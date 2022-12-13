@@ -473,6 +473,84 @@ class RequestSpec(base.NovaObject):
             filt_props['requested_destination'] = self.requested_destination
         return filt_props
 
+    @staticmethod
+    def _rc_from_request(pci_request: 'objects.InstancePCIRequest') -> str:
+        # FIXME(gibi): refactor this and the copy of the logic from the
+        #  translator to a common function
+        # FIXME(gibi): handle directly requested resource_class
+        # ??? can there be more than one spec???
+        spec = pci_request.spec[0]
+        rc = f"CUSTOM_PCI_{spec['vendor_id']}_{spec['product_id']}".upper()
+        return rc
+
+    # This is here temporarily until the PCI placement scheduling is under
+    # implementation. When that is done there will be a config option
+    # [scheduler]pci_in_placement to configure this. Now we add this as a
+    # function to allow tests to selectively enable the WIP feature
+    @staticmethod
+    def _pci_in_placement_enabled():
+        return False
+
+    def _generate_request_groups_from_pci_requests(self):
+        if not self._pci_in_placement_enabled():
+            return False
+
+        for pci_request in self.pci_requests.requests:
+            if pci_request.source == objects.InstancePCIRequest.NEUTRON_PORT:
+                # TODO(gibi): Handle neutron based PCI requests here in a later
+                # cycle.
+                continue
+
+            # The goal is to translate InstancePCIRequest to RequestGroup. Each
+            # InstancePCIRequest can be fulfilled from the whole RP tree. And
+            # a flavor based InstancePCIRequest might request more than one
+            # device (if count > 1) and those devices still need to be placed
+            # independently to RPs.  So we could have two options to translate
+            # an InstancePCIRequest object to RequestGroup objects:
+            # 1) put the all the requested resources from every
+            #    InstancePCIRequest to the unsuffixed RequestGroup.
+            # 2) generate a separate RequestGroup for each individual device
+            #    request
+            #
+            # While #1) feels simpler it has a big downside. The unsuffixed
+            # group will have a bulk request group resource provider mapping
+            # returned from placement. So there would be no easy way to later
+            # untangle which InstancePCIRequest is fulfilled by which RP, and
+            # therefore which PCI device should be used to allocate a specific
+            # device on the hypervisor during the PCI claim. Note that there
+            # could be multiple PF RPs providing the same type of resources but
+            # still we need to make sure that if a resource is allocated in
+            # placement from a specific RP (representing a physical device)
+            # then the PCI claim should consume resources from the same
+            # physical device.
+            #
+            # So we need at least a separate RequestGroup per
+            # InstancePCIRequest. However, for a InstancePCIRequest(count=2)
+            # that would mean a RequestGroup(RC:2) which would mean both
+            # resource should come from the same RP in placement. This is
+            # impossible for PF or PCI type requests and over restrictive for
+            # VF type requests. Therefore we need to generate one RequestGroup
+            # per requested device. So for InstancePCIRequest(count=2) we need
+            # to generate two separate RequestGroup(RC:1) objects.
+
+            # FIXME(gibi): make sure that if we have count=2 requests then
+            #  group_policy=none is in the request as group_policy=isolate
+            #  would prevent allocating two VFs from the same PF.
+
+            for i in range(pci_request.count):
+                rg = objects.RequestGroup(
+                    use_same_provider=True,
+                    # we need to generate a unique ID for each group, so we use
+                    # a counter
+                    requester_id=f"{pci_request.request_id}-{i}",
+                    # as we split count >= 2 requests to independent groups
+                    # each group will have a resource request of one
+                    resources={
+                        self._rc_from_request(pci_request): 1}
+                    # FIXME(gibi): handle traits requested from alias
+                )
+                self.requested_resources.append(rg)
+
     @classmethod
     def from_components(
         cls, context, instance_uuid, image, flavor,
@@ -538,6 +616,8 @@ class RequestSpec(base.NovaObject):
         spec_obj.requested_resources = []
         if port_resource_requests:
             spec_obj.requested_resources.extend(port_resource_requests)
+
+        spec_obj._generate_request_groups_from_pci_requests()
 
         # NOTE(gibi): later the scheduler adds more request level params but
         # never overrides existing ones so we can initialize them here.

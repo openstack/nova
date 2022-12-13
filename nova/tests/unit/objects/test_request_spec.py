@@ -14,6 +14,7 @@
 import collections
 from unittest import mock
 
+import fixtures
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -428,6 +429,67 @@ class _TestRequestSpecObject(object):
         )
 
         self.assertListEqual([rg], spec.requested_resources)
+        self.assertEqual(req_lvl_params, spec.request_level_params)
+
+    # TODO(gibi): replace this with setting the config
+    # [scheduler]pci_in_placement=True once that flag is available
+    @mock.patch(
+        'nova.objects.request_spec.RequestSpec._pci_in_placement_enabled',
+        new=mock.Mock(return_value=True),
+    )
+    def test_from_components_flavor_based_pci_requests(self):
+        ctxt = context.RequestContext(
+            fakes.FAKE_USER_ID, fakes.FAKE_PROJECT_ID
+        )
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image = {
+            "id": uuids.image_id,
+            "properties": {"mappings": []},
+            "status": "fake-status",
+            "location": "far-away",
+        }
+        flavor = fake_flavor.fake_flavor_obj(ctxt)
+        filter_properties = {"fake": "property"}
+
+        qos_port_rg = request_spec.RequestGroup()
+        req_lvl_params = request_spec.RequestLevelParams()
+
+        pci_requests = objects.InstancePCIRequests(
+            requests=[
+                objects.InstancePCIRequest(
+                    count=1,
+                    alias_name='a-dev',
+                    request_id=uuids.req1,
+                    spec=[{"vendor_id": "1234", "product_id": "fe12"}],
+                )
+            ]
+        )
+        pci_request_group = request_spec.RequestGroup(
+            requester_id=f"{uuids.req1}-0",
+            resources={"CUSTOM_PCI_1234_FE12": 1},
+            same_provider=True,
+        )
+
+        spec = objects.RequestSpec.from_components(
+            ctxt,
+            instance.uuid,
+            image,
+            flavor,
+            instance.numa_topology,
+            pci_requests,
+            filter_properties,
+            None,
+            instance.availability_zone,
+            port_resource_requests=[qos_port_rg],
+            request_level_params=req_lvl_params,
+        )
+
+        self.assertEqual(2, len(spec.requested_resources))
+        self.assertEqual(qos_port_rg, spec.requested_resources[0])
+        self.assertEqual(
+            pci_request_group.obj_to_primitive(),
+            spec.requested_resources[1].obj_to_primitive(),
+        )
         self.assertEqual(req_lvl_params, spec.request_level_params)
 
     def test_get_scheduler_hint(self):
@@ -1052,6 +1114,135 @@ class TestRequestSpecObject(test_objects._LocalTest,
 class TestRemoteRequestSpecObject(test_objects._RemoteTest,
                                   _TestRequestSpecObject):
     pass
+
+
+class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        # TODO(gibi): replace this with setting the config
+        # [scheduler]pci_in_placement=True once that flag is available
+        self.mock_pci_in_placement_enabled = self.useFixture(
+            fixtures.MockPatch(
+                "nova.objects.request_spec.RequestSpec."
+                "_pci_in_placement_enabled",
+                return_value=True,
+            )
+        ).mock
+
+    def test_pci_reqs_ignored_if_disabled(self):
+        self.mock_pci_in_placement_enabled.return_value = False
+
+        spec = request_spec.RequestSpec(
+            requested_resources=[],
+            pci_requests=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(
+                        count=1,
+                        request_id=uuids.req1,
+                        spec=[{"vendor_id": "de12", "product_id": "1234"}],
+                        alias_name="a-dev",
+                    ),
+                ]
+            ),
+        )
+
+        spec._generate_request_groups_from_pci_requests()
+
+        self.assertEqual(0, len(spec.requested_resources))
+
+    def test_neutron_based_requests_are_ignored(self):
+        pci_req = objects.InstancePCIRequest(
+            count=1,
+            request_id=uuids.req1,
+            spec=[],
+        )
+        spec = request_spec.RequestSpec(
+            requested_resources=[],
+            pci_requests=objects.InstancePCIRequests(requests=[pci_req]),
+        )
+        self.assertEqual(
+            objects.InstancePCIRequest.NEUTRON_PORT, pci_req.source
+        )
+
+        spec._generate_request_groups_from_pci_requests()
+
+        self.assertEqual(0, len(spec.requested_resources))
+
+    def test_rc_from_product_and_vendor(self):
+        spec = request_spec.RequestSpec(
+            requested_resources=[],
+            pci_requests=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(
+                        count=1,
+                        request_id=uuids.req1,
+                        spec=[{"vendor_id": "de12", "product_id": "1234"}],
+                        alias_name="a-dev",
+                    ),
+                    objects.InstancePCIRequest(
+                        count=1,
+                        request_id=uuids.req2,
+                        spec=[{"vendor_id": "fff", "product_id": "dead"}],
+                        alias_name="a-dev",
+                    ),
+                ]
+            ),
+        )
+
+        spec._generate_request_groups_from_pci_requests()
+
+        self.assertEqual(2, len(spec.requested_resources))
+        self.assertEqual(
+            request_spec.RequestGroup(
+                requester_id=f"{uuids.req1}-0",
+                resources={"CUSTOM_PCI_DE12_1234": 1},
+                use_same_provider=True,
+            ).obj_to_primitive(),
+            spec.requested_resources[0].obj_to_primitive(),
+        )
+        self.assertEqual(
+            request_spec.RequestGroup(
+                requester_id=f"{uuids.req2}-0",
+                resources={"CUSTOM_PCI_FFF_DEAD": 1},
+                use_same_provider=True,
+            ).obj_to_primitive(),
+            spec.requested_resources[1].obj_to_primitive(),
+        )
+
+    def test_multi_device_split_to_multiple_groups(self):
+        spec = request_spec.RequestSpec(
+            requested_resources=[],
+            pci_requests=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(
+                        count=2,
+                        request_id=uuids.req1,
+                        spec=[{"vendor_id": "de12", "product_id": "1234"}],
+                        alias_name="a-dev",
+                    ),
+                ]
+            ),
+        )
+
+        spec._generate_request_groups_from_pci_requests()
+
+        self.assertEqual(2, len(spec.requested_resources))
+        self.assertEqual(
+            request_spec.RequestGroup(
+                requester_id=f"{uuids.req1}-0",
+                resources={"CUSTOM_PCI_DE12_1234": 1},
+                use_same_provider=True,
+            ).obj_to_primitive(),
+            spec.requested_resources[0].obj_to_primitive(),
+        )
+        self.assertEqual(
+            request_spec.RequestGroup(
+                requester_id=f"{uuids.req1}-1",
+                resources={"CUSTOM_PCI_DE12_1234": 1},
+                use_same_provider=True,
+            ).obj_to_primitive(),
+            spec.requested_resources[1].obj_to_primitive(),
+        )
 
 
 class TestRequestGroupObject(test.NoDBTestCase):
