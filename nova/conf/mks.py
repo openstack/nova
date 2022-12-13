@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from oslo_config import cfg
 
 mks_group = cfg.OptGroup('mks',
@@ -53,9 +52,23 @@ Enables graphical console access for virtual machines.
 ]
 
 
+mks_cli_opts = [
+    cfg.StrOpt('web', required=False,
+               help='MKS web location, takes precedence over --web'),
+    cfg.IPOpt('host', default='0.0.0.0', help='MKS proxy host'),
+    cfg.PortOpt('port', default=6090, help='MKS proxy port'),
+    cfg.BoolOpt('verbose', default=False, help='Verbose logging'),
+]
+
+
 def register_opts(conf):
     conf.register_group(mks_group)
     conf.register_opts(mks_opts, group=mks_group)
+
+
+def register_cli_opts(conf):
+    conf.register_group(mks_group)
+    conf.register_cli_opts(mks_cli_opts, mks_group)
 
 
 def list_opts():

@@ -26,6 +26,7 @@ import socket
 from urllib import parse as urlparse
 
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import importutils
 import websockify
@@ -228,8 +229,8 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
 
         # Handshake as necessary
         if 'internal_access_path' in connect_info:
-            path = connect_info.internal_access_path
-            if path:
+            self.parse_internal_access_path(connect_info.internal_access_path)
+            if path := self.internal_access_path_data.get("path"):
                 tsock.send(encodeutils.safe_encode(
                     'CONNECT %s HTTP/1.1\r\n\r\n' % path))
                 end_token = "\r\n\r\n"
@@ -267,8 +268,19 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
                 tsock.close()
                 self.vmsg(_("%(host)s:%(port)s: "
                           "Websocket client or target closed") %
-                          {'host': host, 'port': port})
+                          {'host': connect_info.host,
+                           'port': connect_info.port})
             raise
+
+    def parse_internal_access_path(self, internal_access_path):
+        if internal_access_path is None:
+            self.internal_access_path_data = {}
+            return
+        try:
+            self.internal_access_path_data = \
+                jsonutils.loads(internal_access_path)
+        except ValueError:
+            self.internal_access_path_data = {"path": internal_access_path}
 
     def socket(self, *args, **kwargs):
         return websockifyserver.WebSockifyServer.socket(*args, **kwargs)
