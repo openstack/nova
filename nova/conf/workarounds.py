@@ -374,6 +374,28 @@ Related options:
 
 * :oslo.config:option:`DEFAULT.compute_driver` (libvirt)
 """),
+    cfg.IntOpt('qemu_monitor_announce_self_count',
+                default=3,
+                min=1,
+                help="""
+The total number of times to send the announce_self command to the QEMU
+monitor when enable_qemu_monitor_announce_self is enabled.
+
+Related options:
+
+* :oslo.config:option:`WORKAROUNDS.enable_qemu_monitor_announce_self` (libvirt)
+"""),
+    cfg.IntOpt('qemu_monitor_announce_self_interval',
+                default=1,
+                min=1,
+                help="""
+The number of seconds to wait before re-sending the announce_self
+command to the QEMU monitor.
+
+Related options:
+
+* :oslo.config:option:`WORKAROUNDS.enable_qemu_monitor_announce_self` (libvirt)
+"""),
     cfg.BoolOpt('disable_compute_service_check_for_ffu',
                 default=False,
                 help="""

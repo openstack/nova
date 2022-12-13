@@ -1822,6 +1822,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_guest.set_user_password.assert_called_once_with("root", "123")
 
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    def test_qemu_announce_self(self, mock_get_guest):
+        # Enable the workaround, configure to call announce_self 3 times
+        self.flags(enable_qemu_monitor_announce_self=True, group='workarounds')
+
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_get_guest.return_value = mock_guest
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._qemu_monitor_announce_self(mock_guest)
+
+        # Ensure that 3 calls are made as defined by option
+        # enable_qemu_monitor_announce_self_retries default of 3
+        mock_guest.announce_self.assert_any_call()
+        self.assertEqual(3, mock_guest.announce_self.call_count)
+
     @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
