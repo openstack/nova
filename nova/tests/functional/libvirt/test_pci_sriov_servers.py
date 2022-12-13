@@ -879,7 +879,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         # start two compute services with differing PCI device inventory
         source_pci_info = fakelibvirt.HostPCIDevicesInfo(
-            num_pfs=2, num_vfs=8, numa_node=0)
+            num_pfs=1, num_vfs=4, numa_node=0)
         # add an extra PF without VF to be used by direct-physical ports
         source_pci_info.add_device(
             dev_type='PF',
@@ -932,7 +932,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         # our source host should have marked two PCI devices as used, the VF
         # and the parent PF, while the future destination is currently unused
         self.assertEqual('test_compute0', server['OS-EXT-SRV-ATTR:host'])
-        self.assertPCIDeviceCounts('test_compute0', total=11, free=8)
+        self.assertPCIDeviceCounts('test_compute0', total=6, free=3)
         self.assertPCIDeviceCounts('test_compute1', total=4, free=4)
 
         # the instance should be on host NUMA node 0, since that's where our
@@ -956,7 +956,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
                 # TODO(stephenfin): Stop relying on a side-effect of how nova
                 # chooses from multiple PCI devices (apparently the last
                 # matching one)
-                'pci_slot': '0000:81:01.4',
+                'pci_slot': '0000:81:00.4',
                 'physical_network': 'physnet4',
             },
             port['binding:profile'],
@@ -980,7 +980,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         # we should now have transitioned our usage to the destination, freeing
         # up the source in the process
-        self.assertPCIDeviceCounts('test_compute0', total=11, free=11)
+        self.assertPCIDeviceCounts('test_compute0', total=6, free=6)
         self.assertPCIDeviceCounts('test_compute1', total=4, free=1)
 
         # the instance should now be on host NUMA node 1, since that's where

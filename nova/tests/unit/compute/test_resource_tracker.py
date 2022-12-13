@@ -2401,7 +2401,10 @@ class TestInstanceClaim(BaseTestCase):
                         vendor_id='0001',
                         product_id='0002',
                         numa_node=0,
-                        tags={'dev_type': 'type-PCI'},
+                        tags={
+                            'dev_type': 'type-PCI',
+                            'address': '0000:81:00.0'
+                        },
                         count=0
                     )
                 ]

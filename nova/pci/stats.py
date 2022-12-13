@@ -139,10 +139,19 @@ class PciDeviceStats(object):
             return None
         tags = devspec.get_tags()
         pool = {k: getattr(dev, k) for k in self.pool_keys}
+
         if tags:
             pool.update(
                 {k: v for k, v in tags.items() if k not in self.ignored_tags}
             )
+        # NOTE(gibi): since PCI in placement maps a PCI dev or a PF to a
+        # single RP and the scheduler allocates from a specific RP we need
+        # to split the pools by PCI or PF address. We can still keep
+        # the VFs from the same parent PF in a single pool though as they
+        # are equivalent from placement perspective.
+        address = dev.parent_addr or dev.address
+        pool['address'] = address
+
         # NOTE(gibi): parent_ifname acts like a tag during pci claim but
         # not provided as part of the whitelist spec as it is auto detected
         # by the virt driver.
