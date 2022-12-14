@@ -16,7 +16,6 @@
 from openstack.baremetal.v1 import node as _node
 
 from nova import objects
-from nova.virt.ironic import client_wrapper
 from nova.virt.ironic import ironic_states
 
 
@@ -190,88 +189,3 @@ def get_test_flavor(**kw):
 def get_test_image_meta(**kw):
     return objects.ImageMeta.from_dict(
         {'id': kw.get('id', 'cccccccc-cccc-cccc-cccc-cccccccccccc')})
-
-
-class FakeVolumeTargetClient(object):
-
-    def create(self, node_uuid, volume_type, properties, boot_index,
-               volume_id):
-        pass
-
-    def delete(self, volume_target_id):
-        pass
-
-
-class FakePortClient(object):
-
-    def list(self, address=None, limit=None, marker=None, sort_key=None,
-             sort_dir=None, detail=False, fields=None, node=None,
-             portgroup=None):
-        pass
-
-    def get(self, port_uuid):
-        pass
-
-    def update(self, port_uuid, patch):
-        pass
-
-
-class FakePortgroupClient(object):
-
-    def list(self, node=None, address=None, limit=None, marker=None,
-             sort_key=None, sort_dir=None, detail=False, fields=None):
-        pass
-
-
-class FakeNodeClient(object):
-
-    def list(self, associated=None, maintenance=None, marker=None, limit=None,
-             detail=False, sort_key=None, sort_dir=None, fields=None,
-             provision_state=None, driver=None, resource_class=None,
-             chassis=None):
-        return []
-
-    def get(self, node_uuid, fields=None):
-        pass
-
-    def get_by_instance_uuid(self, instance_uuid, fields=None):
-        pass
-
-    def list_ports(self, node_uuid, detail=False):
-        pass
-
-    def set_power_state(self, node_uuid, target, soft=False, timeout=None):
-        pass
-
-    def set_provision_state(self, node_uuid, state, configdrive=None,
-                            cleansteps=None, rescue_password=None,
-                            os_ironic_api_version=None):
-        pass
-
-    def update(self, node_uuid, patch):
-        pass
-
-    def validate(self, node_uuid):
-        pass
-
-    def vif_attach(self, node_uuid, port_id):
-        pass
-
-    def vif_detach(self, node_uuid, port_id):
-        pass
-
-    def inject_nmi(self, node_uuid):
-        pass
-
-    def list_volume_targets(self, node_uuid, detail=False):
-        pass
-
-
-class FakeClient(object):
-
-    node = FakeNodeClient()
-    port = FakePortClient()
-    portgroup = FakePortgroupClient()
-    volume_target = FakeVolumeTargetClient()
-    current_api_version = '%d.%d' % client_wrapper.IRONIC_API_VERSION
-    is_api_version_negotiated = True
