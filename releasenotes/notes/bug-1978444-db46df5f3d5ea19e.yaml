@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    `Bug #1978444 <https://bugs.launchpad.net/nova/+bug/1978444>`_: Now nova
+    retries deleting a volume attachment in case Cinder API returns
+    ``504 Gateway Timeout``. Also, ``404 Not Found`` is now ignored and
+    leaves only a warning message.
