@@ -991,8 +991,6 @@ class ResourceTracker(object):
         # notified when instances are deleted, we need remove all usages
         # from deleted instances.
         self.pci_tracker.clean_usage(instances, migrations)
-        dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
-        cn.pci_device_pools = dev_pools_obj
 
         self._report_final_resource_view(nodename)
 
@@ -1314,13 +1312,23 @@ class ResourceTracker(object):
 
     def _update(self, context, compute_node, startup=False):
         """Update partial stats locally and populate them to Scheduler."""
+
+        self._update_to_placement(context, compute_node, startup)
+
+        if self.pci_tracker:
+            # sync PCI device pool state stored in the compute node with
+            # the actual state from the PCI tracker as we commit changes in
+            # the DB and in the PCI tracker below
+            dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
+            compute_node.pci_device_pools = dev_pools_obj
+
         # _resource_change will update self.old_resources if it detects changes
         # but we want to restore those if compute_node.save() fails.
         nodename = compute_node.hypervisor_hostname
         old_compute = self.old_resources[nodename]
         if self._resource_change(compute_node):
             # If the compute_node's resource changed, update to DB. Note that
-            # _update_to_placement below does not supersede the need to do this
+            # _update_to_placement above does not supersede the need to do this
             # because there are stats-related fields in the ComputeNode object
             # which could have changed and still need to be reported to the
             # scheduler filters/weighers (which could be out of tree as well).
@@ -1332,8 +1340,6 @@ class ResourceTracker(object):
                 # stale data to compare.
                 with excutils.save_and_reraise_exception(logger=LOG):
                     self.old_resources[nodename] = old_compute
-
-        self._update_to_placement(context, compute_node, startup)
 
         if self.pci_tracker:
             self.pci_tracker.save(context)
