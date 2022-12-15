@@ -14,110 +14,100 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""The bare-metal admin extension."""
+"""The baremetal admin extension."""
 
-from oslo_utils import importutils
+from openstack import exceptions as sdk_exc
 import webob
 
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
-from nova.api.openstack import common
 from nova.api.openstack import wsgi
 import nova.conf
 from nova.i18n import _
 from nova.policies import baremetal_nodes as bn_policies
-
-ironic_client = importutils.try_import('ironicclient.client')
-ironic_exc = importutils.try_import('ironicclient.exc')
+from nova import utils
 
 CONF = nova.conf.CONF
 
 
-def _check_ironic_client_enabled():
-    """Check whether Ironic is installed or not."""
-    if ironic_client is None:
-        common.raise_feature_not_supported()
-
-
-def _get_ironic_client():
-    """return an Ironic client."""
-    # TODO(NobodyCam): Fix insecure setting
-    # NOTE(efried): This should all be replaced by ksa adapter options; but the
-    # nova-to-baremetal API is deprecated, so not changing it.
-    # https://docs.openstack.org/api-ref/compute/#bare-metal-nodes-os-baremetal-nodes-deprecated  # noqa
-    kwargs = {'os_username': CONF.ironic.admin_username,
-              'os_password': CONF.ironic.admin_password,
-              'os_auth_url': CONF.ironic.admin_url,
-              'os_tenant_name': CONF.ironic.admin_tenant_name,
-              'os_service_type': 'baremetal',
-              'os_endpoint_type': 'public',
-              'insecure': 'true',
-              'endpoint': CONF.ironic.endpoint_override}
-    # NOTE(mriedem): The 1 api_version arg here is the only valid value for
-    # the client, but it's not even used so it doesn't really matter. The
-    # ironic client wrapper in the virt driver actually uses a hard-coded
-    # microversion via the os_ironic_api_version kwarg.
-    icli = ironic_client.get_client(1, **kwargs)
-    return icli
-
-
 def _no_ironic_proxy(cmd):
-    raise webob.exc.HTTPBadRequest(
-                    explanation=_("Command Not supported. Please use Ironic "
-                                  "command %(cmd)s to perform this "
-                                  "action.") % {'cmd': cmd})
+    msg = _(
+        "Command Not supported. Please use Ironic "
+        "command %(cmd)s to perform this action."
+    )
+    raise webob.exc.HTTPBadRequest(explanation=msg % {'cmd': cmd})
 
 
 class BareMetalNodeController(wsgi.Controller):
     """The Bare-Metal Node API controller for the OpenStack API."""
 
+    def __init__(self):
+        super().__init__()
+
+        self._ironic_connection = None
+
+    @property
+    def ironic_connection(self):
+        if self._ironic_connection is None:
+            # Ask get_sdk_adapter to raise ServiceUnavailable if the baremetal
+            # service isn't ready yet. Consumers of ironic_connection are set
+            # up to handle this and raise VirtDriverNotReady as appropriate.
+            self._ironic_connection = utils.get_sdk_adapter(
+                'baremetal',
+                check_service=True,
+            )
+        return self._ironic_connection
+
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((404, 501))
     def index(self, req):
         context = req.environ['nova.context']
-        context.can(bn_policies.BASE_POLICY_NAME % 'list',
-                    target={})
+        context.can(bn_policies.BASE_POLICY_NAME % 'list', target={})
+
         nodes = []
         # proxy command to Ironic
-        _check_ironic_client_enabled()
-        icli = _get_ironic_client()
-        ironic_nodes = icli.node.list(detail=True)
-        for inode in ironic_nodes:
-            node = {'id': inode.uuid,
-                    'interfaces': [],
-                    'host': 'IRONIC MANAGED',
-                    'task_state': inode.provision_state,
-                    'cpus': inode.properties.get('cpus', 0),
-                    'memory_mb': inode.properties.get('memory_mb', 0),
-                    'disk_gb': inode.properties.get('local_gb', 0)}
-            nodes.append(node)
-        return {'nodes': nodes}
-
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @wsgi.expected_errors((404, 501))
-    def show(self, req, id):
-        context = req.environ['nova.context']
-        context.can(bn_policies.BASE_POLICY_NAME % 'show',
-                    target={})
-        # proxy command to Ironic
-        _check_ironic_client_enabled()
-        icli = _get_ironic_client()
-        try:
-            inode = icli.node.get(id)
-        except ironic_exc.NotFound:
-            msg = _("Node %s could not be found.") % id
-            raise webob.exc.HTTPNotFound(explanation=msg)
-        iports = icli.node.list_ports(id)
-        node = {'id': inode.uuid,
+        inodes = self.ironic_connection.nodes(details=True)
+        for inode in inodes:
+            node = {
+                'id': inode.id,
                 'interfaces': [],
                 'host': 'IRONIC MANAGED',
                 'task_state': inode.provision_state,
                 'cpus': inode.properties.get('cpus', 0),
                 'memory_mb': inode.properties.get('memory_mb', 0),
                 'disk_gb': inode.properties.get('local_gb', 0),
-                'instance_uuid': inode.instance_uuid}
+            }
+            nodes.append(node)
+
+        return {'nodes': nodes}
+
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.expected_errors((404, 501))
+    def show(self, req, id):
+        context = req.environ['nova.context']
+        context.can(bn_policies.BASE_POLICY_NAME % 'show', target={})
+
+        # proxy command to Ironic
+        try:
+            inode = self.ironic_connection.get_node(id)
+        except sdk_exc.NotFoundException:
+            msg = _("Node %s could not be found.") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
+
+        iports = self.ironic_connection.ports(node=id)
+        node = {
+            'id': inode.id,
+            'interfaces': [],
+            'host': 'IRONIC MANAGED',
+            'task_state': inode.provision_state,
+            'cpus': inode.properties.get('cpus', 0),
+            'memory_mb': inode.properties.get('memory_mb', 0),
+            'disk_gb': inode.properties.get('local_gb', 0),
+            'instance_uuid': inode.instance_id,
+        }
         for port in iports:
             node['interfaces'].append({'address': port.address})
+
         return {'node': node}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)

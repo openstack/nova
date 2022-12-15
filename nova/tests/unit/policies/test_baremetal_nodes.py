@@ -10,8 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
+import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import baremetal_nodes
@@ -20,9 +19,6 @@ from nova.policies import base as base_policy
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
 from nova.tests.unit.virt.ironic import utils as ironic_utils
-
-
-FAKE_IRONIC_CLIENT = ironic_utils.FakeClient()
 
 
 class BaremetalNodesPolicyTest(base.BasePolicyTest):
@@ -35,32 +31,38 @@ class BaremetalNodesPolicyTest(base.BasePolicyTest):
     """
 
     def setUp(self):
-        super(BaremetalNodesPolicyTest, self).setUp()
+        super().setUp()
+
         self.controller = baremetal_nodes.BareMetalNodeController()
         self.req = fakes.HTTPRequest.blank('')
-        self.stub_out('nova.api.openstack.compute.'
-                      'baremetal_nodes._get_ironic_client',
-                      lambda *_: FAKE_IRONIC_CLIENT)
+
+        # stub out openstacksdk
+        self.mock_conn = self.useFixture(
+            fixtures.MockPatchObject(self.controller, '_ironic_connection'),
+        ).mock
+
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to get baremetal nodes.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
+            self.legacy_admin_context,
+            self.system_admin_context,
+            self.project_admin_context,
+        ]
 
     def test_index_nodes_policy(self):
         rule_name = "os_compute_api:os-baremetal-nodes:list"
+        self.mock_conn.nodes.return_value = iter([])
+
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.index,
                                 self.req)
 
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list_ports')
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get')
-    def test_show_node_policy(self, mock_get, mock_port):
+    def test_show_node_policy(self):
         rule_name = "os_compute_api:os-baremetal-nodes:show"
         properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
         node = ironic_utils.get_test_node(properties=properties)
-        mock_get.return_value = node
-        mock_port.return_value = []
+        self.mock_conn.get_node.return_value = node
+        self.mock_conn.ports.return_value = iter([])
 
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
