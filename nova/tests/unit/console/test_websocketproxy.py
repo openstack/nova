@@ -637,7 +637,9 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         # now the same url but with extra leading '/' characters removed.
         if expected_cpython in errmsg:
             location = result[3].decode()
-            location = location.removeprefix('Location: ').rstrip('\r\n')
+            if location.startswith('Location: '):
+                location = location[len('Location: '):]
+            location = location.rstrip('\r\n')
             self.assertTrue(
                 location.startswith('/example.com/%2F..'),
                 msg='Redirect location is not the expected sanitized URL',
