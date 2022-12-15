@@ -14,6 +14,10 @@
 #    under the License.
 
 from openstack.baremetal.v1 import node as _node
+from openstack.baremetal.v1 import port as _port
+from openstack.baremetal.v1 import port_group as _port_group
+from openstack.baremetal.v1 import volume_connector as _volume_connector
+from openstack.baremetal.v1 import volume_target as _volume_target
 
 from nova import objects
 from nova.virt.ironic import ironic_states
@@ -36,34 +40,35 @@ def get_test_node(fields=None, **kw):
     if 'uuid' in kw or 'instance_uuid' in kw or 'maintenance' in kw:
         raise Exception('Invalid property provided')
 
-    node = {'id': kw.get('id', 'eeeeeeee-dddd-cccc-bbbb-aaaaaaaaaaaa'),
-            'chassis_uuid': kw.get('chassis_uuid'),
-            'power_state': kw.get('power_state', ironic_states.NOSTATE),
-            'target_power_state': kw.get('target_power_state',
+    node = {
+        'id': kw.get('id', 'eeeeeeee-dddd-cccc-bbbb-aaaaaaaaaaaa'),
+        'chassis_uuid': kw.get('chassis_uuid'),
+        'power_state': kw.get('power_state', ironic_states.NOSTATE),
+        'target_power_state': kw.get('target_power_state',
+                                     ironic_states.NOSTATE),
+        'provision_state': kw.get('provision_state', ironic_states.AVAILABLE),
+        'target_provision_state': kw.get('target_provision_state',
                                          ironic_states.NOSTATE),
-            'provision_state': kw.get('provision_state',
-                                      ironic_states.NOSTATE),
-            'target_provision_state': kw.get('target_provision_state',
-                                             ironic_states.NOSTATE),
-            'last_error': kw.get('last_error'),
-            'instance_id': kw.get('instance_id'),
-            'instance_info': kw.get('instance_info'),
-            'driver': kw.get('driver', 'fake'),
-            'driver_info': kw.get('driver_info', {}),
-            'properties': kw.get('properties', {}),
-            'reservation': kw.get('reservation'),
-            'is_maintenance': kw.get('is_maintenance'),
-            'network_interface': kw.get('network_interface'),
-            'resource_class': kw.get('resource_class'),
-            'traits': kw.get('traits', []),
-            'extra': kw.get('extra', {}),
-            'updated_at': kw.get('created_at'),
-            'created_at': kw.get('updated_at')}
+        'last_error': kw.get('last_error'),
+        'instance_id': kw.get('instance_id'),
+        'instance_info': kw.get('instance_info'),
+        'driver': kw.get('driver', 'fake'),
+        'driver_info': kw.get('driver_info', {}),
+        'properties': kw.get('properties', {}),
+        'reservation': kw.get('reservation'),
+        'is_maintenance': kw.get('is_maintenance'),
+        'network_interface': kw.get('network_interface'),
+        'resource_class': kw.get('resource_class'),
+        'traits': kw.get('traits', []),
+        'extra': kw.get('extra', {}),
+        'updated_at': kw.get('created_at'),
+        'created_at': kw.get('updated_at'),
+    }
 
     if fields is not None:
         node = {key: value for key, value in node.items() if key in fields}
 
-    return type('node', (object,), node)()
+    return _node.Node(**node)
 
 
 def get_test_port(**kw):
@@ -71,15 +76,18 @@ def get_test_port(**kw):
     if 'uuid' in kw or 'node_uuid' in kw or 'portgroup_uuid' in kw:
         raise Exception('Invalid property provided')
 
-    return type('port', (object,),
-               {'id': kw.get('id', 'gggggggg-uuuu-qqqq-ffff-llllllllllll'),
-                'node_id': kw.get('node_id', get_test_node().id),
-                'address': kw.get('address', 'FF:FF:FF:FF:FF:FF'),
-                'extra': kw.get('extra', {}),
-                'internal_info': kw.get('internal_info', {}),
-                'port_group_id': kw.get('port_group_id'),
-                'created_at': kw.get('created_at'),
-                'updated_at': kw.get('updated_at')})()
+    port = {
+        'id': kw.get('id', 'gggggggg-uuuu-qqqq-ffff-llllllllllll'),
+        'node_id': kw.get('node_id', get_test_node().id),
+        'address': kw.get('address', 'FF:FF:FF:FF:FF:FF'),
+        'extra': kw.get('extra', {}),
+        'internal_info': kw.get('internal_info', {}),
+        'port_group_id': kw.get('port_group_id'),
+        'created_at': kw.get('created_at'),
+        'updated_at': kw.get('updated_at'),
+    }
+
+    return _port.Port(**port)
 
 
 def get_test_portgroup(**kw):
@@ -87,20 +95,23 @@ def get_test_portgroup(**kw):
     if 'uuid' in kw or 'node_uuid' in kw:
         raise Exception('Invalid property provided')
 
-    return type('portgroup', (object,),
-               {'id': kw.get('id', 'deaffeed-1234-5678-9012-fedcbafedcba'),
-                'node_id': kw.get('node_id', get_test_node().id),
-                'address': kw.get('address', 'EE:EE:EE:EE:EE:EE'),
-                'extra': kw.get('extra', {}),
-                'internal_info': kw.get('internal_info', {}),
-                'properties': kw.get('properties', {}),
-                'mode': kw.get('mode', 'active-backup'),
-                'name': kw.get('name'),
-                'standalone_ports_supported': kw.get(
-                    'standalone_ports_supported', True,
-                ),
-                'created_at': kw.get('created_at'),
-                'updated_at': kw.get('updated_at')})()
+    port_group = {
+        'id': kw.get('id', 'deaffeed-1234-5678-9012-fedcbafedcba'),
+        'node_id': kw.get('node_id', get_test_node().id),
+        'address': kw.get('address', 'EE:EE:EE:EE:EE:EE'),
+        'extra': kw.get('extra', {}),
+        'internal_info': kw.get('internal_info', {}),
+        'properties': kw.get('properties', {}),
+        'mode': kw.get('mode', 'active-backup'),
+        'name': kw.get('name'),
+        'is_standalone_ports_supported': kw.get(
+            'is_standalone_ports_supported', True,
+        ),
+        'created_at': kw.get('created_at'),
+        'updated_at': kw.get('updated_at'),
+    }
+
+    return _port_group.PortGroup(**port_group)
 
 
 def get_test_vif(**kw):
@@ -118,7 +129,8 @@ def get_test_vif(**kw):
         'active': kw.get('active', True),
         'type': kw.get('type', 'ironic'),
         'id': kw.get('id', 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'),
-        'qbg_params': kw.get('qbg_params')}
+        'qbg_params': kw.get('qbg_params'),
+    }
 
 
 def get_test_volume_connector(**kw):
@@ -126,14 +138,17 @@ def get_test_volume_connector(**kw):
     if 'uuid' in kw or 'node_uuid' in kw:
         raise Exception('Invalid property provided')
 
-    return type('volume_connector', (object,),
-               {'id': kw.get('id', 'hhhhhhhh-qqqq-uuuu-mmmm-bbbbbbbbbbbb'),
-                'node_id': kw.get('node_id', get_test_node().id),
-                'type': kw.get('type', 'iqn'),
-                'connector_id': kw.get('connector_id', 'iqn.test'),
-                'extra': kw.get('extra', {}),
-                'created_at': kw.get('created_at'),
-                'updated_at': kw.get('updated_at')})()
+    volume_connector = {
+        'id': kw.get('id', 'hhhhhhhh-qqqq-uuuu-mmmm-bbbbbbbbbbbb'),
+        'node_id': kw.get('node_id', get_test_node().id),
+        'type': kw.get('type', 'iqn'),
+        'connector_id': kw.get('connector_id', 'iqn.test'),
+        'extra': kw.get('extra', {}),
+        'created_at': kw.get('created_at'),
+        'updated_at': kw.get('updated_at'),
+    }
+
+    return _volume_connector.VolumeConnector(**volume_connector)
 
 
 def get_test_volume_target(**kw):
@@ -141,34 +156,42 @@ def get_test_volume_target(**kw):
     if 'uuid' in kw or 'node_uuid' in kw:
         raise Exception('Invalid property provided')
 
-    return type('volume_target', (object,),
-                {'id': kw.get('id', 'aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'),
-                 'node_id': kw.get('node_id', get_test_node().id),
-                 'volume_type': kw.get('volume_type', 'iscsi'),
-                 'properties': kw.get('properties', {}),
-                 'boot_index': kw.get('boot_index', 0),
-                 'volume_id': kw.get('volume_id',
-                                     'fffffff-gggg-hhhh-iiii-jjjjjjjjjjjj'),
-                 'extra': kw.get('extra', {}),
-                 'created_at': kw.get('created_at'),
-                 'updated_at': kw.get('updated_at')})()
+    volume_target = {
+        'id': kw.get('id', 'aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'),
+        'node_id': kw.get('node_id', get_test_node().id),
+        'volume_type': kw.get('volume_type', 'iscsi'),
+        'properties': kw.get('properties', {}),
+        'boot_index': kw.get('boot_index', 0),
+        'volume_id': kw.get(
+            'volume_id', 'fffffff-gggg-hhhh-iiii-jjjjjjjjjjjj',
+        ),
+        'extra': kw.get('extra', {}),
+        'created_at': kw.get('created_at'),
+        'updated_at': kw.get('updated_at'),
+    }
+
+    return _volume_target.VolumeTarget(**volume_target)
 
 
 def get_test_flavor(**kw):
-    default_extra_specs = {'baremetal:deploy_kernel_id':
-                                       'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-                           'baremetal:deploy_ramdisk_id':
-                                       'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'}
-    flavor = {'name': kw.get('name', 'fake.flavor'),
-              'extra_specs': kw.get('extra_specs', default_extra_specs),
-              'swap': kw.get('swap', 0),
-              'root_gb': 1,
-              'memory_mb': 1,
-              'vcpus': 1,
-              'ephemeral_gb': kw.get('ephemeral_gb', 0)}
+    default_extra_specs = {
+        'baremetal:deploy_kernel_id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        'baremetal:deploy_ramdisk_id': 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    }
+    flavor = {
+        'name': kw.get('name', 'fake.flavor'),
+        'extra_specs': kw.get('extra_specs', default_extra_specs),
+        'swap': kw.get('swap', 0),
+        'root_gb': 1,
+        'memory_mb': 1,
+        'vcpus': 1,
+        'ephemeral_gb': kw.get('ephemeral_gb', 0),
+    }
+
     return objects.Flavor(**flavor)
 
 
 def get_test_image_meta(**kw):
     return objects.ImageMeta.from_dict(
-        {'id': kw.get('id', 'cccccccc-cccc-cccc-cccc-cccccccccccc')})
+        {'id': kw.get('id', 'cccccccc-cccc-cccc-cccc-cccccccccccc')},
+    )
