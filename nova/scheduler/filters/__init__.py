@@ -28,6 +28,9 @@ class BaseHostFilter(filters.BaseFilter):
     # other parameters. We care about running policy filters (i.e.
     # ImagePropertiesFilter) but not things that check usage on the
     # existing compute node, etc.
+    # This also means that filters marked with RUN_ON_REBUILD = True cannot
+    # filter on allocation candidates or need to handle the rebuild case
+    # specially.
     RUN_ON_REBUILD = False
 
     def _filter_one(self, obj, spec):
