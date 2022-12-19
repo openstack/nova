@@ -47,6 +47,8 @@ class PostLiveMigrationFail(
     def test_post_live_migration_keystone_fails(self):
         """Test for bug 2143972.
         This test simulate a service failure during post live migration.
+        And ensure the instance status and migration state are reported in
+        ERROR.
         """
         orig_function = nova.network.neutron.API.setup_networks_on_host
         service_exception = messaging.RemoteError(
@@ -75,15 +77,8 @@ class PostLiveMigrationFail(
             side_effect=fake_setup_networks_on_host
         ):
 
-            # FIXME(Uggla) A failure with post_live_migration_at_destination
-            # leave the instance in MIGRATING status and
-            # migration_expected_state to completed because the exception
-            # is not raised by the compute manager.  This is mainly due to
-            # the previous behavior that would not want to break, allowing a
-            # migration cleanup.  A recent patch allows better handling of post
-            # migration errors, so we can now raise an exception in such cases.
             server = self._live_migrate(
-                server, migration_expected_state='completed',
-                server_expected_state='MIGRATING')
+                server, migration_expected_state='error',
+                server_expected_state='ERROR')
 
-            self.assertEqual(self.src.host, server['OS-EXT-SRV-ATTR:host'])
+            self.assertEqual(self.dest.host, server['OS-EXT-SRV-ATTR:host'])
