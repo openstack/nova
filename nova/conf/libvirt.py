@@ -1479,6 +1479,9 @@ Related options:
 ]
 
 libvirt_cpu_mgmt_opts = [
+    cfg.BoolOpt('cpu_power_management',
+                default=False,
+                help='Use libvirt to manage CPU cores performance.'),
     cfg.StrOpt('cpu_power_governor_low',
                default='powersave',
                help='Governor to use in order '

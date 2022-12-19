@@ -7745,15 +7745,18 @@ class LibvirtDriver(driver.ComputeDriver):
         if not CONF.compute.cpu_dedicated_set:
             return set()
 
-        online_cpus = self._host.get_online_cpus()
+        if CONF.libvirt.cpu_power_management:
+            available_cpus = self._host.get_available_cpus()
+        else:
+            available_cpus = self._host.get_online_cpus()
         dedicated_cpus = hardware.get_cpu_dedicated_set()
 
-        if not dedicated_cpus.issubset(online_cpus):
+        if not dedicated_cpus.issubset(available_cpus):
             msg = _("Invalid '[compute] cpu_dedicated_set' config: one or "
-                    "more of the configured CPUs is not online. Online "
-                    "cpuset(s): %(online)s, configured cpuset(s): %(req)s")
+                    "more of the configured CPUs is not available. Available "
+                    "cpuset(s): %(available)s, configured cpuset(s): %(req)s")
             raise exception.Invalid(msg % {
-                'online': sorted(online_cpus),
+                'available': sorted(available_cpus),
                 'req': sorted(dedicated_cpus)})
 
         return dedicated_cpus
