@@ -9499,11 +9499,12 @@ class ComputeManager(manager.Manager):
                     instance, block_migration, dest)
         except Exception as error:
             post_at_dest_success = False
-            # We don't want to break _post_live_migration() if
-            # post_live_migration_at_destination() fails as it should never
-            # affect cleaning up source node.
+            # If post_live_migration_at_destination() fails, we now have the
+            # _post_live_migration_update_host() method that will handle
+            # this case.
             LOG.exception("Post live migration at destination %s failed",
                           dest, instance=instance, error=error)
+            raise
 
         self.instance_events.clear_events_for_instance(instance)
 
