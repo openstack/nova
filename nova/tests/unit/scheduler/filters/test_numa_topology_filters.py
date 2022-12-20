@@ -11,6 +11,7 @@
 #    under the License.
 
 import itertools
+from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
 
@@ -53,7 +54,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                                    {'numa_topology': fakes.NUMA_TOPOLOGY,
                                     'pci_stats': None,
                                     'cpu_allocation_ratio': 16.0,
-                                    'ram_allocation_ratio': 1.5})
+                                    'ram_allocation_ratio': 1.5,
+                                    'allocation_candidates': [{"mappings": {}}]
+                                    })
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_numa_topology_filter_numa_instance_no_numa_host_fail(self):
@@ -132,7 +135,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                                    {'numa_topology': fakes.NUMA_TOPOLOGY,
                                     'pci_stats': None,
                                     'cpu_allocation_ratio': 21,
-                                    'ram_allocation_ratio': 1.3})
+                                    'ram_allocation_ratio': 1.3,
+                                    'allocation_candidates': [{"mappings": {}}]
+                                    })
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
         limits = host.limits['numa_topology']
         self.assertEqual(limits.cpu_allocation_ratio, 21)
@@ -180,7 +185,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
             'numa_topology': numa_topology,
             'pci_stats': None,
             'cpu_allocation_ratio': 1,
-            'ram_allocation_ratio': 1.5})
+            'ram_allocation_ratio': 1.5,
+            'allocation_candidates': [{"mappings": {}}],
+        })
         assertion = self.assertTrue if passes else self.assertFalse
 
         # test combinations of image properties and extra specs
@@ -237,7 +244,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                                    {'numa_topology': fakes.NUMA_TOPOLOGY,
                                     'pci_stats': None,
                                     'cpu_allocation_ratio': 16.0,
-                                    'ram_allocation_ratio': 1.5})
+                                    'ram_allocation_ratio': 1.5,
+                                    'allocation_candidates': [{"mappings": {}}]
+                                    })
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_numa_topology_filter_fail_mempages(self):
@@ -287,7 +296,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
             'numa_topology': host_topology,
             'pci_stats': None,
             'cpu_allocation_ratio': 16.0,
-            'ram_allocation_ratio': 1.5})
+            'ram_allocation_ratio': 1.5,
+            'allocation_candidates': [{"mappings": {}}],
+        })
 
     def test_numa_topology_filter_pass_networks(self):
         host = self._get_fake_host_state_with_networks()
@@ -329,3 +340,79 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                                       network_metadata=network_metadata)
 
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    @mock.patch("nova.virt.hardware.numa_fit_instance_to_host")
+    def test_filters_candidates(self, mock_numa_fit):
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset=set([1]), pcpuset=set(), memory=512
+                ),
+            ]
+        )
+        spec_obj = self._get_spec_obj(numa_topology=instance_topology)
+        host = fakes.FakeHostState(
+            "host1",
+            "node1",
+            {
+                "numa_topology": fakes.NUMA_TOPOLOGY,
+                "pci_stats": None,
+                "cpu_allocation_ratio": 16.0,
+                "ram_allocation_ratio": 1.5,
+                # simulate that placement returned 3 candidates for this host
+                "allocation_candidates": [
+                    {"mappings": {f"{uuids.req1}-0": ["candidate_rp_1"]}},
+                    {"mappings": {f"{uuids.req1}-0": ["candidate_rp_2"]}},
+                    {"mappings": {f"{uuids.req1}-0": ["candidate_rp_3"]}},
+                ],
+            },
+        )
+        # and that from those candidates only the second matches the numa logic
+        mock_numa_fit.side_effect = [False, True, False]
+
+        # run the filter and expect that the host passes as it has at least
+        # one viable candidate
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+        # also assert that the filter checked all three candidates
+        self.assertEqual(3, len(mock_numa_fit.mock_calls))
+        # and also it reduced the candidates in the host state to the only
+        # matching one
+        self.assertEqual(1, len(host.allocation_candidates))
+        self.assertEqual(
+            {"mappings": {f"{uuids.req1}-0": ["candidate_rp_2"]}},
+            host.allocation_candidates[0],
+        )
+
+    @mock.patch("nova.virt.hardware.numa_fit_instance_to_host")
+    def test_filter_fails_if_no_matching_candidate_left(self, mock_numa_fit):
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset=set([1]), pcpuset=set(), memory=512
+                ),
+            ]
+        )
+        spec_obj = self._get_spec_obj(numa_topology=instance_topology)
+        host = fakes.FakeHostState(
+            "host1",
+            "node1",
+            {
+                "numa_topology": fakes.NUMA_TOPOLOGY,
+                "pci_stats": None,
+                "cpu_allocation_ratio": 16.0,
+                "ram_allocation_ratio": 1.5,
+                # simulate that placement returned 1 candidate for this host
+                "allocation_candidates": [
+                    {"mappings": {f"{uuids.req1}-0": ["candidate_rp_1"]}},
+                ],
+            },
+        )
+        # simulate that the only candidate we have does not match
+        mock_numa_fit.side_effect = [False]
+
+        # run the filter and expect that it fails the host as there is no
+        # viable candidate left
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+        self.assertEqual(1, len(mock_numa_fit.mock_calls))
+        # and also it made the candidates list empty in the host state
+        self.assertEqual(0, len(host.allocation_candidates))

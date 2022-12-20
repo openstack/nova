@@ -298,7 +298,9 @@ class HostState(object):
             spec_obj.numa_topology = hardware.numa_fit_instance_to_host(
                 self.numa_topology, spec_obj.numa_topology,
                 limits=self.limits.get('numa_topology'),
-                pci_requests=pci_requests, pci_stats=self.pci_stats)
+                pci_requests=pci_requests,
+                pci_stats=self.pci_stats,
+                provider_mapping=spec_obj.get_request_group_mapping())
 
             self.numa_topology = hardware.numa_usage_from_instance_numa(
                 self.numa_topology, spec_obj.numa_topology)
@@ -308,7 +310,11 @@ class HostState(object):
             instance_cells = None
             if spec_obj.numa_topology:
                 instance_cells = spec_obj.numa_topology.cells
-            self.pci_stats.apply_requests(pci_requests, instance_cells)
+            self.pci_stats.apply_requests(
+                pci_requests,
+                spec_obj.get_request_group_mapping(),
+                instance_cells
+            )
 
         # NOTE(sbauza): By considering all cases when the scheduler is called
         # and when consume_from_request() is run, we can safely say that there

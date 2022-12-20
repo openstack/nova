@@ -2638,45 +2638,45 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
 
     def test_get_fitting_success_no_limits(self):
         fitted_instance1 = hw.numa_fit_instance_to_host(
-                self.host, self.instance1)
+                self.host, self.instance1, {})
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
         self.host = hw.numa_usage_from_instance_numa(
                 self.host, fitted_instance1)
         fitted_instance2 = hw.numa_fit_instance_to_host(
-                self.host, self.instance3)
+                self.host, self.instance3, {})
         self.assertIsInstance(fitted_instance2, objects.InstanceNUMATopology)
 
     def test_get_fitting_success_limits(self):
         fitted_instance = hw.numa_fit_instance_to_host(
-                self.host, self.instance3, self.limits)
+                self.host, self.instance3, {}, self.limits)
         self.assertIsInstance(fitted_instance, objects.InstanceNUMATopology)
         self.assertEqual(1, fitted_instance.cells[0].id)
 
     def test_get_fitting_fails_no_limits(self):
         fitted_instance = hw.numa_fit_instance_to_host(
-                self.host, self.instance2, self.limits)
+                self.host, self.instance2, {}, self.limits)
         self.assertIsNone(fitted_instance)
 
     def test_get_fitting_cumulative_fails_limits(self):
         fitted_instance1 = hw.numa_fit_instance_to_host(
-                self.host, self.instance1, self.limits)
+                self.host, self.instance1, {}, self.limits)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
         self.assertEqual(1, fitted_instance1.cells[0].id)
         self.host = hw.numa_usage_from_instance_numa(
                 self.host, fitted_instance1)
         fitted_instance2 = hw.numa_fit_instance_to_host(
-                self.host, self.instance2, self.limits)
+                self.host, self.instance2, {}, self.limits)
         self.assertIsNone(fitted_instance2)
 
     def test_get_fitting_cumulative_success_limits(self):
         fitted_instance1 = hw.numa_fit_instance_to_host(
-                self.host, self.instance1, self.limits)
+                self.host, self.instance1, {}, self.limits)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
         self.assertEqual(1, fitted_instance1.cells[0].id)
         self.host = hw.numa_usage_from_instance_numa(
                 self.host, fitted_instance1)
         fitted_instance2 = hw.numa_fit_instance_to_host(
-                self.host, self.instance3, self.limits)
+                self.host, self.instance3, {}, self.limits)
         self.assertIsInstance(fitted_instance2, objects.InstanceNUMATopology)
         self.assertEqual(2, fitted_instance2.cells[0].id)
 
@@ -2691,7 +2691,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
             network_metadata=network_metadata)
 
         fitted_instance = hw.numa_fit_instance_to_host(
-            self.host, self.instance1, limits=limits)
+            self.host, self.instance1, {}, limits=limits)
 
         self.assertIsInstance(fitted_instance, objects.InstanceNUMATopology)
         mock_supports.assert_called_once_with(
@@ -2708,7 +2708,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
             network_metadata=network_metadata)
 
         fitted_instance = hw.numa_fit_instance_to_host(
-            self.host, self.instance1, limits=limits)
+            self.host, self.instance1, {}, limits=limits)
 
         self.assertIsNone(fitted_instance)
         mock_supports.assert_has_calls([
@@ -2725,6 +2725,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 'support_requests', return_value= True):
             fitted_instance1 = hw.numa_fit_instance_to_host(self.host,
                                                         self.instance1,
+                                                        {},
                                                         pci_requests=pci_reqs,
                                                         pci_stats=pci_stats)
             self.assertIsInstance(fitted_instance1,
@@ -2740,6 +2741,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
             fitted_instance1 = hw.numa_fit_instance_to_host(
                 self.host,
                 self.instance1,
+                {},
                 pci_requests=pci_reqs,
                 pci_stats=pci_stats)
             self.assertIsNone(fitted_instance1)
@@ -2758,7 +2760,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
 
         # ...therefore an instance without a PCI device should get host cell 2
         instance_topology = hw.numa_fit_instance_to_host(
-                self.host, self.instance1, pci_stats=pci_stats)
+                self.host, self.instance1, {}, pci_stats=pci_stats)
         self.assertIsInstance(instance_topology, objects.InstanceNUMATopology)
         # TODO(sfinucan): We should be comparing this against the HOST cell
         self.assertEqual(2, instance_topology.cells[0].id)
@@ -2768,7 +2770,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
 
         # ...therefore an instance without a PCI device should get host cell 1
         instance_topology = hw.numa_fit_instance_to_host(
-                self.host, self.instance1, pci_stats=pci_stats)
+                self.host, self.instance1, {}, pci_stats=pci_stats)
         self.assertIsInstance(instance_topology, objects.InstanceNUMATopology)
         self.assertEqual(1, instance_topology.cells[0].id)
 
@@ -3895,7 +3897,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             ]
         )
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
 
         for cell in inst_topo.cells:
             self.assertInstanceCellPinned(cell, cell_ids=(0, 1))
@@ -3933,7 +3935,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             ]
         )
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
 
         for cell in inst_topo.cells:
             self.assertInstanceCellPinned(cell, cell_ids=(1,))
@@ -3971,7 +3973,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             ]
         )
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertIsNone(inst_topo)
 
     def test_host_numa_fit_instance_to_host_fit(self):
@@ -4014,7 +4016,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             ]
         )
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
 
         for cell in inst_topo.cells:
             self.assertInstanceCellPinned(cell, cell_ids=(0, 1))
@@ -4069,7 +4071,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             ]
         )
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
 
         for cell in inst_topo.cells:
             self.assertInstanceCellPinned(cell, cell_ids=(0, 2))
@@ -4114,7 +4116,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             ]
         )
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertIsNone(inst_topo)
 
     def test_host_numa_fit_instance_to_host_fail_topology(self):
@@ -4148,7 +4150,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                        objects.InstanceNUMACell(
                             cpuset=set(), pcpuset=set([4, 5]), memory=1024,
                             cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertIsNone(inst_topo)
 
     def test_cpu_pinning_usage_from_instances(self):
@@ -4788,7 +4790,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpuset=set(), pcpuset=set([0]), memory=2048,
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertEqual({0: 0}, inst_topo.cells[0].cpu_pinning)
         self.assertIsNone(inst_topo.cells[0].cpuset_reserved)
 
@@ -4802,7 +4804,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpuset=set(), pcpuset=set([0]), memory=2048,
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertEqual({0: 0}, inst_topo.cells[0].cpu_pinning)
         self.assertIsNone(inst_topo.cells[0].cpuset_reserved)
 
@@ -4816,7 +4818,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpuset=set(), pcpuset=set([0]), memory=2048,
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertEqual({0: 0}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
 
@@ -4830,7 +4832,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpuset=set(), pcpuset=set([0, 1, 2, 4]), memory=2048,
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertIsNone(inst_topo)
 
     def test_multi_nodes_isolate(self):
@@ -4847,7 +4849,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpuset=set(), pcpuset=set([1]), memory=2048,
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertEqual({0: 0}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
         self.assertEqual({1: 2}, inst_topo.cells[1].cpu_pinning)
@@ -4867,7 +4869,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpuset=set(), pcpuset=set([2]), memory=2048,
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         # The guest NUMA node 0 is requesting 2pCPUs + 1 additional
         # pCPU for emulator threads, the host can't handle the
         # request.
@@ -4887,7 +4889,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpuset=set(), pcpuset=set([1, 2]), memory=2048,
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertEqual({0: 0}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
         self.assertEqual({1: 2, 2: 3}, inst_topo.cells[1].cpu_pinning)
@@ -4962,7 +4964,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
                 )])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertEqual({0: 0, 1: 2}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([4]), inst_topo.cells[0].cpuset_reserved)
 
@@ -4992,7 +4994,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
                 )])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
 
         self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
@@ -5021,7 +5023,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
         if policy:
             inst_topo.emulator_threads_policy = policy
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         return inst_topo
 
     def test_mixed_instance_not_define(self):
@@ -5078,7 +5080,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpuset=set(), pcpuset=set([0, 1]), memory=2048,
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
         self.assertEqual({0: 2, 1: 3}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
 
@@ -5107,7 +5109,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
                 )])
 
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo, {})
 
         self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
@@ -5896,7 +5898,7 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
 
     def test_sort_host_numa_cell_num_equal_instance_cell_num(self):
         instance_topology = hw.numa_fit_instance_to_host(
-                self.host, self.instance0)
+                self.host, self.instance0, {})
         self.assertInstanceNUMAcellOrder([0, 1, 2, 3], instance_topology)
 
     def test_sort_no_pci_stats_no_shared_cpu_policy(self):
@@ -5905,14 +5907,14 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
             True,
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
-                self.host, self.instance2)
+                self.host, self.instance2, {})
         self.assertInstanceNUMAcellOrder([0, 1, 3], instance_topology)
         CONF.set_override(
             'packing_host_numa_cells_allocation_strategy',
             False,
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
-                self.host, self.instance2)
+                self.host, self.instance2, {})
         self.assertInstanceNUMAcellOrder([2, 3, 0], instance_topology)
 
     def test_sort_no_pci_stats_shared_cpu_policy(self):
@@ -5921,14 +5923,14 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
             True,
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
-                self.host, self.instance1)
+                self.host, self.instance1, {})
         self.assertInstanceNUMAcellOrder([0, 1, 2], instance_topology)
         CONF.set_override(
             'packing_host_numa_cells_allocation_strategy',
             False,
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
-                self.host, self.instance1)
+                self.host, self.instance1, {})
         self.assertInstanceNUMAcellOrder([3, 1, 2], instance_topology)
 
     def test_sort_pci_stats_pci_req_no_shared_cpu_policy(self):
@@ -5941,6 +5943,7 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
         pci_reqs = [pci_request]
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance2,
+                {},
                 pci_requests = pci_reqs,
                 pci_stats = self.pci_stats)
         self.assertInstanceNUMAcellOrder([1, 0, 3], instance_topology)
@@ -5950,6 +5953,7 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance2,
+                {},
                 pci_requests = pci_reqs,
                 pci_stats = self.pci_stats)
         self.assertInstanceNUMAcellOrder([1, 2, 3], instance_topology)
@@ -5964,6 +5968,7 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
         pci_reqs = [pci_request]
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance1,
+                {},
                 pci_requests = pci_reqs,
                 pci_stats = self.pci_stats)
         self.assertInstanceNUMAcellOrder([1, 0, 2], instance_topology)
@@ -5973,6 +5978,7 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance1,
+                {},
                 pci_requests = pci_reqs,
                 pci_stats = self.pci_stats)
         self.assertInstanceNUMAcellOrder([1, 3, 2], instance_topology)
@@ -5984,6 +5990,7 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance2,
+                {},
                 pci_stats = self.pci_stats)
         self.assertInstanceNUMAcellOrder([0, 3, 2], instance_topology)
         CONF.set_override(
@@ -5992,6 +5999,7 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance2,
+                {},
                 pci_stats = self.pci_stats)
         self.assertInstanceNUMAcellOrder([2, 3, 0], instance_topology)
 
@@ -6002,6 +6010,7 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance1,
+                {},
                 pci_stats = self.pci_stats)
         self.assertInstanceNUMAcellOrder([0, 2, 3], instance_topology)
         CONF.set_override(
@@ -6010,5 +6019,6 @@ class HostCellsSortingTestCase(test.NoDBTestCase):
             group = 'compute')
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance1,
+                {},
                 pci_stats = self.pci_stats)
         self.assertInstanceNUMAcellOrder([3, 2, 0], instance_topology)

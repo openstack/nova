@@ -12,6 +12,8 @@
 
 from unittest import mock
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
 from nova import objects
 from nova.pci import stats
 from nova.scheduler.filters import pci_passthrough_filter
@@ -33,11 +35,16 @@ class TestPCIPassthroughFilter(test.NoDBTestCase):
         requests = objects.InstancePCIRequests(requests=[request])
         spec_obj = objects.RequestSpec(pci_requests=requests)
         host = fakes.FakeHostState(
-            'host1', 'node1',
-            attribute_dict={'pci_stats': pci_stats_mock})
+            "host1",
+            "node1",
+            attribute_dict={
+                "pci_stats": pci_stats_mock,
+                "allocation_candidates": [{"mappings": {}}],
+            },
+        )
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
         pci_stats_mock.support_requests.assert_called_once_with(
-            requests.requests)
+            requests.requests, provider_mapping={})
 
     def test_pci_passthrough_fail(self):
         pci_stats_mock = mock.MagicMock()
@@ -47,11 +54,16 @@ class TestPCIPassthroughFilter(test.NoDBTestCase):
         requests = objects.InstancePCIRequests(requests=[request])
         spec_obj = objects.RequestSpec(pci_requests=requests)
         host = fakes.FakeHostState(
-            'host1', 'node1',
-            attribute_dict={'pci_stats': pci_stats_mock})
+            "host1",
+            "node1",
+            attribute_dict={
+                "pci_stats": pci_stats_mock,
+                "allocation_candidates": [{"mappings": {}}],
+            },
+        )
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
         pci_stats_mock.support_requests.assert_called_once_with(
-            requests.requests)
+            requests.requests, provider_mapping={})
 
     def test_pci_passthrough_no_pci_request(self):
         spec_obj = objects.RequestSpec(pci_requests=None)
@@ -82,3 +94,92 @@ class TestPCIPassthroughFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'node1',
             attribute_dict={'pci_stats': None})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_filters_candidates(self):
+        pci_stats_mock = mock.MagicMock()
+        # simulate that only the second allocation candidate fits
+        pci_stats_mock.support_requests.side_effect = [False, True, False]
+        request = objects.InstancePCIRequest(
+            count=1,
+            spec=[{"vendor_id": "8086"}],
+            request_id=uuids.req1,
+        )
+        requests = objects.InstancePCIRequests(requests=[request])
+        spec_obj = objects.RequestSpec(pci_requests=requests)
+        host = fakes.FakeHostState(
+            "host1",
+            "node1",
+            attribute_dict={
+                "pci_stats": pci_stats_mock,
+                # simulate the placement returned 3 possible candidates
+                "allocation_candidates": [
+                    {"mappings": {f"{uuids.req1}-0": ["candidate_rp_1"]}},
+                    {"mappings": {f"{uuids.req1}-0": ["candidate_rp_2"]}},
+                    {"mappings": {f"{uuids.req1}-0": ["candidate_rp_3"]}},
+                ],
+            },
+        )
+
+        # run the filter and expect that it passes the host as there is at
+        # least one viable candidate
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+        # also assert that the filter checked all three candidates
+        pci_stats_mock.support_requests.assert_has_calls(
+            [
+                mock.call(
+                    requests.requests,
+                    provider_mapping={f"{uuids.req1}-0": ["candidate_rp_1"]},
+                ),
+                mock.call(
+                    requests.requests,
+                    provider_mapping={f"{uuids.req1}-0": ["candidate_rp_2"]},
+                ),
+                mock.call(
+                    requests.requests,
+                    provider_mapping={f"{uuids.req1}-0": ["candidate_rp_3"]},
+                ),
+            ]
+        )
+        # and also it reduced the candidates in the host state to the only
+        # matching one
+        self.assertEqual(1, len(host.allocation_candidates))
+        self.assertEqual(
+            {"mappings": {f"{uuids.req1}-0": ["candidate_rp_2"]}},
+            host.allocation_candidates[0],
+        )
+
+    def test_filter_fails_if_no_matching_candidate_left(self):
+        pci_stats_mock = mock.MagicMock()
+        # simulate that the only candidate we have does not match
+        pci_stats_mock.support_requests.side_effect = [False]
+        request = objects.InstancePCIRequest(
+            count=1,
+            spec=[{"vendor_id": "8086"}],
+            request_id=uuids.req1,
+        )
+        requests = objects.InstancePCIRequests(requests=[request])
+        spec_obj = objects.RequestSpec(pci_requests=requests)
+        host = fakes.FakeHostState(
+            "host1",
+            "node1",
+            attribute_dict={
+                "pci_stats": pci_stats_mock,
+                # simulate the placement returned 3 possible candidates
+                "allocation_candidates": [
+                    {"mappings": {f"{uuids.req1}-0": ["candidate_rp_1"]}},
+                ],
+            },
+        )
+
+        # run the filter and expect that it fails the host as there is no
+        # viable candidate left
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+        # also assert that the filter checked our candidate
+        pci_stats_mock.support_requests.assert_called_once_with(
+            requests.requests,
+            provider_mapping={f"{uuids.req1}-0": ["candidate_rp_1"]},
+        )
+        # and also it made the candidates list empty in the host state
+        self.assertEqual(0, len(host.allocation_candidates))

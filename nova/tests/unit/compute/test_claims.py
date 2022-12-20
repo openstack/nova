@@ -169,7 +169,8 @@ class ClaimTestCase(test.NoDBTestCase):
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         requests = objects.InstancePCIRequests(requests=[request])
         self._claim(requests=requests)
-        mock_pci_supports_requests.assert_called_once_with([request])
+        mock_pci_supports_requests.assert_called_once_with(
+            [request], provider_mapping=None)
 
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=False)
@@ -181,7 +182,8 @@ class ClaimTestCase(test.NoDBTestCase):
             exception.ComputeResourcesUnavailable,
             'Claim pci failed.',
             self._claim, requests=requests)
-        mock_pci_supports_requests.assert_called_once_with([request])
+        mock_pci_supports_requests.assert_called_once_with(
+            [request], provider_mapping=None)
 
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests')
     def test_pci_pass_no_requests(self, mock_pci_supports_requests):

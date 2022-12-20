@@ -124,7 +124,13 @@ class Claim(NopClaim):
         pci_requests = self._pci_requests
         if pci_requests.requests:
             stats = self.tracker.pci_tracker.stats
-            if not stats.support_requests(pci_requests.requests):
+            if not stats.support_requests(
+                pci_requests.requests,
+                # We explicitly signal that we are _after_ the scheduler made
+                # allocations in placement and therefore pci_requests.requests
+                # carry its own placement provider mapping information
+                provider_mapping=None,
+            ):
                 return _('Claim pci failed')
 
     def _test_numa_topology(self, compute_node, limit):
@@ -139,12 +145,17 @@ class Claim(NopClaim):
             if pci_requests.requests:
                 pci_stats = self.tracker.pci_tracker.stats
 
-            instance_topology = (
-                    hardware.numa_fit_instance_to_host(
-                        host_topology, requested_topology,
-                        limits=limit,
-                        pci_requests=pci_requests.requests,
-                        pci_stats=pci_stats))
+            instance_topology = hardware.numa_fit_instance_to_host(
+                host_topology,
+                requested_topology,
+                limits=limit,
+                pci_requests=pci_requests.requests,
+                pci_stats=pci_stats,
+                # We explicitly signal that we are _after_ the scheduler made
+                # allocations in placement and therefore pci_requests.requests
+                # carry its own placement provider mapping information
+                provider_mapping=None,
+            )
 
             if requested_topology and not instance_topology:
                 if pci_requests.requests:

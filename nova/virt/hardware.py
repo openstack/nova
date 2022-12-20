@@ -2295,6 +2295,7 @@ def _numa_cells_support_network_metadata(
 def numa_fit_instance_to_host(
     host_topology: 'objects.NUMATopology',
     instance_topology: 'objects.InstanceNUMATopology',
+    provider_mapping: ty.Optional[ty.Dict[str, ty.List[str]]],
     limits: ty.Optional['objects.NUMATopologyLimit'] = None,
     pci_requests: ty.Optional['objects.InstancePCIRequests'] = None,
     pci_stats: ty.Optional[stats.PciDeviceStats] = None,
@@ -2310,6 +2311,12 @@ def numa_fit_instance_to_host(
     :param host_topology: objects.NUMATopology object to fit an
                           instance on
     :param instance_topology: objects.InstanceNUMATopology to be fitted
+    :param provider_mapping: A dict keyed by RequestGroup requester_id,
+        to a list of resource provider UUIDs which provide resource
+        for that RequestGroup. If it is None then it signals that the
+        InstancePCIRequest objects already stores a mapping per request.
+        I.e.: we are called _after_ the scheduler made allocations for this
+        request in placement.
     :param limits: objects.NUMATopologyLimits that defines limits
     :param pci_requests: instance pci_requests
     :param pci_stats: pci_stats for the host
@@ -2465,7 +2472,7 @@ def numa_fit_instance_to_host(
             continue
 
         if pci_requests and pci_stats and not pci_stats.support_requests(
-                pci_requests, chosen_instance_cells):
+                pci_requests, provider_mapping, chosen_instance_cells):
             continue
 
         if network_metadata and not _numa_cells_support_network_metadata(
