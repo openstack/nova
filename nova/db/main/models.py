@@ -266,7 +266,6 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a guest VM."""
     __tablename__ = 'instances'
     __table_args__ = (
-        sa.Index('uuid', 'uuid', unique=True),
         sa.Index('instances_project_id_idx', 'project_id'),
         sa.Index('instances_project_id_deleted_idx',
               'project_id', 'deleted'),
@@ -1046,7 +1045,6 @@ class ConsoleAuthToken(BASE, NovaBase):
     __table_args__ = (
         sa.Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
         sa.Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
-        sa.Index('console_auth_tokens_token_hash_idx', 'token_hash'),
         sa.Index(
             'console_auth_tokens_token_hash_instance_uuid_idx', 'token_hash',
             'instance_uuid',
