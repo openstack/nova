@@ -655,6 +655,7 @@ class Guest(object):
                 stats = self._domain.jobStats()
                 return JobInfo(**stats)
             except libvirt.libvirtError as ex:
+                errmsg = ex.get_error_message()
                 if ex.get_error_code() == libvirt.VIR_ERR_NO_SUPPORT:
                     # Remote libvirt doesn't support new API
                     LOG.debug("Missing remote virDomainGetJobStats: %s", ex)
@@ -667,6 +668,12 @@ class Guest(object):
                     # away completclsely
                     LOG.debug("Domain has shutdown/gone away: %s", ex)
                     return JobInfo(type=libvirt.VIR_DOMAIN_JOB_COMPLETED)
+                elif (ex.get_error_code() == libvirt.VIR_ERR_INTERNAL_ERROR and
+                      errmsg and "migration was active, "
+                      "but no RAM info was set" in errmsg):
+                    LOG.debug("Migration is active or completed but "
+                              "virDomainGetJobStats is missing ram: %s", ex)
+                    return JobInfo(type=libvirt.VIR_DOMAIN_JOB_NONE)
                 else:
                     LOG.debug("Failed to get job stats: %s", ex)
                     raise
