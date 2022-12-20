@@ -656,6 +656,15 @@
             image_conversion:
               output_format: raw
 
+# TODO(gmann): As per the 2023.1 testing runtime, we need to run at least
+# one job on Focal. This job can be removed as per the future testing
+# runtime (whenever we drop the Ubuntu Focal testing).
+- job:
+    name: tempest-integrated-compute-ubuntu-focal
+    description: This is integrated compute job testing on Ubuntu Focal(20.04)
+    parent: tempest-integrated-compute
+    nodeset: openstack-single-node-focal
+
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
@@ -692,10 +701,7 @@
             voting: false
         - nova-tox-functional-py38
         - nova-tox-functional-py39
-        - nova-tox-functional-py310:
-            voting: true
-        - openstack-tox-py310:
-            voting: true
+        - nova-tox-functional-py310
         - tempest-integrated-compute:
            # NOTE(gmann): Policies changes do not need to run all the
            # integration test jobs. Running only tempest and grenade
@@ -715,6 +721,8 @@
              - ^setup.cfg$
              - ^tools/.*$
              - ^tox.ini$
+        - tempest-integrated-compute-ubuntu-focal:
+            irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
@@ -748,6 +756,8 @@
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - tempest-integrated-compute:
            irrelevant-files: *policies-irrelevant-files
+        - tempest-integrated-compute-ubuntu-focal:
+            irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
            irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
