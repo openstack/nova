@@ -610,7 +610,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - server: server
+  - servers: servers
   - accessIPv4: accessIPv4
   - accessIPv6: accessIPv6
   - addresses: addresses
