@@ -173,7 +173,7 @@ is possible to configure other filesystem types.
 
 .. rubric:: Cinder-provisioned block storage
 
-The OpenStack Block Storage service, Cinder, provides persistent volumes hat
+The OpenStack Block Storage service, Cinder, provides persistent volumes that
 are represented by a persistent virtualized block device independent of any
 particular instance.
 
