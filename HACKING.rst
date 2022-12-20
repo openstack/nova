@@ -76,6 +76,7 @@ Nova Specific Commandments
   with eventlet patched code. Use nova.utils.ReaderWriterLock() instead.
 - [N370] Don't use or import six
 - [N371] You must explicitly import python's mock: ``from unittest import mock``
+- [N372] Don't use the setDaemon method. Use the daemon attribute instead.
 
 Creating Unit Tests
 -------------------

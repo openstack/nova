@@ -1043,3 +1043,24 @@ class HackingTestCase(test.NoDBTestCase):
                     import unittest.mock
                """
         self._assert_has_no_errors(code, checks.import_stock_mock)
+
+    def test_check_set_daemon(self):
+        code = """
+                   self.setDaemon(True)
+                   worker.setDaemon(True)
+                   self._event_thread.setDaemon(True)
+                   mythread.setDaemon(False)
+                   self.thread.setDaemon(1)
+               """
+        errors = [(x + 1, 0, 'N372') for x in range(5)]
+        self._assert_has_errors(
+            code, checks.check_set_daemon, expected_errors=errors)
+
+        code = """
+                   self.setDaemon = True
+                   worker.setDaemonFlag(True)
+                   self._event_thread.resetDaemon(True)
+                   self.set.Daemon(True)
+                   self.thread.setdaemon(True)
+               """
+        self._assert_has_no_errors(code, checks.check_set_daemon)
