@@ -16,6 +16,8 @@ from .cast_as_call import CastAsCallFixture  # noqa: F401
 from .cinder import CinderFixture  # noqa: F401
 from .conf import ConfFixture  # noqa: F401, F403
 from .cyborg import CyborgFixture  # noqa: F401
+from .filesystem import SysFileSystemFixture  # noqa: F401
+from .filesystem import TempFileSystemFixture  # noqa: F401
 from .glance import GlanceFixture  # noqa: F401
 from .libvirt import LibvirtFixture  # noqa: F401
 from .libvirt_imagebackend import LibvirtImageBackendFixture  # noqa: F401

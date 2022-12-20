@@ -114,6 +114,7 @@ from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import cpu as libvirt_cpu
 from nova.virt.libvirt import designer
 from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
@@ -817,6 +818,18 @@ class LibvirtDriver(driver.ComputeDriver):
                         "force_raw_images to True.")
                 raise exception.InvalidConfiguration(msg)
 
+        # NOTE(sbauza): We verify first if the dedicated CPU performances were
+        # modified by Nova before. Note that it can provide an exception if
+        # either the governor strategies are different between the cores or if
+        # the cores are offline.
+        libvirt_cpu.validate_all_dedicated_cpus()
+        # NOTE(sbauza): We powerdown all dedicated CPUs but if some instances
+        # exist that are pinned for some CPUs, then we'll later powerup those
+        # CPUs when rebooting the instance in _init_instance()
+        # Note that it can provide an exception if the config options are
+        # wrongly modified.
+        libvirt_cpu.power_down_all_dedicated_cpus()
+
         # TODO(sbauza): Remove this code once mediated devices are persisted
         # across reboots.
         self._recreate_assigned_mediated_devices()
@@ -1512,6 +1525,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(GuanQiang): teardown container to avoid resource leak
             if CONF.libvirt.virt_type == 'lxc':
                 self._teardown_container(instance)
+            # We're sure the instance is gone, we can shutdown the core if so
+            libvirt_cpu.power_down(instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, destroy_secrets=True):
@@ -3164,6 +3179,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         current_power_state = guest.get_power_state(self._host)
 
+        libvirt_cpu.power_up(instance)
         # TODO(stephenfin): Any reason we couldn't use 'self.resume' here?
         guest.launch(pause=current_power_state == power_state.PAUSED)
 
@@ -7641,6 +7657,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 post_xml_callback()
 
             if power_on or pause:
+                libvirt_cpu.power_up(instance)
                 guest.launch(pause=pause)
 
             return guest
