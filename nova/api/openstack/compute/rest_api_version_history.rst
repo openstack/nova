@@ -1141,7 +1141,7 @@ Validation is only used for recognized extra spec namespaces, currently:
 -------------------------------------
 
 Adds support for rescuing boot from volume instances when the compute host
-reports the ``COMPUTE_BFV_RESCUE`` capability trait.
+reports the ``COMPUTE_RESCUE_BFV`` capability trait.
 
 .. _microversion 2.88:
 

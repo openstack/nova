@@ -235,7 +235,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``POST /flavors/{flavor_id}/os-extra_specs`` and
              ``PUT /flavors/{flavor_id}/os-extra_specs/{id}`` APIs.
     * 2.87 - Adds support for rescuing boot from volume instances when the
-             compute host reports the COMPUTE_BFV_RESCUE capability trait.
+             compute host reports the COMPUTE_RESCUE_BFV capability trait.
     * 2.88 - Drop statistics-style fields from the ``/os-hypervisors/detail``
              and ``/os-hypervisors/{hypervisor_id}`` APIs, and remove the
              ``/os-hypervisors/statistics`` and
