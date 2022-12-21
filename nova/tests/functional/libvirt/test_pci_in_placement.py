@@ -73,10 +73,6 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
             )
         )
 
-    @staticmethod
-    def _to_device_spec_conf(spec_list):
-        return [jsonutils.dumps(x) for x in spec_list]
-
 
 class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
 
@@ -1623,7 +1619,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
 class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
     def setUp(self):
         super().setUp()
-        # TODO(gibi): replace this with setting the [scheduler]pci_prefilter
+        # TODO(gibi): replace this with setting the [scheduler]pci_in_placement
         # confing to True once that config is added
         self.mock_pci_in_placement_enabled = self.useFixture(
             fixtures.MockPatch(
@@ -1738,6 +1734,199 @@ class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
             "usages"]["0000:81:00.0"]["CUSTOM_GPU"] = 1
         compute1_expected_placement_view["allocations"][server["id"]] = {
             "0000:81:00.0": {"CUSTOM_GPU": 1}
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self.assert_no_pci_healing("compute1")
+
+    def test_device_claim_consistent_with_placement_allocation(self):
+        """As soon as [scheduler]pci_in_placement is enabled the nova-scheduler
+        will allocate PCI devices in placement. Then on the nova-compute side
+        the PCI claim will also allocate PCI devices in the nova DB. This test
+        will create a situation where the two allocation could contradict and
+        observes that in a contradicting situation the PCI claim will fail
+        instead of allocating a device that is not allocated in placement.
+
+        For the contradiction to happen we need two PCI devices that looks
+        different from placement perspective than from the nova DB perspective.
+
+        We can do that by assigning different traits from in placement and
+        having different product_id in the Nova DB. Then we will create a
+        request that would match from placement perspective to one of the
+        device only and would match to the other device from nova DB
+        perspective. Then we will expect that the boot request fails with no
+        valid host.
+        """
+        # The fake libvirt will emulate on the host:
+        # * one type-PCI in slot 0
+        # * one type-PF in slot 1
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=1, num_vfs=0)
+        # we allow both device to be consumed, but we assign different traits
+        # so we can selectively schedule to one of the devices in placement
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "address": "0000:81:00.0",
+                    "resource_class": "MY_DEV",
+                    "traits": "A_PCI",
+                },
+                {
+                    "address": "0000:81:01.0",
+                    "resource_class": "MY_DEV",
+                    "traits": "A_PF",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assertPCIDeviceCounts("compute1", total=2, free=2)
+        compute1_expected_placement_view = {
+            "inventories": {
+                "0000:81:00.0": {"CUSTOM_MY_DEV": 1},
+                "0000:81:01.0": {"CUSTOM_MY_DEV": 1},
+            },
+            "traits": {
+                "0000:81:00.0": [
+                    "CUSTOM_A_PCI",
+                ],
+                "0000:81:01.0": [
+                    "CUSTOM_A_PF",
+                ],
+            },
+            "usages": {
+                "0000:81:00.0": {"CUSTOM_MY_DEV": 0},
+                "0000:81:01.0": {"CUSTOM_MY_DEV": 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+
+        # now we create a PCI alias that cannot be fulfilled from both
+        # nova and placement perspective at the same time, but can be fulfilled
+        # from each perspective individually
+        pci_alias_no_match = {
+            "resource_class": "MY_DEV",
+            # by product_id this matches 81.00 only
+            "product_id": fakelibvirt.PCI_PROD_ID,
+            # by trait this matches 81.01 only
+            "traits": "A_PF",
+            "name": "a-pci",
+        }
+        self.flags(
+            group="pci",
+            alias=self._to_device_spec_conf([pci_alias_no_match]),
+        )
+
+        # then try to boot with the alias and expect no valid host error
+        extra_spec = {"pci_passthrough:alias": "a-pci:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=flavor_id, networks=[], expected_state='ERROR')
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self.assert_no_pci_healing("compute1")
+
+    def test_vf_with_split_allocation(self):
+        # The fake libvirt will emulate on the host:
+        # * two type-PFs in slot 0, 1 with 2 VFs each
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=2, num_vfs=4)
+        # make all 4 VFs available
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                    "resource_class": "MY_VF",
+                    "traits": "blue",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        compute1_expected_placement_view = {
+            "inventories": {
+                "0000:81:00.0": {"CUSTOM_MY_VF": 2},
+                "0000:81:01.0": {"CUSTOM_MY_VF": 2},
+            },
+            "traits": {
+                "0000:81:00.0": [
+                    "CUSTOM_BLUE",
+                ],
+                "0000:81:01.0": [
+                    "CUSTOM_BLUE",
+                ],
+            },
+            "usages": {
+                "0000:81:00.0": {"CUSTOM_MY_VF": 0},
+                "0000:81:01.0": {"CUSTOM_MY_VF": 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self.assertPCIDeviceCounts('compute1', total=4, free=4)
+
+        pci_alias_vf = {
+            "resource_class": "MY_VF",
+            "traits": "blue",
+            "name": "a-vf",
+        }
+        self.flags(
+            group="pci",
+            # FIXME(gibi): make _to_device_spec_conf a general util for both
+            # device spec and pci alias
+            alias=self._to_device_spec_conf([pci_alias_vf]),
+        )
+
+        # reserve VFs from 81.01 in placement to drive the first instance to
+        # 81.00
+        self._reserve_placement_resource(
+            "compute1_0000:81:01.0", "CUSTOM_MY_VF", 2)
+        # boot an instance with a single VF
+        # we expect that it is allocated from 81.00 as both VF on 81.01 is
+        # reserved
+        extra_spec = {"pci_passthrough:alias": "a-vf:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server_1vf = self._create_server(flavor_id=flavor_id, networks=[])
+
+        self.assertPCIDeviceCounts('compute1', total=4, free=3)
+        compute1_expected_placement_view["usages"] = {
+            "0000:81:00.0": {"CUSTOM_MY_VF": 1}
+        }
+        compute1_expected_placement_view["allocations"][server_1vf["id"]] = {
+            "0000:81:00.0": {"CUSTOM_MY_VF": 1},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self.assert_no_pci_healing("compute1")
+
+        # Boot a second instance requesting two VFs and ensure that the only
+        # way that placement allows this is to split the two VFs between PFs.
+        # Let's remove the reservation of one resource from 81.01 so the only
+        # viable placement candidate is: one VF from 81.00 and one VF from
+        # 81.01
+        self._reserve_placement_resource(
+            "compute1_0000:81:01.0", "CUSTOM_MY_VF", 1)
+
+        extra_spec = {"pci_passthrough:alias": "a-vf:2"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server_2vf = self._create_server(flavor_id=flavor_id, networks=[])
+
+        self.assertPCIDeviceCounts('compute1', total=4, free=1)
+        compute1_expected_placement_view["usages"] = {
+            # both VM uses one VF
+            "0000:81:00.0": {"CUSTOM_MY_VF": 2},
+            "0000:81:01.0": {"CUSTOM_MY_VF": 1},
+        }
+        compute1_expected_placement_view["allocations"][server_2vf["id"]] = {
+            "0000:81:00.0": {"CUSTOM_MY_VF": 1},
+            "0000:81:01.0": {"CUSTOM_MY_VF": 1},
         }
         self.assert_placement_pci_view(
             "compute1", **compute1_expected_placement_view)
