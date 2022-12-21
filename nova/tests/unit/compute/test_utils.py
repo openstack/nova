@@ -1558,47 +1558,86 @@ class PciRequestUpdateTestCase(test.NoDBTestCase):
     def test_no_pci_request(self):
         provider_mapping = {}
 
-        compute_utils.update_pci_request_spec_with_allocated_interface_name(
+        compute_utils.update_pci_request_with_placement_allocations(
             self.context, mock.sentinel.report_client, [], provider_mapping)
 
-    def test_pci_request_from_flavor(self):
-        pci_requests = [objects.InstancePCIRequest(requester_id=None)]
+    def test_pci_request_from_flavor_no_mapping(self):
+        req = objects.InstancePCIRequest(
+            requester_id=None,
+            request_id=uuids.req1,
+            alias_name="a-dev",
+            spec=[{}],
+        )
+        pci_requests = [req]
+
         provider_mapping = {}
 
-        compute_utils.update_pci_request_spec_with_allocated_interface_name(
+        compute_utils.update_pci_request_with_placement_allocations(
             self.context, mock.sentinel.report_client, pci_requests,
             provider_mapping)
+
+        self.assertNotIn('rp_uuids', req.spec[0])
+
+    def test_pci_request_from_flavor_with_mapping(self):
+        req = objects.InstancePCIRequest(
+            requester_id=None,
+            request_id=uuids.req1,
+            alias_name="a-dev",
+            spec=[{}],
+        )
+        pci_requests = [req]
+
+        provider_mapping = {
+            f"{uuids.req1}-0": [uuids.rp1],
+            f"{uuids.req1}-1": [uuids.rp2],
+        }
+
+        compute_utils.update_pci_request_with_placement_allocations(
+            self.context, mock.sentinel.report_client, pci_requests,
+            provider_mapping)
+
+        self.assertEqual(
+            ",".join({uuids.rp1, uuids.rp2}), req.spec[0]["rp_uuids"]
+        )
 
     def test_pci_request_has_no_mapping(self):
         pci_requests = [objects.InstancePCIRequest(requester_id=uuids.port_1)]
         provider_mapping = {}
 
-        compute_utils.update_pci_request_spec_with_allocated_interface_name(
+        compute_utils.update_pci_request_with_placement_allocations(
             self.context, mock.sentinel.report_client, pci_requests,
             provider_mapping)
 
     def test_pci_request_ambiguous_mapping(self):
-        pci_requests = [objects.InstancePCIRequest(requester_id=uuids.port_1)]
+        pci_requests = [
+            objects.InstancePCIRequest(
+                requester_id=uuids.port_1, request_id=uuids.req1
+            )
+        ]
         provider_mapping = {uuids.port_1: [uuids.rp1, uuids.rp2]}
 
         self.assertRaises(
             exception.AmbiguousResourceProviderForPCIRequest,
             (compute_utils.
-             update_pci_request_spec_with_allocated_interface_name),
+             update_pci_request_with_placement_allocations),
             self.context, mock.sentinel.report_client, pci_requests,
             provider_mapping)
 
     def test_unexpected_provider_name(self):
         report_client = mock.Mock(spec=report.SchedulerReportClient)
         report_client.get_resource_provider_name.return_value = 'unexpected'
-        pci_requests = [objects.InstancePCIRequest(
-            requester_id=uuids.port_1, spec=[{}])]
+        pci_requests = [
+            objects.InstancePCIRequest(
+                requester_id=uuids.port_1, spec=[{}], request_id=uuids.req1
+            )
+        ]
+
         provider_mapping = {uuids.port_1: [uuids.rp1]}
 
         self.assertRaises(
             exception.UnexpectedResourceProviderNameForPCIRequest,
             (compute_utils.
-             update_pci_request_spec_with_allocated_interface_name),
+             update_pci_request_with_placement_allocations),
             self.context, report_client, pci_requests,
             provider_mapping)
 
@@ -1610,11 +1649,14 @@ class PciRequestUpdateTestCase(test.NoDBTestCase):
         report_client = mock.Mock(spec=report.SchedulerReportClient)
         report_client.get_resource_provider_name.return_value = (
             'host:agent:enp0s31f6')
-        pci_requests = [objects.InstancePCIRequest(
-            requester_id=uuids.port_1, spec=[{}],)]
+        pci_requests = [
+            objects.InstancePCIRequest(
+                requester_id=uuids.port_1, spec=[{}], request_id=uuids.req1
+            )
+        ]
         provider_mapping = {uuids.port_1: [uuids.rp1]}
 
-        compute_utils.update_pci_request_spec_with_allocated_interface_name(
+        compute_utils.update_pci_request_with_placement_allocations(
             self.context, report_client, pci_requests, provider_mapping)
 
         report_client.get_resource_provider_name.assert_called_once_with(

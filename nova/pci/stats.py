@@ -69,6 +69,10 @@ class PciDeviceStats(object):
     # allocation_candidates query, so we can ignore them during pool creation
     # and during filtering here
     ignored_tags = ['resource_class', 'traits']
+    # these are metadata keys in the pool and in the request that are matched
+    # specially in _filter_pools_based_on_placement_allocation. So we can
+    # ignore them in the general matching logic.
+    ignored_tags += ['rp_uuid', 'rp_uuids']
 
     def __init__(
         self,
@@ -253,10 +257,10 @@ class PciDeviceStats(object):
         for request in pci_requests:
             count = request.count
 
-            # FIXME(gibi): we need to gather the rp_uuids from the
-            #  InstancePCIRequests once stored there
+            rp_uuids = self._get_rp_uuids_for_request(
+                request=request, provider_mapping=None)
             pools = self._filter_pools(
-                self.pools, request, numa_cells, rp_uuids=set())
+                self.pools, request, numa_cells, rp_uuids=rp_uuids)
 
             # Failed to allocate the required number of devices. Return the
             # devices already allocated during previous iterations back to
@@ -795,14 +799,25 @@ class PciDeviceStats(object):
     ) -> ty.Set[str]:
         """Return the list of RP uuids that are fulfilling the request"""
 
-        if not provider_mapping:
-            # FIXME(gibi): read the mapping from the request
-            return set()
-
         if request.source == objects.InstancePCIRequest.NEUTRON_PORT:
             # TODO(gibi): support neutron based requests in a later cycle
             # set() will signal that any PCI pool can be used for this request
             return set()
+
+        if not provider_mapping:
+            # NOTE(gibi): AFAIK specs is always a list of a single dict
+            # but the object is hard to change retroactively
+            rp_uuids = request.spec[0].get('rp_uuids')
+            if not rp_uuids:
+                # This can happen if [scheduler]pci_in_placement is not
+                # enabled yet
+                # set() will signal that any PCI pool can be used for this
+                # request
+                return set()
+
+            # TODO(gibi): this is baaad but spec is a dict of string so
+            #  the list is serialized
+            return set(rp_uuids.split(','))
 
         # NOTE(gibi): the PCI prefilter generates RequestGroup suffixes from
         # InstancePCIRequests in the form of {request_id}-{count_index}

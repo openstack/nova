@@ -761,7 +761,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     @mock.patch(
         'nova.compute.utils.'
-        'update_pci_request_spec_with_allocated_interface_name')
+        'update_pci_request_with_placement_allocations')
     @mock.patch('nova.scheduler.utils.fill_provider_mapping')
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_call_livem_checks_on_host')

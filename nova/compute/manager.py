@@ -2472,7 +2472,7 @@ class ComputeManager(manager.Manager):
         if provider_mapping:
             try:
                 compute_utils\
-                    .update_pci_request_spec_with_allocated_interface_name(
+                    .update_pci_request_with_placement_allocations(
                         context, self.reportclient,
                         instance.pci_requests.requests, provider_mapping)
             except (exception.AmbiguousResourceProviderForPCIRequest,
@@ -3790,7 +3790,7 @@ class ComputeManager(manager.Manager):
 
             if provider_mapping:
                 compute_utils.\
-                    update_pci_request_spec_with_allocated_interface_name(
+                    update_pci_request_with_placement_allocations(
                         context, self.reportclient,
                         instance.pci_requests.requests, provider_mapping)
 
@@ -5416,7 +5416,7 @@ class ComputeManager(manager.Manager):
         if provider_mapping:
             try:
                 compute_utils.\
-                    update_pci_request_spec_with_allocated_interface_name(
+                    update_pci_request_with_placement_allocations(
                         context, self.reportclient,
                         instance.pci_requests.requests, provider_mapping)
             except (exception.AmbiguousResourceProviderForPCIRequest,
@@ -5521,7 +5521,7 @@ class ComputeManager(manager.Manager):
                                   clean_shutdown)
             except exception.BuildAbortException:
                 # NOTE(gibi): We failed
-                # update_pci_request_spec_with_allocated_interface_name so
+                # update_pci_request_with_placement_allocations so
                 # there is no reason to re-schedule. Just revert the allocation
                 # and fail the migration.
                 with excutils.save_and_reraise_exception():
@@ -5652,7 +5652,7 @@ class ComputeManager(manager.Manager):
                   'host (%s).', self.host, instance=instance)
         self._send_prep_resize_notifications(
             ctxt, instance, fields.NotificationPhase.START, flavor)
-        # TODO(mriedem): update_pci_request_spec_with_allocated_interface_name
+        # TODO(mriedem): update_pci_request_with_placement_allocations
         # should be called here if the request spec has request group mappings,
         # e.g. for things like QoS ports with resource requests. Do it outside
         # the try/except so if it raises BuildAbortException we do not attempt
@@ -6901,7 +6901,7 @@ class ComputeManager(manager.Manager):
             if provider_mappings:
                 update = (
                     compute_utils.
-                        update_pci_request_spec_with_allocated_interface_name)
+                    update_pci_request_with_placement_allocations)
                 update(
                     context, self.reportclient, instance.pci_requests.requests,
                     provider_mappings)
@@ -7986,7 +7986,7 @@ class ComputeManager(manager.Manager):
         try:
             update = (
                 compute_utils.
-                    update_pci_request_spec_with_allocated_interface_name)
+                update_pci_request_with_placement_allocations)
             update(
                 context, self.reportclient, pci_reqs.requests,
                 provider_mappings)
