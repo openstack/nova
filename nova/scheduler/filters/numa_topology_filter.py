@@ -20,7 +20,10 @@ from nova.virt import hardware
 LOG = logging.getLogger(__name__)
 
 
-class NUMATopologyFilter(filters.BaseHostFilter):
+class NUMATopologyFilter(
+    filters.BaseHostFilter,
+    filters.CandidateFilterMixin,
+):
     """Filter on requested NUMA topology."""
 
     # NOTE(sean-k-mooney): In change I0322d872bdff68936033a6f5a54e8296a6fb343
@@ -97,34 +100,19 @@ class NUMATopologyFilter(filters.BaseHostFilter):
             if network_metadata:
                 limits.network_metadata = network_metadata
 
-            good_candidates = []
-            for candidate in host_state.allocation_candidates:
-                LOG.debug(
-                    'NUMATopologyFilter tries allocation candidate: %s, %s',
-                    candidate, requested_topology
-                )
-                instance_topology = (hardware.numa_fit_instance_to_host(
-                    host_topology, requested_topology,
+            good_candidates = self.filter_candidates(
+                host_state,
+                lambda candidate: hardware.numa_fit_instance_to_host(
+                    host_topology,
+                    requested_topology,
                     limits=limits,
                     pci_requests=pci_requests,
                     pci_stats=host_state.pci_stats,
-                    provider_mapping=candidate['mappings'],
-                ))
-                if instance_topology:
-                    LOG.debug(
-                        'NUMATopologyFilter accepted allocation candidate: %s',
-                        candidate
-                    )
-                    good_candidates.append(candidate)
-                else:
-                    LOG.debug(
-                        'NUMATopologyFilter rejected allocation candidate: %s',
-                        candidate
-                    )
+                    provider_mapping=candidate["mappings"],
+                ),
+            )
 
-            host_state.allocation_candidates = good_candidates
-
-            if not host_state.allocation_candidates:
+            if not good_candidates:
                 LOG.debug("%(host)s, %(node)s fails NUMA topology "
                           "requirements. The instance does not fit on this "
                           "host.", {'host': host_state.host,

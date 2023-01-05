@@ -20,7 +20,10 @@ from nova.scheduler import filters
 LOG = logging.getLogger(__name__)
 
 
-class PciPassthroughFilter(filters.BaseHostFilter):
+class PciPassthroughFilter(
+    filters.BaseHostFilter,
+    filters.CandidateFilterMixin,
+):
     """Pci Passthrough Filter based on PCI request
 
     Filter that schedules instances on a host if the host has devices
@@ -54,28 +57,12 @@ class PciPassthroughFilter(filters.BaseHostFilter):
                       {'host_state': host_state, 'requests': pci_requests})
             return False
 
-        good_candidates = []
-        for candidate in host_state.allocation_candidates:
-            LOG.debug(
-                'PciPassthroughFilter tries allocation candidate: %s',
-                candidate
-            )
-            if host_state.pci_stats.support_requests(
-                pci_requests.requests,
-                provider_mapping=candidate['mappings']
-            ):
-                LOG.debug(
-                    'PciPassthroughFilter accepted allocation candidate: %s',
-                    candidate
-                )
-                good_candidates.append(candidate)
-            else:
-                LOG.debug(
-                    'PciPassthroughFilter rejected allocation candidate: %s',
-                    candidate
-                )
-
-        host_state.allocation_candidates = good_candidates
+        good_candidates = self.filter_candidates(
+            host_state,
+            lambda candidate: host_state.pci_stats.support_requests(
+                pci_requests.requests, provider_mapping=candidate["mappings"]
+            ),
+        )
 
         if not good_candidates:
             LOG.debug("%(host_state)s doesn't have the required PCI devices"
