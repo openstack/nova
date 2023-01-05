@@ -949,18 +949,6 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
             )
         )
 
-    @staticmethod
-    def _move_allocation(allocations, from_uuid, to_uuid):
-        allocations[to_uuid] = allocations[from_uuid]
-        del allocations[from_uuid]
-
-    def _move_server_allocation(self, allocations, server_uuid, revert=False):
-        migration_uuid = self.get_migration_uuid_for_instance(server_uuid)
-        if revert:
-            self._move_allocation(allocations, migration_uuid, server_uuid)
-        else:
-            self._move_allocation(allocations, server_uuid, migration_uuid)
-
     def test_heal_single_pci_allocation(self):
         # The fake libvirt will emulate on the host:
         # * one type-PCI in slot 0
