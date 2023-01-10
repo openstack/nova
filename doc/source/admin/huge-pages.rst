@@ -96,7 +96,7 @@ pages at boot time, run:
 
 .. code-block:: console
 
-   # echo 'GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX hugepagesz=2M hugepages=2048 transparent_hugepage=never"' > /etc/default/grub
+   # echo 'GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX hugepagesz=2M hugepages=2048 transparent_hugepage=never"' >> /etc/default/grub
    $ grep GRUB_CMDLINE_LINUX /etc/default/grub
    GRUB_CMDLINE_LINUX="..."
    GRUB_CMDLINE_LINUX="$GRUB_CMDLINE_LINUX hugepagesz=2M hugepages=2048 transparent_hugepage=never"
