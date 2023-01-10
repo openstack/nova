@@ -1040,3 +1040,25 @@ class JobInfoTestCase(test.NoDBTestCase):
 
         mock_stats.assert_called_once_with()
         mock_info.assert_called_once_with()
+
+    @mock.patch.object(fakelibvirt.virDomain, "jobInfo")
+    @mock.patch.object(fakelibvirt.virDomain, "jobStats")
+    def test_job_stats_no_ram(self, mock_stats, mock_info):
+        mock_stats.side_effect = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            "internal error: migration was active, but no RAM info was set",
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR,
+            error_message="migration was active, but no RAM info was set")
+
+        info = self.guest.get_job_info()
+
+        self.assertIsInstance(info, libvirt_guest.JobInfo)
+        self.assertEqual(fakelibvirt.VIR_DOMAIN_JOB_NONE, info.type)
+        self.assertEqual(0, info.time_elapsed)
+        self.assertEqual(0, info.time_remaining)
+        self.assertEqual(0, info.memory_total)
+        self.assertEqual(0, info.memory_processed)
+        self.assertEqual(0, info.memory_remaining)
+
+        mock_stats.assert_called_once_with()
+        self.assertFalse(mock_info.called)
