@@ -1440,6 +1440,22 @@ class Host(object):
         """Compares the given CPU description with the host CPU."""
         return self.get_connection().compareCPU(xmlDesc, flags)
 
+    def compare_hypervisor_cpu(self, xmlDesc, flags=0):
+        """Compares the given CPU description with the CPU provided by
+        the host hypervisor. This is different from the older method,
+        compare_cpu(), which compares a given CPU definition with the
+        host CPU without considering the abilities of the host
+        hypervisor. Except @xmlDesc, rest of all the parameters to
+        compareHypervisorCPU API are optional (libvirt will choose
+        sensible defaults).
+        """
+        emulator = None
+        arch = None
+        machine = None
+        virttype = None
+        return self.get_connection().compareHypervisorCPU(
+            emulator, arch, machine, virttype, xmlDesc, flags)
+
     def is_cpu_control_policy_capable(self):
         """Returns whether kernel configuration CGROUP_SCHED is enabled
 

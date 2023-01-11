@@ -9474,7 +9474,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             cpu_xml = cpu.to_xml()
             LOG.debug("cpu compare xml: %s", cpu_xml, instance=instance)
-            ret = self._host.compare_cpu(cpu_xml)
+            ret = self._host.compare_hypervisor_cpu(cpu_xml)
         except libvirt.libvirtError as e:
             error_code = e.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_SUPPORT:

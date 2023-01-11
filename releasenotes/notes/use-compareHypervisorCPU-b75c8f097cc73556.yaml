@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    Nova's use of libvirt's compareCPU() API has become error-prone as
+    it doesn't take into account host hypervisor's capabilities.  With
+    QEMU >=2.9 and libvirt >= 4.4.0, libvirt will do the right thing in
+    terms of CPU comparison checks via a new replacement API,
+    compareHypervisorCPU().  Nova satisfies the said minimum version
+    requirements of QEMU and libvirt by a good margin.
+
+    This change replaces the usage of older API, compareCPU(), with the
+    new one, compareHypervisorCPU().
