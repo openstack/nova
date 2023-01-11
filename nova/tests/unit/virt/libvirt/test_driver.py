@@ -1320,7 +1320,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertRaises(exception.Invalid, drvr.init_host, "dummyhost")
 
-    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    @mock.patch(
+        'nova.virt.libvirt.host.libvirt.Connection.compareHypervisorCPU')
     def test__check_cpu_compatibility_advance_model(self, mocked_compare):
         mocked_compare.side_effect = (2, 0)
         self.flags(cpu_mode="custom",
@@ -1357,7 +1358,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
-    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    @mock.patch(
+        'nova.virt.libvirt.host.libvirt.Connection.compareHypervisorCPU')
     def test__check_cpu_compatibility_advance_flag(self, mocked_compare):
         mocked_compare.side_effect = (-1, 0)
         self.flags(cpu_mode="custom",
@@ -1368,7 +1370,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(exception.InvalidCPUInfo,
                           drvr.init_host, "dummyhost")
 
-    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    @mock.patch(
+        'nova.virt.libvirt.host.libvirt.Connection.compareHypervisorCPU')
     def test__check_cpu_compatibility_wrong_flag(self, mocked_compare):
         # here, and in the surrounding similar tests, the non-zero error
         # code in the compareCPU() side effect indicates error
@@ -1381,7 +1384,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(exception.InvalidCPUInfo,
                           drvr.init_host, "dummyhost")
 
-    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    @mock.patch(
+        'nova.virt.libvirt.host.libvirt.Connection.compareHypervisorCPU')
     def test__check_cpu_compatibility_enabled_and_disabled_flags(
             self, mocked_compare
     ):
@@ -11162,7 +11166,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU')
     def test_check_can_live_migrate_dest_all_pass_with_block_migration(
         self, mock_cpu, mock_test_file,
     ):
@@ -11201,7 +11205,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU')
     def test_check_can_live_migrate_dest_all_pass_with_over_commit(
         self, mock_cpu, mock_test_file,
     ):
@@ -11241,7 +11245,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU')
     def test_check_can_live_migrate_dest_all_pass_no_block_migration(
         self, mock_cpu, mock_test_file,
     ):
@@ -11279,7 +11283,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
                        return_value='fake')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU')
     def test_check_can_live_migrate_dest_fills_listen_addrs(
         self, mock_cpu, mock_test_file,
     ):
@@ -11311,7 +11315,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
                        return_value='fake')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU',
+    @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU',
                        return_value=1)
     def test_check_can_live_migrate_dest_ensure_serial_adds_not_set(
         self, mock_cpu, mock_test_file,
@@ -11419,7 +11423,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU')
     def test_check_can_live_migrate_dest_no_instance_cpu_info(
         self, mock_cpu, mock_test_file,
     ):
@@ -11460,7 +11464,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU')
     def test_check_can_live_migrate_dest_file_backed(
         self, mock_cpu, mock_test_file,
     ):
@@ -11486,7 +11490,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertTrue(return_value.dst_wants_file_backed_memory)
 
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU')
     def test_check_can_live_migrate_dest_incompatible_cpu_raises(
             self, mock_cpu):
         instance_ref = objects.Instance(**self.test_instance)
@@ -11522,7 +11526,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         for vif in result.vifs:
             self.assertTrue(vif.supports_os_vif_delegation)
 
-    @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(host.Host, 'compare_hypervisor_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_compatible_host_cpu(self, mock_vconfig, mock_compare):
         instance = objects.Instance(**self.test_instance)
@@ -11532,7 +11536,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 instance)
         self.assertIsNone(ret)
 
-    @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(host.Host, 'compare_hypervisor_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_handles_not_supported_error_gracefully(self,
                                                                 mock_vconfig,
@@ -11569,7 +11573,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_AARCH64_CPU_COMPARE))
-    @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(host.Host, 'compare_hypervisor_cpu')
     def test_compare_cpu_host_aarch64(self,
                                       mock_compare,
                                       mock_get_libversion,
@@ -11592,7 +11596,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_compare.assert_called_once_with(caps.host.cpu.to_xml())
         self.assertIsNone(ret)
 
-    @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(host.Host, 'compare_hypervisor_cpu')
     @mock.patch.object(nova.virt.libvirt.LibvirtDriver,
                        '_vcpu_model_to_cpu_config')
     def test_compare_cpu_compatible_guest_cpu(self, mock_vcpu_to_cpu,
@@ -11611,7 +11615,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         ret = conn._compare_cpu(None, None, instance)
         self.assertIsNone(ret)
 
-    @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(host.Host, 'compare_hypervisor_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_invalid_cpuinfo_raises(self, mock_vconfig,
                                                 mock_compare):
@@ -11623,7 +11627,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           jsonutils.dumps(_fake_cpu_info),
                           instance)
 
-    @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(host.Host, 'compare_hypervisor_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_incompatible_cpu_raises(self, mock_vconfig,
                                                  mock_compare):
