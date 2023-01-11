@@ -604,6 +604,11 @@ Request
 .. literalinclude:: ../../doc/api_samples/servers/v2.90/server-action-rebuild.json
    :language: javascript
 
+**Example Rebuild Server (rebuild Action) (v2.94)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.94/server-action-rebuild.json
+   :language: javascript
+
 Response
 --------
 

@@ -225,8 +225,11 @@ service.
         help="""
 Domain name used to configure FQDN for instances.
 
-Configure a fully-qualified domain name for instance hostnames. If unset, only
-the hostname without a domain will be configured.
+Configure a fully-qualified domain name for instance hostnames. The value is
+suffixed to the instance hostname from the database to construct the hostname
+that appears in the metadata API. To disable this behavior (for example in
+order to correctly support microversion's 2.94 FQDN hostnames), set this to the
+empty string.
 
 Possible values:
 

@@ -677,7 +677,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_servers.create_v263, '2.63', '2.66')
     @validation.schema(schema_servers.create_v267, '2.67', '2.73')
     @validation.schema(schema_servers.create_v274, '2.74', '2.89')
-    @validation.schema(schema_servers.create_v290, '2.90')
+    @validation.schema(schema_servers.create_v290, '2.90', '2.93')
+    @validation.schema(schema_servers.create_v294, '2.94')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -906,7 +907,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_servers.update_v20, '2.0', '2.0')
     @validation.schema(schema_servers.update, '2.1', '2.18')
     @validation.schema(schema_servers.update_v219, '2.19', '2.89')
-    @validation.schema(schema_servers.update_v290, '2.90')
+    @validation.schema(schema_servers.update_v290, '2.90', '2.93')
+    @validation.schema(schema_servers.update_v294, '2.94')
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
 
@@ -1147,7 +1149,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_servers.rebuild_v254, '2.54', '2.56')
     @validation.schema(schema_servers.rebuild_v257, '2.57', '2.62')
     @validation.schema(schema_servers.rebuild_v263, '2.63', '2.89')
-    @validation.schema(schema_servers.rebuild_v290, '2.90')
+    @validation.schema(schema_servers.rebuild_v290, '2.90', '2.93')
+    @validation.schema(schema_servers.rebuild_v294, '2.94')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
