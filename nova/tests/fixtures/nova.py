@@ -20,8 +20,10 @@ import collections
 import contextlib
 from contextlib import contextmanager
 import functools
+from importlib.abc import MetaPathFinder
 import logging as std_logging
 import os
+import sys
 import time
 from unittest import mock
 import warnings
@@ -1798,3 +1800,51 @@ class SysFsPoisonFixture(fixtures.Fixture):
         # a bunch of test to fail
         # self.inject_poison("os.path", "exists")
         # self.inject_poison("os", "stat")
+
+
+class ImportModulePoisonFixture(fixtures.Fixture):
+    """Poison imports of modules unsuitable for the test environment.
+
+    Examples are guestfs and libvirt. Ordinarily, these would not be installed
+    in the test environment but if they _are_ present, it can result in
+    actual calls to libvirt, for example, which could cause tests to fail.
+
+    This fixture will inspect module imports and if they are in the disallowed
+    list, it will fail the test with a helpful message about mocking needed in
+    the test.
+    """
+
+    class ForbiddenModules(MetaPathFinder):
+        def __init__(self, test, modules):
+            super().__init__()
+            self.test = test
+            self.modules = modules
+
+        def find_spec(self, fullname, path, target=None):
+            if fullname in self.modules:
+                self.test.fail_message = (
+                    f"This test imports the '{fullname}' module, which it "
+                    f'should not in the test environment. Please add '
+                    f'appropriate mocking to this test.'
+                )
+                raise ImportError(fullname)
+
+    def __init__(self, module_names):
+        self.module_names = module_names
+        self.fail_message = ''
+        if isinstance(module_names, str):
+            self.module_names = set([module_names])
+        sys.meta_path.insert(0, self.ForbiddenModules(self, self.module_names))
+
+    def setUp(self):
+        super().setUp()
+        self.addCleanup(self.cleanup)
+
+    def cleanup(self):
+        # We use a flag and check it during the cleanup phase to fail the test
+        # if needed. This is done because some module imports occur inside of a
+        # try-except block that ignores all exceptions, so raising an exception
+        # there (which is also what self.assert* and self.fail() do underneath)
+        # will not work to cause a failure in the test.
+        if self.fail_message:
+            raise ImportError(self.fail_message)

@@ -40,6 +40,7 @@ class FakeMount(object):
 
 
 class APITestCase(test.NoDBTestCase):
+    @mock.patch('nova.virt.disk.vfs.guestfs.VFSGuestFS', new=mock.Mock())
     def test_can_resize_need_fs_type_specified(self):
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
