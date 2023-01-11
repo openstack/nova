@@ -2356,6 +2356,133 @@ class PCIServersTest(_PCIServersTestBase):
         self.assert_no_pci_healing("test_compute0")
         self.assert_no_pci_healing("test_compute1")
 
+    def test_same_host_resize_with_pci(self):
+        """Start a single compute with 3 PCI devs and resize and instance
+        from one dev to two devs
+        """
+        self.flags(allow_resize_to_same_host=True)
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=3))
+        self.assertPCIDeviceCounts('test_compute0', total=3, free=3)
+        test_compute0_placement_pci_view = {
+            "inventories": {
+                "0000:81:00.0": {self.PCI_RC: 1},
+                "0000:81:01.0": {self.PCI_RC: 1},
+                "0000:81:02.0": {self.PCI_RC: 1},
+            },
+            "traits": {
+                "0000:81:00.0": [],
+                "0000:81:01.0": [],
+                "0000:81:02.0": [],
+            },
+            "usages": {
+                "0000:81:00.0": {self.PCI_RC: 0},
+                "0000:81:01.0": {self.PCI_RC: 0},
+                "0000:81:02.0": {self.PCI_RC: 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        # Boot a server with a single PCI device.
+        # To stabilize the test we reserve 81.01 and 81.02 in placement so
+        # we can be sure that the instance will use 81.00, otherwise the
+        # allocation will be random between 00, 01, and 02
+        self._reserve_placement_resource(
+            "test_compute0_0000:81:01.0", self.PCI_RC, 1)
+        self._reserve_placement_resource(
+            "test_compute0_0000:81:02.0", self.PCI_RC, 1)
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
+        pci_flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(flavor_id=pci_flavor_id, networks='none')
+
+        self.assertPCIDeviceCounts('test_compute0', total=3, free=2)
+        test_compute0_placement_pci_view[
+            "usages"]["0000:81:00.0"][self.PCI_RC] = 1
+        test_compute0_placement_pci_view[
+            "allocations"][server['id']] = {"0000:81:00.0": {self.PCI_RC: 1}}
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+        # remove the reservations, so we can resize on the same host and
+        # consume 01 and 02
+        self._reserve_placement_resource(
+            "test_compute0_0000:81:01.0", self.PCI_RC, 0)
+        self._reserve_placement_resource(
+            "test_compute0_0000:81:02.0", self.PCI_RC, 0)
+
+        # Resize the server to use 2 PCI devices
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:2'}
+        pci_flavor_id = self._create_flavor(extra_spec=extra_spec)
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off',
+            return_value='{}',
+        ):
+            self._resize_server(server, pci_flavor_id)
+
+        self.assertPCIDeviceCounts('test_compute0', total=3, free=0)
+        # the source host side of the allocation is now held by the migration
+        # UUID
+        self._move_server_allocation(
+            test_compute0_placement_pci_view["allocations"], server['id'])
+        # but we have the dest host side of the allocations on the same host
+        test_compute0_placement_pci_view[
+            "usages"]["0000:81:01.0"][self.PCI_RC] = 1
+        test_compute0_placement_pci_view[
+            "usages"]["0000:81:02.0"][self.PCI_RC] = 1
+        test_compute0_placement_pci_view["allocations"][server['id']] = {
+            "0000:81:01.0": {self.PCI_RC: 1},
+            "0000:81:02.0": {self.PCI_RC: 1},
+        }
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        # revert the resize so the instance should go back to use a single
+        # device
+        self._revert_resize(server)
+        self.assertPCIDeviceCounts('test_compute0', total=3, free=2)
+        # the migration allocation is moved back to the instance UUID
+        self._move_server_allocation(
+            test_compute0_placement_pci_view["allocations"],
+            server["id"],
+            revert=True,
+        )
+        # and the "dest" side of the allocation is dropped
+        test_compute0_placement_pci_view[
+            "usages"]["0000:81:01.0"][self.PCI_RC] = 0
+        test_compute0_placement_pci_view[
+            "usages"]["0000:81:02.0"][self.PCI_RC] = 0
+        test_compute0_placement_pci_view["allocations"][server['id']] = {
+            "0000:81:00.0": {self.PCI_RC: 1},
+        }
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        # resize again but now confirm the same host resize and assert that
+        # only the new flavor usage remains
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off',
+            return_value='{}',
+        ):
+            self._resize_server(server, pci_flavor_id)
+        self._confirm_resize(server)
+
+        self.assertPCIDeviceCounts('test_compute0', total=3, free=1)
+        test_compute0_placement_pci_view["usages"] = {
+            "0000:81:01.0": {self.PCI_RC: 1},
+            "0000:81:02.0": {self.PCI_RC: 1},
+        }
+        test_compute0_placement_pci_view["allocations"][
+            server['id']] = {self.PCI_RC: 1}
+        test_compute0_placement_pci_view["allocations"][server['id']] = {
+            "0000:81:01.0": {self.PCI_RC: 1},
+            "0000:81:02.0": {self.PCI_RC: 1},
+        }
+        self.assert_no_pci_healing("test_compute0")
+
     def _confirm_resize(self, server, host='host1'):
         # NOTE(sbauza): Unfortunately, _cleanup_resize() in libvirt checks the
         # host option to know the source hostname but given we have a global
