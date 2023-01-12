@@ -79,7 +79,8 @@ Possible Values:
     ``vendor_id`` and ``product_id`` values of the alias in the form of
     ``CUSTOM_PCI_{vendor_id}_{product_id}``. The ``resource_class`` requested
     in the alias is matched against the ``resource_class`` defined in the
-    ``[pci]device_spec``.
+    ``[pci]device_spec``. This field can only be used only if
+    ``[filter_scheduler]pci_in_placement`` is enabled.
 
   ``traits``
     An optional comma separated list of Placement trait names requested to be
@@ -91,7 +92,8 @@ Possible Values:
     prefixed. The maximum allowed length of a trait name is 255 character
     including the prefix. Every trait in ``traits`` requested in the alias
     ensured to be in the list of traits provided in the ``traits`` field of
-    the ``[pci]device_spec`` when scheduling the request.
+    the ``[pci]device_spec`` when scheduling the request. This field can only
+    be used only if ``[filter_scheduler]pci_in_placement`` is enabled.
 
 * Supports multiple aliases by repeating the option (not by specifying
   a list value)::

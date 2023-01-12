@@ -552,7 +552,7 @@ class PciDeviceStats(object):
             # by it. This could happen if the instance only has neutron port
             # based InstancePCIRequest as that is currently not having
             # placement allocation (except for QoS ports, but that handled in a
-            # separate codepath) or if the [scheduler]pci_in_placement
+            # separate codepath) or if the [filter_scheduler]pci_in_placement
             # configuration option is not enabled in the scheduler.
             return pools
 
@@ -563,15 +563,15 @@ class PciDeviceStats(object):
                 # NOTE(gibi): There can be pools without rp_uuid field if the
                 # [pci]report_in_placement is not enabled for a compute with
                 # viable PCI devices. We have a non-empty rp_uuids, so we know
-                # that the [scheduler]pci_in_placement is enabled. This is a
-                # configuration error.
+                # that the [filter_scheduler]pci_in_placement is enabled. This
+                # is a configuration error.
                 LOG.warning(
                     "The PCI pool %s isn't mapped to an RP UUID but the "
                     "scheduler is configured to create PCI allocations in "
                     "placement. This should not happen. Please enable "
                     "[pci]report_in_placement on all compute hosts before "
-                    "enabling [scheduler]pci_in_placement in the scheduler. "
-                    "This pool is ignored now.", pool)
+                    "enabling [filter_scheduler]pci_in_placement in the "
+                    "scheduler. This pool is ignored now.", pool)
                 continue
 
             if rp_uuid in rp_uuids:
@@ -809,7 +809,7 @@ class PciDeviceStats(object):
             # but the object is hard to change retroactively
             rp_uuids = request.spec[0].get('rp_uuids')
             if not rp_uuids:
-                # This can happen if [scheduler]pci_in_placement is not
+                # This can happen if [filter_scheduler]pci_in_placement is not
                 # enabled yet
                 # set() will signal that any PCI pool can be used for this
                 # request

@@ -1616,15 +1616,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
 class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
     def setUp(self):
         super().setUp()
-        # TODO(gibi): replace this with setting the [scheduler]pci_in_placement
-        # confing to True once that config is added
-        self.mock_pci_in_placement_enabled = self.useFixture(
-            fixtures.MockPatch(
-                'nova.objects.request_spec.RequestSpec.'
-                '_pci_in_placement_enabled',
-                return_value=True
-            )
-        ).mock
+        self.flags(group='filter_scheduler', pci_in_placement=True)
 
     def test_boot_with_custom_rc_and_traits(self):
         # The fake libvirt will emulate on the host:
@@ -1737,12 +1729,13 @@ class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
         self.assert_no_pci_healing("compute1")
 
     def test_device_claim_consistent_with_placement_allocation(self):
-        """As soon as [scheduler]pci_in_placement is enabled the nova-scheduler
-        will allocate PCI devices in placement. Then on the nova-compute side
-        the PCI claim will also allocate PCI devices in the nova DB. This test
-        will create a situation where the two allocation could contradict and
-        observes that in a contradicting situation the PCI claim will fail
-        instead of allocating a device that is not allocated in placement.
+        """As soon as [filter_scheduler]pci_in_placement is enabled the
+        nova-scheduler will allocate PCI devices in placement. Then on the
+        nova-compute side the PCI claim will also allocate PCI devices in the
+        nova DB. This test will create a situation where the two allocation
+        could contradict and observes that in a contradicting situation the PCI
+        claim will fail instead of allocating a device that is not allocated in
+        placement.
 
         For the contradiction to happen we need two PCI devices that looks
         different from placement perspective than from the nova DB perspective.

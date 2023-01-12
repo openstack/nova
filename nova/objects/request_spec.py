@@ -22,6 +22,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
 from nova.compute import pci_placement_translator
+import nova.conf
 from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
 from nova import exception
@@ -30,6 +31,7 @@ from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination',
@@ -487,16 +489,8 @@ class RequestSpec(base.NovaObject):
     def _traits_from_request(spec: ty.Dict[str, ty.Any]) -> ty.Set[str]:
         return pci_placement_translator.get_traits(spec.get("traits", ""))
 
-    # This is here temporarily until the PCI placement scheduling is under
-    # implementation. When that is done there will be a config option
-    # [scheduler]pci_in_placement to configure this. Now we add this as a
-    # function to allow tests to selectively enable the WIP feature
-    @staticmethod
-    def _pci_in_placement_enabled():
-        return False
-
     def generate_request_groups_from_pci_requests(self):
-        if not self._pci_in_placement_enabled():
+        if not CONF.filter_scheduler.pci_in_placement:
             return False
 
         for pci_request in self.pci_requests.requests:

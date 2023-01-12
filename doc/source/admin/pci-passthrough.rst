@@ -65,6 +65,10 @@ capabilities.
   :oslo.config:option:`pci.device_spec` configuration that uses the
   ``devname`` field.
 
+.. versionchanged:: 27.0.0 (2023.1 Antelope):
+   Nova provides Placement based scheduling support for servers with flavor
+   based PCI requests. This support is disable by default.
+
 Enabling PCI passthrough
 ------------------------
 
@@ -441,6 +445,24 @@ a device with any allocation is reconfigured in a way that an allocated PF is
 removed and VFs from the same PF is configured (or vice versa) then
 nova-compute will refuse to start as it would create a situation where both
 the PF and its VFs are made available for consumption.
+
+Since nova 27.0.0 (2023.1 Antelope) scheduling and allocation of PCI devices
+in Placement can also be enabled via
+:oslo.config:option:`filter_scheduler.pci_in_placement`. Please note that this
+should only be enabled after all the computes in the system is configured to
+report PCI inventory in Placement via
+enabling :oslo.config:option:`pci.report_in_placement`. In Antelope flavor
+based PCI requests are support but Neutron port base PCI requests are not
+handled in Placement.
+
+If you are upgrading from an earlier version with already existing servers with
+PCI usage then you must enable :oslo.config:option:`pci.report_in_placement`
+first on all your computes having PCI allocations and then restart the
+nova-compute service, before you enable
+:oslo.config:option:`filter_scheduler.pci_in_placement`. The compute service
+will heal the missing PCI allocation in placement during startup and will
+continue healing missing allocations for future servers until the scheduling
+support is enabled.
 
 If a flavor requests multiple ``type-VF`` devices via
 :nova:extra-spec:`pci_passthrough:alias` then it is important to consider the
