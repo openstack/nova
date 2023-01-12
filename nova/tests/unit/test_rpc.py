@@ -214,20 +214,20 @@ class TestRPC(test.NoDBTestCase):
     @mock.patch.object(rpc, 'TRANSPORT')
     @mock.patch.object(rpc, 'profiler', None)
     @mock.patch.object(rpc, 'RequestContextSerializer')
-    @mock.patch.object(messaging, 'RPCClient')
-    def test_get_client(self, mock_client, mock_ser, mock_TRANSPORT):
+    @mock.patch.object(messaging, 'get_rpc_client')
+    def test_get_client(self, mock_get, mock_ser, mock_TRANSPORT):
         tgt = mock.Mock()
         ser = mock.Mock()
-        mock_client.return_value = 'client'
+        mock_get.return_value = 'client'
         mock_ser.return_value = ser
 
         client = rpc.get_client(tgt, version_cap='1.0', serializer='foo')
 
         mock_ser.assert_called_once_with('foo')
-        mock_client.assert_called_once_with(mock_TRANSPORT,
-                                            tgt, version_cap='1.0',
-                                            call_monitor_timeout=None,
-                                            serializer=ser)
+        mock_get.assert_called_once_with(mock_TRANSPORT,
+                                         tgt, version_cap='1.0',
+                                         call_monitor_timeout=None,
+                                         serializer=ser)
         self.assertEqual('client', client)
 
     @mock.patch.object(rpc, 'TRANSPORT')
@@ -253,21 +253,21 @@ class TestRPC(test.NoDBTestCase):
     @mock.patch.object(rpc, 'TRANSPORT')
     @mock.patch.object(rpc, 'profiler', mock.Mock())
     @mock.patch.object(rpc, 'ProfilerRequestContextSerializer')
-    @mock.patch.object(messaging, 'RPCClient')
-    def test_get_client_profiler_enabled(self, mock_client, mock_ser,
+    @mock.patch.object(messaging, 'get_rpc_client')
+    def test_get_client_profiler_enabled(self, mock_get, mock_ser,
             mock_TRANSPORT):
         tgt = mock.Mock()
         ser = mock.Mock()
-        mock_client.return_value = 'client'
+        mock_get.return_value = 'client'
         mock_ser.return_value = ser
 
         client = rpc.get_client(tgt, version_cap='1.0', serializer='foo')
 
         mock_ser.assert_called_once_with('foo')
-        mock_client.assert_called_once_with(mock_TRANSPORT,
-                                            tgt, version_cap='1.0',
-                                            call_monitor_timeout=None,
-                                            serializer=ser)
+        mock_get.assert_called_once_with(mock_TRANSPORT,
+                                         tgt, version_cap='1.0',
+                                         call_monitor_timeout=None,
+                                         serializer=ser)
         self.assertEqual('client', client)
 
     @mock.patch.object(rpc, 'TRANSPORT')
@@ -432,11 +432,11 @@ class TestProfilerRequestContextSerializer(test.NoDBTestCase):
 
 
 class TestClientRouter(test.NoDBTestCase):
-    @mock.patch('oslo_messaging.RPCClient')
-    def test_by_instance(self, mock_rpcclient):
+    @mock.patch('oslo_messaging.get_rpc_client')
+    def test_by_instance(self, mock_get):
         default_client = mock.Mock()
         cell_client = mock.Mock()
-        mock_rpcclient.return_value = cell_client
+        mock_get.return_value = cell_client
         ctxt = mock.Mock()
         ctxt.mq_connection = mock.sentinel.transport
 
@@ -444,7 +444,7 @@ class TestClientRouter(test.NoDBTestCase):
         client = router.client(ctxt)
 
         # verify a client was created by ClientRouter
-        mock_rpcclient.assert_called_once_with(
+        mock_get.assert_called_once_with(
                 mock.sentinel.transport, default_client.target,
                 version_cap=default_client.version_cap,
                 call_monitor_timeout=default_client.call_monitor_timeout,
@@ -452,11 +452,11 @@ class TestClientRouter(test.NoDBTestCase):
         # verify cell client was returned
         self.assertEqual(cell_client, client)
 
-    @mock.patch('oslo_messaging.RPCClient')
-    def test_by_instance_untargeted(self, mock_rpcclient):
+    @mock.patch('oslo_messaging.get_rpc_client')
+    def test_by_instance_untargeted(self, mock_get):
         default_client = mock.Mock()
         cell_client = mock.Mock()
-        mock_rpcclient.return_value = cell_client
+        mock_get.return_value = cell_client
         ctxt = mock.Mock()
         ctxt.mq_connection = None
 
@@ -464,7 +464,7 @@ class TestClientRouter(test.NoDBTestCase):
         client = router.client(ctxt)
 
         self.assertEqual(router.default_client, client)
-        self.assertFalse(mock_rpcclient.called)
+        self.assertFalse(mock_get.called)
 
 
 class TestIsNotificationsEnabledDecorator(test.NoDBTestCase):

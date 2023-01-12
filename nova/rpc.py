@@ -204,11 +204,9 @@ def get_client(target, version_cap=None, serializer=None,
     else:
         serializer = RequestContextSerializer(serializer)
 
-    return messaging.RPCClient(TRANSPORT,
-                               target,
-                               version_cap=version_cap,
-                               serializer=serializer,
-                               call_monitor_timeout=call_monitor_timeout)
+    return messaging.get_rpc_client(TRANSPORT, target,
+        version_cap=version_cap, serializer=serializer,
+        call_monitor_timeout=call_monitor_timeout)
 
 
 def get_server(target, endpoints, serializer=None):
@@ -436,9 +434,9 @@ class ClientRouter(periodic_task.PeriodicTasks):
         transport = context.mq_connection
         if transport:
             cmt = self.default_client.call_monitor_timeout
-            return messaging.RPCClient(transport, self.target,
-                                       version_cap=self.version_cap,
-                                       serializer=self.serializer,
-                                       call_monitor_timeout=cmt)
+            return messaging.get_rpc_client(transport, self.target,
+                version_cap=self.version_cap,
+                serializer=self.serializer,
+                call_monitor_timeout=cmt)
         else:
             return self.default_client
