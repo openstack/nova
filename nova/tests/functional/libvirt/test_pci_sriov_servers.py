@@ -2941,6 +2941,67 @@ class PCIServersTest(_PCIServersTestBase):
         self.assert_no_pci_healing("test_compute0")
         self.assert_no_pci_healing("test_compute1")
 
+    def test_multi_create(self):
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=3))
+        self.assertPCIDeviceCounts('test_compute0', total=3, free=3)
+        test_compute0_placement_pci_view = {
+            "inventories": {
+                "0000:81:00.0": {self.PCI_RC: 1},
+                "0000:81:01.0": {self.PCI_RC: 1},
+                "0000:81:02.0": {self.PCI_RC: 1},
+            },
+            "traits": {
+                "0000:81:00.0": [],
+                "0000:81:01.0": [],
+                "0000:81:02.0": [],
+            },
+            "usages": {
+                "0000:81:00.0": {self.PCI_RC: 0},
+                "0000:81:01.0": {self.PCI_RC: 0},
+                "0000:81:02.0": {self.PCI_RC: 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
+        pci_flavor_id = self._create_flavor(extra_spec=extra_spec)
+        body = self._build_server(flavor_id=pci_flavor_id, networks='none')
+        body.update(
+            {
+                "min_count": "2",
+            }
+        )
+        self.api.post_server({'server': body})
+
+        servers = self.api.get_servers(detail=False)
+        for server in servers:
+            self._wait_for_state_change(server, 'ACTIVE')
+
+        self.assertEqual(2, len(servers))
+        self.assertPCIDeviceCounts('test_compute0', total=3, free=1)
+        # we have no way to influence which instance takes which device, so
+        # we need to look at the nova DB to properly assert the placement
+        # allocation
+        devices = objects.PciDeviceList.get_by_compute_node(
+            self.ctxt,
+            objects.ComputeNode.get_by_nodename(self.ctxt, 'test_compute0').id,
+        )
+        for dev in devices:
+            if dev.instance_uuid:
+                test_compute0_placement_pci_view["usages"][
+                    dev.address][self.PCI_RC] = 1
+                test_compute0_placement_pci_view["allocations"][
+                    dev.instance_uuid] = {dev.address: {self.PCI_RC: 1}}
+
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        self.assert_no_pci_healing("test_compute0")
+
 
 class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
 
