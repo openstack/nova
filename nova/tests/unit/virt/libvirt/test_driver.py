@@ -817,6 +817,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "Driver capabilities for 'supports_socket_pci_numa_affinity' "
             "is invalid",
         )
+        self.assertFalse(
+            drvr.capabilities['supports_ephemeral_encryption'],
+            "Driver capabilities for 'supports_ephemeral_encryption' "
+            "is invalid",
+        )
+        self.assertFalse(
+            drvr.capabilities['supports_ephemeral_encryption_luks'],
+            "Driver capabilities for 'supports_ephemeral_encryption_luks' "
+            " is invalid",
+        )
 
     def test_driver_capabilities_qcow2_with_rbd(self):
         self.flags(images_type='rbd', group='libvirt')
