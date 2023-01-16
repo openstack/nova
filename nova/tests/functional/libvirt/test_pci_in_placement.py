@@ -1917,3 +1917,88 @@ class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
         self.assert_placement_pci_view(
             "compute1", **compute1_expected_placement_view)
         self.assert_no_pci_healing("compute1")
+
+    def test_3vfs_asymmetric_split_between_pfs(self):
+        # The fake libvirt will emulate on the host:
+        # * two type-PFs in slot 0, 1 with 2 VFs each
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=2, num_vfs=4)
+        # make all 4 VFs available
+        device_spec = self._to_list_of_json_str(
+            [
+                {
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                    "resource_class": "MY_VF",
+                    "traits": "blue",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        compute1_expected_placement_view = {
+            "inventories": {
+                "0000:81:00.0": {"CUSTOM_MY_VF": 2},
+                "0000:81:01.0": {"CUSTOM_MY_VF": 2},
+            },
+            "traits": {
+                "0000:81:00.0": [
+                    "CUSTOM_BLUE",
+                ],
+                "0000:81:01.0": [
+                    "CUSTOM_BLUE",
+                ],
+            },
+            "usages": {
+                "0000:81:00.0": {"CUSTOM_MY_VF": 0},
+                "0000:81:01.0": {"CUSTOM_MY_VF": 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self.assertPCIDeviceCounts('compute1', total=4, free=4)
+
+        pci_alias_vf = {
+            "resource_class": "MY_VF",
+            "traits": "blue",
+            "name": "a-vf",
+        }
+        self.flags(
+            group="pci",
+            alias=self._to_list_of_json_str([pci_alias_vf]),
+        )
+
+        # Boot an instance requesting three VFs. The 3 VFs can be split between
+        # the two PFs two ways: 2 from 81.00 and 1 from 81.01, or 1 from 81.00
+        # and 2 from 81.01.
+        # Let's block the first way in placement by reserving 1 device from
+        # 81.00
+        self._reserve_placement_resource(
+            "compute1_0000:81:00.0", "CUSTOM_MY_VF", 1)
+        extra_spec = {"pci_passthrough:alias": "a-vf:3"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        # We expect this to fit, but it does not. The pool filtering logic
+        # only considers which pools can be used based on the allocation
+        # candidate, but does not consider how much device needs to be used
+        # from which pool. So the PCI claim logic sees both PF pools as usable
+        # but allocates 2 dev from 81:00 in nova. Then the PCI allocation
+        # healing logic sees the difference between the placement allocation
+        # and the nova allocation and fails when trys to correct it.
+        self._create_server(
+            flavor_id=flavor_id, networks=[], expected_state="ERROR"
+        )
+        # server_3vf = self._create_server(flavor_id=flavor_id, networks=[])
+        #
+        # self.assertPCIDeviceCounts('compute1', total=4, free=1)
+        # compute1_expected_placement_view["usages"] = {
+        #     "0000:81:00.0": {"CUSTOM_MY_VF": 1},
+        #     "0000:81:01.0": {"CUSTOM_MY_VF": 2},
+        # }
+        # compute1_expected_placement_view["allocations"][server_3vf["id"]] = {
+        #     "0000:81:00.0": {"CUSTOM_MY_VF": 1},
+        #     "0000:81:01.0": {"CUSTOM_MY_VF": 2},
+        # }
+        # self.assert_placement_pci_view(
+        #     "compute1", **compute1_expected_placement_view)
+        # self.assert_no_pci_healing("compute1")
