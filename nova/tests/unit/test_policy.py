@@ -303,10 +303,10 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(RealRolePolicyTestCase, self).setUp()
         self.policy = self.useFixture(nova_fixtures.RealPolicyFixture())
-        self.non_admin_context = context.RequestContext('fake', 'fake',
-                                                        roles=['member'])
-        self.admin_context = context.RequestContext('fake', 'fake', True,
-                                                     roles=['admin', 'member'])
+        self.non_admin_context = context.RequestContext(
+            'fake', 'fake', roles=['member', 'reader'])
+        self.admin_context = context.RequestContext(
+            'fake', 'fake', True, roles=['admin', 'member', 'reader'])
         self.target = {}
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 
@@ -387,6 +387,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-hypervisors:search",
 "os_compute_api:os-hypervisors:servers",
 "os_compute_api:limits:other_project",
+"os_compute_api:os-flavor-access",
 )
 
         self.admin_or_owner_rules = (
@@ -440,7 +441,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-remote-consoles",
 "os_compute_api:os-deferred-delete:restore",
 "os_compute_api:os-deferred-delete:force",
-"os_compute_api:os-flavor-access",
 "os_compute_api:os-flavor-extra-specs:index",
 "os_compute_api:os-flavor-extra-specs:show",
 "os_compute_api:os-floating-ips:add",

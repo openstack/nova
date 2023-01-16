@@ -87,7 +87,8 @@ class ServerGroupTestV21(test.NoDBTestCase):
     def setUp(self):
         super(ServerGroupTestV21, self).setUp()
         self._setup_controller()
-        self.req = fakes.HTTPRequest.blank('')
+        self.member_req = fakes.HTTPRequest.member_req('')
+        self.reader_req = fakes.HTTPRequest.reader_req('')
         self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.foo_req = fakes.HTTPRequest.blank('', project_id='foo')
         self.policy = self.useFixture(fixtures.RealPolicyFixture())
@@ -114,20 +115,20 @@ class ServerGroupTestV21(test.NoDBTestCase):
     def test_create_server_group_with_no_policies(self):
         sgroup = server_group_template()
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
     def _create_server_group_normal(self, policies=None, policy=None,
                                     rules=None):
         sgroup = server_group_template()
         sgroup['policies'] = policies
-        res_dict = self.controller.create(self.req,
+        res_dict = self.controller.create(self.member_req,
                                           body={'server_group': sgroup})
         self.assertEqual(res_dict['server_group']['name'], 'test')
         self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
         self.assertEqual(res_dict['server_group']['policies'], policies)
 
     def test_create_server_group_with_new_policy_before_264(self):
-        req = fakes.HTTPRequest.blank('', version='2.63')
+        req = fakes.HTTPRequest.member_req('', version='2.63')
         policy = 'anti-affinity'
         rules = {'max_server_per_host': 3}
         # 'policy' isn't an acceptable request key before 2.64
@@ -162,7 +163,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.controller.create(self.admin_req, body={'server_group': sgroup})
 
         # test as non-admin
-        self.controller.create(self.req, body={'server_group': sgroup})
+        self.controller.create(self.member_req, body={'server_group': sgroup})
 
     def _create_instance(self, ctx, cell):
         with context.target_cell(ctx, cell) as cctx:
@@ -289,7 +290,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         path = path or '/os-server-groups?all_projects=True'
         if limited:
             path += limited
-        req = fakes.HTTPRequest.blank(path, version=api_version)
+        reader_req = fakes.HTTPRequest.reader_req(path, version=api_version)
         admin_req = fakes.HTTPRequest.blank(path, use_admin_context=True,
                                             version=api_version)
 
@@ -298,7 +299,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.assertEqual(all, res_dict)
 
         # test as non-admin
-        res_dict = self.controller.index(req)
+        res_dict = self.controller.index(reader_req)
         self.assertEqual(tenant_specific, res_dict)
 
     @mock.patch('nova.objects.InstanceGroupList.get_by_project_id')
@@ -347,25 +348,27 @@ class ServerGroupTestV21(test.NoDBTestCase):
         return_get_by_project = return_server_groups()
         mock_get_by_project.return_value = return_get_by_project
         path = '/os-server-groups'
-        req = fakes.HTTPRequest.blank(path, version=api_version)
+        req = fakes.HTTPRequest.reader_req(path, version=api_version)
         res_dict = self.controller.index(req)
         self.assertEqual(expected, res_dict)
 
     def test_display_members(self):
         ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
         (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
-        res_dict = self.controller.show(self.req, ig_uuid)
+        res_dict = self.controller.show(self.reader_req, ig_uuid)
         result_members = res_dict['server_group']['members']
         self.assertEqual(3, len(result_members))
         for member in members:
             self.assertIn(member, result_members)
 
     def test_display_members_with_nonexistent_group(self):
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show, self.req, uuidsentinel.group)
+        self.assertRaises(
+            webob.exc.HTTPNotFound,
+            self.controller.show, self.reader_req, uuidsentinel.group)
 
     def test_display_active_members_only(self):
-        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
+        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID,
+                                     roles=['member', 'reader'])
         (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
 
         # delete an instance
@@ -379,7 +382,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.assertRaises(exception.InstanceNotFound,
                           objects.Instance.get_by_uuid,
                           ctx, instances[1].uuid)
-        res_dict = self.controller.show(self.req, ig_uuid)
+        res_dict = self.controller.show(self.reader_req, ig_uuid)
         result_members = res_dict['server_group']['members']
         # check that only the active instance is displayed
         self.assertEqual(2, len(result_members))
@@ -393,7 +396,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.controller.show(self.admin_req, ig_uuid)
 
         # test as non-admin, same project
-        self.controller.show(self.req, ig_uuid)
+        self.controller.show(self.reader_req, ig_uuid)
 
         # test as non-admin, different project
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -406,7 +409,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
 
         sgroup = server_group_template(name='good* $%name',
                                        policies=['affinity'])
-        res_dict = self.controller.create(self.req,
+        res_dict = self.controller.create(self.member_req,
                                           body={'server_group': sgroup})
         self.assertEqual(res_dict['server_group']['name'], 'good* $%name')
 
@@ -414,99 +417,99 @@ class ServerGroupTestV21(test.NoDBTestCase):
         # blank name
         sgroup = server_group_template(name='', policies=['test_policy'])
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # name with length 256
         sgroup = server_group_template(name='1234567890' * 26,
                                        policies=['test_policy'])
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # non-string name
         sgroup = server_group_template(name=12, policies=['test_policy'])
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # name with leading spaces
         sgroup = server_group_template(name='  leading spaces',
                                        policies=['test_policy'])
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # name with trailing spaces
         sgroup = server_group_template(name='trailing space ',
                                        policies=['test_policy'])
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # name with all spaces
         sgroup = server_group_template(name='    ',
                                        policies=['test_policy'])
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # name with unprintable character
         sgroup = server_group_template(name='bad\x00name',
                                        policies=['test_policy'])
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # name with out of range char U0001F4A9
         sgroup = server_group_template(name=u"\U0001F4A9",
                                        policies=['affinity'])
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
     def test_create_server_group_with_illegal_policies(self):
         # blank policy
         sgroup = server_group_template(name='fake-name', policies='')
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # policy as integer
         sgroup = server_group_template(name='fake-name', policies=7)
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # policy as string
         sgroup = server_group_template(name='fake-name', policies='invalid')
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
         # policy as None
         sgroup = server_group_template(name='fake-name', policies=None)
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
     def test_create_server_group_conflicting_policies(self):
         sgroup = server_group_template()
         policies = ['anti-affinity', 'affinity']
         sgroup['policies'] = policies
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
     def test_create_server_group_with_duplicate_policies(self):
         sgroup = server_group_template()
         policies = ['affinity', 'affinity']
         sgroup['policies'] = policies
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
     def test_create_server_group_not_supported(self):
         sgroup = server_group_template()
         policies = ['storage-affinity', 'anti-affinity', 'rack-affinity']
         sgroup['policies'] = policies
         self.assertRaises(self.validation_error, self.controller.create,
-                          self.req, body={'server_group': sgroup})
+                          self.member_req, body={'server_group': sgroup})
 
     def test_create_server_group_with_no_body(self):
         self.assertRaises(self.validation_error,
-                          self.controller.create, self.req, body=None)
+                          self.controller.create, self.member_req, body=None)
 
     def test_create_server_group_with_no_server_group(self):
         body = {'no-instanceGroup': None}
         self.assertRaises(self.validation_error,
-                          self.controller.create, self.req, body=body)
+                          self.controller.create, self.member_req, body=body)
 
     def test_list_server_group_by_tenant(self):
         self._test_list_server_group_by_tenant(
@@ -528,7 +531,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.controller.index(self.admin_req)
 
         # test as non-admin
-        self.controller.index(self.req)
+        self.controller.index(self.reader_req)
 
     def test_list_server_group_multiple_param(self):
         self._test_list_server_group(api_version=self.wsgi_api_version,
@@ -598,7 +601,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.stub_out('nova.objects.InstanceGroup.get_by_uuid',
                       return_server_group)
 
-        resp = self.controller.delete(self.req, uuidsentinel.sg1_id)
+        resp = self.controller.delete(self.member_req, uuidsentinel.sg1_id)
         mock_destroy.assert_called_once_with()
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
@@ -611,7 +614,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
 
     def test_delete_non_existing_server_group(self):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
-                          self.req, 'invalid')
+                          self.member_req, 'invalid')
 
     def test_delete_server_group_rbac_default(self):
         ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
@@ -622,7 +625,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
 
         # test as non-admin
         ig_uuid = self._create_groups_and_instances(ctx)[0]
-        self.controller.delete(self.req, ig_uuid)
+        self.controller.delete(self.member_req, ig_uuid)
 
 
 class ServerGroupTestV213(ServerGroupTestV21):
@@ -649,7 +652,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
 
     def _create_server_group_normal(self, policies=None, policy=None,
                                     rules=None):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.member_req('', version=self.wsgi_api_version)
         sgroup = server_group_template()
         sgroup['rules'] = rules or {}
         sgroup['policy'] = policy
@@ -674,7 +677,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
             self.assertEqual(res_dict['server_group']['rules'], {})
 
     def _display_server_group(self, uuid):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.reader_req('', version=self.wsgi_api_version)
         group = self.controller.show(req, uuid)
         return group
 
@@ -690,7 +693,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
         self.assertEqual(res_dict['server_group']['rules'], rules)
 
     def test_create_affinity_server_group_with_invalid_policy(self):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.member_req('', version=self.wsgi_api_version)
         sgroup = server_group_template(policy='affinity',
                                        rules={'max_server_per_host': 3})
         result = self.assertRaises(webob.exc.HTTPBadRequest,
@@ -698,7 +701,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
         self.assertIn("Only anti-affinity policy supports rules", str(result))
 
     def test_create_anti_affinity_server_group_with_invalid_rules(self):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.member_req('', version=self.wsgi_api_version)
         # A negative test for key is unknown, the value is not positive
         # and not integer
         invalid_rules = [{'unknown_key': '3'},
@@ -718,7 +721,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
                 return_value=32)
     def test_create_server_group_with_low_version_compute_service(self,
                                                                   mock_get_v):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.member_req('', version=self.wsgi_api_version)
         sgroup = server_group_template(policy='anti-affinity',
                                        rules={'max_server_per_host': 3})
         result = self.assertRaises(
@@ -734,7 +737,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
             self._create_server_group_normal(policy=policy)
 
     def test_policies_since_264(self):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.member_req('', version=self.wsgi_api_version)
         # 'policies' isn't allowed in request >= 2.64
         sgroup = server_group_template(policies=['anti-affinity'])
         self.assertRaises(
@@ -742,14 +745,14 @@ class ServerGroupTestV264(ServerGroupTestV213):
             req, body={'server_group': sgroup})
 
     def test_create_server_group_without_policy(self):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.member_req('', version=self.wsgi_api_version)
         # 'policy' is required request key in request >= 2.64
         sgroup = server_group_template()
         self.assertRaises(self.validation_error, self.controller.create,
                           req, body={'server_group': sgroup})
 
     def test_create_server_group_with_illegal_policies(self):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.member_req('', version=self.wsgi_api_version)
         # blank policy
         sgroup = server_group_template(policy='')
         self.assertRaises(self.validation_error, self.controller.create,
@@ -771,7 +774,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
                           req, body={'server_group': sgroup})
 
     def test_additional_params(self):
-        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.member_req('', version=self.wsgi_api_version)
         sgroup = server_group_template(unknown='unknown')
         self.assertRaises(self.validation_error, self.controller.create,
                           req, body={'server_group': sgroup})
@@ -786,7 +789,7 @@ class ServerGroupTestV275(ServerGroupTestV264):
             path='/os-server-groups?dummy=False&all_projects=True')
 
     def test_list_server_group_additional_param(self):
-        req = fakes.HTTPRequest.blank('/os-server-groups?dummy=False',
-                                      version=self.wsgi_api_version)
+        req = fakes.HTTPRequest.reader_req('/os-server-groups?dummy=False',
+                                           version=self.wsgi_api_version)
         self.assertRaises(self.validation_error, self.controller.index,
                           req)
