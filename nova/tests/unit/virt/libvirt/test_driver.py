@@ -1308,6 +1308,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_register_all_undefined_instance_details',
                        new=mock.Mock())
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    def test__check_cpu_compatibility_skip_compare_at_init(
+            self, mocked_compare
+    ):
+        self.flags(group='workarounds', skip_cpu_compare_at_startup=True)
+        self.flags(cpu_mode="custom",
+                   cpu_models=["Icelake-Server-noTSX"],
+                   cpu_model_extra_flags = ["-mpx"],
+                   group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+        mocked_compare.assert_not_called()
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_all_undefined_instance_details',
+                       new=mock.Mock())
     def test__check_cpu_compatibility_with_flag(self):
         self.flags(cpu_mode="custom",
                    cpu_models=["Penryn"],
@@ -1319,7 +1335,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch(
         'nova.virt.libvirt.host.libvirt.Connection.compareHypervisorCPU')
     def test__check_cpu_compatibility_advance_flag(self, mocked_compare):
-        mocked_compare.side_effect = (2, 0)
+        mocked_compare.side_effect = (-1, 0)
         self.flags(cpu_mode="custom",
                    cpu_models=["qemu64"],
                    cpu_model_extra_flags = ["avx", "avx2"],
@@ -1333,7 +1349,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test__check_cpu_compatibility_wrong_flag(self, mocked_compare):
         # here, and in the surrounding similar tests, the non-zero error
         # code in the compareCPU() side effect indicates error
-        mocked_compare.side_effect = (2, 0)
+        mocked_compare.side_effect = (-1, 0)
         self.flags(cpu_mode="custom",
                    cpu_models=["Broadwell-noTSX"],
                    cpu_model_extra_flags = ["a v x"],
@@ -1347,7 +1363,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test__check_cpu_compatibility_enabled_and_disabled_flags(
             self, mocked_compare
     ):
-        mocked_compare.side_effect = (2, 0)
+        mocked_compare.side_effect = (-1, 0)
         self.flags(
             cpu_mode="custom",
             cpu_models=["Cascadelake-Server"],
