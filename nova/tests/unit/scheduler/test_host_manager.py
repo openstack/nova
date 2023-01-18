@@ -1562,12 +1562,14 @@ class HostStateTestCase(test.NoDBTestCase):
 
         self.assertIsNone(host.updated)
         host.consume_from_request(spec_obj)
-        numa_fit_mock.assert_called_once_with(fake_host_numa_topology,
-                                              fake_numa_topology,
-                                              limits=None, pci_requests=None,
-                                              pci_stats=None,
-                                              provider_mapping=None,
-                                              )
+        numa_fit_mock.assert_called_once_with(
+            fake_host_numa_topology,
+            fake_numa_topology,
+            limits=None,
+            pci_requests=None,
+            pci_stats=None,
+            provider_mapping=None,
+        )
         numa_usage_mock.assert_called_once_with(fake_host_numa_topology,
                                                 fake_numa_topology)
         sync_mock.assert_called_once_with(("fakehost", "fakenode"))

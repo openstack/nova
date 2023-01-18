@@ -1956,7 +1956,8 @@ class PCIServersTest(_PCIServersTestBase):
 
     def test_create_server_with_pci_dev_and_numa(self):
         """Verifies that an instance can be booted with cpu pinning and with an
-           assigned pci device.
+           assigned pci device with legacy policy and numa info for the pci
+           device.
         """
 
         self.flags(cpu_dedicated_set='0-7', group='compute')
@@ -1991,9 +1992,9 @@ class PCIServersTest(_PCIServersTestBase):
 
     def test_create_server_with_pci_dev_and_numa_fails(self):
         """This test ensures that it is not possible to allocated CPU and
-           memory resources from one NUMA node and a PCI device from another.
+           memory resources from one NUMA node and a PCI device from another
+           if we use the legacy policy and the pci device reports numa info.
         """
-
         self.flags(cpu_dedicated_set='0-7', group='compute')
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
