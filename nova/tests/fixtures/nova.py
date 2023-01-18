@@ -1832,14 +1832,16 @@ class ImportModulePoisonFixture(fixtures.Fixture):
         self.module_names = module_names
         self.fail_message = ''
         if isinstance(module_names, str):
-            self.module_names = set([module_names])
-        sys.meta_path.insert(0, self.ForbiddenModules(self, self.module_names))
+            self.module_names = {module_names}
+        self.meta_path_finder = self.ForbiddenModules(self, self.module_names)
 
     def setUp(self):
         super().setUp()
         self.addCleanup(self.cleanup)
+        sys.meta_path.insert(0, self.meta_path_finder)
 
     def cleanup(self):
+        sys.meta_path.remove(self.meta_path_finder)
         # We use a flag and check it during the cleanup phase to fail the test
         # if needed. This is done because some module imports occur inside of a
         # try-except block that ignores all exceptions, so raising an exception
