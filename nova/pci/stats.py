@@ -13,7 +13,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+import collections
 import copy
 import typing as ty
 
@@ -244,6 +244,17 @@ class PciDeviceStats(object):
             free_devs.extend(pool['devices'])
         return free_devs
 
+    def _allocate_devs(
+        self, pool: Pool, num: int, request_id: str
+    ) -> ty.List["objects.PciDevice"]:
+        alloc_devices = []
+        for _ in range(num):
+            pci_dev = pool['devices'].pop()
+            self._handle_device_dependents(pci_dev)
+            pci_dev.request_id = request_id
+            alloc_devices.append(pci_dev)
+        return alloc_devices
+
     def consume_requests(
         self,
         pci_requests: 'objects.InstancePCIRequests',
@@ -274,20 +285,29 @@ class PciDeviceStats(object):
                     self.add_device(alloc_devices.pop())
                 raise exception.PciDeviceRequestFailed(requests=pci_requests)
 
-            for pool in pools:
-                if pool['count'] >= count:
-                    num_alloc = count
-                else:
-                    num_alloc = pool['count']
-                count -= num_alloc
-                pool['count'] -= num_alloc
-                for d in range(num_alloc):
-                    pci_dev = pool['devices'].pop()
-                    self._handle_device_dependents(pci_dev)
-                    pci_dev.request_id = request.request_id
-                    alloc_devices.append(pci_dev)
-                if count == 0:
-                    break
+            if not rp_uuids:
+                # if there is no placement allocation then we are free to
+                # consume from the pools in any order:
+                for pool in pools:
+                    if pool['count'] >= count:
+                        num_alloc = count
+                    else:
+                        num_alloc = pool['count']
+                    count -= num_alloc
+                    pool['count'] -= num_alloc
+                    alloc_devices += self._allocate_devs(
+                        pool, num_alloc, request.request_id)
+                    if count == 0:
+                        break
+            else:
+                # but if there is placement allocation then we have to follow
+                # it
+                requested_devs_per_pool_rp = collections.Counter(rp_uuids)
+                for pool in pools:
+                    count = requested_devs_per_pool_rp[pool['rp_uuid']]
+                    pool['count'] -= count
+                    alloc_devices += self._allocate_devs(
+                        pool, count, request.request_id)
 
         return alloc_devices
 
@@ -543,7 +563,7 @@ class PciDeviceStats(object):
         self,
         pools: ty.List[Pool],
         request: 'objects.InstancePCIRequest',
-        rp_uuids: ty.Set[str],
+        rp_uuids: ty.List[str],
     ) -> ty.List[Pool]:
         if not rp_uuids:
             # If there is no placement allocation then we don't need to filter
@@ -554,6 +574,7 @@ class PciDeviceStats(object):
             # configuration option is not enabled in the scheduler.
             return pools
 
+        requested_dev_count_per_rp = collections.Counter(rp_uuids)
         matching_pools = []
         for pool in pools:
             rp_uuid = pool.get('rp_uuid')
@@ -572,7 +593,13 @@ class PciDeviceStats(object):
                     "scheduler. This pool is ignored now.", pool)
                 continue
 
-            if rp_uuid in rp_uuids:
+            if (
+                # the placement allocation contains this pool
+                rp_uuid in requested_dev_count_per_rp and
+                # the amount of dev allocated in placement can be consumed
+                # from the pool
+                pool["count"] >= requested_dev_count_per_rp[rp_uuid]
+            ):
                 matching_pools.append(pool)
 
         return matching_pools
@@ -582,7 +609,7 @@ class PciDeviceStats(object):
         pools: ty.List[Pool],
         request: 'objects.InstancePCIRequest',
         numa_cells: ty.Optional[ty.List['objects.InstanceNUMACell']],
-        rp_uuids: ty.Set[str],
+        rp_uuids: ty.List[str],
     ) -> ty.Optional[ty.List[Pool]]:
         """Determine if an individual PCI request can be met.
 
@@ -751,7 +778,7 @@ class PciDeviceStats(object):
         self,
         pools: ty.List[Pool],
         request: 'objects.InstancePCIRequest',
-        rp_uuids: ty.Set[str],
+        rp_uuids: ty.List[str],
         numa_cells: ty.Optional[ty.List['objects.InstanceNUMACell']] = None,
     ) -> bool:
         """Apply an individual PCI request.
@@ -782,11 +809,22 @@ class PciDeviceStats(object):
         if not filtered_pools:
             return False
 
-        count = request.count
-        for pool in filtered_pools:
-            count = self._decrease_pool_count(pools, pool, count)
-            if not count:
-                break
+        if not rp_uuids:
+            # If there is no placement allocation for this request then we are
+            # free to consume from the filtered pools in any order
+            count = request.count
+            for pool in filtered_pools:
+                count = self._decrease_pool_count(pools, pool, count)
+                if not count:
+                    break
+        else:
+            # but if there is placement allocation then we have to follow that
+            requested_devs_per_pool_rp = collections.Counter(rp_uuids)
+            for pool in filtered_pools:
+                count = requested_devs_per_pool_rp[pool['rp_uuid']]
+                pool['count'] -= count
+                if pool['count'] == 0:
+                    pools.remove(pool)
 
         return True
 
@@ -794,13 +832,18 @@ class PciDeviceStats(object):
         self,
         provider_mapping: ty.Optional[ty.Dict[str, ty.List[str]]],
         request: 'objects.InstancePCIRequest'
-    ) -> ty.Set[str]:
-        """Return the list of RP uuids that are fulfilling the request"""
+    ) -> ty.List[str]:
+        """Return the list of RP uuids that are fulfilling the request.
+
+        An RP will be in the list as many times as many devices needs to
+        be allocated from that RP.
+        """
 
         if request.source == objects.InstancePCIRequest.NEUTRON_PORT:
             # TODO(gibi): support neutron based requests in a later cycle
-            # set() will signal that any PCI pool can be used for this request
-            return set()
+            # an empty list will signal that any PCI pool can be used for this
+            # request
+            return []
 
         if not provider_mapping:
             # NOTE(gibi): AFAIK specs is always a list of a single dict
@@ -809,23 +852,23 @@ class PciDeviceStats(object):
             if not rp_uuids:
                 # This can happen if [filter_scheduler]pci_in_placement is not
                 # enabled yet
-                # set() will signal that any PCI pool can be used for this
-                # request
-                return set()
+                # An empty list will signal that any PCI pool can be used for
+                # this request
+                return []
 
             # TODO(gibi): this is baaad but spec is a dict of string so
             #  the list is serialized
-            return set(rp_uuids.split(','))
+            return rp_uuids.split(',')
 
         # NOTE(gibi): the PCI prefilter generates RequestGroup suffixes from
         # InstancePCIRequests in the form of {request_id}-{count_index}
         # NOTE(gibi): a suffixed request group always fulfilled from a single
         # RP
-        return {
+        return [
             rp_uuids[0]
             for group_id, rp_uuids in provider_mapping.items()
             if group_id.startswith(request.request_id)
-        }
+        ]
 
     def apply_requests(
         self,
