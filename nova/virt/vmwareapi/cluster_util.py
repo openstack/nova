@@ -412,3 +412,57 @@ def fetch_cluster_drs_vm_overrides(session, cluster_ref=None,
     overrides = getattr(cluster_config, 'drsVmConfig', [])
     return {vim_util.get_moref_value(o.key): o.behavior for o in overrides
             if o.enabled}
+
+
+def update_cluster_das_vm_override(session, cluster, vm_ref, operation='add',
+                                   restart_priority=None):
+    """Add/Update `ClusterDasVmConfigSpec` overriding a VM's `restartPriority`.
+
+    `restart_priority` can be any `ClusterDasVmSettingsRestartPriority` string.
+
+    `restart_priority` is only used if `operation` is `add`.
+    """
+    if operation not in ('add', 'remove'):
+        msg = _('%s operation for ClusterDasVmConfigSpec not supported.')
+        raise exception.ValidationError(msg % operation)
+
+    client_factory = session.vim.client.factory
+
+    das_vm_spec = client_factory.create('ns0:ClusterDasVmConfigSpec')
+    das_vm_spec.operation = operation
+
+    if operation == 'add':
+        das_vm_info = client_factory.create('ns0:ClusterDasVmConfigInfo')
+        das_vm_info.key = vm_ref
+        settings = client_factory.create('ns0:ClusterDasVmSettings')
+        settings.restartPriority = restart_priority
+        das_vm_info.dasSettings = settings
+
+        das_vm_spec.info = das_vm_info
+
+    elif operation == 'remove':
+        das_vm_spec.removeKey = vm_ref
+
+    config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
+    config_spec.dasVmConfigSpec = [das_vm_spec]
+
+    reconfigure_cluster(session, cluster, config_spec)
+
+
+def fetch_cluster_das_vm_restart_priority(session, cluster_ref, vm_ref):
+    """Fetch restartPriority DAS override for the VM on the cluster
+
+    The cluster is identified by a cluster_ref and we fetch the cluster_config.
+
+    Returns the restartPriority of one VM as a
+    `ClusterDasVmSettingsRestartPriority` string or None if no overrides
+    configured.
+    """
+    cluster_config = session._call_method(vim_util, "get_object_property",
+                                          cluster_ref, "configurationEx")
+
+    overrides = getattr(cluster_config, 'dasVmConfig', [])
+    for o in overrides:
+        if vim_util.get_moref_value(o.key) == vim_util.get_moref_value(vm_ref):
+            return o.dasSettings.restartPriority
+    return None

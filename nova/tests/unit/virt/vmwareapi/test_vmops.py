@@ -615,7 +615,7 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def _test_finish_migration(self, power_on=True, resize_instance=False,
                                migration=None, no_nics=False,
-                               power_on_err=None):
+                               power_on_err=None, is_bigvm=False):
         with test.nested(
                 mock.patch.object(self._vmops,
                                   '_resize_create_ephemerals_and_swap'),
@@ -643,6 +643,10 @@ class VMwareVMOpsTestCase(test.TestCase):
                 mock.patch.object(ds_util,
                                   "get_datastore",
                                   return_value=self._ds),
+                mock.patch.object(cluster_util,
+                                  "update_cluster_drs_vm_override"),
+                mock.patch.object(cluster_util,
+                                  "update_cluster_das_vm_override")
         ) as (fake_resize_create_ephemerals_and_swap,
               fake_update_instance_progress, fake_power_on, fake_get_vm_ref,
               fake_reconfigure_vm, fake_remove_ephemerals_and_swap,
@@ -650,7 +654,8 @@ class VMwareVMOpsTestCase(test.TestCase):
               fake_relocate_vm, fake_detach_volumes, fake_attach_volumes,
               fake_update_cluster_placement, fake_is_volume_backed,
               fake_get_vm_networking_spec, fake_get_vsphere_location,
-              fake_get_datastore):
+              fake_get_datastore, fake_update_cluster_drs_vm_override,
+              fake_update_cluster_das_vm_override):
             vm_ref = fake_get_vm_ref.return_value
             migration = migration or objects.Migration(dest_compute="nova",
                 source_compute="nova", uuid=uuids.migration)
@@ -676,6 +681,10 @@ class VMwareVMOpsTestCase(test.TestCase):
 
             if power_on_err:
                 fake_power_on.side_effect = power_on_err
+
+            if is_bigvm:
+                self._instance.memory_mb = 2048 * 1024  # 2 TiB RAM
+                self._instance.flavor.memory_mb = 2048 * 1024  # 2 TiB RAM
 
             self._vmops.finish_migration(context=self._context,
                                          migration=migration,
@@ -735,6 +744,13 @@ class VMwareVMOpsTestCase(test.TestCase):
             else:
                 self.assertFalse(fake_power_on.called)
 
+            if is_bigvm:
+                fake_update_cluster_das_vm_override.assert_called_once_with(
+                    self._session, self._cluster.obj, vm_ref, operation='add',
+                    restart_priority=constants.DAS_RESTART_PRIORITY_HIGH)
+            else:
+                fake_update_cluster_das_vm_override.assert_not_called()
+
     def test_finish_migration_power_on(self):
         self._test_finish_migration(power_on=True, resize_instance=False)
 
@@ -752,6 +768,9 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_finish_migration_no_nics(self):
         self._test_finish_migration(no_nics=True)
+
+    def test_finish_migration_bigvm(self):
+        self._test_finish_migration(is_bigvm=True)
 
     @mock.patch.object(vmops.VMwareVMOps, '_create_swap')
     @mock.patch.object(vmops.VMwareVMOps, '_create_ephemeral')

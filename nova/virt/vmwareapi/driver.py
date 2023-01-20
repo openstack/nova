@@ -1093,6 +1093,10 @@ class VMwareVCDriver(driver.ComputeDriver):
             self._vmops.disable_drs_if_needed(instance)
 
         with self._error_out_instance_on_exception(instance,
+                "set restart priority"):
+            self._vmops.set_restart_priority_if_needed(instance)
+
+        with self._error_out_instance_on_exception(instance,
                 "update cluster placement"):
             self._vmops.update_cluster_placement(context, instance)
 

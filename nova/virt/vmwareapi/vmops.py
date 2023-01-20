@@ -1287,6 +1287,8 @@ class VMwareVMOps(object):
 
         # Make sure we don't automatically move around "big" VMs
         self.disable_drs_if_needed(instance)
+        # Big VMs should (re)start first.
+        self.set_restart_priority_if_needed(instance)
 
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
@@ -1305,6 +1307,21 @@ class VMwareVMOps(object):
                                                         vm_ref,
                                                         operation='add',
                                                         behavior=behavior)
+
+    def set_restart_priority_if_needed(self, instance):
+        if utils.is_big_vm(int(instance.memory_mb), instance.flavor) or \
+                utils.is_large_vm(int(instance.memory_mb), instance.flavor):
+            restart_priority = constants.DAS_RESTART_PRIORITY_HIGH
+            LOG.debug("Adding restart priority '%s' for big VM.",
+                      restart_priority, instance=instance)
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
+            prev_restart_priority = \
+                cluster_util.fetch_cluster_das_vm_restart_priority(
+                    self._session, self._cluster, vm_ref)
+            if prev_restart_priority is None:
+                cluster_util.update_cluster_das_vm_override(
+                    self._session, self._cluster, vm_ref, operation='add',
+                    restart_priority=restart_priority)
 
     def _clean_up_after_special_spawning(self, context, instance_memory_mb,
                                          instance_flavor):
@@ -2043,9 +2060,9 @@ class VMwareVMOps(object):
                                                         operation='add',
                                                         behavior=behavior)
         elif old_needs_override and not new_needs_override:
-            # remove the old override, if we had one before. make sure we don't
-            # error out if it was already deleted another way
-            LOG.debug("Removing DRS override for former big VM.",
+            # remove the old overrides, if we had one before. make sure we
+            # don't error out if they were already deleted another way
+            LOG.debug("Removing DRS and DAS overrides for former big VM.",
                       instance=instance)
             try:
                 cluster_util.update_cluster_drs_vm_override(self._session,
@@ -2055,7 +2072,6 @@ class VMwareVMOps(object):
             except Exception:
                 LOG.warning('Could not remove DRS override.',
                             instance=instance)
-
         self._clean_up_after_special_spawning(context, flavor.memory_mb,
                                               flavor)
 
@@ -2457,12 +2473,13 @@ class VMwareVMOps(object):
             vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
             self._update_vnic_index(context, instance, network_info)
 
-        # 9. Update DRS
+        # 9. Update DRS & restart priority
         self._update_instance_progress(context, instance,
                                        step=10,
                                        total_steps=RESIZE_TOTAL_STEPS)
         self.update_cluster_placement(context, instance)
         self.disable_drs_if_needed(instance)
+        self.set_restart_priority_if_needed(instance)
 
         # 10. Start VM
         client_factory = self._session.vim.client.factory
