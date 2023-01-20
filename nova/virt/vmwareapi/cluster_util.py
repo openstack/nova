@@ -394,3 +394,36 @@ def fetch_cluster_drs_vm_overrides(session, cluster_ref=None,
     overrides = getattr(cluster_config, 'drsVmConfig', [])
     return {vutil.get_moref_value(o.key): o.behavior for o in overrides
             if o.enabled}
+
+
+def update_cluster_das_vm_override(session, cluster, vm_ref, operation='add',
+                                   restart_priority=None):
+    """Add/Update `ClusterDasVmConfigSpec` overriding a VM's `restartPriority`.
+
+    `restart_priority` can be any `ClusterDasVmSettingsRestartPriority` string.
+
+    `restart_priority` is only used if `operation` is `add`.
+    """
+    if operation not in ('add', 'remove'):
+        msg = _('%s operation for ClusterDasVmConfigSpec not supported.')
+        raise exception.ValidationError(msg % operation)
+
+    client_factory = session.vim.client.factory
+
+    das_vm_spec = client_factory.create('ns0:ClusterDasVmConfigInfo')
+    das_vm_spec.operation = operation
+
+    if operation == 'add':
+        das_vm_info = client_factory.create('ns0:ClusterDasVmConfigInfo')
+        das_vm_info.key = vm_ref
+        das_vm_info.dasSettings.restartPriority = restart_priority
+
+        das_vm_spec.info = das_vm_info
+
+    elif operation == 'remove':
+        das_vm_spec.removeKey = vm_ref
+
+    config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
+    config_spec.dasVmConfigSpec = [das_vm_spec]
+
+    reconfigure_cluster(session, cluster, config_spec)
