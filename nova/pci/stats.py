@@ -68,11 +68,15 @@ class PciDeviceStats(object):
     # the PCI alias, but they are matched by the placement
     # allocation_candidates query, so we can ignore them during pool creation
     # and during filtering here
-    ignored_tags = ['resource_class', 'traits']
-    # these are metadata keys in the pool and in the request that are matched
+    ignored_spec_tags = ignored_pool_tags = ['resource_class', 'traits']
+    # this is a metadata key in the spec that is matched
     # specially in _filter_pools_based_on_placement_allocation. So we can
     # ignore them in the general matching logic.
-    ignored_tags += ['rp_uuid', 'rp_uuids']
+    ignored_spec_tags += ['rp_uuids']
+    # this is a metadata key in the pool that is matched
+    # specially in _filter_pools_based_on_placement_allocation. So we can
+    # ignore them in the general matching logic.
+    ignored_pool_tags += ['rp_uuid']
 
     def __init__(
         self,
@@ -146,7 +150,11 @@ class PciDeviceStats(object):
 
         if tags:
             pool.update(
-                {k: v for k, v in tags.items() if k not in self.ignored_tags}
+                {
+                    k: v
+                    for k, v in tags.items()
+                    if k not in self.ignored_pool_tags
+                }
             )
         # NOTE(gibi): since PCI in placement maps a PCI dev or a PF to a
         # single RP and the scheduler allocates from a specific RP we need
@@ -358,7 +366,9 @@ class PciDeviceStats(object):
 
         def ignore_keys(spec):
             return {
-                k: v for k, v in spec.items() if k not in self.ignored_tags
+                k: v
+                for k, v in spec.items()
+                if k not in self.ignored_spec_tags
             }
 
         request_specs = [ignore_keys(spec) for spec in request.spec]
