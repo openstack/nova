@@ -618,6 +618,13 @@ class ServersSampleJson290Test(ServersSampleJsonTest):
     ADMIN_API = False
 
 
+class ServersSampleJson294Test(ServersSampleJsonTest):
+    microversion = '2.94'
+    scenarios = [('v2_94', {'api_major_version': 'v2.1'})]
+    use_common_server_post = False
+    ADMIN_API = False
+
+
 class ServersUpdateSampleJsonTest(ServersSampleBase):
 
     # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
@@ -690,6 +697,44 @@ class ServersUpdateSampleJson290Test(ServersUpdateSampleJsonTest):
             'access_ip_v4': '1.2.3.4',
             'access_ip_v6': '80fe::',
             'hostname': 'updated-hostname',
+        }
+
+        resp = self._do_post(
+            'servers/%s/action' % uuid,
+            'server-action-rebuild',
+            params,
+        )
+        subs = params.copy()
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+
+class ServersUpdateSampleJson294Test(ServersUpdateSampleJsonTest):
+    microversion = '2.94'
+    scenarios = [('v2_94', {'api_major_version': 'v2.1'})]
+    ADMIN_API = False
+
+    def test_update_server(self):
+        uuid = self._post_server()
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        subs['hostname'] = 'updated-hostname.example.com'
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-req', subs)
+        self._verify_response('server-update-resp', subs, response, 200)
+
+    def test_server_rebuild(self):
+        uuid = self._post_server()
+        params = {
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
+            'name': 'foobar',
+            'pass': 'seekr3t',
+            'hostid': '[a-f0-9]+',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+            'hostname': 'updated-hostname.example.com',
         }
 
         resp = self._do_post(

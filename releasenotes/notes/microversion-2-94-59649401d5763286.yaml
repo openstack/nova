@@ -1,0 +1,22 @@
+---
+features:
+  - |
+    The 2.94 microversion has been added. This microversion extends
+    microversion 2.90 by allowing Fully Qualified Domain Names (FQDN) wherever
+    the ``hostname`` is able to be specified. This consists of creating an
+    instance (``POST /servers``), updating an instance
+    (``PUT /servers/{id}``), or rebuilding an instance
+    (``POST /servers/{server_id}/action (rebuild)``). When using an FQDN as the
+    instance hostname, the ``[api]dhcp_domain`` configuration option must be
+    set to the empty string in order for the correct FQDN to appear in the
+    ``hostname`` field in the metadata API.
+
+upgrade:
+  - |
+    In order to make use of microversion's 2.94 FQDN hostnames, the
+    ``[api]dhcp_domain`` config option must be set to the empty string. If
+    this is not done, the ``hostname`` field in the metadata API will be
+    incorrect, as it will include the value of ``[api]dhcp_domain`` appended to
+    the instance's FQDN. Note that simply not setting ``[api]dhcp_domain`` is
+    not enough, as it has a default value of ``novalocal``. It must explicitly
+    be set to the empty string.

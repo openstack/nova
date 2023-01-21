@@ -1,0 +1,81 @@
+{
+    "server": {
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.1.30",
+                    "OS-EXT-IPS-MAC:mac_addr": "00:0c:29:0d:11:74",
+                    "OS-EXT-IPS:type": "fixed",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2013-09-03T04:01:32Z",
+        "description": null,
+        "locked": false,
+        "locked_reason": null,
+        "flavor": {
+            "disk": 1,
+            "ephemeral": 0,
+            "extra_specs": {},
+            "original_name": "m1.tiny",
+            "ram": 512,
+            "swap": 0,
+            "vcpus": 1
+        },
+        "hostId": "92154fab69d5883ba2c8622b7e65f745dd33257221c07af363c51b29",
+        "id": "0e44cc9c-e052-415d-afbf-469b0d384170",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "key_name": null,
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/0e44cc9c-e052-415d-afbf-469b0d384170",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/0e44cc9c-e052-415d-afbf-469b0d384170",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "config_drive": "",
+        "OS-DCF:diskConfig": "AUTO",
+        "OS-EXT-AZ:availability_zone": "nova",
+        "OS-EXT-SRV-ATTR:hostname": "custom-hostname.example.com",
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:task_state": null,
+        "OS-EXT-STS:vm_state": "active",
+        "os-extended-volumes:volumes_attached": [
+            {"id": "volume_id1", "delete_on_termination": false},
+            {"id": "volume_id2", "delete_on_termination": false}
+        ],
+        "OS-SRV-USG:launched_at": "2013-09-23T13:37:00.880302",
+        "OS-SRV-USG:terminated_at": null,
+        "progress": 0,
+        "security_groups": [
+            {
+                "name": "default"
+            }
+        ],
+        "server_groups": [],
+        "status": "ACTIVE",
+        "tags": [],
+        "tenant_id": "6f70656e737461636b20342065766572",
+        "trusted_image_certificates": null,
+        "updated": "2013-09-03T04:01:33Z",
+        "user_id": "fake"
+    }
+}

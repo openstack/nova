@@ -6382,6 +6382,9 @@ server_hostname_req:
   description: |
     The hostname to configure for the instance in the metadata service.
 
+    Starting with microversion 2.94, this can be a Fully Qualified Domain Name
+    (FQDN) of up to 255 characters in length.
+
     .. note::
 
         This information is published via the metadata service and requires

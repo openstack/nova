@@ -1229,3 +1229,11 @@ Add support for volume backed server rebuild. The end user will provide the
 image with the rebuild command and it will rebuild the volume with the new
 image similar to the result of rebuilding an ephemeral disk.
 
+
+2.94
+---------------------
+
+The ``hostname`` parameter to the ``POST /servers`` (create server), ``PUT
+/servers/{id}`` (update server) and ``POST /servers/{server_id}/action
+(rebuild)`` (rebuild server) APIs is now allowed to be a Fully Qualified Domain
+Name (FQDN).

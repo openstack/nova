@@ -360,6 +360,11 @@ create_v290 = copy.deepcopy(create_v274)
 create_v290['properties']['server'][
     'properties']['hostname'] = parameter_types.hostname
 
+# Support FQDN as hostname
+create_v294 = copy.deepcopy(create_v290)
+create_v294['properties']['server'][
+    'properties']['hostname'] = parameter_types.fqdn
+
 update = {
     'type': 'object',
     'properties': {
@@ -390,6 +395,11 @@ update_v219['properties']['server'][
 update_v290 = copy.deepcopy(update_v219)
 update_v290['properties']['server'][
     'properties']['hostname'] = parameter_types.hostname
+
+
+update_v294 = copy.deepcopy(update_v290)
+update_v294['properties']['server'][
+    'properties']['hostname'] = parameter_types.fqdn
 
 rebuild = {
     'type': 'object',
@@ -448,6 +458,10 @@ rebuild_v263['properties']['rebuild']['properties'][
 rebuild_v290 = copy.deepcopy(rebuild_v263)
 rebuild_v290['properties']['rebuild']['properties'][
     'hostname'] = parameter_types.hostname
+
+rebuild_v294 = copy.deepcopy(rebuild_v290)
+rebuild_v294['properties']['rebuild']['properties'][
+    'hostname'] = parameter_types.fqdn
 
 
 resize = {

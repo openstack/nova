@@ -448,6 +448,11 @@ Request
 .. literalinclude:: ../../doc/api_samples/servers/v2.90/server-create-req.json
    :language: javascript
 
+**Example Create Server With FQDN in Hostname (v2.94)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.94/server-create-req.json
+   :language: javascript
+
 Response
 --------
 
