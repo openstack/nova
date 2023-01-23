@@ -242,6 +242,16 @@ def get_limit_and_marker(request):
     return limit, marker
 
 
+def get_limit_and_offset(request):
+    """Get limit and offset parameters from request."""
+    params = get_pagination_params(request)
+    limit = CONF.api.max_limit
+    limit = min(limit, params.get('limit', limit))
+    offset = params.get('offset', None)
+
+    return limit, offset
+
+
 def get_id_from_href(href):
     """Return the id or uuid portion of a url.
 

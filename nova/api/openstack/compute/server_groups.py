@@ -169,6 +169,7 @@ class ServerGroupController(wsgi.Controller):
     def index(self, req):
         """Returns a list of server groups."""
         context = req.environ['nova.context']
+        limit, offset = common.get_limit_and_offset(req)
         project_id = context.project_id
         # NOTE(gmann): Using context's project_id as target here so
         # that when we remove the default target from policy class,
@@ -186,18 +187,19 @@ class ServerGroupController(wsgi.Controller):
             # Until then, let's keep the old behaviour.
             context.can(sg_policies.POLICY_ROOT % 'index:all_projects',
                         target={'project_id': project_id})
-            sgs = objects.InstanceGroupList.get_all(context)
+            sgs = objects.InstanceGroupList.get_all(context,
+                                                    limit=limit,
+                                                    offset=offset)
         else:
             sgs = objects.InstanceGroupList.get_by_project_id(
-                    context, project_id)
-        limited_list = common.limited(sgs.objects, req)
+                    context, project_id, limit=limit, offset=offset)
 
         members = list(itertools.chain.from_iterable(sg.members
-                                                     for sg in limited_list
+                                                     for sg in sgs
                                                      if sg.members))
         not_deleted = _get_not_deleted(context, members)
         result = [self._format_server_group(context, group, req, not_deleted)
-                  for group in limited_list]
+                  for group in sgs]
         return {'server_groups': result}
 
     @wsgi.Controller.api_version("2.1")

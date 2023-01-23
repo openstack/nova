@@ -275,16 +275,26 @@ class ServerGroupTestV21(test.NoDBTestCase):
             tenant_specific = {'server_groups': tenant_groups}
 
         def return_all_server_groups():
-            return objects.InstanceGroupList(
-                objects=[objects.InstanceGroup(
-                    **server_group_db(sg)) for sg in all_groups])
+            if limited:
+                return objects.InstanceGroupList(
+                    objects=[objects.InstanceGroup(
+                        **server_group_db(sg)) for sg in tenant_groups])
+            else:
+                return objects.InstanceGroupList(
+                    objects=[objects.InstanceGroup(
+                        **server_group_db(sg)) for sg in all_groups])
 
         mock_get_all.return_value = return_all_server_groups()
 
         def return_tenant_server_groups():
-            return objects.InstanceGroupList(
-                objects=[objects.InstanceGroup(
-                    **server_group_db(sg)) for sg in tenant_groups])
+            if limited:
+                return objects.InstanceGroupList(
+                    objects=[objects.InstanceGroup(
+                        **server_group_db(sg)) for sg in []])
+            else:
+                return objects.InstanceGroupList(
+                    objects=[objects.InstanceGroup(
+                        **server_group_db(sg)) for sg in tenant_groups])
 
         mock_get_by_project.return_value = return_tenant_server_groups()
 

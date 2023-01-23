@@ -34,14 +34,23 @@ LAZY_LOAD_FIELDS = ['hosts']
 LOG = logging.getLogger(__name__)
 
 
-def _instance_group_get_query(context, id_field=None, id=None):
+def _instance_group_get_query(context, id_field=None, id=None,
+                              project_id=None,
+                              limit=None,
+                              offset=None):
     query = context.session.query(api_models.InstanceGroup).\
         options(orm.joinedload(api_models.InstanceGroup._policies)).\
         options(orm.joinedload(api_models.InstanceGroup._members))
     if not context.is_admin:
         query = query.filter_by(project_id=context.project_id)
+    elif project_id is not None:
+        query = query.filter_by(project_id=project_id)
     if id and id_field:
         query = query.filter(id_field == id)
+    if limit is not None:
+        query = query.limit(limit)
+    if offset is not None:
+        query = query.offset(offset)
     return query
 
 
@@ -552,10 +561,11 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
 
     @staticmethod
     @api_db_api.context_manager.reader
-    def _get_from_db(context, project_id=None):
-        query = _instance_group_get_query(context)
-        if project_id is not None:
-            query = query.filter_by(project_id=project_id)
+    def _get_from_db(context, project_id=None, limit=None, offset=None):
+        query = _instance_group_get_query(context,
+                                          project_id=project_id,
+                                          limit=limit,
+                                          offset=offset)
         return query.all()
 
     @staticmethod
@@ -588,14 +598,16 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         return groups
 
     @base.remotable_classmethod
-    def get_by_project_id(cls, context, project_id):
-        api_db_groups = cls._get_from_db(context, project_id=project_id)
+    def get_by_project_id(cls, context, project_id, limit=None, offset=None):
+        api_db_groups = cls._get_from_db(context, project_id=project_id,
+                                         limit=limit,
+                                         offset=offset)
         return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   api_db_groups)
 
     @base.remotable_classmethod
-    def get_all(cls, context):
-        api_db_groups = cls._get_from_db(context)
+    def get_all(cls, context, limit=None, offset=None):
+        api_db_groups = cls._get_from_db(context, limit=limit, offset=offset)
         return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   api_db_groups)
 
