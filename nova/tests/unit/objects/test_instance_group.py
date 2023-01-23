@@ -363,7 +363,35 @@ class _TestInstanceGroupObject(object):
 
 class TestInstanceGroupObject(test_objects._LocalTest,
                               _TestInstanceGroupObject):
-    pass
+    def test_get_all_with_limits(self):
+        entries = {'entry1': {'user_id': self.context.user_id,
+                              'project_id': self.context.project_id,
+                              'uuid': uuids.sg1,
+                              'name': 'sg1'},
+                   'entry2': {'user_id': self.context.user_id,
+                              'project_id': self.context.project_id,
+                              'uuid': uuids.sg2,
+                              'name': 'sg2'},
+                   'entry3': {'user_id': self.context.user_id,
+                              'project_id': self.context.project_id,
+                              'uuid': uuids.sg3,
+                              'name': 'sg3'},
+                   'entry4': {'user_id': self.context.user_id,
+                              'project_id': self.context.project_id,
+                              'uuid': uuids.sg4,
+                              'name': 'sg4'}}
+        for key, value in entries.items():
+            objects.instance_group.InstanceGroup._create_in_db(self.context,
+                                                               value)
+
+        servg = objects.InstanceGroupList.get_all(self.context,
+                                                  limit=2,
+                                                  offset=1)
+        self.assertEqual(2, len(servg))
+        servg = objects.InstanceGroupList.get_all(self.context,
+                                                  limit=2,
+                                                  offset=3)
+        self.assertEqual(1, len(servg))
 
 
 class TestRemoteInstanceGroupObject(test_objects._RemoteTest,
@@ -393,7 +421,9 @@ class _TestInstanceGroupListObject(object):
         mock_api_get.side_effect = _mock_db_list_get
         inst_list = objects.InstanceGroupList.get_all(self.context)
         self.assertEqual(4, len(inst_list.objects))
-        mock_api_get.assert_called_once_with(self.context)
+        mock_api_get.assert_called_once_with(self.context,
+                                             limit=None,
+                                             offset=None)
 
     @mock.patch('nova.objects.InstanceGroupList._get_from_db')
     def test_list_by_project_id(self, mock_api_get):
@@ -401,7 +431,8 @@ class _TestInstanceGroupListObject(object):
         objects.InstanceGroupList.get_by_project_id(
                 self.context, mock.sentinel.project_id)
         mock_api_get.assert_called_once_with(
-                self.context, project_id=mock.sentinel.project_id)
+                self.context, project_id=mock.sentinel.project_id,
+                limit=None, offset=None)
 
 
 class TestInstanceGroupListObject(test_objects._LocalTest,
