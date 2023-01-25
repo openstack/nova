@@ -111,6 +111,7 @@ class ExtraSpecs(object):
                  memory_limits=None, disk_io_limits=None,
                  vif_limits=None, hv_enabled=None, firmware=None,
                  hw_video_ram=None, numa_prefer_ht=None,
+                 numa_vcpu_max_per_virtual_node=None,
                  migration_data_timeout=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         self.cpu_limits = cpu_limits or Limits()
@@ -124,6 +125,7 @@ class ExtraSpecs(object):
         self.firmware = firmware
         self.hw_video_ram = hw_video_ram
         self.numa_prefer_ht = numa_prefer_ht
+        self.numa_vcpu_max_per_virtual_node = numa_vcpu_max_per_virtual_node
         self.migration_data_timeout = migration_data_timeout
 
 
@@ -437,6 +439,13 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
         opt.value = extra_specs.numa_prefer_ht
         extra_config.append(opt)
 
+    # single- & half-NUMA-node VMs get more than one node without this setting
+    if extra_specs.numa_vcpu_max_per_virtual_node is not None:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'numa.autosize.vcpu.maxPerVirtualNode'
+        opt.value = extra_specs.numa_vcpu_max_per_virtual_node
+        extra_config.append(opt)
+
     # big VMs need more time to settle to make reconfigures possible after they
     # ran for some time
     if extra_specs.migration_data_timeout is not None:
@@ -546,6 +555,13 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
         opt = client_factory.create('ns0:OptionValue')
         opt.key = 'numa.vcpu.preferHT'
         opt.value = extra_specs.numa_prefer_ht
+        extra_config.append(opt)
+
+    # single- & half-NUMA-node VMs get more than one node without this setting
+    if extra_specs.numa_vcpu_max_per_virtual_node is not None:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'numa.autosize.vcpu.maxPerVirtualNode'
+        opt.value = extra_specs.numa_vcpu_max_per_virtual_node
         extra_config.append(opt)
 
     # big VMs need more time to settle to make reconfigures possible after they

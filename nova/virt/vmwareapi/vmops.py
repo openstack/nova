@@ -457,6 +457,11 @@ class VMwareVMOps(object):
         topology = hardware.get_best_cpu_topology(flavor, image_meta,
                                                   allow_threads=False)
         extra_specs.cores_per_socket = topology.cores
+        # needed esp. for single- and half-numa-node-sized flavors
+        extra_specs.numa_vcpu_max_per_virtual_node = (
+            str(extra_specs.cores_per_socket)
+            if utils.is_numa_aligned_flavor(flavor)
+            else '')
         return extra_specs
 
     def _get_storage_policy(self, flavor):
