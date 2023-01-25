@@ -1016,6 +1016,15 @@ Related options:
   filtering computes based on supported image types, which is required
   to be enabled for this to take effect.
 """),
+    cfg.ListOpt('vmdk_allowed_types',
+                default=['streamOptimized', 'monolithicSparse'],
+                help="""
+A list of strings describing allowed VMDK "create-type" subformats
+that will be allowed. This is recommended to only include
+single-file-with-sparse-header variants to avoid potential host file
+exposure due to processing named extents. If this list is empty, then no
+form of VMDK image will be allowed.
+"""),
     cfg.BoolOpt('packing_host_numa_cells_allocation_strategy',
         default=False,
         help="""
