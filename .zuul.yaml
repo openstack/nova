@@ -466,8 +466,6 @@
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
-        - openstacksdk-functional-devstack:
-            irrelevant-files: *dsvm-irrelevant-files
         - cyborg-tempest:
             irrelevant-files: *dsvm-irrelevant-files
             voting: false
@@ -494,8 +492,6 @@
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
-            irrelevant-files: *dsvm-irrelevant-files
-        - openstacksdk-functional-devstack:
             irrelevant-files: *dsvm-irrelevant-files
     experimental:
       jobs:
