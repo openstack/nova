@@ -1492,7 +1492,7 @@ class ComputeManager(manager.Manager):
                     "then you can ignore this warning.", node_name)
         return nodes_by_uuid
 
-    def init_host(self):
+    def init_host(self, service_ref):
         """Initialization for a standalone compute service."""
 
         if CONF.pci.device_spec:
