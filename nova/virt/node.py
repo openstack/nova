@@ -35,7 +35,8 @@ def write_local_node_uuid(node_uuid):
     # Try to create the identity file and write our uuid into it. Fail
     # if the file exists (since it shouldn't if we made it here).
     try:
-        open(fn, 'x').write(node_uuid)
+        with open(fn, 'x') as f:
+            f.write(node_uuid)
     except FileExistsError:
         # If the file exists, we must either fail or re-survey all the
         # potential files. If we just read and return it, it could be

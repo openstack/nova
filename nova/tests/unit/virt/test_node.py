@@ -72,7 +72,8 @@ class TestNodeIdentity(testtools.TestCase):
 
     def test_generate_local_node_uuid_unexpected_write_fail(self):
         with mock.patch('builtins.open') as mock_open:
-            mock_open.return_value.write.side_effect = IndexError()
+            mock_write = mock_open.return_value.__enter__.return_value.write
+            mock_write.side_effect = IndexError()
             e = self.assertRaises(exception.InvalidNodeConfiguration,
                                   node.write_local_node_uuid, 'foo')
             self.assertIn('Unable to write uuid to %s' % (

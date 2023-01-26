@@ -65,6 +65,7 @@ from nova.scheduler import weights
 from nova import service
 from nova.tests.functional.api import client
 from nova import utils
+from nova.virt import node
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -1855,6 +1856,7 @@ class ComputeNodeIdFixture(fixtures.Fixture):
     def setUp(self):
         super().setUp()
 
+        node.LOCAL_NODE_UUID = None
         self.useFixture(fixtures.MockPatch(
             'nova.virt.node.read_local_node_uuid',
             lambda: None))
