@@ -2044,6 +2044,12 @@ class Connection(object):
 
         return VIR_CPU_COMPARE_IDENTICAL
 
+    def compareHypervisorCPU(
+        self, emulator, arch, machine, virttype,
+        xml, flags
+    ):
+        return self.compareCPU(xml, flags)
+
     def getCPUStats(self, cpuNum, flag):
         if cpuNum < 2:
             return {'kernel': 5664160000000,
