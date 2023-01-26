@@ -2496,3 +2496,7 @@ class PlacementPciMixedTraitsException(PlacementPciException):
 
 class ReimageException(NovaException):
     msg_fmt = _("Reimaging volume failed.")
+
+
+class InvalidNodeConfiguration(NovaException):
+    msg_fmt = _('Invalid node identity configuration: %(reason)s')

@@ -66,6 +66,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import matchers
 from nova import utils
 from nova.virt import images
+from nova.virt import node
 
 CONF = cfg.CONF
 
@@ -298,6 +299,11 @@ class TestCase(base.BaseTestCase):
 
         # Reset the placement client singleton
         report.PLACEMENTCLIENT = None
+
+        # Reset our local node uuid cache (and avoid writing to the
+        # local filesystem when we generate a new one).
+        node.LOCAL_NODE_UUID = None
+        self.useFixture(nova_fixtures.ComputeNodeIdFixture())
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.

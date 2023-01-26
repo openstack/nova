@@ -1849,3 +1849,15 @@ class ImportModulePoisonFixture(fixtures.Fixture):
         # will not work to cause a failure in the test.
         if self.fail_message:
             raise ImportError(self.fail_message)
+
+
+class ComputeNodeIdFixture(fixtures.Fixture):
+    def setUp(self):
+        super().setUp()
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.node.read_local_node_uuid',
+            lambda: None))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.node.write_local_node_uuid',
+            lambda uuid: None))
