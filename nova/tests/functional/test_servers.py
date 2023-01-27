@@ -23,6 +23,7 @@ import zlib
 from cinderclient import exceptions as cinder_exception
 from keystoneauth1 import adapter
 from oslo_config import cfg
+from oslo_limit import fixture as limit_fixture
 from oslo_log import log as logging
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
@@ -376,6 +377,112 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Wait for real deletion
         self._wait_until_deleted(found_server)
+
+    def test_unshelve_offloaded_overquota(self):
+        # Use a quota limit of 3 vcpus.
+        self.flags(cores=3, group='quota')
+
+        # Use flavor that has vcpus = 1.
+        for i in range(0, 3):
+            server = self._create_server(flavor_id=1)
+
+        # We should be at the quota limit now. Shelve an instance and wait for
+        # it to become SHELVED_OFFLOADED.
+        self._shelve_server(server, expected_state='SHELVED_OFFLOADED')
+
+        # Try to boot another instance. It should fail because shelved
+        # offloaded instances still consume quota.
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self._create_server,
+                               flavor_id=1)
+        self.assertEqual(403, ex.response.status_code)
+
+        # Unshelving the instance should also succeed.
+        self._unshelve_server(server)
+
+    def _test_unshelve_offloaded_overquota_placement(self):
+        # Use flavor that has vcpus = 1.
+        for i in range(0, 3):
+            server = self._create_server(flavor_id=1)
+
+        # We should be at the quota limit now. Shelve an instance and wait for
+        # it to become SHELVED_OFFLOADED.
+        self._shelve_server(server, expected_state='SHELVED_OFFLOADED')
+
+        # Try to boot another instance. It should succeed because with
+        # placement, shelved offloaded instances do not consume cores/ram
+        # quota.
+        self._create_server(flavor_id=1)
+
+        # FIXME(melwitt): This is bug #2003991, the unshelve is supposed to
+        # fail if we would be over quota after unshelving.
+        # Now try to unshelve the earlier instance. It should fail because it
+        # would put us over quota to have 4 running instances.
+        # ex = self.assertRaises(client.OpenStackApiException,
+        #                        self._unshelve_server,
+        #                        server)
+        # self.assertEqual(403, ex.response.status_code)
+        self._unshelve_server(server)
+
+    def test_unshelve_offloaded_overquota_placement(self):
+        # Count quota usage from placement.
+        self.flags(count_usage_from_placement=True, group='quota')
+        # Use a quota limit of 3 vcpus.
+        self.flags(cores=3, group='quota')
+        self._test_unshelve_offloaded_overquota_placement()
+
+    def test_unshelve_offloaded_overquota_ul(self):
+        self.flags(driver='nova.quota.UnifiedLimitsDriver', group='quota')
+        limits = {
+            'servers': 5,
+            'class:VCPU': 3,
+            'class:MEMORY_MB': 2048,
+            'class:DISK_GB': 5
+        }
+        self.useFixture(limit_fixture.LimitFixture(limits, {}))
+        self._test_unshelve_offloaded_overquota_placement()
+
+    def test_unshelve_overquota(self):
+        # Test for behavior where the shelved instance is not offloaded.
+        self.flags(shelved_offload_time=3600)
+        # Use a quota limit of 3 vcpus.
+        self.flags(cores=3, group='quota')
+
+        # Use flavor that has vcpus = 1.
+        for i in range(0, 3):
+            server = self._create_server(flavor_id=1)
+
+        # We should be at the quota limit now. Shelve an instance.
+        self._shelve_server(server, expected_state='SHELVED')
+
+        # Try to boot another instance. It should fail because shelved
+        # instances still consume quota.
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self._create_server,
+                               flavor_id=1)
+        self.assertEqual(403, ex.response.status_code)
+
+        # Verify that it's still SHELVED.
+        self._wait_for_state_change(server, 'SHELVED')
+
+        # Unshelving the instance should also succeed.
+        self._unshelve_server(server)
+
+    def test_unshelve_overquota_placement(self):
+        # Count quota usage from placement, should behave the same as legacy.
+        self.flags(count_usage_from_placement=True, group='quota')
+        self.test_unshelve_overquota()
+
+    def test_unshelve_overquota_ul(self):
+        self.flags(driver='nova.quota.UnifiedLimitsDriver', group='quota')
+        limits = {
+            'servers': 5,
+            'class:VCPU': 3,
+            'class:MEMORY_MB': 2048,
+            'class:DISK_GB': 5
+        }
+        self.useFixture(limit_fixture.LimitFixture(limits, {}))
+        self.test_unshelve_overquota_placement()
 
     def test_create_server_with_metadata(self):
         # Creates a server with metadata.
