@@ -414,15 +414,12 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # quota.
         self._create_server(flavor_id=1)
 
-        # FIXME(melwitt): This is bug #2003991, the unshelve is supposed to
-        # fail if we would be over quota after unshelving.
         # Now try to unshelve the earlier instance. It should fail because it
         # would put us over quota to have 4 running instances.
-        # ex = self.assertRaises(client.OpenStackApiException,
-        #                        self._unshelve_server,
-        #                        server)
-        # self.assertEqual(403, ex.response.status_code)
-        self._unshelve_server(server)
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self._unshelve_server,
+                               server)
+        self.assertEqual(403, ex.response.status_code)
 
     def test_unshelve_offloaded_overquota_placement(self):
         # Count quota usage from placement.

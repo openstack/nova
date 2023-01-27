@@ -81,7 +81,7 @@ class ShelveController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(202)
-    @wsgi.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('unshelve')
     # In microversion 2.77 we support specifying 'availability_zone' to
     # unshelve a server. But before 2.77 there is no request body
@@ -142,3 +142,5 @@ class ShelveController(wsgi.Controller):
             exception.ComputeHostNotFound,
         ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.OverQuota as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())

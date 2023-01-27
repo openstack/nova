@@ -60,6 +60,7 @@ from nova.i18n import _
 from nova.image import glance
 from nova.limit import local as local_limit
 from nova.limit import placement as placement_limits
+from nova.limit import utils as limit_utils
 from nova.network import constants
 from nova.network import model as network_model
 from nova.network import neutron
@@ -4522,6 +4523,42 @@ class API:
                             "vol_zone": volume['availability_zone']}
                         raise exception.MismatchVolumeAZException(reason=msg)
 
+    @staticmethod
+    def _check_quota_unshelve_offloaded(
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+        request_spec: 'objects.RequestSpec'
+    ):
+        if not (CONF.quota.count_usage_from_placement or
+                limit_utils.use_unified_limits()):
+            return
+        # TODO(melwitt): This is ugly but we have to do it this way because
+        # instances quota is currently counted from the API database but cores
+        # and ram are counted from placement. That means while an instance is
+        # SHELVED_OFFLOADED, it will still consume instances quota but it will
+        # not consume cores and ram. So we need an instances delta of
+        # 0 but cores and ram deltas from the flavor.
+        # Once instances usage is also being counted from placement, we can
+        # replace this method with a normal check_num_instances_quota() call.
+        vcpus = instance.flavor.vcpus
+        memory_mb = instance.flavor.memory_mb
+        # We are not looking to create a new server, we are unshelving an
+        # existing one.
+        deltas = {'instances': 0, 'cores': vcpus, 'ram': memory_mb}
+
+        objects.Quotas.check_deltas(
+            context,
+            deltas,
+            context.project_id,
+            user_id=context.user_id,
+            check_project_id=instance.project_id,
+            check_user_id=instance.user_id,
+        )
+        # Do the same for unified limits.
+        placement_limits.enforce_num_instances_and_flavor(
+            context, context.project_id, instance.flavor, request_spec.is_bfv,
+            0, 0, delta_updates={'servers': 0})
+
     @block_extended_resource_request
     @check_instance_lock
     @check_instance_state(
@@ -4549,6 +4586,15 @@ class API:
 
         request_spec = objects.RequestSpec.get_by_instance_uuid(
             context, instance.uuid)
+
+        # Check quota before we save any changes to the database, but only if
+        # we are counting quota usage from placement. When an instance is
+        # SHELVED_OFFLOADED, it will not consume cores or ram resources in
+        # placement. This means it is possible that an unshelve would cause the
+        # project/user to go over quota.
+        if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+            self._check_quota_unshelve_offloaded(
+                context, instance, request_spec)
 
         # We need to check a list of preconditions and validate inputs first
 
