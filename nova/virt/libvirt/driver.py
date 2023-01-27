@@ -11310,6 +11310,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_available_nodes(self, refresh=False):
         return [self._host.get_hostname()]
 
+    def get_available_node_uuids(self, refresh=False):
+        return [self._host.get_node_uuid()]
+
     def get_host_cpu_stats(self):
         """Return the current CPU state of the host."""
         return self._host.get_cpu_stats()

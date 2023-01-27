@@ -839,6 +839,9 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         return node_uuids
 
+    def get_available_node_uuids(self, refresh=False):
+        return self.get_available_nodes(refresh=refresh)
+
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree object with current resource provider and
         inventory information.

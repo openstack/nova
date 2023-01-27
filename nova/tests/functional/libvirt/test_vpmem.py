@@ -12,9 +12,11 @@
 #    under the License.
 
 import fixtures
+from unittest import mock
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import objects
 from nova.tests import fixtures as nova_fixtures
@@ -99,7 +101,9 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
                                            cpu_cores=2, cpu_threads=2),
             hostname=hostname)
         self.mock_conn.return_value = fake_connection
-        compute = self._start_compute(host=hostname)
+        with mock.patch('nova.virt.node.get_local_node_uuid') as m:
+            m.return_value = str(getattr(uuids, 'node_%s' % hostname))
+            compute = self._start_compute(host=hostname)
 
         # Ensure populating the existing pmems correctly.
         vpmems = compute.driver._vpmems_by_name
