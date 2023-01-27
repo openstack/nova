@@ -156,7 +156,8 @@ def enforce_num_instances_and_flavor(
     is_bfvm: bool,
     min_count: int,
     max_count: int,
-    enforcer: ty.Optional[limit.Enforcer] = None
+    enforcer: ty.Optional[limit.Enforcer] = None,
+    delta_updates: ty.Optional[ty.Dict[str, int]] = None,
 ) -> int:
     """Return max instances possible, else raise TooManyInstances exception."""
     if not limit_utils.use_unified_limits():
@@ -169,7 +170,10 @@ def enforce_num_instances_and_flavor(
         raise ValueError("invalid max_count")
 
     deltas = _get_deltas_by_flavor(flavor, is_bfvm, max_count)
-    enforcer = _get_enforcer(context, project_id)
+    if delta_updates:
+        deltas.update(delta_updates)
+
+    enforcer = enforcer or _get_enforcer(context, project_id)
     try:
         enforcer.enforce(project_id, deltas)
     except limit_exceptions.ProjectOverLimit as e:

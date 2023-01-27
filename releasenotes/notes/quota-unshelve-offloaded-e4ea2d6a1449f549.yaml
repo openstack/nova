@@ -1,0 +1,8 @@
+fixes:
+  - |
+    `Bug #2003991`_: Fixes an issue where quota was not properly enforced
+    during unshelve of a ``SHELVED_OFFLOADED`` server when
+    ``[quota]count_usage_from_placement = true`` or
+    ``[quota]driver = nova.quota.UnifiedLimitsDriver`` are configured.
+
+    .. _Bug #2003991: https://launchpad.net/bugs/2003991

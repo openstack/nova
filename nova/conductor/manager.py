@@ -20,6 +20,7 @@ import copy
 import eventlet
 import functools
 import sys
+import typing as ty
 
 from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
@@ -48,6 +49,7 @@ from nova import exception
 from nova.i18n import _
 from nova.image import glance
 from nova.limit import placement as placement_limits
+from nova.limit import utils as limit_utils
 from nova import manager
 from nova.network import neutron
 from nova import notifications
@@ -970,6 +972,33 @@ class ComputeTaskManager:
                 objects.Destination(
                     cell=instance_mapping.cell_mapping))
 
+    def _recheck_quota(
+        self,
+        context: nova_context.RequestContext,
+        flavor: 'objects.Flavor',
+        request_spec: 'objects.RequestSpec',
+        orig_num_req: int,
+        project_id: ty.Optional[str] = None,
+        user_id: ty.Optional[str] = None
+    ) -> None:
+        # A quota "recheck" is a quota check that is performed *after* quota
+        # limited resources are consumed. It is meant to address race
+        # conditions where a request that was not over quota at the beginning
+        # of the request before resources are allocated becomes over quota
+        # after resources (like database rows or placement allocations) are
+        # created. An example of this would be a large number of requests for
+        # the same resource for the same project sent simultaneously.
+        if CONF.quota.recheck_quota:
+            # The orig_num_req is the number of instances requested, which is
+            # the delta that was quota checked before resources were allocated.
+            # This is only used for the exception message is the recheck fails
+            # for lack of enough quota.
+            compute_utils.check_num_instances_quota(
+                context, flavor, 0, 0, project_id=project_id,
+                user_id=user_id, orig_num_req=orig_num_req)
+            placement_limits.enforce_num_instances_and_flavor(
+                context, project_id, flavor, request_spec.is_bfv, 0, 0)
+
     # TODO(mriedem): Make request_spec required in ComputeTaskAPI RPC v2.0.
     @targets_cell
     def unshelve_instance(self, context, instance, request_spec=None):
@@ -1055,6 +1084,30 @@ class ComputeTaskManager:
                     host_lists = self._schedule_instances(context,
                             request_spec, [instance.uuid],
                             return_alternates=False)
+
+                    # NOTE(melwitt): We recheck the quota after allocating the
+                    # resources in placement, to prevent users from allocating
+                    # more resources than their allowed quota in the event of a
+                    # race. This is configurable because it can be expensive if
+                    # strict quota limits are not required in a deployment.
+                    try:
+                        # Quota should only be checked for unshelve only if
+                        # resources are being counted in placement. Legacy
+                        # quotas continue to consume resources while
+                        # SHELVED_OFFLOADED and will not allocate any new
+                        # resources during unshelve.
+                        if (CONF.quota.count_usage_from_placement or
+                                limit_utils.use_unified_limits()):
+                            self._recheck_quota(
+                                context, instance.flavor, request_spec, 0,
+                                project_id=instance.project_id,
+                                user_id=instance.user_id)
+                    except (exception.TooManyInstances,
+                            limit_exceptions.ProjectOverLimit):
+                        with excutils.save_and_reraise_exception():
+                            self.report_client.delete_allocation_for_instance(
+                                context, instance.uuid, force=True)
+
                     host_list = host_lists[0]
                     selection = host_list[0]
                     scheduler_utils.populate_filter_properties(
@@ -1677,27 +1730,22 @@ class ComputeTaskManager:
                     instances.append(instance)
                     cell_mapping_cache[instance.uuid] = cell
 
-        # NOTE(melwitt): We recheck the quota after creating the
-        # objects to prevent users from allocating more resources
+        # NOTE(melwitt): We recheck the quota after allocating the
+        # resources to prevent users from allocating more resources
         # than their allowed quota in the event of a race. This is
         # configurable because it can be expensive if strict quota
         # limits are not required in a deployment.
-        if CONF.quota.recheck_quota:
-            try:
-                compute_utils.check_num_instances_quota(
-                    context, instance.flavor, 0, 0,
-                    orig_num_req=len(build_requests))
-                placement_limits.enforce_num_instances_and_flavor(
-                    context, context.project_id, instance.flavor,
-                    request_specs[0].is_bfv, 0, 0)
-            except (exception.TooManyInstances,
-                    limit_exceptions.ProjectOverLimit) as exc:
-                with excutils.save_and_reraise_exception():
-                    self._cleanup_build_artifacts(context, exc, instances,
-                                                  build_requests,
-                                                  request_specs,
-                                                  block_device_mapping, tags,
-                                                  cell_mapping_cache)
+        try:
+            self._recheck_quota(context, instance.flavor, request_specs[0],
+                len(build_requests), project_id=instance.project_id,
+                user_id=instance.user_id
+            )
+        except (exception.TooManyInstances,
+                limit_exceptions.ProjectOverLimit) as exc:
+            with excutils.save_and_reraise_exception():
+                self._cleanup_build_artifacts(
+                    context, exc, instances, build_requests, request_specs,
+                    block_device_mapping, tags, cell_mapping_cache)
 
         zipped = zip(build_requests, request_specs, host_lists, instances)
         for (build_request, request_spec, host_list, instance) in zipped:
