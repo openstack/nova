@@ -57,6 +57,7 @@ from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import network_request as net_req_obj
+from nova.objects import service as service_obj
 from nova.pci import request as pci_request
 from nova.scheduler.client import report
 from nova import test
@@ -76,6 +77,7 @@ from nova.virt import driver as virt_driver
 from nova.virt import event as virtevent
 from nova.virt import fake as fake_driver
 from nova.virt import hardware
+from nova.virt import node as virt_node
 from nova.volume import cinder
 
 
@@ -906,6 +908,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             return instance_obj._make_instance_list(
                     self.context, objects.InstanceList(), db_list, None)
 
+        @mock.patch.object(manager.ComputeManager,
+                           '_ensure_existing_node_identity')
         @mock.patch.object(manager.ComputeManager, '_get_nodes')
         @mock.patch.object(manager.ComputeManager,
                            '_error_out_instances_whose_build_was_interrupted')
@@ -924,7 +928,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                            mock_validate_vtpm, mock_validate_pinning,
                            mock_destroy, mock_admin_ctxt, mock_host_get,
                            mock_init_host,
-                           mock_error_interrupted, mock_get_nodes):
+                           mock_error_interrupted, mock_get_nodes,
+                           mock_existing_node):
             mock_admin_ctxt.return_value = self.context
             inst_list = _make_instance_list(startup_instances)
             mock_host_get.return_value = inst_list
@@ -935,6 +940,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             self.compute.init_host(None)
 
+            mock_existing_node.assert_not_called()
             mock_validate_pinning.assert_called_once_with(inst_list)
             mock_validate_vtpm.assert_called_once_with(inst_list)
             mock_destroy.assert_called_once_with(
@@ -988,13 +994,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.objects.InstanceList')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
-    def test_cleanup_host(self, mock_miglist_get, mock_instance_list):
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
+    def test_cleanup_host(self, mock_cnlist_get, mock_miglist_get,
+                          mock_instance_list):
         # just testing whether the cleanup_host method
         # when fired will invoke the underlying driver's
         # equivalent method.
 
         mock_miglist_get.return_value = []
         mock_instance_list.get_by_host.return_value = []
+        mock_cnlist_get.return_value = []
 
         with mock.patch.object(self.compute, 'driver') as mock_driver:
             self.compute.init_host(None)
@@ -1154,19 +1163,22 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     def test_get_nodes(self, mock_driver_get_nodes, mock_get_by_host_and_node):
-        mock_driver_get_nodes.return_value = ['fake-node1', 'fake-node2']
-        cn1 = objects.ComputeNode(uuid=uuids.cn1)
-        cn2 = objects.ComputeNode(uuid=uuids.cn2)
+        mock_driver_get_nodes.return_value = ['fake_node1', 'fake_node2']
+        # NOTE(danms): The fake driver, by default, uses
+        # uuidsentinel.$node_name, so we can predict the uuids it will
+        # return here.
+        cn1 = objects.ComputeNode(uuid=uuids.fake_node1)
+        cn2 = objects.ComputeNode(uuid=uuids.fake_node2)
         mock_get_by_host_and_node.side_effect = [cn1, cn2]
 
         nodes = self.compute._get_nodes(self.context)
 
-        self.assertEqual({uuids.cn1: cn1, uuids.cn2: cn2}, nodes)
+        self.assertEqual({uuids.fake_node1: cn1, uuids.fake_node2: cn2}, nodes)
 
         mock_driver_get_nodes.assert_called_once_with()
         mock_get_by_host_and_node.assert_has_calls([
-            mock.call(self.context, self.compute.host, 'fake-node1'),
-            mock.call(self.context, self.compute.host, 'fake-node2'),
+            mock.call(self.context, self.compute.host, 'fake_node1'),
+            mock.call(self.context, self.compute.host, 'fake_node2')
         ])
 
     @mock.patch.object(manager.LOG, 'warning')
@@ -1206,7 +1218,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_driver_get_nodes.assert_called_once_with()
         mock_get_by_host_and_node.assert_has_calls([
             mock.call(self.context, self.compute.host, 'fake-node1'),
-            mock.call(self.context, self.compute.host, 'fake-node2'),
+            mock.call(self.context, self.compute.host, 'fake-node2')
         ])
         mock_log_warning.assert_called_once_with(
             "Compute node %s not found in the database. If this is the first "
@@ -6320,6 +6332,112 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                          'two-image'])
             self.assertEqual({'one-image': 'cached',
                               'two-image': 'existing'}, r)
+
+    @mock.patch.object(virt_node, 'write_local_node_uuid')
+    def test_ensure_node_uuid_not_needed_version(self, mock_node):
+        # Make sure an up-to-date service bypasses the persistence
+        service_ref = service_obj.Service()
+        self.assertEqual(service_obj.SERVICE_VERSION, service_ref.version)
+        mock_node.assert_not_called()
+        self.compute._ensure_existing_node_identity(service_ref)
+        mock_node.assert_not_called()
+
+    @mock.patch.object(virt_node, 'write_local_node_uuid')
+    def test_ensure_node_uuid_not_needed_ironic(self, mock_node):
+        # Make sure an old service for ironic does not write a local node uuid
+        with mock.patch.object(service_obj, 'SERVICE_VERSION', new=60):
+            service_ref = service_obj.Service()
+        self.assertEqual(60, service_ref.version)
+        self.flags(compute_driver='ironic')
+        self.compute._ensure_existing_node_identity(service_ref)
+        mock_node.assert_not_called()
+
+    @mock.patch.object(virt_node, 'write_local_node_uuid')
+    @mock.patch.object(virt_node, 'read_local_node_uuid')
+    def test_ensure_node_uuid_not_needed_preprovisioned(self,
+                                                        mock_read_node,
+                                                        mock_write_node):
+        # Make sure an old service does not write a uuid if one is present
+        with mock.patch.object(service_obj, 'SERVICE_VERSION', new=60):
+            service_ref = service_obj.Service()
+        self.assertEqual(60, service_ref.version)
+        mock_read_node.return_value = str(uuids.SOME_UUID)
+        self.compute._ensure_existing_node_identity(service_ref)
+        mock_write_node.assert_not_called()
+
+    @mock.patch.object(virt_node, 'write_local_node_uuid')
+    @mock.patch.object(virt_node, 'read_local_node_uuid')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host')
+    def test_ensure_node_uuid_upgrade_no_node(self, mock_get_cn,
+                                              mock_read_node,
+                                              mock_write_node):
+        # If we are not a new service, we have no pre-provisioned node uuid
+        # and we find no nodes in the database, we do not write a local
+        # node uuid *and* we abort startup since something is likely wrong.
+        with mock.patch.object(service_obj, 'SERVICE_VERSION', new=60):
+            service_ref = service_obj.Service()
+        self.assertEqual(60, service_ref.version)
+        mock_read_node.return_value = None
+        mock_get_cn.return_value = []
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.compute._ensure_existing_node_identity,
+                          service_ref)
+        mock_get_cn.assert_called_once_with(mock.ANY, self.compute.host)
+        mock_write_node.assert_not_called()
+
+    @mock.patch.object(virt_node, 'write_local_node_uuid')
+    @mock.patch.object(virt_node, 'read_local_node_uuid')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host')
+    def test_ensure_node_uuid_upgrade_multi_node(self, mock_get_cn,
+                                                 mock_read_node,
+                                                 mock_write_node):
+        # If we are not a new service, we have no pre-provisioned node uuid
+        # and we find multiple nodes in the database, we do not write a local
+        # node uuid *and* we abort startup since something is likely wrong.
+        with mock.patch.object(service_obj, 'SERVICE_VERSION', new=60):
+            service_ref = service_obj.Service()
+        self.assertEqual(60, service_ref.version)
+        mock_read_node.return_value = None
+        mock_get_cn.return_value = [1, 2]
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.compute._ensure_existing_node_identity,
+                          service_ref)
+        mock_get_cn.assert_called_once_with(mock.ANY, self.compute.host)
+        mock_write_node.assert_not_called()
+
+    @mock.patch.object(virt_node, 'write_local_node_uuid')
+    @mock.patch.object(virt_node, 'read_local_node_uuid')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host')
+    def test_ensure_node_uuid_upgrade_writes_node_uuid(self, mock_get_cn,
+                                                       mock_read_node,
+                                                       mock_write_node):
+        # If we are not a new service, there is no pre-provisioned local
+        # compute node uuid, and we find exactly one compute node in the
+        # database for our host, we persist that.
+        with mock.patch.object(service_obj, 'SERVICE_VERSION', new=60):
+            service_ref = service_obj.Service()
+        self.assertEqual(60, service_ref.version)
+        mock_read_node.return_value = None
+        mock_get_cn.return_value = [
+            objects.ComputeNode(uuid=str(uuids.compute)),
+            ]
+        self.compute._ensure_existing_node_identity(service_ref)
+        mock_get_cn.assert_called_once_with(mock.ANY, self.compute.host)
+        mock_write_node.assert_called_once_with(str(uuids.compute))
+
+    def test_ensure_node_uuid_called_by_init_host(self):
+        # test_init_host() above ensures that we do not call
+        # _ensure_existing_node_identity() in the service_ref=None case.
+        # Since testing init_host() requires a billion mocks, this
+        # tests that we do call it when expected, but make it raise
+        # to avoid running the rest of init_host().
+        with mock.patch.object(self.compute,
+                               '_ensure_existing_node_identity') as m:
+            m.side_effect = test.TestingException
+            self.assertRaises(test.TestingException,
+                              self.compute.init_host,
+                              mock.sentinel.service_ref)
+            m.assert_called_once_with(mock.sentinel.service_ref)
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
