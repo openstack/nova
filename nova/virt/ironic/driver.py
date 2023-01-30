@@ -839,8 +839,12 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         return node_uuids
 
-    def get_available_node_uuids(self, refresh=False):
-        return self.get_available_nodes(refresh=refresh)
+    def get_nodenames_by_uuid(self, refresh=False):
+        nodes = self.get_available_nodes(refresh=refresh)
+        # We use the uuid for compute_node.uuid and
+        # compute_node.hypervisor_hostname, so the dict keys and values are
+        # the same.
+        return dict(zip(nodes, nodes))
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree object with current resource provider and

@@ -1473,7 +1473,7 @@ class ComputeManager(manager.Manager):
             node.
         """
         try:
-            node_uuids = self.driver.get_available_node_uuids()
+            node_ids = self.driver.get_nodenames_by_uuid()
         except exception.VirtDriverNotReady:
             LOG.warning(
                 "Virt driver is not ready. If this is the first time this "
@@ -1481,7 +1481,8 @@ class ComputeManager(manager.Manager):
                 "this warning.")
             return {}
 
-        nodes = objects.ComputeNodeList.get_all_by_uuids(context, node_uuids)
+        nodes = objects.ComputeNodeList.get_all_by_uuids(context,
+                                                         list(node_ids.keys()))
         if not nodes:
             # NOTE(danms): This should only happen if the compute_id is
             # pre-provisioned on a host that has never started.
@@ -1489,8 +1490,17 @@ class ComputeManager(manager.Manager):
                         'database. If this is the first time this service is '
                         'starting on this host, then you can ignore this '
                         'warning.',
-                        node_uuids, self.host)
+                        list(node_ids.keys()), self.host)
             return {}
+
+        for node in nodes:
+            if node.hypervisor_hostname != node_ids.get(node.uuid):
+                raise exception.InvalidConfiguration(
+                    ('My compute node %s has hypervisor_hostname %s '
+                     'but virt driver reports it should be %s. Possible '
+                     'rename detected, refusing to start!') % (
+                         node.uuid, node.hypervisor_hostname,
+                         node_ids.get(node.uuid)))
 
         return {n.uuid: n for n in nodes}
 

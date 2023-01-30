@@ -510,7 +510,7 @@ class FakeDriver(driver.ComputeDriver):
         # control our node uuids. Make sure we return a unique and
         # consistent uuid for each node we are responsible for to
         # avoid the persistent local node identity from taking over.
-        host_status['uuid'] = str(getattr(uuids, nodename))
+        host_status['uuid'] = str(getattr(uuids, 'node_%s' % nodename))
         return host_status
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
@@ -653,8 +653,9 @@ class FakeDriver(driver.ComputeDriver):
     def get_available_nodes(self, refresh=False):
         return self._nodes
 
-    def get_available_node_uuids(self, refresh=False):
-        return [str(getattr(uuids, n)) for n in self.get_available_nodes()]
+    def get_nodenames_by_uuid(self, refresh=False):
+        return {str(getattr(uuids, 'node_%s' % n)): n
+                for n in self.get_available_nodes()}
 
     def instance_on_disk(self, instance):
         return False

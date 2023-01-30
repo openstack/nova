@@ -1596,8 +1596,10 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def get_available_node_uuids(self, refresh=False):
-        return [nova.virt.node.get_local_node_uuid()]
+    def get_nodenames_by_uuid(self, refresh=False):
+        """Returns a dict of {uuid: nodename} for all managed nodes."""
+        nodename = self.get_available_nodes()[0]
+        return {nova.virt.node.get_local_node_uuid(): nodename}
 
     def node_is_available(self, nodename):
         """Return whether this compute service manages a particular node."""
