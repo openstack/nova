@@ -1,0 +1,28 @@
+---
+fixes:
+  - |
+    Fixes `bug 1996995`_ in which VMs live migrated on certain VXLAN Arista
+    network fabrics were inaccessible until the switch arp cache expired.
+
+    A Nova workaround option of ``enable_qemu_monitor_announce_self`` was added
+    to fix `bug 1815989`_ which when enabled would interact with the QEMU
+    monitor and force a VM to announce itself.
+
+    On certain network fabrics, VMs that are live migrated remain inaccessible
+    via the network despite the QEMU monitor announce_self command successfully
+    being called.
+
+    It was noted that on Arista VXLAN fabrics, testing showed that it required
+    several attempts of running the QEMU announce_self monitor command before
+    the switch would acknowledge a VM's new location on the fabric.
+
+    This fix introduces two operator configurable options.
+    The first option sets the number of times the QEMU monitor announce_self
+    command is called - ``qemu_announce_self_count``
+
+    The second option allows operators to set the delay between the QEMU
+    announce_self commands in seconds for subsequent announce_self commands
+    with  ``qemu_announce_self_interval``
+
+    .. _`bug 1996995`: https://bugs.launchpad.net/nova/+bug/1996995
+    .. _`bug 1815989`: https://bugs.launchpad.net/nova/+bug/1815989

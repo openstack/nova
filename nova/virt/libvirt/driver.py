@@ -11052,16 +11052,37 @@ class LibvirtDriver(driver.ComputeDriver):
         if not CONF.workarounds.enable_qemu_monitor_announce_self:
             return
 
-        LOG.info('Sending announce-self command to QEMU monitor',
-                 instance=instance)
+        current_attempt = 0
 
-        try:
-            guest = self._host.get_guest(instance)
-            guest.announce_self()
-        except Exception:
-            LOG.warning('Failed to send announce-self command to QEMU monitor',
-                        instance=instance)
-            LOG.exception()
+        max_attempts = (
+            CONF.workarounds.qemu_monitor_announce_self_count)
+        # qemu_monitor_announce_retry_interval specified in seconds
+        announce_pause = (
+            CONF.workarounds.qemu_monitor_announce_self_interval)
+
+        while(current_attempt < max_attempts):
+            # Increment attempt
+            current_attempt += 1
+
+            # Only use announce_pause after the first attempt to avoid
+            # pausing before calling announce_self for the first attempt
+            if current_attempt != 1:
+                greenthread.sleep(announce_pause)
+
+            LOG.info('Sending announce-self command to QEMU monitor. '
+                     'Attempt %(current_attempt)s of %(max_attempts)s',
+                     {'current_attempt': current_attempt,
+                      'max_attempts': max_attempts}, instance=instance)
+            try:
+                guest = self._host.get_guest(instance)
+                guest.announce_self()
+            except Exception:
+                LOG.warning('Failed to send announce-self command to '
+                    'QEMU monitor. Attempt %(current_attempt)s of '
+                    '%(max_attempts)s',
+                    {'current_attempt': current_attempt,
+                     'max_attempts': max_attempts}, instance=instance)
+                LOG.exception()
 
     def post_live_migration_at_destination(self, context,
                                            instance,
