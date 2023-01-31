@@ -1610,12 +1610,6 @@ class ComputeManager(manager.Manager):
         # NOTE(gibi): At this point the compute_nodes of the resource tracker
         # has not been populated yet so we cannot rely on the resource tracker
         # here.
-        # NOTE(gibi): If ironic and vcenter virt driver slow start time
-        # becomes problematic here then we should consider adding a config
-        # option or a driver flag to tell us if we should thread
-        # _destroy_evacuated_instances and
-        # _error_out_instances_whose_build_was_interrupted out in the
-        # background on startup
         context = nova.context.get_admin_context()
         nodes_by_uuid = self._get_nodes(context)
 
@@ -1633,6 +1627,12 @@ class ComputeManager(manager.Manager):
         self._validate_pinning_configuration(instances)
         self._validate_vtpm_configuration(instances)
 
+        # NOTE(gibi): If ironic and vcenter virt driver slow start time
+        # becomes problematic here then we should consider adding a config
+        # option or a driver flag to tell us if we should thread
+        # _destroy_evacuated_instances and
+        # _error_out_instances_whose_build_was_interrupted out in the
+        # background on startup
         try:
             # checking that instance was not already evacuated to other host
             evacuated_instances = self._destroy_evacuated_instances(
