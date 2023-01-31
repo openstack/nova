@@ -91,6 +91,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     # os-brick>=5.1 now uses external file system locks instead of internal
     # locks so we need to set up locking
     REQUIRES_LOCKING = True
+    STUB_COMPUTE_ID = False
 
     def setUp(self):
         super(ComputeManagerUnitTestCase, self).setUp()
@@ -6361,13 +6362,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               'two-image': 'existing'}, r)
 
     @mock.patch.object(virt_node, 'write_local_node_uuid')
-    def test_ensure_node_uuid_not_needed_version(self, mock_node):
+    @mock.patch.object(virt_node, 'read_local_node_uuid')
+    def test_ensure_node_uuid_not_needed_version(self, mock_read, mock_write):
         # Make sure an up-to-date service bypasses the persistence
         service_ref = service_obj.Service()
         self.assertEqual(service_obj.SERVICE_VERSION, service_ref.version)
-        mock_node.assert_not_called()
+        mock_read.return_value = 'not none'
+        mock_write.assert_not_called()
         self.compute._ensure_existing_node_identity(service_ref)
-        mock_node.assert_not_called()
+        mock_write.assert_not_called()
 
     @mock.patch.object(virt_node, 'write_local_node_uuid')
     def test_ensure_node_uuid_not_needed_ironic(self, mock_node):
@@ -6451,6 +6454,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.compute._ensure_existing_node_identity(service_ref)
         mock_get_cn.assert_called_once_with(mock.ANY, self.compute.host)
         mock_write_node.assert_called_once_with(str(uuids.compute))
+
+    @mock.patch.object(virt_node, 'read_local_node_uuid')
+    def test_ensure_node_uuid_missing_file_ironic(self, mock_read):
+        mock_service = mock.MagicMock(
+            version=service_obj.NODE_IDENTITY_VERSION)
+        mock_read.return_value = None
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.compute._ensure_existing_node_identity,
+                          mock_service)
+        mock_read.assert_called_once_with()
+
+        # Now make sure that ironic causes this exact configuration to pass
+        self.flags(compute_driver='ironic')
+        self.compute._ensure_existing_node_identity(mock_service)
 
     def test_ensure_node_uuid_called_by_init_host(self):
         # test_init_host() above ensures that we do not call

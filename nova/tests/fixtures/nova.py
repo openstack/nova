@@ -1863,3 +1863,7 @@ class ComputeNodeIdFixture(fixtures.Fixture):
         self.useFixture(fixtures.MockPatch(
             'nova.virt.node.write_local_node_uuid',
             lambda uuid: None))
+        self.useFixture(fixtures.MockPatch(
+            'nova.compute.manager.ComputeManager.'
+            '_ensure_existing_node_identity',
+            mock.DEFAULT))

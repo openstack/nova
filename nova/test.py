@@ -171,6 +171,12 @@ class TestCase(base.BaseTestCase):
     # base class when USES_DB is True.
     NUMBER_OF_CELLS = 1
 
+    # The stable compute id stuff is intentionally singleton-ish, which makes
+    # it a nightmare for testing multiple host/node combinations in tests like
+    # we do. So, mock it out by default, unless the test is specifically
+    # designed to handle it.
+    STUB_COMPUTE_ID = True
+
     def setUp(self):
         """Run before each test method to initialize test environment."""
         # Ensure BaseTestCase's ConfigureLogging fixture is disabled since
@@ -301,7 +307,8 @@ class TestCase(base.BaseTestCase):
 
         # Reset our local node uuid cache (and avoid writing to the
         # local filesystem when we generate a new one).
-        self.useFixture(nova_fixtures.ComputeNodeIdFixture())
+        if self.STUB_COMPUTE_ID:
+            self.useFixture(nova_fixtures.ComputeNodeIdFixture())
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.

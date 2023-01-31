@@ -1509,13 +1509,19 @@ class ComputeManager(manager.Manager):
         to write our node identity uuid (if not already done) based on
         nodes assigned to us in the database.
         """
-        if service_ref.version >= service_obj.NODE_IDENTITY_VERSION:
-            # Already new enough, nothing to do here
-            return
-
         if 'ironic' in CONF.compute_driver.lower():
             # We do not persist a single local node identity for
             # ironic
+            return
+
+        if service_ref.version >= service_obj.NODE_IDENTITY_VERSION:
+            # Already new enough, nothing to do here, but make sure that we
+            # have a UUID file already, as this is not our first time starting.
+            if nova.virt.node.read_local_node_uuid() is None:
+                raise exception.InvalidConfiguration(
+                    ('No local node identity found, but this is not our '
+                     'first startup on this host. Refusing to start after '
+                     'potentially having lost that state!'))
             return
 
         if nova.virt.node.read_local_node_uuid():
