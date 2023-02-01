@@ -2512,6 +2512,10 @@ class InvalidNodeConfiguration(NovaException):
     msg_fmt = _('Invalid node identity configuration: %(reason)s')
 
 
+class DuplicateRecord(NovaException):
+    msg_fmt = _('Unable to create duplicate record for %(target)s')
+
+
 class NotSupportedComputeForEvacuateV295(NotSupported):
     msg_fmt = _("Starting to microversion 2.95, evacuate API will stop "
                 "instance on destination. To evacuate before upgrades are "

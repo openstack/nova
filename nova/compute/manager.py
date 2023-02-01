@@ -10480,6 +10480,14 @@ class ComputeManager(manager.Manager):
             LOG.exception(
                 "Error updating PCI resources for node %(node)s.",
                 {'node': nodename})
+        except exception.InvalidConfiguration as e:
+            if startup:
+                # If this happens during startup, we need to let it raise to
+                # abort our service startup.
+                raise
+            else:
+                LOG.error("Error updating resources for node %s: %s",
+                          nodename, e)
         except Exception:
             LOG.exception("Error updating resources for node %(node)s.",
                           {'node': nodename})

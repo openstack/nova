@@ -728,7 +728,13 @@ class ResourceTracker(object):
         cn = objects.ComputeNode(context)
         cn.host = self.host
         self._copy_resources(cn, resources, initial=True)
-        cn.create()
+        try:
+            cn.create()
+        except exception.DuplicateRecord:
+            raise exception.InvalidConfiguration(
+                'Duplicate compute node record found for host %s node %s' % (
+                cn.host, cn.hypervisor_hostname))
+
         # Only map the ComputeNode into compute_nodes if create() was OK
         # because if create() fails, on the next run through here nodename
         # would be in compute_nodes and we won't try to create again (because

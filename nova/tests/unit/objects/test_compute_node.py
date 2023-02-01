@@ -16,6 +16,7 @@ import copy
 from unittest import mock
 
 import netaddr
+from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
@@ -340,6 +341,14 @@ class _TestComputeNodeObject(object):
         param_dict = {'service_id': 456,
                       'uuid': uuidsentinel.fake_compute_node}
         mock_create.assert_called_once_with(self.context, param_dict)
+
+    @mock.patch('nova.db.main.api.compute_node_create')
+    def test_create_duplicate(self, mock_create):
+        mock_create.side_effect = db_exc.DBDuplicateEntry
+        compute = compute_node.ComputeNode(context=self.context)
+        compute.service_id = 456
+        compute.hypervisor_hostname = 'node1'
+        self.assertRaises(exception.DuplicateRecord, compute.create)
 
     @mock.patch.object(db, 'compute_node_update')
     @mock.patch(
