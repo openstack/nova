@@ -2731,7 +2731,7 @@ class ComputeTestCase(BaseTestCase,
             bdms=[], recreate=False, on_shared_storage=False,
             preserve_ephemeral=False, migration=None, scheduled_node=None,
             limits={}, request_spec=None, accel_uuids=[],
-            reimage_boot_volume=False)
+            reimage_boot_volume=False, target_state=None)
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_rebuild_driver(self):
@@ -2762,7 +2762,7 @@ class ComputeTestCase(BaseTestCase,
             bdms=[], recreate=False, on_shared_storage=False,
             preserve_ephemeral=False, migration=None, scheduled_node=None,
             limits={}, request_spec=None, accel_uuids=[],
-            reimage_boot_volume=False)
+            reimage_boot_volume=False, target_state=None)
         self.assertTrue(called['rebuild'])
         self.compute.terminate_instance(self.context, instance, [])
 
@@ -2815,7 +2815,7 @@ class ComputeTestCase(BaseTestCase,
             bdms=bdms, recreate=False, preserve_ephemeral=False,
             migration=None, scheduled_node=None, limits={},
             on_shared_storage=False, request_spec=None, accel_uuids=[],
-            reimage_boot_volume=False)
+            reimage_boot_volume=False, target_state=None)
         self.assertTrue(called['rebuild'])
         self.compute.terminate_instance(self.context, instance, [])
 
@@ -2834,7 +2834,8 @@ class ComputeTestCase(BaseTestCase,
             new_pass="new_password", orig_sys_metadata=sys_metadata, bdms=[],
             recreate=False, on_shared_storage=False, preserve_ephemeral=False,
             migration=None, scheduled_node=None, limits=None,
-            request_spec=None, accel_uuids=[], reimage_boot_volume=False)
+            request_spec=None, accel_uuids=[], reimage_boot_volume=False,
+            target_state=None)
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_rebuild_launched_at_time(self):
@@ -2855,7 +2856,7 @@ class ComputeTestCase(BaseTestCase,
             new_pass="new_password", orig_sys_metadata={}, bdms=[],
             recreate=False, on_shared_storage=False, preserve_ephemeral=False,
             migration=None, scheduled_node=None, limits={}, request_spec=None,
-            accel_uuids=[], reimage_boot_volume=False)
+            accel_uuids=[], reimage_boot_volume=False, target_state=None)
         instance.refresh()
         self.assertEqual(cur_time,
                          instance['launched_at'].replace(tzinfo=None))
@@ -2889,7 +2890,7 @@ class ComputeTestCase(BaseTestCase,
             orig_sys_metadata=sys_metadata, bdms=[], recreate=False,
             on_shared_storage=False, preserve_ephemeral=False, migration=None,
             scheduled_node=None, limits={}, request_spec=None, accel_uuids=[],
-            reimage_boot_volume=False)
+            reimage_boot_volume=False, target_state=None)
         self.compute.terminate_instance(self.context, instance, [])
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -4617,7 +4618,8 @@ class ComputeTestCase(BaseTestCase,
                                   'request_spec': None,
                                   'on_shared_storage': False,
                                   'accel_uuids': (),
-                                  'reimage_boot_volume': False}),
+                                  'reimage_boot_volume': False,
+                                  'target_state': None}),
             ("set_admin_password", task_states.UPDATING_PASSWORD,
                                    {'new_pass': None}),
             ("rescue_instance", task_states.RESCUING,
@@ -5136,7 +5138,7 @@ class ComputeTestCase(BaseTestCase,
             orig_sys_metadata=orig_sys_metadata, bdms=[], recreate=False,
             on_shared_storage=False, preserve_ephemeral=False, migration=None,
             scheduled_node=None, limits={}, request_spec=None, accel_uuids=[],
-            reimage_boot_volume=False)
+            reimage_boot_volume=False, target_state=None)
 
         inst_ref.refresh()
 
@@ -11961,7 +11963,7 @@ class ComputeAPITestCase(BaseTestCase):
             force=False)
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def _test_evacuate(self, mock_notify, force=None):
+    def _test_evacuate(self, mock_notify, force=None, target_state=None):
         instance = self._create_fake_instance_obj(services=True)
         self.assertIsNone(instance.task_state)
 
@@ -11998,7 +12000,8 @@ class ComputeAPITestCase(BaseTestCase):
                                       host='fake_dest_host',
                                       on_shared_storage=True,
                                       admin_password=None,
-                                      force=force)
+                                      force=force,
+                                      target_state=target_state)
             if force is False:
                 host = None
             else:
@@ -12015,7 +12018,8 @@ class ComputeAPITestCase(BaseTestCase):
                 recreate=True,
                 on_shared_storage=True,
                 request_spec=fake_spec,
-                host=host)
+                host=host,
+                target_state=target_state)
         do_test()
 
         instance.refresh()
@@ -12046,6 +12050,9 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_evacuate_with_forced_host(self):
         self._test_evacuate(force=True)
+
+    def test_evacuate_with_target_state(self):
+        self._test_evacuate(target_state="stopped")
 
     @mock.patch('nova.servicegroup.api.API.service_is_up',
                 return_value=False)
@@ -13540,7 +13547,8 @@ class EvacuateHostTestCase(BaseTestCase):
                 image_ref, injected_files, 'newpass', {}, bdms, recreate=True,
                 on_shared_storage=on_shared_storage, migration=migration,
                 preserve_ephemeral=False, scheduled_node=node, limits=limits,
-                request_spec=None, accel_uuids=[], reimage_boot_volume=False)
+                request_spec=None, accel_uuids=[], reimage_boot_volume=False,
+                target_state=None)
             if vm_states_is_stopped:
                 mock_notify_rebuild.assert_has_calls([
                     mock.call(ctxt, self.inst, self.inst.host, phase='start',

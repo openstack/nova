@@ -5347,7 +5347,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         self.compute.rebuild_instance(
             self.context, instance, None, None, None, None, None, None,
-            recreate, False, False, None, scheduled_node, {}, None, [], False)
+            recreate, False, False, None, scheduled_node, {}, None, [], False,
+            None)
         mock_set.assert_called_once_with(None, 'failed')
         mock_notify_about_instance_usage.assert_called_once_with(
             mock.ANY, instance, 'rebuild.error', fault=mock_rebuild.side_effect
@@ -5459,7 +5460,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 preserve_ephemeral=False, migration=None,
                 scheduled_node='fake-node',
                 limits={}, request_spec=request_spec, accel_uuids=[],
-                reimage_boot_volume=False)
+                reimage_boot_volume=False,
+                target_state=None)
 
         mock_validate_policy.assert_called_once_with(
             elevated_context, instance, {'group': [uuids.group]})
@@ -5499,7 +5501,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             recreate=True, on_shared_storage=None, preserve_ephemeral=False,
             migration=None, scheduled_node='fake-node', limits={},
             request_spec=request_spec, accel_uuids=[],
-            reimage_boot_volume=False)
+            reimage_boot_volume=False, target_state=None)
 
         mock_validate_policy.assert_called_once_with(
             elevated_context, instance, {'group': [uuids.group]})
@@ -5525,7 +5527,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute.rebuild_instance(
                 self.context, instance, None, None,
                 None, None, None, None, False,
-                False, False, migration, None, {}, None, [], False)
+                False, False, migration, None, {}, None, [], False,
+                None)
             self.assertFalse(mock_get.called)
             self.assertEqual(node, instance.node)
             self.assertEqual('done', migration.status)
@@ -5547,7 +5550,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute.rebuild_instance(
                 self.context, instance, None, None, None, None, None,
                 None, True, False, False, mock.sentinel.migration, None, {},
-                None, [], False)
+                None, [], False, None)
             mock_get.assert_called_once_with(mock.ANY, self.compute.host)
             mock_rt.finish_evacuation.assert_called_once_with(
                 instance, 'new-node', mock.sentinel.migration)
@@ -5630,7 +5633,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                               preserve_ephemeral, {}, {},
                                               self.allocations,
                                               mock.sentinel.mapping, [],
-                                              False)
+                                              False, None)
 
             mock_notify_usage.assert_has_calls(
                 [mock.call(self.context, instance, "rebuild.start",
@@ -5889,7 +5892,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 request_spec=objects.RequestSpec(),
                 allocations=self.allocations,
                 request_group_resource_providers_mapping=mock.sentinel.mapping,
-                accel_uuids=[], reimage_boot_volume=False)
+                accel_uuids=[], reimage_boot_volume=False, target_state=None)
         self.assertIn('Trusted image certificates provided on host', str(ex))
 
     def test_reverts_task_state_instance_not_found(self):

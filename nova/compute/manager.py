@@ -618,7 +618,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='6.1')
+    target = messaging.Target(version='6.2')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3696,7 +3696,7 @@ class ComputeManager(manager.Manager):
                          bdms, recreate, on_shared_storage,
                          preserve_ephemeral, migration,
                          scheduled_node, limits, request_spec, accel_uuids,
-                         reimage_boot_volume):
+                         reimage_boot_volume, target_state):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -3731,6 +3731,7 @@ class ComputeManager(manager.Manager):
         :param reimage_boot_volume: Boolean to specify whether the user has
                                     explicitly requested to rebuild a boot
                                     volume
+        :param target_state: Set a target state for the evacuated instance.
 
         """
         # recreate=True means the instance is being evacuated from a failed
@@ -3795,7 +3796,8 @@ class ComputeManager(manager.Manager):
                     image_meta, injected_files, new_pass, orig_sys_metadata,
                     bdms, evacuate, on_shared_storage, preserve_ephemeral,
                     migration, request_spec, allocs, rebuild_claim,
-                    scheduled_node, limits, accel_uuids, reimage_boot_volume)
+                    scheduled_node, limits, accel_uuids, reimage_boot_volume,
+                    target_state)
             except (exception.ComputeResourcesUnavailable,
                     exception.RescheduledException) as e:
                 if isinstance(e, exception.ComputeResourcesUnavailable):
@@ -3855,7 +3857,7 @@ class ComputeManager(manager.Manager):
             injected_files, new_pass, orig_sys_metadata, bdms, evacuate,
             on_shared_storage, preserve_ephemeral, migration, request_spec,
             allocations, rebuild_claim, scheduled_node, limits, accel_uuids,
-            reimage_boot_volume):
+            reimage_boot_volume, target_state):
         """Helper to avoid deep nesting in the top-level method."""
 
         provider_mapping = None
@@ -3879,7 +3881,8 @@ class ComputeManager(manager.Manager):
                 context, instance, orig_image_ref, image_meta, injected_files,
                 new_pass, orig_sys_metadata, bdms, evacuate, on_shared_storage,
                 preserve_ephemeral, migration, request_spec, allocations,
-                provider_mapping, accel_uuids, reimage_boot_volume)
+                provider_mapping, accel_uuids, reimage_boot_volume,
+                target_state)
 
     @staticmethod
     def _get_image_name(image_meta):
@@ -3893,10 +3896,18 @@ class ComputeManager(manager.Manager):
             injected_files, new_pass, orig_sys_metadata, bdms, evacuate,
             on_shared_storage, preserve_ephemeral, migration, request_spec,
             allocations, request_group_resource_providers_mapping,
-            accel_uuids, reimage_boot_volume):
+            accel_uuids, reimage_boot_volume, target_state):
         orig_vm_state = instance.vm_state
 
         if evacuate:
+            if target_state and orig_vm_state != vm_states.ERROR:
+                # This will ensure that at destination the instance will have
+                # the desired state.
+                if target_state not in vm_states.ALLOW_TARGET_STATES:
+                    raise exception.InstanceEvacuateNotSupportedTargetState(
+                        target_state=target_state)
+                orig_vm_state = target_state
+
             if request_spec:
                 # NOTE(gibi): Do a late check of server group policy as
                 # parallel scheduling could violate such policy. This will
@@ -11369,7 +11380,7 @@ class _ComputeV5Proxy(object):
             bdms, recreate, on_shared_storage,
             preserve_ephemeral, migration,
             scheduled_node, limits, request_spec,
-            accel_uuids, False)
+            accel_uuids, False, None)
 
     # 5.13 support for optional accel_uuids argument
     def shelve_instance(self, context, instance, image_id,

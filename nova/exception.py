@@ -1451,6 +1451,11 @@ class InstanceEvacuateNotSupported(Invalid):
     msg_fmt = _('Instance evacuate is not supported.')
 
 
+class InstanceEvacuateNotSupportedTargetState(Invalid):
+    msg_fmt = _("Target state '%(target_state)s' for instance evacuate "
+                "is not supported.")
+
+
 class DBNotAllowed(NovaException):
     msg_fmt = _('%(binary)s attempted direct database access which is '
                 'not allowed by policy')
@@ -1477,6 +1482,11 @@ class UnsupportedRescueDevice(Invalid):
 
 class UnsupportedRescueImage(Invalid):
     msg_fmt = _("Requested rescue image '%(image)s' is not supported")
+
+
+class UnsupportedRPCVersion(Invalid):
+    msg_fmt = _("Unsupported RPC version for %(api)s. "
+                "Required >= %(required)s")
 
 
 class Base64Exception(NovaException):
