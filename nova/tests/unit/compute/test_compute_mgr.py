@@ -934,7 +934,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             inst_list = _make_instance_list(startup_instances)
             mock_host_get.return_value = inst_list
             our_node = objects.ComputeNode(
-                host='fake-host', uuid=uuids.our_node_uuid,
+                host=self.compute.host, uuid=uuids.our_node_uuid,
                 hypervisor_hostname='fake-node')
             mock_get_nodes.return_value = {uuids.our_node_uuid: our_node}
 
@@ -983,7 +983,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         """
         mock_get_nodes.return_value = {
             uuids.cn_uuid1: objects.ComputeNode(
-                uuid=uuids.cn_uuid1, hypervisor_hostname='node1')}
+                uuid=uuids.cn_uuid1, hypervisor_hostname='node1',
+                host=self.compute.host)}
         self.compute.init_host(None)
 
         mock_error_interrupted.assert_called_once_with(
@@ -1148,7 +1149,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             uuids.evac_instance: evacuating_instance
         }
         our_node = objects.ComputeNode(
-            host='fake-host', uuid=uuids.our_node_uuid,
+            host=self.compute.host, uuid=uuids.our_node_uuid,
             hypervisor_hostname='fake-node')
         mock_get_nodes.return_value = {uuids.our_node_uuid: our_node}
 
@@ -1227,6 +1228,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        new=mock.Mock())
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
+                new=mock.Mock(return_value=[mock.MagicMock()]))
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_validate_pinning_configuration')
     def test_init_host_pinning_configuration_validation_failure(self,
@@ -1244,6 +1247,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_validate_pinning_configuration',
                 new=mock.Mock())
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
+                new=mock.Mock(return_value=[mock.MagicMock()]))
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_validate_vtpm_configuration')
     def test_init_host_vtpm_configuration_validation_failure(self,
@@ -6433,6 +6438,49 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               self.compute.init_host,
                               mock.sentinel.service_ref)
             m.assert_called_once_with(mock.sentinel.service_ref)
+
+    def test_check_for_host_rename_ironic(self):
+        self.flags(compute_driver='ironic')
+        # Passing None here makes sure we take the early exit because of our
+        # virt driver
+        nodes = {uuids.node1: mock.MagicMock(uuid=uuids.node1,
+                                             host='not-this-host')}
+        self.compute._check_for_host_rename(nodes)
+
+    def test_check_for_host_rename_renamed_only(self):
+        nodes = {uuids.node1: mock.MagicMock(uuid=uuids.node1,
+                                             host='not-this-host')}
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.compute._check_for_host_rename, nodes)
+
+    def test_check_for_host_rename_renamed_one(self):
+        nodes = {uuids.node1: mock.MagicMock(uuid=uuids.node1,
+                                             host=self.compute.host),
+                 uuids.node2: mock.MagicMock(uuid=uuids.node2,
+                                             host='not-this-host')}
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.compute._check_for_host_rename, nodes)
+
+    def test_check_for_host_rename_not_renamed(self):
+        nodes = {uuids.node1: mock.MagicMock(uuid=uuids.node1,
+                                             host=self.compute.host)}
+        with mock.patch.object(manager.LOG, 'debug') as mock_debug:
+            self.compute._check_for_host_rename(nodes)
+            mock_debug.assert_called_once_with(
+                'Verified node %s matches my host %s',
+                uuids.node1, self.compute.host)
+
+    @mock.patch('nova.compute.manager.ComputeManager._get_nodes')
+    def test_check_for_host_rename_called_by_init_host(self, mock_nodes):
+        # Since testing init_host() requires a billion mocks, this
+        # tests that we do call it when expected, but make it raise
+        # to avoid running the rest of init_host().
+        with mock.patch.object(self.compute,
+                               '_check_for_host_rename') as m:
+            m.side_effect = test.TestingException
+            self.assertRaises(test.TestingException,
+                              self.compute.init_host, None)
+            m.assert_called_once_with(mock_nodes.return_value)
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
