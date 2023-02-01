@@ -62,11 +62,6 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
 
     def include_object(self, object_, name, type_, reflected, compare_to):
         if type_ == 'table':
-            # migrate_version is a sqlalchemy-migrate control table and
-            # isn't included in the model.
-            if name == 'migrate_version':
-                return False
-
             # Define a whitelist of tables that will be removed from the DB in
             # a later release and don't have a corresponding model anymore.
 
@@ -195,6 +190,11 @@ class NovaMigrationsWalk(
         columns = [x['name'] for x in inspector.get_columns('build_requests')]
         for removed_column in self._b30f573d3377_removed_columns:
             self.assertNotIn(removed_column, columns)
+
+    def _check_cdeec0c85668(self, connection):
+        # the table optionally existed: there's no way to check for its
+        # removal without creating it first, which is dumb
+        pass
 
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.

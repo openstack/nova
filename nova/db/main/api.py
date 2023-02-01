@@ -4508,12 +4508,9 @@ def archive_deleted_rows(context=None, max_rows=None, before=None,
     for table in meta.sorted_tables:
         tablename = table.name
         rows_archived = 0
-        # skip the special sqlalchemy-migrate migrate_version table and any
-        # shadow tables
-        # TODO(stephenfin): Drop 'migrate_version' once we remove support for
-        # the legacy sqlalchemy-migrate migrations
+        # skip the special alembic_version version table and any shadow tables
         if (
-            tablename in ('migrate_version', 'alembic_version') or
+            tablename == 'alembic_version' or
             tablename.startswith(_SHADOW_TABLE_PREFIX)
         ):
             continue
@@ -4543,9 +4540,12 @@ def archive_deleted_rows(context=None, max_rows=None, before=None,
 
 
 def _purgeable_tables(metadata):
-    return [t for t in metadata.sorted_tables
-            if (t.name.startswith(_SHADOW_TABLE_PREFIX) and not
-                t.name.endswith('migrate_version'))]
+    return [
+        t for t in metadata.sorted_tables if (
+            t.name.startswith(_SHADOW_TABLE_PREFIX) and not
+            t.name == 'alembic_version'
+        )
+    ]
 
 
 def purge_shadow_tables(context, before_date, status_fn=None):
