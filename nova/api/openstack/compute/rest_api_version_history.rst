@@ -1243,5 +1243,6 @@ Name (FQDN).
 ---------------------
 
 Any evacuated instances will be now stopped at destination. This
-requires minimun compute version 27.0.0 (antelope 2023.1).  Operators
-can still use previous microversion for older behavior.
+requires minimun nova release 27.0.0, OpenStack release 2023.1
+Antelope.  Operators can still use previous microversion for older
+behavior.
