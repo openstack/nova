@@ -1,3 +1,4 @@
+
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
 # a copy of the License at
@@ -27,6 +28,7 @@ class ForceUpWithDoneEvacuations(integrated_helpers._IntegratedTestBase):
 
     ADMIN_API = True
     microversion = 'latest'
+    expected_state = 'SHUTOFF'
 
     def _create_test_server(self, compute_host):
         return self._create_server(host=compute_host, networks='none')
@@ -59,7 +61,8 @@ class ForceUpWithDoneEvacuations(integrated_helpers._IntegratedTestBase):
         server = self._evacuate_server(
             server,
             expected_host='compute2',
-            expected_migration_status='done'
+            expected_migration_status='done',
+            expected_state=self.expected_state
         )
 
         # Assert that the request to force up the host is rejected
@@ -97,6 +100,7 @@ class ForceUpWithDoneEvacuationsv252(ForceUpWithDoneEvacuations):
     """
 
     microversion = '2.52'
+    expected_state = 'ACTIVE'
 
     def _create_test_server(self, compute_host):
         return self._create_server(az='nova:compute', networks='none')

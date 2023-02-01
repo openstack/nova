@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Starting with v2.95 any evacuated instance will be stopped at
+    destination. The required minimum version for Nova computes is
+    27.0.0 (antelope 2023.1).  Operator can still continue using
+    previous behavior by selecting microversion below v2.95.
+upgrade:
+  - |
+    Operators will have to consider upgrading compute hosts to Nova
+    27.0.0 (antelope 2023.1) in order to take advantage of the new
+    (microversion v2.95) evacuate API behavior. An exception will be
+    raised for older versions.

@@ -103,7 +103,7 @@ class EvacuatePolicyTest(base.BasePolicyTest):
         evacuate_mock.assert_called_once_with(
             self.user_req.environ['nova.context'],
             mock.ANY, 'my-host', False,
-            'MyNewPass', None)
+            'MyNewPass', None, None)
 
 
 class EvacuateNoLegacyNoScopePolicyTest(EvacuatePolicyTest):

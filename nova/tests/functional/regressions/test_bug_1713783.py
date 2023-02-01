@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import time
+from unittest import mock
 
 from oslo_log import log as logging
 
+from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -81,6 +83,10 @@ class FailedEvacuateStateTests(test.TestCase,
         created_server = self.api.post_server({'server': server_req})
         return self._wait_for_state_change(created_server, 'ACTIVE')
 
+    @mock.patch.object(
+        objects.service, 'get_minimum_version_all_cells',
+        new=mock.Mock(return_value=62)
+    )
     def test_evacuate_no_valid_host(self):
         # Boot a server
         server = self._boot_a_server()

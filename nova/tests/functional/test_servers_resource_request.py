@@ -2162,7 +2162,8 @@ class ServerMoveWithPortResourceRequestTest(
             # simply fail and the server remains on the source host
             server = self._evacuate_server(
                 server, expected_host='host1', expected_task_state=None,
-                expected_migration_status='failed')
+                expected_migration_status='failed',
+                expected_state="ACTIVE")
 
         # As evacuation failed the resource allocation should be untouched
         self._check_allocation(
@@ -2979,6 +2980,7 @@ class ExtendedResourceRequestOldCompute(
         super().setUp()
         self.neutron = self.useFixture(
             ExtendedResourceRequestNeutronFixture(self))
+        self.api.microversion = '2.72'
 
     @mock.patch.object(
         objects.service, 'get_minimum_version_all_cells',

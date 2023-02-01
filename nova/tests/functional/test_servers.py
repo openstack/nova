@@ -2260,7 +2260,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         }
 
         server = self._evacuate_server(
-            server, extra_post_args=post, expected_host=dest_hostname)
+            server, extra_post_args=post, expected_host=dest_hostname,
+            expected_state='ACTIVE')
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -2437,7 +2438,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             # stay ACTIVE and task_state will be set to None.
             server = self._evacuate_server(
                 server, expected_task_state=None,
-                expected_migration_status='failed')
+                expected_migration_status='failed',
+                expected_state='ACTIVE')
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -5324,7 +5326,8 @@ class ServerMovingTestsWithNestedResourceRequests(
 
         server = self._evacuate_server(
             server, extra_post_args=post, expected_migration_status='error',
-            expected_host=source_hostname)
+            expected_host=source_hostname,
+            expected_state='ACTIVE')
 
         self.assertIn('Unable to move instance %s to host host2. The instance '
                       'has complex allocations on the source host so move '
@@ -5530,7 +5533,8 @@ class ServerMovingTestsFromFlatToNested(
 
         self._evacuate_server(
             server, extra_post_args=post, expected_host='host1',
-            expected_migration_status='error')
+            expected_migration_status='error',
+            expected_state='ACTIVE')
 
         # We expect that the evacuation will fail as force evacuate tries to
         # blindly copy the source allocation to the destination but on the

@@ -46,18 +46,18 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self.compute2 = self.start_service('compute', host='host2')
 
         actions = [
-            self._test_live_migration_rollback,
-            self._test_live_migration_abort,
-            self._test_live_migration_success,
-            self._test_evacuate_server,
-            self._test_live_migration_force_complete
+            (self._test_live_migration_rollback, 'ACTIVE'),
+            (self._test_live_migration_abort, 'ACTIVE'),
+            (self._test_live_migration_success, 'ACTIVE'),
+            (self._test_evacuate_server, 'SHUTOFF'),
+            (self._test_live_migration_force_complete, 'ACTIVE'),
         ]
 
-        for action in actions:
+        for action, expected_state in actions:
             self.notifier.reset()
             action(server)
             # Ensure that instance is in active state after an action
-            self._wait_for_state_change(server, 'ACTIVE')
+            self._wait_for_state_change(server, expected_state)
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_live_migration_cleanup_flags', return_value=[True, False])
@@ -275,6 +275,12 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self.admin_api.put_service(service_id, {'forced_down': False})
 
     def _test_live_migration_force_complete(self, server):
+        # In the scenario evacuate happened before which stopped the
+        # server.
+        self._start_server(server)
+        self._wait_for_state_change(server, 'ACTIVE')
+        self.notifier.reset()
+
         post = {
             'os-migrateLive': {
                 'host': 'host2',

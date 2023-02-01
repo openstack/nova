@@ -10,6 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
+from nova import objects
 from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
@@ -53,6 +56,10 @@ class TestComputeTaskNotificationSample(
             },
             actual=self.notifier.versioned_notifications[1])
 
+    @mock.patch.object(
+        objects.service, 'get_minimum_version_all_cells',
+        new=mock.Mock(return_value=62)
+    )
     def test_rebuild_fault(self):
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]},
