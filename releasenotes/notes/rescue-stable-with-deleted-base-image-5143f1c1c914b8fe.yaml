@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    `Bug #2002606`_: Previously, server rescue in stable device mode had a
+    dependency on the original image used to create or rebuild the server.
+    If the original image was deleted from Glance, the server could not be
+    rescued. The issue has been fixed by falling back to the instance image
+    metadata if the original image is not found in Glance.
+
+    .. _Bug #2002606: https://bugs.launchpad.net/nova/+bug/2002606
