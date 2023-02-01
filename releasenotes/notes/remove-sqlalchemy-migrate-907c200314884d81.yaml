@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    The legacy ``sqlalchemy-migrate`` migrations, which have been deprecated
+    since Wallaby, have been removed. There should be no end-user impact.
