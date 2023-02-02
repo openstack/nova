@@ -57,7 +57,8 @@ mks_cli_opts = [
                help='MKS web location, takes precedence over --web'),
     cfg.IPOpt('host', default='0.0.0.0', help='MKS proxy host'),
     cfg.PortOpt('port', default=6090, help='MKS proxy port'),
-    cfg.BoolOpt('verbose', default=False, help='Verbose logging'),
+    cfg.BoolOpt('verbose', default=False, help='Verbose logging',
+                deprecated_name='verbose'),
 ]
 
 
