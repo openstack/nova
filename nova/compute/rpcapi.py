@@ -425,7 +425,7 @@ class ComputeAPI(object):
         'xena': '6.0',
         'yoga': '6.0',
         'zed': '6.1',
-        'antilope': '6.2',
+        'antelope': '6.2',
     }
 
     @property
