@@ -41,6 +41,8 @@ Files
 * ``/etc/nova/policy.d/``
 * ``/etc/nova/rootwrap.conf``
 * ``/etc/nova/rootwrap.d/``
+* ``/etc/nova/compute_id``
+* ``/var/lib/nova/compute_id``
 
 See Also
 ========

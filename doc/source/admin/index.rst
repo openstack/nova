@@ -206,6 +206,7 @@ instance for these kind of workloads.
    secure-boot
    sev
    managing-resource-providers
+   compute-node-identification
    resource-limits
    cpu-models
    libvirt-misc
