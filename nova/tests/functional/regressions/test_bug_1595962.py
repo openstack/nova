@@ -47,6 +47,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
            'nova.virt.libvirt.guest.libvirt',
            fakelibvirt))
         self.useFixture(nova_fixtures.LibvirtFixture())
+        self.useFixture(nova_fixtures.CGroupsFixture())
 
         self.admin_api = api_fixture.admin_api
         self.api = api_fixture.api
