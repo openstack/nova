@@ -75,6 +75,7 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
             'nova.privsep.libvirt.get_pmem_namespaces',
             return_value=self.fake_pmem_namespaces))
         self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
+        self.useFixture(nova_fixtures.CGroupsFixture())
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
             return_value={'total': 128,
