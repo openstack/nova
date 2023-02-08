@@ -49,6 +49,7 @@ from nova.objects import migrate_data
 from nova.virt import driver
 from nova.virt import hardware
 from nova.virt.ironic import driver as ironic
+import nova.virt.node
 from nova.virt import virtapi
 
 CONF = nova.conf.CONF
@@ -1130,3 +1131,22 @@ class EphEncryptionDriverPLAIN(MediumFakeDriver):
         FakeDriver.capabilities,
         supports_ephemeral_encryption=True,
         supports_ephemeral_encryption_plain=True)
+
+
+class FakeDriverWithoutFakeNodes(FakeDriver):
+    """FakeDriver that behaves like a real single-node driver.
+
+    This behaves like a real virt driver from the perspective of its
+    nodes, with a stable nodename and use of the global node identity
+    stuff to provide a stable node UUID.
+    """
+
+    def get_available_resource(self, nodename):
+        resources = super().get_available_resource(nodename)
+        resources['uuid'] = nova.virt.node.get_local_node_uuid()
+        return resources
+
+    def get_nodenames_by_uuid(self, refresh=False):
+        return {
+            nova.virt.node.get_local_node_uuid(): self.get_available_nodes()[0]
+        }

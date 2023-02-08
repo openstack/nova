@@ -10,7 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 from unittest import mock
+
+import fixtures
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context as nova_context
 from nova import exception
@@ -19,6 +23,7 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
+from nova.virt import node
 
 
 class ServiceTestCase(test.TestCase,
@@ -137,3 +142,83 @@ class TestOldComputeCheck(
                 return_value=old_version):
             self.assertRaises(
                 exception.TooOldComputeService, self._start_compute, 'host1')
+
+
+class TestComputeStartupChecks(test.TestCase):
+    STUB_COMPUTE_ID = False
+
+    def setUp(self):
+        super().setUp()
+        self.useFixture(nova_fixtures.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
+        self.useFixture(func_fixtures.PlacementFixture())
+
+        self._local_uuid = str(uuids.node)
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.node.get_local_node_uuid',
+            functools.partial(self.local_uuid, True)))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.node.read_local_node_uuid',
+            self.local_uuid))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.node.write_local_node_uuid',
+            mock.DEFAULT))
+        self.flags(compute_driver='fake.FakeDriverWithoutFakeNodes')
+
+    def local_uuid(self, get=False):
+        if get and not self._local_uuid:
+            # Simulate the get_local_node_uuid behavior of calling write once
+            self._local_uuid = str(uuids.node)
+            node.write_local_node_uuid(self._local_uuid)
+        return self._local_uuid
+
+    def test_compute_node_identity_greenfield(self):
+        # Level-set test case to show that starting and re-starting without
+        # any error cases works as expected.
+
+        # Start with no local compute_id
+        self._local_uuid = None
+        self.start_service('compute')
+
+        # Start should have generated and written a compute id
+        node.write_local_node_uuid.assert_called_once_with(str(uuids.node))
+
+        # Starting again should succeed and not cause another write
+        self.start_service('compute')
+        node.write_local_node_uuid.assert_called_once_with(str(uuids.node))
+
+    def test_compute_node_identity_deleted(self):
+        self.start_service('compute')
+
+        # Simulate the compute_id file being deleted
+        self._local_uuid = None
+
+        # Should refuse to start because it's not our first time and the file
+        # being missing is a hard error.
+        exc = self.assertRaises(exception.InvalidConfiguration,
+                                self.start_service, 'compute')
+        self.assertIn('lost that state', str(exc))
+
+    def test_compute_node_hostname_changed(self):
+        # Start our compute once to create the node record
+        self.start_service('compute')
+
+        # Starting with a different hostname should trigger the abort
+        exc = self.assertRaises(exception.InvalidConfiguration,
+                                self.start_service, 'compute', host='other')
+        self.assertIn('hypervisor_hostname', str(exc))
+
+    def test_compute_node_uuid_changed(self):
+        # Start our compute once to create the node record
+        self.start_service('compute')
+
+        # Simulate a changed local compute_id file
+        self._local_uuid = str(uuids.othernode)
+
+        # We should fail to create the compute node record again, but with a
+        # useful error message about why.
+        exc = self.assertRaises(exception.InvalidConfiguration,
+                                self.start_service, 'compute')
+        self.assertIn('Duplicate compute node record', str(exc))
