@@ -1552,6 +1552,20 @@ class TestInitComputeNode(BaseTestCase):
         self.assertEqual('fake-host', node.host)
         mock_update.assert_called()
 
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_get_compute_node',
+                       return_value=None)
+    @mock.patch('nova.objects.compute_node.ComputeNode.create')
+    def test_create_failed_conflict(self, mock_create, mock_getcn):
+        self._setup_rt()
+        resources = {'hypervisor_hostname': 'node1',
+                     'uuid': uuids.node1}
+        mock_create.side_effect = exc.DuplicateRecord(target='foo')
+        self.assertRaises(exc.InvalidConfiguration,
+                          self.rt._init_compute_node,
+                          mock.MagicMock,
+                          resources)
+
 
 @ddt.ddt
 class TestUpdateComputeNode(BaseTestCase):
