@@ -192,6 +192,7 @@ class TestCase(base.BaseTestCase):
         self._service_fixture_count = collections.defaultdict(int)
 
         self.useFixture(nova_fixtures.OpenStackSDKFixture())
+        self.useFixture(nova_fixtures.IsolatedGreenPoolFixture(self.id()))
 
         self.useFixture(log_fixture.get_logging_handle_error_fixture())
 

@@ -498,6 +498,9 @@ class Host(object):
         LOG.debug("Starting green dispatch thread")
         utils.spawn(self._dispatch_thread)
 
+        LOG.debug("Starting connection event dispatch thread")
+        utils.spawn(self._conn_event_thread)
+
     def _get_new_connection(self):
         # call with _wrapped_conn_lock held
         LOG.debug('Connecting to libvirt: %s', self._uri)
@@ -616,9 +619,6 @@ class Host(object):
         libvirt.registerErrorHandler(self._libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
         self._init_events()
-
-        LOG.debug("Starting connection event dispatch thread")
-        utils.spawn(self._conn_event_thread)
 
         self._initialized = True
 

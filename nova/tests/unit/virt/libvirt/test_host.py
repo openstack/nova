@@ -462,6 +462,8 @@ class HostTestCase(test.NoDBTestCase):
         h.initialize()
 
         h.get_connection()
+        h._dispatch_conn_event()
+
         event.wait()
         # This test will timeout if it fails. Success is implicit in a
         # timely return from wait(), indicating that the connection event
