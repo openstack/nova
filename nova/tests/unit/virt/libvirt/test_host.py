@@ -16,6 +16,7 @@
 
 import os
 
+import ddt
 import eventlet
 from eventlet import greenthread
 from eventlet import tpool
@@ -1935,6 +1936,7 @@ class TestLibvirtSEV(test.NoDBTestCase):
         self.host = host.Host("qemu:///system")
 
 
+@ddt.ddt
 class TestLibvirtSEVUnsupported(TestLibvirtSEV):
     @mock.patch.object(os.path, 'exists', return_value=False)
     def test_kernel_parameter_missing(self, fake_exists):
@@ -1942,19 +1944,26 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
         fake_exists.assert_called_once_with(
             '/sys/module/kvm_amd/parameters/sev')
 
+    @ddt.data(
+        ('0\n', False),
+        ('N\n', False),
+        ('1\n', True),
+        ('Y\n', True),
+    )
+    @ddt.unpack
     @mock.patch.object(os.path, 'exists', return_value=True)
-    @mock.patch('builtins.open', mock.mock_open(read_data="0\n"))
-    def test_kernel_parameter_zero(self, fake_exists):
-        self.assertFalse(self.host._kernel_supports_amd_sev())
-        fake_exists.assert_called_once_with(
-            '/sys/module/kvm_amd/parameters/sev')
-
-    @mock.patch.object(os.path, 'exists', return_value=True)
-    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
-    def test_kernel_parameter_one(self, fake_exists):
-        self.assertTrue(self.host._kernel_supports_amd_sev())
-        fake_exists.assert_called_once_with(
-            '/sys/module/kvm_amd/parameters/sev')
+    def test_kernel_parameter(
+        self, sev_param_value, expected_support, mock_exists
+    ):
+        with mock.patch(
+            'builtins.open', mock.mock_open(read_data=sev_param_value)
+        ):
+            self.assertIs(
+                expected_support,
+                self.host._kernel_supports_amd_sev()
+            )
+            mock_exists.assert_called_once_with(
+                '/sys/module/kvm_amd/parameters/sev')
 
     @mock.patch.object(os.path, 'exists', return_value=True)
     @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
