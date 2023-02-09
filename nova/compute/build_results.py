@@ -24,3 +24,11 @@ was rescheduled.
 ACTIVE = 'active'  # Instance is running
 FAILED = 'failed'  # Instance failed to build and was not rescheduled
 RESCHEDULED = 'rescheduled'  # Instance failed to build, but was rescheduled
+# Instance failed by policy violation (such as affinity or anti-affinity)
+# and was not rescheduled. In this case, the node's failed count won't be
+# increased.
+FAILED_BY_POLICY = 'failed_by_policy'
+# Instance failed by policy violation (such as affinity or anti-affinity)
+# but was rescheduled. In this case, the node's failed count won't be
+# increased.
+RESCHEDULED_BY_POLICY = 'rescheduled_by_policy'

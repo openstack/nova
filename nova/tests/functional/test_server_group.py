@@ -20,6 +20,7 @@ from oslo_config import cfg
 from nova.compute import instance_actions
 from nova import context
 from nova.db.main import api as db
+from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
@@ -498,6 +499,85 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.assertEqual(400, ex.response.status_code)
         self.assertIn('Invalid input', ex.response.text)
         self.assertIn('soft-affinity', ex.response.text)
+
+    @mock.patch('nova.scheduler.filters.affinity_filter.'
+        'ServerGroupAffinityFilter.host_passes', return_value=True)
+    def test_failed_count_with_affinity_violation(self, mock_host_passes):
+        """Check failed count not incremented after violation of the late
+        affinity check. https://bugs.launchpad.net/nova/+bug/1996732
+        """
+
+        created_group = self.api.post_server_groups(self.affinity)
+        flavor = self.api.get_flavors()[2]
+
+        # Ensure the first instance is on compute1
+        with utils.temporary_mutation(self.admin_api, microversion='2.53'):
+            compute2_service_id = self.admin_api.get_services(
+            host=self.compute2.host, binary='nova-compute')[0]['id']
+            self.admin_api.put_service(compute2_service_id,
+                                        {'status': 'disabled'})
+
+        self._boot_a_server_to_group(created_group, flavor=flavor)
+
+        # Ensure the second instance is on compute2
+        with utils.temporary_mutation(self.admin_api, microversion='2.53'):
+            self.admin_api.put_service(compute2_service_id,
+                                        {'status': 'enabled'})
+            compute1_service_id = self.admin_api.get_services(
+            host=self.compute.host, binary='nova-compute')[0]['id']
+            self.admin_api.put_service(compute1_service_id,
+                                        {'status': 'disabled'})
+
+        # Expects GroupAffinityViolation exception
+        failed_server = self._boot_a_server_to_group(created_group,
+                                                     flavor=flavor,
+                                                     expected_status='ERROR')
+
+        self.assertEqual('Exceeded maximum number of retries. Exhausted all '
+                         'hosts available for retrying build failures for '
+                         'instance %s.' % failed_server['id'],
+                         failed_server['fault']['message'])
+
+        ctxt = context.get_admin_context()
+        computes = objects.ComputeNodeList.get_all(ctxt)
+
+        for node in computes:
+            self.assertEqual(node.stats.get('failed_builds'), '0')
+
+    @mock.patch('nova.scheduler.filters.affinity_filter.'
+        'ServerGroupAntiAffinityFilter.host_passes', return_value=True)
+    def test_failed_count_with_anti_affinity_violation(self, mock_host_passes):
+        """Check failed count after violation of the late affinity check.
+        https://bugs.launchpad.net/nova/+bug/1996732
+        """
+
+        created_group = self.api.post_server_groups(self.anti_affinity)
+        flavor = self.api.get_flavors()[2]
+
+        # Ensure two instances are scheduled on the same host
+        with utils.temporary_mutation(self.admin_api, microversion='2.53'):
+            compute2_service_id = self.admin_api.get_services(
+            host=self.compute2.host, binary='nova-compute')[0]['id']
+            self.admin_api.put_service(compute2_service_id,
+                                        {'status': 'disabled'})
+
+        self._boot_a_server_to_group(created_group, flavor=flavor)
+
+        # Expects GroupAffinityViolation exception
+        failed_server = self._boot_a_server_to_group(created_group,
+                                                     flavor=flavor,
+                                                     expected_status='ERROR')
+
+        self.assertEqual('Exceeded maximum number of retries. Exhausted all '
+                         'hosts available for retrying build failures for '
+                         'instance %s.' % failed_server['id'],
+                         failed_server['fault']['message'])
+
+        ctxt = context.get_admin_context()
+        computes = objects.ComputeNodeList.get_all(ctxt)
+
+        for node in computes:
+            self.assertEqual(node.stats.get('failed_builds'), '0')
 
 
 class ServerGroupAffinityConfTest(ServerGroupTestBase):
