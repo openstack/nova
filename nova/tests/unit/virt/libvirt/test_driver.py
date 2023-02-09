@@ -21369,6 +21369,40 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_MAXPHYSADDR))
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_MAXPHYSADDR))
+    @mock.patch.object(fakelibvirt.Connection, 'getType',
+                       return_value=host.HV_DRIVER_QEMU)
+    def test_update_host_specific_capabilities_with_maxphysaddr(
+            self, mock_get_lib_version, mock_get_version, mock_type):
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        driver._update_host_specific_capabilities()
+        self.assertTrue(
+            driver.capabilities.get('supports_address_space_passthrough'))
+        self.assertTrue(
+            driver.capabilities.get('supports_address_space_emulated'))
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_MAXPHYSADDR))
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_QEMU_MAXPHYSADDR) - 1)
+    @mock.patch.object(fakelibvirt.Connection, 'getType',
+                       return_value=host.HV_DRIVER_QEMU)
+    def test_update_host_specific_capabilities_without_maxphysaddr(
+            self, mock_get_lib_version, mock_get_version, mock_type):
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        driver._update_host_specific_capabilities()
+        self.assertFalse(
+            driver.capabilities.get('supports_address_space_passthrough'))
+        self.assertFalse(
+            driver.capabilities.get('supports_address_space_emulated'))
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_TB_CACHE_SIZE) - 1)
     def test_supports_tb_cache_size_fail(self, mock_getversion):
         self.flags(virt_type='qemu', group='libvirt')
