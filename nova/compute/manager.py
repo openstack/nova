@@ -1803,11 +1803,8 @@ class ComputeManager(manager.Manager):
                 else:
                     max_server = 1
                 if len(members_on_host) >= max_server:
-                    msg = _("Anti-affinity instance group policy "
-                            "was violated.")
-                    raise exception.RescheduledException(
-                            instance_uuid=instance.uuid,
-                            reason=msg)
+                    raise exception.GroupAffinityViolation(
+                        instance_uuid=instance.uuid, policy='Anti-affinity')
 
             # NOTE(ganso): The check for affinity below does not work and it
             # can easily be violated because the lock happens in different
@@ -1817,10 +1814,8 @@ class ComputeManager(manager.Manager):
             elif group.policy and 'affinity' == group.policy:
                 group_hosts = group.get_hosts(exclude=[instance.uuid])
                 if group_hosts and self.host not in group_hosts:
-                    msg = _("Affinity instance group policy was violated.")
-                    raise exception.RescheduledException(
-                            instance_uuid=instance.uuid,
-                            reason=msg)
+                    raise exception.GroupAffinityViolation(
+                        instance_uuid=instance.uuid, policy='Affinity')
 
         _do_validation(context, instance, group)
 
@@ -2260,6 +2255,9 @@ class ComputeManager(manager.Manager):
                         self.reportclient.delete_allocation_for_instance(
                             context, instance.uuid, force=True)
 
+                    if result in (build_results.FAILED_BY_POLICY,
+                                  build_results.RESCHEDULED_BY_POLICY):
+                        return
                     if result in (build_results.FAILED,
                                   build_results.RESCHEDULED):
                         self._build_failed(node)
@@ -2358,6 +2356,8 @@ class ComputeManager(manager.Manager):
                 self._nil_out_instance_obj_host_and_node(instance)
                 self._set_instance_obj_error_state(instance,
                                                    clean_task_state=True)
+                if isinstance(e, exception.RescheduledByPolicyException):
+                    return build_results.FAILED_BY_POLICY
                 return build_results.FAILED
             LOG.debug(e.format_message(), instance=instance)
             # This will be used for logging the exception
@@ -2384,6 +2384,10 @@ class ComputeManager(manager.Manager):
                     injected_files, requested_networks, security_groups,
                     block_device_mapping, request_spec=request_spec,
                     host_lists=[host_list])
+
+            if isinstance(e, exception.RescheduledByPolicyException):
+                return build_results.RESCHEDULED_BY_POLICY
+
             return build_results.RESCHEDULED
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):
@@ -2601,6 +2605,17 @@ class ComputeManager(manager.Manager):
                     bdms=block_device_mapping)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
+        except exception.GroupAffinityViolation as e:
+            LOG.exception('Failed to build and run instance',
+                          instance=instance)
+            self._notify_about_instance_usage(context, instance,
+                    'create.error', fault=e)
+            compute_utils.notify_about_instance_create(
+                    context, instance, self.host,
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
+            raise exception.RescheduledByPolicyException(
+                    instance_uuid=instance.uuid, reason=str(e))
         except Exception as e:
             LOG.exception('Failed to build and run instance',
                           instance=instance)
