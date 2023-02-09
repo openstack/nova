@@ -675,6 +675,19 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         self.assertRaises(self.bad_request, eval(self.set_metadata),
                           self.req, "1", body=body)
 
+    def test_set_metadata_case_sensitive(self):
+        body = {"set_metadata": {"metadata": {"foo": "bar"}}}
+        side_effect = exception.AggregateMetadataKeyExists(
+            aggregate_id="2", key="foo")
+
+        with mock.patch.object(self.controller.api,
+                               'update_aggregate_metadata',
+                               side_effect=side_effect) as mock_update:
+            self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
+                              self.req, "2", body=body)
+            mock_update.assert_called_once_with(
+                self.context, "2", body["set_metadata"]["metadata"])
+
     def test_delete_aggregate(self):
         with mock.patch.object(self.controller.api,
                                'delete_aggregate') as mock_del:

@@ -482,6 +482,12 @@ class InvalidAggregateActionUpdateMeta(InvalidAggregateAction):
                 "%(aggregate_id)s. Reason: %(reason)s.")
 
 
+class AggregateMetadataKeyExists(NovaException):
+    msg_fmt = _("Aggregate %(aggregate_id)s already contain metadata "
+                "key %(key)s.")
+    code = 400
+
+
 class InvalidSortKey(Invalid):
     msg_fmt = _("Sort key supplied was not valid.")
 
