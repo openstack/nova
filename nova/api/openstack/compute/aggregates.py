@@ -243,7 +243,8 @@ class AggregateController(wsgi.Controller):
                                                            id, metadata)
         except exception.AggregateNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InvalidAggregateAction as e:
+        except (exception.InvalidAggregateAction,
+                exception.AggregateMetadataKeyExists) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return self._marshall_aggregate(req, aggregate)
