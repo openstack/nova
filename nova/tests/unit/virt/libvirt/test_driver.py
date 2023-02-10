@@ -3402,7 +3402,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(
             "Memory encryption requested by hw:mem_encryption extra spec in "
             "m1.fake flavor but image fake_image doesn't have "
-            "'hw_firmware_type' property set to 'uefi'", str(exc))
+            "'hw_firmware_type' property set to 'uefi' or volume-backed "
+            "instance was requested", str(exc))
 
     def test_sev_enabled_host_extra_spec_no_machine_type(self):
         exc = self.assertRaises(exception.InvalidMachineType,
