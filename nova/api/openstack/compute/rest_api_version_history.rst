@@ -1231,16 +1231,17 @@ image similar to the result of rebuilding an ephemeral disk.
 
 
 2.94
----------------------
+----
 
 The ``hostname`` parameter to the ``POST /servers`` (create server), ``PUT
 /servers/{id}`` (update server) and ``POST /servers/{server_id}/action
 (rebuild)`` (rebuild server) APIs is now allowed to be a Fully Qualified Domain
 Name (FQDN).
 
+.. _microversion 2.95:
 
-2.95
----------------------
+2.95 (Maximum in 2023.1 Antelope)
+---------------------------------
 
 Any evacuated instances will be now stopped at destination. This
 requires minimun nova release 27.0.0, OpenStack release 2023.1
