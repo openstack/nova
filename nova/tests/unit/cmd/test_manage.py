@@ -3492,6 +3492,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
     def _test_refresh(self, mock_exists):
         ctxt = context.get_admin_context()
         cell_ctxt = context.get_admin_context()
+        cell_ctxt.cell_uuid = '39fd7a1f-db62-45bc-a7b6-8137cef87c9d'
         fake_connector = self._get_fake_connector_info()
 
         mock_exists.return_value = True
@@ -3548,11 +3549,14 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         output = self.output.getvalue().strip()
         self.assertIn('must be stopped', output)
 
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    @mock.patch.object(manage.VolumeAttachmentCommands, '_do_refresh')
     @mock.patch.object(
         objects.BlockDeviceMapping, 'get_by_volume_and_instance')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def test_refresh_instance_already_locked_failure(
-        self, mock_get_instance, mock_get_bdm
+    def test_refresh_instance_already_locked(
+        self, mock_get_instance, mock_get_bdm,
+        mock__do_refresh, mock_action_start
     ):
         """Test refresh with instance when instance is already locked."""
         mock_get_instance.return_value = objects.Instance(
@@ -3562,11 +3566,11 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         mock_get_bdm.return_value = objects.BlockDeviceMapping(
             uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
             attachment_id=uuidsentinel.instance)
+        mock_action = mock.Mock(spec=objects.InstanceAction)
+        mock_action_start.return_value = mock_action
 
-        ret = self._test_refresh()
-        self.assertEqual(5, ret)
-        output = self.output.getvalue().strip()
-        self.assertIn('must be unlocked', output)
+        self._test_refresh()
+        mock__do_refresh.assert_called_once()
 
     @mock.patch.object(
         objects.BlockDeviceMapping, 'get_by_volume_and_instance')
@@ -3593,9 +3597,9 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_refresh_attachment_unknown_failure(
-        self, mock_action_start, mock_get_instance, mock_get_bdm, mock_lock,
-        mock_unlock, mock_attachment_create, mock_attachment_delete,
-        mock_attachment_get
+        self, mock_action_start, mock_get_instance,
+        mock_get_bdm, mock_lock, mock_unlock, mock_attachment_create,
+        mock_attachment_delete, mock_attachment_get
     ):
         """Test refresh with instance when any other error happens.
         """
@@ -3635,8 +3639,9 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_refresh(
-        self, mock_action_start, mock_get_instance, mock_get_bdm,
-        mock_save_bdm, mock_compute_api, mock_volume_api, mock_compute_rpcapi
+        self, mock_action_start, mock_get_instance,
+        mock_get_bdm, mock_save_bdm, mock_compute_api, mock_volume_api,
+        mock_compute_rpcapi
     ):
         """Test refresh with a successful code path."""
         fake_compute_api = mock_compute_api.return_value
@@ -3714,6 +3719,44 @@ class TestNovaManageMain(test.NoDBTestCase):
             mock_conf.post_mortem = True
             self.assertEqual(255, manage.main())
             self.assertTrue(mock_pm.called)
+
+    def _lock_instance(self, ctxt, instance, reason):
+        instance.locked = True
+
+    def _unlock_instance(self, ctxt, instance):
+        instance.locked = False
+
+    def test_locked_instance(self):
+        cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cell)
+        proj_uuid = uuidutils.generate_uuid()
+        instance = objects.Instance(
+            project_id=proj_uuid, uuid=uuidsentinel.instance)
+        instance.locked = True
+
+        with mock.patch('nova.compute.api.API') as mock_api:
+            mock_api.return_value.lock.side_effect = self._lock_instance
+            mock_api.return_value.unlock.side_effect = self._unlock_instance
+
+            with manage.locked_instance(cm, instance, 'some'):
+                self.assertTrue(instance.locked)
+
+        self.assertTrue(instance.locked)
+
+    def test_unlocked_instance(self):
+        cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cell)
+        proj_uuid = uuidutils.generate_uuid()
+        instance = objects.Instance(
+            project_id=proj_uuid, uuid=uuidsentinel.instance)
+        instance.locked = False
+
+        with mock.patch('nova.compute.api.API') as mock_api:
+            mock_api.return_value.lock.side_effect = self._lock_instance
+            mock_api.return_value.unlock.side_effect = self._unlock_instance
+
+            with manage.locked_instance(cm, instance, 'some'):
+                self.assertTrue(instance.locked)
+
+        self.assertFalse(instance.locked)
 
 
 class LibvirtCommandsTestCase(test.NoDBTestCase):
