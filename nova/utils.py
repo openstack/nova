@@ -86,6 +86,8 @@ MEMORY_RESERVABLE_MB_RESOURCE = 'CUSTOM_MEMORY_RESERVABLE_MB'
 MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY = \
     'resources:' + MEMORY_RESERVABLE_MB_RESOURCE
 
+NUMA_TRAIT_SPEC_PREFIX = 'trait:CUSTOM_NUMASIZE_'
+
 BIGVM_EXCLUSIVE_TRAIT = 'CUSTOM_HANA_EXCLUSIVE_HOST'
 
 _FILE_CACHE = {}
@@ -1244,6 +1246,13 @@ def is_large_vm(memory_mb, flavor):
         return False
 
     return True
+
+
+def is_numa_aligned_flavor(flavor):
+    if is_baremetal_flavor(flavor):
+        return False
+    return any(prop.startswith(NUMA_TRAIT_SPEC_PREFIX) and value == "required"
+               for prop, value in flavor.extra_specs.items())
 
 
 def get_reserved_memory(flavor):

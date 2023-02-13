@@ -436,13 +436,11 @@ class VMwareVMOps(object):
         hv_enabled = flavor.extra_specs.get('vmware:hv_enabled')
         extra_specs.hv_enabled = hv_enabled
         extra_specs.hw_version = hw_version
-        if utils.is_big_vm(int(flavor.memory_mb), flavor):
-            extra_specs.numa_prefer_ht = 'TRUE'
-            extra_specs.migration_data_timeout = '900'
-        else:
-            # empty value should delete the option. we need that for resizes.
-            extra_specs.numa_prefer_ht = ''
-            extra_specs.migration_data_timeout = ''
+        # empty values should delete the option. we need that for resizes.
+        extra_specs.numa_prefer_ht = \
+            'TRUE' if utils.is_numa_aligned_flavor(flavor) else ''
+        extra_specs.migration_data_timeout = \
+            '900' if utils.is_big_vm(int(flavor.memory_mb), flavor) else ''
 
         video_ram = image_meta.properties.get('hw_video_ram', 0)
         max_vram = int(flavor.extra_specs.get('hw_video:ram_max_mb', 0))

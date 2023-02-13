@@ -4020,3 +4020,17 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                     'fake-attach-spec')
         _network_api.update_instance_vnic_index.assert_called_once_with(
             mock.ANY, self._instance, self._network_values, 1)
+
+    def test_set_prefer_ht_on_numa_aligned_flavors(self):
+        def specced_flavor(specs):
+            specs.update({'foo': 'bar'})  # errors might occur on other keys.
+            return objects.Flavor(name='my-flavor', memory_mb=4, vcpus=1,
+                                  root_gb=64, extra_specs=specs)
+        extra_specs = self._vmops._get_extra_specs(
+            specced_flavor({'trait:CUSTOM_NUMASIZE_C48_M729': 'required'}))
+        self.assertEqual(extra_specs.numa_prefer_ht, 'TRUE')
+        extra_specs = self._vmops._get_extra_specs(specced_flavor({}))
+        self.assertEqual(extra_specs.numa_prefer_ht, '')
+        extra_specs = self._vmops._get_extra_specs(
+            specced_flavor({'trait:CUSTOM_NUMASIZE_C48_M729': 'forbidden'}))
+        self.assertEqual(extra_specs.numa_prefer_ht, '')

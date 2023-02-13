@@ -21,6 +21,7 @@ from nova.scheduler import filters
 from nova.scheduler.mixins import HypervisorSizeMixin
 from nova.scheduler import utils
 from nova.utils import is_big_vm
+from nova.utils import NUMA_TRAIT_SPEC_PREFIX
 
 LOG = logging.getLogger(__name__)
 
@@ -90,7 +91,6 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
     """
     _EXTRA_SPECS_KEY = 'host_fraction'
     _HV_SIZE_TOLERANCE_PERCENT = 10
-    _NUMA_TRAIT_SPEC_PREFIX = 'trait:CUSTOM_NUMASIZE_'
 
     def _memory_match_with_tolerance(self, memory_mb, requested_ram_mb):
         """Return True if requested_ram_mb is equal to memory_mb or down to
@@ -103,7 +103,7 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
         """Return the (first) extra_specs key for required numa host traits."""
         try:
             return next(k for k, v in extra_specs.items()
-                        if k.startswith(self._NUMA_TRAIT_SPEC_PREFIX) and
+                        if k.startswith(NUMA_TRAIT_SPEC_PREFIX) and
                             v == "required")
         except StopIteration:
             return None
