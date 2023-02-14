@@ -10061,24 +10061,6 @@ class LibvirtDriver(driver.ComputeDriver):
         :param instance: instance object that is in migration
 
         """
-        current = eventlet.getcurrent()
-        # NOTE(gibi) not all eventlet spawn is under our control, so
-        # there can be senders without test_case_id set, find the first
-        # ancestor that was spawned from nova.utils.spawn[_n] and
-        # therefore has the id set.
-        while (
-                current is not None and
-                not getattr(current, 'test_case_id', None)
-        ):
-            current = current.parent
-
-        if current is not None:
-            LOG.warning(
-                "!!!---!!! live_migration_abort thread was spawned by "
-                "TestCase ID: %s. If you see this in a failed functional test "
-                "then please let #openstack-nova on IRC know about it. "
-                "!!!---!!!", current.test_case_id
-            )
 
         guest = self._host.get_guest(instance)
         dom = guest._domain

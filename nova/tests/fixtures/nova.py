@@ -1822,24 +1822,6 @@ class ImportModulePoisonFixture(fixtures.Fixture):
 
         def find_spec(self, fullname, path, target=None):
             if fullname in self.modules:
-                current = eventlet.getcurrent()
-                # NOTE(gibi) not all eventlet spawn is under our control, so
-                # there can be senders without test_case_id set, find the first
-                # ancestor that was spawned from nova.utils.spawn[_n] and
-                # therefore has the id set.
-                while (
-                    current is not None and
-                    not getattr(current, 'test_case_id', None)
-                ):
-                    current = current.parent
-
-                if current is not None:
-                    self.test.tc_id = current.test_case_id
-                    LOG.warning(
-                        "!!!---!!! TestCase ID %s hit the import poison while "
-                        "importing %s. If you see this in a failed functional "
-                        "test then please let #openstack-nova on IRC know "
-                        "about it. !!!---!!!", current.test_case_id, fullname)
                 self.test.fail_message = (
                     f"This test imports the '{fullname}' module, which it "
                     f'should not in the test environment. Please add '
@@ -1850,7 +1832,6 @@ class ImportModulePoisonFixture(fixtures.Fixture):
     def __init__(self, module_names):
         self.module_names = module_names
         self.fail_message = ''
-        self.tc_id = None
         if isinstance(module_names, str):
             self.module_names = {module_names}
         self.meta_path_finder = self.ForbiddenModules(self, self.module_names)
@@ -1868,13 +1849,6 @@ class ImportModulePoisonFixture(fixtures.Fixture):
         # there (which is also what self.assert* and self.fail() do underneath)
         # will not work to cause a failure in the test.
         if self.fail_message:
-            if self.tc_id is not None:
-                LOG.warning(
-                    "!!!---!!! TestCase ID %s hit the import poison. If you "
-                    "see this in a failed functional test then please let "
-                    "#openstack-nova on IRC know about it. !!!---!!!",
-                    self.tc_id
-                )
             raise ImportError(self.fail_message)
 
 
