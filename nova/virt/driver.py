@@ -109,10 +109,16 @@ def block_device_info_get_encrypted_disks(
     block_device_info: ty.Mapping[str, ty.Any],
 ) -> ty.List['nova.virt.block_device.DriverBlockDevice']:
     block_device_info = block_device_info or {}
+
+    # swap is a single device, not a list
+    swap = block_device_info.get('swap')
+    swap = [swap] if swap else []
+
     return [
         driver_bdm for driver_bdm in itertools.chain(
             block_device_info.get('image', []),
             block_device_info.get('ephemerals', []),
+            swap,
         )
         if driver_bdm.get('encrypted')
     ]

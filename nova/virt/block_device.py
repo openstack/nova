@@ -102,6 +102,7 @@ class DriverBlockDevice(dict):
     """
 
     _fields = set()
+    _readonly_fields = set()
 
     _proxy_as_attr_inherited = set(['uuid', 'is_volume'])
     _update_on_save = {'disk_bus': None,
@@ -204,6 +205,11 @@ class DriverBlockDevice(dict):
         raise NotImplementedError()
 
     def save(self):
+        for attr_name in self._readonly_fields:
+            if self[attr_name] != getattr(self._bdm_obj, attr_name):
+                raise AttributeError(
+                    f"can't set read-only attribute: '{attr_name}'")
+
         for attr_name, key_name in self._update_on_save.items():
             lookup_name = key_name or attr_name
             if self[lookup_name] != getattr(self._bdm_obj, attr_name):
@@ -212,10 +218,26 @@ class DriverBlockDevice(dict):
 
 
 class DriverSwapBlockDevice(DriverBlockDevice):
-    _fields = set(['device_name', 'swap_size', 'disk_bus'])
-
-    _update_on_save = {'disk_bus': None,
-                       'device_name': None}
+    _fields = set([
+        'device_name',
+        'swap_size',
+        'disk_bus',
+        'encrypted',
+        'encryption_secret_uuid',
+        'encryption_format',
+        'encryption_options',
+    ])
+    _readonly_fields = set(['encrypted'])
+    _update_on_save = {
+        'disk_bus': None,
+        'device_name': None,
+        # We don't update the 'encrypted' attribute on save because we are not
+        # going to encrypt or decrypt an existing disk due to a change in the
+        # 'encrypted' attribute value.
+        'encryption_secret_uuid': None,
+        'encryption_format': None,
+        'encryption_options': None,
+    }
 
     def _transform(self):
         if not block_device.new_format_is_swap(self._bdm_obj):
@@ -223,7 +245,11 @@ class DriverSwapBlockDevice(DriverBlockDevice):
         self.update({
             'device_name': self._bdm_obj.device_name,
             'swap_size': self._bdm_obj.volume_size or 0,
-            'disk_bus': self._bdm_obj.disk_bus
+            'disk_bus': self._bdm_obj.disk_bus,
+            'encrypted': self._bdm_obj.encrypted,
+            'encryption_secret_uuid': self._bdm_obj.encryption_secret_uuid,
+            'encryption_format': self._bdm_obj.encryption_format,
+            'encryption_options': self._bdm_obj.encryption_options
         })
 
 
@@ -243,12 +269,16 @@ class DriverImageBlockDevice(DriverBlockDevice):
     _fields = set([
         'device_name',
         'size']) | _new_only_fields
+    _readonly_fields = set(['encrypted'])
     _legacy_fields = (
         _fields - _new_only_fields | set(['num', 'virtual_name']))
     _update_on_save = {
         'disk_bus': None,
         'device_name': None,
         'device_type': None,
+        # We don't update the 'encrypted' attribute on save because we are not
+        # going to encrypt or decrypt an existing disk due to a change in the
+        # 'encrypted' attribute value.
         'encryption_secret_uuid': None,
         'encryption_format': None,
         'encryption_options': None,
@@ -283,10 +313,14 @@ class DriverEphemeralBlockDevice(DriverBlockDevice):
         'encryption_format',
         'encryption_options'])
     _fields = set(['device_name', 'size']) | _new_only_fields
+    _readonly_fields = set(['encrypted'])
     _update_on_save = {
         'disk_bus': None,
         'device_name': None,
         'device_type': None,
+        # We don't update the 'encrypted' attribute on save because we are not
+        # going to encrypt or decrypt an existing disk due to a change in the
+        # 'encrypted' attribute value.
         'encryption_secret_uuid': None,
         'encryption_format': None,
         'encryption_options': None,

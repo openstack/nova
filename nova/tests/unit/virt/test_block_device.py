@@ -62,12 +62,20 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'guest_format': 'swap',
          'disk_bus': 'scsi',
          'volume_size': 2,
-         'boot_index': -1})
+         'boot_index': -1,
+         'encrypted': False,
+         'encryption_secret_uuid': None,
+         'encryption_format': None,
+         'encryption_options': None})
 
     swap_driver_bdm = {
         'device_name': '/dev/sdb1',
         'swap_size': 2,
-        'disk_bus': 'scsi'}
+        'disk_bus': 'scsi',
+        'encrypted': False,
+        'encryption_secret_uuid': None,
+        'encryption_format': None,
+        'encryption_options': None}
 
     ephemeral_bdm_dict = block_device.BlockDeviceDict(
         {'id': 2, 'instance_uuid': uuids.instance,
@@ -366,28 +374,48 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                               cls,
                               getattr(self, '%s_bdm' % name))
 
+        def assign_fake_changed_value(test_bdm, field, alias=None):
+            # We can't set fake values on enums, like device_type,
+            # so skip those.
+            if not isinstance(test_bdm._bdm_obj.fields[field],
+                              fields.BaseEnumField):
+                field_or_alias = alias or field
+                if field_or_alias == 'attachment_id':
+                    # Must set UUID values on UUID fields.
+                    fake_value = ATTACHMENT_ID
+                elif isinstance(test_bdm._bdm_obj.fields[field],
+                                fields.UUIDField):
+                    # Generically handle other UUID fields.
+                    fake_value = uuids.fake_value
+                elif isinstance(test_bdm._bdm_obj.fields[field],
+                                fields.BooleanField):
+                    fake_value = not test_bdm[field_or_alias]
+                else:
+                    fake_value = 'fake_changed_value'
+                test_bdm[field_or_alias] = fake_value
+
         # Test the save method
         with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
+            # First test saveable fields.
             for fld, alias in test_bdm._update_on_save.items():
-                # We can't set fake values on enums, like device_type,
-                # so skip those.
-                if not isinstance(test_bdm._bdm_obj.fields[fld],
-                                  fields.BaseEnumField):
-                    field = alias or fld
-                    if field == 'attachment_id':
-                        # Must set UUID values on UUID fields.
-                        fake_value = ATTACHMENT_ID
-                    elif isinstance(test_bdm._bdm_obj.fields[fld],
-                                    fields.UUIDField):
-                        # Generically handle other UUID fields.
-                        fake_value = uuids.fake_value
-                    else:
-                        fake_value = 'fake_changed_value'
-                    test_bdm[field] = fake_value
+                assign_fake_changed_value(test_bdm, fld, alias=alias)
+
             test_bdm.save()
+
             for fld, alias in test_bdm._update_on_save.items():
                 self.assertEqual(test_bdm[alias or fld],
                                  getattr(test_bdm._bdm_obj, fld))
+
+            # Then test read-only fields.
+            for field in test_bdm._readonly_fields:
+                value = test_bdm[field]
+
+                assign_fake_changed_value(test_bdm, field)
+                self.assertRaises(AttributeError, test_bdm.save)
+
+                # Reset to original value so this already tested field won't
+                # be considered during the next save().
+                test_bdm[field] = value
 
             save_mock.assert_called_once_with()
 
