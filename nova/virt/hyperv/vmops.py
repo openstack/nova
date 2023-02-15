@@ -747,7 +747,7 @@ class VMOps(object):
             # should be disconnected even if the VM doesn't exist anymore,
             # so they are not leaked.
             self.unplug_vifs(instance, network_info)
-            self._volumeops.disconnect_volumes(block_device_info)
+            self._volumeops.disconnect_volumes(block_device_info, force=True)
 
             if destroy_disks:
                 self._delete_disk_files(instance_name)
