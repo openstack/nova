@@ -1129,7 +1129,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_unplug_vifs.assert_called_once_with(
             mock_instance, mock.sentinel.fake_network_info)
         mock_disconnect_volumes.assert_called_once_with(
-            mock.sentinel.FAKE_BD_INFO)
+            mock.sentinel.FAKE_BD_INFO, force=True)
         mock_delete_disk_files.assert_called_once_with(
             mock_instance.name)
 

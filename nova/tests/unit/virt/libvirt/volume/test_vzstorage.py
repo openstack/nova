@@ -95,7 +95,13 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         conn = {'data': mock.sentinel.conn_data}
         drv.disconnect_volume(conn, mock.sentinel.instance)
         drv.connector.disconnect_volume.assert_called_once_with(
-            mock.sentinel.conn_data, None)
+            mock.sentinel.conn_data, None, force=False)
+
+        # Verify force=True
+        drv.connector.disconnect_volume.reset_mock()
+        drv.disconnect_volume(conn, mock.sentinel.instance, force=True)
+        drv.connector.disconnect_volume.assert_called_once_with(
+            mock.sentinel.conn_data, None, force=True)
 
     def test_libvirt_vzstorage_driver_get_config(self):
         libvirt_driver = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_host)

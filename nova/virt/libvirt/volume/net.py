@@ -88,12 +88,13 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             LOG.debug("Attached RBD volume %s", device_info, instance=instance)
             connection_info['data']['device_path'] = device_info['path']
 
-    def disconnect_volume(self, connection_info, instance):
+    def disconnect_volume(self, connection_info, instance, force=False):
         if self._use_rbd_volume_local_attach(connection_info):
             LOG.debug("calling os-brick to detach RBD Volume",
                       instance=instance)
             try:
-                self.connector.disconnect_volume(connection_info['data'], None)
+                self.connector.disconnect_volume(connection_info['data'], None,
+                                                 force=force)
             except os_brick_exception.VolumeDeviceNotFound as exc:
                 LOG.warning('Ignoring VolumeDeviceNotFound: %s', exc)
                 return

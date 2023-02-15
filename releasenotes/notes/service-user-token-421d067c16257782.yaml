@@ -1,0 +1,11 @@
+upgrade:
+  - |
+    Configuration of service user tokens is now **required** for all Nova services
+    to ensure security of block-storage volume data.
+
+    All Nova configuration files must configure the ``[service_user]`` section as
+    described in the `documentation`__.
+
+    See https://bugs.launchpad.net/nova/+bug/2004555 for more details.
+
+    __ https://docs.openstack.org/nova/latest/admin/configuration/service-user-token.html
