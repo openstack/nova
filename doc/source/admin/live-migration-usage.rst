@@ -320,4 +320,4 @@ To make live-migration succeed, you have several options:
 
 If live migrations routinely timeout or fail during cleanup operations due
 to the user token timing out, consider configuring nova to use
-:ref:`service user tokens <user_token_timeout>`.
+:ref:`service user tokens <service_user_token>`.
