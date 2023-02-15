@@ -697,3 +697,19 @@ class TestUpgradeCheckOldCompute(test.NoDBTestCase):
                 return_value=too_old):
             result = self.cmd._check_old_computes()
             self.assertEqual(upgradecheck.Code.WARNING, result.code)
+
+
+class TestUpgradeCheckServiceUserToken(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.cmd = status.UpgradeCommands()
+
+    def test_service_user_token_not_configured(self):
+        result = self.cmd._check_service_user_token()
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
+
+    def test_service_user_token_configured(self):
+        self.flags(send_service_user_token=True, group='service_user')
+        result = self.cmd._check_service_user_token()
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)

@@ -237,7 +237,7 @@ class LibvirtNetVolumeDriverTestCase(
 
         # Assert that the connector is called correctly
         libvirt_driver.connector.disconnect_volume.assert_called_once_with(
-            connection_info['data'], None)
+            connection_info['data'], None, force=False)
 
     def test_libvirt_rbd_driver_block_config(self):
         self.flags(rbd_volume_local_attach=True, group='workarounds')

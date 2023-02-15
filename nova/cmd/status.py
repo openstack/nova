@@ -437,6 +437,15 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
 
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
+    def _check_service_user_token(self):
+        if not CONF.service_user.send_service_user_token:
+            msg = (_("""
+Service user token configuration is required for all Nova services.
+For more details see the following:
+https://docs.openstack.org/latest/nova/admin/configuration/service-user-token.html"""))  # noqa
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
+
     # The format of the check functions is to return an upgradecheck.Result
     # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -458,7 +467,9 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         # Added in Victoria
         (_('Policy File JSON to YAML Migration'), _check_policy_json),
         # Backported from Wallaby
-        (_('Older than N-1 computes'), _check_old_computes)
+        (_('Older than N-1 computes'), _check_old_computes),
+        # Added in Bobcat
+        (_('Service User Token Configuration'), _check_service_user_token),
     )
 
 

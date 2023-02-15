@@ -189,7 +189,7 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             LOG.error("Could not mount Quobyte volume: %s", nex)
 
     @utils.synchronized('connect_qb_volume')
-    def disconnect_volume(self, connection_info, instance):
+    def disconnect_volume(self, connection_info, instance, force=False):
         """Disconnect the volume."""
 
         mount_path = self._get_mount_path(connection_info)
