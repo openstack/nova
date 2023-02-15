@@ -135,7 +135,7 @@ class LibvirtBaseVolumeDriver(object):
         """Connect the volume."""
         pass
 
-    def disconnect_volume(self, connection_info, instance):
+    def disconnect_volume(self, connection_info, instance, force=False):
         """Disconnect the volume."""
         pass
 

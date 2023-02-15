@@ -59,10 +59,10 @@ class VolumeOps(object):
         for vol in volumes:
             self.attach_volume(vol['connection_info'], instance_name)
 
-    def disconnect_volumes(self, block_device_info):
+    def disconnect_volumes(self, block_device_info, force=False):
         mapping = driver.block_device_info_get_mapping(block_device_info)
         for vol in mapping:
-            self.disconnect_volume(vol['connection_info'])
+            self.disconnect_volume(vol['connection_info'], force=force)
 
     def attach_volume(self, connection_info, instance_name,
                       disk_bus=constants.CTRL_TYPE_SCSI):
@@ -116,9 +116,9 @@ class VolumeOps(object):
             volume_driver.set_disk_qos_specs(connection_info,
                                              qos_specs)
 
-    def disconnect_volume(self, connection_info):
+    def disconnect_volume(self, connection_info, force=False):
         volume_driver = self._get_volume_driver(connection_info)
-        volume_driver.disconnect_volume(connection_info)
+        volume_driver.disconnect_volume(connection_info, force=force)
 
     def detach_volume(self, connection_info, instance_name):
         LOG.debug("Detaching volume: %(connection_info)s "
@@ -231,8 +231,8 @@ class BaseVolumeDriver(object):
     def connect_volume(self, connection_info):
         return self._connector.connect_volume(connection_info['data'])
 
-    def disconnect_volume(self, connection_info):
-        self._connector.disconnect_volume(connection_info['data'])
+    def disconnect_volume(self, connection_info, force=False):
+        self._connector.disconnect_volume(connection_info['data'], force=force)
 
     def get_disk_resource_path(self, connection_info):
         disk_paths = self._connector.get_volume_paths(connection_info['data'])

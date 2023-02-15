@@ -81,3 +81,23 @@ class LibvirtFibreChannelVolumeDriverTestCase(
         self.assertEqual(requested_size, new_size)
         libvirt_driver.connector.extend_volume.assert_called_once_with(
            connection_info['data'])
+
+    def test_disconnect_volume(self):
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
+                                                                self.fake_host)
+        libvirt_driver.connector.disconnect_volume = mock.MagicMock()
+        libvirt_driver.disconnect_volume(
+            connection_info, mock.sentinel.instance)
+
+        libvirt_driver.connector.disconnect_volume.assert_called_once_with(
+            connection_info['data'], connection_info['data'], force=False)
+
+        # Verify force=True
+        libvirt_driver.connector.disconnect_volume.reset_mock()
+        libvirt_driver.disconnect_volume(
+            connection_info, mock.sentinel.instance, force=True)
+        libvirt_driver.connector.disconnect_volume.assert_called_once_with(
+            connection_info['data'], connection_info['data'], force=True)

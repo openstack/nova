@@ -92,6 +92,26 @@ Install and configure components
         Comment out or remove any other options in the ``[keystone_authtoken]``
         section.
 
+   * In the ``[service_user]`` section, configure :ref:`service user
+     tokens <service_user_token>`:
+
+     .. path /etc/nova/nova.conf
+     .. code-block:: ini
+
+        [service_user]
+        send_service_user_token = true
+        auth_url = https://controller/identity
+        auth_strategy = keystone
+        auth_type = password
+        project_domain_name = Default
+        project_name = service
+        user_domain_name = Default
+        username = nova
+        password = NOVA_PASS
+
+     Replace ``NOVA_PASS`` with the password you chose for the ``nova`` user in
+     the Identity service.
+
    * In the ``[DEFAULT]`` section, configure the ``my_ip`` option:
 
      .. path /etc/nova/nova.conf
