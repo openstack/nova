@@ -284,7 +284,7 @@ Troubleshooting
 Timeouts
 ~~~~~~~~
 
-Configure a :ref:`service user <user_token_timeout>` in case the user token
+Configure a :ref:`service user <service_user_token>` in case the user token
 times out, e.g. during the snapshot and download of a large server image.
 
 If RPC calls are timing out with a ``MessagingTimeout`` error in the logs,
