@@ -1478,6 +1478,15 @@ Related options:
 """),
 ]
 
+libvirt_cpu_mgmt_opts = [
+    cfg.StrOpt('cpu_power_governor_low',
+               default='powersave',
+               help='Governor to use in order '
+                    'to reduce CPU power consumption'),
+    cfg.StrOpt('cpu_power_governor_high',
+             default='performance',
+             help='Governor to use in order to have best CPU performance'),
+]
 
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
@@ -1499,6 +1508,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_nvmeof_opts,
     libvirt_pmem_opts,
     libvirt_vtpm_opts,
+    libvirt_cpu_mgmt_opts,
 ))
 
 
