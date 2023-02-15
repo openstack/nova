@@ -52,7 +52,7 @@ class LibvirtSMBFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         device_path = self._get_device_path(connection_info)
         connection_info['data']['device_path'] = device_path
 
-    def disconnect_volume(self, connection_info, instance):
+    def disconnect_volume(self, connection_info, instance, force=False):
         """Disconnect the volume."""
         smbfs_share = connection_info['data']['export']
         mount_path = self._get_mount_path(connection_info)

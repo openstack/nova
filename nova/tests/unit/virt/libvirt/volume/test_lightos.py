@@ -62,7 +62,13 @@ class LibvirtLightVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         connection_info = {'data': disk_info}
         lightos_driver.disconnect_volume(connection_info, None)
         lightos_driver.connector.disconnect_volume.assert_called_once_with(
-            disk_info, None)
+            disk_info, None, force=False)
+
+        # Verify force=True
+        lightos_driver.connector.disconnect_volume.reset_mock()
+        lightos_driver.disconnect_volume(connection_info, None, force=True)
+        lightos_driver.connector.disconnect_volume.assert_called_once_with(
+            disk_info, None, force=True)
 
     @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory',
         new=mock.Mock(return_value=mock.Mock()))
