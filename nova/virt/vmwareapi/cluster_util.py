@@ -410,7 +410,7 @@ def update_cluster_das_vm_override(session, cluster, vm_ref, operation='add',
 
     client_factory = session.vim.client.factory
 
-    das_vm_spec = client_factory.create('ns0:ClusterDasVmConfigInfo')
+    das_vm_spec = client_factory.create('ns0:ClusterDasVmConfigSpec')
     das_vm_spec.operation = operation
 
     if operation == 'add':
