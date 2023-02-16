@@ -359,7 +359,7 @@ transferred, with lower bound of a minimum of 2 GiB per device.
                mutable=True,
                help="""
 Time to wait, in seconds, for migration to successfully complete transferring
-data before aborting the operation.
+data before executing the timeout action.
 
 Value is per GiB of guest RAM + disk to be transferred, with lower bound of
 a minimum of 2 GiB. Should usually be larger than downtime delay * downtime
@@ -367,6 +367,7 @@ steps. Set to 0 to disable timeouts.
 
 Related options:
 
+* live_migration_timeout_action
 * live_migration_downtime
 * live_migration_downtime_steps
 * live_migration_downtime_delay
