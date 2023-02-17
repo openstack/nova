@@ -2047,6 +2047,12 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
         self.keymap = None
         self.listen = None
 
+        self.image_compression = None
+        self.jpeg_compression = None
+        self.zlib_compression = None
+        self.playback_compression = None
+        self.streaming_mode = None
+
     def format_dom(self):
         dev = super(LibvirtConfigGuestGraphics, self).format_dom()
 
@@ -2056,6 +2062,24 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
             dev.set("keymap", self.keymap)
         if self.listen:
             dev.set("listen", self.listen)
+
+        if self.type == "spice":
+            if self.image_compression is not None:
+                dev.append(etree.Element(
+                    'image', compression=self.image_compression))
+            if self.jpeg_compression is not None:
+                dev.append(etree.Element(
+                    'jpeg', compression=self.jpeg_compression))
+            if self.zlib_compression is not None:
+                dev.append(etree.Element(
+                    'zlib', compression=self.zlib_compression))
+            if self.playback_compression is not None:
+                dev.append(etree.Element(
+                    'playback', compression=self.get_on_off_str(
+                        self.playback_compression)))
+            if self.streaming_mode is not None:
+                dev.append(etree.Element(
+                    'streaming', mode=self.streaming_mode))
 
         return dev
 

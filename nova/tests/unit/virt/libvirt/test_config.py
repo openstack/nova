@@ -1537,7 +1537,7 @@ class LibvirtConfigGuestInputTest(LibvirtConfigBaseTest):
 
 class LibvirtConfigGuestGraphicsTest(LibvirtConfigBaseTest):
 
-    def test_config_graphics(self):
+    def test_config_graphics_vnc(self):
         obj = config.LibvirtConfigGuestGraphics()
         obj.type = "vnc"
         obj.autoport = True
@@ -1547,6 +1547,30 @@ class LibvirtConfigGuestGraphicsTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
   <graphics type="vnc" autoport="yes" keymap="en_US" listen="127.0.0.1"/>
+                            """)
+
+    def test_config_graphics_spice(self):
+        obj = config.LibvirtConfigGuestGraphics()
+        obj.type = "spice"
+        obj.autoport = False
+        obj.keymap = "en_US"
+        obj.listen = "127.0.0.1"
+
+        obj.image_compression = "auto_glz"
+        obj.jpeg_compression = "auto"
+        obj.zlib_compression = "always"
+        obj.playback_compression = True
+        obj.streaming_mode = "filter"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+  <graphics type="spice" autoport="no" keymap="en_US" listen="127.0.0.1">
+    <image compression="auto_glz"/>
+    <jpeg compression="auto"/>
+    <zlib compression="always"/>
+    <playback compression="on"/>
+    <streaming mode="filter"/>
+  </graphics>
                             """)
 
 

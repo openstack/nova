@@ -85,6 +85,59 @@ Agent. With the Spice agent installed the following features are enabled:
   needing to click inside the console or press keys to release it. The
   performance of mouse movement is also improved.
 """),
+    cfg.StrOpt('image_compression',
+        advanced=True,
+        choices=[
+            ('auto_glz', 'enable image compression mode to choose between glz '
+             'and quic algorithm, based on image properties'),
+            ('auto_lz', 'enable image compression mode to choose between lz '
+             'and quic algorithm, based on image properties'),
+            ('quic', 'enable image compression based on the SFALIC algorithm'),
+            ('glz', 'enable image compression using lz with history based '
+             'global dictionary'),
+            ('lz', 'enable image compression with the Lempel-Ziv algorithm'),
+            ('off', 'disable image compression')
+        ],
+        help="""
+Configure the SPICE image compression (lossless).
+"""),
+    cfg.StrOpt('jpeg_compression',
+        advanced=True,
+        choices=[
+            ('auto', 'enable JPEG image compression automatically'),
+            ('never', 'disable JPEG image compression'),
+            ('always', 'enable JPEG image compression')
+        ],
+        help="""
+Configure the SPICE wan image compression (lossy for slow links).
+"""),
+    cfg.StrOpt('zlib_compression',
+        advanced=True,
+        choices=[
+            ('auto', 'enable zlib image compression automatically'),
+            ('never', 'disable zlib image compression'),
+            ('always', 'enable zlib image compression')
+        ],
+        help="""
+Configure the SPICE wan image compression (lossless for slow links).
+"""),
+    cfg.BoolOpt('playback_compression',
+        advanced=True,
+        help="""
+Enable the SPICE audio stream compression (using celt).
+"""),
+    cfg.StrOpt('streaming_mode',
+        advanced=True,
+        choices=[
+            ('filter', 'SPICE server adds additional filters to decide if '
+             'video streaming should be activated'),
+            ('all', 'any fast-refreshing window can be encoded into a video '
+             'stream'),
+            ('off', 'no video detection and (lossy) compression is performed')
+        ],
+        help="""
+Configure the SPICE video stream detection and (lossy) compression.
+"""),
     cfg.URIOpt('html5proxy_base_url',
         default='http://127.0.0.1:6082/spice_auto.html',
         help="""
