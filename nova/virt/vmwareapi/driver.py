@@ -540,6 +540,13 @@ class VMwareVCDriver(driver.ComputeDriver):
         stats = self.get_available_resource(nodename)
         result = {}
 
+        # NOTE(yikun): If the inv record does not exists, the allocation_ratio
+        # will use the CONF.xxx_allocation_ratio value if xxx_allocation_ratio
+        # is set, and fallback to use the initial_xxx_allocation_ratio
+        # otherwise.
+        inv = provider_tree.data(nodename).inventory
+        ratios = self._get_allocation_ratios(inv)
+
         local_gb = stats["local_gb"]
         local_gb_max_free = stats.get("local_gb_max_free", "local_gb")
         if local_gb > 0 and local_gb_max_free > 0:
@@ -551,6 +558,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': local_gb_max_free,
                 'step_size': 1,
+                'allocation_ratio': ratios[orc.DISK_GB],
             }
 
         vcpus = stats["vcpus"]
@@ -563,6 +571,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': max_vcpus,
                 'step_size': 1,
+                'allocation_ratio': ratios[orc.VCPU],
             }
 
         memory_mb = stats["memory_mb"]
@@ -575,6 +584,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                 'min_unit': 1,
                 'max_unit': max_memory_mb,
                 'step_size': 1,
+                'allocation_ratio': ratios[orc.MEMORY_MB],
             }
 
             available_memory_mb = memory_mb - reserved_memory_mb

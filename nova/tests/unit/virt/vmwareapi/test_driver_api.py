@@ -2392,6 +2392,7 @@ class VMwareAPIVMTestCase(test.TestCase,
                 'min_unit': 1,
                 'max_unit': 16,
                 'step_size': 1,
+                'allocation_ratio': CONF.initial_cpu_allocation_ratio,
             },
             orc.MEMORY_MB: {
                 'total': 2048,
@@ -2399,6 +2400,7 @@ class VMwareAPIVMTestCase(test.TestCase,
                 'min_unit': 1,
                 'max_unit': 1024,
                 'step_size': 1,
+                'allocation_ratio': CONF.initial_ram_allocation_ratio,
             },
             orc.DISK_GB: {   # Fix this
                 'total': 1024,
@@ -2406,6 +2408,7 @@ class VMwareAPIVMTestCase(test.TestCase,
                 'min_unit': 1,
                 'max_unit': 500,
                 'step_size': 1,
+                'allocation_ratio': CONF.initial_disk_allocation_ratio,
             },
             nova.utils.MEMORY_RESERVABLE_MB_RESOURCE: {
                 'total': 2048 - 512,  # 512 CONF.reserved_host_memory_mb
