@@ -1052,6 +1052,12 @@ Active:          8381604 kB
              'iowait': 6121490000000},
             stats)
 
+    @mock.patch.object(fakelibvirt.virConnect, "getCPUMap")
+    def test_get_available_cpus(self, mock_map):
+        mock_map.return_value = (4, [True, True, False, False], None)
+        result = self.host.get_available_cpus()
+        self.assertEqual(result, {0, 1, 2, 3})
+
     @mock.patch.object(fakelibvirt.virConnect, "defineXML")
     def test_write_instance_config(self, mock_defineXML):
         fake_dom_xml = """

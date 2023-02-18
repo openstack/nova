@@ -740,6 +740,14 @@ class Host(object):
 
         return doms
 
+    def get_available_cpus(self):
+        """Get the set of CPUs that exist on the host.
+
+        :returns: set of CPUs, raises libvirtError on error
+        """
+        cpus, cpu_map, online = self.get_connection().getCPUMap()
+        return {cpu for cpu in range(cpus)}
+
     def get_online_cpus(self):
         """Get the set of CPUs that are online on the host
 

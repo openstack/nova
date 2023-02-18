@@ -9254,6 +9254,34 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.Invalid, drvr._get_pcpu_available)
 
+    @mock.patch('nova.virt.libvirt.host.Host.get_available_cpus',
+                return_value=set([0, 1, 2, 3]))
+    def test_get_pcpu_available_for_power_mgmt(self, get_available_cpus):
+        """Test what happens when the '[compute] cpu_dedicated_set' config
+        option is set and power management is defined.
+        """
+        self.flags(vcpu_pin_set=None)
+        self.flags(cpu_dedicated_set='2-3', cpu_shared_set=None,
+                   group='compute')
+        self.flags(cpu_power_management=True, group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        pcpus = drvr._get_pcpu_available()
+        self.assertEqual(set([2, 3]), pcpus)
+
+    @mock.patch('nova.virt.libvirt.host.Host.get_available_cpus',
+                return_value=set([4, 5]))
+    def test_get_pcpu_available__cpu_dedicated_set_invalid_for_pm(self,
+            get_available_cpus):
+        """Test what happens when the '[compute] cpu_dedicated_set' config
+        option is set but it's invalid with power management set.
+        """
+        self.flags(vcpu_pin_set=None)
+        self.flags(cpu_dedicated_set='4-6', cpu_shared_set=None,
+                   group='compute')
+        self.flags(cpu_power_management=True, group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.Invalid, drvr._get_pcpu_available)
+
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
                 return_value=set([0, 1, 2, 3]))
     def test_get_vcpu_available(self, get_online_cpus):
