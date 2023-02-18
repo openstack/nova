@@ -1,6 +1,5 @@
 {
     "evacuate": {
-        "host": "testHost",
-        "targetState": "stopped"
+        "host": "testHost"
     }
 }
