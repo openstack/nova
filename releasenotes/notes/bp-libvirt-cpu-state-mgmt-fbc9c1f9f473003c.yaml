@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    This is now possible to configure nova-compute services using libvirt driver
+    by setting ``[libvirt]cpu_power_management`` to ``True`` in order to let the
+    service to powering down or up physical CPUs depending on whether those CPUs
+    are pinned or not to instances. In order on to support this feature, the
+    compute service needs to be set with ``[compute]cpu_dedicated_set``. If so,
+    all the related CPUs will be powering down until they are used by an
+    instance where the related pinned CPU will be powering up just before
+    starting the guest. If ``[compute]cpu_dedicated_set`` isn't set, then the
+    compute service will refuse to start.
+    By default the power strategy will offline CPUs when powering down and
+    online the CPUs on powering up but another strategy is possible by using
+    ``[libvirt]cpu_power_management_strategy=governor`` which will rather modify
+    the related CPU governor using ``[libvirt]cpu_power_governor_low`` and
+    ``[libvirt]cpu_power_governor_high`` configuration values (respective
+    defaults being  ``powersave`` and ``performance``)

@@ -14,3 +14,9 @@ from nova.virt.libvirt.cpu import api
 
 
 Core = api.Core
+
+
+power_up = api.power_up
+power_down = api.power_down
+validate_all_dedicated_cpus = api.validate_all_dedicated_cpus
+power_down_all_dedicated_cpus = api.power_down_all_dedicated_cpus
