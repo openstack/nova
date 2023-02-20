@@ -1837,7 +1837,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # Set maximum attempt as 5, most test can remove the directory
         # for the second time.
         attempts = 0
-        while(os.path.exists(target) and attempts < 5):
+        while os.path.exists(target) and attempts < 5:
             shutil.rmtree(target, ignore_errors=True)
             if os.path.exists(target):
                 time.sleep(random.randint(20, 200) / 100.0)
@@ -11103,7 +11103,7 @@ class LibvirtDriver(driver.ComputeDriver):
         announce_pause = (
             CONF.workarounds.qemu_monitor_announce_self_interval)
 
-        while(current_attempt < max_attempts):
+        while current_attempt < max_attempts:
             # Increment attempt
             current_attempt += 1
 

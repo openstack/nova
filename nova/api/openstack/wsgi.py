@@ -700,9 +700,9 @@ def expected_errors(errors):
 
                 LOG.exception("Unexpected exception in API method")
                 msg = _("Unexpected API Error. "
-                        "%(support)s\n%(exc)s" % {
-                            'support': version.support_string(),
-                            'exc': type(exc)})
+                        "{support}\n{exc}").format(
+                            support=version.support_string(),
+                            exc=type(exc))
                 raise webob.exc.HTTPInternalServerError(explanation=msg)
 
         return wrapped

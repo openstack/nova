@@ -5612,7 +5612,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               '_get_instance_block_device_info',
                               return_value='fake-bdminfo'),
             mock.patch.object(self.compute, '_check_trusted_certs'),
-        ) as(
+        ) as (
              mock_notify_usage,
              mock_setup,
              mock_setup_inst,
@@ -5712,7 +5712,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               return_value=is_vol_backed),
             mock.patch.object(self.compute, '_rebuild_volume_backed_instance'),
             mock.patch.object(compute_utils, 'get_root_bdm')
-        ) as(
+        ) as (
              mock_destroy,
              mock_spawn,
              mock_save,
@@ -5844,7 +5844,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                   return_value=root_bdm),
             mock.patch.object(self.compute, 'volume_api'),
             mock.patch.object(self.compute.image_api, 'get'),
-        ) as(
+        ) as (
             mock_save,
             mock_get_root_bdm,
             mock_vol_api,

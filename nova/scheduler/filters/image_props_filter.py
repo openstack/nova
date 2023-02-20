@@ -82,7 +82,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
 
         def _compare_product_version(hyper_version, image_props):
             version_required = image_props.get('img_hv_requested_version')
-            if not(hypervisor_version and version_required):
+            if not (hypervisor_version and version_required):
                 return True
             img_prop_predicate = versionpredicate.VersionPredicate(
                 'image_prop (%s)' % version_required)

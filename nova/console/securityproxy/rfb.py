@@ -164,19 +164,17 @@ class RFBSecurityProxy(base.SecurityProxy):
         if client_auth != auth.AuthType.NONE:
             self._fail(
                 tenant_sock, compute_sock,
-                _("Only the security type %d (%s) is supported") % (
-                    auth.AuthType.NONE.value, auth.AuthType.NONE.name,
-                ))
+                _("Only the security type {value} ({name}) "
+                  "is supported").format(value=auth.AuthType.NONE.value,
+                                         name=auth.AuthType.NONE.name))
 
             reason = _(
-                "Client requested a security type other than %d (%s): "
-                "%d (%s)"
-            ) % (
-                auth.AuthType.NONE.value,
-                auth.AuthType.NONE.name,
-                auth.AuthType(client_auth).value,
-                auth.AuthType(client_auth).name,
-            )
+                "Client requested a security type other than "
+                "{value} ({name}): {client_value} ({client_name})"
+            ).format(value=auth.AuthType.NONE.value,
+                     name=auth.AuthType.NONE.name,
+                     client_value=auth.AuthType(client_auth).value,
+                     client_name=auth.AuthType(client_auth).name)
             raise exception.SecurityProxyNegotiationFailed(reason=reason)
 
         try:
