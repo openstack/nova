@@ -730,6 +730,97 @@ CPU policy, meanwhile, will consume ``VCPU`` inventory.
 
 .. _configure-hyperv-numa:
 
+Configuring CPU power management for dedicated cores
+----------------------------------------------------
+
+.. versionchanged:: 27.0.0
+
+   This feature was only introduced by the 2023.1 Antelope release
+
+.. important::
+
+   The functionality described below is currently only supported by the
+   libvirt/KVM driver.
+
+For power saving reasons, operators can decide to turn down the power usage of
+CPU cores whether they are in use or not. For obvious reasons, Nova only allows
+to change the power consumption of a dedicated CPU core and not a shared one.
+Accordingly, usage of this feature relies on the reading of
+:oslo.config:option:`compute.cpu_dedicated_set` config option to know which CPU
+cores to handle.
+The main action to enable the power management of dedicated cores is to set
+:oslo.config:option:`libvirt.cpu_power_management` config option to ``True``.
+
+By default, if this option is enabled, Nova will lookup the dedicated cores and
+power them down at the compute service startup. Then, once an instance starts
+by being attached to a dedicated core, this below core will be powered up right
+before the libvirt guest starts. On the other way, once an instance is stopped,
+migrated or deleted, then the corresponding dedicated core will be powered down.
+
+There are two distinct strategies for powering up or down :
+
+- the default is to offline the CPU core and online it when needed.
+- an alternative strategy is to use two distinct CPU governors for the up state
+  and the down state.
+
+The strategy can be chosen using
+:oslo.config:option:`libvirt.cpu_power_management_strategy` config option.
+``cpu_state`` supports the first online/offline strategy, while ``governor``
+sets the alternative strategy.
+We default to turning off the cores as it provides you the best power savings
+while there could be other tools outside Nova to manage the governor, like
+tuned. That being said, we also provide a way to automatically change the
+governors on the fly, as explained below.
+
+If the strategy is set to ``governor``, a couple of config options are provided
+to define which exact CPU govenor to use for each of the up and down states :
+
+- :oslo.config:option:`libvirt.cpu_power_governor_low` will define the governor
+  to use for the powerdown state (defaults to ``powersave``)
+- :oslo.config:option:`libvirt.cpu_power_governor_high` will define the
+  governor to use for the powerup state (defaults to ``performance``)
+
+.. important::
+   This is the responsibility of the operator to ensure that the govenors
+   defined by the configuration options are currently supported by the OS
+   underlying kernel that runs the compute service.
+
+   As a side note, we recommend the ``schedutil`` governor as an alternative for
+   the high-power state (if the kernel supports it) as the CPU frequency is
+   dynamically set based on CPU task states. Other governors may be worth to
+   be tested, including ``conservative`` and ``ondemand`` which are quite a bit
+   more power consuming than ``schedutil`` but more efficient than
+   ``performance``. See `Linux kernel docs`_ for further explanations.
+
+.. _`Linux kernel docs`: https://www.kernel.org/doc/Documentation/cpu-freq/governors.txt
+
+As an example, a ``nova.conf`` part of configuration would look like::
+
+    [compute]
+    cpu_dedicated_set=2-17
+
+    [libvirt]
+    cpu_power_management=True
+    cpu_power_management_strategy=cpu_state
+
+.. warning::
+
+   The CPU core #0 has a special meaning in most of the recent Linux kernels.
+   This is always highly discouraged to use it for CPU pinning but please
+   refrain to have it power managed or you could have surprises if Nova turns
+   it off !
+
+One last important note : you can decide to change the CPU management strategy
+during the compute lifecycle, or you can currently already manage the CPU
+states. For ensuring that Nova can correctly manage the CPU performances, we
+added a couple of checks at startup that refuse to start nova-compute service
+if those arbitrary rules aren't enforced :
+
+- if the operator opts for ``cpu_state`` strategy, then all dedicated CPU
+  governors *MUST* be identical.
+- if they decide using ``governor``, then all dedicated CPU cores *MUST* be
+  online.
+
 Configuring Hyper-V compute nodes for instance NUMA policies
 ------------------------------------------------------------
 
