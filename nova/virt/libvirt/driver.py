@@ -114,7 +114,7 @@ from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import cpu as libvirt_cpu
+from nova.virt.libvirt.cpu import api as libvirt_cpu
 from nova.virt.libvirt import designer
 from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest

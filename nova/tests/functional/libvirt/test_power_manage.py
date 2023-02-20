@@ -21,7 +21,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base
 from nova.virt import hardware
-from nova.virt.libvirt import cpu
+from nova.virt.libvirt.cpu import api as cpu_api
 
 
 class PowerManagementTestsBase(base.ServersTestBase):
@@ -73,7 +73,7 @@ class PowerManagementTestsBase(base.ServersTestBase):
 
     def _assert_cpu_set_state(self, cpu_set, expected='online'):
         for i in cpu_set:
-            core = cpu.Core(i)
+            core = cpu_api.Core(i)
             if expected == 'online':
                 self.assertTrue(core.online, f'{i} is not online')
             elif expected == 'offline':
@@ -211,7 +211,7 @@ class PowerManagementTestsGovernor(PowerManagementTestsBase):
 
     def test_changing_strategy_fails(self):
         # Arbitratly set a core governor strategy to be performance
-        cpu.Core(1).set_high_governor()
+        cpu_api.Core(1).set_high_governor()
         # and then forget about it while changing the strategy.
         self.flags(cpu_power_management_strategy='cpu_state', group='libvirt')
         # This time, this wouldn't be acceptable as some core would have a
