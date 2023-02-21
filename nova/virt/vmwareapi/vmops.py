@@ -3633,7 +3633,8 @@ class VMwareVMOps(object):
 
                 vm_moref_value = vutil.get_moref_value(obj.obj)
                 if not timeutils.is_older_than(vm_props['config.createDate'],
-                        CONF.remove_unused_original_minimum_age_seconds):
+                        CONF.image_cache.
+                            remove_unused_original_minimum_age_seconds):
                     expired_templ_vms.pop(vm_moref_value)
                     continue
 
