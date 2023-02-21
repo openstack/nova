@@ -1287,7 +1287,6 @@ class VMwareVMOps(object):
         reconfig_spec.instanceUuid = vi.instance.uuid
         vif_infos = vmwarevif.get_vif_info(self._session,
                                            self._cluster,
-                                           utils.is_neutron(),
                                            vi.ii.vif_model,
                                            network_info)
         vm_util.append_vif_infos_to_config_spec(client_factory,
@@ -2414,7 +2413,6 @@ class VMwareVMOps(object):
         """ctxt is only there to provide the same signature as rpc calls"""
         vif_info = vmwarevif.get_vif_info(self._session,
                                           self._cluster,
-                                          utils.is_neutron(),
                                           vif_model,
                                           network_info)
         return vif_info
