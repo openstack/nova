@@ -1,0 +1,21 @@
+---
+fixes:
+  - |
+    `Bug #2024258`_: Fixes an issue with performance degradation archiving
+    databases with large numbers of foreign key related records.
+
+    Previously, deleted rows were archived in batches of max_rows parents +
+    their child rows in a single database transaction. It limited how high
+    a value of max_rows could be specified by the user because of the size of
+    the database transaction it could generate. Symptoms of the behavior were
+    exceeding the maximum configured packet size of the database or timing out
+    due to a deadlock.
+
+    The behavior has been changed to archive batches of complete parent +
+    child rows trees while limiting each batch when it has reached >= max_rows
+    records. This allows the size of the database transaction to be controlled
+    by the user and enables more rows to be archived per invocation of
+    ``nova-manage db archive_deleted_rows`` when there are a large number of
+    foreign key related records.
+
+    .. _Bug #2024258: https://bugs.launchpad.net/nova/+bug/2024258
