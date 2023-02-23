@@ -641,7 +641,7 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def _test_finish_migration(self, power_on=True,
                                resize_instance=False, migration=None,
-                               no_nics=False):
+                               no_nics=False, is_bigvm=False):
         with test.nested(
                 mock.patch.object(self._vmops,
                                   '_resize_create_ephemerals_and_swap'),
@@ -667,13 +667,19 @@ class VMwareVMOpsTestCase(test.TestCase):
                 mock.patch.object(ds_util,
                                   "get_datastore",
                                   return_value=self._ds),
+                mock.patch.object(cluster_util,
+                                  "update_cluster_drs_vm_override"),
+                mock.patch.object(cluster_util,
+                                  "update_cluster_das_vm_override")
         ) as (fake_resize_create_ephemerals_and_swap,
               fake_update_instance_progress, fake_power_on, fake_get_vm_ref,
               fake_reconfigure_vm, fake_remove_ephemerals_and_swap,
               fake_get_vmdk_info, fake_resize_vm, fake_resize_disk,
               fake_relocate_vm, fake_detach_volumes, fake_attach_volumes,
               fake_update_cluster_placement, fake_get_vm_networking_spec,
-              fake_get_vsphere_location, fake_get_datastore):
+              fake_get_vsphere_location, fake_get_datastore,
+              fake_update_cluster_drs_vm_override,
+              fake_update_cluster_das_vm_override):
             vm_ref = fake_get_vm_ref.return_value
             migration = migration or objects.Migration(dest_compute="nova",
                 source_compute="nova", uuid=uuids.migration)
@@ -696,6 +702,10 @@ class VMwareVMOpsTestCase(test.TestCase):
                     }]
                 fake_get_vm_networking_spec.return_value = \
                     mock.sentinel.network_spec
+
+            if is_bigvm:
+                self._instance.memory_mb = 2048 * 1024  # 2 TiB RAM
+                self._instance.flavor.memory_mb = 2048 * 1024  # 2 TiB RAM
 
             self._vmops.finish_migration(context=self._context,
                                          migration=migration,
@@ -755,6 +765,13 @@ class VMwareVMOpsTestCase(test.TestCase):
             else:
                 self.assertFalse(fake_power_on.called)
 
+            if is_bigvm:
+                fake_update_cluster_das_vm_override.assert_called_once_with(
+                    self._session, self._cluster.obj, vm_ref, operation='add',
+                    restart_priority=constants.DAS_RESTART_PRIORITY_HIGH)
+            else:
+                fake_update_cluster_das_vm_override.assert_not_called()
+
     def test_finish_migration_power_on(self):
         self._test_finish_migration(power_on=True, resize_instance=False)
 
@@ -766,6 +783,9 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_finish_migration_no_nics(self):
         self._test_finish_migration(no_nics=True)
+
+    def test_finish_migration_bigvm(self):
+        self._test_finish_migration(is_bigvm=True)
 
     @mock.patch.object(vmops.VMwareVMOps, '_create_swap')
     @mock.patch.object(vmops.VMwareVMOps, '_create_ephemeral')
@@ -1213,10 +1233,8 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'get_vm_ref',
                        return_value=mock.sentinel.vm_ref)
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
-    @mock.patch.object(cluster_util, 'update_cluster_das_vm_override')
-    def test_resize_vm_bigvm_upsize(self, fake_das_override, fake_drs_override,
-                                    fake_get_vm_ref, fake_resize_spec,
-                                    fake_reconfigure,
+    def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_get_vm_ref,
+                                    fake_resize_spec, fake_reconfigure,
                                     fake_cleanup_after_special_spawning,
                                     fake_get_extra_specs, fake_get_metadata):
         vm_ref = fake_get_vm_ref.return_value
@@ -1236,12 +1254,6 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                   vm_ref,
                                                   operation='add',
                                                   behavior=behavior)
-        priority = constants.DAS_RESTART_PRIORITY_HIGH
-        fake_das_override.assert_called_once_with(self._session,
-                                                  self._cluster.obj,
-                                                  vm_ref,
-                                                  operation='add',
-                                                  restart_priority=priority)
         expected = (self._context, int(flavor.memory_mb), flavor)
         fake_cleanup_after_special_spawning.assert_called_once_with(*expected)
 
@@ -1254,9 +1266,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'get_vm_ref',
                        return_value=mock.sentinel.vm_ref)
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
-    @mock.patch.object(cluster_util, 'update_cluster_das_vm_override')
-    def test_resize_vm_bigvm_downsize(self, fake_das_override,
-                                      fake_drs_override, fake_get_vm_ref,
+    def test_resize_vm_bigvm_downsize(self, fake_drs_override, fake_get_vm_ref,
                                       fake_resize_spec, fake_reconfigure,
                                       fake_cleanup_after_special_spawning,
                                       fake_get_extra_specs, fake_get_metadata):
@@ -1273,10 +1283,6 @@ class VMwareVMOpsTestCase(test.TestCase):
         instance.old_flavor.memory_mb = CONF.bigvm_mb
         self._vmops._resize_vm(self._context, instance, vm_ref, flavor, None)
         fake_drs_override.assert_called_once_with(self._session,
-                                                  self._cluster.obj,
-                                                  vm_ref,
-                                                  operation='remove')
-        fake_das_override.assert_called_once_with(self._session,
                                                   self._cluster.obj,
                                                   vm_ref,
                                                   operation='remove')

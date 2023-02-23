@@ -2253,13 +2253,6 @@ class VMwareVMOps(object):
                                                         vm_ref,
                                                         operation='add',
                                                         behavior=behavior)
-            # Make sure BigVMs get restarted first
-            restart_priority = constants.DAS_RESTART_PRIORITY_HIGH
-            LOG.debug("Adding restart priority override '%s' for big VM.",
-                      restart_priority, instance=instance)
-            cluster_util.update_cluster_das_vm_override(
-                self._session, self._cluster, vm_ref, operation='add',
-                restart_priority=restart_priority)
         elif old_needs_override and not new_needs_override:
             # remove the old overrides, if we had one before. make sure we
             # don't error out if they were already deleted another way
@@ -2272,14 +2265,6 @@ class VMwareVMOps(object):
                                                             operation='remove')
             except Exception:
                 LOG.warning('Could not remove DRS override.',
-                            instance=instance)
-            try:
-                cluster_util.update_cluster_das_vm_override(self._session,
-                                                            self._cluster,
-                                                            vm_ref,
-                                                            operation='remove')
-            except Exception:
-                LOG.warning('Could not remove DAS override.',
                             instance=instance)
         self._clean_up_after_special_spawning(context, flavor.memory_mb,
                                               flavor)
