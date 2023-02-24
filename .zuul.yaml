@@ -608,6 +608,7 @@
         GLANCE_USE_IMPORT_WORKFLOW: True
         DEVSTACK_PARALLEL: True
         GLANCE_LIMIT_IMAGE_SIZE_TOTAL: 2048
+        MYSQL_REDUCE_MEMORY: True
       # NOTE(danms): This job is pretty heavy as it is, so we disable some
       # services that are not relevant to the nova-glance-ceph scenario
       # that this job is intended to validate.
