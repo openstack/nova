@@ -102,7 +102,7 @@ Manual selection of the destination host
 
    .. code-block:: console
 
-      $ openstack server migrate d1df1b5a-70c4-4fed-98b7-423362f2c47c --live HostC
+      $ openstack server migrate d1df1b5a-70c4-4fed-98b7-423362f2c47c --live-migration --host HostC
 
 #. Confirm that the instance has been migrated successfully:
 
