@@ -757,7 +757,7 @@
             irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-enforce-scope-new-defaults:
             irrelevant-files: *policies-irrelevant-files
-        - grenade-skip-level:
+        - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
@@ -793,6 +793,8 @@
         - tempest-integrated-compute-ubuntu-focal:
             irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-enforce-scope-new-defaults:
+            irrelevant-files: *policies-irrelevant-files
+        - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
            irrelevant-files: *policies-irrelevant-files
