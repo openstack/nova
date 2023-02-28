@@ -1213,10 +1213,13 @@ def _check_for_mem_encryption_requirement_conflicts(
             "image %(image_name)s which has hw_mem_encryption property "
             "explicitly set to %(image_val)s"
         )
+        # image_meta.name is not set if image object represents root
+        # Cinder volume.
+        image_name = (image_meta.name if 'name' in image_meta else None)
         data = {
             'flavor_name': flavor.name,
             'flavor_val': flavor_mem_enc_str,
-            'image_name': image_meta.name,
+            'image_name': image_name,
             'image_val': image_mem_enc,
         }
         raise exception.FlavorImageConflict(emsg % data)
@@ -1228,10 +1231,15 @@ def _check_mem_encryption_uses_uefi_image(requesters, image_meta):
 
     emsg = _(
         "Memory encryption requested by %(requesters)s but image "
-        "%(image_name)s doesn't have 'hw_firmware_type' property set to 'uefi'"
+        "%(image_name)s doesn't have 'hw_firmware_type' property set to "
+        "'uefi' or volume-backed instance was requested"
     )
+    # image_meta.name is not set if image object represents root Cinder
+    # volume, for this case FlavorImageConflict should be raised, but
+    # image_meta.name can't be extracted.
+    image_name = (image_meta.name if 'name' in image_meta else None)
     data = {'requesters': " and ".join(requesters),
-            'image_name': image_meta.name}
+            'image_name': image_name}
     raise exception.FlavorImageConflict(emsg % data)
 
 
@@ -1260,12 +1268,14 @@ def _check_mem_encryption_machine_type(image_meta, machine_type=None):
     if mach_type is None:
         return
 
+    # image_meta.name is not set if image object represents root Cinder volume.
+    image_name = (image_meta.name if 'name' in image_meta else None)
     # Could be something like pc-q35-2.11 if a specific version of the
     # machine type is required, so do substring matching.
     if 'q35' not in mach_type:
         raise exception.InvalidMachineType(
             mtype=mach_type,
-            image_id=image_meta.id, image_name=image_meta.name,
+            image_id=image_meta.id, image_name=image_name,
             reason=_("q35 type is required for SEV to work"))
 
 

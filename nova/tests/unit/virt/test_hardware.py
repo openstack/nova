@@ -5364,7 +5364,7 @@ class MemEncryptionRequestedWithoutUEFITestCase(
     expected_error = (
         "Memory encryption requested by %(requesters)s but image "
         "%(image_name)s doesn't have 'hw_firmware_type' property "
-        "set to 'uefi'"
+        "set to 'uefi' or volume-backed instance was requested"
     )
 
     def _test_encrypted_memory_support_no_uefi(self, enc_extra_spec,
@@ -5490,6 +5490,25 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
                     "hw_mem_encryption property of image %s" %
                     (self.flavor_name, self.image_id)
                 )
+
+    def test_encrypted_memory_support_flavor_for_volume(self):
+        extra_specs = {'hw:mem_encryption': True}
+
+        flavor = objects.Flavor(name=self.flavor_name,
+                                extra_specs=extra_specs)
+        # Following image_meta is typical for root Cinder volume
+        image_meta = objects.ImageMeta.from_dict({
+            'min_disk': 0,
+            'min_ram': 0,
+            'properties': {},
+            'size': 0,
+            'status': 'active'})
+        # Confirm that exception.FlavorImageConflict is raised when
+        # flavor with hw:mem_encryption flag is used to create
+        # volume-backed instance
+        self.assertRaises(exception.FlavorImageConflict,
+                          hw.get_mem_encryption_constraint, flavor,
+                          image_meta)
 
 
 class PCINUMAAffinityPolicyTest(test.NoDBTestCase):
