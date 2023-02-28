@@ -99,6 +99,9 @@ class ViewBuilder(object):
         for name, value in quotas.items():
             if name.startswith('instances_'):
                 flavorname = name[10:]
-                limits[flavorname] = {'maxTotalInstances': value}
+                limits[flavorname] = {
+                    'maxTotalInstances': value['limit'],
+                    'totalInstancesUsed': value['in_use'],
+                }
 
         return limits
