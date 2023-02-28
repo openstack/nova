@@ -1549,7 +1549,11 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
             'not supported for instance with vDPA ports',
             ex.response.text)
 
+    # NOTE(sbauza): Now we're post-Antelope release, we don't need to support
+    # this test
     def test_attach_interface_service_version_61(self):
+        self.flags(disable_compute_service_check_for_ffu=True,
+                   group='workarounds')
         with mock.patch(
                 "nova.objects.service.get_minimum_version_all_cells",
                 return_value=61
@@ -1578,7 +1582,11 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
         self.assertEqual(hostname, port['binding:host_id'])
         self.assertEqual(server['id'], port['device_id'])
 
+    # NOTE(sbauza): Now we're post-Antelope release, we don't need to support
+    # this test
     def test_detach_interface_service_version_61(self):
+        self.flags(disable_compute_service_check_for_ffu=True,
+                   group='workarounds')
         with mock.patch(
                 "nova.objects.service.get_minimum_version_all_cells",
                 return_value=61
@@ -1871,7 +1879,11 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
             self.assertEqual(
                 dest, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
 
+    # NOTE(sbauza): Now we're post-Antelope release, we don't need to support
+    # this test
     def test_suspend_and_resume_service_version_62(self):
+        self.flags(disable_compute_service_check_for_ffu=True,
+                   group='workarounds')
         with mock.patch(
                 "nova.objects.service.get_minimum_version_all_cells",
                 return_value=62
@@ -1890,7 +1902,11 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
         self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
         self.assertEqual('ACTIVE', server['status'])
 
+    # NOTE(sbauza): Now we're post-Antelope release, we don't need to support
+    # this test
     def test_live_migrate_service_version_62(self):
+        self.flags(disable_compute_service_check_for_ffu=True,
+                   group='workarounds')
         with mock.patch(
                 "nova.objects.service.get_minimum_version_all_cells",
                 return_value=62
