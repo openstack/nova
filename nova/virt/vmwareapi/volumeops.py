@@ -587,10 +587,16 @@ class VMwareVolumeOps(object):
     def _get_vmdk_backed_disk_device(self, vm_ref, connection_info_data):
         # Get the vmdk file name that the VM is pointing to
         hardware_devices = vm_util.get_hardware_devices(self._session, vm_ref)
+        volume_uuid = connection_info_data['volume_id']
 
-        # Get disk uuid
-        disk_uuid = self._get_volume_uuid(vm_ref,
-                                          connection_info_data['volume_id'])
+        # Try first the direct mapping
+        device = vm_util.get_vmdk_backed_disk_device(hardware_devices,
+                                                     volume_uuid)
+        if device:
+            return device
+
+        # Fall back to the indirect mapping
+        disk_uuid = self._get_volume_uuid(vm_ref, volume_uuid)
         device = vm_util.get_vmdk_backed_disk_device(hardware_devices,
                                                      disk_uuid)
         if not device:

@@ -60,8 +60,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             **self._instance_values)
 
     def _test_detach_disk_from_vm(self, destroy_disk=False):
-        def fake_call_method(module, method, *args, **kwargs):
-            vmdk_detach_config_spec = kwargs.get('spec')
+        def fake_call_method(module, method, *args, spec, **kwargs):
+            vmdk_detach_config_spec = spec
             virtual_device_config = vmdk_detach_config_spec.deviceChange[0]
             self.assertEqual('remove', virtual_device_config.operation)
             self.assertEqual('ns0:VirtualDeviceConfigSpec',
@@ -180,14 +180,41 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         hardware_devices = mock.sentinel.hardware_devices
         session._call_method.return_value = hardware_devices
 
-        disk_uuid = mock.sentinel.disk_uuid
-        get_volume_uuid.return_value = disk_uuid
-
         device = mock.sentinel.device
         get_vmdk_backed_disk_device.return_value = device
 
         vm_ref = mock.sentinel.vm_ref
         connection_info = self._fake_connection_info()
+        volume_id = connection_info['data']['volume_id']
+
+        ret = self._volumeops._get_vmdk_backed_disk_device(
+            vm_ref, connection_info['data'])
+
+        self.assertEqual(device, ret)
+        session._call_method.assert_called_once_with(
+            vutil, "get_object_property", vm_ref, "config.hardware.device")
+        get_vmdk_backed_disk_device.assert_called_once_with(hardware_devices,
+                                                            volume_id)
+
+    @mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_uuid')
+    @mock.patch.object(vm_util, 'get_vmdk_backed_disk_device')
+    def test_get_vmdk_backed_disk_device_indirect(self,
+            get_vmdk_backed_disk_device, get_volume_uuid):
+        session = mock.Mock()
+        self._volumeops._session = session
+        hardware_devices = mock.sentinel.hardware_devices
+        session._call_method.return_value = hardware_devices
+
+        disk_uuid = mock.sentinel.disk_uuid
+        get_volume_uuid.return_value = disk_uuid
+
+        device = mock.sentinel.device
+        get_vmdk_backed_disk_device.side_effect = [None, device]
+
+        vm_ref = mock.sentinel.vm_ref
+        connection_info = self._fake_connection_info()
+        volume_id = connection_info['data']['volume_id']
+
         ret = self._volumeops._get_vmdk_backed_disk_device(
             vm_ref, connection_info['data'])
 
@@ -196,8 +223,9 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             vutil, "get_object_property", vm_ref, "config.hardware.device")
         get_volume_uuid.assert_called_once_with(
             vm_ref, connection_info['data']['volume_id'])
-        get_vmdk_backed_disk_device.assert_called_once_with(hardware_devices,
-                                                            disk_uuid)
+        get_vmdk_backed_disk_device.assert_has_calls([
+            mock.call(mock.sentinel.hardware_devices, volume_id),
+            mock.call(mock.sentinel.hardware_devices, disk_uuid)])
 
     @mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_uuid')
     @mock.patch.object(vm_util, 'get_vmdk_backed_disk_device')
@@ -215,6 +243,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
         vm_ref = mock.sentinel.vm_ref
         connection_info = self._fake_connection_info()
+        volume_id = connection_info['data']['volume_id']
         self.assertRaises(exception.DiskNotFound,
                           self._volumeops._get_vmdk_backed_disk_device,
                           vm_ref, connection_info['data'])
@@ -222,8 +251,9 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             vutil, "get_object_property", vm_ref, "config.hardware.device")
         get_volume_uuid.assert_called_once_with(
             vm_ref, connection_info['data']['volume_id'])
-        get_vmdk_backed_disk_device.assert_called_once_with(hardware_devices,
-                                                            disk_uuid)
+        get_vmdk_backed_disk_device.assert_has_calls([
+            mock.call(mock.sentinel.hardware_devices, volume_id),
+            mock.call(mock.sentinel.hardware_devices, disk_uuid)])
 
     def test_detach_volume_vmdk(self):
         client_factory = self._volumeops._session.vim.client.factory
@@ -253,22 +283,22 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
               _get_device_disk_type, consolidate_vmdk_volume,
               detach_disk_from_vm, session_call_method):
 
+            data = {'volume': 'vm-10',
+                    'volume_id': 'd11a82de-ddaa-448d-b50a-a255a7e61a1e',
+                    'profile_id': 'fake-profile-id'}
             connection_info = {'driver_volume_type': 'vmdk',
                                'serial': 'volume-fake-id',
-                               'data': {'volume': 'vm-10',
-                                        'volume_id':
-                                        'd11a82de-ddaa-448d-b50a-a255a7e61a1e',
-                                        'profile_id': 'fake-profile-id'
-                                        }}
+                               'data': data}
+
             instance = mock.MagicMock(name='fake-name',
                                       vm_state=vm_states.ACTIVE)
             self._volumeops._detach_volume_vmdk(connection_info, instance)
 
             get_vm_ref.assert_called_once_with(self._volumeops._session,
                                                instance)
-            get_volume_ref.assert_called_once_with(connection_info['data'])
+            get_volume_ref.assert_called_once_with(data)
             get_vmdk_backed_disk_device.assert_called_once_with(
-                mock.sentinel.vm_ref, connection_info['data'])
+                mock.sentinel.vm_ref, data)
             adapter_type = vm_util.CONTROLLER_TO_ADAPTER_TYPE.get(
                 virtual_controller.__class__.__name__)
             consolidate_vmdk_volume.assert_called_once_with(
@@ -277,7 +307,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 disk_type='fake-disk-type', profile_id='fake-profile-id')
             detach_disk_from_vm.assert_called_once_with(
                 mock.sentinel.vm_ref, instance, virtual_disk,
-                volume_uuid=connection_info['data']['volume_id'])
+                volume_uuid=data['volume_id'])
 
     def test_detach_volume_vmdk_invalid(self):
         client_factory = self._volumeops._session.vim.client.factory
