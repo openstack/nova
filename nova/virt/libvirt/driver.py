@@ -224,16 +224,13 @@ NEXT_MIN_QEMU_VERSION = (6, 2, 0)
 # vIOMMU model value `virtio` minimal support version
 MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL = (8, 3, 0)
 
-
 MIN_LIBVIRT_TB_CACHE_SIZE = (8, 0, 0)
 
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
-
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
-
 
 # number of serial console limit
 QEMU_MAX_SERIAL_PORTS = 4
@@ -243,7 +240,6 @@ ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
-
 
 # Maxphysaddr minimal support version.
 MIN_LIBVIRT_MAXPHYSADDR = (8, 7, 0)
@@ -9053,6 +9049,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         traits: ty.Dict[str, bool] = {}
         traits.update(self._get_cpu_traits())
+        traits.update(self._get_packed_virtqueue_traits())
         traits.update(self._get_storage_bus_traits())
         traits.update(self._get_video_model_traits())
         traits.update(self._get_vif_model_traits())
@@ -12462,6 +12459,14 @@ class LibvirtDriver(driver.ComputeDriver):
             f'COMPUTE_GRAPHICS_MODEL_{model.replace("-", "_").upper()}': model
             in supported_models for model in all_models
         }
+
+    def _get_packed_virtqueue_traits(self) -> ty.Dict[str, bool]:
+        """Get Virtio Packed Ring traits to be set on the host's
+           resource provider.
+
+        :return: A dict of trait names mapped to boolean values.
+        """
+        return {ot.COMPUTE_NET_VIRTIO_PACKED: True}
 
     def _get_cpu_traits(self) -> ty.Dict[str, bool]:
         """Get CPU-related traits to be set and unset on the host's resource

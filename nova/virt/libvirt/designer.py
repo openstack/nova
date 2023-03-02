@@ -24,7 +24,7 @@ from nova.pci import utils as pci_utils
 
 
 def set_vif_guest_frontend_config(conf, mac, model, driver, queues,
-                                  rx_queue_size):
+                                  rx_queue_size, packed):
     """Populate a LibvirtConfigGuestInterface instance
     with guest frontend details.
 
@@ -39,6 +39,8 @@ def set_vif_guest_frontend_config(conf, mac, model, driver, queues,
         conf.vhost_queues = queues
     if rx_queue_size:
         conf.vhost_rx_queue_size = rx_queue_size
+    if packed is not None:
+        conf.driver_packed = packed
 
 
 def set_vif_host_backend_ethernet_config(conf, tapname):

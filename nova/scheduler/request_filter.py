@@ -272,6 +272,22 @@ def accelerators_filter(ctxt, request_spec):
 
 
 @trace_request_filter
+def packed_virtqueue_filter(ctxt, request_spec):
+    """Allow only compute nodes with Packed virtqueue.
+
+    This filter retains only nodes whose compute manager published the
+    COMPUTE_NET_VIRTIO_PACKED trait, thus indicates virtqueue packed feature.
+    """
+    trait_name = os_traits.COMPUTE_NET_VIRTIO_PACKED
+    if (hardware.get_packed_virtqueue_constraint(request_spec.flavor,
+                                                 request_spec.image)):
+        request_spec.root_required.add(trait_name)
+        LOG.debug('virtqueue_filter request filter added required '
+                  'trait %s', trait_name)
+    return True
+
+
+@trace_request_filter
 def routed_networks_filter(
     ctxt: nova_context.RequestContext,
     request_spec: 'objects.RequestSpec'
@@ -436,6 +452,7 @@ ALL_REQUEST_FILTERS = [
     isolate_aggregates,
     transform_image_metadata,
     accelerators_filter,
+    packed_virtqueue_filter,
     routed_networks_filter,
     remote_managed_ports_filter,
     ephemeral_encryption_filter,

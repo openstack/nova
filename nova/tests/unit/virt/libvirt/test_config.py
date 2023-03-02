@@ -1923,6 +1923,26 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         self.assertTrue(obj.uses_virtio)
         return obj
 
+    def test_config_driver_packed_options(self):
+        obj = self._get_virtio_interface()
+        obj.driver_name = "vhost"
+        obj.driver_packed = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="ethernet">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <driver name="vhost" packed="on"/>
+              <target dev="vnet0"/>
+            </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_driver_options(self):
         obj = self._get_virtio_interface()
         obj.driver_name = "vhost"

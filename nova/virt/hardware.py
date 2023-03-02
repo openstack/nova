@@ -1941,6 +1941,56 @@ def get_vif_multiqueue_constraint(
     return flavor_value or image_value or False
 
 
+def get_packed_virtqueue_constraint(
+    flavor,
+    image_meta,
+) -> bool:
+    """Validate and return the requested Packed virtqueue configuration.
+
+    :param flavor: ``nova.objects.Flavor`` or dict instance
+    :param image_meta: ``nova.objects.ImageMeta`` or dict instance
+    :raises: nova.exception.FlavorImageConflict if a value is specified in both
+        the flavor and the image, but the values do not match
+    :returns: True if the Packed virtqueue must be enabled, else False.
+    """
+    key_value = 'virtio_packed_ring'
+
+    if type(image_meta) is dict:
+        flavor_key = ':'.join(['hw', key_value])
+        image_key = '_'.join(['hw', key_value])
+        flavor_value_str = flavor.get('extra_specs', {}).get(flavor_key, None)
+        image_value = image_meta.get('properties', {}).get(image_key, None)
+    else:
+        flavor_value_str, image_value = _get_flavor_image_meta(
+            key_value, flavor, image_meta)
+
+    flavor_value = None
+    if flavor_value_str is not None:
+        flavor_value = strutils.bool_from_string(flavor_value_str)
+
+    if (
+        image_value is not None and
+        flavor_value is not None and
+        image_value != flavor_value
+    ):
+        msg = _(
+            "Flavor has %(prefix)s:%(key)s extra spec "
+            "explicitly set to %(flavor_val)s, conflicting with image "
+            "which has %(prefix)s_%(key)s explicitly set to "
+            "%(image_val)s."
+        )
+        raise exception.FlavorImageConflict(
+            msg % {
+                'prefix': 'hw',
+                'key': key_value,
+                'flavor_val': flavor_value,
+                'image_val': image_value,
+            }
+        )
+
+    return flavor_value or image_value or False
+
+
 def get_vtpm_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',

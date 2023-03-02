@@ -993,6 +993,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         expected = {
             'COMPUTE_GRAPHICS_MODEL_VGA': True,
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
+            'COMPUTE_NET_VIRTIO_PACKED': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
             'COMPUTE_STORAGE_BUS_VIRTIO': True,
@@ -1031,7 +1032,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_storage_bus_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_video_model_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_vif_model_traits')
-    def test_static_traits__invalid_trait(
+    def test_static_traits_invalid_trait(
         self, mock_vif_traits, mock_video_traits, mock_storage_traits,
         mock_cpu_traits, mock_log,
     ):
@@ -1044,6 +1045,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         expected = {
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
+            'COMPUTE_NET_VIRTIO_PACKED': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
             'COMPUTE_VIOMMU_MODEL_AUTO': True,

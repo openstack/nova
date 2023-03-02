@@ -130,7 +130,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     #                     'hw_ephemeral_encryption_format' fields
     # Version 1.11: Added 'hw_locked_memory' field
     # Version 1.12: Added 'hw_viommu_model' field
-    VERSION = '1.12'
+    # Version 1.13: Added 'hw_virtio_packed_ring' field
+    VERSION = '1.13'
 
     SCHEMA = {
         k: ('image_meta_props', k) for k in image_meta.ImageMetaProps.fields}

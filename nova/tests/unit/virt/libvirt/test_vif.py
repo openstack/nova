@@ -725,6 +725,38 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertEqual(4, conf.vhost_queues)
         self.assertIsNone(conf.driver_name)
 
+    def _test_virtio_packed_config(self, image_meta, flavor):
+        d = vif.LibvirtGenericVIFDriver()
+
+        xml = self._get_instance_xml(d, self.vif_bridge,
+                                     image_meta, flavor)
+
+        node = self._get_node(xml)
+        packed = node.find("driver").get("packed")
+        self.assertEqual(packed, 'on')
+
+    def test_image_packed_config(self):
+        extra_specs = {}
+        extra_specs['hw:virtio_packed_ring'] = True
+
+        flavor = objects.Flavor(
+            name='foo', vcpus=2, memory_mb=1024, extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict(
+            {'name': 'bar', 'properties': {}})
+
+        self._test_virtio_packed_config(image_meta, flavor)
+
+    def test_flavor_packed_config(self):
+        image_meta_props = {}
+        image_meta_props['hw_virtio_packed_ring'] = True
+
+        flavor = objects.Flavor(
+            name='foo', vcpus=2, memory_mb=1024, extra_specs={})
+        image_meta = objects.ImageMeta.from_dict(
+            {'name': 'bar', 'properties': image_meta_props})
+
+        self._test_virtio_packed_config(image_meta, flavor)
+
     def _test_virtio_config_queue_sizes(
             self, vnic_type=network_model.VNIC_TYPE_NORMAL):
         self.flags(rx_queue_size=512, group='libvirt')
@@ -895,7 +927,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
                           flavor, 'kvm', 'normal')
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
-                                         'virtio', None, None, None)
+                                         'virtio', None, None, None, False)
 
     @mock.patch.object(vif.designer, 'set_vif_guest_frontend_config',
                        wraps=vif.designer.set_vif_guest_frontend_config)
@@ -911,9 +943,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(
             {'properties': {'hw_vif_model': 'virtio'}})
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                                 None, 'kvm', vnic_type)
+                                 objects.Flavor(vcpus=2), 'kvm', vnic_type)
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
-                                         None, None, None, None)
+                                         None, None, None, None, False)
         self.assertIsNone(conf.vhost_queues)
         self.assertIsNone(conf.driver_name)
         self.assertIsNone(conf.model)

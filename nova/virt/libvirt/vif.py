@@ -192,11 +192,13 @@ class LibvirtGenericVIFDriver(object):
         vhost_queues = None
         rx_queue_size = None
 
+        packed = self._get_packed_virtqueue_settings(
+            image_meta, flavor)
         # NOTE(stephenfin): Skip most things here as only apply to virtio
         # devices
         if vnic_type in network_model.VNIC_TYPES_DIRECT_PASSTHROUGH:
             designer.set_vif_guest_frontend_config(
-                conf, mac, model, driver, vhost_queues, rx_queue_size)
+                conf, mac, model, driver, vhost_queues, rx_queue_size, packed)
             return conf
 
         rx_queue_size = CONF.libvirt.rx_queue_size
@@ -211,7 +213,7 @@ class LibvirtGenericVIFDriver(object):
         # The rest of this only applies to virtio
         if model != network_model.VIF_MODEL_VIRTIO:
             designer.set_vif_guest_frontend_config(
-                conf, mac, model, driver, vhost_queues, rx_queue_size)
+                conf, mac, model, driver, vhost_queues, rx_queue_size, packed)
             return conf
 
         # Workaround libvirt bug, where it mistakenly enables vhost mode, even
@@ -243,7 +245,7 @@ class LibvirtGenericVIFDriver(object):
                 driver = 'vhost'
 
         designer.set_vif_guest_frontend_config(
-            conf, mac, model, driver, vhost_queues, rx_queue_size)
+            conf, mac, model, driver, vhost_queues, rx_queue_size, packed)
 
         return conf
 
@@ -295,6 +297,13 @@ class LibvirtGenericVIFDriver(object):
             return 256
         else:
             return None
+
+    def _get_packed_virtqueue_settings(self, image_meta, flavor):
+        """A method to check if Virtio Packed Ring was requested."""
+        if not isinstance(image_meta, objects.ImageMeta):
+            image_meta = objects.ImageMeta.from_dict(image_meta)
+
+        return hardware.get_packed_virtqueue_constraint(flavor, image_meta)
 
     def get_bridge_name(self, vif):
         return vif['network']['bridge']

@@ -1,0 +1,19 @@
+---
+features:
+  - |
+    Handling packed virtqueue requests for an instance is now supported on
+    the nodes with Qemu v4.2 and Libvirt v6.3.
+
+    VMs using virtio-net will see an increase in performance. The increase
+    can be anywhere between 10/20% (see DPDK Intel Vhost/virtio perf. reports)
+    and 75% (using Napatech SmartNICs).
+
+    Packed Ring can be requested via image property or flavor extra spec.
+    hw_virtio_packed_ring=true|false  (default false)
+    hw:virtio_packed_ring=true|false  (default false)
+
+    Useful references:
+    https://libvirt.org/formatdomain.html#virtio-related-options
+    https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html
+    https://specs.openstack.org/openstack/nova-specs/specs/2023.2/approved/virtio_packedring_configuration_support.html
+
