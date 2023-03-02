@@ -2188,6 +2188,77 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assert_hypervisor_usage(
             dest_rp_uuid, self.flavor2, volume_backed=False)
 
+    def test_resize_server_conflict(self):
+
+        # Set appropriate traits for Resource Provider
+        rp_uuid1 = self._get_provider_uuid_by_host(self.compute1.host)
+        self._set_provider_traits(rp_uuid1, ['COMPUTE_NET_VIRTIO_PACKED'])
+
+        # Create image
+        image = self._create_image(metadata={'hw_virtio_packed_ring': 'true'})
+
+        # Create server
+        server = self._build_server(image_uuid=image['id'], networks='none')
+        created_server = self.api.post_server({"server": server})
+        created_server_id = created_server['id']
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
+
+        # Create a flavor with conflict in relation to the image configuration
+        flavor_id = self._create_flavor(
+            extra_spec={'hw:virtio_packed_ring': 'false'})
+
+        # Resize server(flavorRef: 1 -> 2)
+        post = {'resize': {"flavorRef": flavor_id}}
+
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               created_server_id, post)
+
+        # By returning 400, We want to confirm that the RESIZE server
+        # does not cause unexpected behavior.
+        self.assertEqual(400, ex.response.status_code)
+
+        # Verify that the instance is still in the Active state
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Cleanup
+        self._delete_server(found_server)
+
+    def test_rebuild_server_conflict(self):
+
+        # Set appropriate traits for Resource Provider
+        rp_uuid1 = self._get_provider_uuid_by_host(self.compute1.host)
+        self._set_provider_traits(rp_uuid1, ['COMPUTE_NET_VIRTIO_PACKED'])
+
+        # Create flavor
+        flavor_id = self._create_flavor(
+            extra_spec={'hw:virtio_packed_ring': 'true'})
+
+        # Create server
+        server = self._build_server(flavor_id=flavor_id, networks='none')
+        created_server = self.api.post_server({"server": server})
+        created_server_id = created_server['id']
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
+
+        # Create an image with conflict in relation to the flavor configuration
+        image = self._create_image(metadata={'hw_virtio_packed_ring': 'false'})
+
+        # Now rebuild the server with a different image
+        post = {'rebuild': {'imageRef': image['id']}}
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               created_server_id, post)
+
+        # By returning 400, We want to confirm that the RESIZE server
+        # does not cause unexpected behavior.
+        self.assertEqual(400, ex.response.status_code)
+
+        # Verify that the instance is still in the Active state
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Cleanup
+        self._delete_server(found_server)
+
     def test_evacuate_with_no_compute(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host

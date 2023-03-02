@@ -499,6 +499,41 @@ class TestRequestFilter(test.NoDBTestCase):
         # Assert about logging
         mock_log.assert_not_called()
 
+    @mock.patch.object(request_filter, 'LOG')
+    def test_virtio_filter_with_packed_ring_in_flavor(self, mock_log):
+        # First ensure that packed_virtqueue_filter is included
+        self.assertIn(request_filter.packed_virtqueue_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        es = {'hw:virtio_packed_ring': 'true'}
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(extra_specs=es),
+            image=objects.ImageMeta(properties=objects.ImageMetaProps()))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+        # Request filter puts the trait into the request spec
+        request_filter.packed_virtqueue_filter(self.context, reqspec)
+        self.assertEqual({ot.COMPUTE_NET_VIRTIO_PACKED}, reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+    @mock.patch.object(request_filter, 'LOG')
+    def test_virtio_filter_with_packed_ring_in_image(self, mock_log):
+        # First ensure that packed_virtqueue_filter is included
+        self.assertIn(request_filter.packed_virtqueue_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        reqspec = objects.RequestSpec(flavor=objects.Flavor(extra_specs={}),
+            image=objects.ImageMeta(
+            properties=objects.ImageMetaProps(hw_virtio_packed_ring=True)))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+        # Request filter puts the trait into the request spec
+        request_filter.packed_virtqueue_filter(self.context, reqspec)
+        self.assertEqual({ot.COMPUTE_NET_VIRTIO_PACKED}, reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
     def test_routed_networks_filter_not_enabled(self):
         self.assertIn(request_filter.routed_networks_filter,
                       request_filter.ALL_REQUEST_FILTERS)

@@ -1759,6 +1759,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.filterparams = []
         self.driver_name = None
         self.driver_iommu = False
+        self.driver_packed = False
         self.vhostuser_mode = None
         self.vhostuser_path = None
         self.vhostuser_type = None
@@ -1811,6 +1812,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         drv_elem = None
         if (self.driver_name or
                 self.driver_iommu or
+                self.driver_packed or
                 self.net_type == "vhostuser"):
 
             drv_elem = etree.Element("driver")
@@ -1819,6 +1821,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                 drv_elem.set("name", self.driver_name)
             if self.driver_iommu:
                 drv_elem.set("iommu", "on")
+            if self.driver_packed:
+                drv_elem.set("packed", "on")
 
         if drv_elem is not None:
             if self.vhost_queues is not None:
@@ -1831,7 +1835,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             if (drv_elem.get('name') or drv_elem.get('queues') or
                 drv_elem.get('rx_queue_size') or
                 drv_elem.get('tx_queue_size') or
-                drv_elem.get('iommu')):
+                drv_elem.get('iommu') or
+                drv_elem.get('packed')):
                 # Append the driver element into the dom only if name
                 # or queues or tx/rx or iommu attributes are set.
                 dev.append(drv_elem)
@@ -1931,6 +1936,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             elif c.tag == 'driver':
                 self.driver_name = c.get('name')
                 self.driver_iommu = (c.get('iommu', '') == 'on')
+                self.driver_packed = (c.get('packed', '') == 'on')
                 self.vhost_queues = c.get('queues')
                 self.vhost_rx_queue_size = c.get('rx_queue_size')
                 self.vhost_tx_queue_size = c.get('tx_queue_size')

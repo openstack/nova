@@ -527,6 +527,18 @@ feature_flag_validators = [
             'description': 'model for vIOMMU',
         },
     ),
+    base.ExtraSpecValidator(
+        name='hw:virtio_packed_ring',
+        description=(
+            'Permit guests to negotiate the virtio packed ring format. '
+            'This requires guest support and is only supported by '
+            'the libvirt driver.'
+        ),
+        value={
+            'type': bool,
+            'description': 'Whether to enable packed virtqueue',
+        },
+    ),
 ]
 
 ephemeral_encryption_validators = [

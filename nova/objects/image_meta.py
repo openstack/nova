@@ -192,14 +192,17 @@ class ImageMetaProps(base.NovaObject):
     #                     'hw_ephemeral_encryption_format' fields
     # Version 1.33: Added 'hw_locked_memory' field
     # Version 1.34: Added 'hw_viommu_model' field
+    # Version 1.35: Added 'hw_virtio_packed_ring' field
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.34'
+    VERSION = '1.35'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 35):
+            primitive.pop('hw_virtio_packed_ring', None)
         if target_version < (1, 34):
             primitive.pop('hw_viommu_model', None)
         if target_version < (1, 33):
@@ -472,6 +475,9 @@ class ImageMetaProps(base.NovaObject):
         # encryption format to be used when ephemeral encryption is enabled
         'hw_ephemeral_encryption_format':
             fields.BlockDeviceEncryptionFormatTypeField(),
+
+        # boolean - If true, this will enable the virtio packed ring feature
+        'hw_virtio_packed_ring': fields.FlexibleBooleanField(),
 
         # if true download using bittorrent
         'img_bittorrent': fields.FlexibleBooleanField(),
