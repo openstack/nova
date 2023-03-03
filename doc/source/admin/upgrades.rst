@@ -41,21 +41,27 @@ Rolling upgrade process
 To reduce downtime, the compute services can be upgraded in a rolling fashion.
 It means upgrading a few services at a time. This results in a condition where
 both old (N) and new (N+1) nova-compute services co-exist for a certain time
-period. Note that, there is no upgrade of the hypervisor here, this is just
+period (or even N with N+2 upgraded nova-compute services, see below).
+Note that, there is no upgrade of the hypervisor here, this is just
 upgrading the nova services. If reduced downtime is not a concern (or lower
 complexity is desired), all services may be taken down and restarted at the
 same time.
 
 .. important::
 
-    Nova does not currently support the coexistence of N and N+2 or greater
-    :program:`nova-compute` or :program:`nova-conductor` services in the same
-    deployment. The `nova-conductor`` service will fail to start when a
-    ``nova-compute`` service that is older than the previous release (N-2 or
-    greater) is detected. Similarly, in a :doc:`deployment with multiple cells
+    As of OpenStack 2023.1 (Antelope), Nova supports the coexistence of N and
+    N-2 (Yoga) :program:`nova-compute` or :program:`nova-conductor` services in
+    the same deployment. The `nova-conductor`` service will fail to start when
+    a ``nova-compute`` service that is older than the support envelope is
+    detected. This varies by release and the support envelope will be explained
+    in the release notes. Similarly, in a :doc:`deployment with multiple cells
     </admin/cells>`, neither the super conductor service nor any per-cell
     conductor service will start if any other conductor service in the
-    deployment is older than the previous release.
+    deployment is older than the N-2 release.
+
+    Releases older than 2023.1 will only support rolling upgrades for a single
+    release difference between :program:`nova-compute` and
+    :program:`nova-conductor` services.
 
 #. Before maintenance window:
 

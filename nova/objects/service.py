@@ -237,15 +237,30 @@ SERVICE_VERSION_HISTORY = (
 # local node identity for single-node systems.
 NODE_IDENTITY_VERSION = 65
 
-# This is used to raise an error at service startup if older than N-1 computes
-# are detected. Update this at the beginning of every release cycle to point to
-# the smallest service version that was added in N-1.
+# This is used to raise an error at service startup if older than supported
+# computes are detected.
+# NOTE(sbauza) : Please modify it this way :
+#  * At the beginning of a non-SLURP release (eg. 2023.2 Bobcat) (or just after
+#    the previous SLURP release RC1, like 2023.1 Antelope), please bump
+#    OLDEST_SUPPORTED_SERVICE_VERSION to the previous SLURP release (in that
+#    example, Antelope)
+#  * At the beginning of a SLURP release (eg. 2024.1 C) (or just after the
+#    previous non-SLURP release RC1, like 2023.2 Bobcat), please keep the
+#    OLDEST_SUPPORTED_SERVICE_VERSION value using the previous SLURP release
+#    (in that example, Antelope)
+#  * At the end of any release (SLURP or non-SLURP), please modify
+#    SERVICE_VERSION_ALIASES to add a key/value with key being the release name
+#    and value be the latest service version that the release supports (for
+#    example, before Bobcat RC1, please add 'Bobcat': XX where X is the latest
+#    servion version that was added)
 OLDEST_SUPPORTED_SERVICE_VERSION = 'Yoga'
 SERVICE_VERSION_ALIASES = {
     'Victoria': 52,
     'Wallaby': 54,
     'Xena': 57,
     'Yoga': 61,
+    'Zed': 64,
+    'Antelope': 66,
 }
 
 
