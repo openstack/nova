@@ -1056,76 +1056,34 @@ def get_machine_ips():
     return addresses
 
 
-def resize_quota_delta(new_flavor, old_flavor, sense, compare):
-    """Calculate any quota adjustment required at a particular point
-    in the resize cycle.
-
-    :param context: the request context
-    :param new_flavor: the target instance type
-    :param old_flavor: the original instance type
-    :param sense: the sense of the adjustment, 1 indicates a
-                  forward adjustment, whereas -1 indicates a
-                  reversal of a prior adjustment
-    :param compare: the direction of the comparison, 1 indicates
-                    we're checking for positive deltas, whereas
-                    -1 indicates negative deltas
-    """
-    def _quota_delta(resource):
-        old_reserve = old_flavor.get('extra_specs', {}).get(
-            'quota:instance_only', 'false') != 'true'
-        new_reserve = new_flavor.get('extra_specs', {}).get(
-            'quota:instance_only', 'false') != 'true'
-        old_factor = 1 if old_reserve else 0
-        new_factor = 1 if new_reserve else 0
-        return sense * (new_flavor[resource] * new_factor -
-            old_flavor[resource] * old_factor)
-
-    deltas = {}
-
-    def add_delta(resource, delta):
-        if compare * delta > 0:
-            deltas[resource] = delta
-
-    add_delta('cores', _quota_delta('vcpus'))
-    add_delta('ram', _quota_delta('memory_mb'))
-
-    old_separate = old_flavor.get('extra_specs', {}).get(
-        'quota:separate', 'false') == 'true'
-    new_separate = new_flavor.get('extra_specs', {}).get(
-        'quota:separate', 'false') == 'true'
-    if old_separate and not new_separate:
-        add_delta('instances_' + old_flavor['name'], -1 * sense)
-        add_delta('instances', +1 * sense)
-    if not old_separate and new_separate:
-        add_delta('instances', -1 * sense)
-        add_delta('instances_' + new_flavor['name'], +1 * sense)
-    if old_separate and new_separate:
-        add_delta('instances_' + old_flavor['name'], -1 * sense)
-        add_delta('instances_' + new_flavor['name'], +1 * sense)
-
-    return deltas
-
-
 def upsize_quota_delta(new_flavor, old_flavor):
     """Calculate deltas required to adjust quota for an instance upsize.
+
+    :param new_flavor: the target instance type
+    :param old_flavor: the original instance type
     """
-    return resize_quota_delta(new_flavor, old_flavor, 1, 1)
+    def _quota_delta(resource):
+        return (new_flavor[resource] - old_flavor[resource])
 
+    deltas = {}
+    if _quota_delta('vcpus') > 0:
+        deltas['cores'] = _quota_delta('vcpus')
+    if _quota_delta('memory_mb') > 0:
+        deltas['ram'] = _quota_delta('memory_mb')
 
-def reverse_upsize_quota_delta(instance):
-    """Calculate deltas required to reverse a prior upsizing
-    quota adjustment.
-    """
-    return resize_quota_delta(instance.new_flavor,
-                              instance.old_flavor, -1, -1)
+    # NOTE(jkulik): We need to add the instances_* resource only if we resize
+    # towards a quota:separate flavor, as we're interested in positive deltas
+    # only. Since we only need resource deltas, the old flavor having the same
+    # quota:separate between new and old flavor adds no delta.
+    new_extra_specs = new_flavor.get('extra_specs', {})
+    new_separate = new_extra_specs.get('quota:separate') == 'true'
+    if new_separate:
+        old_extra_specs = old_flavor.get('extra_specs', {})
+        old_separate = old_extra_specs.get('quota:separate') == 'true'
+        if not old_separate or new_flavor['name'] != old_flavor['name']:
+            deltas[f"instances_{new_flavor['name']}"] = 1
 
-
-def downsize_quota_delta(instance):
-    """Calculate deltas required to adjust quota for an instance downsize.
-    """
-    old_flavor = instance.get_flavor('old')
-    new_flavor = instance.get_flavor('new')
-    return resize_quota_delta(new_flavor, old_flavor, 1, -1)
+    return deltas
 
 
 def get_headroom(quotas, usages, deltas):
