@@ -419,6 +419,7 @@
         # Added in Yoga.
         NOVNC_FROM_PACKAGE: False
         NOVA_USE_UNIFIED_LIMITS: True
+        MYSQL_REDUCE_MEMORY: True
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
