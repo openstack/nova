@@ -62,7 +62,10 @@ update = {
         'type': 'object',
         'quota_set': {
             'properties': update_quota_set,
-            'additionalProperties': True,
+            'patternProperties': {
+                '^instances_': common_quota
+            },
+            'additionalProperties': False,
         },
     },
     'required': ['quota_set'],
