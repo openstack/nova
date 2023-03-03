@@ -156,10 +156,3 @@ class QuotaClassSetsController(wsgi.Controller):
 
         values = QUOTAS.get_class_quotas(context, id)
         return self._format_quota_set(None, values, None)
-
-    @wsgi.Controller.api_version('2.1')
-    @wsgi.response(204)
-    @wsgi.expected_errors((404, 409))
-    def delete(self, req, id, body):
-        context = req.environ['nova.context']
-        objects.Quotas.delete_class(context, id)

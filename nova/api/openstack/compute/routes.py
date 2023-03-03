@@ -639,7 +639,6 @@ ROUTE_LIST = (
         'GET': [quota_classes_controller, 'show'],
         'PUT': [quota_classes_controller, 'update'],
         'POST': [quota_classes_controller, 'create'],
-        'DELETE': [quota_classes_controller, 'delete']
     }),
     ('/os-quota-sets/{id}', {
         'GET': [quota_set_controller, 'show'],

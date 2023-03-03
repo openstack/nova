@@ -407,10 +407,6 @@ class Quotas(base.NovaObject):
                                              resource=resource)
 
     @classmethod
-    def delete_class(cls, context, class_name):
-        raise NotImplementedError()
-
-    @classmethod
     def update_class(cls, context, class_name, resource, limit):
         try:
             cls._update_class_in_db(context, class_name, resource, limit)
