@@ -94,7 +94,6 @@ class QuotaClassSetsController(wsgi.Controller):
 
     def _show(self, req, id, filtered_quotas=None,
               exclude_server_groups=False):
-        QUOTAS.initialize()
         context = req.environ['nova.context']
         context.can(qcs_policies.POLICY_ROOT % 'show', target={})
         values = QUOTAS.get_class_quotas(context, id)
@@ -121,7 +120,6 @@ class QuotaClassSetsController(wsgi.Controller):
 
     def _update(self, req, id, body, filtered_quotas=None,
                 exclude_server_groups=False):
-        QUOTAS.initialize()
         context = req.environ['nova.context']
         context.can(qcs_policies.POLICY_ROOT % 'update', target={})
         try:

@@ -897,27 +897,7 @@ class QuotaEngine(object):
         # NOTE(mriedem): quota_driver is ever only supplied in tests with a
         # fake driver.
         self.__driver = quota_driver
-        self._initialized = False
         self._class_resources = {}
-
-    def initialize(self):
-        pass
-        return
-
-        objects.register_all()
-        # construct resources for each flavor that has a separate quota
-        # (also for deleted flavors that still have running instances)
-        ctxt = nova_context.get_admin_context()
-        for flavor in objects.FlavorList.get_all(
-            ctxt, filters={'disabled': False, 'is_public': True}):
-            if flavor['extra_specs'].get('quota:separate', 'false') == 'true':
-                self.register_resource(CountableResource(
-                    'instances_' + flavor.name,
-                    _instances_cores_ram_count,
-                    flag=None, default=0,
-                ))
-        self._initialized = True
-        LOG.info("Initialized flavor quotas")
 
     @property
     def _driver(self):
