@@ -98,7 +98,7 @@ class ViewBuilder(object):
         limits = {}
         for name, value in quotas.items():
             if name.startswith('instances_'):
-                flavorname = name[10:]
+                flavorname = name[10:]  # remove instances_ prefix
                 limits[flavorname] = {
                     'maxTotalInstances': value['limit'],
                     'totalInstancesUsed': value['in_use'],

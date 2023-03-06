@@ -47,15 +47,14 @@ FILTERED_QUOTAS_2_57.extend(['injected_files', 'injected_file_content_bytes',
 
 class QuotaSetsController(wsgi.Controller):
 
-    def _format_quota_set(self, context, project_id, quota_set,
-                          filtered_quotas):
+    def _format_quota_set(self, project_id, quota_set, filtered_quotas):
         """Convert the quota object to a result dict."""
         if project_id:
             result = dict(id=str(project_id))
         else:
             result = {}
 
-        for resource in QUOTAS.combined_resources(context):
+        for resource in QUOTAS.resources:
             if (resource not in filtered_quotas and
                     resource in quota_set):
                 result[resource] = quota_set[resource]
@@ -81,9 +80,6 @@ class QuotaSetsController(wsgi.Controller):
         if user_id:
             values = QUOTAS.get_user_quotas(context, id, user_id,
                                             usages=usages)
-            values.update(QUOTAS.get_user_quotas(context, id, user_id,
-                                            usages=usages,
-                                            quota_class='flavors'))
         else:
             values = QUOTAS.get_project_quotas(context, id, usages=usages)
 
@@ -133,7 +129,7 @@ class QuotaSetsController(wsgi.Controller):
 
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
-        return self._format_quota_set(context, id,
+        return self._format_quota_set(id,
             self._get_quotas(context, id, user_id=user_id),
             filtered_quotas=filtered_quotas)
 
@@ -162,7 +158,6 @@ class QuotaSetsController(wsgi.Controller):
 
         user_id = req.GET.get('user_id', None)
         return self._format_quota_set(
-            context,
             id,
             self._get_quotas(context, id, user_id=user_id, usages=True),
             filtered_quotas=filtered_quotas)
@@ -249,7 +244,6 @@ class QuotaSetsController(wsgi.Controller):
         # Note(gmann): Removed 'id' from update's response to make it same
         # as V2. If needed it can be added with microversion.
         return self._format_quota_set(
-            context,
             None,
             self._get_quotas(context, id, user_id=user_id),
             filtered_quotas=filtered_quotas)
@@ -276,7 +270,7 @@ class QuotaSetsController(wsgi.Controller):
         identity.verify_project_id(context, id)
 
         values = QUOTAS.get_defaults(context)
-        return self._format_quota_set(context, id, values,
+        return self._format_quota_set(id, values,
             filtered_quotas=filtered_quotas)
 
     # TODO(oomichi): Here should be 204(No Content) instead of 202 by v2.1

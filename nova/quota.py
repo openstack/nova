@@ -83,29 +83,28 @@ class DbQuotaDriver(object):
         :param quota_class: The name of the quota class to return
                             quotas for.
         """
+        # NOTE(jkulik): Our way of doing this is, that we merge all resources
+        # from our supported custom quota classes (currently only "flavors")
+        # into the default resources. Therefore, requesting the class quotas
+        # for the "default" quota class needs to fetch the "flavors" quotas,
+        # too.
 
         quotas = {}
-        class_quotas = objects.Quotas.get_all_class_by_name(context,
-                                                            quota_class)
-
-        # Custom Resource Classess, provide flavors for default
+        class_quotas = {}
         if quota_class == 'default':
-            flavor_quotas = objects.Quotas.get_all_class_by_name(context,
-                                                                 'flavors')
-        else:
-            flavor_quotas = class_quotas
+            class_quotas.update(objects.Quotas.get_all_class_by_name(context,
+                                                                    'flavors'))
 
-        for resource_key, val in flavor_quotas.items():
-            if resource_key == 'class_name':
-                continue
-
-            # Set custom resources default quota to 0
-            quotas[resource_key] = flavor_quotas.get(resource_key, 0)
+        # `class_quotas` contains the key "class_name". If we got "flavor"
+        # quotas above its value will be "flavor", but we want to make sure
+        # that key gets updated to the requested quota_class "default".
+        # So the order is important here.
+        class_quotas.update(objects.Quotas.get_all_class_by_name(context,
+                                                                 quota_class))
 
         for resource in resources.values():
-            if (quota_class == 'default') or resource.name in class_quotas:
-                quotas[resource.name] = class_quotas.get(resource.name,
-                                                         resource.default)
+            quotas[resource.name] = class_quotas.get(resource.name,
+                                                     resource.default)
 
         return quotas
 
@@ -117,8 +116,11 @@ class DbQuotaDriver(object):
         # matches the one in the context, we use the quota_class from
         # the context, otherwise, we use the provided quota_class (if
         # any)
-        # if project_id == context.project_id:
-        #     quota_class = context.quota_class
+        # NOTE(jkulik): The original code supported context.quota_class here,
+        # but we cannot support context.quota_class, because we want to
+        # piggy-back on the quota-classes API to dynamically define more
+        # default quotas - but keep them stowed away in a class for easier
+        # management.
         if quota_class:
             class_quotas = objects.Quotas.get_all_class_by_name(context,
                                                                 quota_class)
@@ -402,17 +404,22 @@ class DbQuotaDriver(object):
                       {'user_id': user_id, 'project_id': project_id,
                        'keys': keys})
             # Grab and return the quotas (without usages)
+            # NOTE(jkulik): The original code would pass context.quota_class
+            # here, but our usage for quota-classes as extension for the
+            # default quotas does not allow this.
             quotas = self.get_user_quotas(context, sub_resources,
                                           project_id, user_id,
-                                          context.quota_class, usages=False,
+                                          usages=False,
                                           project_quotas=project_quotas)
         else:
             LOG.debug('Getting quotas for project %(project_id)s. Resources: '
                       '%(keys)s', {'project_id': project_id, 'keys': keys})
             # Grab and return the quotas (without usages)
+            # NOTE(jkulik): The original code would pass context.quota_class
+            # here, but our usage for quota-classes as extension for the
+            # default quotas does not allow this.
             quotas = self.get_project_quotas(context, sub_resources,
                                              project_id,
-                                             context.quota_class,
                                              usages=False,
                                              project_quotas=project_quotas)
 
@@ -801,6 +808,8 @@ class BaseResource(object):
         :param flag: The name of the flag or configuration option
                      which specifies the default value of the quota
                      for this resource.
+        :param default: Explicitly overwrite the default value. Used for
+                        handling dynamic resources e.g. via quota:separate.
         """
 
         self.name = name
@@ -810,9 +819,11 @@ class BaseResource(object):
     @property
     def default(self):
         """Return the default value of the quota."""
-
-        return CONF.quota[self.flag] if self.flag else \
-            (self.default_value if self.default_value is not None else -1)
+        if self.flag:
+            return CONF.quota[self.flag]
+        if self.default_value is not None:
+            return self.default_value
+        return -1
 
 
 class AbsoluteResource(BaseResource):
@@ -872,6 +883,8 @@ class CountableResource(AbsoluteResource):
         :param flag: The name of the flag or configuration option
                      which specifies the default value of the quota
                      for this resource.
+        :param default: Explicitly overwrite the default value. Used for
+                        handling dynamic resources e.g. via quota:separate.
         """
 
         super(CountableResource, self).__init__(name, flag=flag,
@@ -891,13 +904,13 @@ class QuotaEngine(object):
         :param resources: iterable of Resource objects
         """
         resources = resources or []
-        self._resources = {
+        self._original_resources = {
             resource.name: resource for resource in resources
         }
+        self._resources = None
         # NOTE(mriedem): quota_driver is ever only supplied in tests with a
         # fake driver.
         self.__driver = quota_driver
-        self._class_resources = {}
 
     @property
     def _driver(self):
@@ -912,7 +925,7 @@ class QuotaEngine(object):
         :param context: The request context, for access checks.
         """
 
-        return self._driver.get_defaults(context, self._resources)
+        return self._driver.get_defaults(context, self.resources)
 
     def get_class_quotas(self, context, quota_class):
         """Retrieve the quotas for the given quota class.
@@ -922,7 +935,7 @@ class QuotaEngine(object):
                             quotas for.
         """
 
-        return self._driver.get_class_quotas(context, self._resources,
+        return self._driver.get_class_quotas(context, self.resources,
                                              quota_class)
 
     def get_user_quotas(self, context, project_id, user_id, quota_class=None,
@@ -938,13 +951,10 @@ class QuotaEngine(object):
         :param usages: If True, the current counts will also be returned.
         """
 
-        quota = self._driver.get_user_quotas(
-            context, self._resources, project_id, user_id,
-            quota_class=quota_class, usages=usages)
-        quota.update(self._driver.get_user_quotas(
-            context, self.class_resources(context, 'flavors'),
-            project_id, user_id, quota_class='flavors', usages=usages))
-        return quota
+        return self._driver.get_user_quotas(context, self.resources,
+                                            project_id, user_id,
+                                            quota_class=quota_class,
+                                            usages=usages)
 
     def get_project_quotas(self, context, project_id, quota_class=None,
                            usages=True, remains=False):
@@ -960,13 +970,10 @@ class QuotaEngine(object):
                         will be returned.
         """
 
-        quota = self._driver.get_project_quotas(
-            context, self._resources, project_id,
-            quota_class=quota_class, usages=usages)
-        quota.update(self._driver.get_project_quotas(
-            context, self.class_resources(context, 'flavors'),
-            project_id, quota_class='flavors', usages=usages))
-        return quota
+        return self._driver.get_project_quotas(context, self.resources,
+                                               project_id,
+                                               quota_class=quota_class,
+                                               usages=usages)
 
     def get_settable_quotas(self, context, project_id, user_id=None):
         """Given a list of resources, retrieve the range of settable quotas for
@@ -976,12 +983,9 @@ class QuotaEngine(object):
         :param project_id: The ID of the project to return quotas for.
         :param user_id: The ID of the user to return quotas for.
         """
-        settable_quotas = self._driver.get_settable_quotas(
-            context,
-            self.combined_resources(context),
-            project_id,
-            user_id=user_id)
-        return settable_quotas
+        return self._driver.get_settable_quotas(context, self.resources,
+                                                project_id,
+                                                user_id=user_id)
 
     def count_as_dict(self, context, resource, *args, **kwargs):
         """Count a resource and return a dict.
@@ -1002,7 +1006,7 @@ class QuotaEngine(object):
         """
 
         # Get the resource
-        res = self.combined_resources(context).get(resource)
+        res = self.resources.get(resource)
         if not res or not hasattr(res, 'count_as_dict'):
             raise exception.QuotaResourceUnknown(unknown=[resource])
 
@@ -1038,9 +1042,8 @@ class QuotaEngine(object):
                         common user.
         """
 
-        return self._driver.limit_check(
-            context, self.combined_resources(context),
-            values, project_id=project_id, user_id=user_id)
+        return self._driver.limit_check(context, self.resources, values,
+                                        project_id=project_id, user_id=user_id)
 
     def limit_check_project_and_user(self, context, project_values=None,
                                      user_values=None, project_id=None,
@@ -1072,30 +1075,38 @@ class QuotaEngine(object):
                         different user than in the context
         """
         return self._driver.limit_check_project_and_user(
-            context, self.combined_resources(context),
-            project_values=project_values,
+            context, self.resources, project_values=project_values,
             user_values=user_values, project_id=project_id,
             user_id=user_id)
 
+    def update_resources_from_quota_classes(self):
+        """Update the _resources dict to contain all current resources
+
+        This should be called whenever there's a new dynamic resource added
+        i.e. a resource in the "flavors" quota class.
+        """
+        # NOTE(jkulik): We cannot call this method when getting an API request
+        # to update a quota-class, because then only one of the nova-api pods
+        # would be updated and the others would not - as only a single pod is
+        # handling the request.
+        flavor_quotas = objects.Quotas.get_all_class_by_name(
+            nova_context.get_admin_context(), 'flavors')
+        del flavor_quotas['class_name']
+
+        resources = {}
+        for key, value in flavor_quotas.items():
+            resources[key] = CountableResource(key,
+                _instances_cores_ram_count, default=value)
+
+        resources.update(self._original_resources)
+
+        self._resources = resources
+
     @property
     def resources(self):
-        return sorted(self._resources.keys())
-
-    def class_resources(self, context, quota_class):
-        if quota_class not in self._class_resources:
-            resources = {}
-            quotas = self._driver.get_class_quotas(context, {}, quota_class)
-            for key, val in quotas.items():
-                resources[key] = CountableResource(key,
-                    _instances_cores_ram_count, default=val)
-
-            self._class_resources[quota_class] = resources
-        return self._class_resources[quota_class]
-
-    def combined_resources(self, context):
-        resources = copy.copy(self._resources)
-        resources.update(self.class_resources(context, 'flavors'))
-        return resources
+        if self._resources is None:
+            self.update_resources_from_quota_classes()
+        return self._resources
 
     def get_reserved(self):
         if isinstance(self._driver, NoopQuotaDriver):

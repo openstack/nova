@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 import webob
 
 from nova.api.openstack.compute.schemas import quota_classes
@@ -47,7 +46,6 @@ class QuotaClassSetsController(wsgi.Controller):
 
     def __init__(self):
         super(QuotaClassSetsController, self).__init__()
-        self.supported_quotas = QUOTAS.resources
 
     def _format_quota_set(self, quota_class, quota_set, filtered_quotas=None,
                           exclude_server_groups=False):
@@ -57,7 +55,7 @@ class QuotaClassSetsController(wsgi.Controller):
             result = dict(id=str(quota_class))
         else:
             result = {}
-        original_quotas = copy.deepcopy(self.supported_quotas)
+        original_quotas = list(QUOTAS.resources)
         if filtered_quotas:
             original_quotas = [resource for resource in original_quotas
                                if resource not in filtered_quotas]
@@ -70,10 +68,6 @@ class QuotaClassSetsController(wsgi.Controller):
         for resource in original_quotas:
             if resource in quota_set:
                 result[resource] = quota_set[resource]
-
-        # Custom Quota Support
-        if quota_class != 'default':
-            result = copy.copy(quota_set)
 
         return dict(quota_class_set=result)
 
