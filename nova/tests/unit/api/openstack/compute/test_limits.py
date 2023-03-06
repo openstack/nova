@@ -99,6 +99,7 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
             "limits": {
                 "rate": [],
                 "absolute": {},
+                "absolutePerFlavor": {},
             },
         }
         body = jsonutils.loads(response.body)
@@ -143,6 +144,7 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
                     "totalFloatingIpsUsed": 5,
                     "totalSecurityGroupsUsed": 5,
                     },
+                "absolutePerFlavor": {},
             },
         }
 
@@ -358,14 +360,15 @@ class LimitsViewBuilderTest(test.NoDBTestCase):
                 "absolute": {"maxServerMeta": 1,
                              "maxImageMeta": 1,
                              "maxPersonality": 5,
-                             "maxPersonalitySize": 5}}}
+                             "maxPersonalitySize": 5},
+                "absolutePerFlavor": {}}}
 
         output = self.view_builder.build(self.req, self.absolute_limits)
         self.assertThat(output, matchers.DictMatches(expected_limits))
 
     def test_build_limits_empty_limits(self):
         expected_limits = {"limits": {"rate": [],
-                           "absolute": {}}}
+                           "absolute": {}, "absolutePerFlavor": {}}}
 
         quotas = {}
         output = self.view_builder.build(self.req, quotas)
@@ -411,6 +414,7 @@ class LimitsControllerTestV236(BaseLimitTestSuite):
                         "totalCoresUsed": 10,
                         "totalInstancesUsed": 2,
                     },
+                    "absolutePerFlavor": {},
                 },
             }
             self.assertEqual(expected_response, response)
@@ -445,6 +449,7 @@ class LimitsControllerTestV239(BaseLimitTestSuite):
                     "absolute": {
                         "maxServerMeta": 1,
                     },
+                    "absolutePerFlavor": {},
                 },
             }
             self.assertEqual(expected_response, response)
