@@ -349,20 +349,23 @@ class Quotas(base.NovaObject):
                 continue
             count = cls.count_as_dict(context, resource, *count_args,
                                       **count_kwargs)
-            # Initialize counts if not yet counted!
-            for custom_key in deltas:
-                if 'project' in count and custom_key not in count['project']:
-                    count['project'][custom_key] = 0
-                if 'user' in count and custom_key not in count['user']:
-                    count['user'][custom_key] = 0
             for res in count.get('project', {}):
                 if res in deltas:
-                    total = count['project'][res] + deltas.get(res, 0)
+                    total = count['project'][res] + deltas[res]
                     check_kwargs['project_values'][res] = total
             for res in count.get('user', {}):
                 if res in deltas:
-                    total = count['user'][res] + deltas.get(res, 0)
+                    total = count['user'][res] + deltas[res]
                     check_kwargs['user_values'][res] = total
+            # NOTE(jkulik): We need special sauce here, because we won't report
+            # any instances_* resource in our count_as_dict() if the
+            # project/user doesn't use any instance of that type. We still need
+            # to report this resource as it's in the deltas.
+            if resource.startswith('instances_'):
+                if resource not in check_kwargs['project_values']:
+                    check_kwargs['project_values'][resource] = deltas[res]
+                if resource not in check_kwargs['user_values']:
+                    check_kwargs['user_values'][resource] = deltas[res]
         if check_project_id is not None:
             check_kwargs['project_id'] = check_project_id
         if check_user_id is not None:
