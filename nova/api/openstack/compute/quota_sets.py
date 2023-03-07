@@ -216,8 +216,6 @@ class QuotaSetsController(wsgi.Controller):
             # update
             value = int(value)
 
-            print(key)
-            print(settable_quotas)
             if key not in settable_quotas:
                 raise webob.exc.HTTPBadRequest(
                     explanation=_('The quota {} is not available, please '
