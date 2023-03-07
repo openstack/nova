@@ -21,6 +21,9 @@ update = {
         'type': 'object',
         'quota_class_set': {
             'properties': quota_sets.quota_resources,
+            'patternProperties': {
+                '^instances_': quota_sets.common_quota
+            },
             'additionalProperties': False,
         },
     },
@@ -45,3 +48,6 @@ del update_v257['properties']['quota_class_set']['properties'][
     'injected_file_content_bytes']
 del update_v257['properties']['quota_class_set']['properties'][
     'injected_file_path_bytes']
+
+
+create = copy.deepcopy(update)

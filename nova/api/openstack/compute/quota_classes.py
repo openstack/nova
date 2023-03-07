@@ -138,13 +138,30 @@ class QuotaClassSetsController(wsgi.Controller):
     @wsgi.Controller.api_version('2.1')
     @wsgi.response(201)
     @wsgi.expected_errors((400))
+    @validation.schema(quota_classes.create)
     def create(self, req, id, body):
-        context = req.environ['nova.context']
-        class_set = body['quota_class_set']
+        """Create a quota class resource if it does not exist
 
-        for key, value in class_set.items():
+        This method is similar to update(), but only creates a quota class
+        resource and never updates the value of an existing quota class. It is
+        thus safe to call this endpoint to ensure a quota class resource exists
+        without touching possibly changed values.
+        """
+        context = req.environ['nova.context']
+        context.can(qcs_policies.POLICY_ROOT % 'create', target={})
+
+        try:
+            utils.check_string_length(id, 'quota_class_name',
+                                      min_length=1, max_length=255)
+        except exception.InvalidInput as e:
+            raise webob.exc.HTTPBadRequest(
+                explanation=e.format_message())
+
+        quota_class = id
+
+        for key, value in body['quota_class_set'].items():
             try:
-                objects.Quotas.create_class(context, id, key, value)
+                objects.Quotas.create_class(context, quota_class, key, value)
             except exception.QuotaClassExists:
                 pass
 
