@@ -2,15 +2,16 @@
 # Andi Chandler <andi@gowling.com>, 2018. #zanata
 # Andi Chandler <andi@gowling.com>, 2020. #zanata
 # Andi Chandler <andi@gowling.com>, 2022. #zanata
+# Andi Chandler <andi@gowling.com>, 2023. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-09-16 12:59+0000\n"
+"POT-Creation-Date: 2023-03-06 19:02+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2022-09-15 09:04+0000\n"
+"PO-Revision-Date: 2023-01-26 10:17+0000\n"
 "Last-Translator: Andi Chandler <andi@gowling.com>\n"
 "Language-Team: English (United Kingdom)\n"
 "Language: en_GB\n"
@@ -382,9 +383,6 @@ msgstr "20.5.0"
 msgid "20.6.1"
 msgstr "20.6.1"
 
-msgid "20.6.1-29"
-msgstr "20.6.1-29"
-
 msgid "204 NoContent on success"
 msgstr "204 NoContent on success"
 
@@ -409,9 +407,6 @@ msgstr "21.2.2"
 msgid "21.2.3"
 msgstr "21.2.3"
 
-msgid "21.2.4-12"
-msgstr "21.2.4-12"
-
 msgid "22.0.0"
 msgstr "22.0.0"
 
@@ -433,9 +428,6 @@ msgstr "22.3.0"
 msgid "22.4.0"
 msgstr "22.4.0"
 
-msgid "22.4.0-6"
-msgstr "22.4.0-6"
-
 msgid "23.0.0"
 msgstr "23.0.0"
 
@@ -451,8 +443,8 @@ msgstr "23.2.0"
 msgid "23.2.1"
 msgstr "23.2.1"
 
-msgid "23.2.1-13"
-msgstr "23.2.1-13"
+msgid "23.2.2"
+msgstr "23.2.2"
 
 msgid "24.0.0"
 msgstr "24.0.0"
@@ -463,8 +455,8 @@ msgstr "24.1.0"
 msgid "24.1.1"
 msgstr "24.1.1"
 
-msgid "24.1.1-7"
-msgstr "24.1.1-7"
+msgid "24.2.0"
+msgstr "24.2.0"
 
 msgid "25.0.0"
 msgstr "25.0.0"
@@ -472,8 +464,14 @@ msgstr "25.0.0"
 msgid "25.0.1"
 msgstr "25.0.1"
 
-msgid "25.0.1-5"
-msgstr "25.0.1-5"
+msgid "25.1.0"
+msgstr "25.1.0"
+
+msgid "26.0.0"
+msgstr "26.0.0"
+
+msgid "26.1.0"
+msgstr "26.1.0"
 
 msgid "400 for unknown param for query param and for request body."
 msgstr "400 for unknown param for query param and for request body."
@@ -486,6 +484,24 @@ msgstr "405 MethodNotAllowed if a microversion is specified that is before"
 
 msgid "409 Conflict if inventory in use or if some other request concurrently"
 msgstr "409 Conflict if inventory in use or if some other request concurrently"
+
+msgid ""
+"A ``--dry-run`` option has been added to the ``nova-manage placement "
+"heal_allocations`` CLI which allows running the command to get output "
+"without committing any changes to placement."
+msgstr ""
+"A ``--dry-run`` option has been added to the ``nova-manage placement "
+"heal_allocations`` CLI which allows running the command to get output "
+"without committing any changes to placement."
+
+msgid ""
+"A ``--force`` flag is provided to skip the above checks but caution should "
+"be taken as this could easily lead to the underlying ABI of the instance "
+"changing when moving between machine types."
+msgstr ""
+"A ``--force`` flag is provided to skip the above checks but caution should "
+"be taken as this could easily lead to the underlying ABI of the instance "
+"changing when moving between machine types."
 
 msgid ""
 "A ``default_floating_pool`` configuration option has been added in the "
@@ -571,6 +587,24 @@ msgid "Stein Series Release Notes"
 msgstr "Stein Series Release Notes"
 
 msgid ""
+"The XenServer configuration option 'iqn_prefix' has been removed. It was not "
+"used anywhere and has no effect on any code, so there should be no impact."
+msgstr ""
+"The XenServer configuration option 'iqn_prefix' has been removed. It was not "
+"used anywhere and has no effect on any code, so there should be no impact."
+
+msgid ""
+"The ``api_rate_limit`` configuration option has been removed. The option was "
+"disabled by default back in the Havana release since it's effectively broken "
+"for more than one API worker. It has been removed because the legacy v2 API "
+"code that was using it has also been removed."
+msgstr ""
+"The ``api_rate_limit`` configuration option has been removed. The option was "
+"disabled by default back in the Havana release since it's effectively broken "
+"for more than one API worker. It has been removed because the legacy v2 API "
+"code that was using it has also been removed."
+
+msgid ""
 "The ``nova-manage vm list`` command is deprecated and will be removed in the "
 "15.0.0 Ocata release. Use the ``nova list`` command from python-novaclient "
 "instead."
@@ -578,6 +612,24 @@ msgstr ""
 "The ``nova-manage vm list`` command is deprecated and will be removed in the "
 "15.0.0 Ocata release. Use the ``nova list`` command from python-novaclient "
 "instead."
+
+msgid ""
+"The default flavors that nova has previously had are no longer created as "
+"part of the first database migration. New deployments will need to create "
+"appropriate flavors before first use."
+msgstr ""
+"The default flavours that Nova previously had are no longer created as part "
+"of the first database migration. New deployments will need to create "
+"appropriate flavours before first use."
+
+msgid ""
+"The network configuration option 'fake_call' has been removed. It hasn't "
+"been used for several cycles, and has no effect on any code, so there should "
+"be no impact."
+msgstr ""
+"The network configuration option 'fake_call' has been removed. It hasn't "
+"been used for several cycles, and has no effect on any code, so there should "
+"be no impact."
 
 msgid ""
 "These commands only work with nova-network which is itself deprecated in "
@@ -610,6 +662,9 @@ msgstr "Xena Series Release Notes"
 
 msgid "Yoga Series Release Notes"
 msgstr "Yoga Series Release Notes"
+
+msgid "Zed Series Release Notes"
+msgstr "Zed Series Release Notes"
 
 msgid "kernels 3.x: 8"
 msgstr "kernels 3.x: 8"
