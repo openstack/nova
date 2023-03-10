@@ -177,7 +177,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         "supports_image_type_vdi": False,
         "supports_image_type_vhd": False,
         "supports_image_type_vhdx": False,
-        "supports_image_type_vmdk": False,
+        "supports_image_type_vmdk": True,
         "supports_image_type_ploop": False,
     }
 
