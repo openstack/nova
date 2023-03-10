@@ -2238,57 +2238,71 @@ class TestDBArchiveDeletedRowsMultiCell(integrated_helpers.InstanceHelperMixin,
 
     def test_archive_deleted_rows(self):
         admin_context = context.get_admin_context(read_deleted='yes')
-        # Boot a server to cell1
-        server_ids = {}
-        server = self._build_server(az='nova:host1')
-        created_server = self.api.post_server({'server': server})
-        self._wait_for_state_change(created_server, 'ACTIVE')
-        server_ids['cell1'] = created_server['id']
-        # Boot a server to cell2
-        server = self._build_server(az='nova:host2')
-        created_server = self.api.post_server({'server': server})
-        self._wait_for_state_change(created_server, 'ACTIVE')
-        server_ids['cell2'] = created_server['id']
-        # Boot a server to cell0 (cause ERROR state prior to schedule)
-        server = self._build_server()
-        # Flavor m1.xlarge cannot be fulfilled
-        server['flavorRef'] = 'http://fake.server/5'
-        created_server = self.api.post_server({'server': server})
-        self._wait_for_state_change(created_server, 'ERROR')
-        server_ids['cell0'] = created_server['id']
+        server_ids_by_cell = collections.defaultdict(list)
+        # Create two servers per cell to make sure archive for table iterates
+        # at least once.
+        for i in range(2):
+            # Boot a server to cell1
+            server = self._build_server(az='nova:host1')
+            created_server = self.api.post_server({'server': server})
+            self._wait_for_state_change(created_server, 'ACTIVE')
+            server_ids_by_cell['cell1'].append(created_server['id'])
+            # Boot a server to cell2
+            server = self._build_server(az='nova:host2')
+            created_server = self.api.post_server({'server': server})
+            self._wait_for_state_change(created_server, 'ACTIVE')
+            server_ids_by_cell['cell2'].append(created_server['id'])
+            # Boot a server to cell0 (cause ERROR state prior to schedule)
+            server = self._build_server()
+            # Flavor m1.xlarge cannot be fulfilled
+            server['flavorRef'] = 'http://fake.server/5'
+            created_server = self.api.post_server({'server': server})
+            self._wait_for_state_change(created_server, 'ERROR')
+            server_ids_by_cell['cell0'].append(created_server['id'])
+
         # Verify all the servers are in the databases
-        for cell_name, server_id in server_ids.items():
-            with context.target_cell(admin_context,
-                                     self.cell_mappings[cell_name]) as cctxt:
-                objects.Instance.get_by_uuid(cctxt, server_id)
+        for cell_name, server_ids in server_ids_by_cell.items():
+            for server_id in server_ids:
+                with context.target_cell(
+                    admin_context,
+                    self.cell_mappings[cell_name]
+                ) as cctxt:
+                    objects.Instance.get_by_uuid(cctxt, server_id)
         # Delete the servers
-        for cell_name in server_ids.keys():
-            self.api.delete_server(server_ids[cell_name])
+        for cell_name, server_ids in server_ids_by_cell.items():
+            for server_id in server_ids:
+                self.api.delete_server(server_id)
         # Verify all the servers are in the databases still (as soft deleted)
-        for cell_name, server_id in server_ids.items():
-            with context.target_cell(admin_context,
-                                     self.cell_mappings[cell_name]) as cctxt:
-                objects.Instance.get_by_uuid(cctxt, server_id)
+        for cell_name, server_ids in server_ids_by_cell.items():
+            for server_id in server_ids:
+                with context.target_cell(
+                    admin_context,
+                    self.cell_mappings[cell_name]
+                ) as cctxt:
+                    objects.Instance.get_by_uuid(cctxt, server_id)
         # Archive the deleted rows
         self.cli.archive_deleted_rows(verbose=True, all_cells=True)
-        # Three instances should have been archived (cell0, cell1, cell2)
+        # 6 instances should have been archived (cell0, cell1, cell2)
         self.assertRegex(self.output.getvalue(),
-                         r"| cell0\.instances.*\| 1.*")
+                         r"\| cell0\.instances\s+\| 2")
         self.assertRegex(self.output.getvalue(),
-                         r"| cell1\.instances.*\| 1.*")
+                         r"\| cell1\.instances\s+\| 2")
         self.assertRegex(self.output.getvalue(),
-                         r"| cell2\.instances.*\| 1.*")
+                         r"\| cell2\.instances\s+\| 2")
         self.assertRegex(self.output.getvalue(),
-                         r"| API_DB\.instance_mappings.*\| 3.*")
+                         r"\| API_DB\.instance_mappings\s+\| 6")
         self.assertRegex(self.output.getvalue(),
-                         r"| API_DB\.request_specs.*\| 3.*")
+                         r"\| API_DB\.request_specs\s+\| 6")
         # Verify all the servers are gone from the cell databases
-        for cell_name, server_id in server_ids.items():
-            with context.target_cell(admin_context,
-                                     self.cell_mappings[cell_name]) as cctxt:
-                self.assertRaises(exception.InstanceNotFound,
-                                  objects.Instance.get_by_uuid,
-                                  cctxt, server_id)
+        for cell_name, server_ids in server_ids_by_cell.items():
+            for server_id in server_ids:
+                with context.target_cell(
+                    admin_context,
+                    self.cell_mappings[cell_name]
+                ) as cctxt:
+                    self.assertRaises(exception.InstanceNotFound,
+                                      objects.Instance.get_by_uuid,
+                                      cctxt, server_id)
 
 
 class TestDBArchiveDeletedRowsMultiCellTaskLog(
