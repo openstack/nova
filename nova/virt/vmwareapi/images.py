@@ -226,7 +226,7 @@ def image_transfer(read_handle, write_handle):
 def upload_iso_to_datastore(iso_path, instance, **kwargs):
     LOG.debug("Uploading iso %s to datastore", iso_path,
               instance=instance)
-    with open(iso_path, 'r') as iso_file:
+    with open(iso_path, 'rb') as iso_file:
         write_file_handle = rw_handles.FileWriteHandle(
             kwargs.get("host"),
             kwargs.get("port"),
