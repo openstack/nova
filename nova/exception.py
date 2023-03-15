@@ -2532,5 +2532,9 @@ class NotSupportedComputeForEvacuateV295(NotSupported):
                 "for compute %(expected), current version %(currently)s")
 
 
+class HostConflict(Exception):
+    pass
+
+
 class VolumeMigrationError(NovaException):
     msg_fmt = 'Migration of volume %(volume_id)s failed: %(reason)s'

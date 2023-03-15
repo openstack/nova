@@ -165,18 +165,14 @@ def locked_instance(cell_mapping, instance, reason):
     initial_state = 'locked' if instance.locked else 'unlocked'
     if not instance.locked:
         with context.target_cell(
-                    context.get_admin_context(),
-                    cell_mapping
-                ) as cctxt:
+                context.get_admin_context(), cell_mapping) as cctxt:
             compute_api.lock(cctxt, instance, reason=reason)
     try:
         yield
     finally:
         if initial_state == 'unlocked':
             with context.target_cell(
-                    context.get_admin_context(),
-                    cell_mapping
-                ) as cctxt:
+                    context.get_admin_context(), cell_mapping) as cctxt:
                 compute_api.unlock(cctxt, instance)
 
 
@@ -3112,8 +3108,15 @@ class VolumeAttachmentCommands(object):
             # TODO(lyarwood): Add delete_attachment as a kwarg to
             # remove_volume_connection as is available in the private
             # method within the manager.
-            compute_rpcapi.remove_volume_connection(
-                cctxt, instance, volume_id, instance.host)
+            if instance.host == connector['host']:
+                compute_rpcapi.remove_volume_connection(
+                    cctxt, instance, volume_id, instance.host)
+            else:
+                msg = (
+                    f"The compute host '{connector['host']}' in the "
+                    f"connector does not match the instance host "
+                    f"'{instance.host}'.")
+                raise exception.HostConflict(_(msg))
 
             # Delete the existing volume attachment if present in the bdm.
             # This isn't present when the original attachment was made
@@ -3195,6 +3198,7 @@ class VolumeAttachmentCommands(object):
         * 4: Instance does not exist.
         * 5: Instance state invalid.
         * 6: Volume is not attached to instance.
+        * 7: Connector host is not correct.
         """
         try:
             # TODO(lyarwood): Make this optional and provide a rpcapi capable
@@ -3210,6 +3214,12 @@ class VolumeAttachmentCommands(object):
             # Refresh the volume attachment
             return self._refresh(instance_uuid, volume_id, connector)
 
+        except exception.HostConflict as e:
+            print(
+                f"The command 'nova-manage volume_attachment get_connector' "
+                f"may have been run on the wrong compute host. Or the "
+                f"instance host may be wrong and in need of repair.\n{e}")
+            return 7
         except exception.VolumeBDMNotFound as e:
             print(str(e))
             return 6

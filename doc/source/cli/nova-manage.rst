@@ -1531,7 +1531,9 @@ command.
    * - 5
      - Instance state invalid (must be stopped and unlocked)
    * - 6
-     - Instance is not attached to volume
+     - Volume is not attached to the instance
+   * - 7
+     - Connector host is not correct
 
 
 Libvirt Commands
