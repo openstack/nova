@@ -418,6 +418,12 @@ class TestCase(base.BaseTestCase):
         for k, v in kw.items():
             CONF.set_override(k, v, group)
 
+    def reset_flags(self, *k, **kw):
+        """Reset flag variables for a test."""
+        group = kw.pop('group')
+        for flag in k:
+            CONF.clear_override(flag, group)
+
     def enforce_fk_constraints(self, engine=None):
         if engine is None:
             engine = db_api.get_engine()

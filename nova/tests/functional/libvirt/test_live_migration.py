@@ -210,3 +210,124 @@ class LiveMigrationQueuedAbortTestLeftoversRemoved(LiveMigrationWithLockBase):
         )
         self.assertEqual(1, len(port_binding_server_b))
         self.assertNotIn('dest', port_binding_server_b)
+
+
+class LiveMigrationWithCpuSharedSet(
+    libvirt_base.LibvirtMigrationMixin,
+    libvirt_base.ServersTestBase,
+    integrated_helpers.InstanceHelperMixin
+):
+
+    api_major_version = 'v2.1'
+    # Microversion 2.74 is required to boot a server on a specific host,
+    # which is used in the below tests.
+    microversion = '2.74'
+    ADMIN_API = True
+
+    def setUp(self):
+        super().setUp()
+
+        self.src_hostname = self.start_compute(hostname='src')
+        self.dest_hostname = self.start_compute(hostname='dest')
+
+        self.src = self.computes[self.src_hostname]
+        self.dest = self.computes[self.dest_hostname]
+
+    def get_host(self, server_id):
+        server = self.api.get_server(server_id)
+        return server['OS-EXT-SRV-ATTR:host']
+
+    def test_live_migration_to_different_cpu_shared_set(self):
+        """Reproducer for bug 1869804 #1.
+        An instance live migrated from a host with a cpu_shared_set to a
+        destination host with a different cpu_shared_set should be updated
+        to use the destination cpu_shared_set.
+        """
+        self.flags(cpu_shared_set='0,1', group='compute')
+        self.restart_compute_service('src')
+        self.restart_compute_service('dest')
+        self.server = self._create_server(host='src', networks='none')
+
+        conn = self.src.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        xml = dom.XMLDesc(0)
+        self.assertIn('<vcpu cpuset="0-1">1</vcpu>', xml)
+
+        self.flags(cpu_shared_set='3,4', group='compute')
+        self.restart_compute_service('dest')
+        self._live_migrate(self.server, 'completed')
+        self.assertEqual('dest', self.get_host(self.server['id']))
+
+        conn = self.dest.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        xml = dom.XMLDesc(0)
+        # The destination should be updated to "3-4" but it is not the case.
+        self.assertIn('<vcpu cpuset="0-1">1</vcpu>', xml)
+        self.assertNotIn('<vcpu cpuset="3-4">1</vcpu>', xml)
+
+    def test_live_migration_to_no_cpu_shared_set(self):
+        """Reproducer for bug 1869804 #2.
+        An instance live migrated from a host with a cpu_shared_set to a
+        destination host without cpu_shared_set should not keep cpuset
+        settings.
+        """
+        self.flags(cpu_shared_set='0,1', group='compute')
+        self.restart_compute_service('src')
+        self.restart_compute_service('dest')
+        self.server = self._create_server(host='src', networks='none')
+
+        self.reset_flags('cpu_shared_set', group='compute')
+        self.restart_compute_service('src')
+        self.restart_compute_service('dest')
+
+        # Here we just create a server2 to ensure cpu_shared_set is not
+        # configured on destination host.
+        self.server2 = self._create_server(host='dest', networks='none')
+
+        conn = self.src.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        xml = dom.XMLDesc(0)
+        self.assertIn('<vcpu cpuset="0-1">1</vcpu>', xml)
+
+        conn = self.dest.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server2['id'])
+        xml = dom.XMLDesc(0)
+        # This prove that cpu_shared_set is not configured on destination host
+        self.assertIn('<vcpu>1</vcpu>', xml)
+
+        self._live_migrate(self.server, 'completed')
+        self.assertEqual('dest', self.get_host(self.server['id']))
+
+        conn = self.dest.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        xml = dom.XMLDesc(0)
+        # The destination cpuset should be removed because the
+        # host has no cpu_shared_set configured. Which is not the case due to
+        # the bug.
+        self.assertIn('<vcpu cpuset="0-1">1</vcpu>', xml)
+        self.assertNotIn('<vcpu>1</vcpu>', xml)
+
+    def test_live_migration_from_no_cpu_shared_set_to_cpu_shared_set(self):
+        """Reproducer for bug 1869804 #3.
+        An instance live migrated from a host without a cpu_shared_set to a
+        destination host with cpu_shared_set should be updated to use
+        the destination cpu_shared_set.
+        """
+        self.server = self._create_server(host='src', networks='none')
+
+        conn = self.src.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        xml = dom.XMLDesc(0)
+        self.assertIn('<vcpu>1</vcpu>', xml)
+
+        self.flags(cpu_shared_set='0,1', group='compute')
+        self.restart_compute_service('dest')
+        self._live_migrate(self.server, 'completed')
+        self.assertEqual('dest', self.get_host(self.server['id']))
+
+        conn = self.dest.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        xml = dom.XMLDesc(0)
+        # The destination should be updated to "0-1".
+        self.assertIn('<vcpu>1</vcpu>', xml)
+        self.assertNotIn('<vcpu cpuset="0-1">1</vcpu>', xml)
