@@ -19,6 +19,7 @@ from oslo_log import log as logging
 import nova.conf
 from nova.scheduler import filters
 from nova.scheduler.mixins import HypervisorSizeMixin
+from nova.scheduler import utils
 from nova.utils import is_big_vm
 from nova.utils import NUMA_TRAIT_SPEC_PREFIX
 
@@ -47,6 +48,9 @@ class BigVmClusterUtilizationFilter(BigVmBaseFilter):
         return hypervisor_max_used_ram_mb / hypervisor_ram_mb * 100
 
     def host_passes(self, host_state, spec_obj):
+        if utils.is_non_vmware_spec(spec_obj):
+            return True
+
         requested_ram_mb = spec_obj.memory_mb
         # not scheduling a big VM -> every host is fine
         if not is_big_vm(requested_ram_mb, spec_obj.flavor):
@@ -171,6 +175,9 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
         return False
 
     def host_passes(self, host_state, spec_obj):
+        if utils.is_non_vmware_spec(spec_obj):
+            return True
+
         requested_ram_mb = spec_obj.memory_mb
         # not scheduling a big VM -> every host is fine
         if not is_big_vm(requested_ram_mb, spec_obj.flavor):

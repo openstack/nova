@@ -17,7 +17,8 @@ from oslo_log import log as logging
 import nova.conf
 from nova.scheduler import filters
 from nova.scheduler.mixins import HypervisorSizeMixin
-from nova.utils import is_baremetal_flavor
+from nova.scheduler import utils
+from nova import utils as nova_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -41,8 +42,18 @@ class VmSizeThresholdFilter(filters.BaseHostFilter, HypervisorSizeMixin):
         return CONF.filter_scheduler.vm_size_threshold_hv_size_mb
 
     def host_passes(self, host_state, spec_obj):
-        # ignore baremetal
-        if is_baremetal_flavor(spec_obj.flavor):
+        # While theoretically, the logic makes also sense
+        # for other hypervisors, we do not have the hardware
+        # to place the requests that granular yet.
+        # Depending on how the hardware looks like,
+        # we might want to revisit the logic.
+        # I.e. either remove this check, or differentiate it
+        # according to the hypervisor
+        if utils.is_non_vmware_spec(spec_obj):
+            return True
+
+        # ignore baremetal.
+        if nova_utils.is_baremetal_flavor(spec_obj.flavor):
             return True
 
         requested_ram_mb = spec_obj.memory_mb

@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 import nova.conf
 from nova import objects
 from nova.scheduler.filters import bigvm_filter
@@ -112,6 +114,13 @@ class TestBigVmClusterUtilizationFilter(test.NoDBTestCase):
                  'free_ram_mb': total_ram - (total_ram * hv_percent / 100.0),
                  'total_usable_ram_mb': total_ram})
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    @mock.patch('nova.scheduler.utils.is_non_vmware_spec', return_value=True)
+    def test_non_vmware_spec(self, mock_is_non_vmware_spec):
+        spec_obj = mock.sentinel.spec_obj
+        host = mock.sentinel.host
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+        mock_is_non_vmware_spec.assert_called_once_with(spec_obj)
 
 
 class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
@@ -290,3 +299,11 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    @mock.patch('nova.scheduler.utils.is_non_vmware_spec', return_value=True)
+    def test_non_vmware_spec(self, mock_is_non_vmware_spec):
+        """test non-vmware spec passes filter"""
+        spec_obj = mock.sentinel.spec_obj
+        host = mock.sentinel.host
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+        mock_is_non_vmware_spec.assert_called_once_with(spec_obj)
