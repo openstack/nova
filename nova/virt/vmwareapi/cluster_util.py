@@ -416,7 +416,9 @@ def update_cluster_das_vm_override(session, cluster, vm_ref, operation='add',
     if operation == 'add':
         das_vm_info = client_factory.create('ns0:ClusterDasVmConfigInfo')
         das_vm_info.key = vm_ref
-        das_vm_info.dasSettings.restartPriority = restart_priority
+        settings = client_factory.create('ns0:ClusterDasVmSettings')
+        settings.restartPriority = restart_priority
+        das_vm_info.dasSettings = settings
 
         das_vm_spec.info = das_vm_info
 
