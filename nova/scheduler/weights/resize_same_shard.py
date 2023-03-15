@@ -48,6 +48,9 @@ class PreferSameShardOnResizeWeigher(weights.BaseHostWeigher):
         if not utils.request_is_resize(request_spec):
             return 0.0
 
+        if utils.is_non_vmware_spec(request_spec):
+            return 0.0
+
         host_shard_aggrs = [aggr for aggr in host_state.aggregates
                             if aggr.name.startswith(self._SHARD_PREFIX)]
         if not host_shard_aggrs:

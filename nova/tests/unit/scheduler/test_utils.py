@@ -2543,3 +2543,54 @@ class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
             log)
         self.assertEqual('none', rr.group_policy)
         self.assertIn('group_policy=none', rr.to_querystring())
+
+
+class TestIsNonVmWareSpec(test.NoDBTestCase):
+    """These test cases assert the behaviour of the is_non_vmware_spec function
+    which decides based on either flavor extra_specs or image properties,
+    if it is a vmware instance or not, defaulting to vmware (for SAP use-case)
+    """
+
+    def setUp(self):
+        super(TestIsNonVmWareSpec, self).setUp()
+
+    @staticmethod
+    def _create_spec_obj(extra_specs=None, properties=None):
+        properties = objects.ImageMetaProps.from_dict(properties or {})
+        image = objects.ImageMeta(properties=properties)
+        flavor = objects.Flavor(extra_specs=(extra_specs or {}))
+        return objects.RequestSpec(flavor=flavor, image=image)
+
+    def test_default_vmware(self):
+        spec_obj = self._create_spec_obj()
+        self.assertFalse(utils.is_non_vmware_spec(spec_obj))
+
+    def test_image_hyperviror_type_vmware(self):
+        spec_obj = self._create_spec_obj(properties={
+            "img_hv_type": "VmWare"
+        })
+        self.assertFalse(utils.is_non_vmware_spec(spec_obj))
+
+    def test_image_hyperviror_type_kvm(self):
+        spec_obj = self._create_spec_obj(properties={
+            "img_hv_type": "kvm"
+        })
+        self.assertTrue(utils.is_non_vmware_spec(spec_obj))
+
+    def test_flavor_hypervisor_type_vmware(self):
+        spec_obj = self._create_spec_obj(extra_specs={
+            "capabilities:hypervisor_type": "VMware vCenter Server"
+        })
+        self.assertFalse(utils.is_non_vmware_spec(spec_obj))
+
+    def test_flavor_hypervisor_type_baremetal(self):
+        spec_obj = self._create_spec_obj(extra_specs={
+            "capabilities:cpu_arch": "randomvalue"
+        })
+        self.assertTrue(utils.is_non_vmware_spec(spec_obj))
+
+    def test_flavor_hypervisor_type_not_vmware(self):
+        spec_obj = self._create_spec_obj(extra_specs={
+            "capabilities:hypervisor_type": "QEMU"
+        })
+        self.assertTrue(utils.is_non_vmware_spec(spec_obj))

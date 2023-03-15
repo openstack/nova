@@ -37,6 +37,7 @@ from nova.objects import fields as obj_fields
 from nova.objects import instance as obj_instance
 from nova import rpc
 from nova.scheduler.filters import utils as filters_utils
+from nova import utils as nova_utils
 from nova.virt import hardware
 
 
@@ -1503,3 +1504,31 @@ def get_aggregates_for_routed_subnet(
                 'Failed to find aggregate related to segment %s' % segment_id)
         return agg_info.aggregates
     return []
+
+
+def is_non_vmware_spec(spec_obj):
+    """Tests, if scheduler spec is specifiying a non-vmware hypervisor
+
+    That is SAP specific, as we run majorly on VMware, and target it
+    as the default
+
+    """
+    if 'flavor' in spec_obj:
+        if nova_utils.is_baremetal_flavor(spec_obj.flavor):
+            return True
+        extra_specs = spec_obj.flavor.extra_specs
+        hypervisor_type = extra_specs.get('capabilities:hypervisor_type')
+        if hypervisor_type:
+            from nova.scheduler.filters import extra_specs_ops
+            if not extra_specs_ops.match("VMware vCenter Server",
+                                         hypervisor_type):
+                return True
+
+    if 'image' in spec_obj:
+        image_props = spec_obj.image.properties
+        img_h_type = obj_fields.HVType.canonicalize(
+            image_props.get('img_hv_type'))
+        if img_h_type and img_h_type != obj_fields.HVType.VMWARE:
+            return True
+
+    return False

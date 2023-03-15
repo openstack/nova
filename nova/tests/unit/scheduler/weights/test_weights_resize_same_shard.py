@@ -15,6 +15,8 @@
 """
 Tests for scheduler prefer-resize-to-same-host weigher.
 """
+from unittest import mock
+
 from nova import objects
 from nova.scheduler import weights
 from nova.scheduler.weights import resize_same_shard as same_shard
@@ -127,6 +129,22 @@ class PreferSameShardOnResizeWeigherTestCase(test.NoDBTestCase):
             instance_uuid=self.instance1.uuid)
         weighed_hosts = self.weight_handler.get_weighed_objects(
             self.weighers, self.hosts, request_spec)
+        self.assertEqual(0.0, weighed_hosts[0].weight)
+        self.assertEqual(0.0, weighed_hosts[1].weight)
+        self.assertEqual(0.0, weighed_hosts[2].weight)
+
+    @mock.patch('nova.scheduler.utils.is_non_vmware_spec', return_value=True)
+    def test_ignore_non_vmware_instance(self, mock_is_non_vmware_spec):
+        self.flags(prefer_same_shard_resize_weight_multiplier=1.0,
+                   group='filter_scheduler')
+        request_spec = objects.RequestSpec(
+            instance_uuid=self.instance1.uuid,
+            scheduler_hints=dict(_nova_check_type=['resize'],
+                                 source_host=['host1'],))
+        weighed_hosts = self.weight_handler.get_weighed_objects(
+            self.weighers, self.hosts, request_spec)
+        mock_is_non_vmware_spec.assert_has_calls(
+            len(self.hosts) * [mock.call(request_spec)])
         self.assertEqual(0.0, weighed_hosts[0].weight)
         self.assertEqual(0.0, weighed_hosts[1].weight)
         self.assertEqual(0.0, weighed_hosts[2].weight)

@@ -23,7 +23,6 @@ import nova.conf
 from nova.scheduler.mixins import HypervisorSizeMixin
 from nova.scheduler import utils
 from nova.scheduler import weights
-from nova.utils import is_baremetal_flavor
 
 LOG = logging.getLogger(__name__)
 
@@ -61,8 +60,8 @@ class HvRamClassWeigher(weights.BaseHostWeigher, HypervisorSizeMixin):
         the amount of RAM an HV has to offer to matter. Therefore, we use
         configurable classes with weights, defined by an upper bound of RAM.
         """
-        # ignore baremetal
-        if is_baremetal_flavor(request_spec.flavor):
+        # ignore non-vmware scheduling requests
+        if utils.is_non_vmware_spec(request_spec):
             return self.minval
 
         hypervisor_ram_mb = self._get_hv_size(host_state)

@@ -17,6 +17,7 @@ from oslo_log import log as logging
 import nova.conf
 from nova.scheduler import filters
 from nova.scheduler.mixins import ProjectTagMixin
+from nova.scheduler import utils
 from nova import utils as nova_utils
 
 LOG = logging.getLogger(__name__)
@@ -45,8 +46,8 @@ class ShardFilter(filters.BaseHostFilter, ProjectTagMixin):
         return self._get_tags(project_id)
 
     def host_passes(self, host_state, spec_obj):
-        # ignore baremetal
-        if nova_utils.is_baremetal_flavor(spec_obj.flavor):
+        # Only VMware
+        if utils.is_non_vmware_spec(spec_obj):
             return True
 
         host_shard_aggrs = [aggr for aggr in host_state.aggregates

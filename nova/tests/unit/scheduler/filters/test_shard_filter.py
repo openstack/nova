@@ -226,3 +226,11 @@ class TestShardFilter(test.NoDBTestCase):
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
         log_mock.error.assert_called_once_with(mock.ANY, mock.ANY)
         log_mock.debug.assert_not_called()
+
+    @mock.patch('nova.scheduler.utils.is_non_vmware_spec', return_value=True)
+    def test_non_vmware_spec(self, mock_is_non_vmware_spec):
+        host = mock.sentinel.host
+        spec_obj = mock.sentinel.spec_obj
+
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+        mock_is_non_vmware_spec.assert_called_once_with(spec_obj)

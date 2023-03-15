@@ -24,7 +24,6 @@ This weigher ignores any instances which are:
 import nova.conf
 from nova.scheduler import utils
 from nova.scheduler import weights
-from nova import utils as nova_utils
 
 CONF = nova.conf.CONF
 
@@ -45,7 +44,7 @@ class PreferSameHostOnResizeWeigher(weights.BaseHostWeigher):
         if not utils.request_is_resize(request_spec):
             return 0.0
 
-        if nova_utils.is_baremetal_flavor(request_spec.flavor):
+        if utils.is_non_vmware_spec(request_spec):
             return 0.0
 
         instance_host = request_spec.get_scheduler_hint('source_host')
