@@ -424,10 +424,7 @@ class VMwareVolumeOps(object):
                   "%(adapter)s.",
                   {'vm_ref': vm_ref, 'adapter': adapter_type})
         client_factory = self._session.vim.client.factory
-        devices = self._session._call_method(vutil,
-                                             "get_object_property",
-                                             vm_ref,
-                                             "config.hardware.device")
+        devices = vm_util.get_hardware_devices(self._session, vm_ref)
         return vm_util.allocate_controller_key_and_unit_number(
             client_factory, devices, adapter_type)
 
