@@ -2556,3 +2556,7 @@ class EphemeralEncryptionSecretNotFound(Invalid):
 class EphemeralEncryptionCleanupFailed(NovaException):
     msg_fmt = _("Failed to clean up ephemeral encryption secrets: "
                 "%(error)s")
+
+
+class HostConflict(Exception):
+    pass
