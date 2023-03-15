@@ -28,6 +28,6 @@ repos:
       - id: flake8
         name: flake8
         language: python
-        entry: tox -epep8
+        entry: tox -epep8 --
         files: '^.*\.py$'
         exclude: '^(doc|releasenotes|tools)/.*$'
