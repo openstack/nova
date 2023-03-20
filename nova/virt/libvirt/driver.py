@@ -196,6 +196,7 @@ def patch_tpool_proxy():
     or __repr__() calls. See bug #962840 for details.
     We perform a monkey patch to replace those two instance methods.
     """
+
     def str_method(self):
         return str(self._obj)
 
@@ -3956,7 +3957,6 @@ class LibvirtDriver(driver.ComputeDriver):
                           accel_info)
 
     def trigger_crash_dump(self, instance):
-
         """Trigger crash dump by injecting an NMI to the specified instance."""
         try:
             self._host.get_guest(instance).inject_nmi()
@@ -7725,7 +7725,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if self._host.has_min_version(
             lv_ver=MIN_LIBVIRT_VDPA, hv_ver=MIN_QEMU_VDPA,
         ):
-            dev_flags |= libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_VDPA
+            try:
+                dev_flags |= libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_VDPA
+            except AttributeError:
+                pass
 
         devices = {
             dev.name(): dev for dev in
