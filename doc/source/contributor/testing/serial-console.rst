@@ -54,16 +54,20 @@ A simple client for *test purpose* can be written with few lines of Python.
               while not self.terminated:
                   try:
                       b = self.sock.recv(4096)
-                      sys.stdout.write(b)
-                      sys.stdout.flush()
+                      while len(b) > 0:
+                          # websocket data: opcode + length + data
+                          word = b[2:b[1]+2]
+                          b = b[b[1]+2:]
+                          sys.stdout.buffer.write(word)
+                          sys.stdout.flush()
                   except: # socket error expected
                       pass
           finally:
               self.terminate()
   if __name__ == '__main__':
       if len(sys.argv) != 2 or not sys.argv[1].startswith("ws"):
-          print "Usage %s: Please use websocket url"
-          print "Example: ws://127.0.0.1:6083/?token=xxx"
+          print("Usage %s: Please use websocket url")
+          print("Example: ws://127.0.0.1:6083/?token=xxx")
           exit(1)
       try:
           ws = LazyClient(sys.argv[1], protocols=['binary'])
@@ -72,7 +76,7 @@ A simple client for *test purpose* can be written with few lines of Python.
               # keyboard event...
               c = sys.stdin.read(1)
               if c:
-                  ws.send(c)
+                  ws.send(c.encode('utf-8'), binary=True)
           ws.run_forever()
       except KeyboardInterrupt:
           ws.close()
