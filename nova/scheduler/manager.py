@@ -23,6 +23,7 @@ import collections
 import copy
 import random
 
+from keystoneauth1 import exceptions as ks_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -67,9 +68,41 @@ class SchedulerManager(manager.Manager):
         self.host_manager = host_manager.HostManager()
         self.servicegroup_api = servicegroup.API()
         self.notifier = rpc.get_notifier('scheduler')
-        self.placement_client = report.report_client_singleton()
+        self._placement_client = None
+
+        try:
+            # Test our placement client during initialization
+            self.placement_client
+        except (ks_exc.EndpointNotFound,
+                ks_exc.DiscoveryFailure,
+                ks_exc.RequestTimeout,
+                ks_exc.GatewayTimeout,
+                ks_exc.ConnectFailure) as e:
+            # Non-fatal, likely transient (although not definitely);
+            # continue startup but log the warning so that when things
+            # fail later, it will be clear why we can not do certain
+            # things.
+            LOG.warning('Unable to initialize placement client (%s); '
+                        'Continuing with startup, but scheduling '
+                        'will not be possible.', e)
+        except (ks_exc.MissingAuthPlugin,
+                ks_exc.Unauthorized) as e:
+            # This is almost definitely fatal mis-configuration. The
+            # Unauthorized error might be transient, but it is
+            # probably reasonable to consider it fatal.
+            LOG.error('Fatal error initializing placement client; '
+                      'config is incorrect or incomplete: %s', e)
+            raise
+        except Exception as e:
+            # Unknown/unexpected errors here are fatal
+            LOG.error('Fatal error initializing placement client: %s', e)
+            raise
 
         super().__init__(service_name='scheduler', *args, **kwargs)
+
+    @property
+    def placement_client(self):
+        return report.report_client_singleton()
 
     @periodic_task.periodic_task(
         spacing=CONF.scheduler.discover_hosts_in_cells_interval,
