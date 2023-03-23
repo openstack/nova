@@ -110,6 +110,34 @@ def get_info(context, image_href):
     return IMAGE_API.get(context, image_href)
 
 
+def check_vmdk_image(image_id, data):
+    # Check some rules about VMDK files. Specifically we want to make
+    # sure that the "create-type" of the image is one that we allow.
+    # Some types of VMDK files can reference files outside the disk
+    # image and we do not want to allow those for obvious reasons.
+
+    types = CONF.compute.vmdk_allowed_types
+
+    if not len(types):
+        LOG.warning('Refusing to allow VMDK image as vmdk_allowed_'
+                    'types is empty')
+        msg = _('Invalid VMDK create-type specified')
+        raise exception.ImageUnacceptable(image_id=image_id, reason=msg)
+
+    try:
+        create_type = data.format_specific['data']['create-type']
+    except KeyError:
+        msg = _('Unable to determine VMDK create-type')
+        raise exception.ImageUnacceptable(image_id=image_id, reason=msg)
+
+    if create_type not in CONF.compute.vmdk_allowed_types:
+        LOG.warning('Refusing to process VMDK file with create-type of %r '
+                    'which is not in allowed set of: %s', create_type,
+                    ','.join(CONF.compute.vmdk_allowed_types))
+        msg = _('Invalid VMDK create-type specified')
+        raise exception.ImageUnacceptable(image_id=image_id, reason=msg)
+
+
 def fetch_to_raw(context, image_href, path, trusted_certs=None):
     path_tmp = "%s.part" % path
     fetch(context, image_href, path_tmp, trusted_certs)
@@ -128,6 +156,9 @@ def fetch_to_raw(context, image_href, path, trusted_certs=None):
             raise exception.ImageUnacceptable(image_id=image_href,
                 reason=(_("fmt=%(fmt)s backed by: %(backing_file)s") %
                         {'fmt': fmt, 'backing_file': backing_file}))
+
+        if fmt == 'vmdk':
+            check_vmdk_image(image_href, data)
 
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path
