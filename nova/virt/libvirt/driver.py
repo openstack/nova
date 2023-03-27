@@ -7636,7 +7636,7 @@ class LibvirtDriver(driver.ComputeDriver):
         instance: 'objects.Instance',
         power_on: bool = True,
         pause: bool = False,
-        post_xml_callback: ty.Callable = None,
+        post_xml_callback: ty.Optional[ty.Callable] = None,
     ) -> libvirt_guest.Guest:
         """Create a Guest from XML.
 
@@ -7697,7 +7697,7 @@ class LibvirtDriver(driver.ComputeDriver):
         block_device_info: ty.Optional[ty.Dict[str, ty.Any]],
         power_on: bool = True,
         vifs_already_plugged: bool = False,
-        post_xml_callback: ty.Callable = None,
+        post_xml_callback: ty.Optional[ty.Callable] = None,
         external_events: ty.Optional[ty.List[ty.Tuple[str, str]]] = None,
         cleanup_instance_dir: bool = False,
         cleanup_instance_disks: bool = False,

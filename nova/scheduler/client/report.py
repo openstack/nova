@@ -1047,7 +1047,7 @@ class SchedulerReportClient(object):
         context: nova_context.RequestContext,
         rp_uuid: str,
         traits: ty.Iterable[str],
-        generation: int = None
+        generation: ty.Optional[int] = None
     ):
         """Replace a provider's traits with those specified.
 

@@ -168,7 +168,7 @@ def _get_alias_from_config() -> Alias:
 
 
 def _translate_alias_to_requests(
-    alias_spec: str, affinity_policy: str = None,
+    alias_spec: str, affinity_policy: ty.Optional[str] = None,
 ) -> ty.List['objects.InstancePCIRequest']:
     """Generate complete pci requests from pci aliases in extra_spec."""
     pci_aliases = _get_alias_from_config()
@@ -255,7 +255,7 @@ def get_instance_pci_request_from_vif(
 
 
 def get_pci_requests_from_flavor(
-    flavor: 'objects.Flavor', affinity_policy: str = None,
+    flavor: 'objects.Flavor', affinity_policy: ty.Optional[str] = None,
 ) -> 'objects.InstancePCIRequests':
     """Validate and return PCI requests.
 

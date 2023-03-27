@@ -261,8 +261,8 @@ def copy_image(
     dest: str,
     host: ty.Optional[str] = None,
     receive: bool = False,
-    on_execute: ty.Callable = None,
-    on_completion: ty.Callable = None,
+    on_execute: ty.Optional[ty.Callable] = None,
+    on_completion: ty.Optional[ty.Callable] = None,
     compression: bool = True,
 ) -> None:
     """Copy a disk image to an existing directory
@@ -639,7 +639,7 @@ def mdev_name2uuid(mdev_name: str) -> str:
     return str(uuid.UUID(mdev_uuid))
 
 
-def mdev_uuid2name(mdev_uuid: str, parent: str = None) -> str:
+def mdev_uuid2name(mdev_uuid: str, parent: ty.Optional[str] = None) -> str:
     """Convert an mdev uuid (of the form 8-4-4-4-12) and optionally its parent
     device to a name (of the form mdev_<uuid_with_underscores>[_<pciid>]).
 

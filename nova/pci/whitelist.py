@@ -33,7 +33,7 @@ class Whitelist(object):
     assignable.
     """
 
-    def __init__(self, whitelist_spec: str = None) -> None:
+    def __init__(self, whitelist_spec: ty.Optional[str] = None) -> None:
         """White list constructor
 
         For example, the following json string specifies that devices whose

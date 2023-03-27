@@ -82,7 +82,7 @@ class PciDeviceStats(object):
         self,
         numa_topology: 'objects.NUMATopology',
         stats: 'objects.PCIDevicePoolList' = None,
-        dev_filter: whitelist.Whitelist = None,
+        dev_filter: ty.Optional[whitelist.Whitelist] = None,
     ) -> None:
         self.numa_topology = numa_topology
         self.pools = (
