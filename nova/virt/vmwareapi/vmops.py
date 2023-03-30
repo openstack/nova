@@ -2678,7 +2678,6 @@ class VMwareVMOps(object):
         self._update_instance_progress(context, instance,
                                        step=8,
                                        total_steps=RESIZE_TOTAL_STEPS)
-
         vi = self._get_instance_config_info(context, instance, image_meta)
         self._attach_volumes(instance, block_device_info, vi.ii.adapter_type)
 
@@ -2686,9 +2685,11 @@ class VMwareVMOps(object):
         self._update_instance_progress(context, instance,
                                        step=9,
                                        total_steps=RESIZE_TOTAL_STEPS)
-        config_spec = self._get_vm_networking_spec(instance, network_info)
-        vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
-        self._update_vnic_index(context, instance, network_info)
+        if network_info:
+            # Nothing to do here, if there is no nic attached
+            config_spec = self._get_vm_networking_spec(instance, network_info)
+            vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
+            self._update_vnic_index(context, instance, network_info)
 
         # 9. Update DRS & restart priority
         self._update_instance_progress(context, instance,
