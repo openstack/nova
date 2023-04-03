@@ -283,6 +283,24 @@ class NovaMigrationsWalk(
         # removal without creating it first, which is dumb
         pass
 
+    def _check_1acf2c98e646(self, connection):
+        for prefix in ('', 'shadow_'):
+            self.assertColumnExists(connection,
+                                    prefix + 'instances',
+                                    'compute_id')
+            self.assertColumnExists(connection,
+                                    prefix + 'migrations',
+                                    'dest_compute_id')
+            if not prefix:
+                self.assertIndexExists(
+                    connection,
+                    prefix + 'instances',
+                    'instances_compute_id_deleted_idx')
+                self.assertIndexExists(
+                    connection,
+                    prefix + 'migrations',
+                    'migrations_dest_compute_id_deleted_idx')
+
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.
 
