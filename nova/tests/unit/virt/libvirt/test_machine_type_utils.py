@@ -345,6 +345,7 @@ class TestMachineTypeUtilsListUnset(test.NoDBTestCase):
                 context=cctxt,
                 host=node.host,
                 node=node.hypervisor_hostname,
+                compute_id=node.id,
                 uuid=uuidutils.generate_uuid())
             inst.create()
 

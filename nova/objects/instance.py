@@ -115,7 +115,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 2.5: Added hard_delete kwarg in destroy
     # Version 2.6: Added hidden
     # Version 2.7: Added resources
-    VERSION = '2.7'
+    # Version 2.8: Added compute_id
+    VERSION = '2.8'
 
     fields = {
         'id': fields.IntegerField(),
@@ -146,6 +147,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         'host': fields.StringField(nullable=True),
         'node': fields.StringField(nullable=True),
+        'compute_id': fields.IntegerField(nullable=True),
 
         # TODO(stephenfin): Remove this in version 3.0 of the object as it has
         # been replaced by 'flavor'
@@ -231,6 +233,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(Instance, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (2, 8) and 'compute_id' in primitive:
+            del primitive['compute_id']
         if target_version < (2, 7) and 'resources' in primitive:
             del primitive['resources']
         if target_version < (2, 6) and 'hidden' in primitive:
@@ -546,6 +550,21 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='already deleted')
         updates = self.obj_get_changes()
+        version = versionutils.convert_version_to_tuple(self.VERSION)
+
+        if 'node' in updates and 'compute_id' not in updates:
+            # NOTE(danms): This is not really the best idea, as we should try
+            # not to have different behavior based on the version of the
+            # object. However, this exception helps us find cases in testing
+            # where these may not be updated together. We can remove this
+            # later.
+            if version >= (2, 8):
+                raise exception.ObjectActionError(
+                    ('Instance is being created with node (%r) '
+                     'but not compute_id') % updates['node'])
+            else:
+                LOG.warning('Instance is being created with node %r but '
+                            'no compute_id', updates['node'])
 
         # NOTE(danms): We know because of the check above that deleted
         # is either unset or false. Since we need to avoid passing False
@@ -779,6 +798,21 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self._extra_values_to_save = {}
         updates = {}
         changes = self.obj_what_changed()
+
+        version = versionutils.convert_version_to_tuple(self.VERSION)
+        if 'node' in changes and 'compute_id' not in changes:
+            # NOTE(danms): This is not really the best idea, as we should try
+            # not to have different behavior based on the version of the
+            # object. However, this exception helps us find cases in testing
+            # where these may not be updated together. We can remove this
+            # later.
+            if version >= (2, 8):
+                raise exception.ObjectActionError(
+                    ('Instance.node is being updated (%r) '
+                     'but compute_id is not') % self.node)
+            else:
+                LOG.warning('Instance %s node is being updated to %r but '
+                            'compute_id is not', self.uuid, self.node)
 
         for field in self.fields:
             # NOTE(danms): For object fields, we construct and call a

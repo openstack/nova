@@ -2261,6 +2261,8 @@ class TestInstanceClaim(BaseTestCase):
 
         # Reset all changes to the instance to make sure that we can detect
         # any manipulation after the failure.
+        orig_node = self.instance.node
+        self.assertNotIn('compute_id', self.instance)
         self.instance.obj_reset_changes(recursive=True)
 
         with mock.patch.object(self.instance, 'save') as mock_save:
@@ -2272,6 +2274,8 @@ class TestInstanceClaim(BaseTestCase):
 
         # Make sure the instance was not touched by the failed claim process
         self.assertEqual(set(), self.instance.obj_what_changed())
+        self.assertEqual(orig_node, self.instance.node)
+        self.assertNotIn('compute_id', self.instance)
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
@@ -4108,21 +4112,29 @@ class TestSetInstanceHostAndNode(BaseTestCase):
     @mock.patch('nova.objects.Instance.save')
     def test_set_instance_host_and_node(self, save_mock):
         inst = objects.Instance()
-        self.rt._set_instance_host_and_node(inst, _NODENAME)
+        self.rt._set_instance_host_and_node(inst, _COMPUTE_NODE_FIXTURES[0])
         save_mock.assert_called_once_with()
         self.assertEqual(self.rt.host, inst.host)
         self.assertEqual(_NODENAME, inst.node)
+        self.assertEqual(1, inst.compute_id)
         self.assertEqual(self.rt.host, inst.launched_on)
 
     @mock.patch('nova.objects.Instance.save')
     def test_unset_instance_host_and_node(self, save_mock):
         inst = objects.Instance()
-        self.rt._set_instance_host_and_node(inst, _NODENAME)
+        self.rt._set_instance_host_and_node(inst, _COMPUTE_NODE_FIXTURES[0])
         self.rt._unset_instance_host_and_node(inst)
         self.assertEqual(2, save_mock.call_count)
         self.assertIsNone(inst.host)
         self.assertIsNone(inst.node)
         self.assertEqual(self.rt.host, inst.launched_on)
+
+    def test_get_node_by_name(self):
+        self.assertRaises(exc.ComputeHostNotFound,
+                          self.rt.get_node_by_name, 'foo')
+        self.assertRaises(exc.ComputeHostNotFound,
+                          self.rt.get_node_by_name,
+                            _COMPUTE_NODE_FIXTURES[0].hypervisor_hostname)
 
 
 def _update_compute_node(node, **kwargs):

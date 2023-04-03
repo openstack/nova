@@ -302,6 +302,77 @@ class _TestInstanceObject(object):
 
         self.assertFalse(mock_log.called)
 
+    def test_save_updates_host_not_compute_id(self):
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id)
+        # Instance create() without node or compute_id is okay
+        instance.create()
+
+        # Try to update node without compute_id and make sure save() fails
+        instance.node = 'foo'
+        self.assertRaises(exception.ObjectActionError, instance.save)
+
+        # If we update both, then save() should succeed
+        instance.compute_id = 1
+        instance.save()
+
+    # NOTE(danms): This ensures that older object versions are not held to the
+    # new standard of requiring compute_id. If we drop support for Instance
+    # <=2.7 we can remove this test.
+    def test_save_updates_host_not_compute_id_compat(self):
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id,
+                                    numa_topology=None)
+        # Instance create() without node or compute_id is okay
+        instance.create()
+
+        # Backlevel this to before the requirement
+        manifest = ovo_base.obj_tree_get_versions('Instance')
+        instance = objects.Instance.obj_from_primitive(
+            instance.obj_to_primitive(target_version='2.7',
+                                      version_manifest=manifest))
+        instance._context = self.context
+
+        # Try to update node without compute_id and make sure save() does not
+        # fail for this older version
+        instance.node = 'foo'
+        instance.save()
+
+    def test_create_with_host_not_compute_id(self):
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id)
+        # Instance create() with node but not compute_id should fail
+        instance.node = 'foo'
+        self.assertRaises(exception.ObjectActionError, instance.create)
+
+        # If we create with both, then create() should succeed
+        instance.compute_id = 1
+        instance.create()
+
+    # NOTE(danms): This ensures that older object versions are not held to the
+    # new standard of requiring compute_id. If we drop support for Instance
+    # <=2.7 we can remove this test.
+    def test_create_with_host_not_compute_id_compat(self):
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id,
+                                    numa_topology=None)
+
+        # Backlevel this to before the requirement
+        manifest = ovo_base.obj_tree_get_versions('Instance')
+        instance = objects.Instance.obj_from_primitive(
+            instance.obj_to_primitive(target_version='2.7',
+                                      version_manifest=manifest))
+
+        # Try to create this object without compute_id and make sure create()
+        # does not fail for this older version
+        instance._context = self.context
+        instance.node = 'foo'
+        instance.create()
+
     @mock.patch.object(db, 'instance_get')
     def test_get_by_id(self, mock_get):
         mock_get.return_value = self.fake_instance

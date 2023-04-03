@@ -431,7 +431,8 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
                   memory_mb=0, vcpus=0, root_gb=0, ephemeral_gb=0,
                   flavor=None, launch_index=0, kernel_id="",
                   ramdisk_id="", user_data=None, system_metadata=None,
-                  services=None, trusted_certs=None, hidden=False):
+                  services=None, trusted_certs=None, hidden=False,
+                  compute_id=None):
     if user_id is None:
         user_id = 'fake_user'
     if project_id is None:
@@ -504,6 +505,7 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
         "ephemeral_key_uuid": None,
         "host": host,
         "node": node,
+        "compute_id": compute_id,
         "instance_type_id": flavor.id,
         "user_data": user_data,
         "reservation_id": reservation_id,

@@ -169,6 +169,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         with context.target_cell(ctx, cell) as cctx:
             instance = objects.Instance(context=cctx,
                                         image_ref=uuidsentinel.fake_image_ref,
+                                        compute_id=123,
                                         node='node1', reservation_id='a',
                                         host='host1',
                                         project_id=fakes.FAKE_PROJECT_ID,

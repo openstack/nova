@@ -99,6 +99,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.context = context.RequestContext(fakes.FAKE_USER_ID,
                                               fakes.FAKE_PROJECT_ID)
 
+        self.compute.rt.compute_nodes = {
+            uuids.compute: mock.MagicMock(id=123,
+                                          hypervisor_hostname=uuids.compute),
+        }
+
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.useFixture(fixtures.EventReporterStub())
         self.allocations = {
@@ -5486,7 +5491,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.context, instance, None, None, None, None, None,
                 None, recreate=True, on_shared_storage=None,
                 preserve_ephemeral=False, migration=None,
-                scheduled_node='fake-node',
+                scheduled_node=uuids.compute,
                 limits={}, request_spec=request_spec, accel_uuids=[],
                 reimage_boot_volume=False,
                 target_state=None)
@@ -5542,8 +5547,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
     def test_rebuild_node_not_updated_if_not_recreate(self):
-        node = uuidutils.generate_uuid()  # ironic node uuid
-        instance = fake_instance.fake_instance_obj(self.context, node=node)
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   node=uuids.compute)
         instance.migration_context = None
         migration = objects.Migration(status='accepted')
         with test.nested(
@@ -5558,7 +5563,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 False, False, migration, None, {}, None, [], False,
                 None)
             self.assertFalse(mock_get.called)
-            self.assertEqual(node, instance.node)
+            self.assertEqual(uuids.compute, instance.node)
+            self.assertEqual(123, instance.compute_id)
             self.assertEqual('done', migration.status)
             mock_migration_save.assert_called_once_with()
 
@@ -9015,13 +9021,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             mock.patch.object(objects.Flavor, 'get_by_id'),
             mock.patch.object(self.compute, '_terminate_volume_connections'),
             mock.patch.object(self.compute, 'compute_rpcapi'),
+            mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename'),
         ) as (
             migrate_disk_and_power_off, fault_create, instance_update,
             network_api, save_inst, notify, vol_block_info, bdm, flavor,
-            terminate_volume_connections, compute_rpcapi
+            terminate_volume_connections, compute_rpcapi, cn_get
         ):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
+            cn_get.return_value = mock.MagicMock(id=123,
+                                                 hypervisor_hostname='fake')
             yield (migrate_disk_and_power_off, notify)
 
     def test_resize_instance_failure(self):
@@ -9197,6 +9206,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.migration.uuid = uuids.migration
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['host']
+            self.compute.rt.get_node_by_name.return_value = (
+                mock.MagicMock(id=123,
+                               hypervisor_hostname=self.migration.source_node))
             request_spec = objects.RequestSpec()
             self.compute.finish_revert_resize(context=self.context,
                                               migration=self.migration,
@@ -9208,6 +9220,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             # source_compute value.
             self.assertNotEqual(self.migration.dest_compute,
                                 self.migration.source_compute)
+            self.compute.rt.get_node_by_name.assert_called_once_with(
+                self.migration.source_node)
 
         do_test()
 
@@ -9243,6 +9257,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
             self.compute.rt.tracked_migrations[self.instance['uuid']] = (
                 self.migration, None)
+            self.compute.rt.compute_nodes[self.instance['node']] = (
+                mock.MagicMock(id=123,
+                               hypervisor_hostname=self.instance['node']))
             self.instance.migration_context = objects.MigrationContext()
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['node']
@@ -9342,6 +9359,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_get_bdms.return_value = objects.BlockDeviceMappingList()
         request_spec = objects.RequestSpec()
         mock_revert_allocation.return_value = mock.sentinel.allocation
+        self.compute.rt.compute_nodes[self.migration.source_node] = (
+            mock.MagicMock(id=123,
+                           hypervisor_hostname=self.migration.source_node))
 
         with mock.patch.object(
                 self.compute.network_api, 'get_instance_nw_info'):
@@ -9374,6 +9394,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
         mock_get_bdms.return_value = objects.BlockDeviceMappingList()
         mock_get_allocations.return_value = mock.sentinel.allocation
+        self.compute.rt.compute_nodes[self.migration.source_node] = (
+            mock.MagicMock(id=123,
+                           hypervisor_hostname=self.migration.source_node))
 
         with mock.patch.object(
                 self.compute.network_api, 'get_instance_nw_info'):
@@ -10270,8 +10293,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                      setup_networks_on_host, get_instance_nw_info, save,
                      rt_mock, mock_apply_mig_ctxt, mock_drop_mig_ctxt):
 
-            cn = mock.Mock(spec_set=['hypervisor_hostname'])
+            cn = mock.Mock(spec_set=['hypervisor_hostname', 'id'])
             cn.hypervisor_hostname = 'test_host'
+            cn.id = 123
             _get_compute_info.return_value = cn
             cn_old = self.instance.host
             instance_old = self.instance
@@ -10392,8 +10416,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                      _notify_about_instance_usage, network_api, save,
                      add_instance_fault_from_exc, rt_mock,
                      mock_apply_mig_ctxt, mock_drop_mig_ctxt):
-            cn = mock.Mock(spec_set=['hypervisor_hostname'])
+            cn = mock.Mock(spec_set=['hypervisor_hostname', 'id'])
             cn.hypervisor_hostname = 'test_host'
+            cn.id = 123
             _get_compute_info.return_value = cn
 
             self.assertRaises(exception.NovaException,
@@ -10422,6 +10447,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                            return_value=power_state.RUNNING)
         @mock.patch.object(self.compute, '_get_compute_info',
                            return_value=objects.ComputeNode(
+                               id=123,
                                hypervisor_hostname='fake-dest-host'))
         @mock.patch.object(self.instance, 'save')
         def _do_test(instance_save, get_compute_node, get_power_state,
@@ -10494,7 +10520,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.compute, '_get_compute_info')
         def _test_post_live_migration(_get_compute_info):
             dest_host = 'dest'
-            cn = objects.ComputeNode(hypervisor_hostname=dest_host)
+            cn = objects.ComputeNode(hypervisor_hostname=dest_host, id=123)
             _get_compute_info.return_value = cn
             instance = fake_instance.fake_instance_obj(self.context,
                                                         node='src',
@@ -12013,6 +12039,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.migration.dest_compute = uuids.dest
         self.migration.dest_node = uuids.dest
         self.migration.dest_compute_id = 123
+        self.compute.rt.compute_nodes[uuids.dest] = mock.MagicMock(
+            id=123, hypervisor_hostname=uuids.dest)
 
         with mock.patch.object(self.compute, 'network_api') as network_api:
             network_api.get_instance_nw_info.return_value = nwinfo
@@ -12693,6 +12721,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # Configure the instance with an old_flavor for the revert.
         old_flavor = fake_flavor.fake_flavor_obj(self.context)
         self.instance.old_flavor = old_flavor
+        self.compute.rt.compute_nodes[self.migration.source_node] = (
+            mock.MagicMock(id=123,
+                           hypervisor_hostname=self.migration.source_node))
         with test.nested(
             mock.patch.object(self.compute.network_api,
                               'get_instance_nw_info'),
@@ -12765,6 +12796,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # Configure the instance with an old_flavor for the revert.
         old_flavor = fake_flavor.fake_flavor_obj(self.context)
         self.instance.old_flavor = old_flavor
+        self.compute.rt.compute_nodes[self.migration.source_node] = (
+            mock.MagicMock(id=123,
+                           hypervisor_hostname=self.migration.source_node))
         with test.nested(
             mock.patch.object(self.compute.network_api,
                               'get_instance_nw_info'),
