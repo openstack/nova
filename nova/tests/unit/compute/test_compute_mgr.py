@@ -8478,7 +8478,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             'False', self.instance.system_metadata['network_allocated'])
 
     @mock.patch('nova.compute.manager.LOG')
-    def test__cleanup_allocated_networks__error(self, mock_log):
+    def test__cleanup_allocated_networks_neutron_error(self, mock_log):
         with test.nested(
             mock.patch.object(
                 self.compute.network_api, 'get_instance_nw_info',
@@ -8496,6 +8496,29 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_log.warning.call_args[0][0],
         )
         mock_unplug.assert_not_called()
+
+    @mock.patch('nova.compute.manager.LOG.warning')
+    def test__cleanup_allocated_networks_osvif_error(self, mock_log):
+        with test.nested(
+            mock.patch.object(self.compute.network_api,
+                              'get_instance_nw_info'),
+            mock.patch.object(self.compute.driver, 'unplug_vifs',
+                side_effect=ValueError('Malformed MAC 40:28:0:00:2:6')),
+            mock.patch.object(self.compute, '_deallocate_network'),
+            mock.patch.object(self.instance, 'save'),
+        ) as (mock_nwinfo, mock_unplug, mock_deallocate_network, mock_save):
+            self.compute._cleanup_allocated_networks(
+                self.context, self.instance, self.requested_networks)
+
+        mock_nwinfo.assert_called_once_with(self.context, self.instance)
+        self.assertEqual(1, mock_log.call_count)
+        self.assertIn(
+            'Cleaning up VIFs failed for instance. Error: %s',
+            mock_log.call_args[0][0],
+        )
+        mock_deallocate_network.assert_called_once_with(
+            self.context, self.instance, self.requested_networks)
+        mock_save.assert_called_once_with()
 
     def test_split_network_arqs(self):
         arqs = [

@@ -2985,7 +2985,7 @@ class ComputeManager(manager.Manager):
                 'Virt driver does not provide unplug_vifs method, so it '
                 'is not possible determine if VIFs should be unplugged.'
             )
-        except exception.NovaException as exc:
+        except Exception as exc:
             # It's possible that the instance never got as far as plugging
             # VIFs, in which case we would see an exception which can be
             # mostly ignored
