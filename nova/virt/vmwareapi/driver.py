@@ -878,7 +878,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                                            block_migration=False,
                                            disk_over_commit=False):
         """Check if it is possible to execute live migration."""
-        data = objects.migrate_data.VMWareLiveMigrateData()
+        data = objects.migrate_data.VMwareLiveMigrateData()
 
         data.instance_already_migrated = (
                 self.instance_exists(instance) and  # In this vcenter
