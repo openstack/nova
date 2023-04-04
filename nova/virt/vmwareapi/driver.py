@@ -824,6 +824,32 @@ class VMwareVCDriver(driver.ComputeDriver):
                                            block_migration=False,
                                            disk_over_commit=False):
         """Check if it is possible to execute live migration."""
+        RequestSpec = objects.request_spec.RequestSpec
+        request_spec = RequestSpec.get_by_instance_uuid(context, instance.uuid)
+        target_host_ref_value = None
+        scheduler_hints = request_spec.scheduler_hints
+        if scheduler_hints and 'requested_host_ref' in scheduler_hints:
+            # scheduler_hints are always saved as list
+            target_host_ref_value = scheduler_hints['requested_host_ref'][0]
+            target_host_ref = vim_util.get_moref(target_host_ref_value,
+                                                 'HostSystem')
+            try:
+                target_host_name = self._session._call_method(
+                    vim_util, "get_object_property", target_host_ref, "name")
+            except vexc.ManagedObjectNotFoundException:
+                msg = f"Cannot find given target node {target_host_ref_value}"
+                raise exception.MigrationPreCheckError(reason=msg)
+            host_stats = self._vc_state.get_host_stats().get(target_host_name)
+            if not host_stats:
+                msg = (f"Cannot find given node {target_host_name} in host "
+                       "stats (doesn't belong to this cluster or is a "
+                       "failover host)")
+                raise exception.MigrationPreCheckError(reason=msg)
+            if not host_stats['available']:
+                msg = (f"Given node {target_host_name} is unsuitable "
+                       "(available = False)")
+                raise exception.MigrationPreCheckError(reason=msg)
+
         data = objects.migrate_data.VMwareLiveMigrateData()
 
         data.instance_already_migrated = (
@@ -844,7 +870,8 @@ class VMwareVCDriver(driver.ComputeDriver):
                 password=CONF.vmware.host_password))
 
         data.relocate_defaults = {
-            "service": nova_vim_util.serialize_object(service, typed=True)
+            "service": nova_vim_util.serialize_object(service, typed=True),
+            "target_host_ref_value": target_host_ref_value
         }
 
         return data

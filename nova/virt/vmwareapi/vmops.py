@@ -2667,7 +2667,13 @@ class VMwareVMOps(object):
 
     def pre_live_migration(self, context, instance, block_device_info,
                             network_info, disk_info, migrate_data):
-        result = self.place_vm(context, instance)
+        defaults = migrate_data.relocate_defaults
+        target_host_ref_value = defaults.pop('target_host_ref_value', None)
+        target_host_ref = None
+        if target_host_ref_value:
+            target_host_ref = vutil.get_moref(target_host_ref_value,
+                                              'HostSystem')
+        result = self.place_vm(context, instance, host_ref=target_host_ref)
 
         if hasattr(result, 'drsFault'):
             LOG.error("Placement Error: %s", vutil.serialize_object(
@@ -2699,8 +2705,6 @@ class VMwareVMOps(object):
             raise exception.MigrationError(
                 reason="No datastore with enough resources")
 
-        # relocate_defaults are serialized/deserialized on put/get
-        defaults = migrate_data.relocate_defaults
         spec = vutil.serialize_object(relocate_spec)
         defaults["relocate_spec"] = spec
         # Writing the values back
@@ -4120,7 +4124,7 @@ class VMwareVMOps(object):
 
         _sync_sync_server_group(context, sg_uuid)
 
-    def place_vm(self, context, instance):
+    def place_vm(self, context, instance, host_ref=None):
         # We currently only fill the bare-minimum to get a placement.
         # The datastore for the VM is selected as on instance creation,
         # instead of allowing placevm to decide it (which may be better)
@@ -4145,6 +4149,7 @@ class VMwareVMOps(object):
             client_factory,
             res_pool=self._root_resource_pool,
             datastore=vi.datastore.ref,
+            host=host_ref,
             disk_move_type="moveAllDiskBackingsAndDisallowSharing",
             folder=vm_folder)
 

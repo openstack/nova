@@ -67,7 +67,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         body_map = {'_migrate_live': self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
                                        'hostname', self.force, self.async_),
-                                      {}),
+                                      {'host_ref': None}),
                     '_migrate': ((), {'host_name': self.host_name})}
         self._test_actions(['_migrate', '_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
@@ -79,7 +79,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         body_map = {'_migrate_live': self._get_migration_body(host=None)}
         args_map = {'_migrate_live': ((False, self.disk_over_commit, None,
                                        self.force, self.async_),
-                                      {}),
+                                      {'host_ref': None}),
                     '_migrate': ((), {'host_name': None})}
         self._test_actions(['_migrate', '_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
@@ -98,7 +98,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                     self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
                                        'hostname', self.force, self.async_),
-                                      {}),
+                                      {'host_ref': None}),
                     '_migrate': ((), {'host_name': self.host_name})}
         exception_arg = {'_migrate': 'migrate',
                          '_migrate_live': 'os-migrateLive'}
@@ -115,7 +115,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                     self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
                                        'hostname', self.force, self.async_),
-                                      {}),
+                                      {'host_ref': None}),
                     '_migrate': ((), {'host_name': self.host_name})}
         self._test_actions_with_locked_instance(
             ['_migrate', '_migrate_live'], body_map=body_map,
@@ -162,7 +162,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             self.assertEqual(202, live_migrate_method.wsgi_code)
             mock_live_migrate.assert_called_once_with(
                 self.context, instance, False, self.disk_over_commit,
-                'hostname', self.force, self.async_)
+                'hostname', self.force, self.async_, host_ref=None)
 
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=['numa_topology'],
@@ -241,7 +241,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                 self.assertIn(str(fake_exc), ex.explanation)
             mock_live_migrate.assert_called_once_with(
                 self.context, instance, False, self.disk_over_commit,
-                'hostname', self.force, self.async_)
+                'hostname', self.force, self.async_, host_ref=None)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=['numa_topology'],
                                               cell_down_support=False)
@@ -367,7 +367,7 @@ class MigrateServerTestsV225(MigrateServerTestsV21):
         body_map = {'_migrate_live': {'os-migrateLive': {'host': 'hostname',
                                       'block_migration': 'auto'}}}
         args_map = {'_migrate_live': ((None, None, 'hostname', self.force,
-                                       self.async_), {})}
+                                       self.async_), {'host_ref': None})}
         self._test_actions(['_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
@@ -400,7 +400,7 @@ class MigrateServerTestsV230(MigrateServerTestsV225):
                                       'block_migration': 'auto',
                                       'force': literal_force}}}
         args_map = {'_migrate_live': ((None, None, 'hostname', force,
-                                       self.async_), {})}
+                                       self.async_), {'host_ref': None})}
         self._test_actions(['_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
@@ -489,7 +489,7 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
                               self.req, instance.uuid, body=body)
             mock_live_migrate.assert_called_once_with(
                 self.context, instance, None, self.disk_over_commit,
-                'hostname', self.force, self.async_)
+                'hostname', self.force, self.async_, host_ref=None)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=['numa_topology'],
                                               cell_down_support=False)
@@ -508,7 +508,7 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
                               self.req, instance.uuid, body=body)
             mock_live_migrate.assert_called_once_with(
                 self.context, instance, None, self.disk_over_commit,
-                'hostname', self.force, self.async_)
+                'hostname', self.force, self.async_, host_ref=None)
         self.mock_get.assert_called_once_with(self.context, instance.uuid,
                                               expected_attrs=['numa_topology'],
                                               cell_down_support=False)
@@ -616,7 +616,7 @@ class MigrateServerTestsV268(MigrateServerTestsV256):
         body_map = {'_migrate_live': {'os-migrateLive': {'host': 'hostname',
                                       'block_migration': 'auto'}}}
         args_map = {'_migrate_live': ((None, None, 'hostname', False,
-                                       self.async_), {})}
+                                       self.async_), {'host_ref': None})}
         self._test_actions(['_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)

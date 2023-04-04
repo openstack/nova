@@ -5539,7 +5539,8 @@ class API:
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
     def live_migrate(self, context, instance, block_migration,
-                     disk_over_commit, host_name, force=None, async_=False):
+                     disk_over_commit, host_name, force=None, async_=False,
+                     host_ref=None):
         """Migrate a server lively to a new host."""
         LOG.debug("Going to try to live migrate instance to %s",
                   host_name or "another host", instance=instance)
@@ -5551,6 +5552,21 @@ class API:
 
         request_spec = objects.RequestSpec.get_by_instance_uuid(
             context, instance.uuid)
+
+        if host_ref:
+            if 'scheduler_hints' not in request_spec:
+                request_spec.scheduler_hints = {}
+            request_spec.scheduler_hints['requested_host_ref'] = [host_ref]
+            # need to save it here so we can fetch the changes from the DB in
+            # nova-compute
+            request_spec.save()
+        else:
+            # we need to make sure there are no left-overs from previous
+            # live-migrations requesting a specific host_ref
+            if 'scheduler_hints' in request_spec and\
+                    'requested_host_ref' in request_spec.scheduler_hints:
+                del request_spec.scheduler_hints['requested_host_ref']
+                request_spec.save()
 
         instance.task_state = task_states.MIGRATING
         instance.save(expected_task_state=[None])
