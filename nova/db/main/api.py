@@ -4176,6 +4176,12 @@ def _get_fk_stmts(metadata, conn, table, column, records):
             fk_column = fk_table.c.id
 
         for fk in fk_table.foreign_keys:
+            if table != fk.column.table:
+                # if the foreign key doesn't actually point to the table we're
+                # archiving entries from then it's not relevant; trying to
+                # resolve this would result in a cartesian product
+                continue
+
             # We need to find the records in the referring (child) table that
             # correspond to the records in our (parent) table so we can archive
             # them.
@@ -4225,6 +4231,7 @@ def _get_fk_stmts(metadata, conn, table, column, records):
                 # deque.
                 fk_delete = fk_table.delete().where(fk_column.in_(fk_records))
                 deletes.appendleft(fk_delete)
+
         # Repeat for any possible nested child tables.
         i, d = _get_fk_stmts(metadata, conn, fk_table, fk_column, fk_records)
         inserts.extendleft(i)
