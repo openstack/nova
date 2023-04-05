@@ -1417,7 +1417,7 @@ class Host(object):
     def list_mediated_devices(self, flags=0):
         """Lookup mediated devices.
 
-        :returns: a list of virNodeDevice instance
+        :returns: a list of strings with the name of the instance
         """
         return self._list_devices("mdev", flags=flags)
 
