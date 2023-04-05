@@ -290,11 +290,6 @@ class ResourceTracker(object):
         resources after the compute operation is finished.
         """
         image_meta = image_meta or {}
-        if migration:
-            self._claim_existing_migration(migration, nodename)
-        else:
-            migration = self._create_migration(
-                context, instance, new_flavor, nodename, move_type)
 
         if self.disabled(nodename):
             # This means we were asked to accept an incoming migration to a
@@ -310,6 +305,11 @@ class ResourceTracker(object):
                      'node': 'nodename'})
 
         cn = self.compute_nodes[nodename]
+        if migration:
+            self._claim_existing_migration(migration, cn)
+        else:
+            migration = self._create_migration(
+                context, instance, new_flavor, cn, move_type)
 
         # TODO(moshele): we are recreating the pci requests even if
         # there was no change on resize. This will cause allocating
@@ -380,7 +380,7 @@ class ResourceTracker(object):
         return claim
 
     def _create_migration(
-        self, context, instance, new_flavor, nodename, move_type=None,
+        self, context, instance, new_flavor, node, move_type=None,
     ):
         """Create a migration record for the upcoming resize.  This should
         be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
@@ -388,7 +388,8 @@ class ResourceTracker(object):
         """
         migration = objects.Migration(context=context.elevated())
         migration.dest_compute = self.host
-        migration.dest_node = nodename
+        migration.dest_node = node.hypervisor_hostname
+        migration.dest_compute_id = node.id
         migration.dest_host = self.driver.get_host_ip_addr()
         migration.old_instance_type_id = instance.flavor.id
         migration.new_instance_type_id = new_flavor.id
@@ -404,7 +405,7 @@ class ResourceTracker(object):
         migration.create()
         return migration
 
-    def _claim_existing_migration(self, migration, nodename):
+    def _claim_existing_migration(self, migration, node):
         """Make an existing migration record count for resource tracking.
 
         If a migration record was created already before the request made
@@ -413,7 +414,8 @@ class ResourceTracker(object):
         COMPUTE_RESOURCES_SEMAPHORE is held.
         """
         migration.dest_compute = self.host
-        migration.dest_node = nodename
+        migration.dest_node = node.hypervisor_hostname
+        migration.dest_compute_id = node.id
         migration.dest_host = self.driver.get_host_ip_addr()
         # NOTE(artom) Migration objects for live migrations are created with
         # status 'accepted' by the conductor in live_migrate_instance() and do

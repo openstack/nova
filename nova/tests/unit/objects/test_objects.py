@@ -1099,7 +1099,7 @@ object_data = {
     'LibvirtLiveMigrateNUMAInfo': '1.0-0e777677f3459d0ed1634eabbdb6c22f',
     'LibvirtVPMEMDevice': '1.0-17ffaf47585199eeb9a2b83d6bde069f',
     'MemoryDiagnostics': '1.0-2c995ae0f2223bb0f8e523c5cc0b83da',
-    'Migration': '1.7-bd45b232fd7c95cd79ae9187e10ef582',
+    'Migration': '1.8-6ed577d80e71e9b9d88b8cf358af3781',
     'MigrationContext': '1.2-89f10a83999f852a489962ae37d8a026',
     'MigrationList': '1.5-36793f8d65bae421bd5564d09a4de7be',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',

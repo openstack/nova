@@ -82,6 +82,7 @@ class ServerMigrationsSamplesJsonTestV2_23(test_servers.ServersSampleBase):
         {
             'source_node': 'node1',
             'dest_node': 'node2',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute2',
             'dest_host': '1.2.3.4',
@@ -103,6 +104,7 @@ class ServerMigrationsSamplesJsonTestV2_23(test_servers.ServersSampleBase):
         {
             'source_node': 'node10',
             'dest_node': 'node20',
+            'dest_compute_id': 456,
             'source_compute': 'compute10',
             'dest_compute': 'compute20',
             'dest_host': '5.6.7.8',
@@ -183,6 +185,7 @@ class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
         fake_migration = {
             'source_node': self.compute.host,
             'dest_node': 'node10',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute12',
             'migration_type': 'live-migration',

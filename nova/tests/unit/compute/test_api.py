@@ -4794,6 +4794,7 @@ class _ComputeAPIUnitTestMixIn(object):
         migrations[42] = {'id': 42, 'source_compute': 'host1',
                           'dest_compute': 'host2', 'source_node': None,
                           'dest_node': None, 'dest_host': None,
+                          'dest_compute_id': None,
                           'old_instance_type_id': None,
                           'new_instance_type_id': None,
                           'uuid': uuids.migration,

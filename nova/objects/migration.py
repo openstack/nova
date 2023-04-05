@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_db import exception as db_exc
+from oslo_log import log as logging
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
@@ -22,6 +23,9 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+
+
+LOG = logging.getLogger(__name__)
 
 
 def determine_migration_type(migration):
@@ -48,7 +52,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
     # Version 1.5: Added uuid
     # Version 1.6: Added cross_cell_move and get_by_uuid().
     # Version 1.7: Added user_id and project_id
-    VERSION = '1.7'
+    # Version 1.8: Added dest_compute_id
+    VERSION = '1.8'
 
     fields = {
         'id': fields.IntegerField(),
@@ -57,6 +62,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
         'dest_compute': fields.StringField(nullable=True),    # dest hostname
         'source_node': fields.StringField(nullable=True),     # source nodename
         'dest_node': fields.StringField(nullable=True),       # dest nodename
+        # ID of ComputeNode matching dest_node
+        'dest_compute_id': fields.IntegerField(nullable=True),
         'dest_host': fields.StringField(nullable=True),       # dest host IP
         # TODO(stephenfin): Rename these to old_flavor_id, new_flavor_id in
         # v2.0
@@ -119,6 +126,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
                 del primitive['user_id']
             if 'project_id' in primitive:
                 del primitive['project_id']
+        if target_version < (1, 8):
+            primitive.pop('dest_compute_id', None)
 
     def obj_load_attr(self, attrname):
         if attrname == 'migration_type':
@@ -184,6 +193,21 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
                 action="create",
                 reason=_("cannot create a Migration object without a "
                          "migration_type set"))
+        version = versionutils.convert_version_to_tuple(self.VERSION)
+        if 'dest_node' in updates and 'dest_compute_id' not in updates:
+            # NOTE(danms): This is not really the best idea, as we should try
+            # not to have different behavior based on the version of the
+            # object. However, this exception helps us find cases in testing
+            # where these may not be updated together. We can remove this
+            # later.
+            if version >= (1, 8):
+                raise exception.ObjectActionError(
+                    action='create',
+                    reason=_('cannot create a Migration object with a '
+                             'dest_node but no dest_compute_id'))
+            else:
+                LOG.warning('Migration is being created for %s but no '
+                            'compute_id is set', self.dest_node)
         db_migration = db.migration_create(self._context, updates)
         self._from_db_object(self._context, self, db_migration)
 
@@ -218,6 +242,23 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
     @property
     def is_same_host_resize(self):
         return self.is_resize and self.source_node == self.dest_node
+
+    def get_dest_compute_id(self):
+        """Try to determine the ComputeNode id this migration targets.
+
+        This should be just the dest_compute_id field, but for migrations
+        created by older compute nodes, we may not have that set. If not,
+        look up the compute the old way for compatibility.
+
+        :raises:ComputeHostNotFound if the destination compute is missing
+        """
+        if 'dest_compute_id' not in self:
+            self.dest_compute_id = (
+                objects.ComputeNode.get_by_host_and_nodename(
+                    self._context,
+                    self.dest_compute,
+                    self.dest_node).id)
+        return self.dest_compute_id
 
 
 @base.NovaObjectRegistry.register

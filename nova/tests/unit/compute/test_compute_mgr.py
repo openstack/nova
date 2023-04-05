@@ -12012,6 +12012,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.migration.migration_type = 'resize'
         self.migration.dest_compute = uuids.dest
         self.migration.dest_node = uuids.dest
+        self.migration.dest_compute_id = 123
 
         with mock.patch.object(self.compute, 'network_api') as network_api:
             network_api.get_instance_nw_info.return_value = nwinfo
