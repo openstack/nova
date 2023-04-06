@@ -833,6 +833,16 @@ class WarningsFixture(fixtures.Fixture):
 
         self.addCleanup(warnings.resetwarnings)
 
+        # Enable general SQLAlchemy warnings also to ensure we're not doing
+        # silly stuff. It's possible that we'll need to filter things out here
+        # with future SQLAlchemy versions, but that's a good thing
+
+        warnings.filterwarnings(
+            'error',
+            module='nova',
+            category=sqla_exc.SAWarning,
+        )
+
 
 class ConfPatcher(fixtures.Fixture):
     """Fixture to patch and restore global CONF.
