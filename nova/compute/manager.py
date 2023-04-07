@@ -675,6 +675,7 @@ class ComputeManager(manager.Manager):
         # NOTE(russellb) Load the driver last.  It may call back into the
         # compute manager via the virtapi, so we want it to be fully
         # initialized before that happens.
+        self.service_ref = None
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.rt = resource_tracker.ResourceTracker(
             self.host, self.driver, reportclient=self.reportclient)
@@ -1749,11 +1750,13 @@ class ComputeManager(manager.Manager):
                             instance_uuid=migration.instance_uuid)
         self._waiting_live_migrations.clear()
 
-    def pre_start_hook(self):
+    def pre_start_hook(self, service_ref):
         """After the service is initialized, but before we fully bring
         the service up by listening on RPC queues, make sure to update
         our available resources (and indirectly our available nodes).
         """
+        self.service_ref = service_ref
+        self.rt.set_service_ref(service_ref)
         self.update_available_resource(nova.context.get_admin_context(),
                                        startup=True)
 

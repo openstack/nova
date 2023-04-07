@@ -487,11 +487,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         """Very simple test just to make sure update_available_resource is
         called as expected.
         """
+        fake_service = objects.Service(id=123, host=self.compute.host)
         with mock.patch.object(
                 self.compute, 'update_available_resource') as update_res:
-            self.compute.pre_start_hook()
+            self.compute.pre_start_hook(fake_service)
         update_res.assert_called_once_with(
             get_admin_context.return_value, startup=True)
+        self.assertEqual(fake_service, self.compute.rt.service_ref)
 
     @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
                        side_effect=exception.NotFound)

@@ -174,7 +174,7 @@ class Service(service.Service):
                 self.service_ref = objects.Service.get_by_host_and_binary(
                     ctxt, self.host, self.binary)
 
-        self.manager.pre_start_hook()
+        self.manager.pre_start_hook(self.service_ref)
 
         if self.backdoor_port is not None:
             self.manager.backdoor_port = self.backdoor_port
@@ -443,9 +443,10 @@ class WSGIService(service.Service):
                 service_ref = objects.Service.get_by_host_and_binary(
                     ctxt, self.host, self.binary)
 
+        self.service_ref = service_ref
         if self.manager:
             self.manager.init_host()
-            self.manager.pre_start_hook()
+            self.manager.pre_start_hook(self.service_ref)
             if self.backdoor_port is not None:
                 self.manager.backdoor_port = self.backdoor_port
         self.server.start()

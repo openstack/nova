@@ -134,7 +134,8 @@ class ServiceTestCase(test.NoDBTestCase):
         mock_create.assert_called_once_with()
         # pre_start_hook is called after service record is created,
         # but before RPC consumer is created
-        serv.manager.pre_start_hook.assert_called_once_with()
+        serv.manager.pre_start_hook.assert_called_once_with(
+            serv.service_ref)
         # post_start_hook is called after RPC consumer is created.
         serv.manager.post_start_hook.assert_called_once_with()
 
@@ -221,7 +222,7 @@ class ServiceTestCase(test.NoDBTestCase):
                                                             self.host,
                                                             self.binary)
         mock_create.assert_called_once_with()
-        serv.manager.pre_start_hook.assert_called_once_with()
+        serv.manager.pre_start_hook.assert_called_once_with(serv.service_ref)
         serv.manager.post_start_hook.assert_called_once_with()
         serv.stop()
         mock_stop.assert_called_once_with()

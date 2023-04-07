@@ -50,6 +50,7 @@ from nova.virt import driver
 
 _HOSTNAME = 'fake-host'
 _NODENAME = 'fake-node'
+_SERVICE_ID = 123
 CONF = cfg.CONF
 
 _VIRT_DRIVER_AVAIL_RESOURCES = {
@@ -82,6 +83,7 @@ _COMPUTE_NODE_FIXTURES = [
         hypervisor_type='fake',
         hypervisor_version=0,
         hypervisor_hostname=_NODENAME,
+        service_id=_SERVICE_ID,
         free_ram_mb=(_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'] -
                      _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb_used']),
         free_disk_gb=(_VIRT_DRIVER_AVAIL_RESOURCES['local_gb'] -
@@ -505,6 +507,10 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES):
                        return_value=report_client_mock),
             mock.patch('nova.rpc.get_notifier', return_value=notifier_mock)):
         rt = resource_tracker.ResourceTracker(hostname, vd)
+
+    fake_service = objects.Service(id=_SERVICE_ID, host=hostname)
+    rt.set_service_ref(fake_service)
+
     return (rt, query_client_mock, report_client_mock, vd)
 
 
@@ -1424,6 +1430,7 @@ class TestInitComputeNode(BaseTestCase):
             hypervisor_hostname=resources['hypervisor_hostname'],
             # NOTE(sbauza): ResourceTracker adds host field
             host=_HOSTNAME,
+            service_id=_SERVICE_ID,
             # NOTE(sbauza): ResourceTracker adds CONF allocation ratios
             ram_allocation_ratio=CONF.initial_ram_allocation_ratio,
             cpu_allocation_ratio=CONF.initial_cpu_allocation_ratio,
@@ -1441,6 +1448,8 @@ class TestInitComputeNode(BaseTestCase):
                                          uuids.compute_node_uuid)
 
         create_mock.assert_called_once_with()
+        self.assertEqual(obj_base.obj_to_primitive(expected_compute),
+                         obj_base.obj_to_primitive(cn))
         self.assertTrue(obj_base.obj_equal_prims(expected_compute, cn))
         setup_pci.assert_called_once_with(mock.sentinel.ctx, cn, resources)
         self.assertFalse(update_mock.called)
@@ -1567,6 +1576,23 @@ class TestInitComputeNode(BaseTestCase):
                           self.rt._init_compute_node,
                           mock.MagicMock,
                           resources)
+
+    def test_init_compute_node_updates_service_id(self):
+        unset = object()
+        # Make sure that we can go from unset, none, or some other service_id
+        # to the one in our RT's service_ref
+        for iv in [unset, None, 121]:
+            compute = objects.ComputeNode(uuid=uuids.fakenode, id=7)
+            if iv is not unset:
+                compute.service_id = iv
+            self._setup_rt()
+            resources = {'hypervisor_hostname': 'fake-node',
+                        'uuid': uuids.fakenode}
+            self.rt.compute_nodes = {'fake-node': compute}
+            with mock.patch.object(self.rt, '_setup_pci_tracker'):
+                self.rt._init_compute_node(mock.MagicMock(), resources)
+            self.assertIn('service_id', compute)
+            self.assertEqual(self.rt.service_ref.id, compute.service_id)
 
 
 @ddt.ddt
@@ -4283,6 +4309,37 @@ class ResourceTrackerTestCase(test.NoDBTestCase):
 
         self.assertRaises(AssertionError, _test_explict_unfair)
         self.assertRaises(AssertionError, _test_implicit_unfair)
+
+    def test_set_service_ref(self):
+        rt = resource_tracker.ResourceTracker(
+            _HOSTNAME, mock.sentinel.driver, mock.sentinel.reportclient)
+
+        # The service ref should default to None and we should be able to set
+        # the service ref to anything from that state, as long as the host
+        # matches what the rt was initialized with
+        self.assertIsNone(rt.service_ref)
+        service = objects.Service(id=123, host=_HOSTNAME)
+        rt.set_service_ref(service)
+        self.assertEqual(service, rt.service_ref)
+
+        # We should be able to set the service again with the same attributes
+        # without raising
+        service = service.obj_clone()
+        rt.set_service_ref(service)
+
+        # A service with a different id is an error
+        service = objects.Service(id=456, host=_HOSTNAME)
+        self.assertRaises(exc.ComputeServiceInUse,
+                          rt.set_service_ref, service)
+
+        # A service with a different host is an error
+        service = objects.Service(id=123, host='foo')
+        self.assertRaises(exc.ServiceNotUnique,
+                          rt.set_service_ref, service)
+
+        # Make sure we haven't disturbed the stored ref with the above
+        self.assertEqual(123, rt.service_ref.id)
+        self.assertEqual(_HOSTNAME, rt.service_ref.host)
 
 
 class ProviderConfigTestCases(BaseTestCase):
