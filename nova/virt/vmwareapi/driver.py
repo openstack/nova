@@ -234,7 +234,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         pass
 
     def resume_state_on_host_boot(self, context, instance, network_info,
-                                  block_device_info=None):
+                                  share_info, block_device_info=None):
         """resume guest state when a host is booted."""
         # Check if the instance is running already and avoid doing
         # anything if it is.

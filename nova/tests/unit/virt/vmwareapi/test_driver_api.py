@@ -1424,8 +1424,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def test_resume_state_on_host_boot(self, mock_get_vm_state,
                                        mock_reboot):
         self._create_instance()
+        share_info = objects.ShareMappingList()
         self.conn.resume_state_on_host_boot(self.context, self.instance,
-                'network_info')
+                'network_info', share_info)
         mock_get_vm_state.assert_called_once_with(self.conn._session,
                                                   self.instance)
         mock_reboot.assert_called_once_with(self.context, self.instance,
@@ -1439,9 +1440,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 mock.patch.object(vm_util, 'get_vm_state',
                                   return_value=state)
             ) as (mock_reboot, mock_get_vm_state):
-                self.conn.resume_state_on_host_boot(self.context,
-                                                    self.instance,
-                                                    'network_info')
+                share_info = objects.ShareMappingList()
+                self.conn.resume_state_on_host_boot(
+                    self.context, self.instance, 'network_info', share_info)
                 mock_get_vm_state.assert_called_once_with(self.conn._session,
                                                           self.instance)
                 self.assertFalse(mock_reboot.called)

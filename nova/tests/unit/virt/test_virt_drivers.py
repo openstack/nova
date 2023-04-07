@@ -276,8 +276,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_resume_state_on_host_boot(self):
         instance_ref, network_info = self._get_running_instance()
+        share_info = objects.ShareMappingList()
         self.connection.resume_state_on_host_boot(self.ctxt, instance_ref,
-                                                  network_info)
+                                                  network_info, share_info)
 
     @catch_notimplementederror
     def test_rescue(self):
