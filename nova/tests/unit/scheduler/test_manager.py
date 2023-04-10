@@ -19,6 +19,7 @@ Tests For Scheduler
 
 from unittest import mock
 
+from keystoneauth1 import exceptions as ks_exc
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -1687,6 +1688,41 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
         mock_log_warning.assert_not_called()
         mock_log_debug.assert_called_once_with(msg)
+
+    @mock.patch('nova.scheduler.client.report.report_client_singleton')
+    @mock.patch.object(manager, 'LOG')
+    @mock.patch('nova.scheduler.host_manager.HostManager')
+    @mock.patch('nova.servicegroup.API')
+    @mock.patch('nova.rpc.get_notifier')
+    def test_init_lazy_placement_client(self, mock_rpc, mock_sg, mock_hm,
+                                        mock_log, mock_report):
+        # Simulate keytone or placement being offline at startup
+        mock_report.side_effect = ks_exc.RequestTimeout
+        mgr = manager.SchedulerManager()
+        mock_report.assert_called_once_with()
+        self.assertTrue(mock_log.warning.called)
+
+        # Make sure we're raising the actual error to subsequent callers
+        self.assertRaises(ks_exc.RequestTimeout, lambda: mgr.placement_client)
+
+        # Simulate recovery of the keystone or placement service
+        mock_report.reset_mock(side_effect=True)
+        mgr.placement_client
+        mock_report.assert_called_once_with()
+
+    @mock.patch('nova.scheduler.client.report.report_client_singleton')
+    @mock.patch('nova.scheduler.host_manager.HostManager')
+    @mock.patch('nova.servicegroup.API')
+    @mock.patch('nova.rpc.get_notifier')
+    def test_init_lazy_placement_client_failures(self, mock_rpc, mock_sg,
+                                                 mock_hm, mock_report):
+        # Certain keystoneclient exceptions are fatal
+        mock_report.side_effect = ks_exc.Unauthorized
+        self.assertRaises(ks_exc.Unauthorized, manager.SchedulerManager)
+
+        # Anything else is fatal
+        mock_report.side_effect = test.TestingException
+        self.assertRaises(test.TestingException, manager.SchedulerManager)
 
 
 class SchedulerManagerAllocationCandidateTestCase(test.NoDBTestCase):
