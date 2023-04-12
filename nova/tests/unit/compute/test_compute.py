@@ -8066,7 +8066,8 @@ class ComputeTestCase(BaseTestCase,
         ctxt = context.get_admin_context()
         created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
 
-        filters = {'vm_state': vm_states.BUILDING, 'host': CONF.host}
+        filters = {'vm_state': vm_states.BUILDING, 'host': CONF.host,
+                   'deleted': False}
         # these are the ones that are expired
         old_instances = []
         for x in range(4):
