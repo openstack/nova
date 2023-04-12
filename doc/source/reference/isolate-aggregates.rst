@@ -13,6 +13,8 @@
       License for the specific language governing permissions and limitations
       under the License.
 
+.. _filtering_hosts_by_isolating_aggregates:
+
 Filtering hosts by isolating aggregates
 =======================================
 

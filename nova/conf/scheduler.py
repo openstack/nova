@@ -464,6 +464,49 @@ Possible values:
 * An integer or float value, where the value corresponds to the multipler
   ratio for this weigher.
 """),
+    cfg.FloatOpt("hypervisor_version_weight_multiplier",
+        default=1.0,
+        help="""
+Hypervisor Version weight multiplier ratio.
+
+The multiplier is used for weighting hosts based on the reported
+hypervisor version.
+Negative numbers indicate preferring older hosts,
+the default is to prefer newer hosts to aid with upgrades.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multiplier
+  ratio for this weigher.
+
+Example:
+
+* Strongly prefer older hosts
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    hypervisor_version_weight_multiplier=-1000
+
+
+* Moderately prefer new hosts
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    hypervisor_version_weight_multiplier=2.5
+
+* Disable weigher influence
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    hypervisor_version_weight_multiplier=0
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
+"""),
     cfg.FloatOpt("io_ops_weight_multiplier",
         default=-1.0,
         help="""
