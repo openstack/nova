@@ -52,7 +52,6 @@ class TestVolumeDetachRollback(integrated_helpers._IntegratedTestBase):
         self._wait_for_action_fail_completion(
             server, 'detach_volume', 'compute_detach_volume')
 
-        # FIXME(melwitt): This is the bug, the volume does not go back to
-        # "in-use" after the detach fails.
+        # Assert the volume status was rolled back to "in-use".
         volume = self.volume_api.get(self.ctxt, volume_id)
-        self.assertNotEqual('in-use', volume['status'])
+        self.assertEqual('in-use', volume['status'])

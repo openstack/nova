@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from cinderclient import exceptions as cinder_exception
 from os_brick import encryptors
 from unittest import mock
 
@@ -318,6 +319,30 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertTrue(log.warning.called)
         vol_api.roll_detaching.assert_called_once_with(self.context,
                                                        driver_bdm.volume_id)
+
+    def test_driver_detach_volume_api_raises_exception(self):
+        """Test volume API rollback of detach when an exception raised
+
+        In the compute/api, we call the begin_detaching volume API before
+        calling compute. If an exception is raised later when we call the
+        volume API to detach the volume, we need to roll back the volume
+        status to remain 'in-use' after the detach fails.
+        """
+        exc = cinder_exception.ClientException(500)
+        self.volume_api.terminate_connection.side_effect = exc
+        self.volume_api.attachment_delete.side_effect = exc
+
+        driver_bdm = self.driver_classes['volume'](self.volume_bdm)
+        instance = mock.Mock()
+        virt_driver = mock.Mock()
+
+        self.assertRaises(
+            cinder_exception.ClientException, driver_bdm.detach,
+            self.context, instance, self.volume_api, virt_driver
+        )
+
+        self.volume_api.roll_detaching.assert_called_once_with(
+            self.context, driver_bdm['volume_id'])
 
     def test_no_device_raises(self):
         for name, cls in self.driver_classes.items():

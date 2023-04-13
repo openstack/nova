@@ -546,9 +546,24 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                                'schost': stashed_connector.get('host')})
                     connector = stashed_connector
 
-            volume_api.terminate_connection(context, volume_id, connector)
-            volume_api.detach(context.elevated(), volume_id, instance.uuid,
-                              attachment_id)
+            try:
+                volume_api.terminate_connection(context, volume_id, connector)
+                volume_api.detach(context.elevated(), volume_id, instance.uuid,
+                                  attachment_id)
+            except Exception:
+                # NOTE(melwitt): If we fail to detach the volume for any
+                # reason, attempt to roll back the volume status to "in-use" so
+                # that the user may retry the detach later, if they want. If
+                # the failure was a 500, we might fail the rollback API call as
+                # well, but it's worth trying to roll back the status in case
+                # the detach API failure was due to an intermittent issue.
+                LOG.exception(
+                    f'Volume detach failed for volume {volume_id} '
+                    f'and attachment {attachment_id}', instance=instance
+                )
+                volume_api.roll_detaching(context, volume_id)
+                # Re-raise to compute.
+                raise
         else:
             try:
                 volume_api.attachment_delete(context, self['attachment_id'])
@@ -562,6 +577,21 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                         'attachment_id': self['attachment_id']
                     }
                 )
+            except Exception:
+                # NOTE(melwitt): If we fail to detach the volume for any
+                # reason, attempt to roll back the volume status to "in-use" so
+                # that the user may retry the detach later, if they want. If
+                # the failure was a 500, we might fail the rollback API call as
+                # well, but it's worth trying to roll back the status in case
+                # the detach API failure was due to an intermittent issue.
+                LOG.exception(
+                    f"Volume detach failed for volume {volume_id} "
+                    f"and attachment {self['attachment_id']}",
+                    instance=instance
+                )
+                volume_api.roll_detaching(context, volume_id)
+                # Re-raise to compute.
+                raise
 
     def detach(self, context, instance, volume_api, virt_driver,
                attachment_id=None, destroy_bdm=False):

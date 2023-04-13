@@ -567,10 +567,14 @@ class ComputeVolumeTestCase(BaseTestCase):
         with test.nested(
             mock.patch.object(driver_bdm_volume, 'driver_detach'),
             mock.patch.object(self.compute.volume_api, 'detach'),
+            mock.patch.object(self.compute.volume_api, 'roll_detaching'),
             mock.patch.object(objects.BlockDeviceMapping,
                               'get_by_volume_and_instance'),
             mock.patch.object(fake_bdm, 'destroy')
-        ) as (mock_internal_detach, mock_detach, mock_get, mock_destroy):
+        ) as (
+            mock_internal_detach, mock_detach, mock_rollback, mock_get,
+            mock_destroy
+        ):
             mock_detach.side_effect = test.TestingException
             mock_get.return_value = fake_bdm
             self.assertRaises(
@@ -580,6 +584,8 @@ class ComputeVolumeTestCase(BaseTestCase):
             mock_event.assert_called_once_with(
                 self.context, 'compute_detach_volume', CONF.host,
                 instance.uuid, graceful_exit=False)
+            mock_rollback.assert_called_once_with(
+                self.context, fake_bdm.volume_id)
 
     @mock.patch.object(compute_utils, 'EventReporter')
     def test_detach_volume_bdm_destroyed(self, mock_event):
