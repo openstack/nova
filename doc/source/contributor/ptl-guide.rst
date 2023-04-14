@@ -29,7 +29,11 @@ New PTL
 
 * Get acquainted with the release schedule
 
-  * Example: https://wiki.openstack.org/wiki/Nova/Stein_Release_Schedule
+  * Example: https://releases.openstack.org/antelope/schedule.html
+
+   * Also, note that we usually create a specific wiki page for each cycle like
+     https://wiki.openstack.org/wiki/Nova/2023.1_Release_Schedule but it's
+     preferred to use the main release schedule above.
 
 Project Team Gathering
 ----------------------
@@ -37,30 +41,34 @@ Project Team Gathering
 * Create PTG planning etherpad, retrospective etherpad and alert about it in
   nova meeting and dev mailing list
 
-  * Example: https://etherpad.openstack.org/p/nova-ptg-stein
+  * Example: https://etherpad.opendev.org/p/nova-antelope-ptg
 
 * Run sessions at the PTG
 
-* Have a priorities discussion at the PTG
+* Do a retro of the previous cycle
 
-  * Example: https://etherpad.openstack.org/p/nova-ptg-stein-priorities
+* Make agreement on the agenda for this release, including but not exhaustively:
+
+  * Number of review days, for either specs or implementation
+  * Define the Spec approval and Feature freeze dates
+  * Modify the release schedule if needed by adding the new dates.
+    As an example : https://review.opendev.org/c/openstack/releases/+/877094
+
+* Discuss the implications of the `SLURP or non-SLURP`__ current release
+
+.. __: https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html
 
 * Sign up for group photo at the PTG (if applicable)
 
-* Open review runways for the cycle
-
-  * Example: https://etherpad.openstack.org/p/nova-runways-stein
 
 After PTG
 ---------
 
 * Send PTG session summaries to the dev mailing list
 
-* Make sure the cycle priorities spec gets reviewed and merged
+* Add `RFE bugs`__ if you have action items that are simple to do but without a owner yet.
 
-  * Example: https://specs.openstack.org/openstack/nova-specs/priorities/stein-priorities.html
-
-* Run the count-blueprints script daily to gather data for the cycle burndown chart
+.. __: https://bugs.launchpad.net/nova/+bugs?field.tag=rfe
 
 A few weeks before milestone 1
 ------------------------------
@@ -70,12 +78,13 @@ A few weeks before milestone 1
 * Periodically check the series goals others have proposed in the “Set series
   goals” link:
 
-  * Example: https://blueprints.launchpad.net/nova/stein/+setgoals
+  * Example: https://blueprints.launchpad.net/nova/antelope/+setgoals
 
 Milestone 1
 -----------
 
-* Do milestone release of nova and python-novaclient (in launchpad only)
+* Do milestone release of nova and python-novaclient (in launchpad only, can be
+  optional)
 
   * This is launchpad bookkeeping only. With the latest release team changes,
     projects no longer do milestone releases. See: https://releases.openstack.org/reference/release_models.html#cycle-with-milestones-legacy
@@ -87,6 +96,8 @@ Milestone 1
   the minor version to leave room for future stable branch releases
 
   * os-vif
+  * placement
+  * os-traits / os-resource-classes
 
 * Release stable branches of nova
 
@@ -117,28 +128,26 @@ Summit
 
 * Prepare the on-boarding session materials. Enlist help of others
 
+* Prepare the operator meet-and-greet session. Enlist help of others
+
 A few weeks before milestone 2
 ------------------------------
 
 * Plan a spec review day (optional)
 
-* Periodically check the series goals others have proposed in the “Set series
-  goals” link:
-
-  * Example: https://blueprints.launchpad.net/nova/stein/+setgoals
-
 Milestone 2
 -----------
 
-* Spec freeze
+* Spec freeze (if agreed)
 
-* Release nova and python-novaclient
+* Release nova and python-novaclient (if new features were merged)
 
 * Release other libraries as needed
 
 * Stable branch releases of nova
 
 * For nova, set the launchpad milestone release as “released” with the date
+  (can be optional)
 
 Shortly after spec freeze
 -------------------------
@@ -146,7 +155,7 @@ Shortly after spec freeze
 * Create a blueprint status etherpad to help track, especially non-priority
   blueprint work, to help things get done by Feature Freeze (FF). Example:
 
-  * https://etherpad.openstack.org/p/nova-stein-blueprint-status
+  * https://etherpad.opendev.org/p/nova-antelope-blueprint-status
 
 * Create or review a patch to add the next release’s specs directory so people
   can propose specs for next release after spec freeze for current release
@@ -155,13 +164,15 @@ Non-client library release freeze
 ---------------------------------
 
 * Final release for os-vif
+* Final release for os-traits
+* Final release for os-resource-classes
 
 Milestone 3
 -----------
 
 * Feature freeze day
 
-* Client library freeze, release python-novaclient
+* Client library freeze, release python-novaclient and osc-placement
 
 * Close out all blueprints, including “catch all” blueprints like mox,
   versioned notifications
@@ -170,7 +181,7 @@ Milestone 3
 
 * For nova, set the launchpad milestone release as “released” with the date
 
-* Write the `cycle highlights
+* Start writing the `cycle highlights
   <https://docs.openstack.org/project-team-guide/release-management.html#cycle-highlights>`__
 
 Week following milestone 3
@@ -199,7 +210,7 @@ A few weeks before RC
 * Make a RC1 todos etherpad and tag bugs as ``<release>-rc-potential`` and keep
   track of them, example:
 
-  * https://etherpad.openstack.org/p/nova-stein-rc-potential
+  * https://etherpad.opendev.org/p/nova-antelope-rc-potential
 
 * Go through the bug list and identify any rc-potential bugs and tag them
 
@@ -242,7 +253,7 @@ RC
 
   * Example: https://review.opendev.org/644412
 
-* Write the cycle-highlights in marketing-friendly sentences and propose to the
+* Push the cycle-highlights in marketing-friendly sentences and propose to the
   openstack/releases repo. Usually based on reno prelude but made more readable
   and friendly
 
@@ -257,11 +268,13 @@ Immediately after RC
 
   * https://wiki.openstack.org/wiki/Nova/ReleaseChecklist
 
-  * Drop old RPC compat code (if there was a RPC major version bump)
+  * Drop old RPC compat code (if there was a RPC major version bump and if
+    agreed on at the PTG)
 
     * Example: https://review.opendev.org/543580
 
-  * Bump the oldest supported compute service version
+  * Bump the oldest supported compute service version (if master branch is now
+    on a non-SLURP version)
 
     * https://review.opendev.org/#/c/738482/
 
@@ -275,7 +288,9 @@ Immediately after RC
 
 * Set the previous to last series status to “supported”
 
-* Repeat launchpad steps ^ for python-novaclient
+* Repeat launchpad steps ^ for python-novaclient (optional)
+
+* Repeat launchpad steps ^ for placement
 
 * Register milestones in launchpad for the new cycle based on the new cycle
   release schedule
@@ -293,7 +308,7 @@ Immediately after RC
 
 * Create new release wiki:
 
-  * Example: https://wiki.openstack.org/wiki/Nova/Train_Release_Schedule
+  * Example: https://wiki.openstack.org/wiki/Nova/2023.1_Release_Schedule
 
 * Update the contributor guide for the new cycle
 
