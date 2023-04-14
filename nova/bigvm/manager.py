@@ -384,7 +384,7 @@ class BigVmManager(manager.Manager):
 
                 # retrieve traits so we can find disabled and hana exclusive
                 # hosts
-                traits = client._get_provider_traits(context, rp['uuid'])
+                traits = client.get_provider_traits(context, rp['uuid'])
                 vmware_providers[rp['uuid']] = {
                     'hv_size': hv_size,
                     'host': host,
