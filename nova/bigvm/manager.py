@@ -122,7 +122,7 @@ class BigVmManager(manager.Manager):
         candidates = {}
         for hv_size in set(_flatten(missing_hv_sizes_per_vc.values())):
             resources = ResourceRequest()
-            resources._add_resource(None, MEMORY_MB, hv_size)
+            resources._add_resource(MEMORY_MB, hv_size)
             res = client.get_allocation_candidates(context, resources)
             if res is None:
                 continue
