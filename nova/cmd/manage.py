@@ -3215,7 +3215,7 @@ class ImagePropertyCommands:
         'instance_uuid', metavar='<instance_uuid>',
         help='UUID of the instance')
     @args(
-        'property', metavar='<image_property>',
+        'image_property', metavar='<image_property>',
         help='Image property to show')
     def show(self, instance_uuid=None, image_property=None):
         """Show value of a given instance image property.
@@ -3233,10 +3233,10 @@ class ImagePropertyCommands:
             with context.target_cell(ctxt, im.cell_mapping) as cctxt:
                 instance = objects.Instance.get_by_uuid(
                     cctxt, instance_uuid, expected_attrs=['system_metadata'])
-                image_property = instance.system_metadata.get(
+                property_value = instance.system_metadata.get(
                     f'image_{image_property}')
-                if image_property:
-                    print(image_property)
+                if property_value:
+                    print(property_value)
                     return 0
                 else:
                     print(f'Image property {image_property} not found '
