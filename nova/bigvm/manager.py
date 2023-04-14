@@ -695,24 +695,20 @@ class BigVmManager(manager.Manager):
             # reserve $total
             'max_unit': 2, 'min_unit': 2, 'total': 2}}
 
-        # we can't use `set_inventory_for_provider` here, because that doesn't
-        # tell us if we succeeded ... so we copy everything over.
         client._ensure_resource_provider(
             context, rp_uuid, rp['rp']['name'])
-
-        # Auto-create custom resource classes coming from a virt driver
-        for rc_name in inv_data:
-            if rc_name not in orc.STANDARDS:
-                client._ensure_resource_classes(context, [rc_name])
-
-        if client._update_inventory(context, rp_uuid, inv_data):
+        try:
+            client.set_inventory_for_provider(context, rp_uuid, inv_data)
+        except (exception.ResourceProviderUpdateConflict,
+                exception.ResourceProviderUpdateFailed,
+                exception.InventoryInUse) as err:
+            LOG.error('Adding inventory to the resource-provider for '
+                      'spawning on %(host)s failed: %(err)s',
+                      {'host': rp['host'], 'err': err})
+        else:
             LOG.info('Added inventory to the resource-provider for spawning '
                      'on %(host)s.',
                      {'host': rp['host']})
-        else:
-            LOG.error('Adding inventory to the resource-provider for '
-                      'spawning on %(host)s failed.',
-                      {'host': rp['host']})
 
     def _free_host_for_provider(self, context, rp_uuid, host):
         """Takes care of creating a child resource provider in placement to
