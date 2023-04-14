@@ -403,7 +403,7 @@ class BigVmManager(manager.Manager):
         # retrieve all bigvm provider's inventories
         for rp_uuid, rp in bigvm_providers.items():
             inventory = client._get_inventory(context, rp_uuid)
-            rp['inventory'] = inventory['inventories']
+            rp['inventory'] = inventory['inventories'] if inventory else {}
 
         # make sure grouping by hv_size works properly later on, even if there
         # are marginal differences in the reported hv_size. we need to have all
