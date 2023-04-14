@@ -2231,14 +2231,19 @@ class TestInstanceClaim(BaseTestCase):
         self.rt.compute_nodes = {}
         self.assertTrue(self.rt.disabled(_NODENAME))
 
-        with mock.patch.object(self.instance, 'save'):
-            claim = self.rt.instance_claim(mock.sentinel.ctx, self.instance,
-                                           _NODENAME, self.allocations, None)
+        # Reset all changes to the instance to make sure that we can detect
+        # any manipulation after the failure.
+        self.instance.obj_reset_changes(recursive=True)
 
-        self.assertEqual(self.rt.host, self.instance.host)
-        self.assertEqual(self.rt.host, self.instance.launched_on)
-        self.assertEqual(_NODENAME, self.instance.node)
-        self.assertIsInstance(claim, claims.NopClaim)
+        with mock.patch.object(self.instance, 'save') as mock_save:
+            self.assertRaises(exc.ComputeResourcesUnavailable,
+                              self.rt.instance_claim,
+                              mock.sentinel.ctx, self.instance,
+                              _NODENAME, self.allocations, None)
+            mock_save.assert_not_called()
+
+        # Make sure the instance was not touched by the failed claim process
+        self.assertEqual(set(), self.instance.obj_what_changed())
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
