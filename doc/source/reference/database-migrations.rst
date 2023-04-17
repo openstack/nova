@@ -24,6 +24,10 @@ Schema migrations
    The database migration engine was changed from ``sqlalchemy-migrate`` to
    ``alembic``.
 
+.. versionchanged:: 27.0.0 (Antelope)
+
+   The legacy ``sqlalchemy-migrate``-based database migrations were removed.
+
 The `alembic`__ database migration tool is used to manage schema migrations in
 nova. The migration files and related metadata can be found in
 ``nova/db/api/migrations`` (for the API database) and
@@ -36,10 +40,10 @@ respectively.
 
 .. note::
 
-   There are also legacy migrations provided in the ``legacy_migrations``
-   subdirectory for both the API and main databases. These are provided to
-   facilitate upgrades from pre-Xena (24.0.0) deployments and will be removed
-   in a future release. They should not be modified or extended.
+   There were also legacy migrations provided in the ``legacy_migrations``
+   subdirectory for both the API and main databases. These were provided to
+   facilitate upgrades from pre-Xena (24.0.0) deployments. They were removed
+   in the 27.0.0 (Antelope) release.
 
 The best reference for alembic is the `alembic documentation`__, but a small
 example is provided here. You can create the migration either manually or
