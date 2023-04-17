@@ -180,9 +180,7 @@ class TestDatabaseFixture(testtools.TestCase):
         conn.execute(
             sa.text(
                 "INSERT INTO cell_mappings (uuid, name) VALUES (:uuid, :name)"
-            ),
-            uuid=uuid,
-            name='fake-cell',
+            ).bindparams(uuid=uuid, name='fake-cell'),
         )
         result = conn.execute(sa.text("SELECT * FROM cell_mappings"))
         rows = result.fetchall()
@@ -226,9 +224,7 @@ class TestDatabaseFixture(testtools.TestCase):
         conn.execute(
             sa.text(
                 "INSERT INTO cell_mappings (uuid, name) VALUES (:uuid, :name)"
-            ),
-            uuid=uuid,
-            name='fake-cell',
+            ).bindparams(uuid=uuid, name='fake-cell'),
         )
         result = conn.execute(sa.text("SELECT * FROM cell_mappings"))
         rows = result.fetchall()
