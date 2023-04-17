@@ -758,7 +758,7 @@ class CellV2Commands(object):
             url = sqla_url.make_url(connection)
             url = url.set(database=url.database + '_cell0')
 
-            return urlparse.unquote(str(url))
+            return urlparse.unquote(url.render_as_string(hide_password=False))
 
         dbc = database_connection or cell0_default_connection()
         ctxt = context.RequestContext()
