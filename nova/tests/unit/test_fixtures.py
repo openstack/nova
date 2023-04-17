@@ -353,7 +353,7 @@ class TestBannedDBSchemaOperations(testtools.TestCase):
                               column.alter)
 
     def test_table(self):
-        table = sa.Table()
+        table = sa.Table("foo", sa.MetaData())
         with fixtures.BannedDBSchemaOperations(['Table']):
             self.assertRaises(exception.DBNotAllowed,
                               table.drop)
