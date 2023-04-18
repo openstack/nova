@@ -699,9 +699,7 @@ class BigVmManager(manager.Manager):
             context, rp_uuid, rp['rp']['name'])
         try:
             client.set_inventory_for_provider(context, rp_uuid, inv_data)
-        except (exception.ResourceProviderUpdateConflict,
-                exception.ResourceProviderUpdateFailed,
-                exception.InventoryInUse) as err:
+        except Exception as err:
             LOG.error('Adding inventory to the resource-provider for '
                       'spawning on %(host)s failed: %(err)s',
                       {'host': rp['host'], 'err': err})
