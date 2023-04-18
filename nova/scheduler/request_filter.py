@@ -311,7 +311,7 @@ def routed_networks_filter(
 
     # Get the clients we need
     network_api = neutron.API()
-    report_api = report.SchedulerReportClient()
+    report_api = report.report_client_singleton()
 
     for requested_network in requested_networks:
         network_id = None

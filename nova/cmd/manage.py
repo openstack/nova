@@ -2217,7 +2217,7 @@ class PlacementCommands(object):
                 output(_('No cells to process.'))
                 return 4
 
-        placement = report.SchedulerReportClient()
+        placement = report.report_client_singleton()
 
         neutron = None
         if heal_port_allocations:
@@ -2718,7 +2718,7 @@ class PlacementCommands(object):
         if verbose:
             output = lambda msg: print(msg)
 
-        placement = report.SchedulerReportClient()
+        placement = report.report_client_singleton()
         # Resets two in-memory dicts for knowing instances per compute node
         self.cn_uuid_mapping = collections.defaultdict(tuple)
         self.instances_mapping = collections.defaultdict(list)

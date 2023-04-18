@@ -13043,16 +13043,13 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         hosts = aggregate.hosts if 'hosts' in aggregate else None
         self.assertIn(values[0][1][0], hosts)
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
+    @mock.patch('nova.scheduler.client.report.report_client_singleton')
     def test_placement_client_init(self, mock_report_client):
         """Tests to make sure that the construction of the placement client
-        only happens once per AggregateAPI class instance.
+        uses the singleton helper, and happens only when needed.
         """
-        self.assertIsNone(self.api._placement_client)
-        # Access the property twice to make sure SchedulerReportClient is
-        # only loaded once.
-        for x in range(2):
-            self.api.placement_client
+        self.assertFalse(mock_report_client.called)
+        self.api.placement_client
         mock_report_client.assert_called_once_with()
 
 

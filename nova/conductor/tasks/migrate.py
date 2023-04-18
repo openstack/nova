@@ -54,7 +54,7 @@ def replace_allocation_with_migration(context, instance, migration):
         # and do any rollback required
         raise
 
-    reportclient = report.SchedulerReportClient()
+    reportclient = report.report_client_singleton()
 
     orig_alloc = reportclient.get_allocs_for_consumer(
         context, instance.uuid)['allocations']
@@ -94,7 +94,7 @@ def replace_allocation_with_migration(context, instance, migration):
 def revert_allocation_for_migration(context, source_cn, instance, migration):
     """Revert an allocation made for a migration back to the instance."""
 
-    reportclient = report.SchedulerReportClient()
+    reportclient = report.report_client_singleton()
 
     # FIXME(gibi): This method is flawed in that it does not handle allocations
     # against sharing providers in any special way. This leads to duplicate
