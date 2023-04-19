@@ -264,8 +264,8 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
             msg = (_("""
 Instances found without hw_machine_type set. This warning can be ignored if
 your environment does not contain libvirt based compute hosts.
-Use the `nova-manage machine_type list_unset` command to list these instances.
-For more details see the following:
+Use the `nova-manage libvirt list_unset_machine_type` command to list these
+instances. For more details see the following:
 https://docs.openstack.org/nova/latest/admin/hw-machine-type.html"""))
             return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
 

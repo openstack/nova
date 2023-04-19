@@ -331,8 +331,8 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         self._unset_machine_type(server_shelved_without['id'])
 
         # Assert that both _without instances are listed by
-        # get_instances_without_type as used by `nova-manage machine_type
-        # list_unset` and `nova-status upgrade check`
+        # get_instances_without_type as used by `nova-manage libvirt
+        # list_unset_machine_type` and `nova-status upgrade check`
         instances = machine_type_utils.get_instances_without_type(self.context)
         instance_uuids = [i.uuid for i in instances]
         self.assertIn(
@@ -357,8 +357,9 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
             instances[0].uuid
         )
 
-        # Manually update the machine type of server_shelved_without using
-        # machine_type_utils as used by `nova-manage machine_type update`
+        # Manually update the machine type of server_shelved_without
+        # using machine_type_utils as used by the nova-manage libvirt
+        # update_machine_type command
         machine_type_utils.update_machine_type(
             self.context,
             server_shelved_without['id'],
