@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fix rescuing volume based instance by adding a check for 'hw_rescue_disk'
+    and 'hw_rescue_device' properties in image metadata before attempting
+    to rescue instance.
