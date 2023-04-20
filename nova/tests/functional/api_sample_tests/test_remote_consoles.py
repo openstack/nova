@@ -13,6 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
+from nova.compute import api as compute
+from nova import exception
 from nova.tests.functional.api_sample_tests import test_servers
 
 HTTP_RE = r'(https?://)([\w\d:#@%/;$()~_?\+-=\\.&](#!)?)*'
@@ -37,6 +41,22 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
                                 {'action': 'os-getVNCConsole'})
         self._verify_response('get-vnc-console-post-resp', {'url': HTTP_RE},
                               response, 200)
+
+    @mock.patch.object(compute.API, 'get_vnc_console')
+    def test_get_vnc_console_instance_invalid_state(self,
+                                                    mock_get_vnc_console):
+        uuid = self._post_server()
+
+        def fake_get_vnc_console(*args, **kwargs):
+            raise exception.InstanceInvalidState(
+                attr='fake_attr', state='fake_state', method='fake_method',
+                instance_uuid=uuid)
+
+        mock_get_vnc_console.side_effect = fake_get_vnc_console
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'get-vnc-console-post-req',
+                                 {'action': 'os-getVNCConsole'})
+        self.assertEqual(409, response.status_code)
 
     def test_get_spice_console(self):
         uuid = self._post_server()

@@ -56,6 +56,9 @@ class RemoteConsolesController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceInvalidState as e:
+            common.raise_http_conflict_for_instance_invalid_state(
+                e, 'get_vnc_console', id)
         except NotImplementedError:
             common.raise_feature_not_supported()
 
