@@ -21,6 +21,7 @@ versioned object model os_vif.objects.*
 from os_vif import objects
 from oslo_config import cfg
 from oslo_log import log as logging
+import pbr.version
 
 from nova import exception
 from nova.i18n import _
@@ -347,6 +348,27 @@ def _nova_to_osvif_vif_ovs(vif):
             vif_name=vif_name,
             bridge_name=_get_hybrid_bridge_name(vif))
     else:
+        # NOTE(stephenfin): The 'create_port' attribute was added in os-vif
+        # 1.15.0 and isn't available with the lowest version supported here
+        if (
+            pbr.version.VersionInfo('os-vif').semantic_version() >=
+            pbr.version.SemanticVersion.from_pip_string('1.15.0')
+        ):
+            profile.create_port = vif.get('delegate_create', False)
+        elif vif.get('delegate_create', False):
+            # NOTE(stephenfin): This should never happen, since if the
+            # 'delegate_create' attribute is true then it was set by the
+            # destination compute node as part of the live migration operation:
+            # the same destination compute node that we are currently running
+            # on. We include it for sanity-preservation
+            LOG.warning(
+                'os-vif 1.15.0 or later is required to support '
+                'delegated port creation but you have %s; consider '
+                'updating this package to resolve bugs #1734320 and '
+                '#1815989',
+                pbr.version.VersionInfo('os-vif').version_string(),
+            )
+
         obj = _get_vif_instance(
             vif,
             objects.vif.VIFOpenVSwitch,
