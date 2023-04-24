@@ -658,15 +658,6 @@
             image_conversion:
               output_format: raw
 
-# TODO(gmann): As per the 2023.1 testing runtime, we need to run at least
-# one job on Focal. This job can be removed as per the future testing
-# runtime (whenever we drop the Ubuntu Focal testing).
-- job:
-    name: tempest-integrated-compute-ubuntu-focal
-    description: This is integrated compute job testing on Ubuntu Focal(20.04)
-    parent: tempest-integrated-compute
-    nodeset: openstack-single-node-focal
-
 # TODO(gmann): Remove this jobs once all the required services for intergrate
 # compute gate (Cinder, Glance, Neutron) by default enable scope and new
 # defaults which means all the nova jobs will be tested with new RBAC in
@@ -753,8 +744,6 @@
              - ^setup.cfg$
              - ^tools/.*$
              - ^tox.ini$
-        - tempest-integrated-compute-ubuntu-focal:
-            irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-enforce-scope-new-defaults:
             irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
@@ -790,8 +779,6 @@
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - tempest-integrated-compute:
            irrelevant-files: *policies-irrelevant-files
-        - tempest-integrated-compute-ubuntu-focal:
-            irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-enforce-scope-new-defaults:
             irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
