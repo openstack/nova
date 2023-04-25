@@ -103,6 +103,18 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
             'get_vnc_console',
             exception.InstanceNotFound(instance_id=fakes.FAKE_UUID))
 
+    def test_get_vnc_console_instance_invalid_state(self):
+        body = {'os-getVNCConsole': {'type': 'novnc'}}
+        self._check_console_failure(
+            self.controller.get_vnc_console,
+            webob.exc.HTTPConflict,
+            body,
+            'get_vnc_console',
+            exception.InstanceInvalidState(
+                attr='fake-attr', state='fake-state', method='fake-method',
+                instance_uuid=fakes.FAKE_UUID)
+        )
+
     def test_get_vnc_console_invalid_type(self):
         body = {'os-getVNCConsole': {'type': 'invalid'}}
         self._check_console_failure(
