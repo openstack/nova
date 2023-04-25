@@ -750,6 +750,44 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_attachment.show.assert_called_once_with(attachment_id)
 
     @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_get_all_by_instance(self, mock_cinderclient):
+        mock_attachment = mock.MagicMock()
+        mock_cinderclient.return_value = \
+            mock.MagicMock(attachments=mock_attachment)
+
+        instance_id = uuids.instance_id
+        search_opts = {'instance_id': instance_id}
+        self.api.attachment_get_all(self.ctx, instance_id)
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
+                                                  skip_version_check=True)
+        mock_attachment.list.assert_called_once_with(search_opts=search_opts)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_get_all_by_volume(self, mock_cinderclient):
+        mock_attachment = mock.MagicMock()
+        mock_cinderclient.return_value = \
+            mock.MagicMock(attachments=mock_attachment)
+
+        volume_id = uuids.volume_id
+        search_opts = {'volume_id': volume_id}
+        self.api.attachment_get_all(self.ctx, volume_id=volume_id)
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
+                                                  skip_version_check=True)
+        mock_attachment.list.assert_called_once_with(search_opts=search_opts)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_get_all_failed(self, mock_cinderclient):
+        err = "Either instance or volume id must be passed."
+        mock_cinderclient.return_value.attachments.show.side_effect = (
+            exception.InvalidRequest(err))
+
+        ex = self.assertRaises(exception.InvalidRequest,
+                               self.api.attachment_get_all,
+                               self.ctx)
+
+        self.assertIn(err, str(ex))
+
+    @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_get_failed(self, mock_cinderclient):
         mock_cinderclient.return_value.attachments.show.side_effect = (
                 cinder_exception.NotFound(404, '404'))
