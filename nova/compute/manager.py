@@ -3791,9 +3791,21 @@ class ComputeManager(manager.Manager):
                 try:
                     compute_node = self._get_compute_info(context, self.host)
                     scheduled_node = compute_node.hypervisor_hostname
-                except exception.ComputeHostNotFound:
+                except exception.ComputeHostNotFound as e:
+                    # This means we were asked to rebuild one of our own
+                    # instances, or another instance as a target of an
+                    # evacuation, but we are unable to find a matching compute
+                    # node.
                     LOG.exception('Failed to get compute_info for %s',
                                   self.host)
+                    self._set_migration_status(migration, 'failed')
+                    self._notify_instance_rebuild_error(context, instance, e,
+                                                        bdms)
+                    raise exception.InstanceFaultRollback(
+                        inner_exception=exception.BuildAbortException(
+                        instance_uuid=instance.uuid,
+                        reason=e.format_message()))
+
             else:
                 scheduled_node = instance.node
 

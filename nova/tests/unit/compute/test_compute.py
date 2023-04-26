@@ -13513,7 +13513,8 @@ class EvacuateHostTestCase(BaseTestCase):
         super(EvacuateHostTestCase, self).tearDown()
 
     def _rebuild(self, on_shared_storage=True, migration=None,
-                 send_node=False, vm_states_is_stopped=False):
+                 send_node=False, vm_states_is_stopped=False,
+                 expect_error=False):
         network_api = self.compute.network_api
         ctxt = context.get_admin_context()
 
@@ -13560,6 +13561,11 @@ class EvacuateHostTestCase(BaseTestCase):
                               action='power_off', phase='start'),
                     mock.call(ctxt, self.inst, self.inst.host,
                               action='power_off', phase='end')])
+            elif expect_error:
+                mock_notify_rebuild.assert_has_calls([
+                    mock.call(ctxt, self.inst, self.compute.host,
+                              phase='error', exception=mock.ANY, bdms=bdms)])
+                return
             else:
                 mock_notify_rebuild.assert_has_calls([
                     mock.call(ctxt, self.inst, self.inst.host, phase='start',
@@ -13614,14 +13620,15 @@ class EvacuateHostTestCase(BaseTestCase):
             mock.patch.object(self.compute, '_get_compute_info',
                               side_effect=fake_get_compute_info)
         ) as (mock_inst, mock_get):
-            self._rebuild()
+            self.assertRaises(exception.InstanceFaultRollback,
+                              self._rebuild, expect_error=True)
 
             # Should be on destination host
             instance = db.instance_get(self.context, self.inst.id)
-            self.assertEqual(instance['host'], self.compute.host)
-            self.assertIsNone(instance['node'])
-            self.assertTrue(mock_inst.called)
-            self.assertTrue(mock_get.called)
+            self.assertEqual('fake_host_2', instance['host'])
+            self.assertEqual('fakenode2', instance['node'])
+            mock_inst.assert_not_called()
+            mock_get.assert_called_once_with(mock.ANY, self.compute.host)
 
     def test_rebuild_on_host_node_passed(self):
         patch_get_info = mock.patch.object(self.compute, '_get_compute_info')
