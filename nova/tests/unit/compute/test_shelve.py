@@ -646,7 +646,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.compute.unshelve_instance(
             self.context, instance, image=None,
-            filter_properties={}, node='fake-node', request_spec=request_spec,
+            filter_properties={}, node='fakenode2', request_spec=request_spec,
             accel_uuids=[])
 
         mock_update_pci.assert_called_once_with(
@@ -700,7 +700,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.assertRaises(test.TestingException,
                     self.compute.unshelve_instance, self.context, instance,
                     image=shelved_image, filter_properties={},
-                    node='fake-node', request_spec=fake_spec, accel_uuids=[])
+                    node='fakenode2', request_spec=fake_spec, accel_uuids=[])
         self.assertEqual(instance.image_ref, initial_image_ref)
 
     @mock.patch.object(objects.InstanceList, 'get_by_filters')

@@ -146,16 +146,20 @@ class ResourceTracker(object):
                   during the instance build.
         """
         if self.disabled(nodename):
-            # instance_claim() was called before update_available_resource()
-            # (which ensures that a compute node exists for nodename). We
-            # shouldn't get here but in case we do, just set the instance's
-            # host and nodename attribute (probably incorrect) and return a
-            # NoopClaim.
-            # TODO(jaypipes): Remove all the disabled junk from the resource
-            # tracker. Servicegroup API-level active-checking belongs in the
-            # nova-compute manager.
-            self._set_instance_host_and_node(instance, nodename)
-            return claims.NopClaim()
+            # If we get here, it means we are trying to claim for an instance
+            # that was scheduled to a node that we do not have in our list,
+            # or is in some other way unmanageable by this node. This would
+            # mean that we are unable to account for resources, create
+            # allocations in placement, or do any of the other accounting
+            # necessary for this to work. In the past, this situation was
+            # effectively ignored silently, but in a world where we track
+            # resources with placement and instance assignment to compute nodes
+            # by service, we can no longer be leaky.
+            raise exception.ComputeResourcesUnavailable(
+                ('Attempt to claim resources for instance %(inst)s '
+                 'on unknown node %(node)s failed') % {
+                     'inst': instance.uuid,
+                     'node': nodename})
 
         # sanity checks:
         if instance.host:
@@ -280,9 +284,17 @@ class ResourceTracker(object):
                 context, instance, new_flavor, nodename, move_type)
 
         if self.disabled(nodename):
-            # compute_driver doesn't support resource tracking, just
-            # generate the migration record and continue the resize:
-            return claims.NopClaim(migration=migration)
+            # This means we were asked to accept an incoming migration to a
+            # node that we do not own or track. We really should not get here,
+            # but if we do, we must refuse to continue with the migration
+            # process, since we cannot account for those resources, create
+            # allocations in placement, etc. This has been a silent resource
+            # leak in the past, but it must be a hard failure now.
+            raise exception.ComputeResourcesUnavailable(
+                ('Attempt to claim move resources for instance %(inst)s on '
+                 'unknown node %(node)s failed') % {
+                     'inst': instance.uuid,
+                     'node': 'nodename'})
 
         cn = self.compute_nodes[nodename]
 

@@ -2560,10 +2560,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertFalse(mock_get_info.called)
             self.assertFalse(mock_sync_power_state.called)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_sync_instance_power_state')
     def test_query_driver_power_state_and_sync_not_found_driver(
-            self, mock_sync_power_state):
+            self, mock_sync_power_state, mock_claim):
         error = exception.InstanceNotFound(instance_id=1)
         with mock.patch.object(self.compute.driver,
                                'get_info', side_effect=error) as mock_get_info:
@@ -6568,6 +6569,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
                     self.compute.driver)
         self.compute.rt = fake_rt
+        self.compute.driver._set_nodes([self.node])
+        self.compute.rt.compute_nodes = {self.node: objects.ComputeNode()}
 
         self.allocations = {
             uuids.provider1: {
@@ -6857,6 +6860,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_get_arqs.assert_called_once_with(
             self.instance.uuid, only_resolved=True)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim')
     @mock.patch.object(fake_driver.FakeDriver, 'spawn')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -6868,7 +6872,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     def test_spawn_called_with_accel_info(self, mock_ins_usage,
             mock_ins_create, mock_dev_tag, mock_certs, mock_req_group_map,
-            mock_get_allocations, mock_ins_save, mock_spawn):
+            mock_get_allocations, mock_ins_save, mock_spawn, mock_claim):
 
         accel_info = [{'k1': 'v1', 'k2': 'v2'}]
 
@@ -7142,13 +7146,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.security_groups, self.block_device_mapping,
                 request_spec={}, host_lists=[fake_host_list])
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim')
     @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
     @mock.patch.object(fake_driver.FakeDriver, 'spawn')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     def test_rescheduled_exception_with_non_ascii_exception(self,
-            mock_notify, mock_save, mock_spawn, mock_build, mock_shutdown):
+            mock_notify, mock_save, mock_spawn, mock_build, mock_shutdown,
+            mock_claim):
         exc = exception.NovaException(u's\xe9quence')
 
         mock_build.return_value = self.network_info
@@ -7163,7 +7169,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           self.limits, self.filter_properties,
                           self.accel_uuids)
         mock_save.assert_has_calls([
-            mock.call(),
             mock.call(),
             mock.call(expected_task_state='block_device_mapping'),
         ])
@@ -7670,6 +7675,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertEqual(10, mock_failed.call_count)
         mock_succeeded.assert_not_called()
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim')
     @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
     @mock.patch.object(fake_driver.FakeDriver, 'spawn')
@@ -7677,7 +7683,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     def _test_instance_exception(self, exc, raised_exc,
                                  mock_notify, mock_save, mock_spawn,
-                                 mock_build, mock_shutdown):
+                                 mock_build, mock_shutdown, mock_claim):
         """This method test the instance related InstanceNotFound
             and reschedule on exception errors. The test cases get from
             arguments.
@@ -7699,7 +7705,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           self.accel_uuids)
 
         mock_save.assert_has_calls([
-            mock.call(),
             mock.call(),
             mock.call(expected_task_state='block_device_mapping')])
         mock_notify.assert_has_calls([
@@ -7811,11 +7816,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     '_shutdown_instance'),
                 mock.patch.object(self.compute,
                     '_validate_instance_group_policy'),
+                mock.patch.object(self.compute.rt, 'instance_claim'),
                 mock.patch('nova.compute.utils.notify_about_instance_create')
         ) as (spawn, save,
                 _build_networks_for_instance, _notify_about_instance_usage,
                 _shutdown_instance, _validate_instance_group_policy,
-                mock_notify):
+                mock_claim, mock_notify):
 
             self.assertRaises(exception.BuildAbortException,
                     self.compute._build_and_run_instance, self.context,
@@ -7845,7 +7851,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           phase='error', exception=exc, bdms=[])])
 
             save.assert_has_calls([
-                mock.call(),
                 mock.call(),
                 mock.call(
                     expected_task_state=task_states.BLOCK_DEVICE_MAPPING)])
@@ -7908,11 +7913,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 request_spec={}, host_lists=[fake_host_list])
         mock_nil.assert_called_once_with(self.instance)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim')
     @mock.patch.object(manager.ComputeManager, '_build_resources')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     def test_build_resources_buildabort_reraise(self, mock_notify, mock_save,
-                                                mock_build):
+                                                mock_build, mock_claim):
         exc = exception.BuildAbortException(
                 instance_uuid=self.instance.uuid, reason='')
         mock_build.side_effect = exc
@@ -7926,7 +7932,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           self.node, self.limits, self.filter_properties,
                           request_spec=[], accel_uuids=self.accel_uuids)
 
-        mock_save.assert_called_once_with()
         mock_notify.assert_has_calls([
             mock.call(self.context, self.instance, 'create.start',
                 extra_usage_info={'image_name': self.image.get('name')}),
@@ -8581,10 +8586,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             ctxt, instance, req_networks)
         warning_mock.assert_not_called()
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim')
     @mock.patch('nova.compute.utils.notify_about_instance_create')
     @mock.patch.object(manager.ComputeManager, '_instance_update')
     def test_launched_at_in_create_end_notification(self,
-            mock_instance_update, mock_notify_instance_create):
+            mock_instance_update, mock_notify_instance_create, mock_claim):
 
         def fake_notify(*args, **kwargs):
             if args[2] == 'create.end':
@@ -8624,6 +8630,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.flags(default_access_ip_network_name='test1')
         instance = fake_instance.fake_db_instance()
 
+        @mock.patch.object(self.compute.rt, 'instance_claim')
         @mock.patch.object(db, 'instance_update_and_get_original',
                 return_value=({}, instance))
         @mock.patch.object(self.compute.driver, 'spawn')
@@ -8632,7 +8639,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         @mock.patch.object(db, 'instance_extra_update_by_uuid')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         def _check_access_ip(mock_notify, mock_extra, mock_networks,
-                mock_spawn, mock_db_update):
+                mock_spawn, mock_db_update, mock_claim):
             self.compute._build_and_run_instance(self.context, self.instance,
                     self.image, self.injected_files, self.admin_pass,
                     self.requested_networks, self.security_groups,
@@ -8653,8 +8660,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         _check_access_ip()
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim')
     @mock.patch.object(manager.ComputeManager, '_instance_update')
-    def test_create_error_on_instance_delete(self, mock_instance_update):
+    def test_create_error_on_instance_delete(self, mock_instance_update,
+                                             mock_claim):
 
         def fake_notify(*args, **kwargs):
             if args[2] == 'create.error':
@@ -8668,7 +8677,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance', return_value=[]),
                 mock.patch.object(self.instance, 'save',
-                    side_effect=[None, None, None, exc]),
+                    side_effect=[None, None, exc]),
                 mock.patch.object(self.compute, '_notify_about_instance_usage',
                     side_effect=fake_notify)
         ) as (mock_spawn, mock_networks, mock_save, mock_notify):
@@ -8697,7 +8706,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock.patch.object(
                 self.compute, '_build_networks_for_instance', return_value=[]),
             mock.patch.object(self.instance, 'save'),
-        ) as (mock_spawn, mock_networks, mock_save):
+            mock.patch.object(self.compute.rt, 'instance_claim'),
+        ) as (mock_spawn, mock_networks, mock_save, mock_claim):
             self.compute._build_and_run_instance(
                 self.context,
                 self.instance, self.image, self.injected_files,
@@ -8747,7 +8757,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.patch.object(self.instance, 'save'),
                 mock.patch('nova.scheduler.client.report.'
                            'SchedulerReportClient._get_resource_provider'),
-        ) as (mock_spawn, mock_networks, mock_save, mock_get_rp):
+                mock.patch.object(self.compute.rt, 'instance_claim'),
+        ) as (mock_spawn, mock_networks, mock_save, mock_get_rp, mock_claim):
             mock_get_rp.return_value = {
                 'uuid': uuids.rp1,
                 'name': 'compute1:sriov-agent:ens3'
