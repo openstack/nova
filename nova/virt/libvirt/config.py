@@ -2761,6 +2761,21 @@ class LibvirtConfigGuestFeatureSMM(LibvirtConfigGuestFeature):
         return root
 
 
+class LibvirtConfigGuestFeatureTCG(LibvirtConfigGuestFeature):
+
+    def __init__(self, cache_size, **kwargs):
+        super(LibvirtConfigGuestFeatureTCG, self).__init__("tcg", **kwargs)
+
+        self.cache_size = str(cache_size)
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestFeatureTCG, self).format_dom()
+        root.append(self._text_node("tb-cache", self.cache_size,
+                                    unit="MiB"))
+
+        return root
+
+
 class LibvirtConfigGuestFeaturePMU(LibvirtConfigGuestFeature):
 
     def __init__(self, state, **kwargs):

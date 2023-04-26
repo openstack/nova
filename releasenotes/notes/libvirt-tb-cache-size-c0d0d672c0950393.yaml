@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Qemu>=5.0.0 bumped the default tb-cache size to 1GiB(from 32MiB) and this
+    made it difficult to run multiple guest VMs on systems running with lower
+    memory. With Libvirt>=8.0.0 it's possible to configure lower tb-cache
+    size. A new config option is introduced:
+
+    ``[libvirt]tb_cache_size``
+
+    This config option can be used to configure tb_cache size
+    for guest VMs, it's only applicable with ``virt_type=qemu``.

@@ -21367,6 +21367,47 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     cpu_model = drvr._get_cpu_model_mapping(expect_model[0])
                     self.assertEqual(cpu_model, expect_model[0])
 
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_TB_CACHE_SIZE) - 1)
+    def test_supports_tb_cache_size_fail(self, mock_getversion):
+        self.flags(virt_type='qemu', group='libvirt')
+        self.flags(tb_cache_size=10, group='libvirt')
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.assertRaises(exception.InvalidConfiguration,
+                          driver.init_host, 'dummyhost')
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_all_undefined_instance_details',
+                       new=mock.Mock())
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_TB_CACHE_SIZE))
+    def test_supports_tb_cache_size_ok(self, mock_getversion):
+        self.flags(virt_type='qemu', group='libvirt')
+        self.flags(tb_cache_size=10, group='libvirt')
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        driver.init_host('dummyhost')
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            libvirt_driver.MIN_LIBVIRT_TB_CACHE_SIZE))
+    def test_get_guest_config_feature_tcg(self, mock_getversion):
+        self.flags(virt_type='qemu', group='libvirt')
+        self.flags(tb_cache_size=10, group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance_ref, image_meta)
+
+        cfg = drvr._get_guest_config(
+            instance_ref, _fake_network_info(self), image_meta, disk_info)
+
+        expected = '<tcg><tb-cache unit="MiB">10</tb-cache></tcg>'
+        self.assertXmlEqual(expected, cfg.features[2].to_xml())
+
 
 class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
     def setUp(self):

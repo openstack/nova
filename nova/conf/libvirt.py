@@ -118,6 +118,7 @@ Related options:
 * ``disk_prefix``: depends on this
 * ``cpu_mode``: depends on this
 * ``cpu_models``: depends on this
+* ``tb_cache_size``: depends on this
 """),
     cfg.StrOpt('connection_uri',
                default='',
@@ -900,6 +901,21 @@ Related options:
 
 * :oslo.config:option:`libvirt.device_detach_attempts`
 
+"""),
+    cfg.IntOpt('tb_cache_size',
+                min=0,
+                help="""
+Qemu>=5.0.0 bumped the default tb-cache size to 1GiB(from 32MiB) and this
+made it difficult to run multiple guest VMs on systems running with lower
+memory. With Libvirt>=8.0.0 this config option can be used to configure
+lower tb-cache size.
+
+Set it to > 0 to configure tb-cache for guest VMs.
+
+Related options:
+
+* ``compute_driver`` (libvirt)
+* ``virt_type`` (qemu)
 """),
 ]
 

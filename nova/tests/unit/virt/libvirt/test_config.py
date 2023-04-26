@@ -2414,6 +2414,14 @@ class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
         self.assertXmlEqual(xml, "<ioapic driver='libvirt'/>")
 
+    def test_feature_tcg(self):
+        obj = config.LibvirtConfigGuestFeatureTCG(10)
+        obj.driver = "libvirt"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, '<tcg><tb-cache unit="MiB">10'
+                '</tb-cache></tcg>')
+
 
 class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
