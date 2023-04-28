@@ -39,7 +39,7 @@ when comparing availability zones and host aggregates:
       The use of the default availability zone name in requests can be very
       error-prone. Since the user can see the list of availability zones, they
       have no way to know whether the default availability zone name (currently
-      ``nova``) is provided because an host belongs to an aggregate whose AZ
+      ``nova``) is provided because a host belongs to an aggregate whose AZ
       metadata key is set to ``nova``, or because there is at least one host
       not belonging to any aggregate.  Consequently, it is highly recommended
       for users to never ever ask for booting an instance by specifying an
