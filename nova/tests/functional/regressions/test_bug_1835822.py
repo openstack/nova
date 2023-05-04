@@ -27,6 +27,7 @@ class RegressionTest1835822(
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
+        self.useFixture(nova_fixtures.CinderFixture(self))
 
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1')).api

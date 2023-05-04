@@ -85,6 +85,7 @@ class InstanceActionEventFaultsTestCase(
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         self.useFixture(nova_fixtures.RealPolicyFixture())
+        self.useFixture(nova_fixtures.CinderFixture(self))
 
         # Start the compute services.
         self.start_service('conductor')

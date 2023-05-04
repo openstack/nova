@@ -66,10 +66,8 @@ class TestAttachedVolumes(
         # verify if volume attachment is present at nova
         bdm_list = self._get_bdm_list(server)
 
-        # TODO(auniyal): Reboot should remove stale bdms
         # after fix bdm should not have any volume
-        self.assertEqual(1, len(bdm_list))
-        self.assertEqual(volume_id, bdm_list[0][0])
+        self.assertEqual(0, len(bdm_list))
 
     def test_delete_multiple_stale_attachment_from_nova(self):
         volumes = [
@@ -109,13 +107,12 @@ class TestAttachedVolumes(
         bdm_list_2 = self._get_bdm_list(server)
         bdm_attc_vols = [bdm[0] for bdm in bdm_list_2]
 
-        # after fix only 2 volumes should be attached instead 4
-        self.assertEqual(4, len(bdm_list_2))
+        self.assertEqual(2, len(bdm_list_2))
 
         self.assertIn(bdm_list[0][0], bdm_attc_vols)
-        self.assertIn(bdm_list[1][0], bdm_attc_vols)
+        self.assertNotIn(bdm_list[1][0], bdm_attc_vols)
         self.assertIn(bdm_list[2][0], bdm_attc_vols)
-        self.assertIn(bdm_list[3][0], bdm_attc_vols)
+        self.assertNotIn(bdm_list[3][0], bdm_attc_vols)
 
     def test_delete_multiple_stale_attachment_from_cinder(self):
         volume_id = 'aeb9b5f4-1fe9-4964-ab65-5e168be4de8e'
@@ -149,9 +146,7 @@ class TestAttachedVolumes(
         # rebooting server should remove stale attachments
         server = self._reboot_server(server, hard=True)
 
-        # TODO(auniyal): Reboot should remove only stale attachments
-        # from cinder too
         # verify if how many volume attachments are present at cinder
         attached_volume_ids = self.cinder.attachment_ids_for_instance(
             server['id'])
-        self.assertEqual(attachments + 1, len(attached_volume_ids))
+        self.assertEqual(1, len(attached_volume_ids))

@@ -4174,6 +4174,56 @@ class ComputeManager(manager.Manager):
             accel_info = []
         return accel_info
 
+    def _delete_dangling_bdms(self, context, instance, bdms):
+        """Deletes dangling or stale attachments for volume from
+        Nova and Cinder DB so both service DBs can be in sync.
+
+        Retrieves volume attachments from the Nova block_device_mapping
+        table and verifies them with the Cinder volume_attachment table.
+        If attachment is not present in any one of the DBs, delete
+        attachments from the other DB.
+
+        :param context: The nova request context.
+        :param instance: instance object.
+        :param instance: BlockDeviceMappingList list object.
+        """
+
+        # attachments present in nova DB, ones nova knows about
+        nova_attachments = []
+        bdms_to_delete = []
+        for bdm in bdms.objects:
+            if bdm.volume_id and bdm.source_type == 'volume' and \
+                bdm.destination_type == 'volume':
+                try:
+                    self.volume_api.attachment_get(context, bdm.attachment_id)
+                except exception.VolumeAttachmentNotFound:
+                    LOG.info(
+                        f"Removing stale volume attachment "
+                        f"'{bdm.attachment_id}' from instance for "
+                        f"volume '{bdm.volume_id}'.", instance=instance)
+                    bdm.destroy()
+                    bdms_to_delete.append(bdm)
+                else:
+                    nova_attachments.append(bdm.attachment_id)
+
+        cinder_attachments = self.volume_api.attachment_get_all(
+            context, instance.uuid)
+        cinder_attachments = [each['id'] for each in cinder_attachments]
+
+        if len(set(cinder_attachments) - set(nova_attachments)):
+            LOG.info(
+                "Removing stale volume attachments of instance from "
+                "Cinder", instance=instance)
+        for each_attach in set(cinder_attachments) - set(nova_attachments):
+            # delete only cinder known attachments, from cinder DB.
+            LOG.debug(
+                f"Removing attachment '{each_attach}'", instance=instance)
+            self.volume_api.attachment_delete(context, each_attach)
+
+        # refresh bdms object
+        for bdm in bdms_to_delete:
+            bdms.objects.remove(bdm)
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -4203,6 +4253,9 @@ class ComputeManager(manager.Manager):
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             context, instance.uuid)
+
+        self._delete_dangling_bdms(context, instance, bdms)
+
         block_device_info = self._get_instance_block_device_info(
             context, instance, bdms=bdms)
 
@@ -5636,7 +5689,7 @@ class ComputeManager(manager.Manager):
         # in case _prep_resize fails.
         instance_state = instance.vm_state
         with self._error_out_instance_on_exception(
-                context, instance, instance_state=instance_state),\
+                context, instance, instance_state=instance_state), \
                 errors_out_migration_ctxt(migration):
 
             self._send_prep_resize_notifications(
