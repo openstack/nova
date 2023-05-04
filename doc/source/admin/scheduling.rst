@@ -1049,6 +1049,37 @@ Otherwise, it will fall back to the
 more than one value is found for a host in aggregate metadata, the minimum
 value will be used.
 
+``HypervisorVersionWeigher``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 28.0.0 (Bobcat)
+
+Weigh hosts by their relative hypervisor version reported by the virt driver.
+
+While the hypervisor_version filed for all virt drivers is an int,
+each nova virt driver uses a different algorithm to convert the hypervisor-specific
+version sequence into an int. As such the values are not directly comparable between
+hosts with different hypervisors.
+
+For example, the ironic virt driver uses the ironic API micro-version as the hypervisor
+version for a given node. The libvirt driver uses the libvirt version
+i.e. Libvirt `7.1.123` becomes `700100123` vs  Ironic `1.82` becomes `1`
+Hyper-V `6.3` becomes `6003`.
+
+If you have a mixed virt driver deployment in the ironic vs non-ironic
+case nothing special needs to be done. ironic nodes are scheduled using custom
+resource classes so ironic flavors will never match non-ironic compute nodes.
+
+If a deployment has multiple non-ironic virt drivers it is recommended to use aggregates
+to group hosts by virt driver. While this is not strictly required, it is
+desirable to avoid bias towards one virt driver.
+see :ref:`filtering_hosts_by_isolating_aggregates` and :ref:`AggregateImagePropertiesIsolation`
+for more information.
+
+The default behavior of the HypervisorVersionWeigher is to select newer hosts.
+If you prefer to invert the behavior set the
+:oslo.config:option:`filter_scheduler.hypervisor_version_weight_multiplier` option
+to a negative number and the weighing has the opposite effect of the default.
 
 Utilization-aware scheduling
 ----------------------------

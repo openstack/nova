@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    A new hypervisor version weigher has been added to prefer selecting hosts
+    with newer hypervisors installed. For the libvirt driver, this is the version
+    of libvirt on the compute node not the version of qemu. As with all
+    weighers this is enabled by default and its behavior can be modified using
+    the new ``hypervisor_version_weight_multiplier`` config option in the
+    ``filter_scheduler`` section.
+upgrade:
+  - |
+    A new hypervisor version weigher has been added that will prefer selecting
+    hosts with a newer hypervisor installed. This can help simplify rolling
+    upgrades by preferring the already upgraded hosts when moving workloads around
+    using live or cold migration. To restore the old behavior either remove
+    the weigher from the list of enabled weighers or set
+    ``[filter_scheduler] hypervisor_version_weight_multiplier=0``. The default
+    value of the hypervisor_version_weight_multiplier is 1 so only a mild
+    preference is given to new hosts, higher values will make the effect
+    more pronounced and negative values will prefer older hosts.
