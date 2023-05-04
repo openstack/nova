@@ -34,6 +34,7 @@ NUMA_TOPOLOGY = objects.NUMATopology(cells=[
         memory=512,
         cpu_usage=0,
         memory_usage=0,
+        socket=0,
         pinned_cpus=set(),
         mempages=[
             objects.NUMAPagesTopology(size_kb=16, total=387184, used=0),
@@ -46,6 +47,7 @@ NUMA_TOPOLOGY = objects.NUMATopology(cells=[
         memory=512,
         cpu_usage=0,
         memory_usage=0,
+        socket=0,
         pinned_cpus=set(),
         mempages=[
             objects.NUMAPagesTopology(size_kb=4, total=1548736, used=0),
