@@ -143,6 +143,22 @@ class TestNeutronClient(test.NoDBTestCase):
         self.assertIsInstance(cl.httpclient.auth,
                               service_token.ServiceTokenAuthWrapper)
 
+    @mock.patch('nova.service_auth._SERVICE_AUTH')
+    @mock.patch('nova.network.neutron._ADMIN_AUTH')
+    @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
+    def test_admin_with_service_token(
+        self, mock_load, mock_admin_auth, mock_service_auth
+    ):
+        self.flags(send_service_user_token=True, group='service_user')
+
+        admin_context = context.get_admin_context()
+
+        cl = neutronapi.get_client(admin_context)
+        self.assertIsInstance(cl.httpclient.auth,
+                              service_token.ServiceTokenAuthWrapper)
+        self.assertEqual(mock_admin_auth, cl.httpclient.auth.user_auth)
+        self.assertEqual(mock_service_auth, cl.httpclient.auth.service_auth)
+
     @mock.patch.object(client.Client, "list_networks",
                        side_effect=exceptions.Unauthorized())
     def test_Unauthorized_user(self, mock_list_networks):
