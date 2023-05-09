@@ -91,12 +91,14 @@ def _get_auth(context):
     # from them generated from 'context.get_admin_context'
     # which only set is_admin=True but is without token.
     # So add load_auth_plugin when this condition appear.
+    user_auth = None
     if context.is_admin and not context.auth_token:
         if not _ADMIN_AUTH:
             _ADMIN_AUTH = _load_auth_plugin(CONF)
-        return _ADMIN_AUTH
-    else:
-        return service_auth.get_auth_plugin(context)
+        user_auth = _ADMIN_AUTH
+
+    # When user_auth = None, user_auth will be extracted from the context.
+    return service_auth.get_auth_plugin(context, user_auth=user_auth)
 
 
 # NOTE(efried): Bug #1752152

@@ -55,3 +55,13 @@ class ServiceAuthTestCase(test.NoDBTestCase):
         result = service_auth.get_auth_plugin(self.ctx)
         self.assertEqual(1, mock_load.call_count)
         self.assertNotIsInstance(result, service_token.ServiceTokenAuthWrapper)
+
+    @mock.patch.object(ks_loading, 'load_auth_from_conf_options',
+                       new=mock.Mock())
+    def test_get_auth_plugin_user_auth(self):
+        self.flags(send_service_user_token=True, group='service_user')
+        user_auth = mock.Mock()
+
+        result = service_auth.get_auth_plugin(self.ctx, user_auth=user_auth)
+
+        self.assertEqual(user_auth, result.user_auth)
