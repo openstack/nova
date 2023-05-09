@@ -223,13 +223,15 @@ def _get_auth_plugin(context, admin=False):
     # support some services (metadata API) where an admin context is used
     # without an auth token.
     global _ADMIN_AUTH
+    user_auth = None
     if admin or (context.is_admin and not context.auth_token):
         if not _ADMIN_AUTH:
             _ADMIN_AUTH = _load_auth_plugin(CONF)
-        return _ADMIN_AUTH
+        user_auth = _ADMIN_AUTH
 
-    if context.auth_token:
-        return service_auth.get_auth_plugin(context)
+    if context.auth_token or user_auth:
+        # When user_auth = None, user_auth will be extracted from the context.
+        return service_auth.get_auth_plugin(context, user_auth=user_auth)
 
     # We did not get a user token and we should not be using
     # an admin token so log an error
