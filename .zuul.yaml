@@ -595,12 +595,13 @@
     irrelevant-files: *nova-base-irrelevant-files
     required-projects:
       - openstack/nova
+    timeout: 9000
     pre-run:
       - playbooks/ceph/glance-setup.yaml
     vars:
       # NOTE(danms): Increase our swap size since we're dealing with
       # larger images and trigger OOMs.
-      configure_swap_size: 4096
+      configure_swap_size: 8192
       # NOTE(danms): These tests create an empty non-raw image, which nova
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
