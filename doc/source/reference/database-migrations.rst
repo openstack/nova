@@ -24,7 +24,7 @@ Schema migrations
    The database migration engine was changed from ``sqlalchemy-migrate`` to
    ``alembic``.
 
-.. versionchanged:: 27.0.0 (Antelope)
+.. versionchanged:: 28.0.0 (Bobcat)
 
    The legacy ``sqlalchemy-migrate``-based database migrations were removed.
 
@@ -43,7 +43,7 @@ respectively.
    There were also legacy migrations provided in the ``legacy_migrations``
    subdirectory for both the API and main databases. These were provided to
    facilitate upgrades from pre-Xena (24.0.0) deployments. They were removed
-   in the 27.0.0 (Antelope) release.
+   in the 28.0.0 (Bobcat) release.
 
 The best reference for alembic is the `alembic documentation`__, but a small
 example is provided here. You can create the migration either manually or
