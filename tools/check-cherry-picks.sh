@@ -23,7 +23,7 @@ hashes=$(git show --format='%b' --quiet $commit_hash | sed -nr 's/^.cherry picke
 checked=0
 branches+=""
 for hash in $hashes; do
-    branch=$(git branch -a --contains "$hash" 2>/dev/null| grep -oE '(master|stable/[a-z]+)')
+    branch=$(git branch -a --contains "$hash" 2>/dev/null| grep -oE '(master|stable/[a-z0-9.]+)')
     if [ $? -ne 0 ]; then
         echo "Cherry pick hash $hash not on any master or stable branches"
         exit 1
