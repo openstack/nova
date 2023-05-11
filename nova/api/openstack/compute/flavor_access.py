@@ -93,7 +93,14 @@ class FlavorActionController(wsgi.Controller):
 
         vals = body['removeTenantAccess']
         tenant = vals['tenant']
-        identity.verify_project_id(context, tenant)
+        # It doesn't really matter if project exists or not: we can delete
+        # it from flavor's access list in both cases.
+        try:
+            identity.verify_project_id(context, tenant)
+        except webob.exc.HTTPBadRequest as identity_exc:
+            msg = "Project ID %s is not a valid project." % tenant
+            if msg not in identity_exc.explanation:
+                raise
 
         # NOTE(gibi): We have to load a flavor from the db here as
         # flavor.remove_access() will try to emit a notification and that needs
