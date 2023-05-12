@@ -591,8 +591,8 @@ class BigVmManager(manager.Manager):
         client = self.placement_client
 
         # find the consumer
-        allocations = client.get_allocations_for_resource_provider(context,
-                                                                   rp_uuid)
+        allocations = client.get_allocations_for_resource_provider(
+                                                context, rp_uuid).allocations
         # we might have already deleted them and got killed or the VM got
         # deleted in the mean time
         failures = 0
