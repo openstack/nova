@@ -1532,8 +1532,8 @@ class VMwareVMOps(object):
                 # deployment needing a free host on that compute-node.
                 inv_data = rp.inventory
                 inv_data[special_spawning.BIGVM_RESOURCE]['reserved'] = 1
-                placement_client.set_inventory_for_provider(context,
-                                        rp.uuid, rp_name, inv_data)
+                placement_client.set_inventory_for_provider(context, rp.uuid,
+                                                            inv_data)
 
     def _is_bdm_valid(self, block_device_mapping):
         """Checks if the block device mapping is valid."""
