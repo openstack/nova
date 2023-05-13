@@ -19,6 +19,7 @@ A list of config options based on different topics can be found below:
 .. toctree::
    :maxdepth: 1
 
+   /admin/configuration/service-user-token
    /admin/configuration/api
    /admin/configuration/resize
    /admin/configuration/cross-cell-resize

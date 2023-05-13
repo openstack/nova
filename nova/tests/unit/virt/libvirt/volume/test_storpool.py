@@ -53,9 +53,11 @@ class MockStorPoolConnector(object):
         }
         return {'type': 'block', 'path': test_attached[v]['path']}
 
-    def disconnect_volume(self, connection_info, device_info):
+    def disconnect_volume(self, connection_info, device_info, **kwargs):
         self.inst.assertIn('client_id', connection_info)
         self.inst.assertIn('volume', connection_info)
+        self.inst.assertIn('force', kwargs)
+        self.inst.assertEqual(self.inst.force, kwargs.get('force'))
 
         v = connection_info['volume']
         if v not in test_attached:
@@ -85,6 +87,11 @@ class MockStorPoolInitiator(object):
 
 class LibvirtStorPoolVolumeDriverTestCase(
         test_volume.LibvirtVolumeBaseTestCase):
+
+    def setUp(self):
+        super().setUp()
+        # This is for testing the force flag of disconnect_volume()
+        self.force = False
 
     def mock_storpool(f):
         def _config_inner_inner1(inst, *args, **kwargs):
@@ -175,3 +182,10 @@ class LibvirtStorPoolVolumeDriverTestCase(
 
         libvirt_driver.disconnect_volume(ci_2, mock.sentinel.instance)
         self.assertDictEqual({}, test_attached)
+
+        # Connect the volume again so we can detach it again
+        libvirt_driver.connect_volume(ci_2, mock.sentinel.instance)
+        # Verify force=True
+        self.force = True
+        libvirt_driver.disconnect_volume(
+            ci_2, mock.sentinel.instance, force=True)

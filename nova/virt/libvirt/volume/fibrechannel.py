@@ -59,7 +59,7 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             connection_info['data']['multipath_id'] = \
                 device_info['multipath_id']
 
-    def disconnect_volume(self, connection_info, instance):
+    def disconnect_volume(self, connection_info, instance, force=False):
         """Detach the volume from instance_name."""
 
         LOG.debug("calling os-brick to detach FC Volume", instance=instance)
@@ -69,11 +69,12 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         # the 2nd param of disconnect_volume and be consistent
         # with the rest of the connectors.
         self.connector.disconnect_volume(connection_info['data'],
-                                         connection_info['data'])
+                                         connection_info['data'],
+                                         force=force)
         LOG.debug("Disconnected FC Volume", instance=instance)
 
         super(LibvirtFibreChannelVolumeDriver,
-              self).disconnect_volume(connection_info, instance)
+              self).disconnect_volume(connection_info, instance, force=force)
 
     def extend_volume(self, connection_info, instance, requested_size):
         """Extend the volume."""
