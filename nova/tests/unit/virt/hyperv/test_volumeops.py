@@ -140,7 +140,13 @@ class VolumeOpsTestCase(test_base.HyperVBaseTestCase):
 
         self._volumeops.disconnect_volumes(block_device_info)
         fake_volume_driver.disconnect_volume.assert_called_once_with(
-            block_device_mapping[0]['connection_info'])
+            block_device_mapping[0]['connection_info'], force=False)
+
+        # Verify force=True
+        fake_volume_driver.disconnect_volume.reset_mock()
+        self._volumeops.disconnect_volumes(block_device_info, force=True)
+        fake_volume_driver.disconnect_volume.assert_called_once_with(
+            block_device_mapping[0]['connection_info'], force=True)
 
     @mock.patch('time.sleep')
     @mock.patch.object(volumeops.VolumeOps, '_get_volume_driver')
@@ -180,7 +186,7 @@ class VolumeOpsTestCase(test_base.HyperVBaseTestCase):
 
         if attach_failed:
             fake_volume_driver.disconnect_volume.assert_called_once_with(
-                fake_conn_info)
+                fake_conn_info, force=False)
             mock_sleep.assert_has_calls(
                 [mock.call(CONF.hyperv.volume_attach_retry_interval)] *
                     CONF.hyperv.volume_attach_retry_count)
@@ -202,7 +208,13 @@ class VolumeOpsTestCase(test_base.HyperVBaseTestCase):
         mock_get_volume_driver.assert_called_once_with(
             mock.sentinel.conn_info)
         fake_volume_driver.disconnect_volume.assert_called_once_with(
-            mock.sentinel.conn_info)
+            mock.sentinel.conn_info, force=False)
+
+        # Verify force=True
+        fake_volume_driver.disconnect_volume.reset_mock()
+        self._volumeops.disconnect_volume(mock.sentinel.conn_info, force=True)
+        fake_volume_driver.disconnect_volume.assert_called_once_with(
+            mock.sentinel.conn_info, force=True)
 
     @mock.patch.object(volumeops.VolumeOps, '_get_volume_driver')
     def test_detach_volume(self, mock_get_volume_driver):
@@ -346,7 +358,13 @@ class BaseVolumeDriverTestCase(test_base.HyperVBaseTestCase):
         self._base_vol_driver.disconnect_volume(conn_info)
 
         self._conn.disconnect_volume.assert_called_once_with(
-            conn_info['data'])
+            conn_info['data'], force=False)
+
+        # Verify force=True
+        self._conn.disconnect_volume.reset_mock()
+        self._base_vol_driver.disconnect_volume(conn_info, force=True)
+        self._conn.disconnect_volume.assert_called_once_with(
+            conn_info['data'], force=True)
 
     @mock.patch.object(volumeops.BaseVolumeDriver, '_get_disk_res_path')
     def _test_get_disk_resource_path_by_conn_info(self,
