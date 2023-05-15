@@ -14,12 +14,21 @@ import logging
 
 from oslo_utils import versionutils
 
+import nova.conf
 from nova.db.main import api as db
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
+from nova.share import manila as manila_api
 
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
+
+EPHEMERAL_FIELDS = [
+    "access_type",
+    "access_to",
+    "access_key",
+]
 
 
 @base.NovaObjectRegistry.register
@@ -27,7 +36,9 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version.
     # Version 1.1: Add "attaching" and "detaching" to possible values
     #              of status field.
-    VERSION = '1.1'
+    # Version 1.2: Add ephemeral fields 'access_type', 'access_to',
+    #              'access_key' to manage CephFS protocol and access.
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -37,7 +48,11 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
         'status': fields.ShareMappingStatusField(),
         'tag': fields.StringField(nullable=False),
         'export_location': fields.StringField(nullable=False),
-        'share_proto': fields.ShareMappingProtoField()
+        'share_proto': fields.ShareMappingProtoField(),
+        # Next fields are ephemeral
+        'access_type': fields.StringField(nullable=True),
+        'access_to': fields.StringField(nullable=True),
+        'access_key': fields.StringField(nullable=True),
     }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -59,7 +74,8 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
     @staticmethod
     def _from_db_object(context, share_mapping, db_share_mapping):
         for field in share_mapping.fields:
-            setattr(share_mapping, field, db_share_mapping[field])
+            if field not in EPHEMERAL_FIELDS:
+                setattr(share_mapping, field, db_share_mapping[field])
         share_mapping._context = context
         share_mapping.obj_reset_changes()
         return share_mapping
@@ -132,6 +148,29 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
         else:
             raise NotImplementedError()
         return rhost
+
+    def enhance_with_ceph_credentials(self, context):
+        # Enhance the share_mapping object by adding Ceph
+        # credential information
+        access = manila_api.API().get_access(
+            context,
+            self.share_id,
+            self.access_type,
+            self.access_to
+        )
+        self.access_key = access.access_key
+
+    def set_access_according_to_protocol(self):
+        if self.share_proto == fields.ShareMappingProto.NFS:
+            self.access_type = 'ip'
+            self.access_to = CONF.my_shared_fs_storage_ip
+        elif self.share_proto == fields.ShareMappingProto.CEPHFS:
+            self.access_type = 'cephx'
+            self.access_to = 'nova'
+        else:
+            raise exception.ShareProtocolNotSupported(
+                share_proto=self.share_proto
+            )
 
 
 @base.NovaObjectRegistry.register

@@ -17818,10 +17818,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             external_events=[])
         mock_metadata.assert_called_once_with(self.context, instance)
 
-    def _mount_or_umount_share(self, func, side_effect=False):
+    def _mount_or_umount_share(self, protocol, func, side_effect=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         class_object = getattr(drvr, func)
-        base_class = 'nova.virt.libvirt.volume.nfs.LibvirtNFSVolumeDriver'
+        if protocol == fields.ShareMappingProto.NFS:
+            base_class = "nova.virt.libvirt.volume.nfs.LibvirtNFSVolumeDriver"
+        elif protocol == fields.ShareMappingProto.CEPHFS:
+            base_class = (
+                "nova.virt.libvirt.volume.cephfs.LibvirtCEPHFSVolumeDriver"
+            )
+
         if func == 'umount_share':
             mock_class_object = base_class + '.disconnect_volume'
             exc = exception.ShareUmountError
@@ -17838,20 +17844,32 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         share_mapping.status = 'inactive'
         share_mapping.tag = 'fake_tag'
         share_mapping.export_location = '192.168.122.152:/manila/share'
-        share_mapping.share_proto = 'NFS'
+        share_mapping.share_proto = protocol
+        share_mapping.access_to = 'myname'
+        share_mapping.access_key = 'mysecret'
 
-        with mock.patch(mock_class_object) as mock_nfsdrv, mock.patch(
+        with mock.patch(mock_class_object) as mock_drv, mock.patch(
                 'nova.objects.share_mapping.ShareMapping.save'):
             if not side_effect:
                 class_object(self.context, instance, share_mapping)
-                mock_nfsdrv.assert_called_once_with(
-                    {'data': {
-                        'export': share_mapping.export_location,
-                        'name': share_mapping.share_id},
-                     },
-                    instance)
+                if protocol == fields.ShareMappingProto.NFS:
+                    mock_drv.assert_called_once_with(
+                        {'data': {
+                            'export': share_mapping.export_location,
+                            'name': share_mapping.share_id},
+                         },
+                        instance)
+                elif protocol == fields.ShareMappingProto.CEPHFS:
+                    mock_drv.assert_called_once_with(
+                        {'data': {
+                            'export': share_mapping.export_location,
+                            'name': share_mapping.share_id,
+                            "options": ["name=myname", "secret=mysecret"]},
+                         },
+                        instance)
+
             else:
-                mock_nfsdrv.side_effect = side_effect
+                mock_drv.side_effect = side_effect
                 self.assertRaises(
                     exc,
                     class_object,
@@ -17860,19 +17878,53 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     share_mapping
                 )
 
-    def test_mount_share(self):
-        self._mount_or_umount_share('mount_share')
-
-    def test_mount_share_fails(self):
+    def test_mount_nfs_share(self):
         self._mount_or_umount_share(
-            'mount_share', processutils.ProcessExecutionError)
+            fields.ShareMappingProto.NFS, "mount_share"
+        )
 
-    def test_umount_share(self):
-        self._mount_or_umount_share('umount_share')
-
-    def test_umount_share_fails(self):
+    def test_mount_nfs_share_fails(self):
         self._mount_or_umount_share(
-            'umount_share', processutils.ProcessExecutionError)
+            fields.ShareMappingProto.NFS,
+            "mount_share",
+            processutils.ProcessExecutionError,
+        )
+
+    def test_umount_nfs_share(self):
+        self._mount_or_umount_share(
+            fields.ShareMappingProto.NFS, "umount_share"
+        )
+
+    def test_umount_nfs_share_fails(self):
+        self._mount_or_umount_share(
+            fields.ShareMappingProto.NFS,
+            "umount_share",
+            processutils.ProcessExecutionError,
+        )
+
+    def test_mount_cephfs_share(self):
+        self._mount_or_umount_share(
+            fields.ShareMappingProto.CEPHFS, "mount_share"
+        )
+
+    def test_mount_cephfs_share_fails(self):
+        self._mount_or_umount_share(
+            fields.ShareMappingProto.CEPHFS,
+            "mount_share",
+            processutils.ProcessExecutionError,
+        )
+
+    def test_umount_cephfs_share(self):
+        self._mount_or_umount_share(
+            fields.ShareMappingProto.CEPHFS, "umount_share"
+        )
+
+    def test_umount_cephfs_share_fails(self):
+        self._mount_or_umount_share(
+            fields.ShareMappingProto.CEPHFS,
+            "umount_share",
+            processutils.ProcessExecutionError,
+        )
 
     @mock.patch('nova.objects.instance.Instance.save',
                 return_value=None)

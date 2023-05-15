@@ -331,3 +331,19 @@ class API(object):
                 )
         else:
             raise exception.ShareAccessNotFound(share_id=share_id)
+
+    def has_access(self, context, share_id, access_type, access_to):
+        """Helper method to check if a policy is applied to a share
+        :param context: The request context.
+        :param share_id: the id of the share
+        :param access_type: the type of access ("ip", "cert", "user")
+        :param access_to: ip:cidr or cert:cn or user:group or user name
+        :returns: boolean, true means the policy is applied.
+        """
+        access = self.get_access(
+            context,
+            share_id,
+            access_type,
+            access_to
+        )
+        return access is not None and access.state == 'active'
