@@ -1275,3 +1275,14 @@ class CinderClientTestCase(test.NoDBTestCase):
         admin_ctx = context.get_admin_context()
         params = cinder._get_cinderclient_parameters(admin_ctx)
         self.assertEqual(params[0], mock_admin_auth)
+
+    @mock.patch('nova.service_auth._SERVICE_AUTH')
+    @mock.patch('nova.volume.cinder._ADMIN_AUTH')
+    def test_admin_context_without_user_token_but_with_service_token(
+        self, mock_admin_auth, mock_service_auth
+    ):
+        self.flags(send_service_user_token=True, group='service_user')
+        admin_ctx = context.get_admin_context()
+        params = cinder._get_cinderclient_parameters(admin_ctx)
+        self.assertEqual(mock_admin_auth, params[0].user_auth)
+        self.assertEqual(mock_service_auth, params[0].service_auth)
