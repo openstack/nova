@@ -18,6 +18,7 @@
 
 import os.path
 import tempfile
+import unittest
 from unittest import mock
 import uuid
 
@@ -415,3 +416,21 @@ class PatchOpenTestCase(test.NoDBTestCase):
         without changing other file operations.
         """
         self._test_patched_open()
+
+
+class SubclassSignatureTestCaseTestCase(test.SubclassSignatureTestCase):
+    class Baseclass():
+        def method(self):
+            pass
+
+    class Subclass(Baseclass):
+        def method(self, different):
+            pass
+
+    def _get_base_class(self):
+        return SubclassSignatureTestCaseTestCase.Baseclass
+
+    @unittest.expectedFailure
+    def test_signatures(self):
+        # Test that the signature check fails when it's supposed to fail.
+        super().test_signatures()
