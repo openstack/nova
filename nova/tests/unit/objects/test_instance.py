@@ -1633,6 +1633,21 @@ class TestInstanceObject(test_objects._LocalTest,
         self._test_save_objectfield_fk_constraint_fails(
                 'other_foreign_key', db_exc.DBReferenceError)
 
+    @mock.patch('nova.objects.instance.LOG.debug')
+    def test_obj_load_attr_log(self, mock_log_debug):
+        # Instance with no UUID should not log.
+        instance = objects.Instance()
+        self.assertRaises(
+            exception.OrphanedObjectError, instance.obj_load_attr, 'foo')
+        mock_log_debug.assert_not_called()
+        # Instance with UUID should log.
+        instance = objects.Instance(
+            uuid='127a0d59-b88c-422b-b9a1-2dc7cc51fb9a')
+        self.assertRaises(
+            exception.OrphanedObjectError, instance.obj_load_attr, 'foo')
+        msg = "Lazy-load of '%s' attempted by orphaned instance"
+        mock_log_debug.assert_called_once_with(msg, 'foo', instance=instance)
+
 
 class TestRemoteInstanceObject(test_objects._RemoteTest,
                                _TestInstanceObject):
