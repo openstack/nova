@@ -1671,8 +1671,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.mock_conn.nodes.assert_called_with(
             instance_id=instance.uuid,
             fields=ironic_driver._NODE_FIELDS)
-        mock_cleanup_deploy.assert_called_with(node, instance, network_info,
-                                               remove_instance_info=False)
 
         # For states that makes sense check if set_node_provision_state has
         # been called
@@ -1683,7 +1681,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
             self.assertFalse(mock_remove_instance_info.called)
         else:
             self.mock_conn.set_node_provision_state.assert_not_called()
-            mock_remove_instance_info.assert_called_once_with(node)
+            mock_cleanup_deploy.assert_called_with(
+                node, instance, network_info)
 
         # we call this innter function twice so we need to reset mocks
         self.mock_conn.set_node_provision_state.reset_mock()
@@ -1713,27 +1712,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             self.driver.destroy,
             self.ctx, instance, None, None,
         )
-        mock_clean.assert_called_once_with(node, instance, None,
-                                           remove_instance_info=False)
-
-    @mock.patch.object(ironic_driver.IronicDriver,
-                       '_validate_instance_and_node')
-    @mock.patch.object(ironic_driver.IronicDriver,
-                       '_cleanup_deploy')
-    def test_destroy_trigger_remove_info_fail(self, mock_clean, fake_validate):
-        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        node = ironic_utils.get_test_node(
-            driver='fake', id=node_uuid,
-            provision_state=ironic_states.AVAILABLE)
-        fake_validate.return_value = node
-        instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   node=node_uuid)
-        self.mock_conn.update_node.side_effect = SystemError('unexpected '
-                                                             'error')
-        self.assertRaises(SystemError, self.driver.destroy,
-                          self.ctx, instance, None, None)
-        mock_clean.assert_called_once_with(node, instance, None,
-                                           remove_instance_info=False)
+        mock_clean.assert_not_called()
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
@@ -2539,18 +2518,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_vol.assert_called_once_with(instance)
         mock_unvif.assert_called_once_with(node, instance, None)
         mock_remove_info.assert_called_once_with(node)
-
-    @mock.patch.object(ironic_driver.IronicDriver, '_unplug_vifs')
-    @mock.patch.object(ironic_driver.IronicDriver,
-                       '_cleanup_volume_target_info')
-    def test__cleanup_deploy_no_remove_ii(self, mock_vol, mock_unvif):
-        # TODO(TheJulia): This REALLY should be updated to cover all of the
-        # calls that take place.
-        node = ironic_utils.get_test_node(driver='fake')
-        instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
-        self.driver._cleanup_deploy(node, instance, remove_instance_info=False)
-        mock_vol.assert_called_once_with(instance)
-        mock_unvif.assert_called_once_with(node, instance, None)
 
 
 class IronicDriverSyncTestCase(IronicDriverTestCase):
