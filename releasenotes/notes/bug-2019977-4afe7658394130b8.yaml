@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fixes an issue seen when using bare metal (Ironic) instances where an
+    instance could fail to delete.  See `Bug 2019977`_ for more details.
+
+    .. _Bug 2019977: https://bugs.launchpad.net/nova/+bug/2019977
