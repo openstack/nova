@@ -3021,7 +3021,7 @@ class HashRingTestCase(test.NoDBTestCase):
         services = ['host1', 'host2', 'host3']
         expected_hosts = {'host1', 'host2'}
         self.mock_is_up.return_value = True
-        self.flags(partition_key='not-none', group='ironic')
+        self.flags(conductor_group='not-none', group='ironic')
         self.flags(peer_list=['host1', 'host2'], group='ironic')
         self._test__refresh_hash_ring(services, expected_hosts,
                                       uncalled=['host3'])
@@ -3034,7 +3034,7 @@ class HashRingTestCase(test.NoDBTestCase):
         services = ['host1', 'host2', 'host3']
         expected_hosts = {'host1', 'host2', 'host3'}
         self.mock_is_up.return_value = True
-        self.flags(partition_key='not-none', group='ironic')
+        self.flags(conductor_group='not-none', group='ironic')
         self.flags(peer_list=['host1', 'host2'], group='ironic')
         self._test__refresh_hash_ring(services, expected_hosts,
                                       uncalled=['host3'])
@@ -3043,17 +3043,17 @@ class HashRingTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver, 'LOG', autospec=True)
     def test__check_peer_list(self, mock_log):
         self.flags(host='host1')
-        self.flags(partition_key='not-none', group='ironic')
+        self.flags(conductor_group='not-none', group='ironic')
         self.flags(peer_list=['host1', 'host2'], group='ironic')
         ironic_driver._check_peer_list()
-        # happy path, nothing happens
+        # warn as we have two hosts in the list
+        self.assertTrue(mock_log.warning.called)
         self.assertFalse(mock_log.error.called)
-        self.assertFalse(mock_log.warning.called)
 
     @mock.patch.object(ironic_driver, 'LOG', autospec=True)
     def test__check_peer_list_empty(self, mock_log):
         self.flags(host='host1')
-        self.flags(partition_key='not-none', group='ironic')
+        self.flags(conductor_group='not-none', group='ironic')
         self.flags(peer_list=[], group='ironic')
         self.assertRaises(exception.InvalidPeerList,
                           ironic_driver._check_peer_list)
@@ -3062,7 +3062,7 @@ class HashRingTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver, 'LOG', autospec=True)
     def test__check_peer_list_missing_self(self, mock_log):
         self.flags(host='host1')
-        self.flags(partition_key='not-none', group='ironic')
+        self.flags(conductor_group='not-none', group='ironic')
         self.flags(peer_list=['host2'], group='ironic')
         self.assertRaises(exception.InvalidPeerList,
                           ironic_driver._check_peer_list)
@@ -3071,10 +3071,12 @@ class HashRingTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver, 'LOG', autospec=True)
     def test__check_peer_list_only_self(self, mock_log):
         self.flags(host='host1')
-        self.flags(partition_key='not-none', group='ironic')
+        self.flags(conductor_group='not-none', group='ironic')
         self.flags(peer_list=['host1'], group='ironic')
         ironic_driver._check_peer_list()
-        self.assertTrue(mock_log.warning.called)
+        # happy path, nothing happens
+        self.assertFalse(mock_log.error.called)
+        self.assertFalse(mock_log.warning.called)
 
 
 class NodeCacheTestCase(test.NoDBTestCase):
@@ -3184,7 +3186,7 @@ class NodeCacheTestCase(test.NoDBTestCase):
         ]
         hosts = [self.host, self.host, self.host]
         partition_key = 'some-group'
-        self.flags(partition_key=partition_key, group='ironic')
+        self.flags(conductor_group=partition_key, group='ironic')
 
         self._test__refresh_cache(instances, nodes, hosts,
                                   partition_key=partition_key)
@@ -3205,7 +3207,7 @@ class NodeCacheTestCase(test.NoDBTestCase):
         ]
         hosts = [self.host, self.host, self.host]
         partition_key = 'some-group'
-        self.flags(partition_key=partition_key, group='ironic')
+        self.flags(conductor_group=partition_key, group='ironic')
 
         self._test__refresh_cache(instances, nodes, hosts,
                                   partition_key=partition_key,

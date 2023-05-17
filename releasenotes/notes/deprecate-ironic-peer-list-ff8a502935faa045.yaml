@@ -1,0 +1,16 @@
+---
+deprecations:
+  - |
+    We have renamed ``[ironic]partition_key`` to ``[ironic]conductor_group``.
+    The config option is still used to specify which Ironic conductor group
+    the ironic driver in the nova compute process should target.
+  - |
+    We have deprecated the configuration ``[ironic]peer_list``, along with
+    our support for a group of ironic nova-compute processes targeting
+    a shared set of Ironic nodes.
+    There are so many bugs in this support we now prefer statically
+    sharding the nodes between multiple nova-compute processes.
+    Note that the ironic nova-compute process is stateless, and the
+    identity of the service is defined by the config option ``[DEFAULT]host``.
+    As such, you can use an active-passive HA solution to ensure at most
+    one nova-compute process is running for each Ironic node shard.

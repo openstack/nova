@@ -69,7 +69,8 @@ Related options:
         help='Timeout (seconds) to wait for node serial console state '
              'changed. Set to 0 to disable timeout.'),
     cfg.StrOpt(
-        'partition_key',
+        'conductor_group',
+        deprecated_name='partition_key',
         default=None,
         mutable=True,
         max_length=255,
@@ -83,13 +84,18 @@ Related options:
              'leaving the option unset.'),
     cfg.ListOpt(
         'peer_list',
+        deprecated_for_removal=True,
+        deprecated_since='28.0.0',
+        deprecated_reason="""\
+        We do not recommend using nova-compute HA, please use passive
+        failover of a single nova-compute service instead.""",
         default=[],
         mutable=True,
         help='List of hostnames for all nova-compute services (including '
-             'this host) with this partition_key config value. '
-             'Nodes matching the partition_key value will be distributed '
+             'this host) with this conductor_group config value. '
+             'Nodes matching the conductor_group value will be distributed '
              'between all services specified here. '
-             'If partition_key is unset, this option is ignored.'),
+             'If conductor_group is unset, this option is ignored.'),
 ]
 
 

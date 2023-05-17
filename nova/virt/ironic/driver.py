@@ -133,7 +133,7 @@ def _log_ironic_polling(what, node, instance):
 
 def _check_peer_list():
     # these configs are mutable; need to check at runtime and init
-    if CONF.ironic.partition_key is not None:
+    if CONF.ironic.conductor_group is not None:
         peer_list = set(CONF.ironic.peer_list)
         if not peer_list:
             LOG.error('FATAL: Peer list is not configured in the '
@@ -145,11 +145,10 @@ def _check_peer_list():
                       'compute service hostname (%s); add it to '
                       'the [ironic]/peer_list option.', CONF.host)
             raise exception.InvalidPeerList(host=CONF.host)
-        if set([CONF.host]) == peer_list:
-            LOG.warning('This compute service (%s) is the only service '
-                        'present in the [ironic]/peer_list option. '
-                        'Are you sure this should not include more '
-                        'hosts?', CONF.host)
+        if len(peer_list) > 1:
+            LOG.warning('Having multiple compute services in your '
+                        'peer_list is now deprecated. We recommend moving '
+                        'to just a single node in your peer list.')
 
 
 class IronicDriver(virt_driver.ComputeDriver):
@@ -706,8 +705,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         # NOTE(jroll) if this is set, we need to limit the set of other
         # compute services in the hash ring to hosts that are currently up
         # and specified in the peer_list config option, as there's no way
-        # to check which partition_key other compute services are using.
-        if CONF.ironic.partition_key is not None:
+        # to check which conductor_group other compute services are using.
+        if CONF.ironic.conductor_group is not None:
             try:
                 # NOTE(jroll) first we need to make sure the Ironic API can
                 # filter by conductor_group. If it cannot, limiting to
@@ -741,6 +740,12 @@ class IronicDriver(virt_driver.ComputeDriver):
         # table will be here so far, and we might be brand new.
         services.add(CONF.host.lower())
 
+        if len(services) > 1:
+            LOG.warning('Having multiple compute services in your '
+                        'deployment, for a single conductor group, '
+                        'is now deprecated. We recommend moving '
+                        'to just a single ironic nova compute service.')
+
         self.hash_ring = hash_ring.HashRing(services,
                                             partitions=_HASH_RING_PARTITIONS)
         LOG.debug('Hash ring members are %s', services)
@@ -759,18 +764,18 @@ class IronicDriver(virt_driver.ComputeDriver):
             # depending on if any filter parameters are applied.
             return self._get_node_list(fields=_NODE_FIELDS, **kwargs)
 
-        # NOTE(jroll) if partition_key is set, we need to limit nodes that
+        # NOTE(jroll) if conductor_group is set, we need to limit nodes that
         # can be managed to nodes that have a matching conductor_group
         # attribute. If the API isn't new enough to support conductor groups,
         # we fall back to managing all nodes. If it is new enough, we can
         # filter it in the API.
-        partition_key = CONF.ironic.partition_key
-        if partition_key is not None:
+        conductor_group = CONF.ironic.conductor_group
+        if conductor_group is not None:
             try:
                 self._can_send_version(min_version='1.46')
-                nodes = _get_node_list(conductor_group=partition_key)
+                nodes = _get_node_list(conductor_group=conductor_group)
                 LOG.debug('Limiting manageable ironic nodes to conductor '
-                          'group %s', partition_key)
+                          'group %s', conductor_group)
             except exception.IronicAPIVersionNotAvailable:
                 LOG.error('Required Ironic API version 1.46 is not '
                           'available to filter nodes by conductor group. '
