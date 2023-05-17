@@ -1088,6 +1088,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def obj_load_attr(self, attrname):
         # NOTE(danms): We can't lazy-load anything without a context and a uuid
         if not self._context:
+            if 'uuid' in self:
+                LOG.debug(
+                    "Lazy-load of '%s' attempted by orphaned instance",
+                    attrname, instance=self
+                )
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
         if 'uuid' not in self:
