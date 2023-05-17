@@ -504,12 +504,10 @@ class IronicDriver(virt_driver.ComputeDriver):
                              'reason': e},
                             instance=instance)
 
-    def _cleanup_deploy(self, node, instance, network_info=None,
-                        remove_instance_info=True):
+    def _cleanup_deploy(self, node, instance, network_info=None):
         self._cleanup_volume_target_info(instance)
         self._unplug_vifs(node, instance, network_info)
-        if remove_instance_info:
-            self._remove_instance_info_from_node(node)
+        self._remove_instance_info_from_node(node)
 
     def _wait_for_active(self, instance):
         """Wait for the node to be marked as ACTIVE in Ironic."""
@@ -1366,21 +1364,16 @@ class IronicDriver(virt_driver.ComputeDriver):
             #             without raising any exceptions.
             return
 
-        try:
-            if node.provision_state in _UNPROVISION_STATES:
-                self._unprovision(instance, node)
-            else:
-                # NOTE(hshiina): if spawn() fails before ironic starts
-                #                provisioning, instance information should be
-                #                removed from ironic node.
-                self._remove_instance_info_from_node(node)
-        finally:
-            # NOTE(mgoddard): We don't need to remove instance info at this
-            # point since we will have already done it. The destroy will only
-            # succeed if this method returns without error, so we will end up
-            # removing the instance info eventually.
-            self._cleanup_deploy(node, instance, network_info,
-                                 remove_instance_info=False)
+        if node.provision_state in _UNPROVISION_STATES:
+            # NOTE(mgoddard): Ironic's node tear-down procedure includes all of
+            # the things we do in _cleanup_deploy, so let's not repeat them
+            # here. Doing so would also race with the node cleaning process,
+            # which may acquire the node lock and prevent us from making
+            # changes to the node. See
+            # https://bugs.launchpad.net/nova/+bug/2019977
+            self._unprovision(instance, node)
+        else:
+            self._cleanup_deploy(node, instance, network_info)
 
         LOG.info('Successfully unprovisioned Ironic node %s',
                  node.id, instance=instance)
