@@ -44,12 +44,14 @@ def upgrade():
     # 252_add_instance_extra_table; we shouldn't have created an index for the
     # shadow table
 
-    op.drop_index('shadow_instance_extra_idx', 'shadow_instance_extra')
+    op.drop_index(index_name='shadow_instance_extra_idx',
+                  table_name='shadow_instance_extra')
 
     # 373_migration_uuid; we shouldn't have created an index for the shadow
     # table
 
-    op.drop_index('shadow_migrations_uuid', 'shadow_migrations')
+    op.drop_index(index_name='shadow_migrations_uuid',
+                  table_name='shadow_migrations')
 
     # 298_mysql_extra_specs_binary_collation; we changed the collation on the
     # main table but not the shadow table
