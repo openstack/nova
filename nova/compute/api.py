@@ -4217,6 +4217,19 @@ class API:
         if not same_flavor:
             request_spec.numa_topology = hardware.numa_get_constraints(
                 new_flavor, instance.image_meta)
+            # if the flavor is changed then we need to recalculate the
+            # pci_requests as well because the new flavor might request
+            # different pci_aliases
+            new_pci_requests = pci_request.get_pci_requests_from_flavor(
+                new_flavor)
+            new_pci_requests.instance_uuid = instance.uuid
+            # The neutron based InstancePCIRequest cannot change during resize,
+            # so we just need to copy them from the old request
+            for request in request_spec.pci_requests.requests or []:
+                if request.source == objects.InstancePCIRequest.NEUTRON_PORT:
+                    new_pci_requests.requests.append(request)
+            request_spec.pci_requests = new_pci_requests
+
             # TODO(huaqiang): Remove in Wallaby
             # check nova-compute nodes have been updated to Victoria to resize
             # instance to a new mixed instance from a dedicated or shared

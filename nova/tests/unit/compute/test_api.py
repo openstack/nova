@@ -2088,7 +2088,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 filter_properties = {'ignore_hosts': [fake_inst['host']]}
 
             if request_spec:
-                fake_spec = objects.RequestSpec()
+                fake_spec = objects.RequestSpec(
+                    pci_requests=objects.InstancePCIRequests(requests=[]))
                 if requested_destination:
                     cell1 = objects.CellMapping(uuid=uuids.cell1, name='cell1')
                     fake_spec.requested_destination = objects.Destination(

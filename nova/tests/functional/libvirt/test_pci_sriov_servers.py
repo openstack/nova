@@ -1733,13 +1733,16 @@ class PCIServersTest(_PCIServersTestBase):
 
         # Resize it to a flavor without PCI devices. We expect this to work, as
         # test_compute1 is available.
-        # FIXME(artom) This is bug 1941005.
         flavor_id = self._create_flavor()
-        ex = self.assertRaises(client.OpenStackApiException,
-                               self._resize_server, server, flavor_id)
-        self.assertEqual(500, ex.response.status_code)
-        self.assertIn('NoValidHost', str(ex))
-        # self._confirm_resize(server)
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off',
+            return_value='{}',
+        ):
+            self._resize_server(server, flavor_id)
+        self._confirm_resize(server)
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=1)
+        self.assertPCIDeviceCounts('test_compute1', total=0, free=0)
 
     def _confirm_resize(self, server, host='host1'):
         # NOTE(sbauza): Unfortunately, _cleanup_resize() in libvirt checks the
