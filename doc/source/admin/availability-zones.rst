@@ -152,7 +152,7 @@ it was previously possible with novaclient.
 
 .. code-block:: console
 
-  $ nova evacuate 
+  $ nova evacuate
 
 - evacuate without forcing using openstackclient:
 
