@@ -186,6 +186,14 @@ class VMwareVCDriver(driver.ComputeDriver):
                 self._datastore_regex = None
 
     def init_host(self, host):
+        LOG.warning(
+            'The vmwareapi driver is not tested by the OpenStack project nor '
+            'does it have clear maintainer(s) and thus its quality can not be '
+            'ensured. It should be considered experimental and may be removed '
+            'in a future release. If you are using the driver in production '
+            'please let us know via the openstack-discuss mailing list.'
+        )
+
         vim = self._session.vim
         if vim is None:
             self._session._create_session()
