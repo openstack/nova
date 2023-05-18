@@ -30,8 +30,10 @@ def reset_globals():
     _SERVICE_AUTH = None
 
 
-def get_auth_plugin(context):
-    user_auth = context.get_auth_plugin()
+def get_auth_plugin(context, user_auth=None):
+    # user_auth may be passed in when the RequestContext is anonymous, such as
+    # when get_admin_context() is used for API calls by nova-manage.
+    user_auth = user_auth or context.get_auth_plugin()
 
     if CONF.service_user.send_service_user_token:
         global _SERVICE_AUTH
