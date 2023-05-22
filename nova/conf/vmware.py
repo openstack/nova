@@ -489,6 +489,23 @@ that are stored in Swift will be downloaded by VMWare from the `direct_url`,
 instead of the nova-compute service having to proxy the image between glance
 and VMware.
 """),
+    cfg.IntOpt('resource_disk_gb_max_unit_limit',
+               min=-1,
+               default=-1,
+               help="""
+Limit reporting DISK_GB "max_unit" to Placement to this value
+
+A VMware hypervisor managing multiple datastores reports "max_unit" for DISK_GB
+as the most free space on any of these datastores. Since this can lead to a lot
+of changes in Placement with VMs spawning and getting deleted, users can limit
+the reported "max_unit" value with this config option.
+
+Possible values:
+ * integer > 0: limit of the "max_unit" for DISK_GB in GB
+ * integer = 0: disable reporting DISK_GB resources i.e. disallow non-volume
+                root disks
+ * integer = -1: no limit
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +
