@@ -457,6 +457,23 @@ Create a snapshot of the VM before cloning it
 Before fetching from Glance an image missing on the datastore first look
 for it on other datastores and clone it from there if available.
 """),
+    cfg.IntOpt('resource_disk_gb_max_unit_limit',
+               min=-1,
+               default=-1,
+               help="""
+Limit reporting DISK_GB "max_unit" to Placement to this value
+
+A VMware hypervisor managing multiple datastores reports "max_unit" for DISK_GB
+as the most free space on any of these datastores. Since this can lead to a lot
+of changes in Placement with VMs spawning and getting deleted, users can limit
+the reported "max_unit" value with this config option.
+
+Possible values:
+ * integer > 0: limit of the "max_unit" for DISK_GB in GB
+ * integer = 0: disable reporting DISK_GB resources i.e. disallow non-volume
+                root disks
+ * integer = -1: no limit
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +

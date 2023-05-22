@@ -467,6 +467,9 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         local_gb = stats["local_gb"]
         local_gb_max_free = stats.get("local_gb_max_free", "local_gb")
+        local_gb_max_unit_limit = CONF.vmware.resource_disk_gb_max_unit_limit
+        if local_gb_max_unit_limit != -1:
+            local_gb_max_free = min(local_gb_max_free, local_gb_max_unit_limit)
         if local_gb > 0 and local_gb_max_free > 0:
             reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
                 CONF.reserved_host_disk_mb)
