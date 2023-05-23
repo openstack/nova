@@ -3050,10 +3050,14 @@ class LibvirtCommandsTestCase(test.NoDBTestCase):
     def test_get_unknown_failure(
         self, mock_get_context, mock_get_machine_type
     ):
-        mock_get_machine_type.side_effect = Exception()
+        mock_get_machine_type.side_effect = Exception('oops')
         ret = self.commands.get_machine_type(
             instance_uuid=uuidsentinel.instance
         )
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         self.assertEqual(1, ret)
 
     @mock.patch('nova.virt.libvirt.machine_type_utils.get_machine_type')
@@ -3145,11 +3149,15 @@ class LibvirtCommandsTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
     @mock.patch('nova.context.get_admin_context', new=mock.Mock())
     def test_update_unknown_failure(self, mock_update):
-        mock_update.side_effect = Exception()
+        mock_update.side_effect = Exception('oops')
         ret = self.commands.update_machine_type(
             instance_uuid=uuidsentinel.instance,
             machine_type=mock.sentinel.machine_type
         )
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         self.assertEqual(1, ret)
 
     @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
@@ -3269,9 +3277,13 @@ class LibvirtCommandsTestCase(test.NoDBTestCase):
     def test_list_unset_machine_type_unknown_failure(
         self, mock_get_context, mock_get_instances
     ):
-        mock_get_instances.side_effect = Exception()
+        mock_get_instances.side_effect = Exception('oops')
         ret = self.commands.list_unset_machine_type(
             cell_uuid=uuidsentinel.cell_uuid)
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         self.assertEqual(1, ret)
 
     @mock.patch(
