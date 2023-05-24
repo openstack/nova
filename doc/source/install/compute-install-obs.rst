@@ -28,7 +28,7 @@ Install and configure components
 
    .. code-block:: console
 
-      # zypper install openstack-nova-compute genisoimage qemu-kvm libvirt
+      # zypper install openstack-nova-compute xorrisofs qemu-kvm libvirt
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 

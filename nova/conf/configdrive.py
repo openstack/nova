@@ -69,7 +69,7 @@ Possible values:
 Related options:
 
 * Use the 'mkisofs_cmd' flag to set the path where you install the
-  genisoimage program. If genisoimage is in same path as the
+  xorrisofs program. If xorrisofs is in same path as the
   nova-compute service, you do not need to set this flag.
 * To use a config drive with Hyper-V, you must set the
   'mkisofs_cmd' value to the full path to an mkisofs.exe installation.
@@ -78,12 +78,12 @@ Related options:
   installation.
 """),
     cfg.StrOpt('mkisofs_cmd',
-        default='genisoimage',
+        default='xorrisofs',
         help="""
 Name or path of the tool used for ISO image creation.
 
 Use the ``mkisofs_cmd`` flag to set the path where you install the
-``genisoimage`` program. If ``genisoimage`` is on the system path, you do not
+``xorrisofs`` program. If ``xorrisofs`` is on the system path, you do not
 need to change the default value.
 
 To use a config drive with Hyper-V, you must set the ``mkisofs_cmd`` value to

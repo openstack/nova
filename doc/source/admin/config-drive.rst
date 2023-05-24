@@ -43,9 +43,9 @@ The following virt drivers support the config drive: libvirt, Hyper-V and
 VMware. The Bare Metal service also supports the config drive.
 
 - To use config drives with libvirt or VMware, you must first
-  install the :command:`genisoimage` package on each compute host. Use the
+  install the :command:`xorrisofs` package on each compute host. Use the
   :oslo.config:option:`mkisofs_cmd` config option to set the path where you
-  install the :command:`genisoimage` program. If :command:`genisoimage` is in
+  install the :command:`xorrisofs` program. If :command:`xorrisofs` is in
   the same path as the :program:`nova-compute` service, you do not need to set
   this flag.
 

@@ -49,10 +49,10 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                 os.close(fd)
                 c.make_drive(imagefile)
 
-            mock_execute.assert_called_once_with('genisoimage', '-o',
+            mock_execute.assert_called_once_with('xorrisofs', '-o',
                                                  mock.ANY,
-                                                 '-ldots', '-allow-lowercase',
-                                                 '-allow-multidot', '-l',
+                                                 '-allow-lowercase',
+                                                 '-l',
                                                  '-publisher',
                                                  mock.ANY,
                                                  '-quiet', '-J', '-r',

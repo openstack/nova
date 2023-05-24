@@ -83,9 +83,7 @@ class ConfigDriveBuilder(object):
 
         processutils.execute(CONF.mkisofs_cmd,
                              '-o', path,
-                             '-ldots',
                              '-allow-lowercase',
-                             '-allow-multidot',
                              '-l',
                              '-publisher',
                              publisher,
@@ -99,7 +97,7 @@ class ConfigDriveBuilder(object):
 
     def _make_vfat(self, path, tmpdir):
         # NOTE(mikal): This is a little horrible, but I couldn't find an
-        # equivalent to genisoimage for vfat filesystems.
+        # equivalent to xorrisofs for vfat filesystems.
         with open(path, 'wb') as f:
             f.truncate(CONFIGDRIVESIZE_BYTES)
 
