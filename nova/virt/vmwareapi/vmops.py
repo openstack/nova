@@ -1528,6 +1528,10 @@ class VMwareVMOps(object):
                             'reserving resources after (re)starting a big VM.',
                             {'rp': rp_name})
             else:
+                # we need to update the inventory of the bigvm provider in our
+                # cache, because the generation might be too old after the
+                # allocations of our currently spawning big vm
+                placement_client._refresh_and_get_inventory(context, rp.uuid)
                 # reserve the bigvm resource. this prohibits any further
                 # deployment needing a free host on that compute-node.
                 inv_data = rp.inventory
