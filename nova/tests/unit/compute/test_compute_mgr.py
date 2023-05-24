@@ -7720,6 +7720,42 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     @mock.patch.object(virt_driver.ComputeDriver, 'failed_spawn_cleanup')
     @mock.patch.object(virt_driver.ComputeDriver, 'prepare_for_spawn')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_networks_before_block_device_mapping')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'clean_networks_preparation')
+    def test_failed_prepare_for_spawn(self, mock_clean, mock_prepnet,
+                                      mock_prepspawn, mock_failedspawn):
+        mock_prepspawn.side_effect = exception.ComputeResourcesUnavailable(
+                reason="asdf")
+        with mock.patch.object(self.compute,
+                    '_build_networks_for_instance',
+                    return_value=self.network_info
+                ) as _build_networks_for_instance:
+
+            try:
+                with self.compute._build_resources(self.context, self.instance,
+                        self.requested_networks, self.security_groups,
+                        self.image, self.block_device_mapping,
+                        self.resource_provider_mapping, self.accel_uuids):
+                    pass
+            except Exception as e:
+                self.assertIsInstance(e,
+                    exception.ComputeResourcesUnavailable)
+
+            _build_networks_for_instance.assert_has_calls(
+                    [mock.call(self.context, self.instance,
+                        self.requested_networks, self.security_groups,
+                        self.resource_provider_mapping,
+                        self.network_arqs)])
+
+        mock_prepnet.assert_not_called()
+        mock_clean.assert_called_once_with(self.instance, self.network_info)
+        mock_prepspawn.assert_called_once_with(self.instance)
+        mock_failedspawn.assert_called_once_with(self.instance)
+
+    @mock.patch.object(virt_driver.ComputeDriver, 'failed_spawn_cleanup')
+    @mock.patch.object(virt_driver.ComputeDriver, 'prepare_for_spawn')
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
     def test_build_resources_aborts_on_failed_network_alloc(self, mock_build,
                                                             mock_prepspawn,

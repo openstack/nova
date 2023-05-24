@@ -2499,7 +2499,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
     @mock.patch.object(cw.IronicClientWrapper, 'call')
     def test_prepare_for_spawn(self, mock_call):
-        node = ironic_utils.get_test_node(driver='fake')
+        node = ironic_utils.get_test_node(
+            driver='fake', instance_uuid=None,
+            provision_state=ironic_states.AVAILABLE,
+            power_state=ironic_states.POWER_OFF)
         self.mock_conn.get_node.return_value = node
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
@@ -2531,11 +2534,26 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           instance)
 
     def test_prepare_for_spawn_conflict(self):
-        node = ironic_utils.get_test_node(driver='fake')
+        node = ironic_utils.get_test_node(
+            driver='fake', instance_uuid=None,
+            provision_state=ironic_states.AVAILABLE,
+            power_state=ironic_states.POWER_OFF)
         self.mock_conn.get_node.return_value = node
         self.mock_conn.update_node.side_effect = sdk_exc.ConflictException
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
         self.assertRaises(exception.InstanceDeployFailure,
+                          self.driver.prepare_for_spawn,
+                          instance)
+
+    def test_prepare_for_spawn_not_available(self):
+        node = ironic_utils.get_test_node(
+            driver='fake', instance_uuid=None,
+            provision_state=ironic_states.CLEANWAIT,
+            power_state=ironic_states.POWER_OFF)
+        self.mock_conn.get_node.return_value = node
+        self.mock_conn.update_node.side_effect = sdk_exc.ConflictException
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
+        self.assertRaises(exception.ComputeResourcesUnavailable,
                           self.driver.prepare_for_spawn,
                           instance)
 

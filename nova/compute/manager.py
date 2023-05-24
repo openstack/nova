@@ -2732,7 +2732,8 @@ class ComputeManager(manager.Manager):
                     block_device_mapping)
             resources['block_device_info'] = block_device_info
         except (exception.InstanceNotFound,
-                exception.UnexpectedDeletingTaskStateError):
+                exception.UnexpectedDeletingTaskStateError,
+                exception.ComputeResourcesUnavailable):
             with excutils.save_and_reraise_exception():
                 self._build_resources_cleanup(instance, network_info)
         except (exception.UnexpectedTaskStateError,
