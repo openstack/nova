@@ -269,35 +269,13 @@ class BigVmManager(manager.Manager):
         bigvm_providers = {}
         vmware_providers = {}
         resp = client.get('/resource_providers',
-                         version=NESTED_PROVIDER_API_VERSION)
+                          version=NESTED_PROVIDER_API_VERSION)
         for rp in resp.json()['resource_providers']:
             if rp['name'].startswith(CONF.bigvm_deployment_rp_name_prefix):
-                # retrieve the aggregates
-                url = '/resource_providers/{}/aggregates'.format(rp['uuid'])
-                resp = client.get(url, version=NESTED_PROVIDER_API_VERSION)
-                if resp.status_code != 200:
-                    LOG.error('Could not retrieve aggregates for RP %(name)s '
-                              '(%(rp)s).',
-                              {'name': rp['name'], 'rp': rp['uuid']})
-                    continue
-                aggregates = resp.json()['aggregates']
-                if not aggregates:
-                    LOG.error('RP %(name)s (%(rp)s) has no aggregate. Cannot '
-                              'find "parent" provider.',
-                              {'name': rp['name'], 'rp': rp['uuid']})
-                    continue
-                for agg in aggregates:
-                    if agg not in vmware_hvs:
-                        continue
-                    host_rp_uuid = agg
-                    break
-                else:
-                    LOG.error('RP %(name)s (%(rp)s) has no aggregate matching '
-                              'a compute node UUID. Cannot find "parent" '
-                              'provider in %(aggs)s',
-                              {'name': rp['name'], 'rp': rp['uuid'],
-                               'aggs': ', '.join(aggregates)})
-                    continue
+                # We use the _root_ RP and not the parent because that will
+                # always map to the ComputeNode, even if we decide to nest RPs
+                # further.
+                host_rp_uuid = rp['root_provider_uuid']
                 host = vmware_hvs[host_rp_uuid]
                 cell_mapping = host_mappings[host]
                 bigvm_providers[rp['uuid']] = {'rp': rp,
@@ -398,7 +376,7 @@ class BigVmManager(manager.Manager):
 
             # make sure the placement cache is filled
             client.get_provider_tree_and_ensure_root(context, rp['uuid'],
-                rp['name'])
+                                                     rp['name'])
 
         # retrieve all bigvm provider's inventories
         for rp_uuid, rp in bigvm_providers.items():
@@ -514,7 +492,7 @@ class BigVmManager(manager.Manager):
                 providers_to_delete[rp_uuid] = rp
                 LOG.info('Resource-provider %(host_rp_uuid)s got disabled '
                          'bigVMs. Marking %(rp_uuid)s for deletion.',
-                         {'host_rp_uuid': host_rp['uuid'],
+                         {'host_rp_uuid': rp['host_rp_uuid'],
                           'rp_uuid': rp_uuid})
 
         for rp_uuid, rp in providers_to_delete.items():
@@ -696,7 +674,8 @@ class BigVmManager(manager.Manager):
             'max_unit': 2, 'min_unit': 2, 'total': 2}}
 
         client._ensure_resource_provider(
-            context, rp_uuid, rp['rp']['name'])
+            context, rp_uuid, rp['rp']['name'],
+            parent_provider_uuid=rp['host_rp_uuid'])
         try:
             client.set_inventory_for_provider(context, rp_uuid, inv_data)
         except Exception as err:
@@ -727,7 +706,8 @@ class BigVmManager(manager.Manager):
             # to set the uuid manually which it doesn't support
             url = "/resource_providers"
             payload = {
-                'name': new_rp_name
+                'name': new_rp_name,
+                'parent_provider_uuid': rp_uuid
             }
             resp = client.post(url, payload,
                                version=NESTED_PROVIDER_API_VERSION,
@@ -759,7 +739,10 @@ class BigVmManager(manager.Manager):
                                                               name=new_rp_name)
             # make sure the placement cache is filled
             client.get_provider_tree_and_ensure_root(context, new_rp_uuid,
-                new_rp_name)
+                                                     new_rp_name)
+
+            # Remove the following once elektra doesn't look at aggregates
+            # anymore to show spawnable bigvm flavors:
 
             # ensure the parent resource-provider has its uuid as aggregate set
             # in addition to its previous aggregates
@@ -769,15 +752,10 @@ class BigVmManager(manager.Manager):
                 client.set_aggregates_for_provider(
                     context, rp_uuid, agg_info.aggregates,
                     generation=agg_info.generation)
-
             # add the newly-created resource-provider to the parent uuid's
             # aggregate
             client.set_aggregates_for_provider(context, new_rp_uuid, [rp_uuid])
-
-            # make the newly-created resource-provider share its resources with
-            # its aggregates
-            client.set_traits_for_provider(context, new_rp_uuid,
-                                           ['MISC_SHARES_VIA_AGGREGATE'])
+            # Remove until here after elektra change.
 
             # find a host and let DRS free it up
             state = self.special_spawn_rpc.free_host(context, host)
@@ -786,7 +764,8 @@ class BigVmManager(manager.Manager):
                 # there were free resources available immediately
                 needs_cleanup = False
                 new_rp = {'host': host,
-                          'rp': {'name': new_rp_name}}
+                          'rp': {'name': new_rp_name},
+                          'host_rp_uuid': rp_uuid}
                 self._add_resources_to_provider(context, new_rp_uuid, new_rp)
             elif state == special_spawning.FREE_HOST_STATE_STARTED:
                 # it started working on it. we have to check back later
