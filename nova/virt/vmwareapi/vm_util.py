@@ -526,11 +526,14 @@ def create_serial_port_spec(client_factory):
     return dev_spec
 
 
-def get_vm_boot_spec(client_factory, device):
+def get_vm_boot_spec(client_factory, device, is_efi=False):
     """Returns updated boot settings for the instance.
 
     The boot order for the instance will be changed to have the
     input device as the boot disk.
+
+    If "is_efi" is True, "quickBoot" will be disabled for the VM so it can
+    actually see the rescue disk during the boot decision.
     """
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     boot_disk = client_factory.create(
@@ -539,6 +542,13 @@ def get_vm_boot_spec(client_factory, device):
     boot_options = client_factory.create('ns0:VirtualMachineBootOptions')
     boot_options.bootOrder = [boot_disk]
     config_spec.bootOptions = boot_options
+
+    if is_efi:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'efi.quickBoot.enabled'
+        opt.value = 'FALSE'
+        config_spec.extraConfig = [opt]
+
     return config_spec
 
 

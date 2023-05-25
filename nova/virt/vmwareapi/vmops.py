@@ -2063,7 +2063,10 @@ class VMwareVMOps(object):
         # boot from this device
         rescue_device = self._get_rescue_device(instance, vm_ref)
         factory = self._session.vim.client.factory
-        boot_spec = vm_util.get_vm_boot_spec(factory, rescue_device)
+        firmware = vm_util.get_object_property(self._session, vm_ref,
+                                               'config.firmware')
+        boot_spec = vm_util.get_vm_boot_spec(factory, rescue_device,
+                                             firmware == 'efi')
         # Update the VM with the new boot order and power on
         vm_util.reconfigure_vm(self._session, vm_ref, boot_spec)
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
@@ -2082,6 +2085,19 @@ class VMwareVMOps(object):
         vm_util.power_off_instance(self._session, instance, vm_ref)
         self._volumeops.detach_disk_from_vm(vm_ref, instance, rescue_device,
                                             destroy_disk=True)
+
+        firmware = vm_util.get_object_property(self._session, vm_ref,
+                                               'config.firmware')
+        if firmware == 'efi':
+            # Enable quickBoot again, since we only needed it to find the
+            # rescue disk
+            factory = self._session.vim.client.factory
+            config_spec = factory.create('ns0:VirtualMachineConfigSpec')
+            opt = factory.create('ns0:OptionValue')
+            opt.key = 'efi.quickBoot.enabled'
+            opt.value = ''  # an empty value deletes the option
+            config_spec.extraConfig = [opt]
+            vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 

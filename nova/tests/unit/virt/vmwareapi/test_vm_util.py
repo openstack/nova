@@ -1973,11 +1973,17 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         mock_reconfigure.assert_called_once_with(session, 'fake-ref', mock.ANY)
 
     def test_get_vm_boot_spec(self):
+        self._test_get_vm_boot_spec(efi=False)
+
+    def test_get_vm_boot_spec_efi(self):
+        self._test_get_vm_boot_spec(efi=True)
+
+    def _test_get_vm_boot_spec(self, efi):
         disk = fake.VirtualDisk()
         disk.key = 7
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_boot_spec(fake_factory,
-                                          disk)
+                                          disk, efi)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
         boot_disk = fake_factory.create(
             'ns0:VirtualMachineBootOptionsBootableDiskDevice')
@@ -1985,6 +1991,12 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         boot_options = fake_factory.create('ns0:VirtualMachineBootOptions')
         boot_options.bootOrder = [boot_disk]
         expected.bootOptions = boot_options
+
+        if efi:
+            opt = fake_factory.create('ns0:OptionValue')
+            opt.key = 'efi.quickBoot.enabled'
+            opt.value = 'FALSE'
+            expected.extraConfig = [opt]
         self.assertEqual(expected, result)
 
     def _get_devices(self, filename):
