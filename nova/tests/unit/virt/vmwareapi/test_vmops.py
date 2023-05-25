@@ -403,6 +403,12 @@ class VMwareVMOpsTestCase(test.TestCase):
     def test_get_datacenter_ref_and_name_with_no_datastore(self):
         self._test_get_datacenter_ref_and_name()
 
+    def test_rescue(self):
+        self._test_rescue()
+
+    def test_rescue_efi(self):
+        self._test_rescue(efi=True)
+
     @mock.patch('nova.image.glance.API.get')
     @mock.patch.object(vm_util, 'power_off_instance')
     @mock.patch.object(ds_util, 'disk_copy')
@@ -416,11 +422,11 @@ class VMwareVMOpsTestCase(test.TestCase):
                        return_value=None)
     @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_from_other_datastores',
                        return_value=None)
-    def test_rescue(self, mock_fetch_image_from_other_datastores,
+    def _test_rescue(self, mock_fetch_image_from_other_datastores,
                     mock_find_image_template_vm, mock_get_ds_by_ref,
                     mock_power_on, mock_reconfigure, mock_get_boot_spec,
                     mock_find_rescue, mock_get_vm_ref, mock_disk_copy,
-                    mock_power_off, mock_glance):
+                    mock_power_off, mock_glance, efi=False):
         _volumeops = mock.Mock()
         self._vmops._volumeops = _volumeops
         ds_ref = vmwareapi_fake.ManagedObjectReference(value='fake-ref')
@@ -443,6 +449,8 @@ class VMwareVMOpsTestCase(test.TestCase):
         vmx_path = ds_obj.DatastorePath.parse(
             '[vmx-ds] test (uuid)/test (uuid).vmdk')
 
+        gop_return = 'efi' if efi else 'bios'
+
         with test.nested(
             mock.patch.object(self._vmops, 'get_datacenter_ref_and_name'),
             mock.patch.object(vm_util, 'get_vmdk_info',
@@ -450,9 +458,11 @@ class VMwareVMOpsTestCase(test.TestCase):
             mock.patch.object(vm_util, 'get_datastore_ref_by_name',
                               return_value=ds_ref),
             mock.patch.object(vm_util, 'get_vmx_path',
-                              return_value=vmx_path)
+                              return_value=vmx_path),
+            mock.patch.object(vm_util, 'get_object_property',
+                              return_value=gop_return)
         ) as (_get_dc_ref_and_name, fake_vmdk_info, fake_ds_ref_by_name,
-                fake_get_vmx_path):
+                fake_get_vmx_path, fake_get_object_property):
             dc_info = mock.Mock()
             _get_dc_ref_and_name.return_value = dc_info
             self._vmops.rescue(
@@ -472,8 +482,9 @@ class VMwareVMOpsTestCase(test.TestCase):
                              cache_path, rescue_path)
             _volumeops.attach_disk_to_vm.assert_called_once_with(vm_ref,
                              self._instance, mock.ANY, mock.ANY, rescue_path)
-            mock_get_boot_spec.assert_called_once_with(mock.ANY,
-                                                       'fake-rescue-device')
+
+            get_boot_spec_args = [mock.ANY, 'fake-rescue-device', efi]
+            mock_get_boot_spec.assert_called_once_with(*get_boot_spec_args)
             mock_reconfigure.assert_called_once_with(self._session,
                                                      vm_ref,
                                                      'fake-boot-spec')
@@ -482,20 +493,31 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                   vm_ref=vm_ref)
 
     def test_unrescue_power_on(self):
-        self._test_unrescue(True)
+        self._test_unrescue(power_on=True)
 
     def test_unrescue_power_off(self):
-        self._test_unrescue(False)
+        self._test_unrescue(power_on=False)
 
-    def _test_unrescue(self, power_on):
+    def test_unrescue_efi(self):
+        self._test_unrescue(power_on=False, efi=True)
+
+    def _test_unrescue(self, power_on=False, efi=False):
         _volumeops = mock.Mock()
         self._vmops._volumeops = _volumeops
         vm_ref = mock.Mock()
 
+        get_object_property_args = iter(((vm_ref, 'config.hardware.device'),
+                                         (vm_ref, 'config.firmware')))
+
         def fake_call_method(module, method, *args, **kwargs):
-            expected_args = (vm_ref, 'config.hardware.device')
+            expected_args = next(get_object_property_args)
             self.assertEqual('get_object_property', method)
             self.assertEqual(expected_args, args)
+            if args[1] == 'config.firmware':
+                if efi:
+                    return 'efi'
+                else:
+                    return 'bios'
 
         with test.nested(
                 mock.patch.object(vm_util, 'power_on_instance'),
@@ -503,9 +525,10 @@ class VMwareVMOpsTestCase(test.TestCase):
                 mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
                 mock.patch.object(self._session, '_call_method',
                                   fake_call_method),
-                mock.patch.object(vm_util, 'power_off_instance')
+                mock.patch.object(vm_util, 'power_off_instance'),
+                mock.patch.object(vm_util, 'reconfigure_vm', autospec=True)
         ) as (_power_on_instance, _find_rescue, _get_vm_ref,
-              _call_method, _power_off):
+              _call_method, _power_off, _reconfigure_vm):
             self._vmops.unrescue(self._instance, power_on=power_on)
 
             if power_on:
@@ -519,6 +542,19 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                vm_ref)
             _volumeops.detach_disk_from_vm.assert_called_once_with(
                 vm_ref, self._instance, mock.ANY, destroy_disk=True)
+
+            fake_factory = vmwareapi_fake.FakeFactory()
+            expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+            boot_options = fake_factory.create('ns0:VirtualMachineBootOptions')
+            boot_options.bootOrder = []
+            expected.bootOptions = boot_options
+            if efi:
+                opt = fake_factory.create('ns0:OptionValue')
+                opt.key = 'efi.quickBoot.enabled'
+                opt.value = ''
+                expected.extraConfig = [opt]
+            _reconfigure_vm.assert_called_once_with(self._session, vm_ref,
+                expected)
 
     @mock.patch.object(time, 'sleep')
     def _test_clean_shutdown(self, mock_sleep,

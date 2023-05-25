@@ -507,19 +507,38 @@ def create_serial_port_spec(client_factory):
     return dev_spec
 
 
-def get_vm_boot_spec(client_factory, device):
+def get_vm_boot_spec(client_factory, device=None, is_efi=False):
     """Returns updated boot settings for the instance.
+
+    If device is set, we want to boot from a non-standard device (rescue disk)
 
     The boot order for the instance will be changed to have the
     input device as the boot disk.
+
+    If "is_efi" is True, "quickBoot" will be disabled for the VM so it can
+    actually see the rescue disk during the boot decision.
+
+    If device is unset, we restore the defaults.
     """
-    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
-    boot_disk = client_factory.create(
-        'ns0:VirtualMachineBootOptionsBootableDiskDevice')
-    boot_disk.deviceKey = device.key
     boot_options = client_factory.create('ns0:VirtualMachineBootOptions')
-    boot_options.bootOrder = [boot_disk]
+
+    if device:
+        boot_disk = client_factory.create(
+            'ns0:VirtualMachineBootOptionsBootableDiskDevice')
+        boot_disk.deviceKey = device.key
+        boot_options.bootOrder = [boot_disk]
+    else:
+        boot_options.bootOrder = []
+
+    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.bootOptions = boot_options
+
+    if is_efi:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'efi.quickBoot.enabled'
+        opt.value = 'FALSE' if device else ''  # '' Clears the value
+        config_spec.extraConfig = [opt]
+
     return config_spec
 
 

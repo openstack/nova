@@ -1974,18 +1974,46 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         mock_reconfigure.assert_called_once_with(session, 'fake-ref', mock.ANY)
 
     def test_get_vm_boot_spec(self):
-        disk = fake.VirtualDisk()
-        disk.key = 7
+        self._test_get_vm_boot_spec(efi=False, reset=False)
+
+    def test_get_vm_boot_spec_efi(self):
+        self._test_get_vm_boot_spec(efi=True, reset=False)
+
+    def test_get_vm_boot_reset_spec(self):
+        self._test_get_vm_boot_spec(efi=False, reset=True)
+
+    def test_get_vm_boot_reset_spec_efi(self):
+        self._test_get_vm_boot_spec(efi=True, reset=True)
+
+    def _test_get_vm_boot_spec(self, efi, reset):
+        if not reset:
+            disk = fake.VirtualDisk()
+            disk.key = 7
+        else:
+            disk = None
+
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_boot_spec(fake_factory,
-                                          disk)
+                                          disk, efi)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
-        boot_disk = fake_factory.create(
-            'ns0:VirtualMachineBootOptionsBootableDiskDevice')
-        boot_disk.deviceKey = disk.key
+
         boot_options = fake_factory.create('ns0:VirtualMachineBootOptions')
-        boot_options.bootOrder = [boot_disk]
         expected.bootOptions = boot_options
+
+        if reset:
+            boot_options.bootOrder = []
+        else:
+            boot_disk = fake_factory.create(
+                'ns0:VirtualMachineBootOptionsBootableDiskDevice')
+            boot_disk.deviceKey = disk.key
+            boot_options.bootOrder = [boot_disk]
+
+        if efi:
+            opt = fake_factory.create('ns0:OptionValue')
+            opt.key = 'efi.quickBoot.enabled'
+            opt.value = 'FALSE' if not reset else ''
+            expected.extraConfig = [opt]
+
         self.assertEqual(expected, result)
 
     def _get_devices(self, filename):
