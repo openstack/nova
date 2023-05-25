@@ -1,0 +1,16 @@
+---
+fixes:
+  - |
+    Previously ``switchdev`` capabilities should be configured manually by a
+    user with admin privileges using port's binding profile. This blocked
+    regular users from managing ports with Open vSwitch hardware offloading
+    as providing write access to a port's binding profile to non-admin users
+    introduces security risks. For example, a binding profile may contain a
+    ``pci_slot`` definition, which denotes the host PCI address of the
+    device attached to the VM. A malicious user can use this parameter to
+    passthrough any host device to a guest, so it is impossible to provide
+    write access to a binding profile to regular users in many scenarios.
+
+    This patch fixes this situation by translating VF capabilities reported
+    by Libvirt to Neutron port binding profiles. Other VF capabilities are
+    translated as well for possible future use.
