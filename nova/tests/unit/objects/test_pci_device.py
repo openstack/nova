@@ -171,6 +171,16 @@ class _TestPciDeviceObject(object):
         self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
         self.assertEqual(self.pci_device.card_serial_number, '42')
 
+    def test_pci_device_extra_info_network_capabilities(self):
+        self.dev_dict = copy.copy(dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
+        self.assertEqual(self.pci_device.network_caps, [])
+
+        self.dev_dict = copy.copy(dev_dict)
+        self.dev_dict['capabilities'] = {'network': ['sg', 'tso', 'tx']}
+        self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
+        self.assertEqual(self.pci_device.network_caps, ['sg', 'tso', 'tx'])
+
     def test_update_device(self):
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.pci_device.obj_reset_changes()
