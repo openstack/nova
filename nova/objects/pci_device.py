@@ -588,6 +588,13 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         """
         return self.extra_info.get('mac_address')
 
+    @property
+    def network_caps(self):
+        """PCI device network capabilities or empty list if not available"""
+        caps_json = self.extra_info.get('capabilities', '{}')
+        caps = jsonutils.loads(caps_json)
+        return caps.get('network', [])
+
 
 @base.NovaObjectRegistry.register
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
