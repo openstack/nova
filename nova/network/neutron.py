@@ -1588,6 +1588,13 @@ class API:
                 'pf_mac_address': pf_mac,
                 'vf_num': vf_num,
             })
+
+        # Update port binding capabilities using PCI device's network
+        # capabilities if they exist.
+        pci_net_caps = pci_dev.network_caps
+        if pci_net_caps:
+            vf_profile.update({'capabilities': pci_net_caps})
+
         return vf_profile
 
     def _get_pci_device_profile(self, pci_dev):
