@@ -171,12 +171,13 @@ class HyperVDriver(driver.ComputeDriver):
         self._vmops.reboot(instance, network_info, reboot_type)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, destroy_secrets=True):
         self._vmops.destroy(instance, network_info, block_device_info,
                             destroy_disks)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None, destroy_vifs=True):
+                destroy_disks=True, migrate_data=None, destroy_vifs=True,
+                destroy_secrets=True):
         """Cleanup after instance being destroyed by Hypervisor."""
         self.unplug_vifs(instance, network_info)
 

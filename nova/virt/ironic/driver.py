@@ -1344,7 +1344,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         _sync_remove_cache_entry()
 
     def destroy(self, context, instance, network_info,
-                block_device_info=None, destroy_disks=True):
+                block_device_info=None, destroy_disks=True,
+                destroy_secrets=True):
         """Destroy the specified instance, if it can be found.
 
         :param context: The security context.
@@ -1353,6 +1354,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param block_device_info: Instance block device
             information. Ignored by this driver.
         :param destroy_disks: Indicates if disks should be
+            destroyed. Ignored by this driver.
+        :param destroy_secrets: Indicates if secrets should be
             destroyed. Ignored by this driver.
         """
         LOG.debug('Destroy called for instance', instance=instance)

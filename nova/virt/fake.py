@@ -308,7 +308,7 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, destroy_secrets=True):
         key = instance.uuid
         if key in self.instances:
             flavor = instance.flavor
@@ -323,7 +323,8 @@ class FakeDriver(driver.ComputeDriver):
                          'inst': self.instances}, instance=instance)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None, destroy_vifs=True):
+                destroy_disks=True, migrate_data=None, destroy_vifs=True,
+                destroy_secrets=True):
         # cleanup() should not be called when the guest has not been destroyed.
         if instance.uuid in self.instances:
             raise exception.InstanceExists(

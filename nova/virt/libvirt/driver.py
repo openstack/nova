@@ -1337,7 +1337,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._teardown_container(instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, destroy_secrets=True):
         self._destroy(instance)
         self.cleanup(context, instance, network_info, block_device_info,
                      destroy_disks)
@@ -1367,7 +1367,8 @@ class LibvirtDriver(driver.ComputeDriver):
             pass
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None, destroy_vifs=True):
+                destroy_disks=True, migrate_data=None, destroy_vifs=True,
+                destroy_secrets=True):
         """Cleanup the instance from the host.
 
         Identify if the instance disks and instance path should be removed
@@ -1381,6 +1382,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param destroy_disks: if local ephemeral disks should be destroyed
         :param migrate_data: optional migrate_data object
         :param destroy_vifs: if plugged vifs should be unplugged
+        :param destroy_secrets: Indicates if secrets should be destroyed
         """
         cleanup_instance_dir = False
         cleanup_instance_disks = False

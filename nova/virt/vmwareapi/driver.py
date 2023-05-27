@@ -224,7 +224,8 @@ class VMwareVCDriver(driver.ComputeDriver):
             LOG.debug('Extension %s already exists.', constants.EXTENSION_KEY)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None, destroy_vifs=True):
+                destroy_disks=True, migrate_data=None, destroy_vifs=True,
+                destroy_secrets=True):
         """Cleanup after instance being destroyed by Hypervisor."""
         pass
 
@@ -593,7 +594,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                                   instance=instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, destroy_secrets=True):
         """Destroy VM instance."""
 
         # Destroy gets triggered when Resource Claim in resource_tracker
