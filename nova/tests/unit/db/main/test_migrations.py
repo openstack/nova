@@ -79,11 +79,9 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
 
     def include_object(self, object_, name, type_, reflected, compare_to):
         if type_ == 'table':
-            # migrate_version is a sqlalchemy-migrate control table and
-            # isn't included in the model. shadow_* are generated from
-            # the model and have their own tests to ensure they don't
-            # drift.
-            if name == 'migrate_version' or name.startswith('shadow_'):
+            # shadow_* are generated from the model and have their own tests to
+            # ensure they don't drift.
+            if name.startswith('shadow_'):
                 return False
 
             # Define a whitelist of tables that will be removed from the DB in
@@ -157,7 +155,6 @@ class TestModelsSyncMySQL(
                     "FROM information_schema.TABLES "
                     "WHERE TABLE_SCHEMA = :database "
                     "AND ENGINE != 'InnoDB' "
-                    "AND TABLE_NAME != 'migrate_version'"
                 ),
                 {'database': self.engine.url.database},
             )
@@ -280,6 +277,11 @@ class NovaMigrationsWalk(
         self.assertIndexNotExists(
             connection, 'instances', 'uuid',
         )
+
+    def _check_1b91788ec3a6(self, connection):
+        # the table optionally existed: there's no way to check for its
+        # removal without creating it first, which is dumb
+        pass
 
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.
