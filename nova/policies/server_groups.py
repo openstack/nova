@@ -93,14 +93,15 @@ server_groups_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
         description="Update members of a server group",
         operations=[
             {
                 'path': '/os-server-groups/{server_group_id}',
                 'method': 'PUT'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
 ]
 
