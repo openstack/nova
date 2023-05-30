@@ -28,6 +28,7 @@ from sqlalchemy.sql import func
 from nova import availability_zones as avail_zone
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import context as nova_context
 from nova.db.main import api as db
 from nova.db.main import models
 from nova import exception
@@ -1341,6 +1342,30 @@ def populate_missing_availability_zones(context, count):
     for instance in instances:
         az = avail_zone.get_instance_availability_zone(context, instance)
         instance.availability_zone = az
+        instance.save(context.session)
+        count_hit += 1
+    return count_all, count_hit
+
+
+@db.pick_context_manager_writer
+def populate_instance_compute_id(context, count):
+    instances = (context.session.query(models.Instance).
+        filter(models.Instance.compute_id == None).  # noqa E711
+        limit(count).all())
+    count_all = count_hit = 0
+    rd_context = nova_context.get_admin_context(read_deleted='yes')
+    for instance in instances:
+        count_all += 1
+        try:
+            node = objects.ComputeNode.get_by_host_and_nodename(rd_context,
+                                                                instance.host,
+                                                                instance.node)
+        except exception.ComputeHostNotFound:
+            LOG.error('Unable to migrate instance because host %s with '
+                      'node %s not found', instance.host, instance.node,
+                      instance=instance)
+            continue
+        instance.compute_id = node.id
         instance.save(context.session)
         count_hit += 1
     return count_all, count_hit

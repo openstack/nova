@@ -185,6 +185,8 @@ class DbCommands(object):
         instance_mapping_obj.populate_user_id,
         # Added in Victoria
         pci_device_obj.PciDevice.populate_dev_uuids,
+        # Added in 2023.2
+        instance_obj.populate_instance_compute_id,
     )
 
     @args('--local_cell', action='store_true',
