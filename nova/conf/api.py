@@ -370,6 +370,17 @@ option will be ignored. See "Handling Down Cells" section of the Compute API
 guide (https://docs.openstack.org/api-guide/compute/down_cells.html) for
 more information.
 """),
+    cfg.BoolOpt("disable_hypervisor_uptime_detail",
+                default=False,
+                help="""
+If enabled, return None in the "uptime" field from hypervisors' detailed
+properties. This speeds up the API for these requests. Consider enabling this
+if you have a lot of hypervisors, since it scales with their number.
+
+In the VMware driver in particular a nova hypervisor is actually a cluster of
+nodes, and reporting uptime is not meaningful. Ironic also doesn't implement
+this field.
+"""),
 ]
 
 os_network_opts = [
