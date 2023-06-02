@@ -28,6 +28,7 @@ from nova.api.openstack.compute.views import hypervisors as hyper_view
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.policies import hypervisors as hv_policies
@@ -35,6 +36,8 @@ from nova import servicegroup
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+
+CONF = nova.conf.CONF
 
 UUID_FOR_ID_MIN_VERSION = '2.53'
 
@@ -102,18 +105,20 @@ class HypervisorsController(wsgi.Controller):
         if detail and api_version_request.is_supported(
             req, min_version='2.88',
         ):
-            try:
-                hyp_dict['uptime'] = self.host_api.get_host_uptime(
-                    req.environ['nova.context'], hypervisor.host)
-            except (
-                NotImplementedError,
-                exception.ComputeServiceUnavailable,
-                exception.HostMappingNotFound,
-                exception.HostNotFound,
-            ):
-                # Not all virt drivers support this, and it's not generally
-                # possible to get uptime for a down host
-                hyp_dict['uptime'] = None
+            # Not all virt drivers support this, and it's not generally
+            # possible to get uptime for a down host
+            hyp_dict['uptime'] = None
+            if not CONF.api.disable_hypervisor_uptime_detail:
+                try:
+                    hyp_dict['uptime'] = self.host_api.get_host_uptime(
+                        req.environ['nova.context'], hypervisor.host)
+                except (
+                    NotImplementedError,
+                    exception.ComputeServiceUnavailable,
+                    exception.HostMappingNotFound,
+                    exception.HostNotFound,
+                ):
+                    pass
 
         if servers:
             hyp_dict['servers'] = [
