@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    The `CPU power management`_ feature has been fixed to use privsep to avoid
+    a FileNotFound error when offlining CPUs.
+
+    .. _CPU power management: https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-cpu-power-management-for-dedicated-cores
