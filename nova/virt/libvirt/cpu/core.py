@@ -60,6 +60,7 @@ def set_online(core: int) -> bool:
     return get_online(core)
 
 
+@nova.privsep.sys_admin_pctxt.entrypoint
 def set_offline(core: int) -> bool:
     filesystem.write_sys(os.path.join(gen_cpu_path(core), 'online'), data='0')
     return not get_online(core)
