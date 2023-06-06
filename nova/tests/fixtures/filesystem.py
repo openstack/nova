@@ -39,10 +39,14 @@ class TempFileSystemFixture(fixtures.Fixture):
 
 
 class SysFileSystemFixture(TempFileSystemFixture):
-    """Creates a fake /sys filesystem"""
+    def __init__(self, cpus_supported=None, cpufreq_enabled=True):
+        """Instantiates a fake sysfs.
 
-    def __init__(self, cpus_supported=None):
+        :param cpus_supported: number of devices/system/cpu (default: 10)
+        :param cpufreq_enabled: cpufreq subdir created (default: True)
+        """
         self.cpus_supported = cpus_supported or 10
+        self.cpufreq_enabled = cpufreq_enabled
 
     def _setUp(self):
         super()._setUp()
@@ -73,9 +77,12 @@ class SysFileSystemFixture(TempFileSystemFixture):
 
         for cpu_nr in range(self.cpus_supported):
             cpu_dir = os.path.join(self.cpu_path_mock % {'core': cpu_nr})
-            os.makedirs(os.path.join(cpu_dir, 'cpufreq'))
-            filesystem.write_sys(
-                os.path.join(cpu_dir, 'cpufreq/scaling_governor'),
-                data='powersave')
+            os.makedirs(cpu_dir)
+            filesystem.write_sys(os.path.join(cpu_dir, 'online'), data='1')
+            if self.cpufreq_enabled:
+                os.makedirs(os.path.join(cpu_dir, 'cpufreq'))
+                filesystem.write_sys(
+                    os.path.join(cpu_dir, 'cpufreq/scaling_governor'),
+                    data='powersave')
         filesystem.write_sys(core.AVAILABLE_PATH,
                              f'0-{self.cpus_supported - 1}')
