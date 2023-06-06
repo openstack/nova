@@ -11,6 +11,7 @@
 #    under the License.
 
 from dataclasses import dataclass
+import typing as ty
 
 from oslo_log import log as logging
 
@@ -59,8 +60,13 @@ class Core:
         return str(self.ident)
 
     @property
-    def governor(self) -> str:
-        return core.get_governor(self.ident)
+    def governor(self) -> ty.Optional[str]:
+        try:
+            return core.get_governor(self.ident)
+        # NOTE(sbauza): cpufreq/scaling_governor is not enabled for some OS
+        # platforms.
+        except exception.FileNotFound:
+            return None
 
     def set_high_governor(self) -> None:
         core.set_governor(self.ident, CONF.libvirt.cpu_power_governor_high)

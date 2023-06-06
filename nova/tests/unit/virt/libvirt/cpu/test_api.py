@@ -57,6 +57,12 @@ class TestAPI(test.NoDBTestCase):
         self.assertEqual('fake_governor', self.core_1.governor)
         mock_get_governor.assert_called_once_with(self.core_1.ident)
 
+    @mock.patch.object(core, 'get_governor')
+    def test_governor_optional(self, mock_get_governor):
+        mock_get_governor.side_effect = exception.FileNotFound(file_path='foo')
+        self.assertIsNone(self.core_1.governor)
+        mock_get_governor.assert_called_once_with(self.core_1.ident)
+
     @mock.patch.object(core, 'set_governor')
     def test_set_governor_low(self, mock_set_governor):
         self.flags(cpu_power_governor_low='fake_low_gov', group='libvirt')
