@@ -220,6 +220,39 @@ class PowerManagementTestsGovernor(PowerManagementTestsBase):
                           self.restart_compute_service, hostname='compute1')
 
 
+class PowerManagementTestsGovernorNotSupported(PowerManagementTestsBase):
+    """Test suite for OS without governor support usage (same 10-core host)"""
+
+    def setUp(self):
+        super(PowerManagementTestsGovernorNotSupported, self).setUp()
+
+        self.useFixture(nova_fixtures.SysFileSystemFixture(
+            cpufreq_enabled=False))
+
+        # Definining the CPUs to be pinned.
+        self.flags(cpu_dedicated_set='1-9', cpu_shared_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+        self.flags(cpu_power_management=True, group='libvirt')
+        self.flags(cpu_power_management_strategy='cpu_state', group='libvirt')
+
+        self.flags(allow_resize_to_same_host=True)
+        self.host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                              cpu_cores=5, cpu_threads=2)
+
+    def test_enabling_governor_strategy_fails(self):
+        self.flags(cpu_power_management_strategy='governor', group='libvirt')
+        self.assertRaises(exception.FileNotFound, self.start_compute,
+                          host_info=self.host_info, hostname='compute1')
+
+    def test_enabling_cpu_state_strategy_works(self):
+        self.flags(cpu_power_management_strategy='cpu_state', group='libvirt')
+        self.compute1 = self.start_compute(host_info=self.host_info,
+                                           hostname='compute1')
+        cpu_dedicated_set = hardware.get_cpu_dedicated_set()
+        self._assert_cpu_set_state(cpu_dedicated_set, expected='offline')
+
+
 class PowerManagementMixedInstances(PowerManagementTestsBase):
     """Test suite for a single host with 6 dedicated cores, 3 shared and one
     OS-restricted.

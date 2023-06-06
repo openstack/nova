@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Some OS platforms don't provide by default cpufreq resources in sysfs, so
+    they don't have CPU scaling governors. That's why we should let the governor
+    strategy to be optional for `CPU power management`_.
+
+    .. _CPU power management: https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-cpu-power-management-for-dedicated-cores
+
