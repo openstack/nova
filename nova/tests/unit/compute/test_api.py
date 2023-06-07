@@ -95,6 +95,18 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock.Mock(return_value=False),
             )
         )
+        self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.compute.api.check_shares_supported',
+                mock.Mock(return_value=False),
+            )
+        )
+        self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.compute.api.instance_has_share',
+                mock.Mock(return_value=False),
+            )
+        )
 
     def _get_vm_states(self, exclude_states=None):
         vm_state = set([vm_states.ACTIVE, vm_states.BUILDING, vm_states.PAUSED,

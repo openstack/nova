@@ -224,6 +224,9 @@ class SchedulerReportClient(object):
         :param adapter: A prepared keystoneauth1 Adapter for API communication.
                 If unspecified, one is created based on config options in the
                 [placement] section.
+
+        Note: You should not instantiate this directly. You should call the
+        report_client_singleton() function instead.
         """
         self._adapter = adapter
         # An object that contains a nova-compute-side cache of resource

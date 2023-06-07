@@ -324,7 +324,9 @@ class API(object):
         if access:
             client = _manilaclient(context, admin=True)
             LOG.debug("Deny host access to share id:'%s'", share_id)
-            resp = client.delete_access_rule(access.id, share_id)
+            resp = client.delete_access_rule(
+                access.id, share_id, unrestrict=True
+            )
             if resp.status_code != 202:
                 raise exception.ShareAccessRemovalError(
                     share_id=share_id, reason=resp.reason

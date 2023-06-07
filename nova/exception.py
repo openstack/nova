@@ -179,6 +179,19 @@ class ForbiddenWithAccelerators(NotSupported):
     msg_fmt = _("Feature not supported with instances that have accelerators.")
 
 
+class ForbiddenSharesNotSupported(NotSupported):
+    msg_fmt = _("Feature not supported until computes have not been updated.")
+
+
+class ForbiddenSharesNotConfiguredCorrectly(NotSupported):
+    msg_fmt = _("Feature not supported because either compute or instance "
+                "are not configured correctly.")
+
+
+class ForbiddenWithShare(NotSupported):
+    msg_fmt = _("Feature not supported with instances that have shares.")
+
+
 class ForbiddenPortsWithAccelerator(NotSupported):
     msg_fmt = _("Feature not supported with Ports that have accelerators.")
 
@@ -751,6 +764,29 @@ class ShareAccessGrantError(NovaException):
 
 class ShareAccessRemovalError(NovaException):
     msg_fmt = _("Share access could not be removed from "
+                "share id %(share_id)s.\n"
+                "Reason: %(reason)s.")
+
+
+class ShareLockNotFound(NovaException):
+    msg_fmt = _("Share lock can not be found for "
+                "share id %(share_id)s.\n")
+
+
+class ShareLockError(NovaException):
+    msg_fmt = _("Share lock can not be acquired from "
+                "share id %(share_id)s.\n"
+                "Reason: %(reason)s.")
+
+
+class ShareLockAlreadyExists(NovaException):
+    msg_fmt = _("Share lock can not be acquired from "
+                "share id %(share_id)s.\n"
+                "Reason: lock already exists.")
+
+
+class ShareUnlockError(NovaException):
+    msg_fmt = _("Share can not be unlocked from "
                 "share id %(share_id)s.\n"
                 "Reason: %(reason)s.")
 
