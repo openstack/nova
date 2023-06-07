@@ -454,6 +454,7 @@ def _wait_for_import_task(session, vm_ref):
     task_filter_spec.state = ["queued", "running"]
 
     waited = False
+    task_collector = None
 
     try:
         task_collector = session._call_method(
