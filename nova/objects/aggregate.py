@@ -125,7 +125,7 @@ def _metadata_add_to_db(context, aggregate_id, metadata, max_retries=10,
                                         "aggregate_id": aggregate_id})
                 if new_entries:
                     context.session.execute(
-                        api_models.AggregateMetadata.__table__.insert(None),
+                        api_models.AggregateMetadata.__table__.insert(),
                         new_entries)
 
                 return metadata
