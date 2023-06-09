@@ -417,7 +417,7 @@ class TestNovaManageVolumeAttachmentRefresh(
         with (
             mock.patch(
                 'nova.volume.cinder.API.attachment_update',
-                side_effect=test.TestingException)
+                side_effect=test.TestingException, autospec=False)
         ) as (
             mock_attachment_update
         ):

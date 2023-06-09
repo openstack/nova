@@ -57,7 +57,7 @@ class TestDetachAttachmentNotFound(integrated_helpers._IntegratedTestBase):
         with mock.patch(
             'nova.volume.cinder.API.attachment_delete',
             side_effect=exception.VolumeAttachmentNotFound(
-                attachment_id=bdm.attachment_id)
+                attachment_id=bdm.attachment_id), autospec=False
         ) as (
             mock_attachment_delete
         ):

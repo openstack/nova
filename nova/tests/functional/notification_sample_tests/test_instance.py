@@ -19,6 +19,7 @@ from nova.tests import fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
+from nova.volume import cinder
 
 
 class TestInstanceNotificationSampleWithMultipleCompute(
@@ -1774,11 +1775,14 @@ class TestInstanceNotificationSample(
         # Leave instance in normal, active state
         self.api.post_server_action(server['id'], {'restore': {}})
 
-    def _do_test_attach_volume_error(self, server, mock_attach):
+    def _test_attach_volume_error(self, server):
         def attach_volume(*args, **kwargs):
             raise exception.CinderConnectionFailed(
                 reason="Connection timed out")
-        mock_attach.side_effect = attach_volume
+
+        # Override the fixture's default implementation of this with our
+        # error-generating version.
+        cinder.API.attachment_update.side_effect = attach_volume
 
         post = {"volumeAttachment": {"volumeId": self.cinder.SWAP_NEW_VOL}}
         self.api.post_server_volume(server['id'], post)
@@ -1833,10 +1837,6 @@ class TestInstanceNotificationSample(
                 'uuid': server['id'],
                 'fault.traceback': self.ANY},
             actual=self.notifier.versioned_notifications[1])
-
-    @mock.patch('nova.volume.cinder.API.attachment_update')
-    def _test_attach_volume_error(self, server, mock_attach):
-        self._do_test_attach_volume_error(server, mock_attach)
 
     def _test_interface_attach_and_detach(self, server):
         post = {

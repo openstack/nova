@@ -1137,9 +1137,9 @@ class ServerTestV220(integrated_helpers._IntegratedTestBase):
                          mock.patch.object(volume.cinder.API,
                                         'check_availability_zone'),
                          mock.patch.object(volume.cinder.API,
-                                        'attachment_create'),
+                                        'attachment_create', autospec=False),
                          mock.patch.object(volume.cinder.API,
-                                        'attachment_complete')
+                                        'attachment_complete', autospec=False)
                          ) as (mock_check_vol_attached,
                                mock_check_av_zone, mock_attach_create,
                                mock_attachment_complete):
@@ -1667,7 +1667,7 @@ class ServerRebuildTestCaseV293(integrated_helpers._IntegratedTestBase):
         server = self._bfv_server()
         error = cinder_exception.ClientException(code=500)
         with mock.patch.object(volume.cinder.API, 'attachment_create',
-                               side_effect=error):
+                               side_effect=error, autospec=False):
             # We expect this to fail because we are doing cast-as-call
             self.assertRaises(client.OpenStackApiException,
                               self._test_rebuild, server)
@@ -1693,7 +1693,7 @@ class ServerRebuildTestCaseV293(integrated_helpers._IntegratedTestBase):
         server = self._bfv_server()
         error = cinder_exception.ClientException(code=500)
         with mock.patch.object(volume.cinder.API, 'attachment_delete',
-                               side_effect=error):
+                               side_effect=error, autospec=False):
             # We expect this to fail because we are doing cast-as-call
             self.assertRaises(client.OpenStackApiException,
                               self._test_rebuild, server)

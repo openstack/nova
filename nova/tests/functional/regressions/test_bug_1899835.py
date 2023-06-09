@@ -84,7 +84,7 @@ class TestVolumeDisconnectDuringPreLiveMigrationRollback(base.ServersTestBase):
                 self.computes['dest'].driver, '_disconnect_volume'),
             mock.patch(
                 'nova.volume.cinder.API.attachment_create',
-                side_effect=test.TestingException)
+                side_effect=test.TestingException, autospec=False)
         ) as (
             mock_dest_connector, mock_dest_connect, mock_dest_disconnect,
             mock_attachment_create
