@@ -1081,6 +1081,21 @@ If you prefer to invert the behavior set the
 :oslo.config:option:`filter_scheduler.hypervisor_version_weight_multiplier` option
 to a negative number and the weighing has the opposite effect of the default.
 
+
+``NumInstancesWeigher``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 28.0.0 (Bobcat)
+
+This weigher compares hosts and orders them based on their number of instances
+respectively. By default the weigher is doing nothing but you
+can change its behaviour by modifiying the value of
+:oslo.config:option:`filter_scheduler.num_instances_weight_multiplier`.
+A positive value will favor hosts with a larger number of instances (packing
+strategy) while a negative value will follow a spread strategy that will
+favor hosts with the lesser number of instances.
+
+
 Utilization-aware scheduling
 ----------------------------
 

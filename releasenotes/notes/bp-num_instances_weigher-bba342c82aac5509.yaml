@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    A new `num_instances_weigher` weigher has been added. This weigher will
+    compare the number of instances between each node and order the list of
+    filtered results by its number, By default, this weigher is enabled but with
+    a default of 0.0 which doesn't change the current behavior.
+    In order to use it, please change the value of
+    ``[filter_scheduler]/num_instances_weight_multiplier`` config option where
+    a positive value will favor the host with the higher number of instances
+    (ie. packing strategy) vs. a negative value that will spread instances
+    between hosts. As a side note, this weigher will count *all* of the existing
+    instances on the host, even the stopped or shelved ones.
