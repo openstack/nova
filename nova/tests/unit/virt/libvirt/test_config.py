@@ -1441,6 +1441,22 @@ class LibvirtConfigGuestFilesysTest(LibvirtConfigBaseTest):
               <target dir="/mnt"/>
             </filesystem>""")
 
+    def test_config_virtiofs(self):
+        obj = config.LibvirtConfigGuestFilesys()
+        obj.source_type = "mount"
+        obj.accessmode = "passthrough"
+        obj.driver_type = "virtiofs"
+        obj.source_dir = "/mnt/nfsmount"
+        obj.target_dir = "mount_tag"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <filesystem type="mount" accessmode='passthrough'>
+              <driver type='virtiofs'/>
+              <source dir="/mnt/nfsmount"/>
+              <target dir="mount_tag"/>
+            </filesystem>""")
+
     def test_config_block(self):
         obj = config.LibvirtConfigGuestFilesys()
         obj.source_type = "block"
@@ -1482,6 +1498,22 @@ class LibvirtConfigGuestFilesysTest(LibvirtConfigBaseTest):
         self.assertEqual('mount', obj.source_type)
         self.assertEqual('/tmp/hello', obj.source_dir)
         self.assertEqual('/mnt', obj.target_dir)
+
+    def test_parse_virtiofs(self):
+        xmldoc = """
+            <filesystem type="mount" accessmode='passthrough'>
+              <driver type='virtiofs'/>
+              <source dir="/mnt/nfsmount"/>
+              <target dir="mount_tag"/>
+            </filesystem>
+        """
+        obj = config.LibvirtConfigGuestFilesys()
+        obj.parse_str(xmldoc)
+        self.assertEqual('mount', obj.source_type)
+        self.assertEqual('passthrough', obj.accessmode)
+        self.assertEqual('virtiofs', obj.driver_type)
+        self.assertEqual('/mnt/nfsmount', obj.source_dir)
+        self.assertEqual('mount_tag', obj.target_dir)
 
     def test_parse_block(self):
         xmldoc = """
