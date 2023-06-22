@@ -32,8 +32,6 @@ class TestRequestFilter(test.NoDBTestCase):
                                                    project_id=uuids.project)
         self.flags(limit_tenants_to_placement_aggregate=True,
                    group='scheduler')
-        self.flags(query_placement_for_availability_zone=True,
-                   group='scheduler')
         self.flags(enable_isolated_aggregate_filtering=True,
                    group='scheduler')
         self.flags(query_placement_for_routed_network_aggregates=True,
@@ -259,14 +257,6 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertNotIn('requested_destination', reqspec)
         getmd.assert_called_once_with(self.context, key='availability_zone',
                                       value='fooaz')
-
-    @mock.patch('nova.objects.AggregateList.get_by_metadata')
-    def test_map_az_disabled(self, getmd):
-        self.flags(query_placement_for_availability_zone=False,
-                   group='scheduler')
-        reqspec = objects.RequestSpec(availability_zone='fooaz')
-        request_filter.map_az_to_placement_aggregate(self.context, reqspec)
-        getmd.assert_not_called()
 
     @mock.patch('nova.objects.aggregate.AggregateList.'
                 'get_non_matching_by_metadata_keys')

@@ -72,7 +72,6 @@ class Selection(base.NovaObject, ovo_base.ComparableVersionedObject):
         """
         allocation_request_json = jsonutils.dumps(allocation_request)
         limits = objects.SchedulerLimits.from_dict(host_state.limits)
-        # Note that the AZ logic here is similar to the AvailabilityZoneFilter.
         metadata = filter_utils.aggregate_metadata_get_by_host(
             host_state, key='availability_zone')
         availability_zone = metadata.get('availability_zone')

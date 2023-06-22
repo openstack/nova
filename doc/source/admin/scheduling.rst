@@ -10,7 +10,8 @@ a variety of options.
 In the default configuration, this scheduler considers hosts that meet all the
 following criteria:
 
-* Are in the requested :term:`Availability Zone` (``AvailabilityZoneFilter``).
+* Are in the requested :term:`Availability Zone`
+  (``map_az_to_placement_aggregate``) placement pre filter.
 
 * Can service the request meaning the nova-compute service handling the target
   node is available and not disabled (``ComputeFilter``).
@@ -165,9 +166,6 @@ possible to avoid unnecessary costs. We can sort
 :oslo.config:option:`filter_scheduler.enabled_filters`
 items by their costs in reverse order. For example, ``ComputeFilter`` is better
 before any resource calculating filters like ``NUMATopologyFilter``.
-
-In medium/large environments having AvailabilityZoneFilter before any
-capability or resource calculating filters can be useful.
 
 .. _AggregateImagePropertiesIsolation:
 
@@ -348,20 +346,6 @@ Refer to :doc:`/admin/aggregates` for more information.
 
 This is a no-op filter. It does not eliminate any of the available hosts.
 
-
-.. _AvailabilityZoneFilter:
-
-``AvailabilityZoneFilter``
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Filters hosts by availability zone. It passes hosts matching the availability
-zone specified in the instance properties.  Use a comma to specify multiple
-zones. The filter will then ensure it matches any zone specified.
-
-You must enable this filter for the scheduler to respect availability zones in
-requests.
-
-Refer to :doc:`/admin/availability-zones` for more information.
 
 .. _ComputeCapabilitiesFilter:
 

@@ -69,10 +69,9 @@ Availability Zones with Placement
 
 In order to use placement to honor availability zone requests, there must be
 placement aggregates that match the membership and UUID of nova host aggregates
-that you assign as availability zones. The same key in aggregate metadata used
-by the `AvailabilityZoneFilter` filter controls this function, and is enabled by
-setting :oslo.config:option:`scheduler.query_placement_for_availability_zone`
-to ``True``. As of 24.0.0 (Xena), this is the default.
+that you assign as availability zones. An aggregate metadata key is used
+to controls this function. As of 28.0.0 (Bobcat), this is the only way to
+schedule instances to availability-zones.
 
 .. code-block:: console
 
@@ -106,12 +105,6 @@ to ``True``. As of 24.0.0 (Xena), this is the default.
   +-------------------+--------------------------------------+
 
   $ openstack aggregate set --property availability_zone=az002 myaz
-
-  $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate 019e2189-31b3-49e1-aff2-b220ebd91c24 815a5634-86fb-4e1e-8824-8a631fee3e06
-
-Without the above configuration, the `AvailabilityZoneFilter` filter must be
-enabled in :oslo.config:option:`filter_scheduler.enabled_filters` to retain
-proper behavior.
 
 Implications for moving servers
 -------------------------------
@@ -183,8 +176,7 @@ With respect to availability zones, a server is restricted to a zone if:
    for details.
 
 If the server was not created in a specific zone then it is free to be moved
-to other zones, i.e. the :ref:`AvailabilityZoneFilter <AvailabilityZoneFilter>`
-is a no-op.
+to other zones.
 
 Resource affinity
 ~~~~~~~~~~~~~~~~~

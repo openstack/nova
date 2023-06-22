@@ -544,25 +544,6 @@ class TenantAggregateFilterTest(AggregateRequestFiltersTest):
             self.assertEqual('host2', self._get_instance_host(server))
 
 
-class AvailabilityZoneFilterTest(AggregateRequestFiltersTest):
-    def setUp(self):
-        # Default to enabling the filter
-        self.flags(query_placement_for_availability_zone=True,
-                   group='scheduler')
-
-        # Use custom weigher to make sure that we have a predictable
-        # scheduling sort order.
-        self.useFixture(nova_fixtures.HostNameWeigherFixture())
-        super(AvailabilityZoneFilterTest, self).setUp()
-
-    def test_filter_with_az(self):
-        self._set_az_aggregate('only-host2', 'myaz')
-        server1 = self._boot_server(az='myaz')
-        server2 = self._boot_server(az='myaz')
-        hosts = [self._get_instance_host(s) for s in (server1, server2)]
-        self.assertEqual(['host2', 'host2'], hosts)
-
-
 class IsolateAggregateFilterTest(AggregateRequestFiltersTest):
     def setUp(self):
         # Default to enabling the filter
@@ -847,8 +828,6 @@ class TestAggregateFiltersTogether(AggregateRequestFiltersTest):
         self.flags(limit_tenants_to_placement_aggregate=True,
                    group='scheduler')
         self.flags(placement_aggregate_required_for_tenants=True,
-                   group='scheduler')
-        self.flags(query_placement_for_availability_zone=True,
                    group='scheduler')
         self.flags(enable_isolated_aggregate_filtering=True,
                    group='scheduler')
