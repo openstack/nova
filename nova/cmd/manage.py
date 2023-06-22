@@ -3258,17 +3258,20 @@ class SAPCommands(object):
         def _update_instance_flavor(cctxt, instance, dry_run=False):
             flavor = _find_flavor(instance)
             if not flavor or not _should_update(instance, flavor):
-                return
+                return False
+
             if dry_run:
                 output("Instance %s has outdated flavor extra_specs."
                        % instance.uuid)
-                return
+                return True
+
             instance.flavor.extra_specs = flavor.extra_specs
             instance.save()
             _update_request_spec_flavor(instance, flavor)
 
             output("Updated flavor extra_specs for instance %s. "
                    % instance.uuid)
+            return True
 
         return self._run_across_cells(_update_instance_flavor,
                                       instance_uuid=instance_uuid,
@@ -3341,8 +3344,8 @@ class SAPCommands(object):
             output(_('Found %s candidate instances.') % len(instances))
 
             for instance in instances:
-                cb(ctxt, instance, dry_run=dry_run)
-                num_processed += 1
+                if cb(ctxt, instance, dry_run=dry_run):
+                    num_processed += 1
 
             # Make sure we don't go over the max count.
             if (not unlimited and num_processed == max_count) or instance_uuid:
