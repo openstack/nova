@@ -7950,6 +7950,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._test_build_and_run_spawn_exceptions(
             exception.RequestedVRamTooHigh(req_vram=200, max_vram=100))
 
+    def test_build_and_run_over_quota(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.OverQuota(overs="nothing"))
+
     def _test_build_and_run_spawn_exceptions(self, exc):
         with test.nested(
                 mock.patch.object(self.compute.driver, 'spawn',

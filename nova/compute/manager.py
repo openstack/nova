@@ -2710,7 +2710,8 @@ class ComputeManager(manager.Manager):
                 exception.InvalidInput,
                 # TODO(mriedem): We should be validating RequestedVRamTooHigh
                 # in the API during server create and rebuild.
-                exception.RequestedVRamTooHigh) as e:
+                exception.RequestedVRamTooHigh,
+                exception.OverQuota) as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
             compute_utils.notify_about_instance_create(
