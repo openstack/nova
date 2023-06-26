@@ -8694,7 +8694,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertIsInstance(device,
                                       vconfig.LibvirtConfigGuestIOMMU)
                 self.assertEqual('intel', device.model)
-                self.assertFalse(hasattr(device, "aw_bits"))
+                self.assertTrue(hasattr(device, "aw_bits"))
                 self.assertTrue(device.interrupt_remapping)
                 self.assertTrue(device.caching_mode)
                 self.assertTrue(device.eim)
@@ -8803,7 +8803,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertIsInstance(device,
                                       vconfig.LibvirtConfigGuestIOMMU)
                 self.assertEqual('smmuv3', device.model)
-                self.assertFalse(hasattr(device, "aw_bits"))
+                self.assertTrue(hasattr(device, "aw_bits"))
                 self.assertTrue(device.interrupt_remapping)
                 self.assertTrue(device.caching_mode)
                 self.assertFalse(device.eim)
@@ -11672,30 +11672,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 instance)
         self.assertIsNone(ret)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_AARCH64_CPU_COMPARE) - 1
-                       )
-    @mock.patch.object(nova.virt.libvirt, 'config')
-    def test_compare_cpu_aarch64_skip_comparison(self,
-                                                 mock_vconfig,
-                                                 mock_get_libversion):
-        instance = objects.Instance(**self.test_instance)
-        self.mock_uname.return_value = fakelibvirt.os_uname(
-            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        ret = conn._compare_cpu(None, jsonutils.dumps(_fake_cpu_info_aarch64),
-                instance)
-        self.assertIsNone(ret)
-
     @mock.patch.object(host.Host, 'get_capabilities')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_AARCH64_CPU_COMPARE))
     @mock.patch.object(host.Host, 'compare_hypervisor_cpu')
     def test_compare_cpu_host_aarch64(self,
                                       mock_compare,
-                                      mock_get_libversion,
                                       mock_caps):
         instance = objects.Instance(**self.test_instance)
         mock_compare.return_value = 6
