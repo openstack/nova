@@ -162,7 +162,9 @@ class NovaManageDBIronicTest(test.TestCase):
                                     user_id=self.context.user_id,
                                     project_id=self.context.project_id,
                                     flavor=flavor,
-                                    node=cn.hypervisor_hostname)
+                                    node=cn.hypervisor_hostname,
+                                    host=cn.host,
+                                    compute_id=cn.id)
             inst.create()
             self.insts.append(inst)
 
@@ -170,6 +172,57 @@ class NovaManageDBIronicTest(test.TestCase):
                              if i.node != self.cn4.hypervisor_hostname]
         self.virt_insts = [i for i in self.insts
                            if i.node == self.cn4.hypervisor_hostname]
+
+
+class TestIronicComputeNodeMove(NovaManageDBIronicTest):
+    """Functional tests for "nova-manage db ironic_compute_node_move" CLI."""
+    api_major_version = 'v2.1'
+
+    def setUp(self):
+        super(TestIronicComputeNodeMove, self).setUp()
+        self.enforce_fk_constraints()
+        self.cli = manage.DbCommands()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+
+    def test_ironic_compute_node_move_success(self):
+        self.service1.forced_down = True
+        self.service1.save()
+        self.assertEqual(self.service1.id, self.cn1.service_id)
+        # move cn1 on service1 to service2
+        node_uuid = self.cn1.uuid
+        dest_host = self.service2.host
+
+        self.commands.ironic_compute_node_move(node_uuid, dest_host)
+
+        # check the compute node got moved to service 2
+        updated_cn1 = objects.ComputeNode.get_by_id(self.context, self.cn1.id)
+        self.assertEqual(self.service2.id, updated_cn1.service_id)
+        self.assertEqual(self.service2.host, updated_cn1.host)
+        # check the instance got moved too
+        updated_instance = objects.Instance.get_by_id(
+            self.context, self.insts[0].id)
+        self.assertEqual(self.service2.host, updated_instance.host)
+
+    def test_ironic_compute_node_move_raise_not_forced_down(self):
+        node_uuid = self.cn1.uuid
+        dest_host = self.service2.host
+
+        self.assertRaises(exception.NovaException,
+                          self.commands.ironic_compute_node_move,
+                          node_uuid, dest_host)
+
+    def test_ironic_compute_node_move_raise_forced_down(self):
+        self.service1.forced_down = True
+        self.service1.save()
+        self.service2.forced_down = True
+        self.service2.save()
+        node_uuid = self.cn1.uuid
+        dest_host = self.service2.host
+
+        self.assertRaises(exception.NovaException,
+                          self.commands.ironic_compute_node_move,
+                          node_uuid, dest_host)
 
 
 class NovaManageCellV2Test(test.TestCase):

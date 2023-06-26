@@ -10,3 +10,8 @@ features:
     which ironic nodes are managed by each nova-compute service.
     Note that when you use ``[ironic]shard`` the ``[ironic]peer_list``
     is hard coded to a single nova-compute service.
+
+    There is a new nova-manage command ``db ironic_compute_node_move`` that
+    can be used to move ironic nodes, and the associated instances, between
+    nova-compute services. This is useful when migrating from the legacy
+    hash ring based HA towards the new sharding approach.

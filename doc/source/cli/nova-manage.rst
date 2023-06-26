@@ -465,6 +465,47 @@ command completed successfully with exit code 0.
    * - 127
      - Invalid input was provided.
 
+db ironic_compute_node_move
+---------------------------
+
+.. program:: nova-manage db ironic_compute_node_move
+
+.. code-block:: shell
+
+    nova-manage db ironic_compute_node_move --ironic-node-uuid <uuid> --destination-host <host>
+
+Move ironic nodes, along with any associated instances,
+between nova-compute services.
+
+This is useful when migrating away from using peer_list and multiple
+hash ring balanced nova-compute servers to the new ironic shard system.
+
+First you must turn off the nova-compute service that currently manages
+the Ironic host. Second you mark that nova-compute service as forced down
+via the Nova API. Third, you ensure the new nova-compute service is
+correctly configured to target the appropriate shard (and optionally
+also a conductor group). Finally, most Ironic nodes should now move to
+the new service, but any Ironic nodes with instances on them
+will need to be manually moved to their new Ironic service
+by using this nova-manage command.
+
+.. versionadded:: 28.0.0 (2023.2 Bobcat)
+
+.. rubric:: Options
+
+.. option:: --ironic-node-uuid <uuid>
+
+    Ironic node uuid to be moved (which is also the Nova compute node uuid
+    and the uuid of corresponding resource provider in Placement).
+
+    The Nova compute service that currently manages this Ironic node
+    must first be marked a "forced down" via the Nova API, in a similar
+    way to a down hypervisor that is about to have its VMs evacuated to
+    a replacement hypervisor.
+
+.. option:: --destination-host <host>
+
+    Destination ironic nova-compute service CONF.host.
 
 API Database Commands
 =====================
