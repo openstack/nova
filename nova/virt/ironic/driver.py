@@ -698,12 +698,16 @@ class IronicDriver(virt_driver.ComputeDriver):
             return False
 
     def _refresh_hash_ring(self, ctxt):
-        peer_list = None
+        # When requesting a shard, we assume each compute service is
+        # targeting a separate shard, so hard code peer_list to
+        # just this service
+        peer_list = None if not CONF.ironic.shard else {CONF.host}
+
         # NOTE(jroll) if this is set, we need to limit the set of other
         # compute services in the hash ring to hosts that are currently up
         # and specified in the peer_list config option, as there's no way
         # to check which conductor_group other compute services are using.
-        if CONF.ironic.conductor_group is not None:
+        if peer_list is None and CONF.ironic.conductor_group is not None:
             try:
                 # NOTE(jroll) first we need to make sure the Ironic API can
                 # filter by conductor_group. If it cannot, limiting to
@@ -766,21 +770,24 @@ class IronicDriver(virt_driver.ComputeDriver):
         # attribute. If the API isn't new enough to support conductor groups,
         # we fall back to managing all nodes. If it is new enough, we can
         # filter it in the API.
+        # NOTE(johngarbutt) similarly, if shard is set, we also limit the
+        # nodes that are returned by the shard key
         conductor_group = CONF.ironic.conductor_group
-        if conductor_group is not None:
-            try:
+        shard = CONF.ironic.shard
+        kwargs = {}
+        try:
+            if conductor_group is not None:
                 self._can_send_version('1.46')
-                nodes = _get_node_list(conductor_group=conductor_group)
-                LOG.debug('Limiting manageable ironic nodes to conductor '
-                          'group %s', conductor_group)
-            except exception.IronicAPIVersionNotAvailable:
-                LOG.error('Required Ironic API version 1.46 is not '
-                          'available to filter nodes by conductor group. '
-                          'All nodes will be eligible to be managed by '
-                          'this compute service.')
-                nodes = _get_node_list()
-        else:
-            nodes = _get_node_list()
+                kwargs['conductor_group'] = conductor_group
+            if shard:
+                self._can_send_version('1.82')
+                kwargs['shard'] = shard
+            nodes = _get_node_list(**kwargs)
+        except exception.IronicAPIVersionNotAvailable:
+            LOG.error('Required Ironic API version is not '
+                      'available to filter nodes by conductor group '
+                      'and shard.')
+            nodes = _get_node_list(**kwargs)
 
         # NOTE(saga): As _get_node_list() will take a long
         # time to return in large clusters we need to call it before

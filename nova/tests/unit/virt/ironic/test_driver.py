@@ -2934,6 +2934,31 @@ class HashRingTestCase(test.NoDBTestCase):
         mock_can_send.assert_called_once_with('1.46')
 
     @mock.patch.object(ironic_driver.IronicDriver, '_can_send_version')
+    def test__refresh_hash_ring_peer_list_shard(self, mock_can_send):
+        services = ['host1', 'host2', 'host3']
+        expected_hosts = {'host1'}
+        self.mock_is_up.return_value = True
+        self.flags(host='host1')
+        self.flags(shard='shard1', group='ironic')
+        self._test__refresh_hash_ring(services, expected_hosts,
+                                      uncalled=['host2', 'host3'])
+        mock_can_send.assert_not_called()
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_can_send_version')
+    def test__refresh_hash_ring_peer_list_shard_and_cg(self, mock_can_send):
+        services = ['host1', 'host2', 'host3']
+        expected_hosts = {'host1'}
+        self.mock_is_up.return_value = True
+        self.flags(host='host1')
+        self.flags(shard='shard1', group='ironic')
+        self.flags(conductor_group='not-none', group='ironic')
+        # Note that this is getting ignored, because the shard is set
+        self.flags(peer_list=['host1', 'host2'], group='ironic')
+        self._test__refresh_hash_ring(services, expected_hosts,
+                                      uncalled=['host2', 'host3'])
+        mock_can_send.assert_not_called()
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_can_send_version')
     def test__refresh_hash_ring_peer_list_old_api(self, mock_can_send):
         mock_can_send.side_effect = (
             exception.IronicAPIVersionNotAvailable(version='1.46'))
@@ -3007,7 +3032,8 @@ class NodeCacheTestCase(test.NoDBTestCase):
     def _test__refresh_cache(self, instances, nodes, hosts, mock_instances,
                              mock_nodes, mock_hosts, mock_hash_ring,
                              mock_can_send, partition_key=None,
-                             can_send_146=True):
+                             can_send_146=True, shard=None,
+                             can_send_182=True):
         mock_instances.return_value = instances
         mock_nodes.return_value = nodes
         mock_hosts.side_effect = hosts
@@ -3017,12 +3043,18 @@ class NodeCacheTestCase(test.NoDBTestCase):
         if not can_send_146:
             mock_can_send.side_effect = (
                 exception.IronicAPIVersionNotAvailable(version='1.46'))
+        if not can_send_182:
+            mock_can_send.side_effect = None, (
+                exception.IronicAPIVersionNotAvailable(version='1.82'))
+
         self.driver.node_cache = {}
         self.driver.node_cache_time = None
 
         kwargs = {}
         if partition_key is not None and can_send_146:
             kwargs['conductor_group'] = partition_key
+        if shard and can_send_182:
+            kwargs["shard"] = shard
 
         self.driver._refresh_cache()
 
@@ -3096,6 +3128,74 @@ class NodeCacheTestCase(test.NoDBTestCase):
 
         self._test__refresh_cache(instances, nodes, hosts,
                                   partition_key=partition_key)
+
+        expected_cache = {n.id: n for n in nodes}
+        self.assertEqual(expected_cache, self.driver.node_cache)
+
+    def test__refresh_cache_shard(self):
+        # normal operation, one compute service
+        instances = []
+        nodes = [
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+        ]
+        hosts = [self.host, self.host, self.host]
+        shard = "shard1"
+        self.flags(shard=shard, group='ironic')
+
+        self._test__refresh_cache(instances, nodes, hosts,
+                                  shard=shard)
+
+        expected_cache = {n.id: n for n in nodes}
+        self.assertEqual(expected_cache, self.driver.node_cache)
+
+    def test__refresh_cache_shard_and_conductor_group(self):
+        # normal operation, one compute service
+        instances = []
+        nodes = [
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+        ]
+        hosts = [self.host, self.host, self.host]
+        shard = "shard1"
+        self.flags(shard=shard, group='ironic')
+        partition_key = 'some-group'
+        self.flags(conductor_group=partition_key, group='ironic')
+
+        self._test__refresh_cache(instances, nodes, hosts,
+                                  shard=shard, partition_key=partition_key)
+
+        expected_cache = {n.id: n for n in nodes}
+        self.assertEqual(expected_cache, self.driver.node_cache)
+
+    def test__refresh_cache_shard_and_conductor_group_skip_shard(self):
+        # normal operation, one compute service
+        instances = []
+        nodes = [
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+            _get_cached_node(
+                id=uuidutils.generate_uuid(), instance_id=None),
+        ]
+        hosts = [self.host, self.host, self.host]
+        shard = "shard1"
+        self.flags(shard=shard, group='ironic')
+        partition_key = 'some-group'
+        self.flags(conductor_group=partition_key, group='ironic')
+
+        self._test__refresh_cache(instances, nodes, hosts,
+                                  shard=shard, partition_key=partition_key,
+                                  can_send_182=False)
 
         expected_cache = {n.id: n for n in nodes}
         self.assertEqual(expected_cache, self.driver.node_cache)
