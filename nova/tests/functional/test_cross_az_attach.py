@@ -28,23 +28,30 @@ class CrossAZAttachTestCase(test.TestCase,
     def setUp(self):
         super(CrossAZAttachTestCase, self).setUp()
         # Use the standard fixtures.
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
         self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.CinderFixture(self, az=self.az))
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
+        self.notifier = self.useFixture(
+            nova_fixtures.NotificationFixture(self))
         # Start nova controller services.
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1')).admin_api
         self.start_service('conductor')
         self.start_service('scheduler')
-        # Start one compute service and add it to the AZ. This allows us to
+        # Start two compute services and add them to the AZ. This allows us to
         # get past the AvailabilityZoneFilter and build a server.
         self.start_service('compute', host='host1')
+        self.start_service('compute', host='host2')
         agg_id = self.api.post_aggregate({'aggregate': {
             'name': self.az, 'availability_zone': self.az}})['id']
         self.api.api_post('/os-aggregates/%s/action' % agg_id,
                           {'add_host': {'host': 'host1'}})
+        self.api.api_post('/os-aggregates/%s/action' % agg_id,
+                          {'add_host': {'host': 'host2'}})
 
     def test_cross_az_attach_false_boot_from_volume_no_az_specified(self):
         """Tests the scenario where [cinder]/cross_az_attach=False and the
@@ -138,3 +145,41 @@ class CrossAZAttachTestCase(test.TestCase,
         self.flags(cross_az_attach=False, group='cinder')
         server = self._create_server(az=self.az)
         self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])
+
+    def test_cross_az_attach_false_migrate_continues_to_pin_an_az(self):
+        self.flags(cross_az_attach=False, group='cinder')
+        server = self._build_server()
+        server['block_device_mapping_v2'] = [{
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'boot_index': 0,
+            'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
+        }]
+        server = self.api.post_server({'server': server})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        # The instance is now pinned to a specific AZ.
+        self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])
+        # Start a third compute service and add it to a different 'london' AZ.
+        self.start_service('compute', host='host3')
+        agg_id = self.api.post_aggregate({'aggregate': {
+            'name': 'london', 'availability_zone': 'london'}})['id']
+        self.api.api_post('/os-aggregates/%s/action' % agg_id,
+                          {'add_host': {'host': 'host3'}})
+
+        # we want 2.56 because of the host param in migrate action.
+        self.api.microversion = '2.56'
+
+        # We can migrate the instance to another host in the same AZ
+        server = self._migrate_server(server, host='host2')
+        # let's move it back to host1
+        server = self._revert_resize(server)
+
+        # Now let's try to migrate to host3 which is a different AZ.
+        # It fails miserably.
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.post_server_action,
+                               server['id'], {'migrate': {'host': 'host3'}})
+        self.assertEqual(500, ex.response.status_code)
+        # And yeah, that's due to the fact that the only tested host in not in
+        # the pinned AZ.
+        self.assertIn('NoValidHost', str(ex))
