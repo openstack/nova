@@ -10240,10 +10240,13 @@ class LibvirtDriver(driver.ComputeDriver):
         :param instance:  the instance being migrated
         :param migrate_date: a LibvirtLiveMigrateData object
         """
-        network_info = network_model.NetworkInfo(
-            [vif.source_vif for vif in migrate_data.vifs
-                            if "source_vif" in vif and vif.source_vif])
-        self._reattach_instance_vifs(context, instance, network_info)
+        # NOTE(artom) migrate_data.vifs might not be set if our Neutron doesn't
+        # have the multiple port bindings extension.
+        if 'vifs' in migrate_data and migrate_data.vifs:
+            network_info = network_model.NetworkInfo(
+                [vif.source_vif for vif in migrate_data.vifs
+                                if "source_vif" in vif and vif.source_vif])
+            self._reattach_instance_vifs(context, instance, network_info)
 
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
