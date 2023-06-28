@@ -700,6 +700,14 @@ class IronicDriver(virt_driver.ComputeDriver):
         except sdk_exc.ResourceNotFound:
             return False
 
+    def is_node_deleted(self, nodename):
+        # check if the node is missing in Ironic
+        try:
+            self._get_node(nodename)
+            return False
+        except sdk_exc.ResourceNotFound:
+            return True
+
     def _refresh_hash_ring(self, ctxt):
         peer_list = None
         if CONF.ironic.shard is not None:

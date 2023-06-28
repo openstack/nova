@@ -11,6 +11,7 @@
 # under the License.
 
 from oslo_log import log as logging
+from unittest import mock
 
 from nova import context
 from nova.db.main import api as db_api
@@ -20,6 +21,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova import utils
+from nova.virt import fake as fake_driver
 
 LOG = logging.getLogger(__name__)
 
@@ -56,7 +58,10 @@ class PeriodicNodeRecreateTestCase(test.TestCase,
         # for each node.
         self.flags(compute_driver='fake.PredictableNodeUUIDDriver')
 
-    def test_update_available_resource_node_recreate(self):
+    @mock.patch.object(fake_driver.FakeDriver, 'is_node_deleted')
+    def test_update_available_resource_node_recreate(self, mock_delete):
+        # make the fake driver allow nodes to be delete, like ironic driver
+        mock_delete.return_value = True
         # First we create a compute service to manage a couple of fake nodes.
         compute = self.start_service('compute', 'node1')
         # When start_service runs, it will create the node1 ComputeNode.
