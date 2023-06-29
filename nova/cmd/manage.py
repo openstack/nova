@@ -3347,9 +3347,10 @@ class SAPCommands(object):
                 if cb(ctxt, instance, dry_run=dry_run):
                     num_processed += 1
 
-            # Make sure we don't go over the max count.
-            if (not unlimited and num_processed == max_count) or instance_uuid:
-                return num_processed
+                # Make sure we don't go over the max count.
+                if (not unlimited and num_processed == max_count) \
+                        or instance_uuid:
+                    return num_processed
 
             # Use a marker to get the next page of instances in this cell.
             marker = instances[-1].uuid
