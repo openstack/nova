@@ -258,8 +258,6 @@
         NOVA_BACKEND: LVM
         # Do not waste time clearing volumes.
         LVM_VOLUME_CLEAR: none
-        # Disable SSH validation in tests to save time.
-        TEMPEST_RUN_VALIDATION: false
         # Increase the size of the swift loopback device to accommodate RAW
         # snapshots from the LV based instance disks.
         # See bug #1913451 for more details.
