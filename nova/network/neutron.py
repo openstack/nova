@@ -3764,7 +3764,7 @@ class API:
         if not self._has_segment_extension(context):
             return []
 
-        client = get_client(context)
+        client = get_client(context, admin=True)
         try:
             # NOTE(sbauza): We can't use list_segments() directly because the
             # API is borked and returns both segments but also segmentation IDs
@@ -3794,7 +3794,7 @@ class API:
         if not self._has_segment_extension(context):
             return None
 
-        client = get_client(context)
+        client = get_client(context, admin=True)
         try:
             subnet = client.show_subnet(subnet_id)['subnet']
         except neutron_client_exc.NeutronClientException as e:
