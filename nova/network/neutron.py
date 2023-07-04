@@ -3924,7 +3924,7 @@ class API:
                 'Failed to get segment IDs for network %s' % network_id) from e
         # The segment field of an unconfigured subnet could be None
         return [subnet['segment_id'] for subnet in subnets
-                                     if subnet['segment_id'] is not None]
+                                     if subnet.get('segment_id') is not None]
 
     def get_segment_id_for_subnet(
         self,
