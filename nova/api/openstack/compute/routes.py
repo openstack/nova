@@ -25,6 +25,7 @@ from nova.api.openstack.compute import assisted_volume_snapshots
 from nova.api.openstack.compute import attach_interfaces
 from nova.api.openstack.compute import availability_zone
 from nova.api.openstack.compute import baremetal_nodes
+from nova.api.openstack.compute import basic_api
 from nova.api.openstack.compute import cells
 from nova.api.openstack.compute import certificates
 from nova.api.openstack.compute import cloudpipe
@@ -115,6 +116,8 @@ assisted_volume_snapshots_controller = functools.partial(
 availability_zone_controller = functools.partial(
     _create_controller, availability_zone.AvailabilityZoneController, [])
 
+basic_controller = functools.partial(
+    _create_controller, basic_api.BasicController, [])
 
 baremetal_nodes_controller = functools.partial(
     _create_controller, baremetal_nodes.BareMetalNodeController, [])
