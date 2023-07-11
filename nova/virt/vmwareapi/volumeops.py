@@ -27,9 +27,10 @@ from nova import exception
 from nova.i18n import _
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi.session import StableMoRefProxy
 from nova.virt.vmwareapi import vm_util
-from nova.virt.vmwareapi import ds_util
+
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -462,9 +463,9 @@ class VMwareVolumeOps(object):
             name=vmdk_path,
             datacenter=ds_util.get_dc_info(self._session, ds_ref_val).ref)
         uuid_hex = uuid_hex.replace(' ', '')
-        backing_uuid = (uuid_hex[:8] + '-' + uuid_hex[8:12]
-                        + '-' + uuid_hex[12:21]
-                        + '-' + uuid_hex[21:])
+        backing_uuid = (uuid_hex[:8] + '-' + uuid_hex[8:12] +
+                        '-' + uuid_hex[12:21] +
+                        '-' + uuid_hex[21:])
 
         volume_uuid = fcd_obj.config.name.replace('volume-', '')
         disk_type = fcd_obj.config.backing.provisioningType
