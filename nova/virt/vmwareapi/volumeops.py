@@ -29,6 +29,7 @@ from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi.session import StableMoRefProxy
 from nova.virt.vmwareapi import vm_util
+from nova.virt.vmwareapi import ds_util
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -273,7 +274,8 @@ class VMwareVolumeOps(object):
             return
         LOG.debug("Rescanning HBA %s", hba_device)
         self._session._call_method(self._session.vim,
-            "RescanHba", storage_system_mor, hbaDevice=hba_device)
+                                   "RescanHba", storage_system_mor,
+                                   hbaDevice=hba_device)
         LOG.debug("Rescanned HBA %s ", hba_device)
 
     def _iscsi_discover_target(self, data):
@@ -428,10 +430,11 @@ class VMwareVolumeOps(object):
         return vm_util.allocate_controller_key_and_unit_number(
             client_factory, devices, adapter_type)
 
-    def _attach_fcd(self, vm_ref, adapter_type, fcd_id, ds_ref_val):
-        (controller_key, unit_number,
-         controller_spec) = self._get_controller_key_and_unit(
-             vm_ref, adapter_type)
+    def _attach_fcd(self, instance, adapter_type, fcd_id,
+                    ds_ref_val, profile_id=None):
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        (_, _, controller_spec) = self._get_controller_key_and_unit(
+            vm_ref, adapter_type)
 
         if controller_spec:
             # No controller available to attach, create one first.
@@ -439,18 +442,42 @@ class VMwareVolumeOps(object):
                 'ns0:VirtualMachineConfigSpec')
             config_spec.deviceChange = [controller_spec]
             vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
-            (controller_key, unit_number,
-             controller_spec) = self._get_controller_key_and_unit(
-                 vm_ref, adapter_type)
+            (_, _, controller_spec) = self._get_controller_key_and_unit(
+                vm_ref, adapter_type)
+        vstorage_mgr = self._session.vim.service_content.vStorageObjectManager
+        virtual_dmgr = self._session.vim.service_content.virtualDiskManager
+        cf = self._session.vim.client.factory
+        disk_id = vm_util._create_fcd_id_obj(cf, fcd_id)
+        fcd_obj = self._session.invoke_api(
+            self._session.vim,
+            'RetrieveVStorageObject',
+            vstorage_mgr,
+            id=disk_id,
+            datastore=ds_ref_val)
+        vmdk_path = fcd_obj.config.backing.filePath
+        uuid_hex = self._session.invoke_api(
+            self._session.vim,
+            'QueryVirtualDiskUuid',
+            virtual_dmgr,
+            name=vmdk_path,
+            datacenter=ds_util.get_dc_info(self._session, ds_ref_val).ref)
+        uuid_hex = uuid_hex.replace(' ', '')
+        backing_uuid = (uuid_hex[:8] + '-' + uuid_hex[8:12]
+                        + '-' + uuid_hex[12:21]
+                        + '-' + uuid_hex[21:])
 
-        vm_util.attach_fcd(
-            self._session, vm_ref, fcd_id, ds_ref_val, controller_key,
-            unit_number)
+        volume_uuid = fcd_obj.config.name.replace('volume-', '')
+        disk_type = fcd_obj.config.backing.provisioningType
+
+        self.attach_disk_to_vm(vm_ref, instance, adapter_type, disk_type,
+                               vmdk_path=vmdk_path,
+                               volume_uuid=volume_uuid,
+                               backing_uuid=backing_uuid,
+                               profile_id=profile_id)
 
     def _attach_volume_fcd(self, connection_info, instance):
         """Attach fcd volume storage to VM instance."""
         LOG.debug("_attach_volume_fcd: %s", connection_info, instance=instance)
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
         data = connection_info['data']
         adapter_type = data['adapter_type']
 
@@ -460,7 +487,9 @@ class VMwareVolumeOps(object):
                 raise exception.Invalid(_('%s does not support disk '
                                           'hotplug.') % adapter_type)
 
-        self._attach_fcd(vm_ref, adapter_type, data['id'], data['ds_ref_val'])
+        self._attach_fcd(instance, adapter_type, data['id'],
+                         data['ds_ref_val'],
+                         data.get('profile_id'))
         LOG.debug("Attached fcd: %s", connection_info, instance=instance)
 
     def attach_volume(self, connection_info, instance, adapter_type=None):
@@ -674,8 +703,23 @@ class VMwareVolumeOps(object):
             if state != power_state.SHUTDOWN:
                 raise exception.Invalid(_('%s does not support disk '
                                           'hotplug.') % adapter_type)
-
-        vm_util.detach_fcd(self._session, vm_ref, data['id'])
+        cf = self._session.vim.client.factory
+        fcd_id = data['id']
+        ds_ref_val = data['ds_ref_val']
+        disk_id = vm_util._create_fcd_id_obj(cf, fcd_id)
+        vstorage_mgr = self._session.vim.service_content.vStorageObjectManager
+        fcd_obj = self._session.invoke_api(
+            self._session.vim,
+            'RetrieveVStorageObject',
+            vstorage_mgr,
+            id=disk_id,
+            datastore=ds_ref_val)
+        vmdk_path = fcd_obj.config.backing.filePath
+        hw_devs = vm_util.get_hardware_devices(self._session, vm_ref)
+        device = vm_util.get_vmdk_volume_disk(hw_devs, vmdk_path)
+        volume_uuid = fcd_obj.config.name.replace('volume-', '')
+        self.detach_disk_from_vm(vm_ref, instance, device,
+                                 volume_uuid=volume_uuid)
 
     def detach_volume(self, connection_info, instance):
         """Detach volume storage to VM instance."""
