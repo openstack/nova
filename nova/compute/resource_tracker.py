@@ -91,6 +91,7 @@ class ResourceTracker(object):
     """
 
     def __init__(self, host, driver, reportclient=None):
+        self.service_ref = None
         self.host = host
         self.driver = driver
         self.pci_tracker = None
@@ -124,6 +125,18 @@ class ResourceTracker(object):
         # are not found on the provider tree. These are tracked to facilitate
         # smarter logging.
         self.absent_providers = set()
+
+    def set_service_ref(self, service_ref):
+        # NOTE(danms): Neither of these should ever happen, but sanity check
+        # just in case
+        if self.service_ref and self.service_ref.id != service_ref.id:
+            raise exception.ComputeServiceInUse(
+                'Resource tracker re-initialized with a different service')
+        elif service_ref.host != self.host:
+            raise exception.ServiceNotUnique(
+                'Resource tracker initialized with service that does '
+                'not match host')
+        self.service_ref = service_ref
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def instance_claim(self, context, instance, nodename, allocations,
@@ -704,6 +717,14 @@ class ResourceTracker(object):
         # to initialize
         if nodename in self.compute_nodes:
             cn = self.compute_nodes[nodename]
+            if 'service_id' not in cn or cn.service_id is None:
+                LOG.debug('Setting ComputeNode %s service_id to %i',
+                          cn.uuid, self.service_ref.id)
+                cn.service_id = self.service_ref.id
+            elif cn.service_id != self.service_ref.id:
+                LOG.warning('Moving ComputeNode %s from service %i to %i',
+                            cn.uuid, cn.service_id, self.service_ref.id)
+                cn.service_id = self.service_ref.id
             self._copy_resources(cn, resources)
             self._setup_pci_tracker(context, cn, resources)
             return False
@@ -727,6 +748,7 @@ class ResourceTracker(object):
                 LOG.info("ComputeNode %(name)s moving from %(old)s to %(new)s",
                          {"name": nodename, "old": cn.host, "new": self.host})
                 cn.host = self.host
+                cn.service_id = self.service_ref.id
                 self._update(context, cn)
 
             self.compute_nodes[nodename] = cn
@@ -739,6 +761,7 @@ class ResourceTracker(object):
         # to be initialized with resource values.
         cn = objects.ComputeNode(context)
         cn.host = self.host
+        cn.service_id = self.service_ref.id
         self._copy_resources(cn, resources, initial=True)
         try:
             cn.create()

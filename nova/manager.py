@@ -122,13 +122,15 @@ class Manager(PeriodicTasks, metaclass=ManagerMeta):
         """
         pass
 
-    def pre_start_hook(self):
+    def pre_start_hook(self, service_ref):
         """Hook to provide the manager the ability to do additional
         start-up work before any RPC queues/consumers are created. This is
         called after other initialization has succeeded and a service
         record is created.
 
         Child classes should override this method.
+
+        :param service_ref: The nova.objects.Service for this
         """
         pass
 

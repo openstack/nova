@@ -209,8 +209,10 @@ class BaseTestCase(test.TestCase):
         self.stub_out('nova.db.main.api.compute_node_delete',
                 fake_compute_node_delete)
 
-        self.compute.update_available_resource(
-                context.get_admin_context())
+        self.service = objects.Service(id=7,
+                                       host=self.compute.host)
+        # NOTE(danms): This calls update_available_resource() for us
+        self.compute.pre_start_hook(self.service)
 
         self.user_id = 'fake'
         self.project_id = 'fake'
