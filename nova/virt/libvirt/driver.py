@@ -229,6 +229,8 @@ MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL = (8, 3, 0)
 
 MIN_LIBVIRT_AARCH64_CPU_COMPARE = (6, 9, 0)
 
+MIN_LIBVIRT_TB_CACHE_SIZE = (8, 0, 0)
+
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
@@ -743,6 +745,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._check_my_ip()
 
+        # TODO(ykarel) This can be dropped when MIN_LIBVIRT_VERSION>=8.0.0
+        self._supports_tb_cache_size()
+
         if (CONF.libvirt.virt_type == 'lxc' and
                 not (CONF.libvirt.uid_maps and CONF.libvirt.gid_maps)):
             LOG.warning("Running libvirt-lxc without user namespaces is "
@@ -1216,6 +1221,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 "'vcpu_pin_set' config option value to '[compute] "
                 "cpu_shared_set' and '[compute] cpu_dedicated_set', "
                 "respectively, and undefine 'vcpu_pin_set'.")
+
+    def _supports_tb_cache_size(self):
+        if (
+            CONF.libvirt.virt_type == 'qemu' and
+            CONF.libvirt.tb_cache_size and
+            CONF.libvirt.tb_cache_size > 0
+        ):
+            if not self._host.has_min_version(MIN_LIBVIRT_TB_CACHE_SIZE):
+                raise exception.InvalidConfiguration(
+                    _("Nova requires libvirt version %s or greater "
+                      "with '[libvirt] tb_cache_size' "
+                      "configured.") %
+                    libvirt_utils.version_to_string(MIN_LIBVIRT_TB_CACHE_SIZE))
 
     def _prepare_migration_flags(self):
         migration_flags = 0
@@ -6175,6 +6193,14 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_feature(vconfig.LibvirtConfigGuestFeatureACPI())
             if not CONF.workarounds.libvirt_disable_apic:
                 guest.add_feature(vconfig.LibvirtConfigGuestFeatureAPIC())
+
+        if (
+            CONF.libvirt.virt_type == 'qemu' and
+            CONF.libvirt.tb_cache_size and
+            CONF.libvirt.tb_cache_size > 0
+        ):
+            guest.add_feature(vconfig.LibvirtConfigGuestFeatureTCG(
+                CONF.libvirt.tb_cache_size))
 
         if CONF.libvirt.virt_type in ('qemu', 'kvm') and os_type == 'windows':
             hv = vconfig.LibvirtConfigGuestFeatureHyperV()
