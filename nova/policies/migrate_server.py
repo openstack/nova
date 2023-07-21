@@ -25,7 +25,18 @@ migrate_server_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'migrate',
         check_str=base.ADMIN,
-        description="Cold migrate a server to a host",
+        description="Cold migrate a server without specifying a host",
+        operations=[
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (migrate)'
+            }
+        ],
+        scope_types=['project']),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'migrate:host',
+        check_str=base.ADMIN,
+        description="Cold migrate a server to a specified host",
         operations=[
             {
                 'method': 'POST',

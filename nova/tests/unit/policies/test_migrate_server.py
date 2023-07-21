@@ -62,6 +62,16 @@ class MigrateServerPolicyTest(base.BasePolicyTest):
                                 self.req, self.instance.uuid,
                                 body={'migrate': None})
 
+    @mock.patch('nova.compute.api.API.resize')
+    def test_migrate_server_host_policy(self, mock_resize):
+        rule_name = ms_policies.POLICY_ROOT % 'migrate:host'
+        # the host parameter was added by the 2.56 microversion.
+        req = fakes.HTTPRequest.blank('', version='2.56')
+        self.common_policy_auth(self.project_admin_authorized_contexts,
+                                rule_name, self.controller._migrate,
+                                req, self.instance.uuid,
+                                body={'migrate': {"host": "hostname"}})
+
     @mock.patch('nova.compute.api.API.live_migrate')
     def test_migrate_live_server_policy(self, mock_live_migrate):
         rule_name = ms_policies.POLICY_ROOT % 'migrate_live'
@@ -122,11 +132,13 @@ class MigrateServerOverridePolicyTest(
     def setUp(self):
         super(MigrateServerOverridePolicyTest, self).setUp()
         rule_migrate = ms_policies.POLICY_ROOT % 'migrate'
+        rule_migrate_host = ms_policies.POLICY_ROOT % 'migrate:host'
         rule_live_migrate = ms_policies.POLICY_ROOT % 'migrate_live'
         # NOTE(gmann): override the rule to project member and verify it
         # work as policy is system and project scoped.
         self.policy.set_rules({
             rule_migrate: base_policy.PROJECT_MEMBER,
+            rule_migrate_host: base_policy.PROJECT_MEMBER,
             rule_live_migrate: base_policy.PROJECT_MEMBER},
             overwrite=False)
 

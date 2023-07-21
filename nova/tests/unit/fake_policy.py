@@ -125,6 +125,7 @@ policy_data = """
     "os_compute_api:os-lock-server:lock": "",
     "os_compute_api:os-lock-server:unlock": "",
     "os_compute_api:os-migrate-server:migrate": "",
+    "os_compute_api:os-migrate-server:migrate:host": "",
     "os_compute_api:os-migrate-server:migrate_live": "",
     "os_compute_api:os-migrations:index": "",
     "os_compute_api:os-multinic:add": "",

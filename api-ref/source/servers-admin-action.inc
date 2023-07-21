@@ -75,8 +75,9 @@ automatically confirms the migrate operation after the configured interval.
 
 .. _resize_confirm_window: https://docs.openstack.org/nova/latest/configuration/config.html#DEFAULT.resize_confirm_window
 
-Policy defaults enable only users with the administrative role to
-perform this operation. Cloud providers can change these permissions
+There are two different policies for this action, depending on whether the host
+parameter is set. Both defaults enable only users with the administrative role
+to perform this operation. Cloud providers can change these permissions
 through the ``policy.json`` file.
 
 Normal response codes: 202

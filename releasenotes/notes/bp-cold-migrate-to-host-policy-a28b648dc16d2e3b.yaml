@@ -1,0 +1,6 @@
+---
+features:
+  - A new `os_compute_api:os-migrate-server:migrate:host` policy is created,
+    being by default only an admin-only policy. This will help operators to
+    have different policies between cold-migrate without providing a host or
+    not.
