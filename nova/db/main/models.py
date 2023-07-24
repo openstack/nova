@@ -285,6 +285,8 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
               'deleted', 'created_at'),
         sa.Index('instances_updated_at_project_id_idx',
               'updated_at', 'project_id'),
+        sa.Index('instances_compute_id_deleted_idx',
+              'compute_id', 'deleted'),
         schema.UniqueConstraint('uuid', name='uniq_instances0uuid'),
     )
     injected_files = []
@@ -345,6 +347,10 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     # To identify the "ComputeNode" which the instance resides in.
     # This equals to ComputeNode.hypervisor_hostname.
     node = sa.Column(sa.String(255))
+    # This identifies the ComputeNode object that this instance resides
+    # on and should be equivalent to the one referenced by the 'node'
+    # field above.
+    compute_id = sa.Column(sa.BigInteger())
 
     # *not* flavorid, this is the internal primary_key
     instance_type_id = sa.Column(sa.Integer)
@@ -749,6 +755,8 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
               'status'),
         sa.Index('migrations_uuid', 'uuid', unique=True),
         sa.Index('migrations_updated_at_idx', 'updated_at'),
+        sa.Index('migrations_dest_compute_id_deleted_idx',
+                 'dest_compute_id', 'deleted'),
     )
     id = sa.Column(sa.Integer, primary_key=True, nullable=False)
     # NOTE(tr3buchet): the ____compute variables are instance['host']
@@ -757,6 +765,8 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
     # nodes are equivalent to a compute node's 'hypervisor_hostname'
     source_node = sa.Column(sa.String(255))
     dest_node = sa.Column(sa.String(255))
+    # The ID of the ComputeNode that matches dest_node
+    dest_compute_id = sa.Column(sa.BigInteger())
     # NOTE(tr3buchet): dest_host, btw, is an ip address
     dest_host = sa.Column(sa.String(255))
     old_instance_type_id = sa.Column(sa.Integer())
