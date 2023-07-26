@@ -280,6 +280,29 @@ https://docs.openstack.org/latest/nova/admin/configuration/service-user-token.ht
             return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
+    def _check_compute_object_linkage(self):
+        ctxt = nova_context.get_admin_context()
+        try:
+            cn_no_service = main_db_api.compute_nodes_get_by_service_id(
+                ctxt, None)
+        except exception.ServiceNotFound:
+            cn_no_service = []
+        if cn_no_service:
+            msg = (_('Compute node objects without service_id linkage were '
+                     'found in the database. Ensure all non-deleted compute '
+                     'services have started with upgraded code.'))
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
+
+        inst_no_compute = main_db_api.instance_get_all_by_filters(
+            ctxt, filters={'compute_id': None}, limit=1)
+        if inst_no_compute:
+            msg = (_('Non-deleted instances missing compute node linkage '
+                     'were found in the database. Online data migrations '
+                     'should be run.'))
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
+
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
+
     # The format of the check functions is to return an upgradecheck.Result
     # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -305,6 +328,8 @@ https://docs.openstack.org/latest/nova/admin/configuration/service-user-token.ht
         (_('hw_machine_type unset'), _check_machine_type_set),
         # Added in Bobcat
         (_('Service User Token Configuration'), _check_service_user_token),
+        # Added in 2023.2
+        (_('Object ID linkage'), _check_compute_object_linkage),
     )
 
 

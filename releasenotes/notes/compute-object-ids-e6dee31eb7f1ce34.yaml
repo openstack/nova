@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    A new database schema migration has been added that requires an online
+    data migration after upgrade. The change involves stricter linkage between
+    compute nodes, service records, and instances. A status check has been
+    added, which should pass once the schema *and* online data migrations have
+    been completed.
