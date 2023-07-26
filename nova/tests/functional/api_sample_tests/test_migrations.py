@@ -34,6 +34,7 @@ def _stub_migrations(stub_self, context, filters):
             'id': 1234,
             'source_node': 'node1',
             'dest_node': 'node2',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute2',
             'dest_host': '1.2.3.4',
@@ -54,6 +55,7 @@ def _stub_migrations(stub_self, context, filters):
             'id': 5678,
             'source_node': 'node10',
             'dest_node': 'node20',
+            'dest_compute_id': 456,
             'source_compute': 'compute10',
             'dest_compute': 'compute20',
             'dest_host': '5.6.7.8',
@@ -101,6 +103,7 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
         {
             'source_node': 'node1',
             'dest_node': 'node2',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute2',
             'dest_host': '1.2.3.4',
@@ -120,6 +123,7 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
         {
             'source_node': 'node1',
             'dest_node': 'node2',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute2',
             'dest_host': '1.2.3.4',
@@ -139,6 +143,7 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
         {
             'source_node': 'node10',
             'dest_node': 'node20',
+            'dest_compute_id': 456,
             'source_compute': 'compute10',
             'dest_compute': 'compute20',
             'dest_host': '5.6.7.8',
@@ -158,6 +163,7 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
         {
             'source_node': 'node10',
             'dest_node': 'node20',
+            'dest_compute_id': 456,
             'source_compute': 'compute10',
             'dest_compute': 'compute20',
             'dest_host': '5.6.7.8',
@@ -201,6 +207,7 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
         {
             'source_node': 'node1',
             'dest_node': 'node2',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute2',
             'dest_host': '1.2.3.4',
@@ -221,6 +228,7 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
         {
             'source_node': 'node1',
             'dest_node': 'node2',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute2',
             'dest_host': '1.2.3.4',
@@ -241,6 +249,7 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
         {
             'source_node': 'node10',
             'dest_node': 'node20',
+            'dest_compute_id': 456,
             'source_compute': 'compute10',
             'dest_compute': 'compute20',
             'dest_host': '5.6.7.8',
@@ -261,6 +270,7 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
         {
             'source_node': 'node10',
             'dest_node': 'node20',
+            'dest_compute_id': 456,
             'source_compute': 'compute10',
             'dest_compute': 'compute20',
             'dest_host': '5.6.7.8',
@@ -331,6 +341,7 @@ class MigrationsSamplesJsonTestV2_80(MigrationsSamplesJsonTestV2_66):
         {
             'source_node': 'node1',
             'dest_node': 'node2',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute2',
             'dest_host': '1.2.3.4',
@@ -353,6 +364,7 @@ class MigrationsSamplesJsonTestV2_80(MigrationsSamplesJsonTestV2_66):
         {
             'source_node': 'node1',
             'dest_node': 'node2',
+            'dest_compute_id': 123,
             'source_compute': 'compute1',
             'dest_compute': 'compute2',
             'dest_host': '1.2.3.4',
@@ -375,6 +387,7 @@ class MigrationsSamplesJsonTestV2_80(MigrationsSamplesJsonTestV2_66):
         {
             'source_node': 'node10',
             'dest_node': 'node20',
+            'dest_compute_id': 456,
             'source_compute': 'compute10',
             'dest_compute': 'compute20',
             'dest_host': '5.6.7.8',
@@ -397,6 +410,7 @@ class MigrationsSamplesJsonTestV2_80(MigrationsSamplesJsonTestV2_66):
         {
             'source_node': 'node10',
             'dest_node': 'node20',
+            'dest_compute_id': 456,
             'source_compute': 'compute10',
             'dest_compute': 'compute20',
             'dest_host': '5.6.7.8',

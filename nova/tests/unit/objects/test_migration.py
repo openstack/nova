@@ -41,6 +41,7 @@ def fake_db_migration(**updates):
         'dest_compute': 'compute-dest',
         'source_node': 'node-source',
         'dest_node': 'node-dest',
+        'dest_compute_id': 123,
         'dest_host': 'host-dest',
         'old_instance_type_id': 42,
         'new_instance_type_id': 84,
@@ -148,6 +149,50 @@ class _TestMigrationObject(object):
                                              'uuid': uuidsentinel.migration,
                                              'user_id': 'fake-user',
                                              'project_id': 'fake-project'})
+
+    @mock.patch.object(db, 'migration_create')
+    def test_create_without_node_id(self, mock_create):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake-user'
+        ctxt.project_id = 'fake-project'
+        fake_migration = fake_db_migration(user_id='fake-user',
+                                           project_id='fake-project')
+        mock_create.return_value = fake_migration
+        mig = migration.Migration(context=ctxt)
+        mig.source_compute = 'foo'
+        mig.migration_type = 'resize'
+        mig.uuid = uuidsentinel.migration
+        mig.dest_node = 'foo'
+        self.assertRaises(exception.ObjectActionError, mig.create)
+
+        mig2 = objects.Migration.obj_from_primitive(
+            mig.obj_to_primitive(target_version='1.7'))
+        mig2._context = ctxt
+        mig2.create()
+
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    def test_get_dest_compute_id(self, mock_get):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake-user'
+        ctxt.project_id = 'fake-project'
+        mock_get.return_value = mock.MagicMock(id=123)
+        mig = objects.Migration(context=ctxt, dest_compute='dest_compute',
+                                dest_node='dest_node')
+
+        # Initially unset
+        self.assertNotIn('dest_compute_id', mig)
+
+        # First call should load it
+        self.assertEqual(123, mig.get_dest_compute_id())
+
+        # Second call should return the same thing
+        self.assertEqual(123, mig.get_dest_compute_id())
+
+        # Make sure we only called this once and stored the result
+        mock_get.assert_called_once_with(ctxt, 'dest_compute', 'dest_node')
+
+        # Now it should be set
+        self.assertIn('dest_compute_id', mig)
 
     @mock.patch.object(db, 'migration_create')
     def test_recreate_fails(self, mock_create):

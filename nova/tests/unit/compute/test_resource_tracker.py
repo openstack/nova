@@ -2798,7 +2798,7 @@ class TestResize(BaseTestCase):
                                          None, self.allocations)
 
         create_mig_mock.assert_called_once_with(
-                ctx, instance, new_flavor, _NODENAME,
+                ctx, instance, new_flavor, self.rt.compute_nodes[_NODENAME],
                 None  # move_type is None for resize...
         )
         self.assertIsInstance(claim, claims.MoveClaim)
