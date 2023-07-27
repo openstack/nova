@@ -158,7 +158,8 @@ class InstanceObjectTestCase(test.TestCase):
 
     def test_numa_topology_online_migration(self):
         """Ensure legacy NUMA topology objects are reserialized to o.vo's."""
-        instance = self._create_instance(host='fake-host', node='fake-node')
+        instance = self._create_instance(host='fake-host', node='fake-node',
+                                         compute_id=123)
 
         legacy_topology = jsonutils.dumps({
             "cells": [

@@ -196,7 +196,7 @@ class ResourceTracker(object):
         # so that the resource audit knows about any cpus we've pinned.
         instance_numa_topology = claim.claimed_numa_topology
         instance.numa_topology = instance_numa_topology
-        self._set_instance_host_and_node(instance, nodename)
+        self._set_instance_host_and_node(instance, cn)
 
         if self.pci_tracker:
             # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
@@ -542,7 +542,7 @@ class ResourceTracker(object):
             rc = resource.resource_class
             self.assigned_resources[rp_uuid][rc].add(resource)
 
-    def _set_instance_host_and_node(self, instance, nodename):
+    def _set_instance_host_and_node(self, instance, node):
         """Tag the instance as belonging to this host.  This should be done
         while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource claim
         will not be lost if the audit process starts.
@@ -552,7 +552,15 @@ class ResourceTracker(object):
         # method changes that method might need to be updated.
         instance.host = self.host
         instance.launched_on = self.host
-        instance.node = nodename
+        if node is not None:
+            # NOTE(danms): This method can be called when the node is disabled,
+            # which means not in our list. The note in instance_claim()
+            # explains that we should actually never get there (here) and that
+            # if we do, we will likely record the instance membership
+            # incorrectly. As such, if we do not have a compute node to
+            # update the instance, just avoid making a change.
+            instance.node = node.hypervisor_hostname
+            instance.compute_id = node.id
         instance.save()
 
     def _unset_instance_host_and_node(self, instance):
@@ -563,6 +571,7 @@ class ResourceTracker(object):
         """
         instance.host = None
         instance.node = None
+        instance.compute_id = None
         instance.save()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
@@ -2080,6 +2089,9 @@ class ResourceTracker(object):
         # entry.
         instance.host = self.host
         instance.node = node
+        # NOTE(danms): We can be called with node=None, which means compute_id
+        # should also be None
+        instance.compute_id = node and self.compute_nodes[node].id or None
         instance.save()
         instance.drop_migration_context()
 
@@ -2106,3 +2118,13 @@ class ResourceTracker(object):
             # up the cache.
             self.remove_node(stale_cn)
             self.reportclient.invalidate_resource_provider(stale_cn)
+
+    def get_node_by_name(self, nodename):
+        """Get a node from our list by name.
+
+        :raises: ComputeHostNotFound if missing
+        """
+        try:
+            return self.compute_nodes[nodename]
+        except KeyError:
+            raise exception.ComputeHostNotFound(host=nodename)

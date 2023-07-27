@@ -100,6 +100,7 @@ FAKE_IMAGE_REF = uuids.image_ref
 
 NODENAME = 'fakenode1'
 NODENAME2 = 'fakenode2'
+COMPUTE_ID = 123
 
 
 def fake_not_implemented(*args, **kwargs):
@@ -289,6 +290,7 @@ class BaseTestCase(test.TestCase):
         inst.project_id = self.project_id
         inst.host = self.compute.host
         inst.node = NODENAME
+        inst.compute_id = COMPUTE_ID
         inst.instance_type_id = flavor.id
         inst.ami_launch_index = 0
         inst.memory_mb = 0
@@ -5984,12 +5986,14 @@ class ComputeTestCase(BaseTestCase,
     # test.  It introduced a hacky way to force the migration dest_compute
     # and makes it hard to keep _test_finish_revert_resize() generic
     # and have the resources correctly tracked.
-    def test_finish_revert_resize_validate_source_compute(self):
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    def test_finish_revert_resize_validate_source_compute(self, mock_cn):
         def fake(*args, **kwargs):
             pass
 
         instance = self._create_fake_instance_obj()
         request_spec = objects.RequestSpec()
+        mock_cn.return_value = mock.MagicMock(id=123)
 
         self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
         self.stub_out('nova.virt.fake.FakeDriver.finish_revert_migration',

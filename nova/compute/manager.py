@@ -707,6 +707,7 @@ class ComputeManager(manager.Manager):
         # to the database layer.
         instance.host = None
         instance.node = None
+        instance.compute_id = None
         # ResourceTracker._set_instance_host_and_node also sets launched_on
         # to the same value as host and is really only ever used by legacy
         # nova-network code, but we should also null it out to avoid confusion
@@ -5109,7 +5110,12 @@ class ComputeManager(manager.Manager):
         """Revert host, node and flavor fields after a resize-revert."""
         self._set_instance_info(instance, instance.old_flavor)
         instance.host = migration.source_compute
-        instance.node = migration.source_node
+        # NOTE(danms): This could fail if we somehow ended up on the wrong
+        # host without the desired node. That's a big problem, so let the
+        # ComputeHostNotFound raise from here.
+        cn = self.rt.get_node_by_name(migration.source_node)
+        instance.node = cn.hypervisor_hostname
+        instance.compute_id = cn.id
         instance.save(expected_task_state=[task_states.RESIZE_REVERTING])
 
     @wrap_exception()
@@ -6024,6 +6030,11 @@ class ComputeManager(manager.Manager):
 
             instance.host = migration.dest_compute
             instance.node = migration.dest_node
+            # NOTE(danms): This could fail if the dest_compute_id was not set
+            # by the sending host *and* migration.dest_node does not point to
+            # a legit node on the dest_compute. Since that would be very bad,
+            # let the ComputeHostNotFound raise from here.
+            instance.compute_id = migration.get_dest_compute_id()
             # NOTE(gibi): as the instance now tracked on the destination we
             # have to make sure that the source compute resource track can
             # track this instance as a migration. For that the resource tracker
@@ -6409,7 +6420,12 @@ class ComputeManager(manager.Manager):
         # Setting the host/node values will make the ResourceTracker continue
         # to track usage for this instance on this host.
         instance.host = migration.dest_compute
-        instance.node = migration.dest_node
+        # NOTE(danms): This could fail if we somehow ended up on the wrong
+        # host without the desired node. That's a big problem, so let the
+        # ComputeHostNotFound raise from here.
+        cn = self.rt.get_node_by_name(migration.dest_node)
+        instance.compute_id = cn.id
+        instance.node = cn.hypervisor_hostname
         instance.save(expected_task_state=task_states.RESIZE_FINISH)
 
         # Broadcast to all schedulers that the instance is on this host.
@@ -9189,6 +9205,7 @@ class ComputeManager(manager.Manager):
                 source_bdms)
         except Exception:
             # Restore the instance object
+            compute_node = None
             node_name = None
             try:
                 # get node name of compute, where instance will be
@@ -9210,6 +9227,7 @@ class ComputeManager(manager.Manager):
                 instance.host = dest
                 instance.task_state = None
                 instance.node = node_name
+                instance.compute_id = compute_node and compute_node.id or None
                 instance.progress = 0
                 instance.save()
             raise
@@ -9435,6 +9453,7 @@ class ComputeManager(manager.Manager):
         finally:
             # Restore instance state and update host
             current_power_state = self._get_power_state(instance)
+            compute_node = None
             node_name = None
             prev_host = instance.host
             try:
@@ -9457,6 +9476,7 @@ class ComputeManager(manager.Manager):
                 instance.power_state = current_power_state
                 instance.task_state = None
                 instance.node = node_name
+                instance.compute_id = compute_node and compute_node.id or None
                 instance.progress = 0
                 instance.save(expected_task_state=task_states.MIGRATING)
 

@@ -79,6 +79,7 @@ class NotificationsTestCase(test.TestCase):
                                 display_name='test_instance',
                                 hostname='test_instance_hostname',
                                 node='test_instance_node',
+                                compute_id=123,
                                 system_metadata={})
         inst._context = self.context
         if params:

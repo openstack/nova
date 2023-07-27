@@ -95,6 +95,7 @@ class BuildRequest(base.NovaObject):
         self.instance.terminated_at = None
         self.instance.host = None
         self.instance.node = None
+        self.instance.compute_id = None
         self.instance.launched_at = None
         self.instance.launched_on = None
         self.instance.cell_name = None
