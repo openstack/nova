@@ -1,7 +1,6 @@
 dumb-init
 python-memcached
 pymemcache
-mitmproxy
 python-ironicclient
 
 -e git+https://github.com/sapcc/raven-python.git@ccloud#egg=raven
