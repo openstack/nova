@@ -42,6 +42,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova import utils
+import typing as ty
 
 
 CONF = nova.conf.CONF
@@ -639,6 +640,33 @@ class InstanceHelperMixin:
             server['id'],
             {'createImage': {'name': snapshot_name}}
         )
+
+    def _attach_volumes(self, server, vol_ids: ty.List[str]):
+        # attach volumes to server
+        # these attachments are done by nova api, that means
+        # nova know about these attachments and so they are valid ones.
+
+        for vol_id in vol_ids:
+            self.api.post_server_volume(
+                server['id'], {'volumeAttachment': {'volumeId': vol_id}})
+
+        for vol_id in vol_ids:
+            # wait for each vol to get attached
+            self._wait_for_volume_attach(server['id'], vol_id)
+
+        # here server is already in an active state
+        # this is just to refresh server object
+        # so attached volumes can be shown in server
+        return self._wait_for_state_change(server, expected_status='ACTIVE')
+
+    def _create_vol_attachments_by_cinder(
+            self, volume_id, server, new_attachments=1):
+        # these attachments are done by cinder api,
+        # and nova is not aware of them.
+
+        for _ in range(new_attachments):
+            self.cinder.create_vol_attachment(
+                volume_id, server['id'])
 
 
 class PlacementHelperMixin:
