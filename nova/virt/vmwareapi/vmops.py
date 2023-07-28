@@ -2111,6 +2111,16 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
 
+        # Check if we resize to > 128 vCPUs on a BIOS VM
+        if flavor.vcpus > 128:
+            firmware = vm_util.get_object_property(self._session, vm_ref,
+                                                   'config.firmware')
+            if firmware == 'bios':
+                message = ("BIOS-booted VMs do not support > 128 vCPUs. The "
+                           f"target flavor requests {flavor.vcpus} vCPUs.")
+                raise exception.InstanceFaultRollback(
+                    exception.MigrationError(message=message))
+
         boot_from_volume = compute_utils.is_volume_backed_instance(context,
                                                                    instance)
 

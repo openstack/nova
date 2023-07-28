@@ -17,6 +17,7 @@ import re
 import time
 from unittest import mock
 
+import ddt
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
@@ -62,6 +63,7 @@ class DsPathMatcher(object):
         return str(ds_path_param) == self.expected_ds_path_str
 
 
+@ddt.ddt
 class VMwareVMOpsTestCase(test.TestCase):
     def setUp(self):
         super(VMwareVMOpsTestCase, self).setUp()
@@ -1447,6 +1449,21 @@ class VMwareVMOpsTestCase(test.TestCase):
                           self._test_migrate_disk_and_power_off,
                           flavor_root_gb=self._instance.flavor.root_gb - 1)
 
+    @ddt.data((129, False, True), (128, False, False),
+              (129, True, False), (128, True, False))
+    @ddt.unpack
+    def test_migrate_disk_and_power_off_bios_more_than_128_vcpus(self,
+            flavor_vcpus, is_efi, raises):
+        if raises:
+            self.assertRaises(exception.InstanceFaultRollback,
+                              self._test_migrate_disk_and_power_off,
+                              flavor_root_gb=self._instance.flavor.root_gb + 1,
+                              flavor_vcpus=flavor_vcpus, is_efi=is_efi)
+        else:
+            self._test_migrate_disk_and_power_off(
+                flavor_root_gb=self._instance.flavor.root_gb + 1,
+                flavor_vcpus=flavor_vcpus, is_efi=is_efi)
+
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch.object(vmops.VMwareVMOps, '_do_finish_revert_migration')
@@ -1458,6 +1475,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'power_off_instance')
     @mock.patch.object(vm_util, 'get_hardware_devices_by_type',
                        return_value={})
+    @mock.patch.object(vm_util, 'get_object_property')
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='source-ref')
     @mock.patch.object(vmops.VMwareVMOps, "_do_migrate_disk")
     @mock.patch.object(vmops.VMwareVMOps, "_get_remove_network_device_change")
@@ -1468,14 +1486,18 @@ class VMwareVMOpsTestCase(test.TestCase):
                                          fake_get_remove_network_device_change,
                                          fake_do_migrate_disk,
                                          fake_get_vm_ref,
+                                         fake_get_object_property,
                                          fake_get_hardware_devices_by_type,
                                          fake_power_off,
                                          fake_power_on, fake_get_vmdk_info,
                                          fake_rename_vm, fake_vm_device_change,
                                          fake_image_meta, fake_finish_revert,
                                          fake_is_volume_backed,
-                                         flavor_root_gb,
-                                         migrate_fails=False):
+                                         flavor_root_gb, flavor_vcpus=None,
+                                         is_efi=True, migrate_fails=False):
+        if flavor_vcpus is None:
+            flavor_vcpus = self._instance.flavor.vcpus + 1
+
         block_device_info = mock.sentinel.block_device_info
 
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
@@ -1488,8 +1510,10 @@ class VMwareVMOpsTestCase(test.TestCase):
         dest = self._vmops.get_host_ip_addr()
         fake_get_vmdk_info.return_value = vmdk
         fake_get_remove_network_device_change.return_value = ['fake-device']
+        fake_get_object_property.return_value = 'efi' if is_efi else 'bios'
         flavor = fake_flavor.fake_flavor_obj(self._context,
-                                             root_gb=flavor_root_gb)
+                                             root_gb=flavor_root_gb,
+                                             vcpus=flavor_vcpus)
         if migrate_fails:
             fake_do_migrate_disk.side_effect = test.TestingException
             self.assertRaises(exception.InstanceFaultRollback,
@@ -1510,6 +1534,9 @@ class VMwareVMOpsTestCase(test.TestCase):
         fake_get_vm_ref.assert_called_with(self._session, self._instance)
         fake_get_vmdk_info.assert_called_once_with(self._session, 'source-ref')
 
+        if flavor_vcpus > 128:
+            fake_get_object_property.assert_called_once_with(
+                self._session, 'source-ref', 'config.firmware')
         fake_rename_vm.assert_called_once_with(self._session, 'source-ref',
                                                self._instance)
         fake_power_off.assert_called_once_with(self._session, self._instance,
