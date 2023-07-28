@@ -51,6 +51,7 @@ from nova.virt import driver
 _HOSTNAME = 'fake-host'
 _NODENAME = 'fake-node'
 _SERVICE_ID = 123
+_COMPUTE_ID = 1
 CONF = cfg.CONF
 
 _VIRT_DRIVER_AVAIL_RESOURCES = {
@@ -70,7 +71,7 @@ _VIRT_DRIVER_AVAIL_RESOURCES = {
 
 _COMPUTE_NODE_FIXTURES = [
     objects.ComputeNode(
-        id=1,
+        id=_COMPUTE_ID,
         deleted=False,
         uuid=uuids.cn1,
         host=_HOSTNAME,
@@ -206,6 +207,7 @@ _INSTANCE_FIXTURES = [
         id=1,
         host=_HOSTNAME,
         node=_NODENAME,
+        compute_id=_COMPUTE_ID,
         uuid='c17741a5-6f3d-44a8-ade8-773dc8c29124',
         memory_mb=_FLAVOR_FIXTURES[1]['memory_mb'],
         vcpus=_FLAVOR_FIXTURES[1]['vcpus'],
@@ -231,6 +233,7 @@ _INSTANCE_FIXTURES = [
         id=2,
         host=_HOSTNAME,
         node=_NODENAME,
+        compute_id=_COMPUTE_ID,
         uuid='33805b54-dea6-47b8-acb2-22aeb1b57919',
         memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
         vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
@@ -319,6 +322,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         id=101,
         host=None,  # prevent RT trying to lazy-load this
         node=None,
+        compute_id=None,
         uuid='f15ecfb0-9bf6-42db-9837-706eb2c4bf08',
         memory_mb=_FLAVOR_FIXTURES[1]['memory_mb'],
         vcpus=_FLAVOR_FIXTURES[1]['vcpus'],
@@ -344,6 +348,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         id=102,
         host=None,  # prevent RT trying to lazy-load this
         node=None,
+        compute_id=None,
         uuid='f6ed631a-8645-4b12-8e1e-2fff55795765',
         memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
         vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
@@ -369,6 +374,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         id=3,
         host=None,  # prevent RT trying to lazy-load this
         node=None,
+        compute_id=None,
         uuid='f4f0bfea-fe7e-4264-b598-01cb13ef1997',
         memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
         vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
@@ -394,6 +400,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         id=102,
         host=None,  # prevent RT trying to lazy-load this
         node=None,
+        compute_id=None,
         uuid='077fb63a-bdc8-4330-90ef-f012082703dc',
         memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
         vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
@@ -1055,6 +1062,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         # The resizing instance has already had its instance type
         # changed to the *new* instance type (the bigger one, instance type 2)
         resizing_instance = _MIGRATION_INSTANCE_FIXTURES[inst_uuid].obj_clone()
+        resizing_instance.compute_id = _COMPUTE_ID
         resizing_instance.migration_context = (
             _MIGRATION_CONTEXT_FIXTURES[resizing_instance.uuid])
         all_instances = _INSTANCE_FIXTURES + [resizing_instance]
@@ -1182,6 +1190,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         mig_ctxt.new_resources = objects.ResourceList(
                 objects=[self.resource_2])
         resizing_inst.migration_context = mig_ctxt
+        resizing_inst.compute_id = _COMPUTE_ID
         # the other instance is not being resized and only has the single
         # resource allocation for itself
         # here resource_0 is assigned to inst
@@ -1233,6 +1242,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         mig_ctxt.new_resources = objects.ResourceList(
                 objects=[self.resource_2])
         resizing_inst.migration_context = mig_ctxt
+        resizing_inst.compute_id = _COMPUTE_ID
         inst = _INSTANCE_FIXTURES[0]
         inst.resources = objects.ResourceList(objects=[self.resource_0])
 
@@ -2262,7 +2272,6 @@ class TestInstanceClaim(BaseTestCase):
         # Reset all changes to the instance to make sure that we can detect
         # any manipulation after the failure.
         orig_node = self.instance.node
-        self.assertNotIn('compute_id', self.instance)
         self.instance.obj_reset_changes(recursive=True)
 
         with mock.patch.object(self.instance, 'save') as mock_save:
@@ -2275,7 +2284,6 @@ class TestInstanceClaim(BaseTestCase):
         # Make sure the instance was not touched by the failed claim process
         self.assertEqual(set(), self.instance.obj_what_changed())
         self.assertEqual(orig_node, self.instance.node)
-        self.assertNotIn('compute_id', self.instance)
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
@@ -4047,6 +4055,26 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_remove_allocs = rc.remove_provider_tree_from_instance_allocation
         mock_remove_allocs.assert_called_once_with(
             ctxt, instance.uuid, self.rt.compute_nodes[_NODENAME].uuid)
+
+    @mock.patch.object(objects.Instance, 'save')
+    def test_ensure_compute_id_for_instance(self, mock_save):
+        instances = [
+            objects.Instance(uuid=uuids.inst1),
+            objects.Instance(uuid=uuids.inst2, compute_id=None),
+            objects.Instance(uuid=uuids.inst3, compute_id=456),
+            objects.Instance(uuid=uuids.inst4, compute_id=123),
+        ]
+        node = objects.ComputeNode(id=123)
+        self.rt._ensure_compute_id_for_instances(None, instances, node)
+
+        # We should only have called save on the first three that had a change
+        objects.Instance.save.assert_has_calls([
+            mock.call(), mock.call(), mock.call(),
+        ])
+
+        # Make sure everyone is set to our node id now
+        for inst in instances:
+            self.assertEqual(123, inst.compute_id)
 
 
 class TestInstanceInResizeState(test.NoDBTestCase):

@@ -950,6 +950,26 @@ class ResourceTracker(object):
                               'another host\'s instance!',
                           {'uuid': migration.instance_uuid})
 
+    def _ensure_compute_id_for_instances(self, context, instances, node):
+        """Check the instances on a given node for compute_id linkage"""
+        for instance in instances:
+            changed = False
+            if 'compute_id' not in instance or instance.compute_id is None:
+                LOG.info('Setting Instance.compute_id=%i for %s',
+                         node.id, instance.uuid)
+                instance.compute_id = node.id
+                changed = True
+            elif instance.compute_id != node.id:
+                LOG.warning(
+                    'Correcting compute_id=%i from %i for instance %s',
+                    node.id, instance.compute_id, instance.uuid)
+                instance.compute_id = node.id
+                changed = True
+            if changed:
+                # NOTE(danms): Only save if we made a change here, even if
+                # the instance had other pending changes
+                instance.save()
+
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def _update_available_resource(self, context, resources, startup=False):
 
@@ -1007,6 +1027,14 @@ class ResourceTracker(object):
         instance_by_uuid = self._update_usage_from_instances(
             context, instances, nodename)
 
+        cn = self.compute_nodes[nodename]
+
+        # Make sure these instances have a proper compute_id->CN.id link
+        # NOTE(danms): This is for migrating old records, so we can remove
+        # this once we are sure all records have been migrated and we can
+        # rely on this linkage.
+        self._ensure_compute_id_for_instances(context, instances, cn)
+
         self._pair_instances_to_migrations(migrations, instance_by_uuid)
         self._update_usage_from_migrations(context, migrations, nodename)
 
@@ -1017,8 +1045,6 @@ class ResourceTracker(object):
             self._remove_deleted_instances_allocations(
                 context, self.compute_nodes[nodename], migrations,
                 instance_by_uuid)
-
-        cn = self.compute_nodes[nodename]
 
         # NOTE(yjiang5): Because pci device tracker status is not cleared in
         # this periodic task, and also because the resource tracker is not
