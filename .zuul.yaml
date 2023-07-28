@@ -765,7 +765,6 @@
     gate:
       jobs:
         - nova-live-migration
-        - nova-live-migration-ceph
         - nova-tox-functional-py38
         - nova-tox-functional-py39
         - nova-multi-cell
