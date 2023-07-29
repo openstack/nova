@@ -2451,7 +2451,11 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         if power_on:
-            vm_util.power_on_instance(self._session, instance)
+            try:
+                vm_util.power_on_instance(self._session, instance)
+            except vexc.VimException:
+                LOG.exception("Failed to power on the VM.",
+                              instance=instance)
 
     def _get_vm_networking_spec(self, instance, network_info):
         client_factory = self._session.vim.client.factory
