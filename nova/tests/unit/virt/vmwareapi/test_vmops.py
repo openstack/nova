@@ -675,7 +675,8 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def _test_finish_migration(self, power_on=True,
                                resize_instance=False, migration=None,
-                               no_nics=False, is_bigvm=False):
+                               no_nics=False, is_bigvm=False,
+                               power_on_err=None):
         with test.nested(
                 mock.patch.object(self._vmops,
                                   '_resize_create_ephemerals_and_swap'),
@@ -740,6 +741,9 @@ class VMwareVMOpsTestCase(test.TestCase):
             if is_bigvm:
                 self._instance.memory_mb = 2048 * 1024  # 2 TiB RAM
                 self._instance.flavor.memory_mb = 2048 * 1024  # 2 TiB RAM
+
+            if power_on_err:
+                fake_power_on.side_effect = power_on_err
 
             self._vmops.finish_migration(context=self._context,
                                          migration=migration,
@@ -808,6 +812,12 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_finish_migration_power_on(self):
         self._test_finish_migration(power_on=True, resize_instance=False)
+
+    @mock.patch.object(vmops.LOG, 'exception')
+    def test_finish_migration_power_on_fails(self, log_mock):
+        power_on_err = vexc.VimException()
+        self._test_finish_migration(power_on=True, power_on_err=power_on_err)
+        log_mock.assert_called_once_with(mock.ANY, instance=self._instance)
 
     def test_finish_migration_power_off(self):
         self._test_finish_migration(power_on=False, resize_instance=False)
