@@ -1612,10 +1612,7 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
         # to any host but should still be owned by the vm
         port = self.neutron.show_port(vdpa_port['id'])['port']
         self.assertEqual(server['id'], port['device_id'])
-        # FIXME(sean-k-mooney): we should be unbinding the port from
-        # the host when we shelve offload but we don't today.
-        # This is unrelated to vdpa port and is a general issue.
-        self.assertEqual(hostname, port['binding:host_id'])
+        self.assertIsNone(port['binding:host_id'])
         self.assertIn('binding:profile', port)
         self.assertIsNone(server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
         self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
@@ -1637,9 +1634,7 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
         self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci)
         self.assertIsNone(server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
         port = self.neutron.show_port(vdpa_port['id'])['port']
-        # FIXME(sean-k-mooney): shelve  offload should unbind the port
-        # self.assertEqual('', port['binding:host_id'])
-        self.assertEqual(hostname, port['binding:host_id'])
+        self.assertIsNone(port['binding:host_id'])
 
         server = self._unshelve_server(server)
         self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci - 2)
@@ -1670,9 +1665,7 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
         self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
         self.assertIsNone(server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
         port = self.neutron.show_port(vdpa_port['id'])['port']
-        # FIXME(sean-k-mooney): shelve should unbind the port
-        # self.assertEqual('', port['binding:host_id'])
-        self.assertEqual(source, port['binding:host_id'])
+        self.assertIsNone(port['binding:host_id'])
 
         # force the unshelve to the other host
         self.api.put_service(
@@ -3926,17 +3919,7 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
 
         port = self.neutron.show_port(uuids.dpu_tunnel_port)['port']
         self.assertIn('binding:profile', port)
-        self.assertEqual(
-            {
-                'pci_vendor_info': '15b3:101e',
-                'pci_slot': '0000:82:00.4',
-                'physical_network': None,
-                'pf_mac_address': '52:54:00:1e:59:02',
-                'vf_num': 3,
-                'card_serial_number': 'MT0000X00002',
-            },
-            port['binding:profile'],
-        )
+        self.assertEqual({}, port['binding:profile'])
 
     def test_suspend(self):
         self.start_compute()

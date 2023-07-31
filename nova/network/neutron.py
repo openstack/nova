@@ -614,10 +614,22 @@ class API:
                     raise exception.ExternalNetworkAttachForbidden(
                         network_uuid=net['id'])
 
-    def _unbind_ports(self, context, ports,
-                      neutron, port_client=None):
-        """Unbind the given ports by clearing their device_id,
+    def unbind_ports(self, context, ports, detach=True):
+        """Unbind and detach the given ports by clearing their
         device_owner and dns_name.
+        The device_id will also be cleaned if detach=True.
+
+        :param context: The request context.
+        :param ports: list of port IDs.
+        """
+        neutron = get_client(context)
+        self._unbind_ports(context, ports, neutron, detach=detach)
+
+    def _unbind_ports(self, context, ports,
+                      neutron, port_client=None, detach=True):
+        """Unbind and detach the given ports by clearing their
+        device_owner and dns_name.
+        The device_id will also be cleaned if detach=True.
 
         :param context: The request context.
         :param ports: list of port IDs.
@@ -640,11 +652,12 @@ class API:
 
             port_req_body: ty.Dict[str, ty.Any] = {
                 'port': {
-                    'device_id': '',
-                    'device_owner': '',
                     constants.BINDING_HOST_ID: None,
                 }
             }
+            if detach:
+                port_req_body['port']['device_id'] = ''
+                port_req_body['port']['device_owner'] = ''
             try:
                 port = self._show_port(
                     context, port_id, neutron_client=neutron,

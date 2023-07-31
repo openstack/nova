@@ -6889,6 +6889,9 @@ class ComputeManager(manager.Manager):
         current_power_state = self._get_power_state(instance)
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
+        ports_id = [vif['id'] for vif in network_info]
+        self.network_api.unbind_ports(context, ports_id, detach=False)
+
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance,
                                                                  bdms=bdms)
