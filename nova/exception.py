@@ -1502,6 +1502,15 @@ class RescheduledException(NovaException):
                 "%(reason)s")
 
 
+class RescheduledByPolicyException(RescheduledException):
+    msg_fmt = _("Build of instance %(instance_uuid)s was re-scheduled: "
+                "%(reason)s")
+
+
+class GroupAffinityViolation(NovaException):
+    msg_fmt = _("%(policy)s instance group policy was violated")
+
+
 class InstanceFaultRollback(NovaException):
     def __init__(self, inner_exception=None):
         message = _("Instance rollback performed due to: %s")

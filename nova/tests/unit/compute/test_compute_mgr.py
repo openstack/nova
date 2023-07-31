@@ -6958,13 +6958,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute = manager.ComputeManager()
         self._test_build_and_run_instance()
 
+    @mock.patch.object(manager.ComputeManager, '_build_succeeded')
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     def _test_build_and_run_instance(self, mock_build, mock_save,
-                                     mock_start, mock_finish):
+                                     mock_start, mock_finish, mock_succeeded):
         self._do_build_instance_update(mock_save)
 
         orig_do_build_and_run = self.compute._do_build_and_run_instance
@@ -6997,6 +6998,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
                 self.filter_properties, {}, self.accel_uuids)
+        mock_succeeded.assert_called_once_with(self.node)
 
     # This test when sending an icehouse compatible rpc call to juno compute
     # node, NetworkRequest object can load from three items tuple.
@@ -7024,6 +7026,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertEqual('10.0.0.1', str(requested_network.address))
         self.assertEqual(uuids.port_instance, requested_network.port_id)
 
+    @mock.patch.object(manager.ComputeManager, '_build_failed')
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
@@ -7039,7 +7042,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_build_abort_exception(self, mock_build_run,
                                    mock_build, mock_set, mock_nil, mock_add,
                                    mock_clean_vol, mock_clean_net, mock_save,
-                                   mock_start, mock_finish):
+                                   mock_start, mock_finish, mock_failed):
         self._do_build_instance_update(mock_save)
         mock_build_run.side_effect = exception.BuildAbortException(reason='',
                                         instance_uuid=self.instance.uuid)
@@ -7082,7 +7085,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.ANY, mock.ANY)
         mock_nil.assert_called_once_with(self.instance)
         mock_set.assert_called_once_with(self.instance, clean_task_state=True)
+        mock_failed.assert_called_once_with(self.node)
 
+    @mock.patch.object(manager.ComputeManager, '_build_failed')
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
@@ -7093,8 +7098,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     def test_rescheduled_exception(self, mock_build_run,
-                                   mock_build, mock_set, mock_nil,
-                                   mock_save, mock_start, mock_finish):
+                                   mock_build, mock_set, mock_nil, mock_save,
+                                   mock_start, mock_finish, mock_failed):
         self._do_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
@@ -7141,6 +7146,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.admin_pass, self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping,
                 request_spec={}, host_lists=[fake_host_list])
+        mock_failed.assert_called_once_with(self.node)
 
     @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
@@ -7493,6 +7499,139 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.admin_pass, self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping,
                 request_spec={}, host_lists=[fake_host_list])
+
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim',
+                new=mock.MagicMock())
+    @mock.patch.object(objects.InstanceActionEvent,
+                       'event_finish_with_failure')
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager,
+                       '_nil_out_instance_obj_host_and_node')
+    @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
+    @mock.patch.object(manager.ComputeManager, '_build_failed')
+    @mock.patch.object(manager.ComputeManager, '_build_succeeded')
+    @mock.patch.object(manager.ComputeManager,
+                       '_validate_instance_group_policy')
+    def test_group_affinity_violation_exception_with_retry(
+        self, mock_validate_policy, mock_succeeded, mock_failed, mock_build,
+        mock_nil, mock_save, mock_start, mock_finish,
+    ):
+        """Test retry by affinity or anti-affinity validation check doesn't
+        increase failed build
+        """
+
+        self._do_build_instance_update(mock_save, reschedule_update=True)
+        mock_validate_policy.side_effect = \
+                exception.GroupAffinityViolation(
+                instance_uuid=self.instance.uuid, policy="Affinity")
+
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.RESCHEDULED_BY_POLICY, ret)
+            return ret
+
+        with test.nested(
+            mock.patch.object(
+                self.compute, '_do_build_and_run_instance',
+                side_effect=_wrapped_do_build_and_run_instance,
+            ),
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+            ),
+        ):
+            self.compute.build_and_run_instance(
+                self.context, self.instance,
+                self.image, request_spec={},
+                filter_properties=self.filter_properties,
+                accel_uuids=self.accel_uuids,
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
+                block_device_mapping=self.block_device_mapping, node=self.node,
+                limits=self.limits, host_list=fake_host_list)
+
+        mock_succeeded.assert_not_called()
+        mock_failed.assert_not_called()
+
+        self._instance_action_events(mock_start, mock_finish)
+        self._assert_build_instance_update(mock_save, reschedule_update=True)
+        mock_nil.assert_called_once_with(self.instance)
+        mock_build.assert_called_once_with(self.context,
+                [self.instance], self.image, self.filter_properties,
+                self.admin_pass, self.injected_files, self.requested_networks,
+                self.security_groups, self.block_device_mapping,
+                request_spec={}, host_lists=[fake_host_list])
+
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.instance_claim',
+                new=mock.MagicMock())
+    @mock.patch.object(objects.InstanceActionEvent,
+                       'event_finish_with_failure')
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager,
+                       '_nil_out_instance_obj_host_and_node')
+    @mock.patch.object(manager.ComputeManager, '_cleanup_allocated_networks')
+    @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
+    @mock.patch.object(manager.ComputeManager, '_build_failed')
+    @mock.patch.object(manager.ComputeManager, '_build_succeeded')
+    @mock.patch.object(manager.ComputeManager,
+                       '_validate_instance_group_policy')
+    def test_group_affinity_violation_exception_without_retry(
+        self, mock_validate_policy, mock_succeeded, mock_failed, mock_build,
+        mock_add, mock_set_state, mock_clean_net, mock_nil, mock_save,
+        mock_start, mock_finish,
+    ):
+        """Test failure by affinity or anti-affinity validation check doesn't
+        increase failed build
+        """
+
+        self._do_build_instance_update(mock_save)
+        mock_validate_policy.side_effect = \
+                exception.GroupAffinityViolation(
+                instance_uuid=self.instance.uuid, policy="Affinity")
+
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.FAILED_BY_POLICY, ret)
+            return ret
+
+        with mock.patch.object(
+                self.compute, '_do_build_and_run_instance',
+                side_effect=_wrapped_do_build_and_run_instance,
+        ):
+            self.compute.build_and_run_instance(
+                self.context, self.instance,
+                self.image, request_spec={},
+                filter_properties={},
+                accel_uuids=[],
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
+                block_device_mapping=self.block_device_mapping, node=self.node,
+                limits=self.limits, host_list=fake_host_list)
+
+        mock_succeeded.assert_not_called()
+        mock_failed.assert_not_called()
+
+        self._instance_action_events(mock_start, mock_finish)
+        self._assert_build_instance_update(mock_save)
+        mock_clean_net.assert_called_once_with(self.context, self.instance,
+                self.requested_networks)
+        mock_add.assert_called_once_with(self.context, self.instance,
+                mock.ANY, mock.ANY, fault_message=mock.ANY)
+        mock_nil.assert_called_once_with(self.instance)
+        mock_build.assert_not_called()
+        mock_set_state.assert_called_once_with(self.instance,
+                clean_task_state=True)
 
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
@@ -8073,7 +8212,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         nodes.return_value = ['nodename']
         migration_list.return_value = [objects.Migration(
             uuid=uuids.migration, instance_uuid=uuids.instance)]
-        self.assertRaises(exception.RescheduledException,
+        self.assertRaises(exception.GroupAffinityViolation,
                           self.compute._validate_instance_group_policy,
                           self.context, instance, hints)
 
