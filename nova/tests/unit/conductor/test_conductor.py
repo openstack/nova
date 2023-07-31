@@ -1362,6 +1362,7 @@ class _BaseTaskTestCase(object):
 
         fake_spec = fake_request_spec.fake_spec_obj()
         fake_spec.flavor = instance.flavor
+        fake_spec.is_bfv = False
         # FIXME(sbauza): Modify the fake RequestSpec object to either add a
         # non-empty SchedulerRetries object or nullify the field
         fake_spec.retry = None
@@ -1474,6 +1475,7 @@ class _BaseTaskTestCase(object):
         # 'shelved_image_id' is None for volumebacked instance
         instance.system_metadata['shelved_image_id'] = None
         self.request_spec.flavor = instance.flavor
+        self.request_spec.is_bfv = True
 
         with test.nested(
             mock.patch.object(self.conductor_manager,
@@ -1502,6 +1504,7 @@ class _BaseTaskTestCase(object):
     def test_unshelve_instance_schedule_and_rebuild(
             self, mock_im, mock_get, mock_schedule, mock_unshelve):
         fake_spec = objects.RequestSpec()
+        fake_spec.is_bfv = False
         # Set requested_destination to test setting cell_mapping in
         # existing object.
         fake_spec.requested_destination = objects.Destination(
@@ -1606,6 +1609,7 @@ class _BaseTaskTestCase(object):
     def test_unshelve_instance_schedule_and_rebuild_volume_backed(
             self, mock_im, mock_schedule, mock_unshelve):
         fake_spec = objects.RequestSpec()
+        fake_spec.is_bfv = True
         mock_im.return_value = objects.InstanceMapping(
             cell_mapping=objects.CellMapping.get_by_uuid(self.context,
                                                          uuids.cell1))
@@ -1637,6 +1641,7 @@ class _BaseTaskTestCase(object):
 
         request_spec = objects.RequestSpec()
         request_spec.flavor = instance.flavor
+        request_spec.is_bfv = False
 
         selection = objects.Selection(
             service_host='fake_host',
@@ -1680,6 +1685,7 @@ class _BaseTaskTestCase(object):
         request_spec = objects.RequestSpec()
         request_spec.flavor = instance.flavor
         request_spec.flavor.extra_specs = {'accel:device_profile': 'mydp'}
+        request_spec.is_bfv = False
 
         selection = objects.Selection(
             service_host='fake_host',
@@ -1728,6 +1734,7 @@ class _BaseTaskTestCase(object):
         request_spec = objects.RequestSpec()
         request_spec.flavor = instance.flavor
         request_spec.flavor.extra_specs = {'accel:device_profile': 'mydp'}
+        request_spec.is_bfv = False
 
         selection = objects.Selection(
             service_host='fake_host',
@@ -2964,6 +2971,131 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_check.assert_not_called()
 
         self.assertTrue(mock_build.called)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.unshelve_instance')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    @mock.patch('nova.objects.Instance.save', new=mock.Mock())
+    def _test_unshelve_over_quota_during_recheck(self, mock_select,
+                                                 mock_unshelve):
+        mock_select.return_value = [[fake_selection1]]
+
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.SHELVED_OFFLOADED)
+        # This has to be set separately because fake_instance_obj() would
+        # overwrite it when it calls _from_db_object().
+        instance.system_metadata = {}
+
+        im = objects.InstanceMapping(
+            self.context, instance_uuid=instance.uuid,
+            project_id=instance.project_id)
+        im.cell_mapping = self.cell_mappings['cell1']
+        im.create()
+
+        req_spec = objects.RequestSpec(
+            instance_uuid=instance.uuid, flavor=instance.flavor,
+            instance_group=None, is_bfv=False)
+
+        self.assertRaises(
+            exc.TooManyInstances,
+            self.conductor.unshelve_instance,
+            self.context, instance, req_spec
+        )
+
+        # We should not have called the compute API unshelve().
+        self.assertFalse(mock_unshelve.called)
+
+        return instance, req_spec
+
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
+    def test_unshelve_over_quota_during_recheck_placement(self, mock_check):
+        self.flags(count_usage_from_placement=True, group='quota')
+
+        # Simulate a race where the first check passes and the recheck fails.
+        # First check occurs in compute/api.
+        fake_quotas = {'instances': 5, 'cores': 10, 'ram': 4096}
+        fake_headroom = {'instances': 5, 'cores': 10, 'ram': 4096}
+        fake_usages = {'instances': 5, 'cores': 10, 'ram': 4096}
+        e = exc.OverQuota(overs=['instances'], quotas=fake_quotas,
+                          headroom=fake_headroom, usages=fake_usages)
+        mock_check.side_effect = e
+
+        instance, _ = self._test_unshelve_over_quota_during_recheck()
+
+        # Verify we called the quota check function with expected args.
+        mock_check.assert_called_once_with(
+            self.context, {'instances': 0, 'cores': 0, 'ram': 0},
+            instance.project_id, user_id=None,
+            check_project_id=instance.project_id, check_user_id=None)
+
+    @mock.patch.object(placement_limit, 'enforce_num_instances_and_flavor')
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas', new=mock.Mock())
+    def test_unshelve_over_quota_during_recheck_ul(self, mock_enforce):
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+
+        # Simulate a race where the first check passes and the recheck fails.
+        # First check occurs in compute/api.
+        mock_enforce.side_effect = exc.TooManyInstances(
+            overs=['instances'], req=5, used=5, allowed=5)
+
+        instance, req_spec = self._test_unshelve_over_quota_during_recheck()
+
+        # Verify we called the quota check function with expected args.
+        mock_enforce.assert_called_once_with(
+            self.context, instance.project_id, instance.flavor,
+            req_spec.is_bfv, 0, 0)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.unshelve_instance')
+    @mock.patch.object(placement_limit, 'enforce_num_instances_and_flavor')
+    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    @mock.patch('nova.objects.Instance.save', new=mock.Mock())
+    def test_unshelve_no_quota_recheck(self, mock_select, mock_check,
+                                       mock_enforce, mock_unshelve):
+        # Quota should not be checked on unshelve for legacy quotas at all.
+        mock_select.return_value = [[fake_selection1]]
+
+        # This is needed to register the compute node in a cell.
+        self.start_service('compute', host='host1')
+
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.SHELVED_OFFLOADED)
+        # This has to be set separately because fake_instance_obj() would
+        # overwrite it when it calls _from_db_object().
+        instance.system_metadata = {}
+
+        im = objects.InstanceMapping(
+            self.context, instance_uuid=instance.uuid,
+            project_id=instance.project_id)
+        im.cell_mapping = self.cell_mappings['cell1']
+        im.create()
+
+        req_spec = objects.RequestSpec(
+            instance_uuid=instance.uuid, flavor=instance.flavor,
+            instance_group=None)
+
+        self.conductor.unshelve_instance(self.context, instance, req_spec)
+
+        # check_deltas should not have been called
+        mock_check.assert_not_called()
+
+        # Same for enforce_num_instances_and_flavor
+        mock_enforce.assert_not_called()
+
+        # We should have called the compute API unshelve()
+        self.assertTrue(mock_unshelve.called)
+
+    def test_unshelve_quota_recheck_disabled(self):
+        # Disable recheck_quota.
+        self.flags(recheck_quota=False, group='quota')
+        self.test_unshelve_no_quota_recheck()
+
+    def test_unshelve_no_quota_recheck_disabled_placement(self):
+        self.flags(count_usage_from_placement=True, group='quota')
+        self.test_unshelve_quota_recheck_disabled()
+
+    def test_unshelve_no_quota_recheck_disabled_ul(self):
+        self.flags(driver='nova.quota.UnifiedLimitsDriver', group='quota')
+        self.test_unshelve_quota_recheck_disabled()
 
     def test_schedule_and_build_instances_fill_request_spec(self):
         # makes sure there is some request group in the spec to be mapped
