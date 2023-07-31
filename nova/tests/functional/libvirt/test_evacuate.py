@@ -427,6 +427,7 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
+        self.useFixture(nova_fixtures.CGroupsFixture())
         fake_network.set_stub_network_methods(self)
 
         api_fixture = self.useFixture(
