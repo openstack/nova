@@ -18,6 +18,7 @@ from nova import context
 from nova.db.main import api as db
 from nova import objects
 from nova import test
+from nova import utils
 
 
 class InstanceObjectTestCase(test.TestCase):
@@ -123,6 +124,63 @@ class InstanceObjectTestCase(test.TestCase):
         self.assertEqual(1, count_hit)
         inst3 = objects.Instance.get_by_uuid(self.context, uuid3)
         self.assertEqual('nova-test', inst3.availability_zone)
+
+    def test_populate_instance_compute_id(self):
+        # Create three test nodes, one deleted
+        node_values = dict(vcpus=10, memory_mb=1024, local_gb=10,
+                           vcpus_used=0, memory_mb_used=0, local_gb_used=0,
+                           hypervisor_type='libvirt', hypervisor_version='1',
+                           cpu_info='')
+        node1 = objects.ComputeNode(context=self.context, host='fake_host1',
+                                    hypervisor_hostname='fake_node1',
+                                    **node_values)
+        node1.create()
+        node2 = objects.ComputeNode(context=self.context, host='fake_host2',
+                                    hypervisor_hostname='fake_node2',
+                                    **node_values)
+        node2.create()
+        node3 = objects.ComputeNode(context=self.context, host='fake_host3',
+                                    hypervisor_hostname='fake_node3',
+                                    **node_values)
+        node3.create()
+        node3.destroy()
+
+        # Create four test instances across the test nodes, including a
+        # deleted instance and one instance with a missing compute node.
+        self._create_instance(host='fake_host1', node='fake_node1',
+                              compute_id=None)
+        self._create_instance(host='fake_host2', node='fake_node2',
+                              compute_id=None)
+        self._create_instance(host='fake_host3', node='fake_node3',
+                              compute_id=None)
+        to_delete = self._create_instance(host='fake_host1', node='fake_node1',
+                              compute_id=None)
+        to_delete.destroy()
+        self._create_instance(host='fake_host4', node='fake_node4',
+                              compute_id=None)
+
+        # Do the actual migration
+        count_all, count_hit = objects.instance.populate_instance_compute_id(
+            self.context, 10)
+
+        # We should have found all instances, and fixed all but one which
+        # has a node we cannot find
+        self.assertEqual(5, count_all)
+        self.assertEqual(4, count_hit)
+
+        with utils.temporary_mutation(self.context, read_deleted='yes'):
+            instances = objects.InstanceList.get_all(self.context)
+
+        # Make sure we found all the instances we expect, including the
+        # deleted one.
+        self.assertEqual(5, len(instances))
+
+        # Make sure they all have the compute_id set as we expect, including
+        # the one remaining None because the node is not found.
+        expected_nodes = {n.hypervisor_hostname: n.id
+                          for n in [node1, node2, node3]}
+        for inst in instances:
+            self.assertEqual(inst.compute_id, expected_nodes.get(inst.node))
 
     def test_get_count_by_hosts(self):
         self._create_instance(host='fake_host1')
