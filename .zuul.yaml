@@ -768,6 +768,7 @@
         - nova-live-migration-ceph
         - nova-tox-functional-py38
         - nova-tox-functional-py39
+        - nova-tox-functional-py310
         - nova-multi-cell
         - nova-next
         - nova-tox-validate-backport
