@@ -685,10 +685,19 @@
         # they need keystone to continue working with project scope. Until
         # Keystone policies are changed to work for project scoped also, we
         # need to keep scope check disable for keystone.
-        NOVA_ENFORCE_SCOPE: true
+        # Nova and Glance scope and new defaults are enabled by default in
+        # Devstack so we do not need to explicitly set that to True.
         CINDER_ENFORCE_SCOPE: true
-        GLANCE_ENFORCE_SCOPE: true
         NEUTRON_ENFORCE_SCOPE: true
+
+- job:
+    name: tempest-integrated-compute-rbac-old-defaults
+    parent: tempest-integrated-compute
+    description: |
+      This job runs the Tempest tests with Nova RBAC old defaults
+    vars:
+      devstack_localrc:
+        NOVA_ENFORCE_SCOPE: false
 
 - project:
     # Please try to keep the list of job names sorted alphabetically.
@@ -748,6 +757,8 @@
              - ^tox.ini$
         - tempest-integrated-compute-enforce-scope-new-defaults:
             irrelevant-files: *policies-irrelevant-files
+        - tempest-integrated-compute-rbac-old-defaults:
+            irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
@@ -783,6 +794,8 @@
         - tempest-integrated-compute:
            irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-enforce-scope-new-defaults:
+            irrelevant-files: *policies-irrelevant-files
+        - tempest-integrated-compute-rbac-old-defaults:
             irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
