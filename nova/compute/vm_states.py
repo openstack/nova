@@ -27,6 +27,7 @@ health and progress.
 See http://wiki.openstack.org/VMState
 """
 
+from nova.compute import task_states
 from nova.objects import fields
 
 
@@ -74,5 +75,11 @@ ALLOW_HARD_REBOOT = ALLOW_SOFT_REBOOT + [STOPPED, PAUSED, SUSPENDED, ERROR]
 # states we allow to trigger crash dump
 ALLOW_TRIGGER_CRASH_DUMP = [ACTIVE, PAUSED, RESCUED, RESIZED, ERROR]
 
-# states we allow resources to be freed in
-ALLOW_RESOURCE_REMOVAL = [DELETED, SHELVED_OFFLOADED]
+
+def allow_resource_removal(vm_state, task_state=None):
+    """(vm_state, task_state) combinations we allow resources to be freed in"""
+
+    return (
+        vm_state == DELETED or
+        vm_state == SHELVED_OFFLOADED and task_state != task_states.SPAWNING
+    )

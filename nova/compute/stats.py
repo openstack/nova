@@ -105,7 +105,8 @@ class Stats(dict):
         (vm_state, task_state, os_type, project_id) = \
                 self._extract_state_from_instance(instance)
 
-        if is_removed or vm_state in vm_states.ALLOW_RESOURCE_REMOVAL:
+        if is_removed or vm_states.allow_resource_removal(
+                vm_state=vm_state, task_state=task_state):
             self._decrement("num_instances")
             self.states.pop(uuid)
         else:
