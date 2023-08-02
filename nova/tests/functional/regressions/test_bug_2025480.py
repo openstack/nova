@@ -82,6 +82,5 @@ class UnshelveUpdateAvailableResourcesPeriodicRace(
 
         node = compute_node.ComputeNode.get_by_nodename(
             context.get_admin_context(), 'compute1')
-        # This is the bug, the instance should have resources claimed
-        # self.assertEqual(1, node.vcpus_used)
-        self.assertEqual(0, node.vcpus_used)
+        # After the fix, the instance should have resources claimed
+        self.assertEqual(1, node.vcpus_used)
