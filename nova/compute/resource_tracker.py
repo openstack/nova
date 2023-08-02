@@ -1546,7 +1546,8 @@ class ResourceTracker(object):
         # NOTE(sfinucan): Both brand new instances as well as instances that
         # are being unshelved will have is_new_instance == True
         is_removed_instance = not is_new_instance and (is_removed or
-            instance['vm_state'] in vm_states.ALLOW_RESOURCE_REMOVAL)
+            vm_states.allow_resource_removal(
+                vm_state=instance['vm_state'], task_state=instance.task_state))
 
         if is_new_instance:
             self.tracked_instances.add(uuid)
@@ -1605,7 +1606,9 @@ class ResourceTracker(object):
 
         instance_by_uuid = {}
         for instance in instances:
-            if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
+            if not vm_states.allow_resource_removal(
+                    vm_state=instance['vm_state'],
+                    task_state=instance.task_state):
                 self._update_usage_from_instance(context, instance, nodename)
             instance_by_uuid[instance.uuid] = instance
         return instance_by_uuid
