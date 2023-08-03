@@ -2440,8 +2440,23 @@ class VMwareVMOps(object):
             LOG.debug('Sync for server-group %s done', sg_uuid)
 
         def _update_rule(rule_name, expected_members, sg):
-            rule = cluster_util.get_rule(
-                self._session, self._cluster, rule_name)
+            # we need to get by "prefix", to get all rules matching our name,
+            # as there can be duplication happening with automatically
+            # vSphere-created rules during vMotion
+            rules = [r for r in cluster_util.get_rules_by_prefix(
+                        self._session, self._cluster, rule_name)
+                     if r.name == rule_name]
+
+            rule = rules[0] if rules else None
+
+            # if we have duplicates (with the same name), delete them
+            for dupl_rule in rules[1:]:
+                LOG.debug('Deleting DRS rule %s with key %s as duplicate',
+                          dupl_rule.name, dupl_rule.key)
+                cluster_util.delete_rule(
+                    self._session, self._cluster, dupl_rule)
+                LOG.info('Deleted rule %s with key %s as duplicate',
+                         dupl_rule.name, dupl_rule.key)
 
             if not rule:
                 if len(expected_members) < 2 or sg.policy == 'soft-affinity':
