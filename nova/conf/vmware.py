@@ -498,6 +498,18 @@ that are stored in Swift will be downloaded by VMWare from the `direct_url`,
 instead of the nova-compute service having to proxy the image between glance
 and VMware.
 """),
+    cfg.IntOpt('custom_traits_sync_loop_spacing',
+               default=600,
+               help="""
+Amount of time in seconds to wait between custom trait sync-loop runs
+
+The sync-loop thread for custom traits runs continuously, sleeping after
+syncing the traits. This setting defines how long to sleep between runs.
+
+Possible values:
+ * integer >= time in seconds to sleep between runs
+ * intger < 0: disable the sync-loop
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +

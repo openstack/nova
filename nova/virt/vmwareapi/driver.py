@@ -247,6 +247,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._vmops.set_compute_host(host)
         LOG.debug("Starting green server-group sync-loop thread")
         utils.spawn(self._server_group_sync_loop, host)
+        utils.spawn(self._custom_traits_sync_loop, host)
 
     def cleanup_host(self, host):
         self._session.logout()
@@ -818,6 +819,109 @@ class VMwareVCDriver(driver.ComputeDriver):
                 LOG.debug('Finished server-group sync-loop')
 
             time.sleep(CONF.vmware.server_group_sync_loop_spacing)
+
+    def _custom_traits_sync_loop(self, compute_host):
+        """Get the traits from Placement and sync them down into the cluster's
+        custom attributes.
+
+        Every trait needs to become an CustomFieldDef through the
+        customFieldManager. These CustomFieldDef are visible on all objects of
+        the type they're defined for - just without value. If a trait is active
+        for an object, we set the value to "true". Otherwise, we keep it empty.
+        """
+        context = nova_context.get_admin_context()
+
+        # in addition to all "CUSTOM_"-prefixed traits, we also sync these
+        # traits into the cluster
+        EXTRA_TRAITS = set(['COMPUTE_STATUS_DISABLED'])
+
+        PREFIX = constants.CUSTOM_ATTRIBUTES_TRAITS_PREFIX
+
+        while CONF.vmware.custom_traits_sync_loop_spacing >= 0:
+            LOG.debug('Starting custom traits sync-loop')
+            try:
+                placement_client = self.virtapi.reportclient
+                # NOTE(jkulik): We need to get all traits, because while our
+                # nova-compute might not need a trait, other nova-compute in
+                # the same vCenter might. To not delete CustomFieldDef that's
+                # actually in use by others, we keep all traits in the vCenter.
+                trait_fields_names = set(
+                    f"{PREFIX}{t}"
+                    for t in placement_client.get_traits(context)
+                    if t.startswith('CUSTOM_') or t in EXTRA_TRAITS)
+
+                custom_field = nova_vim_util.CustomField(self._session)
+                obj_type = 'ClusterComputeResource'
+                # Fetch the existing CustomFieldDef
+                vc_fields_names_by_key = {
+                    f.key: f.name
+                    for f in custom_field.get_by_obj_type(obj_type)
+                    if f.name.startswith(PREFIX)}
+                vc_fields_names = set(vc_fields_names_by_key.values())
+
+                # Create all CustomFieldDef that do not exist, yet
+                for name in trait_fields_names - vc_fields_names:
+                    field = custom_field.create(name, obj_type=obj_type)
+                    vc_fields_names_by_key[field.key] = field.name
+                    LOG.debug('Created CustomFieldDef %s for the '
+                              'corresponding trait in Placement.', name)
+
+                # Remove all CustomFieldDef that do not exist in Placement
+                # anymore
+                for name in vc_fields_names - trait_fields_names:
+                    # we do not update vc_fields here, because we only use it
+                    # for mapping values to names.
+                    custom_field.delete(name)
+                    LOG.debug('Deleted CustomFieldDef %s as it has no '
+                              'corresponding trait in Placement.', name)
+
+                # Fetch the traits our nova-compute has from Placement
+                cn = self.virtapi._compute._get_compute_info(context,
+                                                             CONF.host)
+                rp_uuid = cn.uuid
+                provider_traits = \
+                    placement_client.get_provider_traits(context, rp_uuid)
+                our_trait_field_names = set(
+                    f"{PREFIX}{t}"
+                    for t in provider_traits.traits
+                    if t.startswith('CUSTOM_') or t in EXTRA_TRAITS)
+
+                FIELD_VALUE = 'true'
+                # Fetch the custom field values for our cluster
+                # `vc_fields_names_by_key` contains the only fields we care
+                # about. There could be more values on our cluster, but we do
+                # not want to delete them or update them and thus ignore them.
+                vc_values = {
+                    vc_fields_names_by_key[v.key]: v.value
+                    for v in custom_field.get_values(self._cluster_ref)
+                    if v.key in vc_fields_names_by_key and
+                    v.value == FIELD_VALUE}
+                vc_values_names = set(vc_values)
+                vc_fields_keys_by_name = {v: k
+                                    for k, v in vc_fields_names_by_key.items()}
+
+                # Add custom field values we're missing
+                for name in our_trait_field_names - vc_values_names:
+                    key = vc_fields_keys_by_name[name]
+                    custom_field.set_value(self._cluster_ref, key,
+                                           FIELD_VALUE)
+                    LOG.debug('Set value for CustomFieldDef %s to %s',
+                              name, FIELD_VALUE)
+
+                # Remove custom field values we have no trait for anymore
+                for name in vc_values_names - our_trait_field_names:
+                    key = vc_fields_keys_by_name[name]
+                    # There is no remove. We can just set it to an empty
+                    # string. It will still be returned by
+                    # `custom_field.get_values()` as extra item.
+                    custom_field.set_value(self._cluster_ref, key, '')
+            except Exception as e:
+                msg = "Finished custom traits sync-loop with error: %s"
+                LOG.exception(msg, e)
+            else:
+                LOG.debug('Finished custom traits sync-loop')
+
+            time.sleep(CONF.vmware.custom_traits_sync_loop_spacing)
 
     def check_can_live_migrate_destination(self, context, instance,
                                            src_compute_info, dst_compute_info,

@@ -249,3 +249,8 @@ POWER_STATES = {'poweredOff': power_state.SHUTDOWN,
 # distinguish between what has been automatically created and what is
 # admin-created.
 DRS_PREFIX = 'NOVA_'
+
+
+# Prefix for custom attributes (CustomFieldDef names) that's used by Nova to
+# sync traits from Placement.
+CUSTOM_ATTRIBUTES_TRAITS_PREFIX = 'openstack.nova.traits.'
