@@ -2619,3 +2619,27 @@ class SchedulerReportClient(object):
                 self._handle_usages_error_from_placement(resp, project_id,
                                                          user_id=user_id)
         return total_counts
+
+    def get_traits(self, context):
+        """Queries the placement API for all traits.
+
+        :param context: The security context
+        :return: A set() of trait names
+        :raise: NovaException on errors.
+        :raise: keystoneauth1.exceptions.ClientException if placement API
+                communication fails.
+        """
+        resp = self.get("/traits", version='1.6',
+                        global_request_id=context.global_id)
+
+        if resp.status_code == 200:
+            json = resp.json()
+            return set(json['traits'])
+
+        placement_req_id = get_placement_request_id(resp)
+        LOG.error(
+            "[%(placement_req_id)s] Failed to retrieve traits from "
+            "placement API. Got %(status_code)d: %(err_text)s.",
+            {'placement_req_id': placement_req_id,
+             'status_code': resp.status_code, 'err_text': resp.text})
+        raise exception.NovaException('Failed to get traits from Placement')
