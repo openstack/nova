@@ -16,7 +16,8 @@
 """
 The VMware API utility module.
 """
-
+from oslo_utils import excutils
+from oslo_vmware import exceptions as vexc
 from oslo_vmware import vim_util as vutil
 
 
@@ -154,3 +155,92 @@ def get_array_items(array_obj):
 def get_object_property(session, mo_ref, property):
     return session._call_method(vutil, "get_object_property",
                                 mo_ref, property)
+
+
+class CustomField:
+    def __init__(self, session):
+        self._session = session
+        self._mgr = session.vim.service_content.customFieldsManager
+
+    def get_all(self):
+        """Retrieve the list of CustomFieldDef"""
+        fields = get_object_property(self._session, self._mgr, 'field')
+        if not hasattr(fields, 'CustomFieldDef'):
+            return []
+
+        return fields.CustomFieldDef
+
+    def get_by_obj_type(self, obj_type):
+        """Retrieve the list of CustomFieldDef applicable to the given obj_type
+
+        The list includes CustomFieldDef without specified 'managedObjectType',
+        as these are applicable to all objects types.
+        """
+        return [f for f in self.get_all()
+                if getattr(f, 'managedObjectType', None) in (obj_type, None)]
+
+    def get_by_name(self, name, obj_type=None):
+        """Return the first CustomFieldDef matching the given name or None"""
+        return next((f for f in self.get_by_obj_type(obj_type)
+                     if f.name == name),
+                    None)
+
+    def create(self, name, obj_type=None):
+        """Create a CustomFieldDef handling already existing ones by returning
+        the existing one.
+
+        Be aware, that one cannot create multiple CustomFieldDef with the same
+        name, even if they have different managedObjectType values.
+        """
+        try:
+            field = self._session._call_method(self._session.vim,
+                "AddCustomFieldDef", self._mgr, name=name, moType=obj_type)
+        except vexc.DuplicateName:
+            field = self.get_by_name(name, obj_type=obj_type)
+            if field is None:
+                # We raise an exception here instead of returning None, because
+                # we need the code to become aware that something went really
+                # wrong.
+                raise RuntimeError('Got DuplicateName but then did not find a '
+                                   f"CustomFieldDef by name {name} and "
+                                   f"obj_type {obj_type}.")
+        return field
+
+    def delete(self, name):
+        """Delete a CustomFieldDef handling already deleted gracefully"""
+        # check if the field is already gone
+        field = self.get_by_name(name)
+        if field is None:
+            return
+
+        try:
+            self._session._call_method(self._session.vim,
+                "RemoveCustomFieldDef", self._mgr, key=field.key)
+        except vexc.VimFaultException as e:
+            with excutils.save_and_reraise_exception() as ctx:
+                # the CustomFieldDef was already deleted
+                if 'InvalidArgument' in e.fault_list:
+                    ctx.reraise = False
+
+    def get_values(self, moref):
+        """Fetch a list of CustomFieldDef values for the given object
+
+        While not using the customFieldsManager, we still group getting values
+        into this class, because set_value() is there, too.
+
+        The returned list of `vim.CustomFieldsManager.StringValue` the `key` of
+        a CustomFieldDef and the `value` as a string.
+        """
+        values = get_object_property(self._session, moref, 'customValue')
+        if not getattr(values, 'CustomFieldValue', None):
+            return []
+
+        return values.CustomFieldValue
+
+    def set_value(self, moref, key, value):
+        """Set the value for a CustomFieldDef for the given object
+
+        The key should be the `key` attribute of an existing CustomFieldDef.
+        """
+        self._session._call_method(self._session.vim, "SetField", self._mgr,
+                                   entity=moref, key=key, value=value)
