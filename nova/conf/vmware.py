@@ -506,6 +506,18 @@ Possible values:
                 root disks
  * integer = -1: no limit
 """),
+    cfg.IntOpt('custom_traits_sync_loop_spacing',
+               default=600,
+               help="""
+Amount of time in seconds to wait between custom trait sync-loop runs
+
+The sync-loop thread for custom traits runs continuously, sleeping after
+syncing the traits. This setting defines how long to sleep between runs.
+
+Possible values:
+ * integer >= time in seconds to sleep between runs
+ * intger < 0: disable the sync-loop
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +
