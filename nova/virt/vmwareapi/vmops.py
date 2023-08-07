@@ -2063,8 +2063,8 @@ class VMwareVMOps(object):
         # boot from this device
         rescue_device = self._get_rescue_device(instance, vm_ref)
         factory = self._session.vim.client.factory
-        firmware = vm_util.get_object_property(self._session, vm_ref,
-                                               'config.firmware')
+        firmware = vim_util.get_object_property(self._session, vm_ref,
+                                                'config.firmware')
         boot_spec = vm_util.get_vm_boot_spec(factory, rescue_device,
                                              firmware == 'efi')
         # Update the VM with the new boot order and power on
@@ -2086,8 +2086,8 @@ class VMwareVMOps(object):
         self._volumeops.detach_disk_from_vm(vm_ref, instance, rescue_device,
                                             destroy_disk=True)
 
-        firmware = vm_util.get_object_property(self._session, vm_ref,
-                                               'config.firmware')
+        firmware = vim_util.get_object_property(self._session, vm_ref,
+                                                'config.firmware')
         if firmware == 'efi':
             # Enable quickBoot again, since we only needed it to find the
             # rescue disk
@@ -2372,8 +2372,8 @@ class VMwareVMOps(object):
 
         # Check if we resize to > 128 vCPUs on a BIOS VM
         if flavor.vcpus > 128:
-            firmware = vm_util.get_object_property(self._session, vm_ref,
-                                                   'config.firmware')
+            firmware = vim_util.get_object_property(self._session, vm_ref,
+                                                    'config.firmware')
             if firmware == 'bios':
                 message = ("BIOS-booted VMs do not support > 128 vCPUs. The "
                            f"target flavor requests {flavor.vcpus} vCPUs.")
