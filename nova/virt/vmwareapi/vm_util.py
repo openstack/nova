@@ -1501,12 +1501,7 @@ def get_vm_state(session, instance):
 
 
 def get_vm_name(session, vm_ref):
-    return get_object_property(session, vm_ref, "name")
-
-
-def get_object_property(session, mo_ref, property):
-    return session._call_method(vutil, "get_object_property",
-                                mo_ref, property)
+    return vim_util.get_object_property(session, vm_ref, "name")
 
 
 def _set_host_reservations(stats, host_reservations_map, host_moref):

@@ -149,3 +149,8 @@ def get_array_items(array_obj):
         if hasattr(array_obj, attr_name):
             return getattr(array_obj, attr_name)
     return array_obj
+
+
+def get_object_property(session, mo_ref, property):
+    return session._call_method(vutil, "get_object_property",
+                                mo_ref, property)

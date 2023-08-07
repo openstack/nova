@@ -459,7 +459,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                               return_value=ds_ref),
             mock.patch.object(vm_util, 'get_vmx_path',
                               return_value=vmx_path),
-            mock.patch.object(vm_util, 'get_object_property',
+            mock.patch.object(vim_util, 'get_object_property',
                               return_value=gop_return)
         ) as (_get_dc_ref_and_name, fake_vmdk_info, fake_ds_ref_by_name,
                 fake_get_vmx_path, fake_get_object_property):
@@ -1551,7 +1551,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'power_off_instance')
     @mock.patch.object(vm_util, 'get_hardware_devices_by_type',
                        return_value={})
-    @mock.patch.object(vm_util, 'get_object_property')
+    @mock.patch.object(vim_util, 'get_object_property')
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='source-ref')
     @mock.patch.object(vmops.VMwareVMOps, "_do_migrate_disk")
     @mock.patch.object(vmops.VMwareVMOps, "_get_remove_network_device_change")
