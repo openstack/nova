@@ -563,11 +563,19 @@ class GlanceImageServiceV2(object):
 
     def _add_location(self, context, image_id, location):
         # 'show_multiple_locations' must be enabled in glance api conf file.
-        try:
-            return self._client.call(
-                context, 2, 'add_location', args=(image_id, location, {}))
-        except glanceclient.exc.HTTPBadRequest:
-            _reraise_translated_exception()
+        try_methods = ('add_image_location', 'add_location')
+        exc = None
+        for method in try_methods:
+            try:
+                return self._client.call(
+                    context, 2, method, args=(image_id, location, {}))
+            except glanceclient.exc.HTTPNotImplemented as e:
+                exc = e
+                LOG.debug('Glance method %s not available', method)
+            except glanceclient.exc.HTTPBadRequest as e:
+                exc = e
+                _reraise_translated_exception()
+        raise exc
 
     def _add_image_member(self, context, image_id, member_id):
         """Grant access to another project that does not own the image
@@ -666,7 +674,7 @@ class GlanceImageServiceV2(object):
 
         # Sending image location in a separate request.
         if location:
-            image = self._add_location(context, image_id, location)
+            self._add_location(context, image_id, location)
 
         # Add image membership in a separate request.
         if sharing_member_id:
@@ -715,7 +723,7 @@ class GlanceImageServiceV2(object):
 
         # Sending image location in a separate request.
         if location:
-            image = self._add_location(context, image_id, location)
+            self._add_location(context, image_id, location)
 
         # If we have some data we have to send it in separate request and
         # update the image then.
