@@ -58,6 +58,8 @@ from nova.db.main import api as db
 from nova.db import migration
 from nova import exception
 from nova.i18n import _
+from nova.limit import local as local_limit
+from nova.limit import placement as placement_limit
 from nova.network import constants
 from nova.network import neutron as neutron_api
 from nova import objects
@@ -70,6 +72,7 @@ from nova.objects import instance_mapping as instance_mapping_obj
 from nova.objects import pci_device as pci_device_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as virtual_interface_obj
+import nova.quota
 from nova import rpc
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
@@ -3367,6 +3370,183 @@ class ImagePropertyCommands:
             return 1
 
 
+class LimitsCommands():
+
+    def _create_unified_limits(self, ctxt, legacy_defaults, project_id,
+                               region_id, output, dry_run):
+        return_code = 0
+
+        # Create registered (default) limits first.
+        unified_to_legacy_names = dict(
+            **local_limit.LEGACY_LIMITS, **placement_limit.LEGACY_LIMITS)
+
+        legacy_to_unified_names = dict(
+            zip(unified_to_legacy_names.values(),
+                unified_to_legacy_names.keys()))
+
+        # For auth, a section for [keystone] is required in the config:
+        #
+        # [keystone]
+        # region_name = RegionOne
+        # user_domain_name = Default
+        # password = <password>
+        # username = <username>
+        # auth_url = http://127.0.0.1/identity
+        # auth_type = password
+        # system_scope = all
+        #
+        # The configured user needs 'role:admin and system_scope:all' by
+        # default in order to create limits in Keystone.
+        keystone_api = utils.get_sdk_adapter('identity')
+
+        # Service ID is required in unified limits APIs.
+        service_id = keystone_api.find_service('nova').id
+
+        # Retrieve the existing resource limits from Keystone.
+        registered_limits = keystone_api.registered_limits(region_id=region_id)
+
+        unified_defaults = {
+            rl.resource_name: rl.default_limit for rl in registered_limits}
+
+        # f-strings don't seem to work well with the _() translation function.
+        msg = f'Found default limits in Keystone: {unified_defaults} ...'
+        output(_(msg))
+
+        # Determine which resource limits are missing in Keystone so that we
+        # can create them.
+        output(_('Creating default limits in Keystone ...'))
+        for resource, rlimit in legacy_defaults.items():
+            resource_name = legacy_to_unified_names[resource]
+            if resource_name not in unified_defaults:
+                msg = f'Creating default limit: {resource_name} = {rlimit}'
+                if region_id:
+                    msg += f' in region {region_id}'
+                output(_(msg))
+                if not dry_run:
+                    try:
+                        keystone_api.create_registered_limit(
+                            resource_name=resource_name,
+                            default_limit=rlimit, region_id=region_id,
+                            service_id=service_id)
+                    except Exception as e:
+                        msg = f'Failed to create default limit: {str(e)}'
+                        print(_(msg))
+                        return_code = 1
+            else:
+                existing_rlimit = unified_defaults[resource_name]
+                msg = (f'A default limit: {resource_name} = {existing_rlimit} '
+                        'already exists in Keystone, skipping ...')
+                output(_(msg))
+
+        # Create project limits if there are any.
+        if not project_id:
+            return return_code
+
+        output(_('Reading project limits from the Nova API database ...'))
+        legacy_projects = objects.Quotas.get_all_by_project(ctxt, project_id)
+        legacy_projects.pop('project_id', None)
+        msg = f'Found project limits in the database: {legacy_projects} ...'
+        output(_(msg))
+
+        # Retrieve existing limits from Keystone.
+        project_limits = keystone_api.limits(
+            project_id=project_id, region_id=region_id)
+        unified_projects = {
+            pl.resource_name: pl.resource_limit for pl in project_limits}
+        msg = f'Found project limits in Keystone: {unified_projects} ...'
+        output(_(msg))
+
+        output(_('Creating project limits in Keystone ...'))
+        for resource, plimit in legacy_projects.items():
+            resource_name = legacy_to_unified_names[resource]
+            if resource_name not in unified_projects:
+                msg = (
+                    f'Creating project limit: {resource_name} = {plimit} '
+                    f'for project {project_id}')
+                if region_id:
+                    msg += f' in region {region_id}'
+                output(_(msg))
+                if not dry_run:
+                    try:
+                        keystone_api.create_limit(
+                            resource_name=resource_name,
+                            resource_limit=plimit, project_id=project_id,
+                            region_id=region_id, service_id=service_id)
+                    except Exception as e:
+                        msg = f'Failed to create project limit: {str(e)}'
+                        print(_(msg))
+                        return_code = 1
+            else:
+                existing_plimit = unified_projects[resource_name]
+                msg = (f'A project limit: {resource_name} = {existing_plimit} '
+                        'already exists in Keystone, skipping ...')
+                output(_(msg))
+
+        return return_code
+
+    @action_description(
+        _("Copy quota limits from the Nova API database to Keystone."))
+    @args('--project-id', metavar='<project-id>', dest='project_id',
+          help='Project ID for which to migrate quota limits')
+    @args('--region-id', metavar='<region-id>', dest='region_id',
+          help='Region ID for which to migrate quota limits')
+    @args('--verbose', action='store_true', dest='verbose', default=False,
+          help='Provide verbose output during execution.')
+    @args('--dry-run', action='store_true', dest='dry_run', default=False,
+          help='Show what limits would be created without actually '
+               'creating them.')
+    def migrate_to_unified_limits(self, project_id=None, region_id=None,
+                                  verbose=False, dry_run=False):
+        """Migrate quota limits from legacy quotas to unified limits.
+
+        Return codes:
+        * 0: Command completed successfully.
+        * 1: An unexpected error occurred.
+        * 2: Failed to connect to the database.
+        """
+        ctxt = context.get_admin_context()
+
+        output = lambda msg: None
+        if verbose:
+            output = lambda msg: print(msg)
+
+        output(_('Reading default limits from the Nova API database ...'))
+
+        try:
+            # This will look for limits in the 'default' quota class first and
+            # then fall back to the [quota] config options.
+            legacy_defaults = nova.quota.QUOTAS.get_defaults(ctxt)
+        except db_exc.CantStartEngineError:
+            print(_('Failed to connect to the database so aborting this '
+                    'migration attempt. Please check your config file to make '
+                    'sure that [api_database]/connection and '
+                    '[database]/connection are set and run this '
+                    'command again.'))
+            return 2
+
+        # Remove obsolete resource limits.
+        for resource in ('fixed_ips', 'floating_ips', 'security_groups',
+                         'security_group_rules'):
+            if resource in legacy_defaults:
+                msg = f'Skipping obsolete limit for {resource} ...'
+                output(_(msg))
+                legacy_defaults.pop(resource)
+
+        msg = (
+            f'Found default limits in the database: {legacy_defaults} ...')
+        output(_(msg))
+
+        try:
+            return self._create_unified_limits(
+                ctxt, legacy_defaults, project_id, region_id, output, dry_run)
+        except Exception as e:
+            msg = (f'Unexpected error, see nova-manage.log for the full '
+                   f'trace: {str(e)}')
+            print(_(msg))
+            LOG.exception('Unexpected error')
+            return 1
+
+
 CATEGORIES = {
     'api_db': ApiDbCommands,
     'cell_v2': CellV2Commands,
@@ -3375,6 +3555,7 @@ CATEGORIES = {
     'libvirt': LibvirtCommands,
     'volume_attachment': VolumeAttachmentCommands,
     'image_property': ImagePropertyCommands,
+    'limits': LimitsCommands,
 }
 
 

@@ -20,6 +20,7 @@ from unittest import mock
 import fixtures
 from neutronclient.common import exceptions as neutron_client_exc
 import os_resource_classes as orc
+from oslo_db import exception as oslo_db_exc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -2416,3 +2417,203 @@ class TestDBArchiveDeletedRowsMultiCellTaskLog(
         for cell_name in ('cell1', 'cell2'):
             self.assertRegex(
                 self.output.getvalue(), r'\| %s.task_log\s+\| 2' % cell_name)
+
+
+class TestNovaManageLimits(test.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.ctxt = context.get_admin_context()
+        self.cli = manage.LimitsCommands()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        self.ul_api = self.useFixture(nova_fixtures.UnifiedLimitsFixture())
+
+    @mock.patch('nova.quota.QUOTAS.get_defaults')
+    def test_migrate_to_unified_limits_no_db_access(self, mock_get_defaults):
+        mock_get_defaults.side_effect = oslo_db_exc.CantStartEngineError()
+        return_code = self.cli.migrate_to_unified_limits(verbose=True)
+        self.assertEqual(2, return_code)
+
+    @mock.patch('nova.utils.get_sdk_adapter')
+    def test_migrate_to_unified_limits_unexpected_error(self, mock_sdk):
+        # Simulate an error creating limits.
+        mock_sdk.return_value.create_registered_limit.side_effect = (
+            test.TestingException('oops!'))
+        mock_sdk.return_value.create_limit.side_effect = (
+            test.TestingException('oops!'))
+
+        # Create a couple of project limits.
+        objects.Quotas.create_limit(self.ctxt, uuids.project, 'ram', 8192)
+        objects.Quotas.create_limit(self.ctxt, uuids.project, 'instances', 25)
+
+        return_code = self.cli.migrate_to_unified_limits(
+            project_id=uuids.project, verbose=True)
+        self.assertEqual(1, return_code)
+
+        # Verify that limit create attempts for other resources were attempted
+        # after an unexpected error.
+        #
+        # There are 10 default limit values in the config options: instances,
+        # cores, ram, metadata_items, injected_files,
+        # injected_file_content_bytes, injected_file_path_length, key_pairs,
+        # server_groups, and server_group_members.
+        self.assertEqual(
+            10, mock_sdk.return_value.create_registered_limit.call_count)
+
+        self.assertEqual(2, mock_sdk.return_value.create_limit.call_count)
+
+    def test_migrate_to_unified_limits_already_exists(self):
+        # Create a couple of unified limits to already exist.
+        self.ul_api.create_registered_limit(
+            resource_name='servers', default_limit=8)
+        self.ul_api.create_limit(
+            resource_name='class:VCPU', resource_limit=6,
+            project_id=uuids.project)
+
+        # Create a couple of project limits.
+        objects.Quotas.create_limit(self.ctxt, uuids.project, 'cores', 10)
+        objects.Quotas.create_limit(self.ctxt, uuids.project, 'instances', 25)
+
+        self.cli.migrate_to_unified_limits(
+            project_id=uuids.project, verbose=True)
+
+        # There are 10 default limit values in the config options, so because a
+        # limit for 'servers' already exists, we should have only created 9.
+        mock_sdk = self.ul_api.mock_sdk_adapter
+        self.assertEqual(
+            9, mock_sdk.create_registered_limit.call_count)
+
+        # There already exists a project limit for 'class:VCPU', so we should
+        # have created only 1 project limit.
+        self.assertEqual(1, mock_sdk.create_limit.call_count)
+
+    def test_migrate_to_unified_limits(self):
+        # Set some defaults using the config options.
+        self.flags(instances=5, group='quota')
+        self.flags(cores=22, group='quota')
+        self.flags(ram=4096, group='quota')
+        self.flags(metadata_items=64, group='quota')
+        self.flags(injected_files=3, group='quota')
+        self.flags(injected_file_content_bytes=9 * 1024, group='quota')
+        self.flags(injected_file_path_length=250, group='quota')
+        self.flags(key_pairs=50, group='quota')
+        self.flags(server_groups=7, group='quota')
+        self.flags(server_group_members=12, group='quota')
+        # Create a couple of defaults via the 'default' quota class. These take
+        # precedence over the config option values.
+        objects.Quotas.create_class(self.ctxt, 'default', 'cores', 10)
+        objects.Quotas.create_class(self.ctxt, 'default', 'key_pairs', 75)
+        # Create obsolete limits which should not be migrated to unified
+        # limits.
+        objects.Quotas.create_class(self.ctxt, 'default', 'fixed_ips', 8)
+        objects.Quotas.create_class(self.ctxt, 'default', 'floating_ips', 6)
+        objects.Quotas.create_class(self.ctxt, 'default', 'security_groups', 4)
+        objects.Quotas.create_class(
+            self.ctxt, 'default', 'security_group_rules', 14)
+        # Create a couple of project limits.
+        objects.Quotas.create_limit(self.ctxt, uuids.project, 'ram', 8192)
+        objects.Quotas.create_limit(self.ctxt, uuids.project, 'instances', 25)
+
+        # Verify there are no unified limits yet.
+        registered_limits = self.ul_api.registered_limits()
+        self.assertEqual(0, len(registered_limits))
+        limits = self.ul_api.limits(project_id=uuids.project)
+        self.assertEqual(0, len(limits))
+
+        # Verify that --dry-run works to not actually create limits.
+        self.cli.migrate_to_unified_limits(dry_run=True)
+
+        # There should still be no unified limits yet.
+        registered_limits = self.ul_api.registered_limits()
+        self.assertEqual(0, len(registered_limits))
+        limits = self.ul_api.limits(project_id=uuids.project)
+        self.assertEqual(0, len(limits))
+
+        # Migrate the limits.
+        self.cli.migrate_to_unified_limits(
+            project_id=uuids.project, verbose=True)
+
+        # There should be 10 registered (default) limits now.
+        expected_registered_limits = {
+            'servers': 5,
+            'class:VCPU': 10,
+            'class:MEMORY_MB': 4096,
+            'server_metadata_items': 64,
+            'server_injected_files': 3,
+            'server_injected_file_content_bytes': 9 * 1024,
+            'server_injected_file_path_bytes': 250,
+            'server_key_pairs': 75,
+            'server_groups': 7,
+            'server_group_members': 12,
+        }
+
+        registered_limits = self.ul_api.registered_limits()
+        self.assertEqual(10, len(registered_limits))
+        for rl in registered_limits:
+            self.assertEqual(
+                expected_registered_limits[rl.resource_name], rl.default_limit)
+
+        # And 2 project limits.
+        expected_limits = {
+            'class:MEMORY_MB': 8192,
+            'servers': 25,
+        }
+
+        limits = self.ul_api.limits(project_id=uuids.project)
+        self.assertEqual(2, len(limits))
+        for pl in limits:
+            self.assertEqual(
+                expected_limits[pl.resource_name], pl.resource_limit)
+
+        # Verify there are no project limits for a different project.
+        other_project_limits = self.ul_api.limits(
+            project_id=uuids.otherproject)
+        self.assertEqual(0, len(other_project_limits))
+
+        # Try migrating limits for a specific region.
+        region_registered_limits = self.ul_api.registered_limits(
+            region_id=uuids.region)
+        self.assertEqual(0, len(region_registered_limits))
+
+        self.cli.migrate_to_unified_limits(
+            region_id=uuids.region, verbose=True)
+
+        region_registered_limits = self.ul_api.registered_limits(
+            region_id=uuids.region)
+        self.assertEqual(10, len(region_registered_limits))
+        for rl in region_registered_limits:
+            self.assertEqual(
+                expected_registered_limits[rl.resource_name], rl.default_limit)
+
+        # Try migrating project limits for that region.
+        region_limits = self.ul_api.limits(
+            project_id=uuids.project, region_id=uuids.region)
+        self.assertEqual(0, len(region_limits))
+
+        self.cli.migrate_to_unified_limits(
+            project_id=uuids.project, region_id=uuids.region, verbose=True)
+
+        region_limits = self.ul_api.limits(
+            project_id=uuids.project, region_id=uuids.region)
+        self.assertEqual(2, len(region_limits))
+        for pl in region_limits:
+            self.assertEqual(
+                expected_limits[pl.resource_name], pl.resource_limit)
+
+        # Verify no --verbose outputs nothing, migrate limits for a different
+        # project after clearing stdout.
+        self.output = StringIO()
+        self.assertEqual('', self.output.getvalue())
+
+        # Create a limit for the other project.
+        objects.Quotas.create_limit(self.ctxt, uuids.otherproject, 'ram', 2048)
+
+        self.cli.migrate_to_unified_limits(project_id=uuids.otherproject)
+
+        other_project_limits = self.ul_api.limits(
+            project_id=uuids.otherproject)
+        self.assertEqual(1, len(other_project_limits))
+
+        # Output should still be empty after migrating.
+        self.assertEqual('', self.output.getvalue())

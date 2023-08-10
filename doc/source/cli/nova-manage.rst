@@ -1759,6 +1759,61 @@ for example.
      - The provided image property value is invalid
 
 
+Limits Commands
+===============
+
+limits migrate_to_unified_limits
+--------------------------------
+
+.. program:: nova-manage limits migrate_to_unified_limits
+
+.. code-block:: shell
+
+   nova-manage limits migrate_to_unified_limits [--project-id <project-id>]
+   [--region-id <region-id>] [--verbose] [--dry-run]
+
+Migrate quota limits from the Nova database to unified limits in Keystone.
+
+This command is useful for operators to migrate from legacy quotas to unified
+limits. Limits are migrated by copying them from the Nova database to Keystone
+by creating them using the Keystone API.
+
+.. versionadded:: 28.0.0 (2023.2 Bobcat)
+
+.. rubric:: Options
+
+.. option:: --project-id <project-id>
+
+    The project ID for which to migrate quota limits.
+
+.. option:: --region-id <region-id>
+
+    The region ID for which to migrate quota limits.
+
+.. option:: --verbose
+
+   Provide verbose output during execution.
+
+.. option:: --dry-run
+
+   Show what limits would be created without actually creating them.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Command completed successfully
+   * - 1
+     - An unexpected error occurred
+   * - 2
+     - Failed to connect to the database
+
+
 See Also
 ========
 
