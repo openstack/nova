@@ -376,9 +376,12 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
                 vm_import_spec=vm_import_spec,
                 vm_folder=vm_folder_ref,
                 image_size=file_size)
-        except vexc.VimFaultException as e:
-            LOG.warning("Failed to pull the image directly from URL. Falling "
-                        "back to uploading the image to the HttpNfcLease.", e)
+        except vexc.DuplicateName:
+            imported_vm_ref = _wait_for_duplicate_vm_import(
+                session, vm_folder_ref, vm_name)
+        except vexc.VimFaultException:
+            LOG.exception("Failed to pull the image from URL. Falling back "
+                          "to uploading the image to the HttpNfcLease.")
 
     if not imported_vm_ref:
         read_iter = IMAGE_API.download(context, image_ref)
@@ -415,28 +418,38 @@ def _import_image(session, read_handle, vm_import_spec, vm_name, vm_folder_ref,
 
             break
         except vexc.DuplicateName:
-            LOG.debug("Handling name duplication during import of VM %s",
-                      vm_name)
-            vm_ref = vm_util.get_vm_ref_from_name(session, vm_name,
-                            base_obj=vm_folder_ref, path="childEntity")
-            waited_for_ongoing_import = _wait_for_import_task(session, vm_ref)
-            if waited_for_ongoing_import:
-                imported_vm_ref = vm_ref
+            imported_vm_ref = _wait_for_duplicate_vm_import(
+                session, vm_folder_ref, vm_name)
+            if imported_vm_ref:
                 break
-            try:
-                destroy_task = session._call_method(session.vim,
-                                                    "Destroy_Task",
-                                                    vm_ref)
-                session._wait_for_task(destroy_task)
-            except vexc.ManagedObjectNotFoundException:
-                # another agent destroyed the VM in the meantime
-                pass
 
     if not imported_vm_ref:
         raise vexc.VMwareDriverException("Could not import image"
                                          " %s within %d attempts."
                                          % (vm_name, max_attempts))
     return imported_vm_ref
+
+
+def _wait_for_duplicate_vm_import(session, vm_folder_ref, vm_name):
+    LOG.debug("Handling name duplication during import of VM %s",
+              vm_name)
+    vm_ref = vm_util.get_vm_ref_from_name(session, vm_name,
+                                          base_obj=vm_folder_ref,
+                                          path="childEntity")
+    if not vm_ref:
+        return None
+    waited_for_ongoing_import = _wait_for_import_task(session, vm_ref)
+    if waited_for_ongoing_import:
+        return vm_ref
+    try:
+        destroy_task = session._call_method(session.vim,
+                                            "Destroy_Task",
+                                            vm_ref)
+        session._wait_for_task(destroy_task)
+    except vexc.ManagedObjectNotFoundException:
+        # another agent destroyed the VM in the meantime
+        pass
+    return None
 
 
 def _wait_for_import_task(session, vm_ref):
