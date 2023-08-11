@@ -1556,25 +1556,59 @@ Active:          8381604 kB
         self.host.compare_cpu("cpuxml")
         mock_compareCPU.assert_called_once_with("cpuxml", 0)
 
-    def test_is_cpu_control_policy_capable_ok(self):
-        m = mock.mock_open(
-            read_data="""cg /cgroup/cpu,cpuacct cg opt1,cpu,opt3 0 0
-cg /cgroup/memory cg opt1,opt2 0 0
-""")
-        with mock.patch('builtins.open', m, create=True):
-            self.assertTrue(self.host.is_cpu_control_policy_capable())
-
-    def test_is_cpu_control_policy_capable_ko(self):
-        m = mock.mock_open(
-            read_data="""cg /cgroup/cpu,cpuacct cg opt1,opt2,opt3 0 0
-cg /cgroup/memory cg opt1,opt2 0 0
-""")
-        with mock.patch('builtins.open', m, create=True):
-            self.assertFalse(self.host.is_cpu_control_policy_capable())
-
-    @mock.patch('builtins.open', side_effect=IOError)
-    def test_is_cpu_control_policy_capable_ioerror(self, mock_open):
+    def test_is_cpu_control_policy_capable_via_neither(self):
+        self.useFixture(nova_fixtures.CGroupsFixture(version=0))
         self.assertFalse(self.host.is_cpu_control_policy_capable())
+
+    def test_is_cpu_control_policy_capable_via_cgroupsv1(self):
+        self.useFixture(nova_fixtures.CGroupsFixture(version=1))
+        self.assertTrue(self.host.is_cpu_control_policy_capable())
+
+    def test_is_cpu_control_policy_capable_via_cgroupsv2(self):
+        self.useFixture(nova_fixtures.CGroupsFixture(version=2))
+        self.assertTrue(self.host.is_cpu_control_policy_capable())
+
+    def test_has_cgroupsv1_cpu_controller_ok(self):
+        m = mock.mock_open(
+            read_data=(
+                "cg /cgroup/cpu,cpuacct cg opt1,cpu,opt3 0 0"
+                "cg /cgroup/memory cg opt1,opt2 0 0"
+            )
+        )
+        with mock.patch("builtins.open", m, create=True):
+            self.assertTrue(self.host._has_cgroupsv1_cpu_controller())
+
+    def test_has_cgroupsv1_cpu_controller_ko(self):
+        m = mock.mock_open(
+            read_data=(
+                "cg /cgroup/cpu,cpuacct cg opt1,opt2,opt3 0 0"
+                "cg /cgroup/memory cg opt1,opt2 0 0"
+            )
+        )
+        with mock.patch("builtins.open", m, create=True):
+            self.assertFalse(self.host._has_cgroupsv1_cpu_controller())
+
+    @mock.patch("builtins.open", side_effect=IOError)
+    def test_has_cgroupsv1_cpu_controller_ioerror(self, _):
+        self.assertFalse(self.host._has_cgroupsv1_cpu_controller())
+
+    def test_has_cgroupsv2_cpu_controller_ok(self):
+        m = mock.mock_open(
+            read_data="cpuset cpu io memory hugetlb pids rdma misc"
+        )
+        with mock.patch("builtins.open", m, create=True):
+            self.assertTrue(self.host._has_cgroupsv2_cpu_controller())
+
+    def test_has_cgroupsv2_cpu_controller_ko(self):
+        m = mock.mock_open(
+            read_data="memory pids"
+        )
+        with mock.patch("builtins.open", m, create=True):
+            self.assertFalse(self.host._has_cgroupsv2_cpu_controller())
+
+    @mock.patch("builtins.open", side_effect=IOError)
+    def test_has_cgroupsv2_cpu_controller_ioerror(self, _):
+        self.assertFalse(self.host._has_cgroupsv2_cpu_controller())
 
     def test_get_canonical_machine_type(self):
         # this test relies on configuration from the FakeLibvirtFixture

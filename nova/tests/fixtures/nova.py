@@ -1356,6 +1356,77 @@ class PrivsepFixture(fixtures.Fixture):
             nova.privsep.sys_admin_pctxt, 'client_mode', False))
 
 
+class CGroupsFixture(fixtures.Fixture):
+    """Mocks checks made for available subsystems on the host's control group.
+
+    The fixture mocks all calls made on the host to verify the capabilities
+    provided by its kernel. Through this, one can simulate the underlying
+    system hosts work on top of and have tests react to expected outcomes from
+    such.
+
+    Use sample:
+    >>> cgroups = self.useFixture(CGroupsFixture())
+    >>> cgroups = self.useFixture(CGroupsFixture(version=2))
+    >>> cgroups = self.useFixture(CGroupsFixture())
+    ... cgroups.version = 2
+
+    :attr version: Arranges mocks to simulate the host interact with nova
+                   following the given version of cgroups.
+                   Available values are:
+                        - 0: All checks related to cgroups will return False.
+                        - 1: Checks related to cgroups v1 will return True.
+                        - 2: Checks related to cgroups v2 will return True.
+                   Defaults to 1.
+    """
+
+    def __init__(self, version=1):
+        self._cpuv1 = None
+        self._cpuv2 = None
+
+        self._version = version
+
+    @property
+    def version(self):
+        return self._version
+
+    @version.setter
+    def version(self, value):
+        self._version = value
+        self._update_mocks()
+
+    def setUp(self):
+        super().setUp()
+        self._cpuv1 = self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.host.Host._has_cgroupsv1_cpu_controller')).mock
+        self._cpuv2 = self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.host.Host._has_cgroupsv2_cpu_controller')).mock
+        self._update_mocks()
+
+    def _update_mocks(self):
+        if not self._cpuv1:
+            return
+
+        if not self._cpuv2:
+            return
+
+        if self.version == 0:
+            self._cpuv1.return_value = False
+            self._cpuv2.return_value = False
+            return
+
+        if self.version == 1:
+            self._cpuv1.return_value = True
+            self._cpuv2.return_value = False
+            return
+
+        if self.version == 2:
+            self._cpuv1.return_value = False
+            self._cpuv2.return_value = True
+            return
+
+        raise ValueError(f"Unknown cgroups version: '{self.version}'.")
+
+
 class NoopQuotaDriverFixture(fixtures.Fixture):
     """A fixture to run tests using the NoopQuotaDriver.
 

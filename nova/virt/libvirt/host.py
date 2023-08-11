@@ -1548,15 +1548,44 @@ class Host(object):
         CONFIG_CGROUP_SCHED may be disabled in some kernel configs to
         improve scheduler latency.
         """
+        return self._has_cgroupsv1_cpu_controller() or \
+               self._has_cgroupsv2_cpu_controller()
+
+    def _has_cgroupsv1_cpu_controller(self):
+        LOG.debug(f"Searching host: '{self.get_hostname()}' "
+                  "for CPU controller through CGroups V1...")
         try:
             with open("/proc/self/mounts", "r") as fd:
                 for line in fd.readlines():
                     # mount options and split options
                     bits = line.split()[3].split(",")
                     if "cpu" in bits:
+                        LOG.debug("CPU controller found on host.")
                         return True
+                LOG.debug("CPU controller missing on host.")
                 return False
-        except IOError:
+        except IOError as ex:
+            LOG.debug(f"Search failed due to: '{ex}'. "
+                      "Maybe the host is not running under CGroups V1. "
+                      "Deemed host to be missing controller by this approach.")
+            return False
+
+    def _has_cgroupsv2_cpu_controller(self):
+        LOG.debug(f"Searching host: '{self.get_hostname()}' "
+                  "for CPU controller through CGroups V2...")
+        try:
+            with open("/sys/fs/cgroup/cgroup.controllers", "r") as fd:
+                for line in fd.readlines():
+                    bits = line.split()
+                    if "cpu" in bits:
+                        LOG.debug("CPU controller found on host.")
+                        return True
+                LOG.debug("CPU controller missing on host.")
+                return False
+        except IOError as ex:
+            LOG.debug(f"Search failed due to: '{ex}'. "
+                      "Maybe the host is not running under CGroups V2. "
+                      "Deemed host to be missing controller by this approach.")
             return False
 
     def get_canonical_machine_type(self, arch, machine) -> str:
