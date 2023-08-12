@@ -16,8 +16,7 @@ function evacuate_and_wait_for_error() {
     local server="$1"
 
     echo "Forcing evacuate of ${server} to local host"
-    # TODO(mriedem): Use OSC when it supports evacuate.
-    nova --os-compute-api-version "2.67" evacuate --force ${server} ${CONTROLLER_HOSTNAME}
+    openstack --os-compute-api-version 2.67 server evacuate --host ${CONTROLLER_HOSTNAME} ${server}
     # Wait for the instance to go into ERROR state from the failed evacuate.
     count=0
     status=$(openstack server show ${server} -f value -c status)

@@ -22,7 +22,10 @@ done
 function evacuate_and_wait_for_active() {
     local server="$1"
 
-    nova evacuate ${server}
+    # Shared storage will be auto-calculated with -–os-compute-api-version 2.14
+    # and greater and --shared-storage should not be used with later
+    # microversions.
+    openstack --os-compute-api-version 2.14 server evacuate ${server}
     # Wait for the instance to go into ACTIVE state from the evacuate.
     count=0
     status=$(openstack server show ${server} -f value -c status)
