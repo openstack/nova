@@ -11,11 +11,10 @@ echo "Creating ephemeral test server on subnode"
 openstack --os-compute-api-version 2.74 server create --image ${image_id} --flavor ${flavor_id} \
 --nic net-id=${network_id} --host $SUBNODE_HOSTNAME --wait evacuate-test
 
-# TODO(lyarwood) Use osc to launch the bfv volume
 echo "Creating boot from volume test server on subnode"
-nova --os-compute-api-version 2.74 boot --flavor ${flavor_id} --poll \
---block-device id=${image_id},source=image,dest=volume,size=1,bootindex=0,shutdown=remove \
---nic net-id=${network_id} --host ${SUBNODE_HOSTNAME} evacuate-bfv-test
+openstack --os-compute-api-version 2.74  server create --flavor ${flavor_id} \
+--block-device source_type=image,uuid=${image_id},destination_type=volume,volume_size=1,boot_index=0,delete_on_termination=true \
+--network ${network_id} --host ${SUBNODE_HOSTNAME} --wait evacuate-bfv-test
 
 echo "Forcing down the subnode so we can evacuate from it"
 openstack --os-compute-api-version 2.11 compute service set --down ${SUBNODE_HOSTNAME} nova-compute
