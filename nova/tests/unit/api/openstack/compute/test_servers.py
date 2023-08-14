@@ -437,7 +437,8 @@ class ServersControllerTest(_ServersControllerTest):
         def fake_get(*args, **kwargs):
             expected_attrs = kwargs['expected_attrs']
             self.assertEqual(['flavor', 'info_cache', 'metadata',
-                              'numa_topology'], expected_attrs)
+                              'numa_topology', 'services'],
+                              expected_attrs)
             ctxt = context.RequestContext('fake', self.project_id)
             return fake_instance.fake_instance_obj(
                 ctxt, expected_attrs=expected_attrs,
@@ -512,7 +513,8 @@ class ServersControllerTest(_ServersControllerTest):
         self.mock_get.assert_called_once_with(
             self.request.environ['nova.context'], FAKE_UUID,
             expected_attrs=['flavor', 'info_cache', 'metadata',
-                            'numa_topology'], cell_down_support=False)
+                            'numa_topology', 'services'],
+                            cell_down_support=False)
 
     def test_get_server_with_id_image_ref_by_id(self):
         image_bookmark = "http://localhost/%s/images/%s" % (
@@ -531,7 +533,8 @@ class ServersControllerTest(_ServersControllerTest):
         self.mock_get.assert_called_once_with(
             self.request.environ['nova.context'], FAKE_UUID,
             expected_attrs=['flavor', 'info_cache', 'metadata',
-                            'numa_topology'], cell_down_support=False)
+                            'numa_topology', 'services'],
+                            cell_down_support=False)
 
     def _generate_nw_cache_info(self):
         pub0 = ('172.19.0.1', '172.19.0.2',)
