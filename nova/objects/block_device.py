@@ -119,11 +119,11 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
             del primitive['tag']
 
     @classmethod
-    def populate_uuids(cls, context, count):
+    def populate_uuids(cls, context, max_count):
         @db.pick_context_manager_reader
         def get_bdms_no_uuid(context):
             return context.session.query(db_models.BlockDeviceMapping).\
-                    filter_by(uuid=None).limit(count).all()
+                    filter_by(uuid=None).limit(max_count).all()
 
         db_bdms = get_bdms_no_uuid(context)
 

@@ -558,9 +558,9 @@ def _create_limits_in_api_db(context, db_limits, per_user=False):
                                    user_id=user_id)
 
 
-def migrate_quota_limits_to_api_db(context, count):
+def migrate_quota_limits_to_api_db(context, max_count):
     # Migrate per project limits
-    main_per_project_limits = _get_main_per_project_limits(context, count)
+    main_per_project_limits = _get_main_per_project_limits(context, max_count)
     done = 0
     try:
         # Create all the limits in a single transaction.
@@ -575,11 +575,11 @@ def migrate_quota_limits_to_api_db(context, count):
         _destroy_main_per_project_limits(context, db_limit.project_id,
                                          db_limit.resource)
         done += 1
-    if done == count:
+    if done == max_count:
         return len(main_per_project_limits), done
     # Migrate per user limits
-    count -= done
-    main_per_user_limits = _get_main_per_user_limits(context, count)
+    max_count -= done
+    main_per_user_limits = _get_main_per_user_limits(context, max_count)
     try:
         # Create all the limits in a single transaction.
         _create_limits_in_api_db(context, main_per_user_limits, per_user=True)
@@ -621,8 +621,8 @@ def _create_classes_in_api_db(context, db_classes):
                                    db_class.resource, db_class.hard_limit)
 
 
-def migrate_quota_classes_to_api_db(context, count):
-    main_quota_classes = _get_main_quota_classes(context, count)
+def migrate_quota_classes_to_api_db(context, max_count):
+    main_quota_classes = _get_main_quota_classes(context, max_count)
     done = 0
     try:
         # Create all the classes in a single transaction.

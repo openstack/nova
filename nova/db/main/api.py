@@ -3475,12 +3475,12 @@ def migration_get_by_sort_filters(context, sort_keys, sort_dirs, values):
 
 
 @pick_context_manager_writer
-def migration_migrate_to_uuid(context, count):
+def migration_migrate_to_uuid(context, max_count):
     # Avoid circular import
     from nova import objects
 
     db_migrations = model_query(context, models.Migration).filter_by(
-        uuid=None).limit(count).all()
+        uuid=None).limit(max_count).all()
 
     done = 0
     for db_migration in db_migrations:
