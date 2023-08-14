@@ -618,7 +618,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='6.2')
+    target = messaging.Target(version='6.3')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -7967,7 +7967,9 @@ class ComputeManager(manager.Manager):
             old_volume_id, new_volume_id)
 
     @wrap_exception()
-    def remove_volume_connection(self, context, volume_id, instance):
+    def remove_volume_connection(
+            self, context, volume_id, instance,
+            delete_attachment=False):
         """Remove the volume connection on this host
 
         Detach the volume from this instance on this host, and if this is
@@ -7986,7 +7988,8 @@ class ComputeManager(manager.Manager):
             # we cannot simply delete a v3 style attachment here without
             # needing to do some behavior modification of that
             # _rollback_live_migration flow which gets messy.
-            self._remove_volume_connection(context, bdm, instance)
+            self._remove_volume_connection(
+                context, bdm, instance, delete_attachment)
         except exception.NotFound:
             pass
 
