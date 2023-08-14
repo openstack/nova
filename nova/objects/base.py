@@ -20,6 +20,7 @@ import functools
 import traceback
 
 import netaddr
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovoo_base
@@ -28,6 +29,9 @@ from oslo_versionedobjects import exception as ovoo_exc
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import utils
+
+
+LOG = logging.getLogger(__name__)
 
 
 def all_things_equal(obj_a, obj_b):
@@ -97,6 +101,34 @@ NovaObjectDictCompat = ovoo_base.VersionedObjectDictCompat
 NovaTimestampObject = ovoo_base.TimestampedObject
 
 
+def object_id(obj):
+    """Try to get a stable identifier for an object"""
+    if 'uuid' in obj:
+        ident = obj.uuid
+    elif 'id' in obj:
+        ident = obj.id
+    else:
+        ident = 'anonymous'
+    return '%s<%s>' % (obj.obj_name(), ident)
+
+
+def lazy_load_counter(fn):
+    """Increment lazy-load counter and warn if over threshold"""
+    @functools.wraps(fn)
+    def wrapper(self, attrname):
+        try:
+            return fn(self, attrname)
+        finally:
+            if self._lazy_loads is None:
+                self._lazy_loads = []
+            self._lazy_loads.append(attrname)
+            if len(self._lazy_loads) > 1:
+                LOG.debug('Object %s lazy-loaded attributes: %s',
+                          object_id(self), ','.join(self._lazy_loads))
+
+    return wrapper
+
+
 class NovaObject(ovoo_base.VersionedObject):
     """Base class and object factory.
 
@@ -109,6 +141,12 @@ class NovaObject(ovoo_base.VersionedObject):
 
     OBJ_SERIAL_NAMESPACE = 'nova_object'
     OBJ_PROJECT_NAMESPACE = 'nova'
+
+    # Keep a running tally of how many times we've lazy-loaded on this object
+    # so we can warn if it happens too often. This is not serialized or part
+    # of the object that goes over the wire, so it is limited to a single
+    # service, which is fine for what we need.
+    _lazy_loads = None
 
     # NOTE(ndipanov): This is nova-specific
     @staticmethod

@@ -328,6 +328,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     def get_image_mapping(self):
         return block_device.BlockDeviceDict(self).get_image_mapping()
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         if not self._context:
             raise exception.OrphanedObjectError(method='obj_load_attr',

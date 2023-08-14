@@ -64,6 +64,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
     def _load_cell_mapping(self):
         self.cell_mapping = self._get_cell_mapping()
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         if attrname == 'cell_mapping':
             self._load_cell_mapping()

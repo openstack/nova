@@ -60,6 +60,7 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
             if 'queued_for_delete' in primitive:
                 del primitive['queued_for_delete']
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         if attrname == 'user_id':
             LOG.error('The unset user_id attribute of an unmigrated instance '

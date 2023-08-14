@@ -327,6 +327,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
                                                    self.flavorid)
         self.obj_reset_changes(['projects'])
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         # NOTE(danms): Only projects could be lazy-loaded right now
         if attrname != 'projects':
