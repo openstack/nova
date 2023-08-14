@@ -88,7 +88,13 @@ class EvacuateController(wsgi.Controller):
         to a new one.
         """
         context = req.environ["nova.context"]
-        instance = common.get_instance(self.compute_api, context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       expected_attrs=['trusted_certs',
+                                                       'pci_requests',
+                                                       'pci_devices',
+                                                       'resources',
+                                                       'migration_context'])
+
         context.can(evac_policies.BASE_POLICY_NAME,
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})

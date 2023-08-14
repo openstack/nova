@@ -1046,7 +1046,9 @@ class ServersController(wsgi.Controller):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
         instance = self._get_server(context, req, instance_id,
-                                    columns_to_join=['services'])
+                                    columns_to_join=['services', 'resources',
+                                                     'pci_requests',
+                                                     'pci_devices'])
         context.can(server_policies.SERVERS % 'resize',
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
@@ -1160,7 +1162,12 @@ class ServersController(wsgi.Controller):
         password = self._get_server_admin_password(rebuild_dict)
 
         context = req.environ['nova.context']
-        instance = self._get_server(context, req, id)
+        instance = self._get_server(context, req, id,
+                                    columns_to_join=['trusted_certs',
+                                                     'pci_requests',
+                                                     'pci_devices',
+                                                     'resources',
+                                                     'migration_context'])
         target = {'user_id': instance.user_id,
                   'project_id': instance.project_id}
         context.can(server_policies.SERVERS % 'rebuild', target=target)
