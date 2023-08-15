@@ -598,6 +598,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 pci_requests.to_json())
         else:
             updates['extra']['pci_requests'] = None
+            updates['extra']['pci_devices'] = None
         device_metadata = updates.pop('device_metadata', None)
         expected_attrs.append('device_metadata')
         if device_metadata:
@@ -647,15 +648,25 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 resources.obj_to_primitive())
         else:
             updates['extra']['resources'] = None
+
+        # Initially all instances have no migration context, so avoid us
+        # trying to lazy-load it to check.
+        updates['extra']['migration_context'] = None
+
         db_inst = db.instance_create(self._context, updates)
         self._from_db_object(self._context, self, db_inst, expected_attrs)
+
+        if ('pci_devices' in updates['extra'] and
+                updates['extra']['pci_devices'] is None):
+            self.pci_devices = None
+        self.migration_context = None
 
         # NOTE(danms): The EC2 ids are created on their first load. In order
         # to avoid them being missing and having to be loaded later, we
         # load them once here on create now that the instance record is
         # created.
         self._load_ec2_ids()
-        self.obj_reset_changes(['ec2_ids'])
+        self.obj_reset_changes(['ec2_ids', 'pci_devices', 'migration_context'])
 
     @base.remotable
     def destroy(self, hard_delete=False):
