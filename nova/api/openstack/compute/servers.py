@@ -1049,7 +1049,9 @@ class ServersController(wsgi.Controller):
         instance = self._get_server(context, req, instance_id,
                                     columns_to_join=['services', 'resources',
                                                      'pci_requests',
-                                                     'pci_devices'])
+                                                     'pci_devices',
+                                                     'trusted_certs',
+                                                     'vcpu_model'])
         context.can(server_policies.SERVERS % 'resize',
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})

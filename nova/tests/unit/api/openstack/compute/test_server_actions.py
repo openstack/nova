@@ -135,7 +135,8 @@ class ServerActionsControllerTestV21(test.TestCase):
             expected_attrs = ['flavor', 'numa_topology']
             if method == 'resize':
                 expected_attrs.extend(['services', 'resources',
-                                       'pci_requests', 'pci_devices'])
+                                       'pci_requests', 'pci_devices',
+                                       'trusted_certs', 'vcpu_model'])
             elif method == 'rebuild':
                 expected_attrs.extend(['trusted_certs', 'pci_requests',
                                        'pci_devices', 'resources',
