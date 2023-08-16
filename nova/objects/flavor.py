@@ -270,8 +270,9 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return flavor
 
     @staticmethod
-    @api_db_api.context_manager.reader
     def _flavor_get_query_from_db(context):
+        # We don't use a database context decorator on this method because this
+        # method is not executing a query, it's only building one.
         query = context.session.query(api_models.Flavors).options(
             orm.joinedload(api_models.Flavors.extra_specs)
         )
@@ -285,6 +286,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
     @staticmethod
     @db_utils.require_context
+    @api_db_api.context_manager.reader
     def _flavor_get_from_db(context, id):
         """Returns a dict describing specific flavor."""
         result = Flavor._flavor_get_query_from_db(context).\
@@ -296,6 +298,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
     @staticmethod
     @db_utils.require_context
+    @api_db_api.context_manager.reader
     def _flavor_get_by_name_from_db(context, name):
         """Returns a dict describing specific flavor."""
         result = Flavor._flavor_get_query_from_db(context).\
@@ -307,6 +310,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
     @staticmethod
     @db_utils.require_context
+    @api_db_api.context_manager.reader
     def _flavor_get_by_flavor_id_from_db(context, flavor_id):
         """Returns a dict describing specific flavor_id."""
         result = Flavor._flavor_get_query_from_db(context).\
