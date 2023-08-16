@@ -462,3 +462,32 @@ class TestUpgradeCheckServiceUserToken(test.NoDBTestCase):
         self.flags(send_service_user_token=True, group='service_user')
         result = self.cmd._check_service_user_token()
         self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
+
+
+class TestObjectLinkage(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.cmd = status.UpgradeCommands()
+
+    @mock.patch('nova.db.main.api.compute_nodes_get_by_service_id')
+    @mock.patch('nova.db.main.api.instance_get_all_by_filters')
+    def test_all_good(self, mock_get_inst, mock_get_cn):
+        mock_get_inst.return_value = []
+        mock_get_cn.side_effect = exception.ServiceNotFound(service_id=None)
+        result = self.cmd._check_compute_object_linkage()
+        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
+
+    @mock.patch('nova.db.main.api.compute_nodes_get_by_service_id')
+    def test_missing_service_id(self, mock_get):
+        mock_get.return_value = ['foo']
+        result = self.cmd._check_compute_object_linkage()
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
+
+    @mock.patch('nova.db.main.api.compute_nodes_get_by_service_id')
+    @mock.patch('nova.db.main.api.instance_get_all_by_filters')
+    def test_missing_compute_id(self, mock_get_inst, mock_get_cn):
+        mock_get_cn.side_effect = exception.ServiceNotFound(service_id=None)
+        mock_get_inst.return_value = ['foo']
+        result = self.cmd._check_compute_object_linkage()
+        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
