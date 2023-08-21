@@ -1788,6 +1788,8 @@ class ServersTestV280(integrated_helpers._IntegratedTestBase):
         migrations = new_admin_api.get_migrations(project_id=project_id_2)
         self.assertEqual([], migrations)
 
+        self._delete_server(server)
+
 
 class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
     """Tests moving servers while checking the resource allocations and usages
