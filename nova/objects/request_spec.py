@@ -144,6 +144,7 @@ class RequestSpec(base.NovaObject):
             if 'requested_destination' in primitive:
                 del primitive['requested_destination']
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         if attrname not in REQUEST_SPEC_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(

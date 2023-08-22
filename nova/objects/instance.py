@@ -1122,6 +1122,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if numa_topology is not None:
             self.numa_topology = numa_topology.clear_host_pinning()
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         # NOTE(danms): We can't lazy-load anything without a context and a uuid
         if not self._context:

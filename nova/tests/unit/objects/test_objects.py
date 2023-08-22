@@ -22,6 +22,7 @@ import pprint
 from unittest import mock
 
 import fixtures
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
@@ -66,6 +67,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject,
         self._context = context
         return self
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         setattr(self, attrname, 'loaded!')
 
@@ -787,6 +789,35 @@ class TestObject(_LocalTest, _TestObject):
         obj.obj_set_defaults()
         self.assertEqual(1, obj.foo)
         self.assertTrue(obj.deleted)
+
+
+class TestObjectMisc(_BaseTestCase):
+    @mock.patch.object(base.LOG, 'debug')
+    def test_lazy_load_counter(self, mock_log):
+        obj = MyObj()
+        mock_log.assert_not_called()
+        self.assertIsNone(obj._lazy_loads)
+
+        obj.obj_load_attr('bar')
+        mock_log.assert_not_called()
+        self.assertEqual(['bar'], obj._lazy_loads)
+
+        obj.obj_load_attr('bar')
+        mock_log.assert_called_once_with(
+            'Object %s lazy-loaded attributes: %s', 'MyObj<anonymous>',
+            'bar,bar')
+        self.assertEqual(['bar', 'bar'], obj._lazy_loads)
+
+    def test_object_id(self):
+        obj1 = MyObj()
+        self.assertEqual('MyObj<anonymous>', base.object_id(obj1))
+
+        obj2 = objects.Instance(uuid=str(uuids.instance))
+        self.assertEqual('Instance<%s>' % str(uuids.instance),
+                         base.object_id(obj2))
+
+        obj3 = objects.Service(id=123)
+        self.assertEqual('Service<123>', base.object_id(obj3))
 
 
 class TestObjectSerializer(_BaseTestCase):

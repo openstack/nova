@@ -353,6 +353,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
     def destroy_members_bulk(cls, context, instance_uuids):
         return cls._destroy_members_bulk_in_db(context, instance_uuids)
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         # NOTE(sbauza): Only hosts could be lazy-loaded right now
         if attrname != 'hosts':

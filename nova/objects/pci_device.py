@@ -198,6 +198,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         self.parent_device = None
         self.child_devices = []
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attr):
         if attr in ['extra_info']:
             # NOTE(danms): extra_info used to be defaulted during init,

@@ -388,6 +388,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
         return service
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         if not self._context:
             raise exception.OrphanedObjectError(method='obj_load_attr',

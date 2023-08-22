@@ -129,6 +129,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
         if target_version < (1, 8):
             primitive.pop('dest_compute_id', None)
 
+    @base.lazy_load_counter
     def obj_load_attr(self, attrname):
         if attrname == 'migration_type':
             # NOTE(danms): The only reason we'd need to load this is if
