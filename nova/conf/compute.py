@@ -363,7 +363,7 @@ Related options:
     cfg.MultiOpt('reserved_huge_pages',
         item_type=types.Dict(),
         help="""
-Number of huge/large memory pages to reserved per NUMA host cell.
+Number of huge/large memory pages to reserve per NUMA host cell.
 
 Possible values:
 

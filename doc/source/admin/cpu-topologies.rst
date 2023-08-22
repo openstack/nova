@@ -813,7 +813,7 @@ As an example, a ``nova.conf`` part of configuration would look like::
    The CPU core #0 has a special meaning in most of the recent Linux kernels.
    This is always highly discouraged to use it for CPU pinning but please
    refrain to have it power managed or you could have surprises if Nova turns
-   it off !
+   it off!
 
 One last important note : you can decide to change the CPU management strategy
 during the compute lifecycle, or you can currently already manage the CPU
