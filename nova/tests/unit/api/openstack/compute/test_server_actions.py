@@ -134,7 +134,12 @@ class ServerActionsControllerTestV21(test.TestCase):
                               body=body_map.get(action))
             expected_attrs = ['flavor', 'numa_topology']
             if method == 'resize':
-                expected_attrs.append('services')
+                expected_attrs.extend(['services', 'resources',
+                                       'pci_requests', 'pci_devices'])
+            elif method == 'rebuild':
+                expected_attrs.extend(['trusted_certs', 'pci_requests',
+                                       'pci_devices', 'resources',
+                                       'migration_context'])
             mock_get.assert_called_once_with(self.context, uuid,
                 expected_attrs=expected_attrs,
                 cell_down_support=False)
