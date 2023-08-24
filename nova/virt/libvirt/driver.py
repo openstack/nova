@@ -218,8 +218,8 @@ patch_tpool_proxy()
 # DO NOT FORGET to update this document when touching any versions below!
 MIN_LIBVIRT_VERSION = (6, 0, 0)
 MIN_QEMU_VERSION = (4, 2, 0)
-NEXT_MIN_LIBVIRT_VERSION = (7, 0, 0)
-NEXT_MIN_QEMU_VERSION = (5, 2, 0)
+NEXT_MIN_LIBVIRT_VERSION = (8, 0, 0)
+NEXT_MIN_QEMU_VERSION = (6, 2, 0)
 
 # vIOMMU driver attribute aw_bits minimal support version.
 MIN_LIBVIRT_VIOMMU_AW_BITS = (6, 5, 0)
