@@ -469,6 +469,7 @@ class ServersController(wsgi.Controller):
 
         instance = self._get_server(
             context, req, id, is_detail=True,
+            columns_to_join=['services'],
             cell_down_support=cell_down_support)
         context.can(server_policies.SERVERS % 'show',
                     target={'project_id': instance.project_id})
