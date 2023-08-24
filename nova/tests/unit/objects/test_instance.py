@@ -1074,6 +1074,8 @@ class _TestInstanceObject(object):
                     'device_metadata': None,
                     'trusted_certs': None,
                     'resources': None,
+                    'pci_devices': None,
+                    'migration_context': None,
                 }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         mock_create.return_value = fake_inst
@@ -1105,6 +1107,8 @@ class _TestInstanceObject(object):
                     'device_metadata': None,
                     'trusted_certs': None,
                     'resources': None,
+                    'pci_devices': None,
+                    'migration_context': None,
                 }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         mock_create.return_value = fake_inst
@@ -1123,6 +1127,8 @@ class _TestInstanceObject(object):
                   'device_metadata': None,
                   'trusted_certs': None,
                   'resources': None,
+                  'pci_devices': None,
+                  'migration_context': None,
                   }
         mock_create.return_value = self.fake_instance
         inst = objects.Instance(context=self.context)
@@ -1220,6 +1226,8 @@ class _TestInstanceObject(object):
                                 'device_metadata': None,
                                 'trusted_certs': None,
                                 'resources': None,
+                                'pci_devices': None,
+                                'migration_context': None,
                             },
                             })
 
