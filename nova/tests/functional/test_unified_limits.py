@@ -170,7 +170,8 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
         personality = [
             {'path': item[0], 'contents': item[1]} for item in files]
         server['personality'] = personality
-        self.api.post_server({'server': server})
+        server = self.api.post_server({'server': server})
+        self.api.delete_server(server['id'])
 
     def test_max_injected_file_content_bytes(self):
         # Quota is 10 * 1024
@@ -182,7 +183,8 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
         server = self._build_server()
         personality = [{'path': '/test/path', 'contents': content}]
         server['personality'] = personality
-        self.api.post_server({'server': server})
+        server = self.api.post_server({'server': server})
+        self.api.delete_server(server['id'])
 
     def test_max_injected_file_path_bytes(self):
         # Quota is 255.
@@ -191,7 +193,8 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
         server = self._build_server()
         personality = [{'path': path, 'contents': contents}]
         server['personality'] = personality
-        self.api.post_server({'server': server})
+        server = self.api.post_server({'server': server})
+        self.api.delete_server(server['id'])
 
     def test_server_group_members(self):
         # Create a server group.
@@ -207,7 +210,7 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
         server = self._build_server()
         hints = {'group': uuids.instance_group}
         req = {'server': server, 'os:scheduler_hints': hints}
-        self.admin_api.post_server(req)
+        server = self.admin_api.post_server(req)
 
         # Attempt to create another server in the group should fail because we
         # are at quota.
@@ -215,3 +218,5 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
             client.OpenStackApiException, self.admin_api.post_server, req)
         self.assertEqual(403, e.response.status_code)
         self.assertIn('server_group_members', e.response.text)
+
+        self.admin_api.delete_server(server['id'])
