@@ -580,6 +580,32 @@ class HostMountStateTestCase(test.NoDBTestCase):
 
         mock_log.assert_called()
 
+    @mock.patch.object(mount.LOG, 'exception')
+    def test_mount_failure(self, mock_log_exc):
+        m = self._get_clean_hostmountstate()
+        err = processutils.ProcessExecutionError
+        self.mock_mount.side_effect = err
+
+        # Mount vol_a
+        self.assertRaises(err, self._sentinel_mount, m, mock.sentinel.vol_a)
+
+        # Verify the mountpoint got removed after the failure
+        self.assertEqual({}, m.mountpoints)
+
+        # Now try a scenario where the mount failed because the volume was
+        # already mounted
+        self.mock_ismount.side_effect = [False, True]
+
+        # Mount vol_a
+        self._sentinel_mount(m, mock.sentinel.vol_a)
+
+        # Verify the mountpoint is present despite the error
+        self.assertEqual(1, len(m.mountpoints))
+        self.assertIn(mock.sentinel.mountpoint, m.mountpoints)
+
+        # Verify we logged an exception
+        mock_log_exc.assert_called()
+
 
 class MountManagerTestCase(test.NoDBTestCase):
     class FakeHostMountState(object):
