@@ -10,8 +10,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import threading
 import time
 from unittest import mock
+
 
 from nova import context as nova_context
 from nova import objects
@@ -151,8 +153,10 @@ class TestComputeRestartInstanceStuckInBuild(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
 
+        stop = threading.Event()
+
         def sleep_forever(*args, **kwargs):
-            time.sleep(1000000)
+            stop.wait(1000000)
 
         with mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                         'instance_claim') as mock_instance_claim:
@@ -176,3 +180,5 @@ class TestComputeRestartInstanceStuckInBuild(
             'Instance spawn was interrupted before instance_claim, setting '
             'instance to ERROR state',
             instance=mock.ANY)
+
+        stop.set()

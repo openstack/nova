@@ -80,3 +80,4 @@ class LegacyV2CompatibleTestBase(integrated_helpers._IntegratedTestBase):
                                  'x' * 300: 'y',
                                  'h' * 300: 'i'})
         self.assertEqual(exc.response.status_code, 400)
+        self.api.delete_server(created_server['id'])

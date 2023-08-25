@@ -1086,13 +1086,16 @@ class ServersTestV219(integrated_helpers._IntegratedTestBase):
 
         # Update and rebuild servers with invalid descriptions.
         # These throw 400.
-        server_id = self._create_server(True, "desc")[1]['id']
+        server = self._create_server(True, "desc")[1]
+        server_id = server['id']
         # Invalid unicode with non-printable control char
         self._update_assertRaisesRegex(server_id, u'invalid\u0604string')
         self._rebuild_assertRaisesRegex(server_id, u'invalid\u0604string')
         # Description is longer than 255 chars
         self._update_assertRaisesRegex(server_id, 'x' * 256)
         self._rebuild_assertRaisesRegex(server_id, 'x' * 256)
+
+        self._delete_server(server)
 
 
 class ServerTestV220(integrated_helpers._IntegratedTestBase):
