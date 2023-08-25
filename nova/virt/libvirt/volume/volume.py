@@ -118,6 +118,7 @@ class LibvirtBaseVolumeDriver(object):
             conf.shareable = True
 
         volume_id = driver_block_device.get_volume_id(connection_info)
+        conf.alias = vconfig.make_libvirt_device_alias(volume_id)
         volume_secret = None
         if volume_id:
             volume_secret = self.host.find_secret('volume', volume_id)
