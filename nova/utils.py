@@ -80,6 +80,17 @@ _FILE_CACHE = {}
 
 _SERVICE_TYPES = service_types.ServiceTypes()
 
+DEFAULT_GREEN_POOL = None
+
+
+def _get_default_green_pool():
+    global DEFAULT_GREEN_POOL
+    if DEFAULT_GREEN_POOL is None:
+        DEFAULT_GREEN_POOL = eventlet.greenpool.GreenPool(
+            CONF.default_green_pool_size
+        )
+    return DEFAULT_GREEN_POOL
+
 
 # NOTE(mikal): this seems to have to stay for now to handle os-brick
 # requirements. This makes me a sad panda.
@@ -634,7 +645,6 @@ def _serialize_profile_info():
 
 def pass_context(runner, func, *args, **kwargs):
     """Generalised passthrough method
-
     It will grab the context from the threadlocal store and add it to
     the store on the runner.  This allows for continuity in logging the
     context when using this method to spawn a new thread through the
@@ -667,11 +677,11 @@ def spawn(func, *args, **kwargs):
     context when using this method to spawn a new thread.
     """
 
-    return pass_context(eventlet.spawn, func, *args, **kwargs)
+    return pass_context(_get_default_green_pool().spawn, func, *args, **kwargs)
 
 
 def spawn_n(func, *args, **kwargs):
-    """Passthrough method for eventlet.spawn_n.
+    """Passthrough method for eventlet.greenpool.spawn_n.
 
     This utility exists so that it can be stubbed for testing without
     interfering with the service spawns.
@@ -680,7 +690,8 @@ def spawn_n(func, *args, **kwargs):
     the store on the new thread.  This allows for continuity in logging the
     context when using this method to spawn a new thread.
     """
-    pass_context(eventlet.spawn_n, func, *args, **kwargs)
+
+    pass_context(_get_default_green_pool().spawn_n, func, *args, **kwargs)
 
 
 def tpool_execute(func, *args, **kwargs):

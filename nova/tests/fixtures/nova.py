@@ -42,6 +42,7 @@ import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
 from oslo_privsep import daemon as privsep_daemon
 from oslo_utils.fixture import uuidsentinel
+from oslo_utils import strutils
 from requests import adapters
 from sqlalchemy import exc as sqla_exc
 from wsgi_intercept import interceptor
@@ -1133,6 +1134,64 @@ class IndirectionAPIFixture(fixtures.Fixture):
         self.orig_indirection_api = obj_base.NovaObject.indirection_api
         obj_base.NovaObject.indirection_api = self.indirection_api
         self.addCleanup(self.cleanup)
+
+
+class IsolatedGreenPoolFixture(fixtures.Fixture):
+    """isolate each test to a dedicated greenpool.
+
+    Replace the default shared greenpool with a pre test greenpool
+    and wait for all greenthreads to finish in test cleanup.
+    """
+
+    def __init__(self, test):
+        self.test_case_id = test
+
+    def _setUp(self):
+        self.greenpool = eventlet.greenpool.GreenPool()
+
+        def _get_default_green_pool():
+            return self.greenpool
+        # NOTE(sean-k-mooney): greenpools use eventlet.spawn and
+        # eventlet.spawn_n so we can't stub out all calls to those functions.
+        # Instead since nova only creates greenthreads directly via nova.utils
+        # we stub out the default green pool. This will not capture
+        # Greenthreads created via the standard lib threading module.
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils._get_default_green_pool', _get_default_green_pool))
+        self.addCleanup(self.do_cleanup)
+
+    def do_cleanup(self):
+        running = self.greenpool.running()
+        if running:
+            # kill all greenthreads in the pool before raising to prevent
+            # them from interfering with other tests.
+            for gt in list(self.greenpool.coroutines_running):
+                if isinstance(gt, eventlet.greenthread.GreenThread):
+                    gt.kill()
+            # reset the global greenpool just in case.
+            utils.DEFAULT_GREEN_POOL = eventlet.greenpool.GreenPool()
+            if any(
+                isinstance(gt, eventlet.greenthread.GreenThread)
+                for gt in self.greenpool.coroutines_running
+            ):
+                raise RuntimeError(
+                    f'detected leaked greenthreads in {self.test_case_id}')
+            elif (len(self.greenpool.coroutines_running) > 0 and
+                  strutils.bool_from_string(os.getenv(
+                    "NOVA_RAISE_ON_GREENLET_LEAK", "0")
+            )):
+                raise RuntimeError(
+                    f'detected leaked greenlets in {self.test_case_id}')
+            else:
+                self.addDetail(
+                    'IsolatedGreenPoolFixture',
+                    f'no leaked greenthreads detected in {self.test_case_id} '
+                    'but some greenlets were running when the test finished.'
+                    'They cannot be killed so they may interact with '
+                    'other tests if they raise exceptions. '
+                    'These greenlets were likely created by spawn_n and'
+                    'and therefore are not expected to return or raise.'
+                )
 
 
 class _FakeGreenThread(object):

@@ -1244,6 +1244,10 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
     def _setup_conductor_service(self):
         return self.start_service('conductor')
 
+    def _stop_computes(self):
+        for compute in self.computes.values():
+            compute.stop()
+
     def _setup_services(self):
         # NOTE(danms): Set the global MQ connection to that of our first cell
         # for any cells-ignorant code. Normally this is defaulted in the tests
@@ -1252,8 +1256,11 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
             self.flags(transport_url=self.cell_mappings['cell1'].transport_url)
 
         self.conductor = self._setup_conductor_service()
+        self.addCleanup(self.conductor.stop)
         self.scheduler = self._setup_scheduler_service()
+        self.addCleanup(self.scheduler.stop)
         self.compute = self._setup_compute_service()
+        self.addCleanup(self._stop_computes)
 
         self.api_fixture = self.useFixture(
             nova_fixtures.OSAPIFixture(

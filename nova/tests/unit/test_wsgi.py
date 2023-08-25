@@ -192,6 +192,7 @@ class TestWSGIServer(test.NoDBTestCase):
         # Resetting pool size to default
         server.reset()
         server.start()
+        self.addCleanup(server.stop)
         self.assertEqual(server._pool.size, CONF.wsgi.default_pool_size)
 
     def test_client_socket_timeout(self):
@@ -199,30 +200,28 @@ class TestWSGIServer(test.NoDBTestCase):
 
         # mocking eventlet spawn method to check it is called with
         # configured 'client_socket_timeout' value.
-        with mock.patch.object(eventlet,
-                               'spawn') as mock_spawn:
+        with mock.patch('nova.utils.spawn') as mock_spawn:
             server = nova.wsgi.Server("test_app", None,
                                       host="127.0.0.1", port=0)
             server.start()
+            self.addCleanup(server.stop)
             _, kwargs = mock_spawn.call_args
             self.assertEqual(CONF.wsgi.client_socket_timeout,
                              kwargs['socket_timeout'])
-            server.stop()
 
     def test_keep_alive(self):
         self.flags(keep_alive=False, group='wsgi')
 
         # mocking eventlet spawn method to check it is called with
         # configured 'keep_alive' value.
-        with mock.patch.object(eventlet,
-                               'spawn') as mock_spawn:
+        with mock.patch('nova.utils.spawn') as mock_spawn:
             server = nova.wsgi.Server("test_app", None,
                                       host="127.0.0.1", port=0)
             server.start()
+            self.addCleanup(server.stop)
             _, kwargs = mock_spawn.call_args
             self.assertEqual(CONF.wsgi.keep_alive,
                              kwargs['keepalive'])
-            server.stop()
 
 
 @testtools.skip("bug/1482633: test hangs on Python 3")

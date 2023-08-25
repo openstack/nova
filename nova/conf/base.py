@@ -60,6 +60,14 @@ entry.
     cfg.StrOpt(
         'tempdir',
         help='Explicitly specify the temporary working directory.'),
+    cfg.IntOpt(
+        'default_green_pool_size',
+        default=1000,
+        min=100,
+        help='''
+The total number of coroutines that can be run via nova's default
+greenthread pool concurrently, defaults to 1000, min value is 100.
+'''),
 ]
 
 
