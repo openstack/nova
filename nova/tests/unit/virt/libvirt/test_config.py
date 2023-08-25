@@ -24,6 +24,14 @@ from nova.virt import hardware
 from nova.virt.libvirt import config
 
 
+class LibvirtConfigUtiltest(test.NoDBTestCase):
+    def test_make_parse_alias(self):
+        self.assertEqual('ua-foo', config.make_libvirt_device_alias('foo'))
+        self.assertEqual('foo', config.parse_libvirt_device_alias('ua-foo'))
+        # if the alias is not a user-specified one, it should come back whole
+        self.assertEqual('foo', config.parse_libvirt_device_alias('foo'))
+
+
 class LibvirtConfigBaseTest(test.NoDBTestCase):
     pass
 
@@ -997,11 +1005,13 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         obj.driver_name = "qemu"
         obj.target_dev = "/dev/hdc"
         obj.target_bus = "ide"
+        obj.alias = "ua-this-is-my-disk"
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
             <disk type="block" device="cdrom">
               <driver name="qemu"/>
+              <alias name="ua-this-is-my-disk"/>
               <source dev="/tmp/hello"/>
               <target bus="ide" dev="/dev/hdc"/>
             </disk>""")

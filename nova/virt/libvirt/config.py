@@ -42,6 +42,17 @@ from nova.virt import hardware
 NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.1"
 
 
+def make_libvirt_device_alias(identifier):
+    return 'ua-%s' % identifier
+
+
+def parse_libvirt_device_alias(alias):
+    if alias.startswith('ua-'):
+        return alias.split('-', 1)[1]
+    else:
+        return alias
+
+
 class LibvirtConfigObject(object):
 
     def __init__(self, **kwargs):
@@ -1199,6 +1210,11 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
             if self.driver_iommu:
                 drv.set("iommu", "on")
             dev.append(drv)
+
+        if self.alias:
+            alias = etree.Element("alias")
+            alias.set("name", self.alias)
+            dev.append(alias)
 
         if self.source_type == "file":
             dev.append(etree.Element("source", file=self.source_path))
