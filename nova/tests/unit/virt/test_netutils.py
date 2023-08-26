@@ -17,6 +17,17 @@ from nova.virt import netutils
 
 
 class TestNetUtilsTestCase(test.NoDBTestCase):
+
+    def _get_fake_instance_nw_info(self, num_networks, dhcp_server, mtu):
+        network_info = fake_network.fake_get_instance_nw_info(self,
+                                                              num_networks)
+        for vif in network_info:
+            for subnet in vif['network']['subnets']:
+                subnet['meta']['dhcp_server'] = dhcp_server
+            vif['network']['meta']['mtu'] = mtu
+
+        return network_info
+
     def test_get_cached_vifs_with_vlan_no_nw_info(self):
         # Make sure that an empty dictionary will be returned when
         # nw_info is None
@@ -39,3 +50,15 @@ class TestNetUtilsTestCase(test.NoDBTestCase):
         expected = {'fa:16:3e:d1:28:e4': '2145'}
         self.assertEqual(expected,
                          netutils.get_cached_vifs_with_vlan(network_info))
+
+    def test__get_link_mtu(self):
+        network_info_dhcp = self._get_fake_instance_nw_info(
+            1, '192.168.0.100', 9000)
+        network_info_no_dhcp = self._get_fake_instance_nw_info(
+            1, None, 9000)
+
+        for vif in network_info_dhcp:
+            self.assertIsNone(netutils._get_link_mtu(vif))
+
+        for vif in network_info_no_dhcp:
+            self.assertEqual(9000, netutils._get_link_mtu(vif))

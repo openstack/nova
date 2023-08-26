@@ -1,0 +1,5 @@
+---
+other:
+  - |
+    For networks which have any subnets with enabled DHCP, MTU value is not send
+    in the metadata. In such case MTU is configured through the DHCP server.
