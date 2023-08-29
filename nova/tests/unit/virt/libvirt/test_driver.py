@@ -9929,17 +9929,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('threading.Event', new=mock.Mock())
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
     def test_detach_volume_with_vir_domain_affect_live_flag(self,
-            mock_get_domain):
+            mock_get_domain, use_alias=True):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
+        volume_id = uuids.volume
+        alias_xml = '<alias name="%s"/>' % vconfig.make_libvirt_device_alias(
+            volume_id)
         mock_xml_with_disk = """<domain>
   <devices>
     <disk type='file'>
+      %(alias)s
       <source file='/path/to/fake-volume'/>
       <target dev='vdc' bus='virtio'/>
     </disk>
   </devices>
-</domain>"""
+</domain>""" % {'alias': use_alias and alias_xml or ''}
         mock_xml_without_disk = """<domain>
   <devices>
   </devices>
@@ -9951,14 +9955,26 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_xml_with_disk,  # persistent domain
             mock_xml_with_disk,  # live domain
             mock_xml_without_disk,  # persistent gone
-            mock_xml_without_disk   # live gone
+            mock_xml_without_disk,  # persistent gone (no-alias retry)
+            mock_xml_without_disk,  # live gone
+            mock_xml_without_disk,  # live gone (no-alias retry)
         ]
+        if not use_alias:
+            # If we're not using the alias to detach we will end up with two
+            # extra checks of the XML with the alias (which will fail to find
+            # anything) before we fall back to by-path and succeed.
+            return_list = [
+                mock_xml_with_disk,  # persistent check for missing alias
+                mock_xml_with_disk,   # live check for missing alias
+            ] + return_list
+
         # Doubling the size of return list because we test with two guest power
         # states
         mock_dom.XMLDesc.side_effect = return_list + return_list
 
         connection_info = {"driver_volume_type": "fake",
                            "data": {"device_path": "/fake",
+                                    "volume_id": volume_id,
                                     "access_mode": "rw"}}
 
         with mock.patch.object(drvr, '_disconnect_volume') as \
@@ -9972,9 +9988,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
                 mock_get_domain.assert_called_with(instance)
                 xml = """<disk type="file" device="disk">
+                            %(alias)s
                             <source file="/path/to/fake-volume"/>
                             <target bus="virtio" dev="vdc"/>
-                        </disk>"""
+                        </disk>""" % {'alias': use_alias and alias_xml or ''}
                 # we expect two separate detach calls
                 self.assertEqual(2, mock_dom.detachDeviceFlags.call_count)
                 # one for the persistent domain
@@ -9992,6 +10009,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
                 mock_disconnect_volume.assert_called_with(
                     self.context, connection_info, instance, encryption=None)
+
+    def test_detach_volume_with_vir_domain_affect_live_flag_legacy(self):
+        self.test_detach_volume_with_vir_domain_affect_live_flag(
+            use_alias=False)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
@@ -10090,7 +10111,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.call.detach_volume(
                 mock_guest,
                 instance.uuid,
-                # it is functools.partial(mock_guest.get_disk, 'vdc')
+                # it is functools.partial(driver._get_guest_disk_device, 'vdc')
                 # see assert below
                 mock.ANY,
                 device_name='vdc',
@@ -10103,8 +10124,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             )
         ])
         get_device_conf_func = mock_detach_with_retry.mock_calls[0][1][2]
-        self.assertEqual(mock_guest.get_disk, get_device_conf_func.func)
-        self.assertEqual(('vdc',), get_device_conf_func.args)
+        self.assertEqual(drvr._get_guest_disk_device,
+                         get_device_conf_func.func)
+        self.assertEqual((mock_get_guest.return_value, 'vdc'),
+                         get_device_conf_func.args)
 
     def test_extend_volume(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
