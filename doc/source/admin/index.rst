@@ -126,7 +126,7 @@ Once you have an OpenStack deployment up and running, you will want to manage
 it. The below guides cover everything from creating initial flavor and image to
 log management and live migration of instances.
 
-* :doc:`Quotas </admin/quotas>`: Managing project quotas in nova.
+* :doc:`Quotas </admin/unified-limits>`: Managing project quotas in nova.
 
 * :doc:`Scheduling </admin/scheduling>`: How the scheduler is
   configured, and how that will impact where compute instances land in your
@@ -158,7 +158,7 @@ log management and live migration of instances.
    config-drive
    image-caching
    metadata-service
-   quotas
+   unified-limits
    networking
    security-groups
    security

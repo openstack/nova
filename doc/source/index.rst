@@ -180,7 +180,7 @@ Once you are running nova, the following information is extremely useful.
 * :doc:`Flavors </user/flavors>`: What flavors are and why they are used.
 * :doc:`Upgrades </admin/upgrades>`: How nova is designed to be upgraded for minimal
   service impact, and the order you should do them in.
-* :doc:`Quotas </user/quotas>`: Managing project quotas in nova.
+* :doc:`Quotas </user/unified-limits>`: Managing project quotas in nova.
 * :doc:`Aggregates </admin/aggregates>`: Aggregates are a useful way of grouping
   hosts together for scheduling purposes.
 * :doc:`Scheduling </admin/scheduling>`: How the scheduler is
@@ -200,7 +200,7 @@ Once you are running nova, the following information is extremely useful.
    admin/index
    user/flavors
    admin/upgrades
-   user/quotas
+   user/unified-limits
    admin/vendordata
 
 Reference Material

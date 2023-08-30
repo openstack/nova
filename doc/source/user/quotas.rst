@@ -1,6 +1,16 @@
+:orphan:
+
 ======
 Quotas
 ======
+
+.. warning::
+
+   As of Nova release 28.0.0 (2023.2 Bobcat), the ``nova.quota.DbQuotaDriver``
+   has been deprecated and the default quota driver configuration will be
+   changed to the ``nova.quota.UnifiedLimitsDriver`` in the 29.0.0 (2024.1
+   Caracal) release. See the :doc:`unified limits documentation
+   </user/unified-limits>`.
 
 Nova uses a quota system for setting limits on resources such as number of
 instances or amount of CPU that a specific project or user can use.
