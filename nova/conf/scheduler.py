@@ -507,6 +507,51 @@ Related options:
 
 * ``[filter_scheduler] weight_classes``
 """),
+    cfg.FloatOpt("num_instances_weight_multiplier",
+        default=0.0,
+        help="""
+Number of instances weight multiplier ratio.
+
+The multiplier is used for weighting hosts based on the reported
+number of instances they have.
+Negative numbers indicate preferring hosts with fewer instances (i.e. choosing
+to spread instances), while positive numbers mean preferring hosts with more
+hosts (ie. choosing to pack).
+The default is 0.0 which means that you have to choose a strategy if you want
+to use it.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multiplier
+  ratio for this weigher.
+
+Example:
+
+* Strongly prefer to pack instances to hosts.
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    num_instances_weight_multiplier=1000
+
+* Softly prefer to spread instances between hosts.
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    num_instances_weight_multiplier=1.0
+
+* Disable weigher influence
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    num_instances_weight_multiplier=0
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
+"""),
     cfg.FloatOpt("io_ops_weight_multiplier",
         default=-1.0,
         help="""
