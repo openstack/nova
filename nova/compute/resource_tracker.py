@@ -39,6 +39,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova import metrics
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
@@ -1702,6 +1703,7 @@ class ResourceTracker(object):
             # the (potentially expensive) context.elevated construction below.
             return
         read_deleted_context = context.elevated(read_deleted='yes')
+        orphan_allocations = 0
         for consumer_uuid, alloc in allocations.items():
             if consumer_uuid in self.tracked_instances:
                 LOG.debug("Instance %s actively managed on this compute host "
@@ -1734,6 +1736,7 @@ class ResourceTracker(object):
                              "compute host but is not found in the database.",
                              {'uuid': instance_uuid},
                              exc_info=False)
+                    orphan_allocations += 1
                     continue
 
             # NOTE(mriedem): A cross-cell migration will work with instance
@@ -1811,6 +1814,7 @@ class ResourceTracker(object):
                             "the source host that might need to be removed: "
                             "%s.",
                             instance_uuid, instance.host, instance.node, alloc)
+        metrics.gauge("allocation.orphans", orphan_allocations)
 
     def delete_allocation_for_evacuated_instance(self, context, instance, node,
                                                  node_type='source'):
