@@ -252,6 +252,10 @@ LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 MIN_LIBVIRT_VDPA = (6, 9, 0)
 MIN_QEMU_VDPA = (5, 1, 0)
 
+# Maxphysaddr minimal support version.
+MIN_LIBVIRT_MAXPHYSADDR = (8, 7, 0)
+MIN_QEMU_MAXPHYSADDR = (2, 7, 0)
+
 REGISTER_IMAGE_PROPERTY_DEFAULTS = [
     'hw_machine_type',
     'hw_cdrom_bus',
@@ -855,6 +859,19 @@ class LibvirtDriver(driver.ComputeDriver):
             'supports_secure_boot': self._host.supports_secure_boot,
             'supports_remote_managed_ports':
             self._host.supports_remote_managed_ports
+        })
+
+        supports_maxphysaddr = self._host.has_min_version(
+            lv_ver=MIN_LIBVIRT_MAXPHYSADDR,
+            hv_ver=MIN_QEMU_MAXPHYSADDR,
+            hv_type=host.HV_DRIVER_QEMU,
+        )
+
+        # NOTE(nmiki): Currently libvirt does not provide a distinction
+        # between passthrough mode and emulated mode support status.
+        self.capabilities.update({
+            'supports_address_space_passthrough': supports_maxphysaddr,
+            'supports_address_space_emulated': supports_maxphysaddr,
         })
 
     def _register_all_undefined_instance_details(self) -> None:

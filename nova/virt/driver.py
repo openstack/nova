@@ -157,6 +157,10 @@ CAPABILITY_TRAITS_MAP = {
         os_traits.COMPUTE_EPHEMERAL_ENCRYPTION_LUKS,
     "supports_ephemeral_encryption_plain":
         os_traits.COMPUTE_EPHEMERAL_ENCRYPTION_PLAIN,
+    "supports_address_space_passthrough":
+        os_traits.COMPUTE_ADDRESS_SPACE_PASSTHROUGH,
+    "supports_address_space_emulated":
+        os_traits.COMPUTE_ADDRESS_SPACE_EMULATED,
 }
 
 
@@ -226,6 +230,8 @@ class ComputeDriver(object):
         "supports_secure_boot": False,
         "supports_socket_pci_numa_affinity": False,
         "supports_remote_managed_ports": False,
+        "supports_address_space_passthrough": False,
+        "supports_address_space_emulated": False,
 
         # Ephemeral encryption support flags
         "supports_ephemeral_encryption": False,

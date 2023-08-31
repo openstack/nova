@@ -104,6 +104,8 @@ class HyperVDriver(driver.ComputeDriver):
         "supports_accelerators": False,
         "supports_secure_boot": True,
         "supports_remote_managed_ports": False,
+        "supports_address_space_passthrough": False,
+        "supports_address_space_emulated": False,
 
         # Supported image types
         "supports_image_type_vhd": True,

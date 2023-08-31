@@ -119,6 +119,8 @@ class FakeDriver(driver.ComputeDriver):
         "supports_pcpus": False,
         "supports_accelerators": True,
         "supports_remote_managed_ports": True,
+        "supports_address_space_passthrough": True,
+        "supports_address_space_emulated": True,
 
         # Supported image types
         "supports_image_type_raw": True,
