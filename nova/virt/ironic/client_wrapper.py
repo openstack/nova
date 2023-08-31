@@ -32,7 +32,7 @@ ironic = None
 IRONIC_GROUP = nova.conf.ironic.ironic_group
 
 # The API version required by the Ironic driver
-IRONIC_API_VERSION = (1, 46)
+IRONIC_API_VERSION = (1, 82)
 # NOTE(TheJulia): This version should ALWAYS be the _last_ release
 # supported version of the API version used by nova. If a feature
 # needs a higher version to be negotiated to operate properly, then the version

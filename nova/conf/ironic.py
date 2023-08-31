@@ -82,6 +82,18 @@ Related options:
              'service. Note that setting this to the empty string (``""``) '
              'will match the default conductor group, and is different than '
              'leaving the option unset.'),
+    cfg.StrOpt(
+        'shard',
+        default=None,
+        mutable=True,
+        max_length=255,
+        regex=r'^[a-zA-Z0-9_.-]*$',
+        help='Specify which ironic shard this nova-compute will manage. '
+             'This allows you to shard Ironic nodes between compute '
+             'services across conductors and conductor groups. '
+             'When a shard is set, the peer_list configuraton is ignored. '
+             'We require that there is at most one nova-compute service '
+             'for each shard.'),
     cfg.ListOpt(
         'peer_list',
         deprecated_for_removal=True,
