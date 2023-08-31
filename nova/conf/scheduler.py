@@ -147,44 +147,6 @@ Related options:
 
 - ``[scheduler] placement_aggregate_required_for_tenants``
 """),
-    cfg.BoolOpt("query_placement_for_availability_zone",
-        default=True,
-        deprecated_for_removal=True,
-        deprecated_since='24.0.0',
-        deprecated_reason="""
-Since the introduction of placement pre-filters in 18.0.0 (Rocky), we have
-supported tracking Availability Zones either natively in placement or using the
-legacy ``AvailabilityZoneFilter`` scheduler filter. In 24.0.0 (Xena), the
-filter-based approach has been deprecated for removal in favor of the
-placement-based approach. As a result, this config option has also been
-deprecated and will be removed when the ``AvailabilityZoneFilter`` filter is
-removed.
-""",
-        help="""
-Use placement to determine availability zones.
-
-This setting causes the scheduler to look up a host aggregate with the
-metadata key of `availability_zone` set to the value provided by an
-incoming request, and request results from placement be limited to that
-aggregate.
-
-The matching aggregate UUID must be mirrored in placement for proper
-operation. If no host aggregate with the `availability_zone` key is
-found, or that aggregate does not match one in placement, the result will
-be the same as not finding any suitable hosts.
-
-Note that if you disable this flag, you **must** enable the (less efficient)
-``AvailabilityZoneFilter`` in the scheduler in order to availability zones to
-work correctly.
-
-Possible values:
-
-- A boolean value.
-
-Related options:
-
-- ``[filter_scheduler] enabled_filters``
-"""),
     cfg.BoolOpt("query_placement_for_image_type_support",
         default=False,
         help="""

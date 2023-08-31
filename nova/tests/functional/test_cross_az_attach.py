@@ -42,8 +42,7 @@ class CrossAZAttachTestCase(test.TestCase,
             api_version='v2.1')).admin_api
         self.start_service('conductor')
         self.start_service('scheduler')
-        # Start two compute services and add them to the AZ. This allows us to
-        # get past the AvailabilityZoneFilter and build a server.
+        # Start two compute service and add it to the AZ.
         self.start_service('compute', host='host1')
         self.start_service('compute', host='host2')
         agg_id = self.api.post_aggregate({'aggregate': {

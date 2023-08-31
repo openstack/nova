@@ -134,7 +134,7 @@ For example:
 
   [[post-config|$NOVA_CONF]]
   [filter_scheduler]
-  enabled_filters=ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter
+  enabled_filters=ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter
   EOF
   $ FORCE=yes ./stack.sh
 

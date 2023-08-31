@@ -67,7 +67,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     # correctly constructed.
     USE_PROJECT_ID = True
     # Availability zones for the API samples tests. Can be overridden by
-    # sub-classes. If set, the AvailabilityZoneFilter is not used.
+    # sub-classes.
     availability_zones = ['us-west']
 
     scenarios = [
@@ -122,17 +122,3 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
 
     def _setup_services(self):
         pass
-
-    def _setup_scheduler_service(self):
-        """Overrides _IntegratedTestBase._setup_scheduler_service to filter
-        out the AvailabilityZoneFilter prior to starting the scheduler.
-        """
-        if self.availability_zones:
-            # The test is using fake zones so disable the
-            # AvailabilityZoneFilter which is otherwise enabled by default.
-            enabled_filters = CONF.filter_scheduler.enabled_filters
-            if 'AvailabilityZoneFilter' in enabled_filters:
-                enabled_filters.remove('AvailabilityZoneFilter')
-                self.flags(enabled_filters=enabled_filters,
-                           group='filter_scheduler')
-        return super(ApiSampleTestBaseV21, self)._setup_scheduler_service()

@@ -142,8 +142,6 @@ def map_az_to_placement_aggregate(ctxt, request_spec):
     This will modify request_spec to request hosts in an aggregate that
     matches the desired AZ of the user's request.
     """
-    if not CONF.scheduler.query_placement_for_availability_zone:
-        return False
 
     az_hint = request_spec.availability_zone
     if not az_hint:

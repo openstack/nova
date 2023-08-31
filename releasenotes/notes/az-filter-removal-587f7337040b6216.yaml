@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The ``AvailabilityZoneFilter`` was deprecated for removal
+    in 24.0.0 (Xena) and has now been removed.
+    The functionality of the``AvailabilityZoneFilter`` has been
+    replaced by the``map_az_to_placement_aggregate`` pre-filter.
+    The  pre-filter was introduced in 18.0.0 (Rocky) and enabled
+    by default in 24.0.0 (Xena). This pre-filter is now always
+    enabled and the ``[scheduler] query_placement_for_availability_zone``
+    config option has been removed.
