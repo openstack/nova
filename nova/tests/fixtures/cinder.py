@@ -162,6 +162,9 @@ class CinderFixture(fixtures.Fixture):
         self.useFixture(fixtures.MockPatch(
             'nova.volume.cinder.API.get_absolute_limits',
             side_effect=self.fake_get_absolute_limits, autospec=False))
+        self.useFixture(fixtures.MockPatch(
+            'nova.volume.cinder.API.attachment_get_all',
+            side_effect=self.fake_attachment_get_all, autospec=False))
 
     def _is_multiattach(self, volume_id):
         return volume_id in [
@@ -409,6 +412,23 @@ class CinderFixture(fixtures.Fixture):
         limits = {'totalSnapshotsUsed': 0, 'maxTotalSnapshots': -1}
         return limits
 
+    def fake_attachment_get_all(
+            self, context, instance_id=None, volume_id=None):
+        if not instance_id and not volume_id:
+            raise exception.InvalidRequest(
+                "Either instance or volume id must be passed.")
+
+        if volume_id in self.volume_to_attachment:
+            return self.volume_to_attachment[volume_id]
+
+        all_attachments = []
+        for _, attachments in self.volume_to_attachment.items():
+            all_attachments.extend(
+                [attach for attach in attachments.values()
+                 if instance_id == attach['instance_uuid']])
+
+        return all_attachments
+
     def volume_ids_for_instance(self, instance_uuid):
         for volume_id, attachments in self.volume_to_attachment.items():
             for attachment in attachments.values():
@@ -425,3 +445,24 @@ class CinderFixture(fixtures.Fixture):
                 if attachment['instance_uuid'] == instance_uuid:
                     attachment_ids.append(attachment['id'])
         return attachment_ids
+
+    def create_vol_attachment(self, volume_id, instance_id):
+        attachment_id = uuidutils.generate_uuid()
+        if self.attachment_error_id is not None:
+            attachment_id = self.attachment_error_id
+        attachment = {'id': attachment_id}
+        self.volume_to_attachment[volume_id][attachment_id] = {
+            'id': attachment_id,
+            'instance_uuid': instance_id,
+        }
+        return attachment
+
+    def get_vol_attachment(self, _id):
+        for _, attachments in self.volume_to_attachment.items():
+            for attachment_id in attachments:
+                if _id == attachment_id:
+                    # return because attachment id is unique
+                    return attachments[attachment_id]
+
+    def delete_vol_attachment(self, vol_id):
+        del self.volume_to_attachment[vol_id]
