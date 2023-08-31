@@ -1333,6 +1333,7 @@ class ProviderUsageBaseTestCase(test.TestCase, PlacementInstanceHelperMixin):
         self.policy = self.useFixture(nova_fixtures.RealPolicyFixture())
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
         self.useFixture(nova_fixtures.AllServicesCurrent())
 

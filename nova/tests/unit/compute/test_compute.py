@@ -1471,6 +1471,132 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEqual(1, attach_block_devices.call_count)
         get_swap.assert_called_once_with([])
 
+    def _test__delete_dangling_bdms(
+            self, instance, nova_bdms, cinder_attachments, valid=False):
+        with test.nested(
+            mock.patch.object(objects.BlockDeviceMappingList,
+                              'get_by_instance_uuid'),
+            mock.patch.object(objects.BlockDeviceMapping, 'destroy'),
+            mock.patch.object(cinder.API, 'attachment_get'),
+            mock.patch.object(cinder.API, 'attachment_get_all'),
+            mock.patch.object(cinder.API, 'attachment_delete')
+        ) as (mock_get_bdms, mock_destroy, mock_attach_get,
+              mock_all_attachments, mock_attachment_delete):
+            mock_get_bdms.return_value = nova_bdms
+            mock_all_attachments.return_value = cinder_attachments
+
+            if not valid:
+                err = exception.VolumeAttachmentNotFound(
+                    attachment_id=None)
+                mock_attach_get.side_effect = err
+
+            self.compute._delete_dangling_bdms(
+                self.context, instance, nova_bdms)
+
+            return mock_destroy, mock_attachment_delete
+
+    def test_dangling_bdms_nothing_to_delete(self):
+        """no bdm, no attachments"""
+        instance = self._create_fake_instance_obj()
+        bdms = objects.BlockDeviceMappingList(objects=[])
+        mock_dstr, mock_atach_del = self._test__delete_dangling_bdms(
+            instance, bdms, [])
+        self.assertTrue(mock_dstr.assert_not_called)
+        self.assertTrue(mock_atach_del.assert_not_called)
+
+    def test_dangling_bdms_delete_from_bdm(self):
+        """valid source type:
+        able to retrieve from valid target attachmnet from cinder
+        bdm should not get deleted.
+        there is a 'valid' flag passed while
+        calling _test__delete_dangling_bdms
+
+        invalid source type:
+        attachment is of image type, bdm should not get deleted
+        """
+        instance = self._create_fake_instance_obj()
+        bdms = objects.BlockDeviceMappingList(objects=[
+                objects.BlockDeviceMapping(
+                    **fake_block_device.AnonFakeDbBlockDeviceDict(
+                        {
+                            'instance_uuid': instance.uuid,
+                            'volume_id': uuids.fake_vol1,
+                            'attachment_id': uuids.fake_attachment_1,
+                            'source_type': 'volume',
+                            'destination_type': 'volume'})),
+                objects.BlockDeviceMapping(
+                    **fake_block_device.AnonFakeDbBlockDeviceDict(
+                        {
+                            'instance_uuid': instance.uuid,
+                            'volume_id': uuids.fake_vol2,
+                            'attachment_id': uuids.fake_attachment_2,
+                            'source_type': 'image',
+                            'destination_type': 'volume'}))
+            ])
+
+        mock_destroy, _ = self._test__delete_dangling_bdms(
+            instance, bdms, [], True)
+        # bdm.destroy never gets called
+        self.assertFalse(mock_destroy.called)
+        self.assertEqual(mock_destroy.call_count, 0)
+        # u_bdms are valid bdms, both image and volume are valid bdm
+        self.assertEqual(len(bdms), 2)
+
+    def test_dangling_bdms_delete_from_multi_bdm(self):
+        """nova has bdms but they are not present at cinder side
+        both bdms should be deleted
+        """
+        instance = self._create_fake_instance_obj()
+        bdms = objects.BlockDeviceMappingList(objects=[
+                objects.BlockDeviceMapping(
+                    **fake_block_device.AnonFakeDbBlockDeviceDict(
+                        {
+                            'instance_uuid': instance.uuid,
+                            'volume_id': uuids.fake_vol1,
+                            'attachment_id': uuids.fake_attachment_1,
+                            'source_type': 'volume',
+                            'destination_type': 'volume'})),
+                objects.BlockDeviceMapping(
+                    **fake_block_device.AnonFakeDbBlockDeviceDict(
+                        {
+                            'instance_uuid': instance.uuid,
+                            'volume_id': uuids.fake_vol2,
+                            'attachment_id': uuids.fake_attachment_2,
+                            'source_type': 'volume',
+                            'destination_type': 'volume'}))
+            ])
+
+        mock_destroy, _ = self._test__delete_dangling_bdms(
+            instance, bdms, [])
+        self.assertTrue(mock_destroy.called)
+        self.assertEqual(mock_destroy.call_count, 2)
+        self.assertEqual(len(bdms), 0)
+
+    def test_dangling_bdms_delete_cinder_attachments(self):
+        """out of 2 one cinder attachment is present in nova side"""
+        instance = self._create_fake_instance_obj()
+        bdms = objects.BlockDeviceMappingList(objects=[
+                objects.BlockDeviceMapping(
+                    **fake_block_device.AnonFakeDbBlockDeviceDict(
+                        {
+                            'instance_uuid': instance.uuid,
+                            'volume_id': uuids.fake_vol1,
+                            'attachment_id': uuids.fake_attachment_1,
+                            'source_type': 'volume',
+                            'destination_type': 'volume'})),
+            ])
+
+        cinder_attachments = [
+            {'id': uuids.fake_attachment_1},
+            {'id': 2},
+        ]
+        _, mock_attachment_delete = self._test__delete_dangling_bdms(
+            instance, bdms, cinder_attachments, True)
+
+        self.assertTrue(mock_attachment_delete.call_count, 1)
+        self.assertEqual(mock_attachment_delete.call_args_list[0][0][1], 2)
+        self.assertEqual(len(bdms), 1)
+
 
 class ComputeTestCase(BaseTestCase,
                       test_diagnostics.DiagnosticsComparisonMixin,
@@ -2897,6 +3023,8 @@ class ComputeTestCase(BaseTestCase,
             reimage_boot_volume=False, target_state=None)
         self.compute.terminate_instance(self.context, instance, [])
 
+    @mock.patch.object(compute_manager.ComputeManager,
+                           '_delete_dangling_bdms')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(compute_manager.ComputeManager,
                            '_get_instance_block_device_info')
@@ -2908,9 +3036,9 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def _test_reboot(self, soft, mock_notify_action, mock_get_power,
                      mock_get_orig, mock_update, mock_notify_usage,
-                     mock_get_blk, mock_get_bdms, test_delete=False,
-                     test_unrescue=False, fail_reboot=False,
-                     fail_running=False):
+                     mock_get_blk, mock_get_bdms, mock_del_stale_bdms,
+                     test_delete=False, test_unrescue=False,
+                     fail_reboot=False, fail_running=False):
         reboot_type = soft and 'SOFT' or 'HARD'
         task_pending = (soft and task_states.REBOOT_PENDING or
                         task_states.REBOOT_PENDING_HARD)
@@ -3127,6 +3255,8 @@ class ComputeTestCase(BaseTestCase,
     def test_reboot_hard_and_delete_and_rescued(self):
         self._test_reboot(False, test_delete=True, test_unrescue=True)
 
+    @mock.patch.object(compute_manager.ComputeManager,
+                           '_delete_dangling_bdms')
     @mock.patch('nova.virt.fake.FakeDriver.reboot')
     @mock.patch('nova.objects.instance.Instance.save')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -3141,7 +3271,7 @@ class ComputeTestCase(BaseTestCase,
     def _test_reboot_with_accels(self, mock_notify_action, mock_get_power,
              mock_get_orig, mock_update, mock_notify_usage,
              mock_get_blk, mock_get_bdms, mock_inst_save, mock_reboot,
-             extra_specs=None, accel_info=None):
+             mock_del_stale_bdms, extra_specs=None, accel_info=None):
 
         self.compute.network_api.get_instance_nw_info = mock.Mock()
 

@@ -1,0 +1,24 @@
+---
+features:
+  - |
+    This change ensures the synchronization of volume attachments
+    between Nova and Cinder, by deleting any dangling volume attachments
+    and maintaining consistency between two databases.
+
+    Block device mapping (BDM) table in the Nova database, stores
+    information about volume attachments, image attachments
+    and swap attachments. Similarly, each volume attachment had a
+    corresponding entry in the Cinder database volume attachment table.
+
+    With this change, on instance reboot, Nova will checks for all volume
+    attachments associated with the instance and verifies their availability
+    in the Cinder database. If attachments are not found they will get deleted
+    from Nova database too.
+
+    After Nova database cleanup, similarly Cinder database is checked for
+    attachments related to instance. If attachments found in Cinder DB that
+    are not present in Nova DB, they will get deleted from Cinder databse.
+
+    See `spec`__ for more details.
+
+    __ https://specs.openstack.org/openstack/nova-specs/specs/2023.2/approved/cleanup-dangling-volume-attachments.html
