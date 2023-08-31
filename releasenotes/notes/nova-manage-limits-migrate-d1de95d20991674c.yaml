@@ -1,0 +1,7 @@
+features:
+  - |
+    A new command ``nova-manage limits migrate_to_unified_limits`` has been
+    added to make migration from the ``nova.quota.DbQuotaDriver`` to the
+    ``nova.quota.UnifiedLimitsDriver`` easier. This will enable operators to
+    have their existing quota limits copied from the Nova database to Keystone
+    automatically.

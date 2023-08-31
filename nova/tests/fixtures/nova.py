@@ -2032,3 +2032,66 @@ class GreenThreadPoolShutdownWait(fixtures.Fixture):
         self.useFixture(fixtures.MockPatch(
             'futurist.GreenThreadPoolExecutor.shutdown',
             lambda self, wait: real_shutdown(self, wait=True)))
+
+
+class UnifiedLimitsFixture(fixtures.Fixture):
+    def setUp(self):
+        super().setUp()
+        self.mock_sdk_adapter = mock.Mock()
+        real_get_sdk_adapter = utils.get_sdk_adapter
+
+        def fake_get_sdk_adapter(service_type, **kwargs):
+            if service_type == 'identity':
+                return self.mock_sdk_adapter
+            return real_get_sdk_adapter(service_type, **kwargs)
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.utils.get_sdk_adapter', fake_get_sdk_adapter))
+
+        self.mock_sdk_adapter.registered_limits.side_effect = (
+            self.registered_limits)
+        self.mock_sdk_adapter.limits.side_effect = self.limits
+        self.mock_sdk_adapter.create_registered_limit.side_effect = (
+            self.create_registered_limit)
+        self.mock_sdk_adapter.create_limit.side_effect = self.create_limit
+
+        self.registered_limits_list = []
+        self.limits_list = []
+
+    def registered_limits(self, region_id=None):
+        if region_id:
+            return [rl for rl in self.registered_limits_list
+                    if rl.region_id == region_id]
+        return self.registered_limits_list
+
+    def limits(self, project_id=None, region_id=None):
+        limits_list = self.limits_list
+        if project_id:
+            limits_list = [pl for pl in limits_list
+                           if pl.project_id == project_id]
+        if region_id:
+            limits_list = [pl for pl in limits_list
+                           if pl.region_id == region_id]
+        return limits_list
+
+    def create_registered_limit(self, **attrs):
+        rl = collections.namedtuple(
+            'RegisteredLimit',
+            ['resource_name', 'default_limit', 'region_id', 'service_id'])
+        rl.resource_name = attrs.get('resource_name')
+        rl.default_limit = attrs.get('default_limit')
+        rl.region_id = attrs.get('region_id')
+        rl.service_id = attrs.get('service_id')
+        self.registered_limits_list.append(rl)
+
+    def create_limit(self, **attrs):
+        pl = collections.namedtuple(
+            'Limit',
+            ['resource_name', 'resource_limit', 'project_id', 'region_id',
+             'service_id'])
+        pl.resource_name = attrs.get('resource_name')
+        pl.resource_limit = attrs.get('resource_limit')
+        pl.project_id = attrs.get('project_id')
+        pl.region_id = attrs.get('region_id')
+        pl.service_id = attrs.get('service_id')
+        self.limits_list.append(pl)
