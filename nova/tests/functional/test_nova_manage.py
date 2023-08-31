@@ -2443,9 +2443,10 @@ class TestNovaManageLimits(test.TestCase):
         mock_sdk.return_value.create_limit.side_effect = (
             test.TestingException('oops!'))
 
-        # Create a couple of project limits.
+        # Create a few project limits.
         objects.Quotas.create_limit(self.ctxt, uuids.project, 'ram', 8192)
         objects.Quotas.create_limit(self.ctxt, uuids.project, 'instances', 25)
+        objects.Quotas.create_limit(self.ctxt, uuids.project, 'cores', 22)
 
         return_code = self.cli.migrate_to_unified_limits(
             project_id=uuids.project, verbose=True)
@@ -2458,10 +2459,16 @@ class TestNovaManageLimits(test.TestCase):
         # cores, ram, metadata_items, injected_files,
         # injected_file_content_bytes, injected_file_path_length, key_pairs,
         # server_groups, and server_group_members.
+        #
+        # And there is 1 default limit value automatically generated for PCPU
+        # based on 'cores'.
         self.assertEqual(
-            10, mock_sdk.return_value.create_registered_limit.call_count)
+            11, mock_sdk.return_value.create_registered_limit.call_count)
 
-        self.assertEqual(2, mock_sdk.return_value.create_limit.call_count)
+        # We expect that we attempted to create 4 project limits:
+        # class:MEMORY_MB, servers, and class:VCPU = 3 + special case
+        # class:PCPU = 4.
+        self.assertEqual(4, mock_sdk.return_value.create_limit.call_count)
 
     def test_migrate_to_unified_limits_already_exists(self):
         # Create a couple of unified limits to already exist.
@@ -2478,15 +2485,18 @@ class TestNovaManageLimits(test.TestCase):
         self.cli.migrate_to_unified_limits(
             project_id=uuids.project, verbose=True)
 
-        # There are 10 default limit values in the config options, so because a
-        # limit for 'servers' already exists, we should have only created 9.
+        # There are 10 default limit values in the config options +
+        # 1 special case for PCPU which will be added based on VCPU = 11.
+        # Because a limit for 'servers' already exists, we should have only
+        # created 10.
         mock_sdk = self.ul_api.mock_sdk_adapter
         self.assertEqual(
-            9, mock_sdk.create_registered_limit.call_count)
+            10, mock_sdk.create_registered_limit.call_count)
 
         # There already exists a project limit for 'class:VCPU', so we should
-        # have created only 1 project limit.
-        self.assertEqual(1, mock_sdk.create_limit.call_count)
+        # have created only 2 project limits. One for 'servers' and one for
+        # special case 'class:PCPU' generated from VCPU.
+        self.assertEqual(2, mock_sdk.create_limit.call_count)
 
     def test_migrate_to_unified_limits(self):
         # Set some defaults using the config options.
@@ -2534,10 +2544,14 @@ class TestNovaManageLimits(test.TestCase):
         self.cli.migrate_to_unified_limits(
             project_id=uuids.project, verbose=True)
 
-        # There should be 10 registered (default) limits now.
+        # There are 10 default limit values in the config options +
+        # 1 special case for PCPU which will be added based on VCPU = 11.
+        #
+        # There should be 11 registered (default) limits now.
         expected_registered_limits = {
             'servers': 5,
             'class:VCPU': 10,
+            'class:PCPU': 10,
             'class:MEMORY_MB': 4096,
             'server_metadata_items': 64,
             'server_injected_files': 3,
@@ -2549,7 +2563,7 @@ class TestNovaManageLimits(test.TestCase):
         }
 
         registered_limits = self.ul_api.registered_limits()
-        self.assertEqual(10, len(registered_limits))
+        self.assertEqual(11, len(registered_limits))
         for rl in registered_limits:
             self.assertEqual(
                 expected_registered_limits[rl.resource_name], rl.default_limit)
@@ -2581,7 +2595,7 @@ class TestNovaManageLimits(test.TestCase):
 
         region_registered_limits = self.ul_api.registered_limits(
             region_id=uuids.region)
-        self.assertEqual(10, len(region_registered_limits))
+        self.assertEqual(11, len(region_registered_limits))
         for rl in region_registered_limits:
             self.assertEqual(
                 expected_registered_limits[rl.resource_name], rl.default_limit)

@@ -1778,6 +1778,46 @@ This command is useful for operators to migrate from legacy quotas to unified
 limits. Limits are migrated by copying them from the Nova database to Keystone
 by creating them using the Keystone API.
 
+The Nova configuration file used by ``nova-manage`` must have a ``[keystone]``
+section that contains authentication settings in order for the Keystone API
+calls to succeed. As an example:
+
+.. code-block:: ini
+
+   [keystone]
+   region_name = RegionOne
+   user_domain_name = Default
+   auth_url = http://127.0.0.1/identity
+   auth_type = password
+   username = admin
+   password = <password>
+   system_scope = all
+
+By default `Keystone policy configuration`_, access to create, update, and
+delete in the `unified limits API`_ is restricted to callers with
+`system-scoped authorization tokens`_. The ``system_scope = all`` setting
+indicates the scope for system operations. You will need to ensure that the
+user configured under ``[keystone]`` has the necessary role and scope.
+
+.. warning::
+
+   The ``limits migrate_to_unified_limits`` command will create limits only
+   for resources that exist in the legacy quota system and any resource that
+   does not have a unified limit in Keystone will use a quota limit of **0**.
+
+   For resource classes that are allocated by the placement service and have no
+   default limit set, you will need to create default limits manually. The most
+   common example is class:DISK_GB. All Nova API requests that need to allocate
+   DISK_GB will fail quota enforcement until a default limit for it is set in
+   Keystone.
+
+   See the :doc:`unified limits documentation
+   </admin/unified-limits>` about creating limits using the OpenStackClient.
+
+.. _Keystone policy configuration: https://docs.openstack.org/keystone/latest/configuration/policy.html
+.. _unified limits API: https://docs.openstack.org/api-ref/identity/v3/index.html#unified-limits
+.. _system-scoped authorization tokens: https://docs.openstack.org/keystone/latest/admin/tokens-overview.html#system-scoped-tokens
+
 .. versionadded:: 28.0.0 (2023.2 Bobcat)
 
 .. rubric:: Options

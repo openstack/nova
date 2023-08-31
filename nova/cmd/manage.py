@@ -3384,6 +3384,17 @@ class LimitsCommands():
             zip(unified_to_legacy_names.values(),
                 unified_to_legacy_names.keys()))
 
+        # Handle the special case of PCPU. With legacy quotas, there is no
+        # dedicated quota limit for PCPUs, so they share the quota limit for
+        # VCPUs: 'cores'. With unified limits, class:PCPU has its own dedicated
+        # quota limit, so we will just mirror the limit for class:VCPU and
+        # create a limit with the same value for class:PCPU.
+        if 'cores' in legacy_defaults:
+            # Just make up a dummy legacy resource 'pcores' for this.
+            legacy_defaults['pcores'] = legacy_defaults['cores']
+            unified_to_legacy_names['class:PCPU'] = 'pcores'
+            legacy_to_unified_names['pcores'] = 'class:PCPU'
+
         # For auth, a section for [keystone] is required in the config:
         #
         # [keystone]
@@ -3447,6 +3458,11 @@ class LimitsCommands():
         legacy_projects.pop('project_id', None)
         msg = f'Found project limits in the database: {legacy_projects} ...'
         output(_(msg))
+
+        # Handle the special case of PCPU again for project limits.
+        if 'cores' in legacy_projects:
+            # Just make up a dummy legacy resource 'pcores' for this.
+            legacy_projects['pcores'] = legacy_projects['cores']
 
         # Retrieve existing limits from Keystone.
         project_limits = keystone_api.limits(

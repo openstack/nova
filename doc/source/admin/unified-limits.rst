@@ -135,6 +135,12 @@ To list all default quotas for a project, run:
 
     This lists default quotas for all services and not just nova.
 
+To show details about a default limit, run:
+
+.. code-block:: console
+
+   $ openstack registered limit show <registered-limit-id>
+
 To create a default quota limit, run:
 
 .. code-block:: console
@@ -149,11 +155,17 @@ To create a default quota limit, run:
 
    .. _Keystone tokens documentation: https://docs.openstack.org/keystone/latest/admin/tokens-overview.html#operation_create_system_token
 
-To update a default value, run:
+To update a default quota value, run:
 
 .. code-block:: console
 
     $ openstack registered limit set --default-limit <value> <registered-limit-id>
+
+To delete a default quota limit, run:
+
+.. code-block:: console
+
+   $ openstack registered limit delete <registered-limit-id> [<registered-limit-id> ...]
 
 View and update quota values for a project
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,18 +187,36 @@ token and run:
 
    $ openstack limit list
 
+To show details about a quota limit, run:
+
+.. code-block:: console
+
+   $ openstack limit show <limit-id>
+
+To create a quota limit for a project, run:
+
+.. code-block:: console
+
+   $ openstack limit create --service nova --project <project> --resource-limit <value> <resource-name>
+
 To update quotas for a project, run:
 
 .. code-block:: console
 
     $ openstack limit set --resource-limit <value> <limit-id>
 
+To delete quotas for a project, run:
+
+.. code-block:: console
+
+   $ openstack limit delete <limit-id> [<limit-id> ...]
+
 
 Migration to unified limits quotas
 ----------------------------------
 
-There is a `nova-manage limits migrate_to_unified_limits`_ command available
-to help with moving from legacy Nova database quotas to Keystone unified limits
+There is a `nova-manage limits migrate_to_unified_limits`_ command available to
+help with moving from legacy Nova database quotas to Keystone unified limits
 quotas. The command will read quota limits from the Nova database and call the
 Keystone API to create the corresponding unified limits. Per-user quota limits
 will **not** be copied into Keystone because per-user quotas are not supported
