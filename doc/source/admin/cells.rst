@@ -755,7 +755,13 @@ them far over quota when the unreachable cell returns.
    counting of quota usage from the placement service and API database
    to make quota usage calculations resilient to down or poor-performing
    cells in a multi-cell environment. See the :doc:`quotas documentation
-   </user/quotas>` for more details.
+   </admin/quotas>` for more details.
+
+   Starting in the 2023.2 Bobcat (28.0.0) release, it is possible to configure
+   unified limits quotas, which stores quota limits as Keystone unified limits
+   and counts quota usage from the placement service and API database. See the
+   :doc:`unified limits documentation </admin/unified-limits>` for more
+   details.
 
 Performance of listing instances
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

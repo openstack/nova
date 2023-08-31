@@ -1,0 +1,5 @@
+deprecations:
+  - |
+    The ``nova.quota.DbQuotaDriver`` is marked as deprecated and the default
+    quota driver configuration is planned to be changed to the
+    ``nova.quota.UnifiedLimitsDriver`` in the 29.0.0 (2024.1 Caracal) release.
