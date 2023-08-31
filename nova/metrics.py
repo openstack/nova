@@ -46,7 +46,7 @@ def _get_statsd_client():
     return _STATSD_CLIENT
 
 
-def _send_metric(tag: str, value: Union[int, float, None],
+def _send_metric(tag: str, value: Union[int, float],
                  m_type: MetricType = MetricType.GAUGE):
     client = _get_statsd_client()
     try:
@@ -58,5 +58,5 @@ def _send_metric(tag: str, value: Union[int, float, None],
         LOG.exception(f"Exception during metrics handling: {err}")
 
 
-def gauge(tag: str, value: int):
+def gauge(tag: str, value: Union[int, float]):
     _send_metric(tag, value, MetricType.GAUGE)
