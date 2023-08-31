@@ -2,6 +2,7 @@ dumb-init
 python-memcached
 pymemcache
 python-ironicclient
+statsd  # MIT
 
 -e git+https://github.com/sapcc/raven-python.git@ccloud#egg=raven
 -e git+https://github.com/sapcc/openstack-watcher-middleware.git#egg=watcher-middleware

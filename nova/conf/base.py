@@ -70,9 +70,19 @@ greenthread pool concurrently, defaults to 1000, min value is 100.
 '''),
 ]
 
+metrics_opts = [
+    cfg.IntOpt('statsd_port',
+               default=8125,
+               help='Port of the statsd service.'),
+    cfg.StrOpt('statsd_host',
+               default='localhost',
+               help='Host of the statsd service.'),
+]
+
 
 def register_opts(conf):
     conf.register_opts(base_options)
+    conf.register_opts(metrics_opts)
 
 
 def list_opts():
