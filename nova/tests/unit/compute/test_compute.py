@@ -25,7 +25,9 @@ import sys
 from unittest import mock
 
 from castellan import key_manager
+from cinderclient import exceptions as cinder_exception
 import ddt
+from keystoneclient import exceptions as keystone_exception
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -1495,6 +1497,43 @@ class ComputeVolumeTestCase(BaseTestCase):
 
             return mock_destroy, mock_attachment_delete
 
+    def _test_delete_dangling_bdms_cinder_error(self):
+        instance = self._create_fake_instance_obj()
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(
+                **fake_block_device.AnonFakeDbBlockDeviceDict(
+                    {
+                        'instance_uuid': instance.uuid,
+                        'volume_id': uuids.fake_vol1,
+                        'attachment_id': uuids.fake_attachment_1,
+                        'source_type': 'volume',
+                        'destination_type': 'volume'})),
+            objects.BlockDeviceMapping(
+                **fake_block_device.AnonFakeDbBlockDeviceDict(
+                    {
+                        'instance_uuid': instance.uuid,
+                        'volume_id': uuids.fake_vol2,
+                        'attachment_id': uuids.fake_attachment_2,
+                        'source_type': 'image',
+                        'destination_type': 'volume'}))
+        ])
+
+        expected = bdms.obj_to_primitive()
+        self.compute._delete_dangling_bdms(self.context, instance, bdms)
+        self.assertEqual(expected, bdms.obj_to_primitive())
+
+    @mock.patch.object(
+            cinder.API, 'attachment_get_all',
+            new=mock.Mock(side_effect=keystone_exception.EndpointNotFound()))
+    def test_delete_dangling_bdms_cinder_not_found(self):
+        self._test_delete_dangling_bdms_cinder_error()
+
+    @mock.patch.object(
+            cinder.API, 'attachment_get_all',
+            new=mock.Mock(side_effect=cinder_exception.ClientException(500)))
+    def test_delete_dangling_bdms_cinder_client_error(self):
+        self._test_delete_dangling_bdms_cinder_error()
+
     def test_dangling_bdms_nothing_to_delete(self):
         """no bdm, no attachments"""
         instance = self._create_fake_instance_obj()
@@ -1588,13 +1627,15 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         cinder_attachments = [
             {'id': uuids.fake_attachment_1},
-            {'id': 2},
+            {'id': uuids.not_in_nova_bdms},
         ]
         _, mock_attachment_delete = self._test__delete_dangling_bdms(
             instance, bdms, cinder_attachments, True)
 
         self.assertTrue(mock_attachment_delete.call_count, 1)
-        self.assertEqual(mock_attachment_delete.call_args_list[0][0][1], 2)
+        self.assertEqual(
+            mock_attachment_delete.call_args_list[0][0][1],
+            uuids.not_in_nova_bdms)
         self.assertEqual(len(bdms), 1)
 
 

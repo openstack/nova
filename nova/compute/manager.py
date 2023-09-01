@@ -4185,8 +4185,20 @@ class ComputeManager(manager.Manager):
 
         :param context: The nova request context.
         :param instance: instance object.
-        :param instance: BlockDeviceMappingList list object.
+        :param bdms: BlockDeviceMappingList list object.
         """
+
+        try:
+            cinder_attachments = self.volume_api.attachment_get_all(
+                context, instance.uuid)
+        except (keystone_exception.EndpointNotFound,
+                cinder_exception.ClientException):
+            # if cinder is not deployed we never need to check for
+            # attachments as there cannot be dangling bdms.
+            # if we cannot connect to cinder we cannot check for dangling
+            # bdms so we skip the check. Intermittent connection issues
+            # to cinder should not cause instance reboot to fail.
+            return
 
         # attachments present in nova DB, ones nova knows about
         nova_attachments = []
@@ -4206,8 +4218,6 @@ class ComputeManager(manager.Manager):
                 else:
                     nova_attachments.append(bdm.attachment_id)
 
-        cinder_attachments = self.volume_api.attachment_get_all(
-            context, instance.uuid)
         cinder_attachments = [each['id'] for each in cinder_attachments]
 
         if len(set(cinder_attachments) - set(nova_attachments)):
