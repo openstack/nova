@@ -216,18 +216,14 @@ patch_tpool_proxy()
 # doc/source/reference/libvirt-distro-support-matrix.rst
 #
 # DO NOT FORGET to update this document when touching any versions below!
-MIN_LIBVIRT_VERSION = (6, 0, 0)
-MIN_QEMU_VERSION = (4, 2, 0)
+MIN_LIBVIRT_VERSION = (7, 0, 0)
+MIN_QEMU_VERSION = (5, 2, 0)
 NEXT_MIN_LIBVIRT_VERSION = (8, 0, 0)
 NEXT_MIN_QEMU_VERSION = (6, 2, 0)
-
-# vIOMMU driver attribute aw_bits minimal support version.
-MIN_LIBVIRT_VIOMMU_AW_BITS = (6, 5, 0)
 
 # vIOMMU model value `virtio` minimal support version
 MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL = (8, 3, 0)
 
-MIN_LIBVIRT_AARCH64_CPU_COMPARE = (6, 9, 0)
 
 MIN_LIBVIRT_TB_CACHE_SIZE = (8, 0, 0)
 
@@ -248,9 +244,6 @@ VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
-# VDPA interface support
-MIN_LIBVIRT_VDPA = (6, 9, 0)
-MIN_QEMU_VDPA = (5, 1, 0)
 
 # Maxphysaddr minimal support version.
 MIN_LIBVIRT_MAXPHYSADDR = (8, 7, 0)
@@ -7537,8 +7530,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # As Qemu supported values are 39 and 48, we set this to
         # larger width (48) by default and will not exposed to end user.
-        if self._host.has_min_version(MIN_LIBVIRT_VIOMMU_AW_BITS):
-            iommu.aw_bits = 48
+        iommu.aw_bits = 48
 
         if guest.os_mach_type is not None and 'q35' in guest.os_mach_type:
             iommu.eim = True
@@ -8214,12 +8206,9 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         dev_flags = (
             libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_NET |
-            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV
+            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV |
+            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_VDPA
         )
-        if self._host.has_min_version(
-            lv_ver=MIN_LIBVIRT_VDPA, hv_ver=MIN_QEMU_VDPA,
-        ):
-            dev_flags |= libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_VDPA
 
         devices = {
             dev.name(): dev for dev in
@@ -10019,17 +10008,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         host_cpu = self._host.get_capabilities().host.cpu
         if host_cpu.arch == fields.Architecture.AARCH64:
-            if self._host.has_min_version(MIN_LIBVIRT_AARCH64_CPU_COMPARE):
-                LOG.debug("On AArch64 hosts, source and destination host "
-                          "CPUs are compared to check if they're compatible"
-                          "(the only use-case supported by libvirt for "
-                          "Arm64/AArch64)")
-                cpu = host_cpu
-            else:
-                LOG.debug("You need %s libvirt version to be able to compare "
-                          "source host CPU with destination host CPU; skip "
-                          "CPU comparison", MIN_LIBVIRT_AARCH64_CPU_COMPARE)
-                return
+            LOG.debug("On AArch64 hosts, source and destination host "
+                      "CPUs are compared to check if they're compatible"
+                      "(the only use-case supported by libvirt for "
+                      "Arm64/AArch64)")
+            cpu = host_cpu
 
         u = ("http://libvirt.org/html/libvirt-libvirt-host.html#"
              "virCPUCompareResult")

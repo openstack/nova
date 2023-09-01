@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The minimum required version of libvirt by the `nova-compute`
+    service is now 7.0.0, and the minimum required version of QEMU is
+    5.2.0. Failing to meet these minimum versions when using the libvirt
+    compute driver will result in the `nova-compute` service not
+    starting.
+
+    The next minimum required version of libvirt to be used in a future
+    release is 8.0.0, while the next minimum QEMU is 6.2.0.

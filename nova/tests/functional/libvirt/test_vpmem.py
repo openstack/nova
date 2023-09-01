@@ -30,9 +30,6 @@ LOG = logging.getLogger(__name__)
 
 class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
 
-    FAKE_LIBVIRT_VERSION = 5000000
-    FAKE_QEMU_VERSION = 3001000
-
     def setUp(self):
         super(VPMEMTestBase, self).setUp()
 
@@ -89,8 +86,6 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
     def _get_connection(self, host_info, hostname=None):
         fake_connection = fakelibvirt.Connection(
             'qemu:///system',
-            version=self.FAKE_LIBVIRT_VERSION,
-            hv_version=self.FAKE_QEMU_VERSION,
             host_info=host_info,
             hostname=hostname)
         return fake_connection

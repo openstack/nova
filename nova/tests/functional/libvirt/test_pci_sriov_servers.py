@@ -1394,9 +1394,6 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
     NUM_PFS = 1
     NUM_VFS = 4
 
-    FAKE_LIBVIRT_VERSION = 6_009_000  # 6.9.0
-    FAKE_QEMU_VERSION = 5_001_000  # 5.1.0
-
     def setUp(self):
         super().setUp()
         # The ultimate base class _IntegratedTestBase uses NeutronFixture but
@@ -1444,9 +1441,7 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
             vdpa_info.add_device(f'vdpa_vdpa{idx}', idx, vf)
 
         return super().start_compute(hostname=hostname,
-            pci_info=pci_info, vdpa_info=vdpa_info,
-            libvirt_version=self.FAKE_LIBVIRT_VERSION,
-            qemu_version=self.FAKE_QEMU_VERSION)
+            pci_info=pci_info, vdpa_info=vdpa_info)
 
     def create_vdpa_port(self):
         vdpa_port = {
@@ -3661,7 +3656,6 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
 
     # Min Libvirt version that supports working with PCI VPD.
     FAKE_LIBVIRT_VERSION = 7_009_000  # 7.9.0
-    FAKE_QEMU_VERSION = 5_001_000  # 5.1.0
 
     def setUp(self):
         super().setUp()
@@ -3790,8 +3784,7 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
         return super().start_compute(
             hostname=hostname, host_info=host_info, pci_info=pci_info,
             mdev_info=mdev_info, vdpa_info=vdpa_info,
-            libvirt_version=libvirt_version or self.FAKE_LIBVIRT_VERSION,
-            qemu_version=qemu_version or self.FAKE_QEMU_VERSION)
+            libvirt_version=libvirt_version or self.FAKE_LIBVIRT_VERSION)
 
     def create_remote_managed_tunnel_port(self):
         dpu_tunnel_port = {
