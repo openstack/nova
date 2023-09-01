@@ -33,4 +33,6 @@ function evacuate_and_wait_for_error() {
 }
 
 evacuate_and_wait_for_error evacuate-test
-evacuate_and_wait_for_error evacuate-bfv-test
+if openstack endpoint list | grep cinder; then
+    evacuate_and_wait_for_error evacuate-bfv-test
+fi
