@@ -493,6 +493,14 @@ class InstanceHelperMixin:
         self.notifier.wait_for_versioned_notifications('instance.reboot.end')
         return self._wait_for_state_change(server, expected_state)
 
+    def _show_server(self, server):
+        """This method is to retrieve fresh copy of target server object
+        """
+        try:
+            return self.api.get_server(server['id'])
+        except api_client.OpenStackApiNotFoundException:
+            return server
+
     def _attach_interface(self, server, port_uuid):
         """attach a neutron port to a server."""
         body = {
@@ -654,10 +662,9 @@ class InstanceHelperMixin:
             # wait for each vol to get attached
             self._wait_for_volume_attach(server['id'], vol_id)
 
-        # here server is already in an active state
         # this is just to refresh server object
         # so attached volumes can be shown in server
-        return self._wait_for_state_change(server, expected_status='ACTIVE')
+        return self._show_server(server)
 
     def _create_vol_attachments_by_cinder(
             self, volume_id, server, new_attachments=1):
