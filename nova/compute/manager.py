@@ -10638,6 +10638,19 @@ class ComputeManager(manager.Manager):
         # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
+                # if the node could be migrated, we don't delete
+                # the compute node database records
+                if not self.driver.is_node_deleted(cn.hypervisor_hostname):
+                    LOG.warning(
+                        "Found orphan compute node %(id)s "
+                        "hypervisor host is %(hh)s, "
+                        "nodes are %(nodes)s. "
+                        "We are not deleting this as the driver "
+                        "says this node has not been deleted.",
+                        {'id': cn.id, 'hh': cn.hypervisor_hostname,
+                         'nodes': nodenames})
+                    continue
+
                 LOG.info("Deleting orphan compute node %(id)s "
                          "hypervisor host is %(hh)s, "
                          "nodes are %(nodes)s",
