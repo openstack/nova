@@ -1240,8 +1240,8 @@ Name (FQDN).
 
 .. _microversion 2.95:
 
-2.95 (Maximum in 2023.1 Antelope)
----------------------------------
+2.95 (Maximum in 2023.1 Antelope and 2023.2 Bobcat)
+---------------------------------------------------
 
 Any evacuated instances will be now stopped at destination. This
 requires minimun nova release 27.0.0, OpenStack release 2023.1
