@@ -20,6 +20,11 @@ API`_.
 Types of quota
 --------------
 
+Unified limit resource names for resources that are tracked as `resource
+classes`_ in the placement service follow the naming pattern of the ``class:``
+prefix followed by the name of the resource class. For example: class:VCPU,
+class:PCPU, class:MEMORY_MB, class:DISK_GB, class:VGPU.
+
 .. list-table::
    :header-rows: 1
    :widths: 10 40
@@ -27,7 +32,9 @@ Types of quota
    * - Quota name
      - Description
    * - class:VCPU
-     - Number of instance cores (VCPUs) allowed per project.
+     - Number of shared CPU cores (VCPUs) allowed per project.
+   * - class:PCPU
+     - Number of dedicated CPU cores (PCPUs) allowed per project.
    * - servers
      - Number of instances allowed per project.
    * - server_key_pairs
@@ -42,9 +49,11 @@ Types of quota
      - Number of servers per server group.
    * - class:DISK_GB
      - Gigabytes of instance disk allowed per project.
-   * - class:<any resource in the placement service>
-     - Any resource in the placement service that is allocated by Nova can have
-       a quota limit specified for it. Example: class:VGPU.
+   * - class:<any resource class in the placement service>
+     - Any resource class in the placement service that is allocated by Nova
+       can have a quota limit specified for it. Example: class:VGPU.
+
+.. _resource classes: https://docs.openstack.org/os-resource-classes/latest
 
 The following quotas were previously available but were removed in microversion
 2.36 as they proxied information available from the networking service.
@@ -125,6 +134,28 @@ For example:
     | 17c4552c5aad4afca4813f37530fc897 | 8b22bf8a66fa4524a522b2a21865bbf2 | server_group_members               |            10 | None        | None      |
     +----------------------------------+----------------------------------+------------------------------------+---------------+-------------+-----------+
 
+To show details about a default limit, run:
+
+.. code-block:: console
+
+   $ openstack registered limit show <registered-limit-id>
+
+For example:
+
+.. code-block:: console
+
+   $ openstack registered limit show 8a658096236549788e61f4fcbd5a4a12
+   +---------------+----------------------------------+
+   | Field         | Value                            |
+   +---------------+----------------------------------+
+   | default_limit | 20                               |
+   | description   | None                             |
+   | id            | 8a658096236549788e61f4fcbd5a4a12 |
+   | region_id     | None                             |
+   | resource_name | class:VCPU                       |
+   | service_id    | 8b22bf8a66fa4524a522b2a21865bbf2 |
+   +---------------+----------------------------------+
+
 To list the currently set quota values for your project, run:
 
 .. code-block:: console
@@ -141,3 +172,27 @@ For example:
     +----------------------------------+----------------------------------+----------------------------------+---------------+----------------+-------------+-----------+
     | 8b3364b2241e4090aaaa49355c7a5b56 | 5cd3281595a9497ba87209701cd9f3f2 | 8b22bf8a66fa4524a522b2a21865bbf2 | class:VCPU    |              5 | None        | None      |
     +----------------------------------+----------------------------------+----------------------------------+---------------+----------------+-------------+-----------+
+
+To show details about a quota limimt, run:
+
+.. code-block:: console
+
+   $ openstack limit show <limit-id>
+
+For example:
+
+.. code-block:: console
+
+   $ openstack limit show 8b3364b2241e4090aaaa49355c7a5b56
+   +----------------+----------------------------------+
+   | Field          | Value                            |
+   +----------------+----------------------------------+
+   | description    | None                             |
+   | domain_id      | None                             |
+   | id             | 8b3364b2241e4090aaaa49355c7a5b56 |
+   | project_id     | 5cd3281595a9497ba87209701cd9f3f2 |
+   | region_id      | None                             |
+   | resource_limit | 5                                |
+   | resource_name  | class:VCPU                       |
+   | service_id     | 8b22bf8a66fa4524a522b2a21865bbf2 |
+   +----------------+----------------------------------+
