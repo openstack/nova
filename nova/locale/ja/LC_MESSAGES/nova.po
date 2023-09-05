@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2022-08-09 17:12+0000\n"
+"POT-Creation-Date: 2023-09-04 13:53+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -140,9 +140,6 @@ msgstr ""
 "アグリゲート %(id)s にメタデータを追加しようと %(retries)s 回再試行しました"
 "が、追加できませんでした"
 
-msgid "Affinity instance group policy was violated."
-msgstr "Affinity インスタンスグループポリシーに違反しました"
-
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr "アグリゲート %(aggregate_id)s には既にホスト %(host)s があります。"
@@ -180,9 +177,6 @@ msgstr "未知のエラーが発生しました。再度リクエストを実行
 
 msgid "An unknown exception occurred."
 msgstr "不明な例外が発生しました。"
-
-msgid "Anti-affinity instance group policy was violated."
-msgstr "anti-affinity インスタンスグループポリシーに違反しました。"
 
 #, python-format
 msgid "Architecture name '%(arch)s' is not recognised"

@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2022-08-09 17:12+0000\n"
+"POT-Creation-Date: 2023-09-04 13:53+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -127,9 +127,6 @@ msgstr "動作：'%(action)s'，呼叫方法：%(meth)s，主體：%(body)s"
 msgid "Add metadata failed for aggregate %(id)s after %(retries)s retries"
 msgstr "重試 %(retries)s 次之後，對聚集 %(id)s 新增 meta 資料仍失敗"
 
-msgid "Affinity instance group policy was violated."
-msgstr "違反了親緣性實例群組原則。"
-
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr "聚集 %(aggregate_id)s 已有主機 %(host)s。"
@@ -163,9 +160,6 @@ msgstr "發生不明錯誤。請重試要求。"
 
 msgid "An unknown exception occurred."
 msgstr "發生一個未知例外"
-
-msgid "Anti-affinity instance group policy was violated."
-msgstr "違反了反親緣性實例群組原則。"
 
 #, python-format
 msgid "Architecture name '%(arch)s' is not recognised"

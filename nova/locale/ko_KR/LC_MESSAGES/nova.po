@@ -8,19 +8,21 @@
 # Sungjin Kang <potopro@gmail.com>, 2013
 # Sungjin Kang <potopro@gmail.com>, 2013
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
-# Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
+# Lee Jongwon <tothebinaryworld@gmail.com>, 2016. #zanata
 # Ian Y. Choi <ianyrchoi@gmail.com>, 2017. #zanata
 # Lee Dogeon <moreal@dsm.hs.kr>, 2018. #zanata
+# Kuemjong Jeong <goldenbell.jeong@gmail.com>, 2023. #zanata
+# Sion Shin <yelnets99@naver.com>, 2023. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2022-08-09 17:12+0000\n"
+"POT-Creation-Date: 2023-09-04 13:53+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2018-09-23 12:50+0000\n"
-"Last-Translator: Lee Dogeon <moreal@dsm.hs.kr>\n"
+"PO-Revision-Date: 2023-08-26 06:20+0000\n"
+"Last-Translator: Sion Shin <yelnets99@naver.com>\n"
 "Language: ko_KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -104,6 +106,25 @@ msgstr "NetworkModel이 필드 %s에 필요함"
 
 #, python-format
 msgid ""
+"A conflict was encountered attempting to invoke the placement API at URL "
+"%(url)s: %(error)s"
+msgstr ""
+"%(url)s 에서 Placement API 호출하는 동안 충돌이 발생했습니다. : %(error)s"
+
+msgid ""
+"A conflict was encountered attempting to reshape a provider tree: $(error)s"
+msgstr "공급자 트리를 다시 형성하는 동안 충돌이 발생했습니다. :$(error)s"
+
+#, python-format
+msgid ""
+"A conflict was encountered attempting to update resource provider %(uuid)s "
+"(generation %(generation)d): %(error)s"
+msgstr ""
+"리소스 공급자 %(uuid)s (generation %(generation)d) 업데이트를 시도하는 동안 "
+"충돌이 발생했습니다. : %(error)s"
+
+#, python-format
+msgid ""
 "API Version String %(version)s is of invalid format. Must be of format "
 "MajorNum.MinorNum."
 msgstr ""
@@ -142,9 +163,6 @@ msgid "Add metadata failed for aggregate %(id)s after %(retries)s retries"
 msgstr ""
 "%(retries)s 재시도 후 %(id)s 집합에 대한 메타데이터 추가를 실패했습니다"
 
-msgid "Affinity instance group policy was violated."
-msgstr "선호도 인스턴스 그룹 정책을 위반했습니다. "
-
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr "%(aggregate_id)s 집합에 이미 %(host)s 호스트가 있습니다. "
@@ -181,9 +199,6 @@ msgstr "알 수 없는 오류가 발생했습니다. 요청을 다시 시도하�
 msgid "An unknown exception occurred."
 msgstr "알 수 없는 예외가 발생했습니다. "
 
-msgid "Anti-affinity instance group policy was violated."
-msgstr "안티 선호도 인스턴스 그룹 정책을 위반했습니다."
-
 #, python-format
 msgid "Architecture name '%(arch)s' is not recognised"
 msgstr "아키텍처 이름 '%(arch)s'이(가) 인식되지 않음"
@@ -205,6 +220,9 @@ msgstr "기존 값을 겹쳐쓰려 했습니다."
 #, python-format
 msgid "Attribute not supported: %(attr)s"
 msgstr "지원하지 않는 속성입니다: %(attr)s"
+
+msgid "Bad Request - Feature is not supported in Nova"
+msgstr "Bad Request - Nova에서 지원되지 않는 기능입니다."
 
 msgid "Bad Request - Invalid Parameters"
 msgstr "잘못 된 요청 - 유효하지 않은 매개변수"
@@ -229,8 +247,8 @@ msgid ""
 "Binding failed for port %(port_id)s, please check neutron logs for more "
 "information."
 msgstr ""
-"포트 %(port_id)s에 대해 바인딩에 실패했습니다. 자세한 정보는 neutron 로그를확"
-"인하십시오. "
+"포트 %(port_id)s에 대해 바인딩에 실패했습니다. 자세한 정보는 neutron 로그를 "
+"확인하십시오. "
 
 msgid "Blank components"
 msgstr "비어 있는 구성요소"
@@ -431,6 +449,9 @@ msgstr ""
 msgid "Cell %(uuid)s has no mapping."
 msgstr "셀 %(uuid)s에 맵핑이 없습니다."
 
+msgid "Cell0 cannot be disabled."
+msgstr "셀0를 비활성화 할 수 없습니다."
+
 #, python-format
 msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
@@ -480,6 +501,13 @@ msgstr ""
 "구성이 명시적 CPU 모델을 요청했지만 현재 libvirt 하이퍼바이저 '%s'이(가) CPU "
 "모델 선택을 지원하지 않음"
 
+msgid "Configuration is Invalid."
+msgstr "잘못된 구성입니다."
+
+#, python-format
+msgid "Conflict deleting image. Reason: %(reason)s."
+msgstr "이미지 삭제에 충돌이 발생했습니다. 이유: %(reason)s"
+
 #, python-format
 msgid ""
 "Conflict updating instance %(instance_uuid)s, but we were unable to "
@@ -503,6 +531,10 @@ msgstr "Cinder 호스트 연결하지 못했습니다: %(reason)s"
 #, python-format
 msgid "Connection to glance host %(server)s failed: %(reason)s"
 msgstr "Glance 호스트 %(server)s에 연결하는 데 실패: %(reason)s"
+
+#, python-format
+msgid "Connection to keystone host failed: %(reason)s"
+msgstr "Keystone 호스트 연결이 실패했습니다: %(reason)s"
 
 #, python-format
 msgid "Connection to libvirt lost: %s"
@@ -783,6 +815,10 @@ msgid "Failed to provision instance %(inst)s: %(reason)s"
 msgstr "인스턴스 %(inst)s 프로비저닝 실패: %(reason)s"
 
 #, python-format
+msgid "Failed to quiesce instance: %(reason)s"
+msgstr "인스턴스를 종료하지 못했습니다: %(reason)s"
+
+#, python-format
 msgid "Failed to read or write disk info file: %(reason)s"
 msgstr "디스크 정보 파일을 읽거나 쓰지 못함: %(reason)s"
 
@@ -814,6 +850,13 @@ msgstr "%(reason)s 때문에 %(instance)s에 관리 비밀번호를 설정하지
 msgid "Failed to suspend instance: %(reason)s"
 msgstr "인스턴스 일시중단 실패: %(reason)s"
 
+msgid ""
+"Failed to synchronize the placement service with resource provider "
+"information supplied by the compute host."
+msgstr ""
+"컴퓨트 호스트의 리소스 공급자 정보와 Placement 서비스를 동기화하지 못했습니"
+"다. "
+
 #, python-format
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "인스턴스 종료 실패: %(reason)s"
@@ -824,6 +867,9 @@ msgstr "가상 인터페이스 해제 실패: %(reason)s"
 
 msgid "Failure prepping block device."
 msgstr "블록 디바이스 준비 실패"
+
+msgid "Feature not supported with instances that have accelerators."
+msgstr "가속화된 인스턴스에서 지원되지 않는 기능입니다."
 
 #, python-format
 msgid "File %(file_path)s could not be found."
@@ -1076,6 +1122,10 @@ msgid ""
 "Images with destination_type 'volume' need to have a non-zero size specified"
 msgstr "destination_type이 '볼륨'인 이미지는 0이 아닌 크기를 지정해야 함"
 
+#, python-format
+msgid "Import of image %(image_id)s refused: %(reason)s"
+msgstr "%(image_id)s 이미지의 임포트가 거절되었습니다: %(reason)s"
+
 msgid "In ERROR state"
 msgstr "ERROR 상태에 있음"
 
@@ -1137,6 +1187,10 @@ msgstr "%(instance_id)s 인스턴스가 실행 중이 아닙니다. "
 #, python-format
 msgid "Instance %(instance_id)s is unacceptable: %(reason)s"
 msgstr "%(instance_id)s 인스턴스는 허용할 수 없음: %(reason)s"
+
+#, python-format
+msgid "Instance %(instance_uuid)s does not have fixed IP '%(ip)s'."
+msgstr "인스턴스 %(instance_uuid)s 가 고정 IP '%(ip)s'를 가지고 있지 않습니다."
 
 #, python-format
 msgid "Instance %(instance_uuid)s does not specify a NUMA topology"
@@ -1320,6 +1374,10 @@ msgstr "올바르지 않은 이미지 형식 '%(format)s'"
 #, python-format
 msgid "Invalid image href %(image_href)s."
 msgstr "올바르지 않은 이미지 href %(image_href)s."
+
+#, python-format
+msgid "Invalid image property name %(image_property_name)s."
+msgstr "유효하지 않은 이미지 속성 이름 %(image_property_name)s 입니다."
 
 #, python-format
 msgid "Invalid inclusion expression %r"
@@ -1704,6 +1762,10 @@ msgid "No compute host specified"
 msgstr "지정된 계산 호스트가 없음"
 
 #, python-format
+msgid "No conf group name could be found for service type %(stype)s."
+msgstr "서비스 타입 '%(stype)s'에 일치하는 구성 그룹을 찾을 수 없습니다."
+
+#, python-format
 msgid "No configuration information found for operating system %(os_name)s"
 msgstr "%(os_name)s 운영 체제의 구성 정보를 찾을 수 없음"
 
@@ -1775,6 +1837,12 @@ msgid ""
 msgstr ""
 "'%(project_id)s' 프로젝트에 특정 네트워크가 요청되었지만, 사용할 수 있는 네트"
 "워크가 없습니다."
+
+#, python-format
+msgid "No such resource provider %(name_or_uuid)s."
+msgstr ""
+"다음의 이름 또는 UUID를 가지는 리소스 공급자가 존재하지 않습니다. : "
+"%(name_or_uuid)s"
 
 msgid "No valid host found for cold migrate"
 msgstr "콜드 마이그레이션에 대한 유효한 호스트를 찾을 수 없음"
@@ -2011,6 +2079,12 @@ msgstr ""
 msgid "Quota exceeded for resources: %(overs)s"
 msgstr "자원에 대한 할당량 초과: %(overs)s"
 
+#, python-format
+msgid ""
+"Quota exceeded or out of space for image %(image_id)s in the image service."
+msgstr ""
+"이미지 서비스의 %(image_id)s 이미지가 할당량을 초과 했거나 공간이 부족합니다."
+
 msgid "Quota exceeded, too many key pairs."
 msgstr "할당량 초과. 키 쌍이 너무 많습니다. "
 
@@ -2110,6 +2184,10 @@ msgstr "크기 조정 오류: %(reason)s"
 msgid "Resize to zero disk flavor is not allowed."
 msgstr "0 디스크 플레이버로의 크기 조정은 허용되지 않습니다."
 
+#, python-format
+msgid "Resource class '%(resource_class)s' invalid."
+msgstr "리소스 클래스 '%(resource_class)s'가 올바르지 않습니다."
+
 msgid "Resource could not be found."
 msgstr "자원을 찾을 수 없습니다. "
 
@@ -2130,6 +2208,10 @@ msgstr "완료될 때까지 %i 일괄처리 실행"
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
 msgstr "스케줄러 호스트 필터 %(filter_name)s을(를) 찾을 수 없습니다. "
+
+#, python-format
+msgid "Scheduling failed: %(reason)s"
+msgstr "스케줄링 실패: %(reason)s"
 
 #, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
@@ -2250,6 +2332,12 @@ msgstr "제공되는 정렬 키가 올바르지 않습니다. "
 msgid "Specified fixed address not assigned to instance"
 msgstr "지정된 고정 주소가 인스턴스에 연관되지 않음"
 
+msgid "Specifying a volume_type with destination_type=local is not supported."
+msgstr "volume_type 구성을 destination_type=local과 함께 설정할 수 없습니다."
+
+msgid "Specifying volume type to existing volume is not supported."
+msgstr "볼륨 유형을 존재하는 볼륨으로 설정할 수 없습니다."
+
 msgid "Started"
 msgstr "작동함"
 
@@ -2287,6 +2375,9 @@ msgstr "%(task_name)s 태스크가 %(host)s 호스트에서 실행 중이 아님
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI 주소 %(address)s에 올바르지 않은 형식이 있습니다."
+
+msgid "The `os_distro` image metadata property is required"
+msgstr "다음의 이미지 메타데이터 속성이 필요합니다. : `os_distro`"
 
 msgid "The backlog must be more than 0"
 msgstr "백로그는 0보다 커야 함"
@@ -2390,6 +2481,10 @@ msgid ""
 "The volume cannot be assigned the same device name as the root device %s"
 msgstr "볼륨에 루트 디바이스 %s과(와) 같은 디바이스 이름을 지정할 수 없음"
 
+#, python-format
+msgid "The volume mount at %(mount_path)s is unusable."
+msgstr "%(mount_path)s에 마운트 된 볼륨을 사용할 수 없습니다."
+
 msgid "There are not enough hosts available."
 msgstr "사용 가능한 호스트가 부족합니다."
 
@@ -2469,6 +2564,9 @@ msgstr "아이로닉 클라이언트를 인증할 수 없습니다."
 #, python-format
 msgid "Unable to automatically allocate a network for project %(project_id)s"
 msgstr "%(project_id)s 때문에 자동으로 네트워크를 할당할 수 없습니다."
+
+msgid "Unable to communicate with the Placement API."
+msgstr "Placement API와 통신할 수 없습니다."
 
 #, python-format
 msgid "Unable to convert image to %(format)s: %(exp)s"
@@ -2690,6 +2788,10 @@ msgstr "%(volume_id)s 볼륨을 연결할 수 없습니다. 이유: %(reason)s"
 #, python-format
 msgid "Volume %(volume_id)s could not be detached. Reason: %(reason)s"
 msgstr "%(volume_id)s 볼륨을 분리할 수 없습니다. 이유: %(reason)s"
+
+#, python-format
+msgid "Volume %(volume_id)s could not be extended. Reason: %(reason)s"
+msgstr "%(volume_id)s 볼륨을 확장할 수 없습니다. 이유: %(reason)s"
 
 #, python-format
 msgid "Volume %(volume_id)s could not be found."

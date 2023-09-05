@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2022-08-09 17:12+0000\n"
+"POT-Creation-Date: 2023-09-04 13:53+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -144,9 +144,6 @@ msgstr ""
 "Добавление метаданных не выполнено для множества %(id)s после %(retries)s "
 "попыток"
 
-msgid "Affinity instance group policy was violated."
-msgstr "Нарушена стратегия группы экземпляров привязки."
-
 #, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr "Множество %(aggregate_id)s уже имеет хост %(host)s."
@@ -182,9 +179,6 @@ msgstr ""
 
 msgid "An unknown exception occurred."
 msgstr "Обнаружено неизвестное исключение."
-
-msgid "Anti-affinity instance group policy was violated."
-msgstr "Нарушена стратегия строгой распределенности группы экземпляров."
 
 #, python-format
 msgid "Architecture name '%(arch)s' is not recognised"
