@@ -261,6 +261,7 @@ SERVICE_VERSION_ALIASES = {
     'Yoga': 61,
     'Zed': 64,
     'Antelope': 66,
+    'Bobcat': 66,
 }
 
 
