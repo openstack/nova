@@ -738,3 +738,28 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                       version='2.81')
         self.assertRaises(exc.HTTPBadRequest, self.controller.images,
                           req, 'foo', body=body)
+
+    def test_images_with_duplicate_id(self):
+        body = {"cache": [{"id": "faae1bd3-c848-41d6-b4dd-97d5b8be8b7e"},
+                          {"id": "faae1bd3-c848-41d6-b4dd-97d5b8be8b7e"}]}
+        req = fakes.HTTPRequest.blank('/v2/os-aggregates',
+                                      use_admin_context=True,
+                                      version='2.81')
+        self.assertRaises(exc.HTTPBadRequest, self.controller.images,
+                          req, '1', body=body)
+
+    def test_images_with_disorder_id(self):
+        body = {"cache": [{"id": "faae1bd3-c848-41d6-b4dd-97d5b8be8b7e"},
+                          {"id": "290de658-cf55-4cce-b025-9a1a9f93676a"},
+                          {"id": "896f7f54-4e4e-4c21-a2b7-47cff4e99ab0"},
+                          {"id": "d982bb82-04a0-4e9b-b40e-470f20a7b5d1"}]}
+        req = fakes.HTTPRequest.blank('/v2/os-aggregates',
+                                      use_admin_context=True,
+                                      version='2.81')
+        context = req.environ['nova.context']
+        with mock.patch.object(self.controller.api,
+                               'get_aggregate') as mock_get:
+            with mock.patch.object(self.controller.conductor_tasks,
+                                   'cache_images'):
+                self.controller.images(req, '1', body=body)
+                mock_get.assert_called_once_with(context, '1')
