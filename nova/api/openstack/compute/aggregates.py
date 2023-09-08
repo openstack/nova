@@ -289,7 +289,7 @@ class AggregateController(wsgi.Controller):
         for image_req in body.get('cache'):
             image_ids.append(image_req['id'])
 
-        if image_ids != list(set(image_ids)):
+        if sorted(image_ids) != sorted(list(set(image_ids))):
             raise exc.HTTPBadRequest(
                 explanation=_('Duplicate images in request'))
 
