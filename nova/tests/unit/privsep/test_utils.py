@@ -13,6 +13,7 @@
 #    under the License.
 
 import errno
+import fixtures
 import os
 from unittest import mock
 
@@ -55,6 +56,13 @@ class SupportDirectIOTestCase(test.NoDBTestCase):
         self.mock_close = close_patcher.start()
         self.mock_unlink = unlink_patcher.start()
         random_string_patcher.start()
+        # as of change Iac1b0891ae584ce4b95964e6cdc0ff2483a4e57d in oslo.log
+        # oslo.log will now internally call os.write() in its PipeMutex code.
+        # This causes the mock_write() to be called which breaks some of
+        # the testcases as we expect mock_write() to be called only
+        # by the code under test.
+        self.useFixture(fixtures.MonkeyPatch(
+            "nova.privsep.utils.LOG", mock.Mock()))
 
     def test_supports_direct_io(self):
         self.mock_open.return_value = 3
@@ -85,6 +93,7 @@ class SupportDirectIOTestCase(test.NoDBTestCase):
     def test_supports_direct_io_with_exception_in_open(self):
         self.mock_open.side_effect = ValueError()
 
+        self.mock_open.assert_not_called()
         self.assertRaises(ValueError, nova.privsep.utils.supports_direct_io,
                           '.')
 
