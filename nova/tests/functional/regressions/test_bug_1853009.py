@@ -15,7 +15,6 @@ from unittest import mock
 from nova import context
 from nova import objects
 from nova.tests.functional import integrated_helpers
-from nova.virt import fake as fake_driver
 
 
 class NodeRebalanceDeletedComputeNodeRaceTestCase(
@@ -55,10 +54,7 @@ class NodeRebalanceDeletedComputeNodeRaceTestCase(
         self.nodename = 'fake-node'
         self.ctxt = context.get_admin_context()
 
-    @mock.patch.object(fake_driver.FakeDriver, 'is_node_deleted')
-    def test_node_rebalance_deleted_compute_node_race(self, mock_delete):
-        # make the fake driver allow nodes to be delete, like ironic driver
-        mock_delete.return_value = True
+    def test_node_rebalance_deleted_compute_node_race(self):
         # Simulate a service running and then stopping. host_a runs, creates
         # fake-node, then is stopped. The fake-node compute node is destroyed.
         # This leaves a soft-deleted node in the DB.
