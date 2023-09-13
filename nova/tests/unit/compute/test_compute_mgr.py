@@ -396,14 +396,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             {'node': mock.sentinel.node}
         )
 
-    @mock.patch.object(fake_driver.FakeDriver, 'is_node_deleted')
     @mock.patch.object(manager, 'LOG')
     @mock.patch.object(manager.ComputeManager,
                        '_update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource(self, get_db_nodes, get_avail_nodes,
-                                       update_mock, mock_log, mock_deleted):
+                                       update_mock, mock_log):
         mock_rt = self._mock_rt()
         rc_mock = self.useFixture(fixtures.fixtures.MockPatchObject(
             self.compute, 'reportclient')).mock
@@ -416,7 +415,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         get_db_nodes.return_value = db_nodes
         get_avail_nodes.return_value = avail_nodes
-        mock_deleted.return_value = True
         self.compute.update_available_resource(self.context, startup=True)
         get_db_nodes.assert_called_once_with(self.context, avail_nodes,
                                              use_slave=True, startup=True)
@@ -462,13 +460,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         update_mock.assert_not_called()
         del_rp_mock.assert_not_called()
 
-    @mock.patch.object(fake_driver.FakeDriver, 'is_node_deleted')
     @mock.patch.object(manager.ComputeManager,
                        '_update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource_destroy_rebalance(
-            self, get_db_nodes, get_avail_nodes, update_mock, mock_deleted):
+            self, get_db_nodes, get_avail_nodes, update_mock):
         mock_rt = self._mock_rt()
         rc_mock = self.useFixture(fixtures.fixtures.MockPatchObject(
             self.compute, 'reportclient')).mock
@@ -479,7 +476,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         db_nodes[0].destroy.side_effect = exception.ObjectActionError(
             action='destroy', reason='host changed')
         get_avail_nodes.return_value = set()
-        mock_deleted.return_value = True
         self.compute.update_available_resource(self.context)
         get_db_nodes.assert_called_once_with(self.context, set(),
                                              use_slave=True, startup=False)
@@ -490,36 +486,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_rt.remove_node.assert_called_once_with('node1')
         rc_mock.invalidate_resource_provider.assert_called_once_with(
             db_nodes[0].uuid)
-        mock_deleted.assert_called_once_with('node1')
-
-    @mock.patch.object(fake_driver.FakeDriver, 'is_node_deleted')
-    @mock.patch.object(manager.ComputeManager,
-                       '_update_available_resource_for_node')
-    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
-    @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
-    def test_update_available_resource_no_destroy_rebalance(
-            self, get_db_nodes, get_avail_nodes, update_mock, mock_deleted):
-        mock_rt = self._mock_rt()
-        rc_mock = self.useFixture(fixtures.fixtures.MockPatchObject(
-            self.compute, 'reportclient')).mock
-        db_nodes = [self._make_compute_node('node1', 1)]
-        get_db_nodes.return_value = db_nodes
-        # Destroy can fail if nodes were rebalanced between getting the node
-        # list and calling destroy.
-        db_nodes[0].destroy.side_effect = exception.ObjectActionError(
-            action='destroy', reason='host changed')
-        get_avail_nodes.return_value = set()
-        mock_deleted.return_value = False
-        self.compute.update_available_resource(self.context)
-        get_db_nodes.assert_called_once_with(self.context, set(),
-                                             use_slave=True, startup=False)
-        self.assertEqual(0, update_mock.call_count)
-
-        db_nodes[0].destroy.assert_not_called()
-        self.assertEqual(0, rc_mock.delete_resource_provider.call_count)
-        mock_rt.remove_node.assert_not_called()
-        rc_mock.invalidate_resource_provider.assert_not_called()
-        mock_deleted.assert_called_once_with('node1')
 
     @mock.patch('nova.context.get_admin_context')
     def test_pre_start_hook(self, get_admin_context):
