@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Added new flavor extra_specs and image properties to control the physical
+    address bits of vCPUs in Libvirt guests. This option is used to boot a
+    guest with large RAM.

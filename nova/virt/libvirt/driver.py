@@ -5431,6 +5431,23 @@ class LibvirtDriver(driver.ComputeDriver):
             cpu.add_feature(cpu_feature)
         return cpu
 
+    def _get_guest_cpu_config_maxphysaddr(self, flavor, image_meta):
+        mode = (flavor.extra_specs.get('hw:maxphysaddr_mode') or
+                image_meta.properties.get('hw_maxphysaddr_mode'))
+        bits = (flavor.extra_specs.get('hw:maxphysaddr_bits') or
+                image_meta.properties.get('hw_maxphysaddr_bits'))
+
+        if not mode:
+            return None
+
+        maxphysaddr = vconfig.LibvirtConfigGuestCPUMaxPhysAddr()
+        maxphysaddr.mode = mode
+
+        if bits:
+            maxphysaddr.bits = int(bits)
+
+        return maxphysaddr
+
     def _match_cpu_model_by_flags(self, models, flags):
         for model in models:
             if flags.issubset(self.cpu_model_flag_mapping.get(model, set([]))):
@@ -5464,6 +5481,9 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu.cores = topology.cores
         cpu.threads = topology.threads
         cpu.numa = guest_cpu_numa_config
+
+        cpu.maxphysaddr = self._get_guest_cpu_config_maxphysaddr(flavor,
+                                                                 image_meta)
 
         caps = self._host.get_capabilities()
         if arch != caps.host.cpu.arch:
@@ -8186,6 +8206,12 @@ class LibvirtDriver(driver.ComputeDriver):
         topology['cores'] = caps.host.cpu.cores
         topology['threads'] = caps.host.cpu.threads
         cpu_info['topology'] = topology
+
+        if caps.host.cpu.maxphysaddr:
+            maxphysaddr = dict()
+            maxphysaddr["mode"] = caps.host.cpu.maxphysaddr.mode
+            maxphysaddr["bits"] = caps.host.cpu.maxphysaddr.bits
+            cpu_info["maxphysaddr"] = maxphysaddr
 
         features = set()
         for f in caps.host.cpu.features:

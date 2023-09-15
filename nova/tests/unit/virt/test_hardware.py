@@ -5861,6 +5861,52 @@ class SecureBootPolicyTest(test.NoDBTestCase):
 
 
 @ddt.ddt
+class MaxphysaddrModeTest(test.NoDBTestCase):
+
+    @ddt.unpack
+    @ddt.data(
+        # pass: no configuration
+        (None, None, None),
+        # pass: flavor-only configuration
+        ('passthrough', None, 'passthrough'),
+        # pass: image-only configuration
+        (None, 'emulate', 'emulate'),
+        # pass: identical image and flavor configuration
+        ('passthrough', 'passthrough', 'passthrough'),
+        # fail: mismatched image and flavor configuration
+        ('passthrough', 'emulate', exception.FlavorImageConflict),
+        # fail: invalid value
+        ('foobar', None, exception.Invalid),
+    )
+    def test_get_maxphysaddr_mode(
+        self, flavor_policy, image_policy, expected,
+    ):
+        extra_specs = {}
+
+        if flavor_policy:
+            extra_specs['hw:maxphysaddr_mode'] = flavor_policy
+
+        image_meta_props = {}
+
+        if image_policy:
+            image_meta_props['hw_maxphysaddr_mode'] = image_policy
+
+        flavor = objects.Flavor(
+            name='foo', vcpus=1, memory_mb=1024, extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict(
+            {'name': 'bar', 'properties': image_meta_props})
+
+        if isinstance(expected, type) and issubclass(expected, Exception):
+            self.assertRaises(
+                expected, hw.get_maxphysaddr_mode, flavor, image_meta,
+            )
+        else:
+            self.assertEqual(
+                expected, hw.get_maxphysaddr_mode(flavor, image_meta),
+            )
+
+
+@ddt.ddt
 class RescuePropertyTestCase(test.NoDBTestCase):
 
     @ddt.unpack

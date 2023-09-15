@@ -2735,6 +2735,33 @@ def get_vpmems(flavor):
     return formed_labels
 
 
+def get_maxphysaddr_mode(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
+    """Return maxphysaddr mode.
+
+    :param flavor: a flavor object to read extra specs from
+    :param image_meta: an objects.ImageMeta object
+    :raises: nova.exception.Invalid if a value is invalid
+    :returns: maxphysaddr mode if a value is valid, else None.
+    """
+    mode = _get_unique_flavor_image_meta(
+        'maxphysaddr_mode', flavor, image_meta, prefix='hw',
+    )
+
+    if mode is None:
+        return None
+
+    if mode not in fields.MaxPhyAddrMode.ALL:
+        raise exception.Invalid(
+            "Invalid Maxphyaddr mode %(mode)r. Allowed values: %(valid)s." %
+            {'mode': mode, 'valid': ', '.join(fields.MaxPhyAddrMode.ALL)}
+        )
+
+    return mode
+
+
 def check_hw_rescue_props(image_meta):
     """Confirm that hw_rescue_* image properties are present.
     """

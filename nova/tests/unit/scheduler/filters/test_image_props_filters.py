@@ -267,3 +267,37 @@ class TestImagePropsFilter(test.NoDBTestCase):
             'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_image_properties_filter_pass_maxphysaddr_bits(self):
+        img_props = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                hw_architecture=obj_fields.Architecture.X86_64,
+                img_hv_type=obj_fields.HVType.KVM,
+                hw_vm_mode=obj_fields.VMMode.HVM,
+                hw_maxphysaddr_bits=42))
+        spec_obj = objects.RequestSpec(image=img_props)
+        capabilities = {
+            'supported_instances': [(
+                obj_fields.Architecture.X86_64,
+                obj_fields.HVType.KVM,
+                obj_fields.VMMode.HVM)],
+            'cpu_info': {"maxphysaddr": {"mode": "emulate", "bits": 42}}}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_image_properties_filter_fails_maxphysaddr_bits(self):
+        img_props = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                hw_architecture=obj_fields.Architecture.X86_64,
+                img_hv_type=obj_fields.HVType.KVM,
+                hw_vm_mode=obj_fields.VMMode.HVM,
+                hw_maxphysaddr_bits=42))
+        spec_obj = objects.RequestSpec(image=img_props)
+        capabilities = {
+            'supported_instances': [(
+                obj_fields.Architecture.X86_64,
+                obj_fields.HVType.KVM,
+                obj_fields.VMMode.HVM)],
+            'cpu_info': {"maxphysaddr": {"mode": "emulate", "bits": 20}}}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))

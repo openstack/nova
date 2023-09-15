@@ -195,6 +195,8 @@ class ResourceRequest(object):
 
         res_req._translate_secure_boot_request(request_spec.flavor, image)
 
+        res_req._translate_maxphysaddr_request(request_spec.flavor, image)
+
         res_req.strip_zeros()
 
         return res_req
@@ -271,6 +273,23 @@ class ResourceRequest(object):
         trait = os_traits.COMPUTE_SECURITY_UEFI_SECURE_BOOT
         self._add_trait(trait, 'required')
         LOG.debug("Requiring secure boot support via trait %s.", trait)
+
+    def _translate_maxphysaddr_request(self, flavor, image):
+        mode = hardware.get_maxphysaddr_mode(flavor, image)
+
+        if mode is None:
+            return
+
+        trait = None
+
+        if mode == obj_fields.MaxPhyAddrMode.PASSTHROUGH:
+            trait = os_traits.COMPUTE_ADDRESS_SPACE_PASSTHROUGH
+        elif mode == obj_fields.MaxPhyAddrMode.EMULATE:
+            trait = os_traits.COMPUTE_ADDRESS_SPACE_EMULATED
+
+        if trait:
+            self._add_trait(trait, 'required')
+            LOG.debug("Requiring maxphysaddr support via trait %s.", trait)
 
     def _translate_vtpm_request(self, flavor, image):
         vtpm_config = hardware.get_vtpm_constraint(flavor, image)

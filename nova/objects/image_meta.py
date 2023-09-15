@@ -193,14 +193,19 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.33: Added 'hw_locked_memory' field
     # Version 1.34: Added 'hw_viommu_model' field
     # Version 1.35: Added 'hw_virtio_packed_ring' field
+    # Version 1.36: Added 'hw_maxphysaddr_mode' and
+    #                     'hw_maxphysaddr_bits' field
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.35'
+    VERSION = '1.36'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 36):
+            primitive.pop('hw_maxphysaddr_mode', None)
+            primitive.pop('hw_maxphysaddr_bits', None)
         if target_version < (1, 35):
             primitive.pop('hw_virtio_packed_ring', None)
         if target_version < (1, 34):
@@ -478,6 +483,12 @@ class ImageMetaProps(base.NovaObject):
 
         # boolean - If true, this will enable the virtio packed ring feature
         'hw_virtio_packed_ring': fields.FlexibleBooleanField(),
+
+        # Control mode for the physical memory address bit of Libvirt guests.
+        'hw_maxphysaddr_mode': fields.MaxPhysAddrModeField(),
+
+        # Control bits for the physical memory address bit of Libvirt guests.
+        'hw_maxphysaddr_bits': fields.IntegerField(),
 
         # if true download using bittorrent
         'img_bittorrent': fields.FlexibleBooleanField(),

@@ -512,6 +512,32 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
             </cpu>
         """)
 
+    def test_config_maxphysaddr(self):
+        obj = config.LibvirtConfigCPU()
+        obj.maxphysaddr = config.LibvirtConfigCPUMaxPhysAddr()
+        obj.maxphysaddr.mode = "emulate"
+        obj.maxphysaddr.bits = 42
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu>
+              <maxphysaddr mode='emulate' bits='42'/>
+            </cpu>
+        """)
+
+    def test_parse_dom(self):
+        xml = """
+            <cpu>
+              <maxphysaddr mode='emulate' bits='42'/>
+            </cpu>
+        """
+        xmldoc = etree.fromstring(xml)
+        obj = config.LibvirtConfigCPU()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual("emulate", obj.maxphysaddr.mode)
+        self.assertEqual(42, obj.maxphysaddr.bits)
+
 
 class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
 
@@ -588,6 +614,35 @@ class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
                 <cell id="0" cpus="0-1" memory="1000000" memAccess="private"/>
                 <cell id="1" cpus="2-3" memory="1500000"/>
               </numa>
+            </cpu>
+        """)
+
+    def test_config_host_with_maxphysaddr_emulate(self):
+        obj = config.LibvirtConfigGuestCPU()
+
+        m = config.LibvirtConfigGuestCPUMaxPhysAddr()
+        m.mode = "emulate"
+        m.bits = 42
+        obj.maxphysaddr = m
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu match="exact">
+              <maxphysaddr mode="emulate" bits="42"/>
+            </cpu>
+        """)
+
+    def test_config_host_with_maxphysaddr_passthrough(self):
+        obj = config.LibvirtConfigGuestCPU()
+
+        m = config.LibvirtConfigGuestCPUMaxPhysAddr()
+        m.mode = "passthrough"
+        obj.maxphysaddr = m
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu match="exact">
+              <maxphysaddr mode="passthrough"/>
             </cpu>
         """)
 

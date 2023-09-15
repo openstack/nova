@@ -8614,6 +8614,86 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
+    def test_get_guest_cpu_config_maxphysaddr_passthrough_flavor_espec(self):
+        self.flags(cpu_mode="none", group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor.extra_specs = {
+            'hw:maxphysaddr_mode': 'passthrough'}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self),
+                                      image_meta, disk_info)
+        self.assertIsInstance(conf.cpu.maxphysaddr,
+                              vconfig.LibvirtConfigGuestCPUMaxPhysAddr)
+        self.assertEqual(conf.cpu.maxphysaddr.mode, 'passthrough')
+        self.assertIsNone(conf.cpu.maxphysaddr.bits)
+
+    def test_get_guest_cpu_config_maxphysaddr_emulate_flavor_espec(self):
+        self.flags(cpu_mode="none", group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor.extra_specs = {
+                'hw:maxphysaddr_mode': 'emulate',
+                'hw:maxphysaddr_bits': 42}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self),
+                                      image_meta, disk_info)
+        self.assertIsInstance(conf.cpu.maxphysaddr,
+                              vconfig.LibvirtConfigGuestCPUMaxPhysAddr)
+        self.assertEqual(conf.cpu.maxphysaddr.mode, 'emulate')
+        self.assertEqual(conf.cpu.maxphysaddr.bits, 42)
+
+    def test_get_guest_cpu_config_maxphysaddr_passthrough_image_meta(self):
+        self.flags(cpu_mode="none", group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_maxphysaddr_mode": "passthrough"},
+        })
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self),
+                                      image_meta, disk_info)
+        self.assertIsInstance(conf.cpu.maxphysaddr,
+                              vconfig.LibvirtConfigGuestCPUMaxPhysAddr)
+        self.assertEqual(conf.cpu.maxphysaddr.mode, 'passthrough')
+        self.assertIsNone(conf.cpu.maxphysaddr.bits)
+
+    def test_get_guest_cpu_config_maxphysaddr_emulate_image_meta(self):
+        self.flags(cpu_mode="none", group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_maxphysaddr_mode": "emulate",
+                           "hw_maxphysaddr_bits": 42},
+        })
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self),
+                                      image_meta, disk_info)
+        self.assertIsInstance(conf.cpu.maxphysaddr,
+                              vconfig.LibvirtConfigGuestCPUMaxPhysAddr)
+        self.assertEqual(conf.cpu.maxphysaddr.mode, 'emulate')
+        self.assertEqual(conf.cpu.maxphysaddr.bits, 42)
+
     def test_get_guest_cpu_topology(self):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.flavor.vcpus = 8
@@ -18205,6 +18285,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             cpu.threads = 1
             cpu.sockets = 4
 
+            cpu.maxphysaddr = vconfig.LibvirtConfigCPUMaxPhysAddr()
+            cpu.maxphysaddr.mode = "emulate"
+            cpu.maxphysaddr.bits = 42
+
             cpu.add_feature(vconfig.LibvirtConfigCPUFeature("extapic"))
             cpu.add_feature(vconfig.LibvirtConfigCPUFeature("3dnow"))
 
@@ -18231,6 +18315,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         want = {"vendor": "AMD",
                 "features": set(["extapic", "3dnow"]),
+                "maxphysaddr": {"mode": "emulate", "bits": 42},
                 "model": "Opteron_G4",
                 "arch": fields.Architecture.X86_64,
                 "topology": {"cells": 1, "cores": 2, "threads": 1,
@@ -21555,7 +21640,8 @@ class HostStateTestCase(test.NoDBTestCase):
                  "features": ["ssse3", "monitor", "pni", "sse2", "sse",
                  "fxsr", "clflush", "pse36", "pat", "cmov", "mca", "pge",
                  "mtrr", "sep", "apic"],
-                 "topology": {"cores": "1", "threads": "1", "sockets": "1"}}
+                 "topology": {"cores": "1", "threads": "1", "sockets": "1"},
+                 "maxphysaddr": {"mode": "emulate", "bits": "42"}}
     instance_caps = [(fields.Architecture.X86_64, "kvm", "hvm"),
                      (fields.Architecture.I686, "kvm", "hvm")]
     pci_devices = [{
@@ -21673,7 +21759,8 @@ class HostStateTestCase(test.NoDBTestCase):
                  "features": ["ssse3", "monitor", "pni", "sse2", "sse",
                               "fxsr", "clflush", "pse36", "pat", "cmov",
                               "mca", "pge", "mtrr", "sep", "apic"],
-                 "topology": {"cores": "1", "threads": "1", "sockets": "1"}
+                 "topology": {"cores": "1", "threads": "1", "sockets": "1"},
+                 "maxphysaddr": {"mode": "emulate", "bits": "42"}
                 })
         self.assertEqual(stats["disk_available_least"], 80)
         self.assertEqual(jsonutils.loads(stats["pci_passthrough_devices"]),
