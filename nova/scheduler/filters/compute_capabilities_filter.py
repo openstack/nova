@@ -72,7 +72,15 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         if 'extra_specs' not in flavor:
             return True
 
-        for key, req in flavor.extra_specs.items():
+        especs = flavor.extra_specs.copy()
+
+        # Replace it with a capabilities filter specially.
+        bits = especs.get('hw:maxphysaddr_bits')
+        if bits is not None:
+            especs['capabilities:cpu_info:maxphysaddr:bits'] = '>= ' + bits
+            del especs['hw:maxphysaddr_bits']
+
+        for key, req in especs.items():
             # Either not scope format, or in capabilities scope
             scope = key.split(':')
             # If key does not have a namespace, the scope's size is 1, check

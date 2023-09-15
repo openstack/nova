@@ -358,6 +358,8 @@ class TestImageMetaProps(test.NoDBTestCase):
             'img_hv_requested_version': '>= 1.0',
             'os_require_quiesce': True,
             'os_secure_boot': 'required',
+            'hw_maxphysaddr_mode': 'passthrough',
+            'hw_maxphysaddr_bits': 42,
             'hw_rescue_bus': 'ide',
             'hw_rescue_device': 'disk',
             'hw_watchdog_action': fields.WatchdogAction.DISABLED,
@@ -498,6 +500,20 @@ class TestImageMetaProps(test.NoDBTestCase):
         props = {'os_secure_boot': "required"}
         secure_props = objects.ImageMetaProps.from_dict(props)
         self.assertEqual("required", secure_props.os_secure_boot)
+
+    def test_set_hw_maxphysaddr_mode(self):
+        props = {'hw_maxphysaddr_mode': "passthrough"}
+        obj = objects.ImageMetaProps.from_dict(props)
+        self.assertEqual("passthrough", obj.hw_maxphysaddr_mode)
+
+    def test_set_hw_maxphysaddr_mode_negative(self):
+        props = {'hw_maxphysaddr_mode': "blah"}
+        self.assertRaises(ValueError, objects.ImageMetaProps.from_dict, props)
+
+    def test_set_hw_maxphysaddr_bits(self):
+        props = {'hw_maxphysaddr_bits': 42}
+        obj = objects.ImageMetaProps.from_dict(props)
+        self.assertEqual(42, obj.hw_maxphysaddr_bits)
 
     def test_obj_make_compatible_img_hide_hypervisor_id(self):
         """Tests that checks if we pop img_hide_hypervisor_id."""
