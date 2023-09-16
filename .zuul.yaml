@@ -164,6 +164,20 @@
         q-dhcp: true
         q-l3: true
         q-meta: true
+        # NOTE(sean-k-mooney) this job is testing ml2/ovs with
+        # hybrid plug we do not need to test cinder and we want to ensure
+        # that we have at least one job without cinder in our gate so we
+        # disable it in this job
+        # Cinder services
+        c-api: false
+        c-bak: false
+        c-sch: false
+        c-vol: false
+        # we also do not need swift in this job so disable it for speed
+        s-account: false
+        s-container: false
+        s-object: false
+        s-proxy: false
       devstack_local_conf:
         post-config:
           "/$NEUTRON_CORE_PLUGIN_CONF":
@@ -190,6 +204,20 @@
           q-ovn-metadata-agent: false
           # Neutron services
           q-agt: true
+          # NOTE(sean-k-mooney) this job is testing ml2/ovs with
+          # hybrid plug we do not need to test cinder and we want to ensure
+          # that we have at least one job without cinder in our gate so we
+          # disable it in this job
+          # Cinder services
+          c-api: false
+          c-bak: false
+          c-sch: false
+          c-vol: false
+          # we also do not need swift in this job so disable it for speed
+          s-account: false
+          s-container: false
+          s-object: false
+          s-proxy: false
         devstack_local_conf:
           post-config:
             "/$NEUTRON_CORE_PLUGIN_CONF":

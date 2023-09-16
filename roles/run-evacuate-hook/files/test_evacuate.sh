@@ -41,11 +41,17 @@ function evacuate_and_wait_for_active() {
     done
 }
 
-evacuate_and_wait_for_active evacuate-test
-evacuate_and_wait_for_active evacuate-bfv-test
+servers="evacuate-test"
+if openstack endpoint list | grep cinder; then
+    servers="$servers evacuate-bfv-test"
+fi
+
+for server in $servers; do
+    evacuate_and_wait_for_active $server
+done
 
 # Make sure the servers moved.
-for server in evacuate-test evacuate-bfv-test; do
+for server in $servers; do
     host=$(openstack server show ${server} -f value -c OS-EXT-SRV-ATTR:host)
     if [[ ${host} != ${CONTROLLER_HOSTNAME} ]]; then
         echo "Unexpected host ${host} for server ${server} after evacuate."
@@ -55,4 +61,6 @@ done
 
 # Cleanup test servers
 openstack server delete --wait evacuate-test
-openstack server delete --wait evacuate-bfv-test
+if [[ "$servers" =~ "bfv" ]]; then
+    openstack server delete --wait evacuate-bfv-test
+fi
