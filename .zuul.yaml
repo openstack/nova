@@ -109,6 +109,8 @@
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
+      # revert this when bug #1940425 is fixed in neutron
+      tempest_exclude_regex: (test_live_migration_with_trunk)
       devstack_services:
         neutron-trunk: true
       devstack_local_conf:
@@ -146,6 +148,8 @@
       - ^tox.ini$
     vars:
       tox_envlist: all
+      # bug #1940425  only affect ml2/ovn so we execute
+      # test_live_migration_with_trunk in this job to keep
       tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot).*)
       devstack_localrc:
         Q_AGENT: openvswitch
@@ -238,6 +242,8 @@
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
+      # revert this when bug #1940425 is fixed in neutron
+      tempest_exclude_regex: (test_live_migration_with_trunk)
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
@@ -381,7 +387,9 @@
       # tempest_test_exclude_list.
       # FIXME(lyarwood): The tempest.api.compute.admin.test_volume_swap tests
       # are skipped until bug #1929710 is resolved.
-      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|tempest.api.compute.servers.test_device_tagging.TaggedAttachmentsTest.test_tagged_attachment
+      # revert excluding test_live_migration_with_trunk when bug #1940425
+      # is fixed in neutron
+      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|tempest.api.compute.servers.test_device_tagging.TaggedAttachmentsTest.test_tagged_attachment|test_live_migration_with_trunk
       devstack_local_conf:
         post-config:
           $NOVA_CPU_CONF:
@@ -541,6 +549,8 @@
               block_migrate_cinder_iscsi: true
       tox_envlist: all
       tempest_test_regex: ((tempest\.(api\.compute|scenario)\..*smoke.*)|(^tempest\.api\.compute\.admin\.(test_live_migration|test_migration)))
+      # revert this when bug #1940425 is fixed in neutron
+      tempest_exclude_regex: (test_live_migration_with_trunk)
 
 - job:
     name: nova-multi-cell
@@ -628,6 +638,8 @@
     pre-run:
       - playbooks/ceph/glance-setup.yaml
     vars:
+      # revert this when bug #1940425 is fixed in neutron
+      tempest_exclude_regex: (test_live_migration_with_trunk)
       # NOTE(danms): Increase our swap size since we're dealing with
       # larger images and trigger OOMs.
       configure_swap_size: 8192
