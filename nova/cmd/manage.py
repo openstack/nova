@@ -623,47 +623,6 @@ class DbCommands(object):
         # "there are more migrations, but not completable right now"
         return ran and 1 or 0
 
-    @args('--ironic-node-uuid', metavar='<uuid>', dest='compute_node_uuid',
-          help='UUID of Ironic node to be moved between services')
-    @args('--destination-host', metavar='<host>',
-          dest='destination_service_host',
-          help='Destination ironic nova-compute service CONF.host')
-    def ironic_compute_node_move(self, compute_node_uuid,
-                                 destination_service_host):
-        ctxt = context.get_admin_context()
-
-        destination_service = objects.Service.get_by_compute_host(
-            ctxt, destination_service_host)
-        if destination_service.forced_down:
-            raise exception.NovaException(
-                "Destination compute is forced down!")
-
-        target_compute_node = objects.ComputeNode.get_by_uuid(
-            ctxt, compute_node_uuid)
-        source_service = objects.Service.get_by_id(
-            ctxt, target_compute_node.service_id)
-        if not source_service.forced_down:
-            raise exception.NovaException(
-                "Source service is not yet forced down!")
-
-        instances = objects.InstanceList.get_by_host_and_node(
-            ctxt, target_compute_node.host,
-            target_compute_node.hypervisor_hostname)
-        if len(instances) > 1:
-            raise exception.NovaException(
-                "Found an ironic host with more than one instance! "
-                "Please delete all Nova instances that do not match "
-                "the instance uuid recorded on the Ironic node.")
-
-        target_compute_node.service_id = destination_service.id
-        target_compute_node.host = destination_service.host
-        target_compute_node.save()
-
-        for instance in instances:
-            # this is a bit like evacuate, except no need to rebuild
-            instance.host = destination_service.host
-            instance.save()
-
 
 class ApiDbCommands(object):
     """Class for managing the api database."""
