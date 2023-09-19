@@ -1,0 +1,55 @@
+---
+prelude: |
+    The OpenStack 2023.2 (Nova 28.0.0) release includes many new features and
+    bug fixes. Please be sure to read the upgrade section which describes the
+    required actions to upgrade your cloud from 27.0.0 (2023.1) to 28.0.0
+    (2023.2).
+    As a reminder, OpenStack 2023.2 is a non-`Skip-Level-Upgrade Release`__
+    (starting from now, we name it a `non-SLURP release`) meaning that you can
+    only do rolling-upgrade from 2023.1. Next SLURP release will be 2024.1 where
+    you will be able to upgrade from 2023.1 directly by skipping this release.
+
+    .. __: https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for 2023.2 is `v2.95`__.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-2023-1-antelope-and-2023-2-bobcat
+
+    - The Ironic driver ``[ironic]/peer_list`` configuration option has been
+      deprecated. The Ironic driver now more closely models other Nova drivers by
+      having a single compute have exclusive control over assigned nodes.
+      If high availability of a single compute service is required, operators
+      should use active/passive failover.
+
+    - The legacy quota driver is now deprecated and a
+      `nova-manage limits command <https://docs.openstack.org/nova/latest/cli/nova-manage.html#limits-migrate-to-unified-limits>`_
+      is provided in order to migrate the legacy limits into Keystone. We plan
+      to change the default quota driver to the unified limits driver in an
+      upcoming release (hopefully 2024.1 Caracal). It is recommended that you
+      begin planning and executing a migration to unified limits as soon as
+      possible.
+
+    - QEMU in its TCG mode (i.e. full system emulation) uses a translation
+      block (TB) cache as an optimization during dynamic code translation.
+      The libvirt driver can now configure the tb-cache size when the virt type is
+      ``qemu``. This helps running VMs with small memory size.
+      In order to use this feature, a configuration option
+      ``[libvirt]/tb_cache_size`` has been introduced.
+
+    - Two new scheduler weighers have been introduced. One helps `sorting the nodes
+      by the number of active instances they run <https://docs.openstack.org/nova/latest/configuration/config.html#filter_scheduler.num_instances_weight_multiplier>`_,
+      the other helps `sorting by the hypervisor version each compute runs <https://docs.openstack.org/nova/latest/configuration/config.html#filter_scheduler.hypervisor_version_weight_multiplier>`_.
+      Accordingly, you can place your instances with different strategies, eg.
+      by allocating them to more recent nodes or by reducing the number of noisy
+      instance neighbors.
+
+    - It is now possible to define different authorization policies for migration
+      with and without a target host.
+
+    - A couple of other improvements target reducing the number of bugs we have,
+      one `checking at reboot if stale volume attachments still reside <https://specs.openstack.org/openstack/nova-specs/specs/2023.2/approved/cleanup-dangling-volume-attachments.html>`_
+      and another one ensuring a `strict linkage between a compute, a service and the instances
+      it runs <https://specs.openstack.org/openstack/nova-specs/specs/2023.2/approved/compute-object-ids.html>`_.
