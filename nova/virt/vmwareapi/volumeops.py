@@ -16,6 +16,7 @@
 """
 Management class for Storage-related functions (attach, detach, etc).
 """
+import uuid
 
 from oslo_log import log as logging
 from oslo_vmware import exceptions as oslo_vmw_exceptions
@@ -462,10 +463,7 @@ class VMwareVolumeOps(object):
             virtual_dmgr,
             name=vmdk_path,
             datacenter=ds_util.get_dc_info(self._session, ds_ref_val).ref)
-        uuid_hex = uuid_hex.replace(' ', '')
-        backing_uuid = (uuid_hex[:8] + '-' + uuid_hex[8:12] +
-                        '-' + uuid_hex[12:21] +
-                        '-' + uuid_hex[21:])
+        backing_uuid = str(uuid.UUID(uuid_hex.replace(' ', '')))
 
         volume_uuid = fcd_obj.config.name.replace('volume-', '')
         disk_type = fcd_obj.config.backing.provisioningType
