@@ -2307,14 +2307,16 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         disk_id = mock.sentinel.disk_id
         create_fcd_id_obj.return_value = disk_id
 
-        ds_ref = mock.sentinel.ds_ref
+        ds_ref = fake.ManagedObjectReference(
+            mock.sentinel.ds_ref_val, 'Datastore')
         get_moref.return_value = ds_ref
 
         task = mock.sentinel.task
         session = mock.Mock()
         session._call_method.return_value = task
 
-        vm_ref = mock.sentinel.vm_ref
+        vm_ref = fake.ManagedObjectReference(
+            mock.sentinel.vm_ref_val, 'VirtualMachine')
         fcd_id = mock.sentinel.fcd_id
         ds_ref_val = mock.sentinel.ds_ref_val
         controller_key = mock.sentinel.controller_key
@@ -2340,7 +2342,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         session = mock.Mock()
         session._call_method.return_value = task
 
-        vm_ref = mock.sentinel.vm_ref
+        vm_ref = fake.ManagedObjectReference(
+            mock.sentinel.vm_ref, 'VirtualMachine')
         fcd_id = mock.sentinel.fcd_id
         vm_util.detach_fcd(session, vm_ref, fcd_id)
 

@@ -2252,7 +2252,7 @@ def attach_fcd(
               "vm: %(vm_ref)s.",
               {'fcd_id': fcd_id,
                'ds_ref_val': ds_ref_val,
-               'vm_ref': vm_ref})
+               'vm_ref': vutil.get_moref_value(vm_ref)})
     task = session._call_method(
         session.vim, "AttachDisk_Task", vm_ref, diskId=disk_id,
         datastore=ds_ref, controllerKey=controller_key, unitNumber=unit_number)
@@ -2263,7 +2263,7 @@ def detach_fcd(session, vm_ref, fcd_id):
     client_factory = session.vim.client.factory
     disk_id = _create_fcd_id_obj(client_factory, fcd_id)
     LOG.debug("Detaching fcd (id: %(fcd_id)s) from vm: %(vm_ref)s.",
-              {'fcd_id': fcd_id, 'vm_ref': vm_ref})
+              {'fcd_id': fcd_id, 'vm_ref': vutil.get_moref_value(vm_ref)})
     task = session._call_method(
         session.vim, "DetachDisk_Task", vm_ref, diskId=disk_id)
     session._wait_for_task(task)
