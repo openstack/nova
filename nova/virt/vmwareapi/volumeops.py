@@ -457,12 +457,13 @@ class VMwareVolumeOps(object):
             id=disk_id,
             datastore=ds_ref_val)
         vmdk_path = fcd_obj.config.backing.filePath
+        ds_ref = vutil.get_moref(ds_ref_val, "Datastore")
         uuid_hex = self._session.invoke_api(
             self._session.vim,
             'QueryVirtualDiskUuid',
             virtual_dmgr,
             name=vmdk_path,
-            datacenter=ds_util.get_dc_info(self._session, ds_ref_val).ref)
+            datacenter=ds_util.get_dc_info(self._session, ds_ref).ref)
         backing_uuid = str(uuid.UUID(uuid_hex.replace(' ', '')))
 
         volume_uuid = fcd_obj.config.name.replace('volume-', '')
