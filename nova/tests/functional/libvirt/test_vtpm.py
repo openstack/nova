@@ -109,6 +109,16 @@ class FakeKeyManager(key_manager.KeyManager):
 
         del self._passphrases[managed_object_id]
 
+    def add_consumer(self, context, managed_object_id, consumer_data):
+        raise NotImplementedError(
+            'FakeKeyManager does not implement adding consumers'
+        )
+
+    def remove_consumer(self, context, managed_object_id, consumer_data):
+        raise NotImplementedError(
+            'FakeKeyManager does not implement removing consumers'
+        )
+
 
 class VTPMServersTest(base.ServersTestBase):
 
