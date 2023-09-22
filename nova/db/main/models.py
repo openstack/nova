@@ -161,8 +161,8 @@ class Service(BASE, NovaBase, models.SoftDeleteMixin):
     version = sa.Column(sa.Integer, default=0)
 
     instance = orm.relationship(
-        "Instance",
-        backref='services',
+        'Instance',
+        back_populates='services',
         primaryjoin='and_(Service.host == Instance.host,'
                     'Service.binary == "nova-compute",'
                     'Instance.deleted == 0)',
@@ -425,6 +425,96 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
 
     hidden = sa.Column(sa.Boolean, default=False)
 
+    block_device_mapping = orm.relationship(
+        'BlockDeviceMapping',
+        back_populates='instance',
+        primaryjoin=(
+            'and_(BlockDeviceMapping.instance_uuid == Instance.uuid, '
+            'BlockDeviceMapping.deleted == 0)'
+        ),
+    )
+    console_auth_tokens = orm.relationship(
+        'ConsoleAuthToken',
+        back_populates='instance',
+        foreign_keys='ConsoleAuthToken.instance_uuid',
+        primaryjoin=(
+            'and_(Instance.uuid == ConsoleAuthToken.instance_uuid,'
+            'Instance.deleted == 0)'
+        ),
+    )
+    extra = orm.relationship(
+        'InstanceExtra',
+        back_populates='instance',
+        uselist=False,
+    )
+    info_cache = orm.relationship(
+        'InstanceInfoCache',
+        back_populates='instance',
+        uselist=False,
+    )
+    pci_devices = orm.relationship(
+        'PciDevice',
+        back_populates='instance',
+        foreign_keys='PciDevice.instance_uuid',
+        primaryjoin=(
+            'and_(Instance.uuid == PciDevice.instance_uuid,'
+            'PciDevice.deleted == 0)'
+        ),
+    )
+    services = orm.relationship(
+        'Service',
+        back_populates='instance',
+        primaryjoin=(
+            'and_(Instance.host == Service.host,'
+            'Service.binary == "nova-compute",'
+            'Instance.deleted == 0)'
+        ),
+        foreign_keys='Service.host',
+    )
+    security_groups = orm.relationship(
+        'SecurityGroup',
+        secondary='security_group_instance_association',
+        back_populates='instances',
+        primaryjoin=(
+            'and_('
+            'SecurityGroupInstanceAssociation.instance_uuid == Instance.uuid,'
+            # (anthony) the condition below shouldn't be necessary now that the
+            # association is being marked as deleted.  However, removing this
+            # may cause existing deployments to choke, so I'm leaving it
+            'Instance.deleted == 0)'
+        ),
+        secondaryjoin=(
+            'and_('
+            'SecurityGroup.id == SecurityGroupInstanceAssociation.security_group_id,'  # noqa: E501
+            'SecurityGroupInstanceAssociation.deleted == 0,'
+            'SecurityGroup.deleted == 0)'
+        ),
+    )
+    system_metadata = orm.relationship(
+        'InstanceSystemMetadata',
+        back_populates='instance',
+    )
+    tags = orm.relationship(
+        'Tag',
+        back_populates='instance',
+        primaryjoin=(
+            'and_(Instance.uuid == Tag.resource_id,Instance.deleted == 0)'
+        ),
+        foreign_keys='Tag.resource_id',
+    )
+
+
+# NOTE(stephenfin): https://github.com/sqlalchemy/sqlalchemy/discussions/8619
+Instance.metadata = orm.relationship(
+    'InstanceMetadata',
+    back_populates='instance',
+    foreign_keys='InstanceMetadata.instance_uuid',
+    primaryjoin=(
+        'and_(Instance.uuid == InstanceMetadata.instance_uuid,'
+        'InstanceMetadata.deleted == 0)'
+    ),
+)
+
 
 class InstanceInfoCache(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a cache of information about an instance
@@ -442,7 +532,7 @@ class InstanceInfoCache(BASE, NovaBase, models.SoftDeleteMixin):
     instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'),
                            nullable=False)
     instance = orm.relationship(Instance,
-                            backref=orm.backref('info_cache', uselist=False),
+                            back_populates='info_cache',
                             foreign_keys=instance_uuid,
                             primaryjoin=instance_uuid == Instance.uuid)
 
@@ -466,8 +556,7 @@ class InstanceExtra(BASE, NovaBase, models.SoftDeleteMixin):
     # and can be removed in the future release.
     resources = orm.deferred(sa.Column(sa.Text))
     instance = orm.relationship(Instance,
-                            backref=orm.backref('extra',
-                                                uselist=False),
+                            back_populates='extra',
                             foreign_keys=instance_uuid,
                             primaryjoin=instance_uuid == Instance.uuid)
 
@@ -616,7 +705,7 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
     # transition period first.
     uuid = sa.Column(sa.String(36))
     instance = orm.relationship(Instance,
-                            backref=orm.backref('block_device_mapping'),
+                            back_populates='block_device_mapping',
                             foreign_keys=instance_uuid,
                             primaryjoin='and_(BlockDeviceMapping.'
                                               'instance_uuid=='
@@ -664,10 +753,9 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
     encryption_format = sa.Column(sa.String(128))
     encryption_options = sa.Column(sa.String(4096))
 
+
 # TODO(stephenfin): Remove once we drop the security_groups field from the
 # Instance table. Until then, this is tied to the SecurityGroup table
-
-
 class SecurityGroupInstanceAssociation(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'security_group_instance_association'
     __table_args__ = (
@@ -698,6 +786,7 @@ class SecurityGroup(BASE, NovaBase, models.SoftDeleteMixin):
     project_id = sa.Column(sa.String(255))
 
     instances = orm.relationship(Instance,
+                             back_populates='security_groups',
                              secondary = "security_group_instance_association",
                              primaryjoin = 'and_('
         'SecurityGroup.id == '
@@ -709,8 +798,17 @@ class SecurityGroup(BASE, NovaBase, models.SoftDeleteMixin):
         # (anthony) the condition below shouldn't be necessary now that the
         # association is being marked as deleted.  However, removing this
         # may cause existing deployments to choke, so I'm leaving it
-        'Instance.deleted == 0)',
-                             backref='security_groups')
+        'Instance.deleted == 0)')
+
+    rules = orm.relationship(
+        'SecurityGroupIngressRule',
+        primaryjoin=(
+            'and_('
+            'SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,'
+            'SecurityGroupIngressRule.deleted == 0)'
+        ),
+        back_populates='parent_group',
+    )
 
 
 # TODO(stephenfin): Remove once we drop the security_groups field from the
@@ -723,8 +821,9 @@ class SecurityGroupIngressRule(BASE, NovaBase, models.SoftDeleteMixin):
 
     parent_group_id = sa.Column(
         sa.Integer, sa.ForeignKey('security_groups.id'))
-    parent_group = orm.relationship("SecurityGroup", backref="rules",
-                                foreign_keys=parent_group_id,
+    parent_group = orm.relationship("SecurityGroup",
+                                back_populates="rules",
+                                foreign_keys=[parent_group_id],
                                 primaryjoin='and_('
         'SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,'
         'SecurityGroupIngressRule.deleted == 0)')
@@ -738,7 +837,7 @@ class SecurityGroupIngressRule(BASE, NovaBase, models.SoftDeleteMixin):
     # granting access for.
     group_id = sa.Column(sa.Integer, sa.ForeignKey('security_groups.id'))
     grantee_group = orm.relationship("SecurityGroup",
-                                 foreign_keys=group_id,
+                                 foreign_keys=[group_id],
                                  primaryjoin='and_('
         'SecurityGroupIngressRule.group_id == SecurityGroup.id,'
         'SecurityGroupIngressRule.deleted == 0)')
@@ -824,12 +923,16 @@ class InstanceMetadata(BASE, NovaBase, models.SoftDeleteMixin):
     key = sa.Column(sa.String(255))
     value = sa.Column(sa.String(255))
     instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
-    instance = orm.relationship(Instance, backref="metadata",
-                            foreign_keys=instance_uuid,
-                            primaryjoin='and_('
-                                'InstanceMetadata.instance_uuid == '
-                                     'Instance.uuid,'
-                                'InstanceMetadata.deleted == 0)')
+
+    instance = orm.relationship(
+        Instance,
+        back_populates="metadata",
+        foreign_keys=instance_uuid,
+        primaryjoin=(
+            'and_(InstanceMetadata.instance_uuid == Instance.uuid,'
+            'InstanceMetadata.deleted == 0)'
+        ),
+    )
 
 
 class InstanceSystemMetadata(BASE, NovaBase, models.SoftDeleteMixin):
@@ -845,8 +948,11 @@ class InstanceSystemMetadata(BASE, NovaBase, models.SoftDeleteMixin):
                            sa.ForeignKey('instances.uuid'),
                            nullable=False)
 
-    instance = orm.relationship(Instance, backref="system_metadata",
-                            foreign_keys=instance_uuid)
+    instance = orm.relationship(
+        Instance,
+        back_populates='system_metadata',
+        foreign_keys=instance_uuid,
+    )
 
 
 class VolumeUsage(BASE, NovaBase, models.SoftDeleteMixin):
@@ -1022,7 +1128,8 @@ class PciDevice(BASE, NovaBase, models.SoftDeleteMixin):
     numa_node = sa.Column(sa.Integer, nullable=True)
 
     parent_addr = sa.Column(sa.String(12), nullable=True)
-    instance = orm.relationship(Instance, backref="pci_devices",
+    instance = orm.relationship(Instance,
+                                back_populates="pci_devices",
                                 foreign_keys=instance_uuid,
                                 primaryjoin='and_('
                                 'PciDevice.instance_uuid == Instance.uuid,'
@@ -1040,11 +1147,11 @@ class Tag(BASE, models.ModelBase):
     tag = sa.Column(sa.Unicode(80), primary_key=True, nullable=False)
 
     instance = orm.relationship(
-        "Instance",
-        backref='tags',
+        'Instance',
+        back_populates='tags',
+        foreign_keys=resource_id,
         primaryjoin='and_(Tag.resource_id == Instance.uuid,'
                     'Instance.deleted == 0)',
-        foreign_keys=resource_id
     )
 
 
@@ -1074,7 +1181,7 @@ class ConsoleAuthToken(BASE, NovaBase):
 
     instance = orm.relationship(
         "Instance",
-        backref='console_auth_tokens',
+        back_populates='console_auth_tokens',
         primaryjoin='and_(ConsoleAuthToken.instance_uuid == Instance.uuid,'
                     'Instance.deleted == 0)',
         foreign_keys=instance_uuid

@@ -147,11 +147,15 @@ class CellMapping(BASE):
     transport_url = sa.Column(sa.Text())
     database_connection = sa.Column(sa.Text())
     disabled = sa.Column(sa.Boolean, default=False)
+
     host_mapping = orm.relationship(
         'HostMapping',
-        backref=orm.backref('cell_mapping', uselist=False),
-        foreign_keys=id,
-        primaryjoin='CellMapping.id == HostMapping.cell_id')
+        back_populates='cell_mapping',
+    )
+    instance_mapping = orm.relationship(
+        'InstanceMapping',
+        back_populates='cell_mapping',
+    )
 
 
 class InstanceMapping(BASE):
@@ -178,11 +182,11 @@ class InstanceMapping(BASE):
     # transition period first.
     user_id = sa.Column(sa.String(255), nullable=True)
     queued_for_delete = sa.Column(sa.Boolean)
+
     cell_mapping = orm.relationship(
         'CellMapping',
-        backref=orm.backref('instance_mapping', uselist=False),
-        foreign_keys=cell_id,
-        primaryjoin='InstanceMapping.cell_id == CellMapping.id')
+        back_populates='instance_mapping',
+    )
 
 
 class HostMapping(BASE):
@@ -197,6 +201,11 @@ class HostMapping(BASE):
     cell_id = sa.Column(
         sa.Integer, sa.ForeignKey('cell_mappings.id'), nullable=False)
     host = sa.Column(sa.String(255), nullable=False)
+
+    cell_mapping = orm.relationship(
+        'CellMapping',
+        back_populates='host_mapping',
+    )
 
 
 class RequestSpec(BASE):
@@ -235,6 +244,9 @@ class Flavors(BASE):
     is_public = sa.Column(sa.Boolean, default=True)
     description = sa.Column(sa.Text)
 
+    extra_specs = orm.relationship('FlavorExtraSpecs', back_populates='flavor')
+    projects = orm.relationship('FlavorProjects', back_populates='flavor')
+
 
 class FlavorExtraSpecs(BASE):
     """Represents additional specs as key/value pairs for a flavor"""
@@ -251,10 +263,8 @@ class FlavorExtraSpecs(BASE):
     value = sa.Column(sa.String(255))
     flavor_id = sa.Column(
         sa.Integer, sa.ForeignKey('flavors.id'), nullable=False)
-    flavor = orm.relationship(
-        Flavors, backref='extra_specs',
-        foreign_keys=flavor_id,
-        primaryjoin='FlavorExtraSpecs.flavor_id == Flavors.id')
+
+    flavor = orm.relationship(Flavors, back_populates='extra_specs')
 
 
 class FlavorProjects(BASE):
@@ -267,10 +277,8 @@ class FlavorProjects(BASE):
     flavor_id = sa.Column(
         sa.Integer, sa.ForeignKey('flavors.id'), nullable=False)
     project_id = sa.Column(sa.String(255), nullable=False)
-    flavor = orm.relationship(
-        Flavors, backref='projects',
-        foreign_keys=flavor_id,
-        primaryjoin='FlavorProjects.flavor_id == Flavors.id')
+
+    flavor = orm.relationship(Flavors, back_populates='projects')
 
 
 class BuildRequest(BASE):
@@ -354,12 +362,9 @@ class InstanceGroup(BASE):
     project_id = sa.Column(sa.String(255))
     uuid = sa.Column(sa.String(36), nullable=False)
     name = sa.Column(sa.String(255))
-    _policies = orm.relationship(
-        InstanceGroupPolicy,
-        primaryjoin='InstanceGroup.id == InstanceGroupPolicy.group_id')
-    _members = orm.relationship(
-        InstanceGroupMember,
-        primaryjoin='InstanceGroup.id == InstanceGroupMember.group_id')
+
+    _policies = orm.relationship(InstanceGroupPolicy)
+    _members = orm.relationship(InstanceGroupMember)
 
     @property
     def policy(self):
@@ -487,7 +492,5 @@ class Reservation(BASE):
     resource = sa.Column(sa.String(255))
     delta = sa.Column(sa.Integer, nullable=False)
     expire = sa.Column(sa.DateTime)
-    usage = orm.relationship(
-        "QuotaUsage",
-        foreign_keys=usage_id,
-        primaryjoin='Reservation.usage_id == QuotaUsage.id')
+
+    usage = orm.relationship('QuotaUsage')
