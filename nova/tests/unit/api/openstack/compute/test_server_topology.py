@@ -73,7 +73,7 @@ class ServerTopologyTestV278(test.NoDBTestCase):
                      'siblings': [],
                      'vcpu_set': set([0, 1]),
                      'host_node': 0,
-                     'cpu_pinning':{}}],
+                     'cpu_pinning': {}}],
                      'pagesize_kb': 4}
 
         inst = objects.instance.Instance(uuid=self.uuid, host='123',
