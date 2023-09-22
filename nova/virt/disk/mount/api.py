@@ -184,7 +184,7 @@ class Mount(object):
 
     def map_dev(self):
         """Map partitions of the device to the file system namespace."""
-        assert(os.path.exists(self.device))
+        assert os.path.exists(self.device)
         LOG.debug("Map dev %s", self.device)
         automapped_path = '/dev/%sp%s' % (os.path.basename(self.device),
                                               self.partition)
@@ -194,7 +194,7 @@ class Mount(object):
         elif self.partition and not os.path.exists(automapped_path):
             map_path = '/dev/mapper/%sp%s' % (os.path.basename(self.device),
                                               self.partition)
-            assert(not os.path.exists(map_path))
+            assert not os.path.exists(map_path)
 
             # Note kpartx can output warnings to stderr and succeed
             # Also it can output failures to stderr and "succeed"

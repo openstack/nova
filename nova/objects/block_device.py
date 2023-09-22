@@ -168,7 +168,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
                 # gave this bdm a uuid
                 result = query.one()
                 uuid = result['uuid']
-                assert(uuid is not None)
+                assert uuid is not None
 
         return uuid
 

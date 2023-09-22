@@ -49,8 +49,10 @@ class InstanceNUMACell(base.NovaEphemeralObject,
                 raise exception.ObjectActionError(
                     action='obj_make_compatible',
                     reason=_(
-                        '%s policy is not supported in version %s'
-                    ) % (primitive['cpu_policy'], target_version))
+                        '{policy} policy is not supported in '
+                        'version {version}'
+                    ).format(policy=primitive['cpu_policy'],
+                             version=target_version))
 
         # NOTE(huaqiang): Since version 1.5, 'cpuset' is modified to track the
         # unpinned CPUs only, with pinned CPUs tracked via 'pcpuset' instead.

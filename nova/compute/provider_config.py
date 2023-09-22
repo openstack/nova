@@ -229,8 +229,9 @@ def _load_yaml_file(path):
                 if hasattr(ex, 'problem_mark'):
                     pos = ex.problem_mark
                     message += _("File: %s ") % open_file.name
-                    message += _("Error position: (%s:%s)") % (
-                        pos.line + 1, pos.column + 1)
+                    message += _("Error position: "
+                                 "({line}:{column})").format(
+                                     line=pos.line + 1, column=pos.column + 1)
                 raise nova_exc.ProviderConfigException(error=message)
     except OSError:
         message = _("Unable to read yaml config file: %s") % path

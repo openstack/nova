@@ -2624,7 +2624,7 @@ class PlacementCommands(object):
                     # By default we suspect the orphaned allocation was for a
                     # migration...
                     consumer_type = 'migration'
-                    if not(consumer_uuid in inst_uuids):
+                    if consumer_uuid not in inst_uuids:
                         # ... but if we can't find it either for an instance,
                         # that means it was for this.
                         consumer_type = 'instance'
@@ -2798,8 +2798,8 @@ class LibvirtCommands(object):
                 print(mtype)
                 return 0
             else:
-                print(_('No machine type registered for instance %s' %
-                        instance_uuid))
+                print(_('No machine type registered for instance %s') %
+                      instance_uuid)
                 return 3
         except (exception.InstanceNotFound,
                 exception.InstanceMappingNotFound) as e:

@@ -389,7 +389,8 @@ class GlanceImageServiceV2(object):
 
     def _verify_and_write(self, context, image_id, trusted_certs,
                           image_chunks, data, dst_path):
-        """Perform image signature verification and save the image file if needed.
+        """Perform image signature verification and save the image file if
+        needed.
 
         This function writes the content of the image_chunks iterator either to
         a file object provided by the data parameter or to a filepath provided

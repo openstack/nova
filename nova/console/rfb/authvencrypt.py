@@ -110,10 +110,10 @@ class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
         # MITM'd Anonymous Diffie Hellmann (DH) cyphers)
         if AuthVeNCryptSubtype.X509NONE not in sub_types:
             reason = _(
-                "Server does not support the %d (%s) VeNCrypt auth subtype"
-            ) % (
-                AuthVeNCryptSubtype.X509NONE.value,
-                AuthVeNCryptSubtype.X509NONE.name)
+                "Server does not support the {value} ({name}) "
+                "VeNCrypt auth subtype"
+            ).format(value=AuthVeNCryptSubtype.X509NONE.value,
+                     name=AuthVeNCryptSubtype.X509NONE.name)
             raise exception.RFBAuthHandshakeFailed(reason=reason)
 
         LOG.debug(

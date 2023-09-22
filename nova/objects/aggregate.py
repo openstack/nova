@@ -437,7 +437,7 @@ def _get_by_host_from_db(context, host, key=None):
 
 @api_db_api.context_manager.reader
 def _get_by_metadata_from_db(context, key=None, value=None):
-    assert(key is not None or value is not None)
+    assert key is not None or value is not None
     query = context.session.query(api_models.Aggregate)
     query = query.join(api_models.Aggregate._metadata)
     if key is not None:
