@@ -323,7 +323,7 @@ becoming a member of nova-core.
 How to do great nova-spec reviews?
 ==================================
 
-https://specs.openstack.org/openstack/nova-specs/specs/2023.2/template.html
+https://specs.openstack.org/openstack/nova-specs/specs/2024.1/template.html
 
 :doc:`/contributor/blueprints`.
 
