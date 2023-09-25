@@ -175,9 +175,36 @@ support the decided libvirt version.
       - 7.0.0
       - 4.2.0
       - 5.2.0
+    * - Yoga
+      - 25.0.0
+      - 6.0.0
+      - 7.0.0
+      - 4.2.0
+      - 5.2.0
+    * - Zed
+      - 26.0.0
+      - 6.0.0
+      - 7.0.0
+      - 4.2.0
+      - 5.2.0
+    * - 2023.1 Antelope
+      - 27.0.0
+      - 6.0.0
+      - 7.0.0
+      - 4.2.0
+      - 5.2.0
+    * - 2023.2 Bobcat
+      - 28.0.0
+      - 7.0.0
+      - 8.0.0
+      - 5.2.0
+      - 6.2.0
+
 
 OS distribution versions
 ------------------------
+
+.. warning:: This section may become a bit outdated.
 
 This table provides information on a representative sample of OS distros and
 the version of libvirt/QEMU/libguestfs that they ship. This is **NOT** intended
