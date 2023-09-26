@@ -63,3 +63,30 @@ class TestAggregateMultitenancyIsolationFilter(test.NoDBTestCase):
             context=mock.sentinel.ctx, project_id='my_tenantid')
         host = fakes.FakeHostState('host1', 'compute', {})
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_aggregate_multi_tenancy_isolation_with_prefix(self,
+            agg_mock):
+        agg_mock.return_value = {
+            'filter_tenant_id': set(['my_tenantid']),
+            'filter_tenant_id_gr1': set([
+                'my_tenantid1', 'my_tenantid2']),
+            'filter_tenant_id_gr2': set([
+                'my_tenantid5', 'my_tenantid4'])}
+
+        # my_tenantid should pass considering previous behavior.
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='my_tenantid')
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+        # my_tenantid2 should pass considering new behavior.
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='my_tenantid2')
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+        # my_tenantid6 still should not pass
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='my_tenantid6')
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
