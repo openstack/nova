@@ -1570,6 +1570,18 @@ class ComputeManager(manager.Manager):
             LOG.debug('Verified node %s matches my host %s',
                       node.uuid, self.host)
 
+    def _sanity_check_new_host(self):
+        instances_on_hv = self.driver.list_instance_uuids()
+        if len(instances_on_hv) > 0:
+            # This means we have instances on our hypervisor, but we think
+            # we are a new host (i.e. we created a new service record). That
+            # likely means we're pointed at an empty database or the wrong
+            # cell.
+            raise exception.InvalidConfiguration(
+                'My hypervisor has existing instances, but I appear to be '
+                'a new service in this database. Possible database '
+                'configuration error, refusing to start!')
+
     def init_host(self, service_ref):
         """Initialization for a standalone compute service."""
 
@@ -1578,6 +1590,10 @@ class ComputeManager(manager.Manager):
             # to record a locally-persistent node identity because
             # we have upgraded from a previous version.
             self._ensure_existing_node_identity(service_ref)
+        else:
+            # If we are a new service (in the database), make sure we have no
+            # instances on our hypervisor as we would expect.
+            self._sanity_check_new_host()
 
         if CONF.pci.device_spec:
             # Simply loading the PCI passthrough spec will do a bunch of

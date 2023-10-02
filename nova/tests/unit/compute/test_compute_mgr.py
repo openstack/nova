@@ -917,6 +917,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                     self.context, objects.InstanceList(), db_list, None)
 
         @mock.patch.object(manager.ComputeManager,
+                           '_sanity_check_new_host')
+        @mock.patch.object(manager.ComputeManager,
                            '_ensure_existing_node_identity')
         @mock.patch.object(manager.ComputeManager, '_get_nodes')
         @mock.patch.object(manager.ComputeManager,
@@ -937,7 +939,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                            mock_destroy, mock_admin_ctxt, mock_host_get,
                            mock_init_host,
                            mock_error_interrupted, mock_get_nodes,
-                           mock_existing_node):
+                           mock_existing_node, mock_check_new):
             mock_admin_ctxt.return_value = self.context
             inst_list = _make_instance_list(startup_instances)
             mock_host_get.return_value = inst_list
@@ -948,6 +950,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             self.compute.init_host(None)
 
+            mock_check_new.assert_called_once_with()
             mock_existing_node.assert_not_called()
             mock_validate_pinning.assert_called_once_with(inst_list)
             mock_validate_vtpm.assert_called_once_with(inst_list)
@@ -1000,6 +1003,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock_get_nodes.return_value.keys())
         mock_get_nodes.assert_called_once_with(
             test.MatchType(nova.context.RequestContext))
+
+    def test_init_host_new_with_instances(self):
+        """Tests the case where we start up without an existing service_ref,
+        indicating that we are a new service, but our hypervisor reports
+        existing instances. This indicates we were moved to another cell,
+        our database got wiped, etc.
+        """
+        with mock.patch.object(self.compute.driver,
+                               'list_instance_uuids') as mock_insts:
+            mock_insts.return_value = ['foo']
+            self.assertRaises(exception.InvalidConfiguration,
+                              self.compute.init_host, None)
 
     @mock.patch('nova.objects.InstanceList')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
