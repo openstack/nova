@@ -206,7 +206,7 @@ Problem
 You can view the log output of running instances from either the
 :guilabel:`Log` tab of the dashboard or the output of :command:`nova
 console-log`. In some cases, the log output of a running Linux instance will be
-empty or only display a single character (for example, the `?` character).
+empty or only display a single character (for example, the ``?`` character).
 
 This occurs when the Compute service attempts to retrieve the log output of the
 instance via a serial console while the instance itself is not configured to

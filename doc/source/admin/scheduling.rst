@@ -269,7 +269,7 @@ Refer to :doc:`/admin/aggregates` for more information.
 Filters host by disk allocation with a per-aggregate ``max_io_ops_per_host``
 value. If the per-aggregate value is not found, the value falls back to the
 global setting defined by the
-`:oslo.config:option:`filter_scheduler.max_io_ops_per_host` config option.
+:oslo.config:option:`filter_scheduler.max_io_ops_per_host` config option.
 If the host is in more than one aggregate and more than one value is found, the
 minimum value will be used.
 
@@ -906,7 +906,7 @@ that are not and are not available using the
 respectively.
 
 Starting with the Stein release, if per-aggregate value with the key
-`metrics_weight_multiplier` is found, this value would be chosen as the
+``metrics_weight_multiplier`` is found, this value would be chosen as the
 metrics weight multiplier. Otherwise, it will fall back to the
 :oslo.config:option:`metrics.weight_multiplier`. If more than
 one value is found for a host in aggregate metadata, the minimum value will
@@ -1029,7 +1029,7 @@ value will be used.
 Weighs hosts based on which cell they are in. "Local" cells are preferred when
 moving an instance.
 
-If per-aggregate value with the key `cross_cell_move_weight_multiplier` is
+If per-aggregate value with the key ``cross_cell_move_weight_multiplier`` is
 found, this value would be chosen as the cross-cell move weight multiplier.
 Otherwise, it will fall back to the
 :oslo.config:option:`filter_scheduler.cross_cell_move_weight_multiplier`.  If
@@ -1050,7 +1050,7 @@ hosts with different hypervisors.
 
 For example, the ironic virt driver uses the ironic API micro-version as the hypervisor
 version for a given node. The libvirt driver uses the libvirt version
-i.e. Libvirt `7.1.123` becomes `700100123` vs  Ironic `1.82` becomes `1`.
+i.e. Libvirt ``7.1.123`` becomes ``700100123`` vs  Ironic ``1.82`` becomes ``1``.
 
 If you have a mixed virt driver deployment in the ironic vs non-ironic
 case nothing special needs to be done. ironic nodes are scheduled using custom

@@ -51,7 +51,7 @@ same time.
 
     As of OpenStack 2023.1 (Antelope), Nova supports the coexistence of N and
     N-2 (Yoga) :program:`nova-compute` or :program:`nova-conductor` services in
-    the same deployment. The `nova-conductor`` service will fail to start when
+    the same deployment. The ``nova-conductor`` service will fail to start when
     a ``nova-compute`` service that is older than the support envelope is
     detected. This varies by release and the support envelope will be explained
     in the release notes. Similarly, in a :doc:`deployment with multiple cells
@@ -116,7 +116,7 @@ same time.
 #. After maintenance window:
 
    * Once all services are running the new code, double check in the DB that
-     there are no old orphaned service records using `nova service-list`.
+     there are no old orphaned service records using ``nova service-list``.
 
    * Now that all services are upgraded, we need to send the SIG_HUP signal, so all
      the services clear any cached service version data. When a new service

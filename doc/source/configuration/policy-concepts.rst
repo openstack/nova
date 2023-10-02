@@ -255,7 +255,7 @@ overridden in the policy.yaml file but scope is not override-able.
    read-only operation within project. For example: Get server.
 
 #. PROJECT_MEMBER_OR_ADMIN: ``admin`` or ``member`` role on ``project`` scope.    Such policy rules are default to most of the owner level APIs and align
-   with `member` role legacy admin can continue to access those APIs.
+   with ``member`` role legacy admin can continue to access those APIs.
 
 #. PROJECT_READER_OR_ADMIN: ``admin`` or ``reader`` role on ``project`` scope.    Such policy rules are default to most of the read only APIs so that legacy
    admin can continue to access those APIs.

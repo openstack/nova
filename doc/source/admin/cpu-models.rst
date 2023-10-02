@@ -142,7 +142,7 @@ If :oslo.config:option:`cpu_mode=none <libvirt.cpu_mode>`, libvirt does not
 specify a CPU model. Instead, the hypervisor chooses the default model.
 
 The ``none`` CPU model is the default for all non-KVM/QEMU hypervisors.
-(:oslo.config:option:`libvirt.virt_type`\ !=``kvm``/``qemu``)
+(:oslo.config:option:`libvirt.virt_type`\ != ``kvm`` / ``qemu``)
 
 
 .. _cpu-models:

@@ -40,7 +40,7 @@ When we talk about block device mapping, we usually refer to one of two things
    format as the 'API BDMs' from now on.
 
    2.2 The virt driver format - this is the format defined by the classes in
-   :mod: `nova.virt.block_device`. This format is used and expected by the code
+   :mod:`nova.virt.block_device`. This format is used and expected by the code
    in the various virt drivers. These classes, in addition to exposing a
    different format (mimicking the Python dict interface), also provide a place
    to bundle some functionality common to certain types of block devices (for
@@ -66,8 +66,8 @@ mirrored that of the EC2 API. During the Havana release of Nova, block device
 handling code, and in turn the block device mapping structure, had work done on
 improving the generality and usefulness. These improvements included exposing
 additional details and features in the API. In order to facilitate this, a new
-extension was added to the v2 API called `BlockDeviceMappingV2Boot` [2]_, that
-added an additional `block_device_mapping_v2` field to the instance boot API
+extension was added to the v2 API called ``BlockDeviceMappingV2Boot`` [2]_, that
+added an additional ``block_device_mapping_v2`` field to the instance boot API
 request.
 
 Block device mapping v1 (aka legacy)
@@ -82,14 +82,14 @@ this page), and would accept only:
 * Type field - used only to distinguish between volumes and Cinder volume
   snapshots
 * Optional size field
-* Optional `delete_on_termination` flag
+* Optional ``delete_on_termination`` flag
 
 While all of Nova internal code only uses and stores the new data structure, we
 still need to handle API requests that use the legacy format. This is handled
 by the Nova API service on every request. As we will see later, since block
 device mapping information can also be stored in the image metadata in Glance,
 this is another place where we need to handle the v1 format. The code to handle
-legacy conversions is part of the :mod: `nova.block_device` module.
+legacy conversions is part of the :mod:`nova.block_device` module.
 
 Intermezzo - problem with device names
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -110,7 +110,7 @@ for the features mentioned above (and preferably only then).
 
 Another use for specifying the device name was to allow the "boot from volume"
 functionality, by specifying a device name that matches the root device name
-for the instance (usually `/dev/vda`).
+for the instance (usually ``/dev/vda``).
 
 Currently (mid Liberty) users are discouraged from specifying device names
 for all calls requiring or allowing block device mapping, except when trying to
@@ -131,19 +131,19 @@ fields (in addition to the ones that were already there):
 
 * source_type - this can have one of the following values:
 
-  * `image`
-  * `volume`
-  * `snapshot`
-  * `blank`
+  * ``image``
+  * ``volume``
+  * ``snapshot``
+  * ``blank``
 
 * destination_type  - this can have one of the following values:
 
-  * `local`
-  * `volume`
+  * ``local``
+  * ``volume``
 
 * guest_format - Tells Nova how/if to format the device prior to attaching,
   should be only used with blank local images. Denotes a swap disk if the value
-  is `swap`.
+  is ``swap``.
 
 * device_name - See the previous section for a more in depth explanation of
   this - currently best left empty (not specified that is), unless the user
@@ -153,8 +153,8 @@ fields (in addition to the ones that were already there):
   get changed by the driver.
 
 * disk_bus and device_type - low level details that some hypervisors (currently
-  only libvirt) may support. Some example disk_bus values can be: `ide`, `usb`,
-  `virtio`, `scsi`, while device_type may be `disk`, `cdrom`, `floppy`, `lun`.
+  only libvirt) may support. Some example disk_bus values can be: ``ide``, ``usb``,
+  ``virtio``, ``scsi``, while device_type may be ``disk``, ``cdrom``, ``floppy``, ``lun``.
   This is not an exhaustive list as it depends on the virtualization driver,
   and may change as more support is added. Leaving these empty is the most
   common thing to do.
@@ -185,28 +185,28 @@ Combination of the ``source_type`` and ``destination_type`` will define the
 kind of block device the entry is referring to. The following
 combinations are supported:
 
-* `image` -> `local` - this is only currently reserved for the entry
+* ``image`` -> ``local`` - this is only currently reserved for the entry
   referring to the Glance image that the instance is being booted with
   (it should also be marked as a boot device). It is also worth noting
   that an API request that specifies this, also has to provide the
-  same Glance uuid as the `image_ref` parameter to the boot request
+  same Glance uuid as the ``image_ref`` parameter to the boot request
   (this is done for backwards compatibility and may be changed in the
   future). This functionality might be extended to specify additional
   Glance images to be attached to an instance after boot (similar to
   kernel/ramdisk images) but this functionality is not supported by
   any of the current drivers.
-* `volume` -> `volume` - this is just a Cinder volume to be attached to the
+* ``volume`` -> ``volume`` - this is just a Cinder volume to be attached to the
   instance. It can be marked as a boot device.
-* `snapshot` -> `volume` - this works exactly as passing `type=snap` does.
+* ``snapshot`` -> ``volume`` - this works exactly as passing ``type=snap`` does.
   It would create a volume from a Cinder volume snapshot and attach that
   volume to the instance. Can be marked bootable.
-* `image` -> `volume` - As one would imagine, this would download a Glance
+* ``image`` -> ``volume`` - As one would imagine, this would download a Glance
   image to a cinder volume and attach it to an instance. Can also be marked
   as bootable. This is really only a shortcut for creating a volume out of
   an image before booting an instance with the newly created volume.
-* `blank` -> `volume` - Creates a blank Cinder volume and attaches it. This
+* ``blank`` -> ``volume`` - Creates a blank Cinder volume and attaches it. This
   will also require the volume size to be set.
-* `blank` -> `local` - Depending on the guest_format field (see below),
+* ``blank`` -> ``local`` - Depending on the guest_format field (see below),
   this will either mean an ephemeral blank disk on hypervisor local
   storage, or a swap disk (instances can have only one of those).
 
@@ -216,13 +216,13 @@ will do basic validation to make sure that the requested block device
 mapping is valid before accepting a boot request.
 
 .. [1] In addition to the BlockDeviceMapping Nova object, we also have the
-   BlockDeviceDict class in :mod: `nova.block_device` module. This class
+   BlockDeviceDict class in :mod:`nova.block_device` module. This class
    handles transforming and validating the API BDM format.
 .. [2] This work predates API microversions and thus the only way to add it was
    by means of an API extension.
 .. [3] This is a feature that the EC2 API offers as well and has been in Nova
    for a long time, although it has been broken in several releases. More info
-   can be found on `this bug <https://launchpad.net/bugs/1370250>`
+   can be found on `this bug <https://launchpad.net/bugs/1370250>`_
 
 
 FAQs

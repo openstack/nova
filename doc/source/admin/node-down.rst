@@ -220,7 +220,7 @@ After power resumes and all hardware components restart:
       stop at the plymouth stage. This is expected behavior. DO NOT reboot a
       second time.
 
-      Instance state at this stage depends on whether you added an `/etc/fstab`
+      Instance state at this stage depends on whether you added an ``/etc/fstab``
       entry for that volume. Images built with the cloud-init package remain in
       a ``pending`` state, while others skip the missing volume and start. You
       perform this step to ask Compute to reboot every instance so that the

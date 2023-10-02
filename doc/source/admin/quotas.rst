@@ -86,7 +86,7 @@ are made in order:
 .. note::
 
     The API sets the limit in the ``quota_classes`` table. Once a default limit
-    is set via the `default` quota class, that takes precedence over any
+    is set via the ``default`` quota class, that takes precedence over any
     changes to that resource limit in the configuration options. In other
     words, once you've changed things via the API, you either have to keep
     those synchronized with the configuration values or remove the default

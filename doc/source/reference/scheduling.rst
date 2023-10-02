@@ -77,7 +77,7 @@ As the above diagram illustrates, scheduling works like so:
    from the ranked list that are in the same cell as the selected host, which
    can be used by the cell conductor in the event that the build on the
    selected host fails for some reason. The number of alternates is determined
-   by the configuration option `scheduler.max_attempts`.
+   by the configuration option ``scheduler.max_attempts``.
 
 #. Scheduler creates two list structures for each requested instance: one for
    the hosts (selected + alternates), and the other for their matching

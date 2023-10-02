@@ -12,7 +12,7 @@ configuration file were used.
 The 2023.1 and later compute node identification file must remain unchanged
 during the lifecycle of the compute node. Changing the value or removing the
 file will result in a failure to start and may require advanced techniques
-for recovery. The file is read once at `nova-compute`` startup, at which point
+for recovery. The file is read once at ``nova-compute`` startup, at which point
 it is validated for formatting and the corresponding node is located or
 created in the database.
 
@@ -27,7 +27,7 @@ as the (UUID-based) identity and mapping of compute nodes to compute manager
 service hosts is dynamic. In that case, no single node identity is maintained
 by the compute host and thus no identity file is read or written. Thus none
 of the sections below apply to hosts with :oslo.config:option:`compute_driver`
-set to `ironic`.
+set to ``ironic``.
 
 Self-provisioning of the node identity
 --------------------------------------

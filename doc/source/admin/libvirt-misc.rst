@@ -153,11 +153,11 @@ realtime guests but can also be enabled explicitly using the
 ``hw:locked_memory`` extra spec (or use ``hw_locked_memory`` image property).
 ``hw:locked_memory`` (also ``hw_locked_memory`` image property) accept
 boolean values in string format like 'true' or 'false' value.
-It will raise `FlavorImageLockedMemoryConflict` exception if both flavor and
+It will raise ``FlavorImageLockedMemoryConflict`` exception if both flavor and
 image property are specified but with different boolean values.
 This will only be allowed if you have also set ``hw:mem_page_size``,
 so we can ensure that the scheduler can actually account for this correctly
-and prevent out of memory events. Otherwise, will raise `LockMemoryForbidden`
+and prevent out of memory events. Otherwise, will raise ``LockMemoryForbidden``
 exception.
 
 .. code:: console

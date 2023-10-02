@@ -284,7 +284,7 @@ And now back on the physical host edit the guest config as root:
 
   $ sudo virsh edit f29x86_64
 
-The first thing is to change the `<cpu>` block to do passthrough of the host
+The first thing is to change the ``<cpu>`` block to do passthrough of the host
 CPU. In particular this exposes the "SVM" or "VMX" feature bits to the guest so
 that "Nested KVM" can work. At the same time we want to define the NUMA
 topology of the guest. To make things interesting we're going to give the guest
@@ -547,7 +547,7 @@ Testing instance boot with no NUMA topology requested
 For the sake of backwards compatibility, if the NUMA filter is enabled, but the
 flavor/image does not have any NUMA settings requested, it should be assumed
 that the guest will have a single NUMA node. The guest should be locked to a
-single host NUMA node too. Boot a guest with the `m1.tiny` flavor to test this
+single host NUMA node too. Boot a guest with the ``m1.tiny`` flavor to test this
 condition:
 
 .. code-block:: bash

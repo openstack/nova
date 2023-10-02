@@ -451,9 +451,9 @@ certificate as ``cert_client.pem``.
 
 Upload the generated certificates to the key manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-In order interact with the key manager, the user needs to have a `creator` role.
+In order interact with the key manager, the user needs to have a ``creator`` role.
 
-To list all users with a `creator` role, run the following command as an admin:
+To list all users with a ``creator`` role, run the following command as an admin:
 
 .. code-block:: console
 
@@ -467,7 +467,7 @@ To list all users with a `creator` role, run the following command as an admin:
   | creator | project_a_creator@Default   |       | project_a@Default |        | False     |
   +---------+-----------------------------+-------+-------------------+--------+-----------+
 
-To give the `demo` user a `creator` role in the `demo` project, run the
+To give the ``demo`` user a ``creator`` role in the ``demo`` project, run the
 following command as an admin:
 
 .. code-block:: console

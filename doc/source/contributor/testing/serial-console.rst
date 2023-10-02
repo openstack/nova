@@ -26,7 +26,7 @@ Starting a new instance.
   # cd devstack && . openrc
   # nova boot --flavor 1 --image cirros-0.3.2-x86_64-uec cirros1
 
-Nova provides a command `nova get-serial-console` which will returns a
+Nova provides a command ``nova get-serial-console`` which will returns a
 URL with a valid token to connect to the serial console of VMs.
 
 .. code-block:: bash

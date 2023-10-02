@@ -173,26 +173,26 @@ Admins may also refresh an existing volume attachment using the following
     include orchestrating the shutdown of an instance and refreshing volume
     attachments among other things.
 
-To begin the admin can use the `volume_attachment show` subcommand to dump
+To begin the admin can use the ``volume_attachment show`` subcommand to dump
 existing details of the attachment directly from the Nova database. This
-includes the stashed `connection_info` not shared by the API.
+includes the stashed ``connection_info`` not shared by the API.
 
 .. code-block:: shell
 
     $ nova-manage volume_attachment show 216f9481-4c9d-4530-b865-51cedfa4b8e7 8b9b3491-f083-4485-8374-258372f3db35 --json | jq .attachment_id
     "d338fb38-cfd5-461f-8753-145dcbdb6c78"
 
-If the stored `connection_info` or `attachment_id` are incorrect then the
+If the stored ``connection_info`` or ``attachment_id`` are incorrect then the
 admin may want to refresh the attachment to the compute host entirely by
 recreating the Cinder volume attachment record(s) and pulling down fresh
-`connection_info`. To do this we first need to ensure the instance is stopped:
+``connection_info``. To do this we first need to ensure the instance is stopped:
 
 .. code-block:: shell
 
     $ openstack server stop 216f9481-4c9d-4530-b865-51cedfa4b8e7
 
 Once stopped the host connector of the compute hosting the instance has to be
-fetched using the `volume_attachment get_connector` subcommand:
+fetched using the ``volume_attachment get_connector`` subcommand:
 
 .. code-block:: shell
 
@@ -204,7 +204,7 @@ fetched using the `volume_attachment get_connector` subcommand:
     the host connector into the main refresh command. Unfortunately until then
     it must remain a separate manual step.
 
-We can then provide this connector to the `volume_attachment refresh`
+We can then provide this connector to the ``volume_attachment refresh``
 subcommand. This command will connect to the compute, disconnect any host
 volume connections, delete the existing Cinder volume attachment,
 recreate the volume attachment and finally update Nova's database.

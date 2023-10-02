@@ -304,7 +304,7 @@ encryption.
    .. note::
 
       A bootable encrypted volume can also be created by adding the
-      `--type ENCRYPTED_VOLUME_TYPE` parameter to the volume create command.
+      ``--type ENCRYPTED_VOLUME_TYPE`` parameter to the volume create command.
       For example:
 
       .. code-block:: console

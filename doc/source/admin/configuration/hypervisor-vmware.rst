@@ -928,7 +928,7 @@ cached images are stored.
    have a shared file system.
 
 You can automatically purge unused images after a specified period of time.  To
-configure this action, set these options in the :oslo.config:group`image_cache`
+configure this action, set these options in the :oslo.config:group:`image_cache`
 section in the ``nova.conf`` file:
 
 * :oslo.config:option:`image_cache.remove_unused_base_images`

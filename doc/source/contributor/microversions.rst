@@ -380,7 +380,7 @@ necessary to add changes to other places which describe your change:
   env ``api-samples`` or run test with env var ``GENERATE_SAMPLES`` True.
 
 * Update the `API Reference`_ documentation as appropriate.  The source is
-  located under `api-ref/source/`.
+  located under ``api-ref/source/``.
 
 * If the microversion changes servers related APIs, update the
   ``api-guide/source/server_concepts.rst`` accordingly.

@@ -177,7 +177,7 @@ function:
 
 As a reminder, the hooks are optional and you are not enforced to run them.
 You can either not install pre-commit or skip the hooks once by using the
-`--no-verify` flag on `git commit`.
+``--no-verify`` flag on ``git commit``.
 
 Using a remote debugger
 =======================

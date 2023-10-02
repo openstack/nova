@@ -40,7 +40,7 @@ Guidelines for when a feature doesn't need a spec.
 When a blueprint does not require a spec it still needs to be
 approved before the code which implements the blueprint is merged.
 Specless blueprints are discussed and potentially approved during
-the `Open Discussion` portion of the weekly `nova IRC meeting`_. See
+the ``Open Discussion`` portion of the weekly `nova IRC meeting`_. See
 `trivial specifications`_ for more details.
 
 Project Priorities

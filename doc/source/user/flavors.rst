@@ -25,7 +25,7 @@ Flavor ID
 Name
   Name for the new flavor. This property is required.
 
-  Historically, names were given a format `XX.SIZE_NAME`. These are typically
+  Historically, names were given a format ``XX.SIZE_NAME``. These are typically
   not required, though some third party tools may rely on it.
 
 VCPUs

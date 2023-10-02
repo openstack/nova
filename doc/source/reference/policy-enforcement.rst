@@ -172,7 +172,7 @@ broken into ``compute:foobar:create``, ``compute:foobar:update``,
 ``compute:foobar:list``, ``compute:foobar:get``, and ``compute:foobar:delete``.
 Breaking policies down this way allows us to set read-only policies for
 readable operations or use another default role for creation and management of
-`foobar` resources. The oslo.policy library has `examples`_ that show how to do
+``foobar`` resources. The oslo.policy library has `examples`_ that show how to do
 this using deprecated policy rules.
 
 .. _examples: https://docs.openstack.org/oslo.policy/latest/reference/api/oslo_policy.policy.html#oslo_policy.policy.DeprecatedRule

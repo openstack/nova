@@ -559,7 +559,7 @@ URL (using ``rabbit://bob:s3kret@myhost:123/nova?sync=true#extra``):
      - Meaning
      - Part of example URL
    * - ``scheme``
-     - The part before the `://`
+     - The part before the ``://``
      - ``rabbit``
    * - ``username``
      - The username part of the credentials

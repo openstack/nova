@@ -230,7 +230,7 @@ taken against a VM after
 2. ``force_complete``: The compute service will either pause the VM or trigger
    post-copy depending on if post copy is enabled and available
    (:oslo.config:option:`libvirt.live_migration_permit_post_copy` is set to
-   `True`). This is similar to using API
+   ``True``). This is similar to using API
    ``POST /servers/{server_id}/migrations/{migration_id}/action (force_complete)``.
 
 You can also read the

@@ -75,3 +75,10 @@ repos:
             | nova/virt/libvirt/host.py
             | nova/virt/libvirt/utils.py
           )
+  - repo: https://github.com/sphinx-contrib/sphinx-lint
+    rev: v0.6.8
+    hooks:
+      - id: sphinx-lint
+        args: [--enable=default-role]
+        files: ^doc/|releasenotes|api-guide
+        types: [rst]

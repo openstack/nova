@@ -764,7 +764,7 @@ tuned. That being said, we also provide a way to automatically change the
 governors on the fly, as explained below.
 
 .. important::
-   Some OS platforms don't support `cpufreq` resources in sysfs, so the
+   Some OS platforms don't support ``cpufreq`` resources in sysfs, so the
    ``governor`` strategy could be not available. Please verify if your OS
    supports scaling govenors before modifying the configuration option.
 
