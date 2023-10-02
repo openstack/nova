@@ -250,7 +250,7 @@ on compute hosts rather than servers.
    A hypervisor, or virtual machine monitor (VMM), is a piece of computer
    software, firmware or hardware that creates and runs virtual machines.
 
-   In nova, each Host (see `Hosts`) runs a hypervisor. Administrators are able
+   In nova, each Host (see ``Hosts``) runs a hypervisor. Administrators are able
    to query the hypervisor for information, such as all the virtual servers
    currently running, as well as detailed info about the hypervisor, such as
    CPU, memory, or disk related configuration.

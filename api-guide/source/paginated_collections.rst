@@ -25,7 +25,7 @@ implementation does not contain ``previous`` links. The last
 page in the list does not contain a link to "next" page. The following examples
 illustrate three pages in a collection of servers. The first page was
 retrieved through a **GET** to
-`http://servers.api.openstack.org/v2.1/servers?limit=1`. In these
+``http://servers.api.openstack.org/v2.1/servers?limit=1``. In these
 examples, the *``limit``* parameter sets the page size to a single item.
 Subsequent links honor the initial page size. Thus, a client can follow
 links to traverse a paginated collection without having to input the
