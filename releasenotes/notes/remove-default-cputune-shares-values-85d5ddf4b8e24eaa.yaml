@@ -2,7 +2,7 @@ upgrade:
   - |
     In the libvirt driver, the default value of the ``<cputune><shares>``
     element has been removed, and is now left to libvirt to decide. This is
-    because allowed values are platform dependant, and the previous code was
+    because allowed values are platform dependent, and the previous code was
     not guaranteed to be supported on all platforms. If any of your flavors are
     using the quota:cpu_shares extra spec, you may need to resize to a
     supported value before upgrading.

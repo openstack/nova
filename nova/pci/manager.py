@@ -137,7 +137,7 @@ class PciDevTracker(object):
                 # The raised exception is misleading as the problem is not with
                 # the whitelist config but with the host PCI device reported by
                 # libvirt. The code that matches the host PCI device to the
-                # withelist spec reuses the WhitelistPciAddress object to parse
+                # whitelist spec reuses the WhitelistPciAddress object to parse
                 # the host PCI device address. That parsing can fail if the
                 # PCI address has a 32 bit domain. But this should not prevent
                 # processing the rest of the devices. So we simply skip this
@@ -145,7 +145,7 @@ class PciDevTracker(object):
                 # Please note that this except block does not ignore the
                 # invalid whitelist configuration. The whitelist config has
                 # already been parsed or rejected in case it was invalid. At
-                # this point the self.dev_filter representes the parsed and
+                # this point the self.dev_filter represents the parsed and
                 # validated whitelist config.
                 LOG.debug(
                     'Skipping PCI device %s reported by the hypervisor: %s',

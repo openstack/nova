@@ -34,11 +34,11 @@ def replace_allocation_with_migration(context, instance, migration):
     :raises: ConsumerAllocationRetrievalFailed if reading the current
              allocation from placement fails
     :raises: ComputeHostNotFound if the host of the instance is not found in
-             the databse
+             the database
     :raises: AllocationMoveFailed if moving the allocation from the
              instance.uuid to the migration.uuid fails due to parallel
              placement operation on the instance consumer
-    :raises: NoValidHost if placement rejectes the update for other reasons
+    :raises: NoValidHost if placement rejects the update for other reasons
              (e.g. not enough resources)
     :returns: (source_compute_node, migration_allocation)
     """

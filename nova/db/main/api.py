@@ -4349,7 +4349,7 @@ def _archive_deleted_rows_for_table(
     shadow table.
 
     Will also follow FK constraints and archive all referring rows.
-    Example: archving a record from the 'instances' table will also archive
+    Example: archiving a record from the 'instances' table will also archive
     the 'instance_extra' record before archiving the 'instances' record.
 
     :returns: 3-item tuple:

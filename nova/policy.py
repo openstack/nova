@@ -84,7 +84,7 @@ def init(policy_file=None, rules=None, default_rule=None, use_conf=True,
             rules=rules,
             default_rule=default_rule,
             use_conf=use_conf)
-        # NOTE(gmann): Explictly disable the warnings for policies
+        # NOTE(gmann): Explicitly disable the warnings for policies
         # changing their default check_str. During policy-defaults-refresh
         # work, all the policy defaults have been changed and warning for
         # each policy started filling the logs limit for various tool.
@@ -181,7 +181,7 @@ def authorize(context, action, target=None, do_raise=True, exc=None):
     if not exc:
         exc = exception.PolicyNotAuthorized
 
-    # Legacy fallback for emtpy target from context.can()
+    # Legacy fallback for empty target from context.can()
     # should be removed once we improve testing and scope checks
     if target is None:
         target = default_target(context)

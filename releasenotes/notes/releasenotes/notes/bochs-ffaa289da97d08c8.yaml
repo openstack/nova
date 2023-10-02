@@ -4,4 +4,4 @@ features:
     Add support for the ``bochs`` libvirt video model.  This is a
     legacy-free video model that is best suited for UEFI guests.  In
     limited cases (e.g. if the guest does not depend on direct VGA
-    hardware access), it can be useable for BIOS guests as well.
+    hardware access), it can be usable for BIOS guests as well.

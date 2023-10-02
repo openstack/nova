@@ -367,7 +367,7 @@ Possible values:
     cfg.FloatOpt("ram_weight_multiplier",
         default=1.0,
         help="""
-RAM weight multipler ratio.
+RAM weight multiplier ratio.
 
 This option determines how hosts with more or less available RAM are weighed. A
 positive value will result in the scheduler preferring hosts with more
@@ -383,7 +383,7 @@ enabled.
 
 Possible values:
 
-* An integer or float value, where the value corresponds to the multipler
+* An integer or float value, where the value corresponds to the multiplier
   ratio for this weigher.
 
 Related options:
@@ -403,7 +403,7 @@ enabled.
 
 Possible values:
 
-* An integer or float value, where the value corresponds to the multipler
+* An integer or float value, where the value corresponds to the multiplier
   ratio for this weigher.
 
 Related options:
@@ -413,7 +413,7 @@ Related options:
     cfg.FloatOpt("disk_weight_multiplier",
         default=1.0,
         help="""
-Disk weight multipler ratio.
+Disk weight multiplier ratio.
 
 Multiplier used for weighing free disk space. Negative numbers mean to
 stack vs spread.
@@ -423,7 +423,7 @@ is enabled.
 
 Possible values:
 
-* An integer or float value, where the value corresponds to the multipler
+* An integer or float value, where the value corresponds to the multiplier
   ratio for this weigher.
 """),
     cfg.FloatOpt("hypervisor_version_weight_multiplier",
@@ -517,7 +517,7 @@ Related options:
     cfg.FloatOpt("io_ops_weight_multiplier",
         default=-1.0,
         help="""
-IO operations weight multipler ratio.
+IO operations weight multiplier ratio.
 
 This option determines how hosts with differing workloads are weighed. Negative
 values, such as the default, will result in the scheduler preferring hosts with
@@ -533,7 +533,7 @@ is enabled.
 
 Possible values:
 
-* An integer or float value, where the value corresponds to the multipler
+* An integer or float value, where the value corresponds to the multiplier
   ratio for this weigher.
 
 Related options:

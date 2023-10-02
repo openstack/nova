@@ -7,4 +7,4 @@ features:
     on compute nodes using the libvirt virt driver. Two values are currently
     accepted: ``usb`` and ``virtio``. This image metadata property effectively
     replaced the ``hw_pointer_model`` image metadata property, which is
-    nontheless retained for backwards compatibility purposes.
+    nonetheless retained for backwards compatibility purposes.
