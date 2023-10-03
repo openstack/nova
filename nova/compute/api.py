@@ -6223,6 +6223,17 @@ class HostAPI:
             services = []
             service_dict = nova_context.scatter_gather_all_cells(context,
                 objects.ServiceList.get_all, disabled, set_zones=set_zones)
+
+            cell0_computes = [
+                x for x in
+                service_dict.get(objects.CellMapping.CELL0_UUID, [])
+                if x.binary == 'nova-compute']
+            for cn in cell0_computes:
+                LOG.warning(
+                    'Found compute service %(service)s in cell0; '
+                    'This should never happen!',
+                    {'service': cn.host})
+
             for cell_uuid, service in service_dict.items():
                 if not nova_context.is_cell_failure_sentinel(service):
                     services.extend(service)

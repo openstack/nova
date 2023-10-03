@@ -194,6 +194,20 @@ class ComputeHostAPITestCase(test.TestCase):
         self.assertEqual(['host-%s' % uuids.cell1],
                          [svc.host for svc in services])
 
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_service_get_all_cell0_computes(self, mock_sg):
+        service = objects.Service(binary='nova-compute', host='rogue')
+        mock_sg.return_value = {
+            objects.CellMapping.CELL0_UUID: [service],
+        }
+        with mock.patch.object(compute, 'LOG') as mock_log:
+            services = self.host_api.service_get_all(self.ctxt, all_cells=True)
+            mock_log.warning.assert_called_once_with(
+                'Found compute service %(service)s in cell0; '
+                'This should never happen!',
+                {'service': 'rogue'})
+            self.assertEqual([service], services)
+
     @mock.patch('nova.objects.CellMappingList.get_all')
     @mock.patch.object(objects.HostMappingList, 'get_by_cell_id')
     @mock.patch('nova.context.scatter_gather_all_cells')
