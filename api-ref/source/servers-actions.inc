@@ -545,7 +545,7 @@ With microversion 2.93, we support rebuilding volume backed
 instances which will reimage the volume with the provided
 image. For microversion < 2.93, this operation keeps the
 contents of the volume given the image provided is same as
-the image with which the volume was created else the opearation
+the image with which the volume was created else the operation
 will error out.
 
 **Preconditions**
