@@ -17,7 +17,7 @@ features:
 
     After Nova database cleanup, similarly Cinder database is checked for
     attachments related to instance. If attachments found in Cinder DB that
-    are not present in Nova DB, they will get deleted from Cinder databse.
+    are not present in Nova DB, they will get deleted from Cinder database.
 
     See `spec`__ for more details.
 

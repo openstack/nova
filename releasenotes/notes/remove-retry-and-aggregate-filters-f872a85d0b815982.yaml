@@ -5,7 +5,7 @@ upgrade:
 
     RetryFilter
       Deprecated in Train (20.0.0). The RetryFilter has
-      not been requied since Queens following the completion of the
+      not been required since Queens following the completion of the
       return-alternate-hosts blueprint
 
     Aggregatefilter, AggregateRAMFilter, AggregateDiskFilter

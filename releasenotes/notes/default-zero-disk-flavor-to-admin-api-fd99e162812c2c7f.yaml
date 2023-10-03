@@ -1,7 +1,7 @@
 ---
 upgrade:
   - |
-    The defalut value for policy rule
+    The default value for policy rule
     ``os_compute_api:servers:create:zero_disk_flavor`` has changed from
     ``rule:admin_or_owner`` to ``rule:admin_api`` which means that by default,
     users without the admin role will not be allowed to create servers using

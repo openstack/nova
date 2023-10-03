@@ -1,7 +1,7 @@
 ---
 features:
   - |
-    Extra sortings were added to numa_fit_instance_to_host function
+    Extra sorting were added to numa_fit_instance_to_host function
     to balance usage of hypervisor's NUMA cells. Hypervisor's NUMA
     cells with more free resources (CPU, RAM, PCI if requested)
     will be used first (spread strategy) when configuration option

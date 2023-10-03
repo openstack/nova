@@ -2,4 +2,4 @@
 features:
   - Enhance pci.passthrough_whitelist to support regular expression syntax.
     The 'address' field can be regular expression syntax.
-    The old pci.passthrough_whitelist, glob sytnax, is still valid config.
+    The old pci.passthrough_whitelist, glob syntax, is still valid config.

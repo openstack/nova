@@ -18,7 +18,7 @@ deprecations:
   - |
     The ``os_compute_api:os-extended-server-attributes`` policy controls
     which users a number of server extended attributes are shown to.
-    Configuring visiblity of the ``OS-EXT-SRV-ATTR:hostname`` attribute via
+    Configuring visibility of the ``OS-EXT-SRV-ATTR:hostname`` attribute via
     this policy has now been deprecated and will be removed in a future
     release. Upon removal, this attribute will be shown for all users
     regardless of policy configuration.

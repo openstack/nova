@@ -13,7 +13,7 @@ features:
     These configuration options can be used to enable and set the
     SPICE compression settings for libvirt (QEMU/KVM) provisioned
     instances. Each configuration option is optional and can be set
-    explictly to configure the associated SPICE compression setting
+    explicitly to configure the associated SPICE compression setting
     for libvirt. If all configuration options are not set, then none
     of the SPICE compression settings will be configured for libvirt,
     which corresponds to the behavior before this change. In this case,

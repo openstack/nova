@@ -4,7 +4,7 @@ other:
     The ``[workarounds]/rbd_volume_local_attach`` configuration option has been
     introduced. This can be used by operators to ensure RBD volumes are
     connected to compute hosts as block devices. This can be used with
-    the ``[worarounds]/disable_native_luksv1`` configuration option to
+    the ``[workarounds]/disable_native_luksv1`` configuration option to
     workaround recently discovered performance issues found within the
     `libgcrypt library`__ used by QEMU when natively decrypting LUKSv1
     encrypted disks.
