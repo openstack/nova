@@ -92,7 +92,7 @@ class PowerManagementTests(PowerManagementTestsBase):
 
         self.useFixture(nova_fixtures.SysFileSystemFixture())
 
-        # Definining the CPUs to be pinned.
+        # Defining the CPUs to be pinned.
         self.flags(cpu_dedicated_set='1-9', cpu_shared_set=None,
                    group='compute')
         self.flags(vcpu_pin_set=None)
@@ -184,7 +184,7 @@ class PowerManagementTestsGovernor(PowerManagementTestsBase):
 
         self.useFixture(nova_fixtures.SysFileSystemFixture())
 
-        # Definining the CPUs to be pinned.
+        # Defining the CPUs to be pinned.
         self.flags(cpu_dedicated_set='1-9', cpu_shared_set=None,
                    group='compute')
         self.flags(vcpu_pin_set=None)
@@ -231,7 +231,7 @@ class PowerManagementMixedInstances(PowerManagementTestsBase):
 
         self.useFixture(nova_fixtures.SysFileSystemFixture())
 
-        # Definining 6 CPUs to be dedicated, not all of them in a series.
+        # Defining 6 CPUs to be dedicated, not all of them in a series.
         self.flags(cpu_dedicated_set='1-3,5-7', cpu_shared_set='4,8-9',
                    group='compute')
         self.flags(vcpu_pin_set=None)

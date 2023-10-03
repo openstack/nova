@@ -990,7 +990,7 @@ class OSAPIFixture(fixtures.Fixture):
         loader = wsgi.Loader().load_app(service_name)
         app = lambda: loader
 
-        # re-use service setup code from wsgi_app to register
+        # reuse service setup code from wsgi_app to register
         # service, which is looked for in some tests
         wsgi_app._setup_service(CONF.host, service_name)
         intercept = interceptor.RequestsInterceptor(app, url=endpoint)
@@ -1523,7 +1523,7 @@ class DownCellFixture(fixtures.Fixture):
 
             def wrap(cell_uuid, thing):
                 # We should embed the cell_uuid into the context before
-                # wrapping since its used to calcualte the cells_timed_out and
+                # wrapping since its used to calculate the cells_timed_out and
                 # cells_failed properties in the object.
                 ctxt.cell_uuid = cell_uuid
                 return multi_cell_list.RecordWrapper(ctxt, sort_ctx, thing)

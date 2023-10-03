@@ -11,9 +11,9 @@
 #    under the License.
 
 # This file contains ddt test data consumed by test_provider_config.py to test
-# bad provider configrations through _validate_provider_config().
+# bad provider configurations through _validate_provider_config().
 # Sample is required for each test and passed to _validate_provider_config().
-# If excpetion is raised with expected message, the test passes.
+# If exception is raised with expected message, the test passes.
 one_invalid_additional_inventory:
   sample:
     providers:

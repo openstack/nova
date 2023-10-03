@@ -1049,7 +1049,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
             mock_attach.assert_called_once_with(
                 self.context, instance, self.volume_api, self.virt_driver)
-            # Make sure theses are not called
+            # Make sure these are not called
             self.volume_api.get_snapshot.assert_not_called()
             self.volume_api.create.assert_not_called()
 
@@ -1182,7 +1182,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
             mock_attach.assert_called_once_with(
                 self.context, instance, self.volume_api, self.virt_driver)
-            # Make sure theses are not called
+            # Make sure these are not called
             self.volume_api.get_snapshot.assert_not_called()
             self.volume_api.create.assert_not_called()
 

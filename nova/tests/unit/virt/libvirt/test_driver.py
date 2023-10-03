@@ -22794,7 +22794,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                                          mock_get_disk_info):
         # Check error on resize root disk down for rbd.
         # The difference is that get_instance_disk_info always returns
-        # an emply list for rbd.
+        # an empty list for rbd.
         # Ephemeral size is not changed in this case (otherwise other check
         # will raise the same error).
         self.flags(images_type='rbd', group='libvirt')
@@ -24044,7 +24044,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         ]
         self._test_inject_data(instance, injection_info, "/path", disk_params)
 
-        # Test with the configuration setted to false.
+        # Test with the configuration set to false.
         self.flags(inject_password=False, group='libvirt')
         self._test_inject_data(instance, injection_info, "/path", disk_params,
                                called=False)
@@ -24064,7 +24064,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self._test_inject_data(instance, injection_info, "/path",
                                disk_params)
 
-        # Test with the configuration setted to false.
+        # Test with the configuration set to false.
         self.flags(inject_key=False, group='libvirt')
         self._test_inject_data(instance, injection_info, "/path", disk_params,
                                called=False)
@@ -24895,8 +24895,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         )
         # By mocking threading.Event.wait we prevent the test to wait until the
         # timeout happens, and by returning False first we simulate to the
-        # caller that the wait returned not becasuse the event is set but
-        # because timeout happend. Then during the retry we return True
+        # caller that the wait returned not because the event is set but
+        # because timeout happened. Then during the retry we return True
         # signalling that the event is set, i.e. the libvirt event the caller
         # is waiting for has been received
         mock_event_wait.side_effect = [False, True]
@@ -25023,8 +25023,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         # By mocking threading.Event.wait we prevent the test to wait until the
         # timeout happens, and by returning False we simulate to the
-        # caller that the wait returned not becasuse the event is set but
-        # because timeout happend.
+        # caller that the wait returned not because the event is set but
+        # because timeout happened.
         mock_event_wait.return_value = False
 
         self.assertRaises(

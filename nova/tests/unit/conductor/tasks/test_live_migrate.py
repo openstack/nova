@@ -858,7 +858,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 supp_binding_ext_retval
             self.task.instance.pci_requests = instance_pci_reqs
             self.task._check_can_migrate_pci("Src", "Dst")
-            # in case we managed to get away without rasing, check mocks
+            # in case we managed to get away without raising, check mocks
             if instance_pci_reqs:
                 mock_supp_port_binding_ext.assert_called_once_with(
                     self.context)

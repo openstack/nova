@@ -7165,7 +7165,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     def test_update_future_instance_with_buildreq(self, mock_buildreq_get):
 
-        # This test checks that a new instance which is not yet peristed in
+        # This test checks that a new instance which is not yet persisted in
         # DB can be found by looking up the BuildRequest object so we can
         # update it.
 
@@ -7547,7 +7547,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                 new_callable=mock.PropertyMock(return_value=old_image_meta)):
             # The old image has a NUMA topology defined but the new image
             # used to rebuild does not. This would alter the NUMA constrains
-            # and therefor should raise.
+            # and therefore should raise.
             self.assertRaises(
                 exception.ImageNUMATopologyRebuildConflict,
                 self.compute_api._validate_numa_rebuild, instance,
@@ -7605,7 +7605,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(device_profile='smartnic1')])
         self.assertRaisesRegex(exception.ForbiddenPortsWithAccelerator,
-            'Port with cyborg profile is not avaliable until upgrade'
+            'Port with cyborg profile is not available until upgrade'
             ' finished.',
             self.compute_api._check_support_vnic_accelerator,
             self.context,

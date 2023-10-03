@@ -130,7 +130,7 @@ class HostStatusPolicyTestCase(test.TestCase,
         # Verify non-admin do not receive the host_status field.
         self.assertNotIn('host_status', server)
         self._set_server_state_active(server)
-        # Verify that admin will not receive ths host_status field if the
+        # Verify that admin will not receive the host_status field if the
         # API microversion < 2.16.
         with utils.temporary_mutation(self.admin_api, microversion='2.15'):
             server = self._get_server(admin_func(*args))

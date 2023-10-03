@@ -925,7 +925,7 @@ def disable_event_thread(self):
     problematic because it means we've got a floating thread calling
     sleep(1) over the life of the unit test. Seems harmless? It's not,
     because we sometimes want to test things like retry loops that
-    should have specific sleep paterns. An unlucky firing of the
+    should have specific sleep patterns. An unlucky firing of the
     libvirt thread will cause a test failure.
 
     """

@@ -788,7 +788,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         show_mock.return_value = {
             'locations': [
                 {
-                    'url': 'rbd://cluser/pool/image/snapshot',
+                    'url': 'rbd://cluster/pool/image/snapshot',
                     'metadata': mock.sentinel.loc_meta
                 }
             ]
@@ -843,7 +843,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         show_mock.return_value = {
             'locations': [
                 {
-                    'url': 'funky://cluser/pool/image/snapshot',
+                    'url': 'funky://cluster/pool/image/snapshot',
                     'metadata': mock.sentinel.loc_meta
                 }
             ]

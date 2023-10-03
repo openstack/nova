@@ -2312,12 +2312,12 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             ])
 
     def test_instance_update_and_get_original_conflict_race_fallthrough(self):
-        # Ensure that is update_match continuously fails for no discernable
+        # Ensure that is update_match continuously fails for no discernible
         # reason, we evantually raise UnknownInstanceUpdateConflict
         instance = self.create_instance_with_args()
 
         # Reproduce the conditions of a race between fetching and updating the
-        # instance by making update_on_match fail for no discernable reason.
+        # instance by making update_on_match fail for no discernible reason.
         with mock.patch.object(update_match, 'update_on_match',
                         side_effect=update_match.NoRowsMatched):
             self.assertRaises(exception.UnknownInstanceUpdateConflict,
@@ -2669,7 +2669,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         block_dev = block_device.BlockDeviceDict(bdm_values)
         db.block_device_mapping_create(self.ctxt, block_dev, legacy=False)
 
-        # Crate a second BDM that is soft-deleted to simulate that the
+        # Create a second BDM that is soft-deleted to simulate that the
         # volume was detached and the BDM was deleted before the instance
         # was hard destroyed.
         bdm2_values = {

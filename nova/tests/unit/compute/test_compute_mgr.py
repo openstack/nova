@@ -4620,7 +4620,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                      mock_notify_attach_detach,
                                      notify_inst_usage,
                                      expected=None):
-        """Re-usable code for detach volume evacuate test cases.
+        """Reusable code for detach volume evacuate test cases.
 
         :param conn_info_str: String form of the stashed connector.
         :param expected: Dict of the connector that is expected in the
@@ -7893,7 +7893,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_build_and_run_no_more_fixedips_exception(self):
         self._test_build_and_run_spawn_exceptions(
-            exception.NoMoreFixedIps("error messge"))
+            exception.NoMoreFixedIps("error message"))
 
     def test_build_and_run_flavor_disk_smaller_image_exception(self):
         self._test_build_and_run_spawn_exceptions(
@@ -8408,7 +8408,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
         mock_prepspawn.assert_called_once_with(self.instance)
-        # Complete should have occured with _shutdown_instance
+        # Complete should have occurred with _shutdown_instance
         # so calling after the fact is not necessary.
         mock_failedspawn.assert_not_called()
 
@@ -8538,7 +8538,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
         mock_prepspawn.assert_called_once_with(self.instance)
-        # Complete should have occured with _shutdown_instance
+        # Complete should have occurred with _shutdown_instance
         # so calling after the fact is not necessary.
         mock_failedspawn.assert_not_called()
 

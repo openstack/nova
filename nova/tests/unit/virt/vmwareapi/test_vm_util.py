@@ -1025,7 +1025,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         """Ensure we warn when create_vm() fails after we passed an
         unrecognised guestId
         """
-        # avoid real sleeps during test due to te retry decorator on create_vm
+        # avoid real sleeps during test due to the retry decorator on create_vm
         self.useFixture(oslo_svc_fixture.SleepFixture())
 
         found = [False]

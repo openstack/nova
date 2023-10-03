@@ -58,7 +58,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         # Start compute without mocking update_provider_tree. The fake driver
         # doesn't implement the method, so this will cause us to start with the
         # legacy get_available_resource()-based inventory discovery and
-        # boostrapping of placement data.
+        # bootstrapping of placement data.
         self.compute = self._start_compute(host='host1')
 
         # Mock out update_provider_tree *after* starting compute with the

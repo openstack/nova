@@ -162,7 +162,7 @@ class InstanceListTestCase(test.TestCase):
 
         This requests $pages of $pagesize, followed by a final page with
         no limit, and a final-final page which should be empty. It validates
-        that we got a consistent set of results no patter where the page
+        that we got a consistent set of results no pattern where the page
         boundary is, that we got all the results after the unlimited query,
         and that the final page comes back empty when we use the last
         instance as a marker.

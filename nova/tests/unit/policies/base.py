@@ -144,7 +144,7 @@ class BasePolicyTest(test.TestCase):
             self.system_admin_context, self.system_foo_context,
             self.system_member_context, self.system_reader_context,
         ])
-        # A few commmon set of contexts to be used in tests
+        # A few common set of contexts to be used in tests
         #
         # With scope disable and no legacy rule, any admin,
         # project members have access. No other role in that project

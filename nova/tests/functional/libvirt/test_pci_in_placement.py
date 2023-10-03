@@ -1419,7 +1419,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         # * one type-PFs (slot 2) with 1 type-VFs
         compute2_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pci=2, num_pfs=1, num_vfs=1)
-        # the config matches the PCI devs and hte PF but not the VFs
+        # the config matches the PCI devs and the PF but not the VFs
         compute2_device_spec = self._to_list_of_json_str(
             [
                 {
