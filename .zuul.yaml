@@ -29,6 +29,21 @@
     timeout: 3600
 
 - job:
+    name: nova-tox-py310-with-sqlalchemy-2x
+    parent: openstack-tox-py310
+    description: |
+      Run unit tests with main branch of SQLAlchemy, alembic and oslo.db.
+      Takes advantage of the base tox job's install-siblings feature.
+    # The job only tests the latest and shouldn't be run on the stable branches
+    branches: ^master$
+    required-projects:
+      - name: github.com/sqlalchemy/sqlalchemy
+        override-checkout: main
+      - name: github.com/sqlalchemy/alembic
+        override-checkout: main
+      - name: openstack/oslo.db
+
+- job:
     name: nova-tox-functional-py39
     parent: openstack-tox-functional-py39
     description: |
@@ -761,6 +776,7 @@
         - nova-ovs-hybrid-plug
         - nova-tox-validate-backport:
             voting: false
+        - nova-tox-py310-with-sqlalchemy-2x
         - nova-tox-functional-py38
         - nova-tox-functional-py39
         - nova-tox-functional-py310
