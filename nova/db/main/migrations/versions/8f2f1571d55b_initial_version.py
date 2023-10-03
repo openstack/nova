@@ -178,7 +178,7 @@ def _create_shadow_tables(connection):
         'shadow_instance_extra',
         ['instance_uuid'])
 
-    # 373_migration_uuid; we should't create indexes for shadow tables
+    # 373_migration_uuid; we shouldn't create indexes for shadow tables
     # (fixed in migration 16f1fbcab42b)
 
     op.create_index(

@@ -159,7 +159,7 @@ def get_device_name_for_instance(instance, bdms, device):
     This method is a wrapper for get_next_device_name that gets the list
     of used devices and the root device from a block device mapping.
 
-    :raises TooManyDiskDevices: if the maxmimum allowed devices to attach to a
+    :raises TooManyDiskDevices: if the maximum allowed devices to attach to a
                                 single instance is exceeded.
     """
     mappings = block_device.instance_block_mapping(instance, bdms)
@@ -172,7 +172,7 @@ def default_device_names_for_instance(instance, root_device_name,
     """Generate missing device names for an instance.
 
 
-    :raises TooManyDiskDevices: if the maxmimum allowed devices to attach to a
+    :raises TooManyDiskDevices: if the maximum allowed devices to attach to a
                                 single instance is exceeded.
     """
 
@@ -212,7 +212,7 @@ def get_next_device_name(instance, device_name_list,
     /dev/vdc is specified but the backend uses /dev/xvdc), the device
     name will be converted to the appropriate format.
 
-    :raises TooManyDiskDevices: if the maxmimum allowed devices to attach to a
+    :raises TooManyDiskDevices: if the maximum allowed devices to attach to a
                                 single instance is exceeded.
     """
 

@@ -42,7 +42,7 @@ class NetworkRequest(obj_base.NovaObject):
         # arq_uuid save cyborg managed port device, pass
         # arq info from conductor to compute
         'arq_uuid': fields.UUIDField(nullable=True),
-        # tranfer port's device_profile info from api to conductor
+        # transfer port's device_profile info from api to conductor
         'device_profile': fields.StringField(nullable=True)
     }
 

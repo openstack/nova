@@ -2966,7 +2966,7 @@ class ComputeManager(manager.Manager):
         return arqs
 
     def _split_network_arqs(self, arqs, requested_networks):
-        """splif arq request by exra spec from ARQ requested by port.
+        """split arq request by extra spec from ARQ requested by port.
 
         Return ARQ groups tuple:(spec_arqs, port_arqs)
         Each item in the tuple is a dict like:
@@ -3682,7 +3682,7 @@ class ComputeManager(manager.Manager):
                 # manually as we want to maintain a 'reserved' state
                 # throughout the reimage process from the cinder side so
                 # we are excluding the root BDM from certain operations
-                # here i.e. deleteing it's mapping before the destroy call.
+                # here i.e. deleting it's mapping before the destroy call.
                 block_device_info_copy = copy.deepcopy(block_device_info)
                 root_bdm = compute_utils.get_root_bdm(context, instance, bdms)
                 mapping = block_device_info_copy["block_device_mapping"]
@@ -8169,7 +8169,7 @@ class ComputeManager(manager.Manager):
         compute_node_uuid = objects.ComputeNode.get_by_nodename(
             context, instance.node).uuid
         # we can have multiple request groups, it would be enough to restrict
-        # only one of them to the compute tree but for symetry we restrict
+        # only one of them to the compute tree but for symmetry we restrict
         # all of them
         for request_group in request_groups:
             request_group.in_tree = compute_node_uuid
@@ -8228,7 +8228,7 @@ class ComputeManager(manager.Manager):
             exception.AmbiguousResourceProviderForPCIRequest,
             exception.UnexpectedResourceProviderNameForPCIRequest
         ):
-            # These are programing errors. So we clean up an re-raise to let
+            # These are programming errors. So we clean up an re-raise to let
             # the request fail
             with excutils.save_and_reraise_exception():
                 self.reportclient.remove_resources_from_instance_allocation(
@@ -10158,7 +10158,7 @@ class ComputeManager(manager.Manager):
                 if instance.flavor.extra_specs.get('accel:device_profile'):
                     # TODO(brinzhang): After cyborg support batch query ARQs
                     # for more than one instances, we will improve efficiency
-                    # with this implemention.
+                    # with this implementation.
                     accel_uuids = cyclient.get_arq_uuids_for_instance(instance)
                 self.shelve_offload_instance(
                     context, instance, clean_shutdown=False,

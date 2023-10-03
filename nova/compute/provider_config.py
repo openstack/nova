@@ -33,7 +33,7 @@ SUPPORTED_SCHEMA_VERSIONS = {
 
 # Supported provider config file schema
 SCHEMA_V1 = {
-    # This defintion uses JSON Schema Draft 7.
+    # This definition uses JSON Schema Draft 7.
     # https://json-schema.org/draft-07/json-schema-release-notes.html
     'type': 'object',
     'properties': {
@@ -137,7 +137,7 @@ SCHEMA_V1 = {
                         'patternProperties': {
                             # Allows any key name matching the resource class
                             # pattern, check to prevent conflicts with virt
-                            # driver owned resouces classes will be done after
+                            # driver owned resources classes will be done after
                             # schema validation.
                             '^[A-Z0-9_]{1,255}$': {
                                 'type': 'object',

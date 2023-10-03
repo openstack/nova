@@ -161,7 +161,7 @@ Related options:
 The fully qualified path to a PEM file containing the x509 certificate which
 the VNC proxy server presents to the compute node during VNC authentication.
 
-Realted options:
+Related options:
 
 * ``vnc.auth_schemes``: must include ``vencrypt``
 * ``vnc.vencrypt_client_key``: must also be set

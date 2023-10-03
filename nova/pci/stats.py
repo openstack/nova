@@ -630,7 +630,7 @@ class PciDeviceStats(object):
             corresponds to the ``id`` of host NUMACell objects.
         :param rp_uuids: A list of PR uuids this request fulfilled from in
             placement. So here we have to consider only the pools matching with
-            thes RP uuids
+            these RP uuids
         :returns: A list of pools that can be used to support the request if
             this is possible, else None.
         """

@@ -45,7 +45,7 @@ def supports_vif_related_pci_allocations(context, host):
 
 
 def supports_vpmem_live_migration(context):
-    """Checks if the commpute host service is new enough to support
+    """Checks if the compute host service is new enough to support
     instance live migration with virtual persistent memory.
 
     :param context: The user request context.

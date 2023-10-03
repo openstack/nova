@@ -283,7 +283,7 @@ def fill_virtual_interface_list(context, max_count):
     return count_all, count_hit
 
 
-# NOTE(mjozefcz): This is similiar to marker mechanism made for
+# NOTE(mjozefcz): This is similar to marker mechanism made for
 # RequestSpecs object creation.
 # Since we have a lot of instances to be check this
 # will add a FAKE row that points to last instance
@@ -305,7 +305,7 @@ def _set_or_delete_marker_for_migrate_instances(context, marker=None):
         instance.project_id = FAKE_UUID
         instance.user_id = FAKE_UUID
         instance.create()
-        # Thats fake instance, lets destroy it.
+        # That's fake instance, lets destroy it.
         # We need only its row to solve constraint issue.
         instance.destroy()
 

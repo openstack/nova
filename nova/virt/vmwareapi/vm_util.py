@@ -1513,7 +1513,7 @@ def find_rescue_device(hardware_devices, instance):
     """Returns the rescue device.
 
     The method will raise an exception if the rescue device does not
-    exist. The resuce device has suffix '-rescue.vmdk'.
+    exist. The rescue device has suffix '-rescue.vmdk'.
     :param hardware_devices: the hardware devices for the instance
     :param instance: nova.objects.instance.Instance object
     :return: the rescue disk device object

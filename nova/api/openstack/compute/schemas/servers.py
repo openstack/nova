@@ -685,7 +685,7 @@ query_params_v273['properties'].update({
 query_params_v275 = copy.deepcopy(query_params_v273)
 # 1. Update sort_keys to allow only valid sort keys:
 # NOTE(gmann): Remove the ignored sort keys now because 'additionalProperties'
-# is Flase for query schema. Starting from miceoversion 2.75, API will
+# is False for query schema. Starting from miceoversion 2.75, API will
 # raise 400 for any not-allowed sort keys instead of ignoring them.
 VALID_SORT_KEYS_V275 = copy.deepcopy(VALID_SORT_KEYS_V273)
 VALID_SORT_KEYS_V275['enum'] = list(

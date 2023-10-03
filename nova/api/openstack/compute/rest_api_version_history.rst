@@ -1244,6 +1244,6 @@ Name (FQDN).
 ---------------------------------------------------
 
 Any evacuated instances will be now stopped at destination. This
-requires minimun nova release 27.0.0, OpenStack release 2023.1
+requires minimum nova release 27.0.0, OpenStack release 2023.1
 Antelope.  Operators can still use previous microversion for older
 behavior.

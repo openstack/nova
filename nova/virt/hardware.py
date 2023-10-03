@@ -2746,7 +2746,7 @@ def get_ephemeral_encryption_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
 ) -> bool:
-    """Get the ephemeral encryption constrants based on the flavor and image.
+    """Get the ephemeral encryption constraints based on the flavor and image.
 
     :param flavor: an objects.Flavor object
     :param image_meta: an objects.ImageMeta object

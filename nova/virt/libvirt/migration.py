@@ -253,7 +253,7 @@ def _update_volume_xml(xml_doc, migrate_data, instance, get_volume_config):
                         item_dst.tail = None
                         disk_dev.insert(cnt, item_dst)
 
-            # If destination has additional items, thses items should be
+            # If destination has additional items, these items should be
             # added here.
             for item_dst in list(xml_doc2):
                 if item_dst.tag != 'address':
