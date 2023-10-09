@@ -464,6 +464,7 @@
         NOVNC_FROM_PACKAGE: False
         NOVA_USE_UNIFIED_LIMITS: True
         MYSQL_REDUCE_MEMORY: True
+        NOVA_COMPILE_MDEV_SAMPLES: True
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
@@ -486,6 +487,7 @@
       devstack_plugins:
         # Needed for QoS port heal allocation testing.
         neutron: https://opendev.org/openstack/neutron
+        nova: https://opendev.org/openstack/nova
     group-vars:
       subnode:
         devstack_localrc:

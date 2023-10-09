@@ -1,0 +1,8 @@
+# Whether or not to compile the mdev sample drivers from source
+NOVA_COMPILE_MDEV_SAMPLES=$(trueorfalse True NOVA_COMPILE_MDEV_SAMPLES)
+
+# Insert these mdev sample modules
+NOVA_MDEV_SAMPLES=${NOVA_MDEV_SAMPLES:-mtty mdpy mdpy-fb mbochs}
+
+# Temporary directory for kernel source
+NOVA_KERNEL_TEMP=$DEST/kernel
