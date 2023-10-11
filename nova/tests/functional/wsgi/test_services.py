@@ -120,7 +120,8 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
         """Tests a scenario where a server is created on a host, the host
         goes down, the server is evacuated to another host, and then the
         source host compute service is deleted. After that the deleted
-        compute service is restarted and starts successfully.
+        compute service is restarted and refuses to run because it finds its
+        service record deleted even though it has instances.
         """
         # Create our source host that we will evacuate *from* later.
         host1 = self._start_compute('host1')
@@ -154,12 +155,16 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
         # Then the resource provider is also deleted.
         resp = self.placement.get('/resource_providers/%s' % rp_uuid)
         self.assertEqual(404, resp.status)
-        # Try to restart the host1 compute service to create a new service
-        # and a new resource provider.
-        self.restart_compute_service(host1)
-        # Make sure the compute service record for host1 is recreated.
-        service = self.admin_api.get_services(
-            binary='nova-compute', host='host1')[0]
+        # Try to restart the host1 compute service and make sure it recognizes
+        # that its service record has been deleted even though it still has
+        # instances running.
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.restart_compute_service, host1)
+        # Make sure the compute service record for host1 is not recreated
+        # since we aborted startup.
+        services = self.admin_api.get_services(
+            binary='nova-compute', host='host1')
+        self.assertEqual([], services)
 
     def test_migrate_confirm_after_deleted_source_compute(self):
         """Tests a scenario where a server is cold migrated and while in
