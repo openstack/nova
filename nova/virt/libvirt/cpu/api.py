@@ -75,7 +75,7 @@ def power_up(instance: objects.Instance) -> None:
     if instance.numa_topology is None:
         return
 
-    cpu_dedicated_set = hardware.get_cpu_dedicated_set() or set()
+    cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
     pcpus = instance.numa_topology.cpu_pinning
     powered_up = set()
     for pcpu in pcpus:
@@ -95,7 +95,7 @@ def power_down(instance: objects.Instance) -> None:
     if instance.numa_topology is None:
         return
 
-    cpu_dedicated_set = hardware.get_cpu_dedicated_set() or set()
+    cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
     pcpus = instance.numa_topology.cpu_pinning
     powered_down = set()
     for pcpu in pcpus:
@@ -121,7 +121,7 @@ def power_down_all_dedicated_cpus() -> None:
                 "power management if you only use shared CPUs.")
         raise exception.InvalidConfiguration(msg)
 
-    cpu_dedicated_set = hardware.get_cpu_dedicated_set() or set()
+    cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
     for pcpu in cpu_dedicated_set:
         pcpu = Core(pcpu)
         if CONF.libvirt.cpu_power_management_strategy == 'cpu_state':
@@ -138,6 +138,11 @@ def validate_all_dedicated_cpus() -> None:
     governors = set()
     cpu_states = set()
     for pcpu in cpu_dedicated_set:
+        if (pcpu == 0 and
+                CONF.libvirt.cpu_power_management_strategy == 'cpu_state'):
+            LOG.warning('CPU0 is in cpu_dedicated_set, but it is not eligible '
+                        'for state management and will be ignored')
+            continue
         pcpu = Core(pcpu)
         # we need to collect the governors strategy and the CPU states
         governors.add(pcpu.governor)
