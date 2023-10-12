@@ -3724,6 +3724,47 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
             obj.vdpa_capability, config.LibvirtConfigNodeDeviceVDPACap)
         self.assertEqual("/dev/vhost-vdpa-0", obj.vdpa_capability.dev_path)
 
+    def test_config_mtty_device(self):
+        xmlin = """
+        <device>
+          <name>mtty_mtty</name>
+          <path>/sys/devices/virtual/mtty/mtty</path>
+          <parent>computer</parent>
+          <capability type='mdev_types'>
+            <capability type='mdev_types'>
+              <type id='mtty-1'>
+                <name>Single port serial</name>
+                <deviceAPI>vfio-pci</deviceAPI>
+                <availableInstances>24</availableInstances>
+              </type>
+              <type id='mtty-2'>
+                <name>Dual port serial</name>
+                <deviceAPI>vfio-pci</deviceAPI>
+                <availableInstances>12</availableInstances>
+              </type>
+            </capability>
+          </capability>
+        </device>
+        """
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+        self.assertIsInstance(
+            obj.mdev_capability,
+            config.LibvirtConfigNodeDeviceMdevCapableSubFunctionCap)
+        self.assertIsInstance(
+            obj.mdev_capability.mdev_capability[0],
+            config.LibvirtConfigNodeDeviceMdevCapableSubFunctionCap)
+        self.assertEqual(
+            [{'availableInstances': 24,
+              'deviceAPI': 'vfio-pci',
+              'name': 'Single port serial',
+              'type': 'mtty-1'},
+             {'availableInstances': 12,
+              'deviceAPI': 'vfio-pci',
+              'name': 'Dual port serial',
+              'type': 'mtty-2'}],
+            obj.mdev_capability.mdev_capability[0].mdev_types)
+
 
 class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
 

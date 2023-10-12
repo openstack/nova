@@ -3517,6 +3517,7 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
         self.parent = None
         self.pci_capability = None
         self.mdev_information = None
+        self.mdev_capability = None
         self.vdpa_capability = None
         self.vpd_capability = None
 
@@ -3550,6 +3551,10 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
                 vdpa_caps = LibvirtConfigNodeDeviceVDPACap()
                 vdpa_caps.parse_dom(c)
                 self.vdpa_capability = vdpa_caps
+            elif c.tag == "capability" and c.get('type') in ('mdev_types',):
+                mdevcap = LibvirtConfigNodeDeviceMdevCapableSubFunctionCap()
+                mdevcap.parse_dom(c)
+                self.mdev_capability = mdevcap
 
 
 class LibvirtConfigNodeDeviceVDPACap(LibvirtConfigObject):
@@ -3661,6 +3666,7 @@ class LibvirtConfigNodeDeviceMdevCapableSubFunctionCap(LibvirtConfigObject):
         # {'type': 'nvidia-11', 'name': 'GRID M60-0B', 'deviceAPI': 'vfio-pci',
         #  'availableInstances': 16}
         self.mdev_types = list()
+        self.mdev_capability = []
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigNodeDeviceMdevCapableSubFunctionCap,
@@ -3673,6 +3679,10 @@ class LibvirtConfigNodeDeviceMdevCapableSubFunctionCap(LibvirtConfigObject):
                                         if e.tag == 'availableInstances'
                                         else e.text)
                 self.mdev_types.append(mdev_type)
+            elif c.tag == "capability" and c.get('type') in ('mdev_types',):
+                mdevcap = LibvirtConfigNodeDeviceMdevCapableSubFunctionCap()
+                mdevcap.parse_dom(c)
+                self.mdev_capability.append(mdevcap)
 
 
 class LibvirtConfigNodeDeviceMdevInformation(LibvirtConfigObject):
