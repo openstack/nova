@@ -1,0 +1,46 @@
+function compile_mdev_samples {
+    set -x
+    local kver=$(uname -r)
+    local kvariant=$(uname -r | awk -F - '{print $NF}')
+
+    if [[ "$kvariant" == "kvm" ]]; then
+        echo "NOTE: The kvm variant of the kernel you are running does not " \
+            "have the mdev support required to enable the mdev samples."
+        echo "Install the generic variant and retry."
+        exit 1
+    elif [[ "$kvariant" != "generic" ]]; then
+        echo "NOTE: This may not work on your kernel variant of $kvariant!"
+        echo "Recommend installing the generic variant kernel instead."
+    fi
+
+    if grep deb-src /etc/apt/sources.list; then
+        sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
+    else
+        sudo tee -a /etc/apt/sources.list <<EOF
+# Added by devstack
+deb-src http://archive.ubuntu.com/ubuntu jammy main restricted
+deb-src http://archive.ubuntu.com/ubuntu jammy-updates main restricted
+deb-src http://archive.ubuntu.com/ubuntu jammy-security main restricted
+EOF
+    fi
+
+    cat /etc/apt/sources.list
+    sudo apt update
+    sudo apt build-dep -y linux-image-unsigned-$kver
+    sudo apt install -y libncurses-dev gawk flex bison openssl libssl-dev \
+        dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf llvm \
+        linux-headers-$kver
+
+    mkdir $NOVA_KERNEL_TEMP
+    cd $NOVA_KERNEL_TEMP
+    apt source linux-image-unsigned-$kver > kernel-source.log
+    cd linux-*/samples/vfio-mdev
+    sed -i 's/obj-[^ ]*/obj-m/' Makefile
+    make -C /lib/modules/$(uname -r)/build M=$(pwd) modules
+    sudo make -C /lib/modules/$(uname -r)/build M=$(pwd) modules_install
+    sudo depmod
+    for mod in $NOVA_MDEV_SAMPLES;  do
+        sudo modprobe $mod
+    done
+    lsmod | grep mdev
+}
