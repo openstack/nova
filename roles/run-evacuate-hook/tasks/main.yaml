@@ -25,6 +25,13 @@
     state: stopped
   when: qagtstatus.rc | int == 0
 
+- name: Make sure lxml is installed
+  delegate_to: compute1
+  become: true
+  package:
+    name: python3-lxml
+    state: present
+
 - name: Register running domains on subnode
   delegate_to: compute1
   become: true
