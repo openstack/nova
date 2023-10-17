@@ -46,6 +46,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import importutils
+from oslo_utils import strutils
 from oslo_utils import units
 from oslo_utils import versionutils
 
@@ -1553,9 +1554,9 @@ class Host(object):
             return False
 
         with open(SEV_KERNEL_PARAM_FILE) as f:
-            contents = f.read()
-            LOG.debug("%s contains [%s]", SEV_KERNEL_PARAM_FILE, contents)
-            return contents == "1\n"
+            content = f.read()
+            LOG.debug("%s contains [%s]", SEV_KERNEL_PARAM_FILE, content)
+            return strutils.bool_from_string(content)
 
     @property
     def supports_amd_sev(self) -> bool:
