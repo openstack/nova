@@ -60,24 +60,6 @@ Possible values:
 * An OpenStack release name, in lower case, such as 'mitaka' or
   'liberty'.
 """),
-    cfg.StrOpt("cert",
-        deprecated_for_removal=True,
-        deprecated_since='18.0.0',
-        deprecated_reason="""
-The nova-cert service was removed in 16.0.0 (Pike) so this option
-is no longer used.
-""",
-        help="""
-Cert RPC API version cap.
-
-Possible values:
-
-* By default send the latest version the client knows about
-* A string representing a version number in the format 'N.N';
-  for example, possible values might be '1.12' or '2.0'.
-* An OpenStack release name, in lower case, such as 'mitaka' or
-  'liberty'.
-"""),
     cfg.StrOpt("scheduler",
         help="""
 Scheduler RPC API version cap.
