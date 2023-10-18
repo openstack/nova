@@ -6196,6 +6196,45 @@ class HostAPI:
                                                payload)
         return result
 
+    def _service_get_all_cells(self, context, disabled, set_zones,
+                               cell_down_support):
+        services = []
+        service_dict = nova_context.scatter_gather_all_cells(context,
+            objects.ServiceList.get_all, disabled, set_zones=set_zones)
+
+        cell0_computes = [
+            x for x in
+            service_dict.get(objects.CellMapping.CELL0_UUID, [])
+            if x.binary == 'nova-compute']
+        for cn in cell0_computes:
+            LOG.warning(
+                'Found compute service %(service)s in cell0; '
+                'This should never happen!',
+                {'service': cn.host})
+
+        for cell_uuid, cell_services in service_dict.items():
+            if not nova_context.is_cell_failure_sentinel(cell_services):
+                services.extend(cell_services)
+            elif cell_down_support:
+                unavailable_services = objects.ServiceList()
+                cid = [cm.id for cm in nova_context.CELLS
+                        if cm.uuid == cell_uuid]
+                # We know cid[0] is in the list because we are using the
+                # same list that scatter_gather_all_cells used
+                hms = objects.HostMappingList.get_by_cell_id(context,
+                                                                cid[0])
+                for hm in hms:
+                    unavailable_services.objects.append(objects.Service(
+                        binary='nova-compute', host=hm.host))
+                LOG.warning("Cell %s is not responding and hence only "
+                            "partial results are available from this "
+                            "cell.", cell_uuid)
+                services.extend(unavailable_services)
+            else:
+                LOG.warning("Cell %s is not responding and hence skipped "
+                            "from the results.", cell_uuid)
+        return services
+
     def service_get_all(self, context, filters=None, set_zones=False,
                         all_cells=False, cell_down_support=False):
         """Returns a list of services, optionally filtering the results.
@@ -6220,41 +6259,9 @@ class HostAPI:
         # and we should always iterate over the cells. However, certain
         # callers need the legacy behavior for now.
         if all_cells:
-            services = []
-            service_dict = nova_context.scatter_gather_all_cells(context,
-                objects.ServiceList.get_all, disabled, set_zones=set_zones)
-
-            cell0_computes = [
-                x for x in
-                service_dict.get(objects.CellMapping.CELL0_UUID, [])
-                if x.binary == 'nova-compute']
-            for cn in cell0_computes:
-                LOG.warning(
-                    'Found compute service %(service)s in cell0; '
-                    'This should never happen!',
-                    {'service': cn.host})
-
-            for cell_uuid, service in service_dict.items():
-                if not nova_context.is_cell_failure_sentinel(service):
-                    services.extend(service)
-                elif cell_down_support:
-                    unavailable_services = objects.ServiceList()
-                    cid = [cm.id for cm in nova_context.CELLS
-                           if cm.uuid == cell_uuid]
-                    # We know cid[0] is in the list because we are using the
-                    # same list that scatter_gather_all_cells used
-                    hms = objects.HostMappingList.get_by_cell_id(context,
-                                                                 cid[0])
-                    for hm in hms:
-                        unavailable_services.objects.append(objects.Service(
-                            binary='nova-compute', host=hm.host))
-                    LOG.warning("Cell %s is not responding and hence only "
-                                "partial results are available from this "
-                                "cell.", cell_uuid)
-                    services.extend(unavailable_services)
-                else:
-                    LOG.warning("Cell %s is not responding and hence skipped "
-                                "from the results.", cell_uuid)
+            services = self._service_get_all_cells(context, disabled,
+                                                   set_zones,
+                                                   cell_down_support)
         else:
             services = objects.ServiceList.get_all(context, disabled,
                                                    set_zones=set_zones)
