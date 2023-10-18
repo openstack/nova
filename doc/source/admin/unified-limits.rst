@@ -50,14 +50,14 @@ are made in order:
 
    .. code-block:: console
 
-       $ openstack limit create --service nova --project <project> --resource-limit 5 servers
+      $ openstack limit create --service nova --project <project> --resource-limit 5 servers
 
 #. Default limits
 
    Use the Keystone registered limit for the resource as the limit. You can
    create these default limits using:
 
-  .. code-block:: console
+   .. code-block:: console
 
       $ openstack registered limit create --service nova --default-limit 5 servers
 
@@ -129,11 +129,11 @@ To list all default quotas for a project, run:
 
 .. code-block:: console
 
-    $ openstack registered limit list
+   $ openstack registered limit list
 
 .. note::
 
-    This lists default quotas for all services and not just nova.
+   This lists default quotas for all services and not just nova.
 
 To show details about a default limit, run:
 
@@ -159,7 +159,7 @@ To update a default quota value, run:
 
 .. code-block:: console
 
-    $ openstack registered limit set --default-limit <value> <registered-limit-id>
+   $ openstack registered limit set --default-limit <value> <registered-limit-id>
 
 To delete a default quota limit, run:
 
@@ -174,11 +174,11 @@ To list quotas for a project, run:
 
 .. code-block:: console
 
-    $ openstack limit list --project <project>
+   $ openstack limit list --project <project>
 
 .. note::
 
-    This lists project quotas for all services and not just nova.
+   This lists project quotas for all services and not just nova.
 
 To list quotas for all projects, you must have a system-scoped authorization
 token and run:
@@ -203,7 +203,7 @@ To update quotas for a project, run:
 
 .. code-block:: console
 
-    $ openstack limit set --resource-limit <value> <limit-id>
+   $ openstack limit set --resource-limit <value> <limit-id>
 
 To delete quotas for a project, run:
 
