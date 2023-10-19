@@ -76,6 +76,11 @@ def get_cpu_dedicated_set():
     return cpu_ids
 
 
+def get_cpu_dedicated_set_nozero():
+    """Return cpu_dedicated_set without CPU0, if present"""
+    return get_cpu_dedicated_set() - {0}
+
+
 def get_cpu_shared_set():
     """Parse ``[compute] cpu_shared_set`` config.
 
