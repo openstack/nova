@@ -18,6 +18,7 @@ BigVM service
 import itertools
 
 import os_resource_classes as orc
+import os_traits
 from oslo_log import log as logging
 from oslo_messaging import exceptions as oslo_exceptions
 from oslo_service import periodic_task
@@ -168,11 +169,13 @@ class BigVmManager(manager.Manager):
                                 CONF.bigvm_cluster_max_reservation_percent})
                 continue
 
-            # filter out providers that are disabled for bigVMs
+            # filter out providers that are disabled in general or for bigVMs
+            # specifically
             provider_summaries = filtered_provider_summaries
             filtered_provider_summaries = {}
             for p, d in provider_summaries.items():
-                if BIGVM_DISABLED_TRAIT in d['traits']:
+                if os_traits.COMPUTE_STATUS_DISABLED in d['traits'] \
+                        or BIGVM_DISABLED_TRAIT in d['traits']:
                     continue
                 filtered_provider_summaries[p] = d
 
@@ -488,10 +491,12 @@ class BigVmManager(manager.Manager):
                 continue
 
             host_rp = vmware_providers[rp['host_rp_uuid']]
-            if BIGVM_DISABLED_TRAIT in host_rp['traits']:
+            if os_traits.COMPUTE_STATUS_DISABLED in host_rp['traits'] \
+                    or BIGVM_DISABLED_TRAIT in host_rp['traits']:
                 providers_to_delete[rp_uuid] = rp
-                LOG.info('Resource-provider %(host_rp_uuid)s got disabled '
-                         'bigVMs. Marking %(rp_uuid)s for deletion.',
+                LOG.info('Resource-provider %(host_rp_uuid)s got disabled in'
+                         ' general or specifically for bigVMs. Marking'
+                         ' %(rp_uuid)s for deletion.',
                          {'host_rp_uuid': rp['host_rp_uuid'],
                           'rp_uuid': rp_uuid})
 
