@@ -348,6 +348,14 @@ class ComputeTaskManager:
             sh = filter_properties.setdefault('scheduler_hints', {})
             sh.update(new_scheduler_hints)
 
+        volume_sizes = [bdm.volume_size for bdm in instance.get_bdms()
+                        if bdm.destination_type == 'volume']
+        sh = filter_properties.setdefault('scheduler_hints', {})
+        # NOTE(jkulik): We have to update the "volume_sizes" key even if there
+        # are no volumes attached currently, because the "scheduler_hints" are
+        # persisted in the DB and thus could contain old information.
+        sh.update({'volume_sizes': volume_sizes})
+
         # NOTE(sbauza): If a reschedule occurs when prep_resize(), then
         # it only provides filter_properties legacy dict back to the
         # conductor with no RequestSpec part of the payload for <Stein
@@ -441,6 +449,12 @@ class ComputeTaskManager:
         # NOTE(sbauza): Make sure we persist the new flavor in case we had
         # a successful scheduler call if and only if nothing bad happened
         if request_spec.obj_what_changed():
+            # NOTE(jkulik): Make sure we do not store the "volume_sizes"
+            # scheduler_hint as that can change at any time and saving it in
+            # the DB thus is not useful.
+            if (request_spec.scheduler_hints and
+                    'volume_sizes' in request_spec.scheduler_hints):
+                del request_spec.scheduler_hints['volume_sizes']
             request_spec.save()
 
     def _set_vm_state_and_notify(self, context, instance_uuid, method, updates,
