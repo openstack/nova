@@ -287,7 +287,7 @@ New Features
 
 .. releasenotes/notes/online-data-migrations-48dde6a1d8661e47.yaml @ b'c2bd7e4cdcb3c81700977155c93561f50c6b415d'
 
-- Added a `nova-manage db online_data_migrations` command for forcing online data migrations, which will run all registered migrations for the release, instead of there being a separate command for each logical data migration. Operators need to make sure all data is migrated before upgrading to the next release, and the new command provides a unified interface for doing it.
+- Added a ``nova-manage db online_data_migrations`` command for forcing online data migrations, which will run all registered migrations for the release, instead of there being a separate command for each logical data migration. Operators need to make sure all data is migrated before upgrading to the next release, and the new command provides a unified interface for doing it.
 
 .. releasenotes/notes/optional_project_id-6aebf1cb394d498f.yaml @ b'eea7169474d3cf6b9ac27036ae3ca5a95b461b8d'
 
@@ -624,7 +624,7 @@ Deprecation Notes
 
 .. releasenotes/notes/os-migrations-ef225e5b309d5497.yaml @ b'98e4a64ad3f1f975e78224d19e729787b902e84c'
 
-- The old top-level resource `/os-migrations` is deprecated, it won't be extended anymore. And migration_type for /os-migrations, also add ref link to the /servers/{uuid}/migrations/{id} for it when the migration is an in-progress live-migration. This has been added in microversion 2.23.
+- The old top-level resource ``/os-migrations`` is deprecated, it won't be extended anymore. And migration_type for /os-migrations, also add ref link to the /servers/{uuid}/migrations/{id} for it when the migration is an in-progress live-migration. This has been added in microversion 2.23.
 
 .. releasenotes/notes/rm_volume_manager-78fed5be43d285b3.yaml @ b'6e8e322718529e50bf2035507b970058ddaa836a'
 

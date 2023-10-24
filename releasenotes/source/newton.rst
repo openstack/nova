@@ -81,7 +81,7 @@ Security Issues
   ImagePropertiesFilter or the IsolatedHostsFilter). All setups using the
   FilterScheduler (or CachingScheduler) are affected.
 
-  The fix is in the `nova-api` and `nova-conductor` services.
+  The fix is in the ``nova-api`` and ``nova-conductor`` services.
 
   .. _OSSA-2017-005: https://security.openstack.org/ossa/OSSA-2017-005.html
 
@@ -120,8 +120,8 @@ Bug Fixes
 - The ``nova-manage cell_v2 simple_cell_setup`` command now creates the
   default cell0 database connection using the ``[database]`` connection
   configuration option rather than the ``[api_database]`` connection. The
-  cell0 database schema is the `main` database, i.e. the `instances` table,
-  rather than the `api` database schema. In other words, the cell0 database
+  cell0 database schema is the ``main`` database, i.e. the ``instances`` table,
+  rather than the ``api`` database schema. In other words, the cell0 database
   would be called something like ``nova_cell0`` rather than
   ``nova_api_cell0``.
 
@@ -184,10 +184,10 @@ Known Issues
 
 .. releasenotes/notes/libvirt-script-with-empty-path-2b49caa68b05278d.yaml @ b'99f8a3c4e9d903d48e5c7e245bcb2d3299b7904d'
 
-- When generating Libvirt XML to attach network interfaces for the `tap`,
-  `ivs`, `iovisor`, `midonet`, and `vrouter` virtual interface types Nova
+- When generating Libvirt XML to attach network interfaces for the ``tap``,
+  ``ivs``, ``iovisor``, ``midonet``, and ``vrouter`` virtual interface types Nova
   previously generated an empty path attribute to the script element
-  (`<script path=''/>`) of the interface.
+  (``<script path=''/>``) of the interface.
 
   As of Libvirt 1.3.3 (`commit`_) and later Libvirt no longer accepts an
   empty path attribute to the script element of the interface. Notably this
@@ -198,7 +198,7 @@ Known Issues
 
   Additionally, where virtual machines already exist that were created using
   earlier versions of Libvirt interactions with these virtual machines via
-  Nova or other utilities (e.g. `virsh`) may result in similar errors.
+  Nova or other utilities (e.g. ``virsh``) may result in similar errors.
 
   To mitigate this issue Nova no longer generates an empty path attribute
   to the script element when defining an interface. This resolves the issue
@@ -679,7 +679,15 @@ Upgrade Notes
 
 .. releasenotes/notes/cells-single-migration-command-0e98d66e31e02a50.yaml @ b'f9a3c3fcff89828b7df45149c2d0ee188f439e46'
 
-- A new nova-manage command has been added which will upgrade a deployment to cells v2. Running the command will setup a single cell containing the existing hosts and instances. No data or instances will be moved during this operation, but new data will be added to the nova_api database.  New instances booted after this point will be placed into the cell.  Please note that this does not mean that cells v2 is fully functional at this time, but this is a significant part of the effort to get there. The new command is "nova-manage cell_v2 simple_cell_setup --transport_url <transport_url>" where transport_url is the connection information for the current message queue used by Nova. Operators must create a new database for cell0 before running `cell_v2 simple_cell_setup`. The simple cell setup command expects the name of the cell0 database to be `<main database name>_cell0` as it will create a cell mapping for cell0 based on the main database connection, sync the cell0 database, and associate existing hosts and instances with the single cell.
+- A new nova-manage command has been added which will upgrade a deployment to cells v2.
+  Running the command will setup a single cell containing the existing hosts and instances.
+  No data or instances will be moved during this operation, but new data will be added to the nova_api database.
+  New instances booted after this point will be placed into the cell.
+  Please note that this does not mean that cells v2 is fully functional at this time, but this is a significant part of the effort to get there.
+  The new command is "nova-manage cell_v2 simple_cell_setup --transport_url <transport_url>" where transport_url is the connection information
+  for the current message queue used by Nova. Operators must create a new database for cell0 before running ``cell_v2 simple_cell_setup``.
+  The simple cell setup command expects the name of the cell0 database to be ``<main database name>_cell0`` as it will create a cell mapping
+  for cell0 based on the main database connection, sync the cell0 database, and associate existing hosts and instances with the single cell.
 
 .. releasenotes/notes/config-ironic-client_log_level-2bb84f12154417ca.yaml @ b'a924b1db46149d2928731f59afb7fef18deed54d'
 
@@ -803,7 +811,9 @@ Upgrade Notes
 
 .. releasenotes/notes/newton-has-many-online-migrations-38066facfe197382.yaml @ b'd83c2772da4c1a059c4906d8ea7a5cf942e8e41b'
 
-- The newton release has a lot of online migrations that must be performed before you will be able to upgrade to ocata. Please take extra note of this fact and budget time to run these online migrations before you plan to upgrade to ocata. These migrations can be run without downtime with `nova-manage db online_data_migrations`.
+- The newton release has a lot of online migrations that must be performed before you will be able to upgrade to ocata.
+  Please take extra note of this fact and budget time to run these online migrations before you plan to upgrade to ocata.
+  These migrations can be run without downtime with ``nova-manage db online_data_migrations``.
 
 .. releasenotes/notes/notify_on_state_change_opt-e3c6f6664e143993.yaml @ b'5f4dcdce16837e28af18964f533a1eba738b9f34'
 
@@ -814,11 +824,12 @@ Upgrade Notes
 
 .. releasenotes/notes/remove-auth-admin-token-support-1b59ae7739b06bc2.yaml @ b'2ea2399ec3e4b976beadfbcd1cab78b94382eca3'
 
-- The deprecated auth parameter `admin_auth_token` was removed from the [ironic] config option group. The use of `admin_auth_token` is insecure compared to the use of a proper username/password.
+- The deprecated auth parameter ``admin_auth_token`` was removed from the [ironic] config option group.
+  The use of ``admin_auth_token`` is insecure compared to the use of a proper username/password.
 
 .. releasenotes/notes/remove-config-serial-listen-2660be1c0863ea5a.yaml @ b'3495330a94e4728ba44077f0585b34b8c74112b0'
 
-- The previously deprecated config option ``listen```of the group
+- The previously deprecated config option ``listen`` of the group
   ``serial_console`` has been removed, as it was never used in the code.
 
 .. releasenotes/notes/remove-deprecated-cells-manager-option-d9d20691c08d2752.yaml @ b'28803fa40b6195b152668da4e1f0feec53df533b'
@@ -856,7 +867,10 @@ Upgrade Notes
 
 .. releasenotes/notes/remove-libvirt-migration-flags-config-8bf909c1295cc53f.yaml @ b'a48b6146af93dd0cb1b43ec7d83867df8b347df2'
 
-- The 'live_migration_flag' and 'block_migration_flag' options in libvirt section that were deprecated in Mitaka have been completely removed in Newton, because nova automatically sets correct migration flags. New config options has been added to retain possibility to turn tunnelling, auto-converge and post-copy on/off, respectively named `live_migration_tunnelled`, `live_migration_permit_auto_converge` and `live_migration_permit_post_copy`.
+- The 'live_migration_flag' and 'block_migration_flag' options in libvirt section that were deprecated in Mitaka have been completely
+  removed in Newton, because nova automatically sets correct migration flags. New config options has been added to retain possibility
+  to turn tunnelling, auto-converge and post-copy on/off, respectively named ``live_migration_tunnelled``,
+  ``live_migration_permit_auto_converge`` and ``live_migration_permit_post_copy``.
 
 .. releasenotes/notes/remove-memcached-default-option-e0e50d54cef17ac4.yaml @ b'505bc44615d922c0e9054c3ca48721b26b924caa'
 
@@ -872,7 +886,8 @@ Upgrade Notes
 
 .. releasenotes/notes/remove_legacy_v2_api_policy_rules-033fa77420ed6362.yaml @ b'31547f551c3d081b0d88cd6af8e6f1045fab948f'
 
-- Legacy v2 API code is already removed. A set of policy rules in the policy.json, which are only used by legacy v2 API, are removed. Both v2.1 API and v2.1 compatible mode API are using same set of new policy rules which are with prefix `os_compute_api`.
+- Legacy v2 API code is already removed. A set of policy rules in the policy.json, which are only used by legacy v2 API, are removed.
+  Both v2.1 API and v2.1 compatible mode API are using same set of new policy rules which are with prefix ``os_compute_api``.
 
 .. releasenotes/notes/remove_security_group_api-6fefb1a355876e83.yaml @ b'34eed4a4d48772e509261d9098a09185061a0ce0'
 
@@ -983,7 +998,12 @@ Deprecation Notes
 
 .. releasenotes/notes/deprecate-old-auth-parameters-948d70045335b312.yaml @ b'2ea2399ec3e4b976beadfbcd1cab78b94382eca3'
 
-- The auth parameters `admin_username`, `admin_password`, `admin_tenant_name` and `admin_url` of the [ironic] config option group are now deprecated and will be removed in a future release. Using these parameters will log a warning. Please use `username`, `password`, `project_id` (or `project_name`) and `auth_url` instead. If you are using Keystone v3 API, please note that the name uniqueness for project and user only holds inside the same hierarchy level, so you must also specify domain information for user (i.e. `user_domain_id` or `user_domain_name`) and for project, if you are using `project_name` (i.e. `project_domain_id` or `project_domain_name`).
+- The auth parameters ``admin_username``, ``admin_password``, ``admin_tenant_name`` and ``admin_url`` of the [ironic] config option group
+  are now deprecated and will be removed in a future release. Using these parameters will log a warning.
+  Please use ``username``, ``password``, ``project_id`` (or ``project_name``) and ``auth_url`` instead.
+  If you are using Keystone v3 API, please note that the name uniqueness for project and user only holds inside the same hierarchy level,
+  so you must also specify domain information for user (i.e. ``user_domain_id`` or ``user_domain_name``) and for project,
+  if you are using ``project_name`` (i.e. ``project_domain_id`` or ``project_domain_name``).
 
 .. releasenotes/notes/deprecate-snapshot-name-template-46966b0f5e6cabeb.yaml @ b'aeee4547b80013564e634cb7c1bde63f3c55d1f1'
 
