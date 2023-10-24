@@ -27,7 +27,7 @@ class TestShardFilter(test.NoDBTestCase):
     def setUp(self):
         super(TestShardFilter, self).setUp()
         self.filt_cls = shard_filter.ShardFilter()
-        self.filt_cls._PROJECT_SHARD_CACHE = {
+        self.filt_cls._PROJECT_TAG_CACHE = {
             'foo': ['vc-a-0', 'vc-b-0'],
             'last_modified': time.time()
         }
@@ -36,25 +36,25 @@ class TestShardFilter(test.NoDBTestCase):
                 'ShardFilter._update_cache')
     def test_get_shards_cache_timeout(self, mock_update_cache):
         def set_cache():
-            self.filt_cls._PROJECT_SHARD_CACHE = {
+            self.filt_cls._PROJECT_TAG_CACHE = {
                 'foo': ['vc-a-1']
             }
         mock_update_cache.side_effect = set_cache
 
         project_id = 'foo'
-        mod = time.time() - self.filt_cls._PROJECT_SHARD_CACHE_RETENTION_TIME
+        mod = time.time() - self.filt_cls._PROJECT_TAG_CACHE_RETENTION_TIME
 
         self.assertEqual(self.filt_cls._get_shards(project_id),
                                                    ['vc-a-0', 'vc-b-0'])
 
-        self.filt_cls._PROJECT_SHARD_CACHE['last_modified'] = mod
+        self.filt_cls._PROJECT_TAG_CACHE['last_modified'] = mod
         self.assertEqual(self.filt_cls._get_shards(project_id), ['vc-a-1'])
 
     @mock.patch('nova.scheduler.filters.shard_filter.'
                 'ShardFilter._update_cache')
     def test_get_shards_project_not_included(self, mock_update_cache):
         def set_cache():
-            self.filt_cls._PROJECT_SHARD_CACHE = {
+            self.filt_cls._PROJECT_TAG_CACHE = {
                 'bar': ['vc-a-1', 'vc-b-0']
             }
         mock_update_cache.side_effect = set_cache
@@ -95,7 +95,7 @@ class TestShardFilter(test.NoDBTestCase):
             context=mock.sentinel.ctx, project_id='foo',
             flavor=objects.Flavor(extra_specs={}))
 
-        self.filt_cls._PROJECT_SHARD_CACHE['foo'] = []
+        self.filt_cls._PROJECT_TAG_CACHE['foo'] = []
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_metadata_get_by_host')
@@ -145,7 +145,7 @@ class TestShardFilter(test.NoDBTestCase):
             context=mock.sentinel.ctx, project_id='foo',
             flavor=objects.Flavor(extra_specs={}))
 
-        self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
+        self.filt_cls._PROJECT_TAG_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
                                                      'vc-b-0']
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
@@ -161,7 +161,7 @@ class TestShardFilter(test.NoDBTestCase):
             scheduler_hints=dict(_nova_check_type=['resize'],
                                  source_host=['host2']))
 
-        self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
+        self.filt_cls._PROJECT_TAG_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
                                                      'vc-b-0']
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
@@ -176,12 +176,12 @@ class TestShardFilter(test.NoDBTestCase):
             scheduler_hints=dict(_nova_check_type=['resize'],
                                  source_host=['host2']))
 
-        self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
+        self.filt_cls._PROJECT_TAG_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
                                                      'vc-b-0']
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_shard_project_has_sharding_enabled_any_host_passes(self):
-        self.filt_cls._PROJECT_SHARD_CACHE['baz'] = ['sharding_enabled']
+        self.filt_cls._PROJECT_TAG_CACHE['baz'] = ['sharding_enabled']
         aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
                  objects.Aggregate(id=1, name='vc-a-0', hosts=['host1'])]
         host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
@@ -191,7 +191,7 @@ class TestShardFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_shard_project_has_sharding_enabled_and_single_shards(self):
-        self.filt_cls._PROJECT_SHARD_CACHE['baz'] = ['sharding_enabled',
+        self.filt_cls._PROJECT_TAG_CACHE['baz'] = ['sharding_enabled',
                                                      'vc-a-1']
         aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
                  objects.Aggregate(id=1, name='vc-a-0', hosts=['host1'])]
