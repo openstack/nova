@@ -392,15 +392,17 @@ class _BaseTaskTestCase(object):
         return rebuild_args, compute_rebuild_args
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'get_bdms')
     @mock.patch.object(objects.RequestSpec, 'save')
     @mock.patch.object(migrate.MigrationTask, 'execute')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     def _test_cold_migrate(self, spec_from_components, get_image_from_metadata,
-                           migration_task_execute, spec_save, get_im,
+                           migration_task_execute, spec_save, get_bdms, get_im,
                            clean_shutdown=True):
         get_im.return_value.cell_mapping = (
             objects.CellMappingList.get_all(self.context)[0])
+        get_bdms.return_value = []
         get_image_from_metadata.return_value = 'image'
         inst = fake_instance.fake_db_instance(image_ref='image_ref')
         inst_obj = objects.Instance._from_db_object(
@@ -3537,6 +3539,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             'request_spec')
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'get_bdms')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
@@ -3547,7 +3550,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(migrate.MigrationTask, '_preallocate_migration')
     def test_cold_migrate_no_valid_host_back_in_active_state(
             self, _preallocate_migration, rollback_mock, notify_mock,
-            select_dest_mock, metadata_mock, sig_mock, spec_fc_mock, im_mock):
+            select_dest_mock, metadata_mock, sig_mock, spec_fc_mock, bdms_mock,
+            im_mock):
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
             instance_type_id=self.flavor.id,
@@ -3571,6 +3575,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         updates = {'vm_state': vm_states.ACTIVE,
                    'task_state': None}
 
+        bdms_mock.return_value = []
         im_mock.return_value = objects.InstanceMapping(
             cell_mapping=objects.CellMapping.get_by_uuid(self.context,
                                                          uuids.cell1))
@@ -3589,6 +3594,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         rollback_mock.assert_called_once_with(exc_info)
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'get_bdms')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
@@ -3599,7 +3605,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(migrate.MigrationTask, '_preallocate_migration')
     def test_cold_migrate_no_valid_host_back_in_stopped_state(
             self, _preallocate_migration, rollback_mock, notify_mock,
-            select_dest_mock, metadata_mock, spec_fc_mock, sig_mock, im_mock):
+            select_dest_mock, metadata_mock, spec_fc_mock, sig_mock, bdms_mock,
+            im_mock):
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
             vm_state=vm_states.STOPPED,
@@ -3619,6 +3626,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
         spec_fc_mock.return_value = fake_spec
 
+        bdms_mock.return_value = []
         im_mock.return_value = objects.InstanceMapping(
             cell_mapping=objects.CellMapping.get_by_uuid(self.context,
                                                          uuids.cell1))
@@ -3661,15 +3669,17 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             mock.patch.object(migrate.MigrationTask,
                               'execute',
                               side_effect=exc.NoValidHost(reason="")),
-            mock.patch.object(migrate.MigrationTask, 'rollback')
+            mock.patch.object(migrate.MigrationTask, 'rollback'),
+            mock.patch.object(inst_obj, 'get_bdms', return_value=[])
         ) as (image_mock, set_vm_mock, task_execute_mock,
-              task_rollback_mock):
+              task_rollback_mock, inst_bdms_mock):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, self.flavor, {},
                                     True, fake_spec, None)
             self.assertIn('cold migrate', nvh.message)
 
+    @mock.patch.object(objects.Instance, 'get_bdms')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
     @mock.patch.object(migrate.MigrationTask, 'execute')
     @mock.patch.object(migrate.MigrationTask, 'rollback')
@@ -3681,7 +3691,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                  set_vm_mock,
                                                  task_rollback_mock,
                                                  task_exec_mock,
-                                                 image_mock):
+                                                 image_mock,
+                                                 bdms_mock):
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
             vm_state=vm_states.STOPPED,
@@ -3701,6 +3712,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         fake_spec = fake_request_spec.fake_spec_obj()
         spec_fc_mock.return_value = fake_spec
 
+        bdms_mock.return_value = []
         image_mock.return_value = image
         task_exec_mock.side_effect = exception
 
@@ -3713,7 +3725,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                             'migrate_server', updates,
                                             exception, fake_spec)
         filter_properties = {'scheduler_hints': {'source_host': ['host1'],
-                                                 'source_node': ['node1']}}
+                                                 'source_node': ['node1'],
+                                                 'volume_sizes': []}}
         spec_fc_mock.assert_called_once_with(
             self.context, inst_obj.uuid, image, self.flavor,
             inst_obj.numa_topology, inst_obj.pci_requests, filter_properties,
@@ -3724,6 +3737,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                        '_is_selected_host_in_source_cell',
                        return_value=True)
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'get_bdms')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
@@ -3736,7 +3750,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_cold_migrate_exception_host_in_error_state_and_raise(
             self, _preallocate_migration, prep_resize_mock, rollback_mock,
             notify_mock, select_dest_mock, metadata_mock, spec_fc_mock,
-            sig_mock, im_mock, check_cell_mock):
+            sig_mock, bdms_mock, im_mock, check_cell_mock):
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
             vm_state=vm_states.STOPPED,
@@ -3755,6 +3769,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
         spec_fc_mock.return_value = fake_spec
 
+        bdms_mock.return_value = []
         im_mock.return_value = objects.InstanceMapping(
             cell_mapping=objects.CellMapping.get_by_uuid(self.context,
                                                          uuids.cell1))
@@ -3822,13 +3837,15 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_execute.assert_called_once_with()
         mock_refresh.assert_called_once_with()
 
+    @mock.patch.object(objects.Instance, 'get_bdms')
     @mock.patch.object(objects.RequestSpec, 'save')
     @mock.patch.object(migrate.MigrationTask, 'execute')
     @mock.patch.object(utils, 'get_image_from_system_metadata')
     def test_cold_migrate_updates_flavor_if_existing_reqspec(self,
                                                              image_mock,
                                                              task_exec_mock,
-                                                             spec_save_mock):
+                                                             spec_save_mock,
+                                                             bdms_mock):
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
             vm_state=vm_states.STOPPED,
@@ -3845,6 +3862,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         image = 'fake-image'
         fake_spec = fake_request_spec.fake_spec_obj()
 
+        bdms_mock.return_value = []
         image_mock.return_value = image
         # Just make sure we have an original flavor which is different from
         # the new one
@@ -3857,10 +3875,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # ...and persisted
         spec_save_mock.assert_called_once_with()
 
+    @mock.patch.object(objects.Instance, 'get_bdms')
     @mock.patch('nova.objects.RequestSpec.from_primitives')
     @mock.patch.object(objects.RequestSpec, 'save')
     def test_cold_migrate_reschedule_legacy_request_spec(
-            self, spec_save_mock, from_primitives_mock):
+            self, spec_save_mock, from_primitives_mock, bdms_mock):
         """Tests the scenario that compute RPC API is pinned to less than 5.1
         so conductor passes a legacy dict request spec to compute and compute
         sends it back to conductor on a reschedule during prep_resize so
@@ -3868,6 +3887,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         """
         instance = objects.Instance(system_metadata={})
         fake_spec = fake_request_spec.fake_spec_obj()
+        bdms_mock.return_value = []
         from_primitives_mock.return_value = fake_spec
         legacy_spec = fake_spec.to_legacy_request_spec_dict()
         filter_props = {}
@@ -3911,9 +3931,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             mock.patch.object(migrate.MigrationTask,
                               'execute',
                               side_effect=exc.NoValidHost(reason="")),
-            mock.patch.object(migrate.MigrationTask, 'rollback')
+            mock.patch.object(migrate.MigrationTask, 'rollback'),
+            mock.patch.object(inst_obj, 'get_bdms', return_value=[])
         ) as (image_mock, brs_mock, vm_st_mock, task_execute_mock,
-              task_rb_mock):
+              task_rb_mock, inst_bdms_mock):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor_new, {},
