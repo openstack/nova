@@ -95,8 +95,8 @@ are exposed to administrators:
   Refer to :nova-doc:`VM States <reference/vm-states.html>`.
 
 - task_state represents what is happening to the instance at the
-  current moment. These tasks can be generic, such as `spawning`, or specific,
-  such as `block_device_mapping`. These task states allow for a better view into
+  current moment. These tasks can be generic, such as ``spawning``, or specific,
+  such as ``block_device_mapping``. These task states allow for a better view into
   what a server is doing.
 
 Server creation

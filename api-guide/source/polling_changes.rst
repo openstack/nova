@@ -10,10 +10,10 @@ for changes within a specified time.
 
 The ``changes-since`` time or ``changes-before`` time is specified as
 an `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`__ dateTime
-(`2011-01-24T17:08Z`). The form for the timestamp is **CCYY-MM-DDThh:mm:ss**.
+(``2011-01-24T17:08Z``). The form for the timestamp is **CCYY-MM-DDThh:mm:ss**.
 An optional time zone may be written in by appending the form ±hh:mm
 which describes the timezone as an offset from UTC. When the timezone is
-not specified (`2011-01-24T17:08`), the UTC timezone is assumed.
+not specified (``2011-01-24T17:08``), the UTC timezone is assumed.
 
 The following situations need to be considered:
 

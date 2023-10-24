@@ -37,7 +37,7 @@ Permanent Links
 
 The MIME type versioning approach allows for creating of permanent
 links, because the version scheme is not specified in the URI path:
-`https://api.servers.openstack.org/224532/servers/123`.
+``https://api.servers.openstack.org/224532/servers/123``.
 
 If a request is made without a version specified in the URI or via HTTP
 headers, then a multiple-choices response (300) follows that provides
@@ -99,8 +99,8 @@ everything following that truncated) returned from the authentication system.
 
 You can also obtain additional information about a specific version by
 performing a **GET** on the base version URL (such as,
-`https://servers.api.openstack.org/v2.1/`). Version request URLs must
-always end with a trailing slash (`/`). If you omit the slash, the
+``https://servers.api.openstack.org/v2.1/``). Version request URLs must
+always end with a trailing slash (``/``). If you omit the slash, the
 server might respond with a 302 redirection request.
 
 For examples of the list versions and get version details requests and
