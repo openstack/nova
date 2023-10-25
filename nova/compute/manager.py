@@ -3727,7 +3727,7 @@ class ComputeManager(manager.Manager):
                          bdms, recreate, on_shared_storage,
                          preserve_ephemeral, migration,
                          scheduled_node, limits, request_spec, accel_uuids,
-                         reimage_boot_volume, target_state):
+                         reimage_boot_volume=None, target_state=None):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -3761,8 +3761,9 @@ class ComputeManager(manager.Manager):
         :param accel_uuids: a list of cyborg ARQ uuids
         :param reimage_boot_volume: Boolean to specify whether the user has
                                     explicitly requested to rebuild a boot
-                                    volume
-        :param target_state: Set a target state for the evacuated instance.
+                                    volume or None if RPC version is <=6.0
+        :param target_state: Set a target state for the evacuated instance or
+                             None if RPC version is <=6.1.
 
         """
         # recreate=True means the instance is being evacuated from a failed
