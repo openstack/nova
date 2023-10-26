@@ -91,32 +91,31 @@ steps:
   needs to track how many slots are available and used in order to
   avoid attempting to exceed that limit in the hardware.
 
-  At the time of writing (September 2019), work is in progress to
-  allow QEMU and libvirt to expose the number of slots available on
-  SEV hardware; however until this is finished and released, it will
-  not be possible for Nova to programmatically detect the correct
-  value.
+  Since version 8.0.0, libvirt exposes maximun mumber of SEV guests
+  which can run concurrently in its host, so the limit is automatically
+  detected using this feature.
 
-  So this configuration option serves as a stop-gap, allowing the
-  cloud operator the option of providing this value manually.  It may
-  later be demoted to a fallback value for cases where the limit
-  cannot be detected programmatically, or even removed altogether when
-  Nova's minimum QEMU version guarantees that it can always be
-  detected.
+  However in case an older version of libvirt is used, it is not possible for
+  Nova to programmatically detect the correct value and Nova imposes no limit.
+  So this configuration option serves as a stop-gap, allowing the cloud
+  operator the option of providing this value manually.
+
+  This option also allows the cloud operator to set the limit lower than
+  the actual hard limit.
 
   .. note::
 
-     When deciding whether to use the default of ``None`` or manually
-     impose a limit, operators should carefully weigh the benefits
-     vs. the risk.  The benefits of using the default are a) immediate
-     convenience since nothing needs to be done now, and b) convenience
-     later when upgrading compute hosts to future versions of Nova,
-     since again nothing will need to be done for the correct limit to
-     be automatically imposed.  However the risk is that until
-     auto-detection is implemented, users may be able to attempt to
-     launch guests with encrypted memory on hosts which have already
-     reached the maximum number of guests simultaneously running with
-     encrypted memory.  This risk may be mitigated by other limitations
+     If libvirt older than 8.0.0 is used, operators should carefully weigh
+     the benefits vs. the risk when deciding whether to use the default of
+     ``None`` or manually impose a limit.
+     The benefits of using the default are a) immediate convenience since
+     nothing needs to be done now, and b) convenience later when upgrading
+     compute hosts to future versions of libvirt, since again nothing will
+     need to be done for the correct limit to be automatically imposed.
+     However the risk is that until auto-detection is implemented, users may
+     be able to attempt to launch guests with encrypted memory on hosts which
+     have already reached the maximum number of guests simultaneously running
+     with encrypted memory.  This risk may be mitigated by other limitations
      which operators can impose, for example if the smallest RAM
      footprint of any flavor imposes a maximum number of simultaneously
      running guests which is less than or equal to the SEV limit.
@@ -220,16 +219,6 @@ features:
   ``hw_disk_bus=virtio``). Valid alternatives for the disk
   include using ``hw_disk_bus=scsi`` with
   ``hw_scsi_model=virtio-scsi`` , or ``hw_disk_bus=sata``.
-
-- QEMU and libvirt cannot yet expose the number of slots available for
-  encrypted guests in the memory controller on SEV hardware.  Until
-  this is implemented, it is not possible for Nova to programmatically
-  detect the correct value.  As a short-term workaround, operators can
-  optionally manually specify the upper limit of SEV guests for each
-  compute host, via the new
-  :oslo.config:option:`libvirt.num_memory_encrypted_guests`
-  configuration option :ref:`described above
-  <num_memory_encrypted_guests>`.
 
 Permanent limitations
 ~~~~~~~~~~~~~~~~~~~~~

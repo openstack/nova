@@ -29368,7 +29368,7 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
 
 @mock.patch.object(vc, '_domain_capability_features',
                    new=vc._domain_capability_features_with_SEV)
-class TestLibvirtSEVSupported(TestLibvirtSEV):
+class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
     """Libvirt driver tests for when AMD SEV support is present."""
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
@@ -29387,6 +29387,36 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
     def test_get_mem_encrypted_slots_config_zero_supported(self):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
         self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+
+
+@mock.patch.object(vc, '_domain_capability_features',
+                   new=vc._domain_capability_features_with_SEV_max_guests)
+class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
+    """Libvirt driver tests for when AMD SEV support is present."""
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
+    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_mem_encrypted_slots_no_override(self, mock_log):
+        self.assertEqual(100, self.driver._get_memory_encrypted_slots())
+        mock_log.assert_not_called()
+
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
+    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_mem_encrypted_slots_overlide_more(self, mock_log):
+        self.flags(num_memory_encrypted_guests=120, group='libvirt')
+        self.assertEqual(100, self.driver._get_memory_encrypted_slots())
+        mock_log.assert_called_with(
+            'Host is configured with libvirt.num_memory_encrypted_guests '
+            'set to %d, but supports only %d.', 120, 100)
+
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
+    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_mem_encrypted_slots_override_less(self, mock_log):
+        self.flags(num_memory_encrypted_guests=80, group='libvirt')
+        self.assertEqual(80, self.driver._get_memory_encrypted_slots())
+        mock_log.assert_not_called()
 
 
 class LibvirtPMEMNamespaceTests(test.NoDBTestCase):

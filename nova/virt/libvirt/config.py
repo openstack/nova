@@ -310,6 +310,8 @@ class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
         self.supported = False
         self.cbitpos = None
         self.reduced_phys_bits = None
+        self.max_guests = None
+        self.max_es_guests = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigDomainCapsFeatureSev, self).parse_dom(xmldoc)
@@ -322,6 +324,10 @@ class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
                 self.reduced_phys_bits = int(c.text)
             elif c.tag == 'cbitpos':
                 self.cbitpos = int(c.text)
+            elif c.tag == 'maxGuests':
+                self.max_guests = int(c.text)
+            elif c.tag == 'maxESGuests':
+                self.max_es_guests = int(c.text)
 
 
 class LibvirtConfigDomainCapsOS(LibvirtConfigObject):

@@ -9009,33 +9009,30 @@ class LibvirtDriver(driver.ComputeDriver):
                 resources[rc].add(resource_obj)
 
     def _get_memory_encrypted_slots(self):
-        slots = CONF.libvirt.num_memory_encrypted_guests
+        conf_slots = CONF.libvirt.num_memory_encrypted_guests
+
         if not self._host.supports_amd_sev:
-            if slots and slots > 0:
+            if conf_slots and conf_slots > 0:
                 LOG.warning("Host is configured with "
                             "libvirt.num_memory_encrypted_guests set to "
-                            "%d, but is not SEV-capable.", slots)
+                            "%d, but is not SEV-capable.", conf_slots)
             return 0
 
-        # NOTE(aspiers): Auto-detection of the number of available
-        # slots for AMD SEV is not yet possible, so honor the
-        # configured value, or impose no limit if this is not
-        # specified.  This does incur a risk that if operators don't
-        # read the instructions and configure the maximum correctly,
-        # the maximum could be exceeded resulting in SEV guests
-        # failing at launch-time.  However at least SEV guests will
-        # launch until the maximum, and when auto-detection code is
-        # added later, an upgrade will magically fix the issue.
-        #
-        # Note also that the configured value can be 0 on an
-        # SEV-capable host, since there might conceivably be good
-        # reasons for the operator to want to disable SEV even when
-        # it's available (e.g. due to performance impact, or
-        # implementation bugs which may surface later).
-        if slots is not None:
-            return slots
-        else:
-            return db_const.MAX_INT
+        slots = db_const.MAX_INT
+
+        # NOTE(tkajinam): Current nova supports SEV only so we ignore SEV-ES
+        if self._host.max_sev_guests is not None:
+            slots = self._host.max_sev_guests
+
+        if conf_slots is not None:
+            if conf_slots > slots:
+                LOG.warning("Host is configured with "
+                            "libvirt.num_memory_encrypted_guests set to %d, "
+                            "but supports only %d.", conf_slots, slots)
+            slots = min(slots, conf_slots)
+
+        LOG.debug("Available memory encrypted slots: %d", slots)
+        return slots
 
     @property
     def static_traits(self) -> ty.Dict[str, bool]:
