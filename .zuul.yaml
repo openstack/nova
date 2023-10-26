@@ -565,7 +565,7 @@
               block_migration_for_live_migration: true
               block_migrate_cinder_iscsi: true
       tox_envlist: all
-      tempest_test_regex: ((tempest\.(api\.compute|scenario)\..*smoke.*)|(^tempest\.api\.compute\.admin\.(test_live_migration|test_migration)))
+      tempest_test_regex: ((tempest\.(api\.compute|scenario)\..*smoke.*)|(^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))|(^tempest\.api\.compute\.servers\.test_server_actions))
       # revert this when bug #1940425 is fixed in neutron
       tempest_exclude_regex: (test_live_migration_with_trunk)
 
