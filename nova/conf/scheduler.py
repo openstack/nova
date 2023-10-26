@@ -939,6 +939,20 @@ Related options:
 
 * vm_size_threshold_vm_size_mb
 """),
+    cfg.IntOpt("volume_size_same_shard_resize_filter_sum",
+        default=1024,
+        help="""
+Sum of volume sizes in GiB >= the VolumeSizeSameShardResizeFilter starts acting
+
+When using the volume_size_same_shard_resize filter, any VM having in sum equal
+or more than the given amount of volume sizes attached will be prohibited from
+resizing outside of its current shard - if the project has the appropriate tag
+set (see _TAG class attribute).
+
+Possible values:
+
+* Any positive integer
+"""),
 ]
 
 metrics_group = cfg.OptGroup(
