@@ -429,6 +429,84 @@ class VGPUMultipleTypesTests(VGPUTestBase):
             self.assertEqual(expected[trait], mdev_info['parent'])
 
 
+class VGPULimitMultipleTypesTests(VGPUTestBase):
+
+    def setUp(self):
+        super(VGPULimitMultipleTypesTests, self).setUp()
+        extra_spec = {"resources:VGPU": "1"}
+        self.flavor = self._create_flavor(extra_spec=extra_spec)
+
+        self.flags(
+            enabled_mdev_types=[fakelibvirt.NVIDIA_11_VGPU_TYPE,
+                                fakelibvirt.NVIDIA_12_VGPU_TYPE],
+            group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        # host1 will have 2 physical GPUs :
+        #  - 0000:81:00.0 will only support nvidia-11
+        #  - 0000:81:01.0 will only support nvidia-12
+        MDEVCAP_DEV1_PCI_ADDR = self.libvirt2pci_address(
+            fakelibvirt.MDEVCAP_DEV1_PCI_ADDR)
+        MDEVCAP_DEV2_PCI_ADDR = self.libvirt2pci_address(
+            fakelibvirt.MDEVCAP_DEV2_PCI_ADDR)
+        self.flags(device_addresses=[MDEVCAP_DEV1_PCI_ADDR],
+                   group='mdev_nvidia-11')
+        self.flags(device_addresses=[MDEVCAP_DEV2_PCI_ADDR],
+                   group='mdev_nvidia-12')
+
+        # Start the compute by supporting both types
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
+            multiple_gpu_types=True)
+        self.compute1 = self.start_compute_with_vgpu('host1', pci_info)
+
+    def test_create_servers_with_vgpu(self):
+        physdev1_rp_uuid = self._get_provider_uuid_by_name(
+            self.compute1.host + '_' + fakelibvirt.MDEVCAP_DEV1_PCI_ADDR)
+        physdev2_rp_uuid = self._get_provider_uuid_by_name(
+            self.compute1.host + '_' + fakelibvirt.MDEVCAP_DEV2_PCI_ADDR)
+
+        # Just for asserting the inventories we currently have.
+        physdev1_inventory = self._get_provider_inventory(physdev1_rp_uuid)
+        self.assertEqual(16, physdev1_inventory[orc.VGPU]['total'])
+        physdev2_inventory = self._get_provider_inventory(physdev2_rp_uuid)
+        self.assertEqual(8, physdev2_inventory[orc.VGPU]['total'])
+
+        # Now, let's limit the capacity for the first type to 2
+        self.flags(max_instances=2, group='mdev_nvidia-11')
+        # Make a restart to update the Resource Providers
+        self.compute2 = self.restart_compute_service('host1')
+        # Make sure we can still create an instance
+        server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor, networks='auto', host=self.compute1.host)
+        mdevs = self.compute1.driver._get_mediated_devices()
+        self.assertEqual(1, len(mdevs))
+
+        # ... but actually looking at Placement, only now the 2nd GPU can be
+        # used because nvidia-11 was limited to 2 while the GPU supporting it
+        # was having a 8th capacity.
+        physdev2_inventory = self._get_provider_inventory(physdev2_rp_uuid)
+        self.assertEqual(8, physdev2_inventory[orc.VGPU]['total'])
+
+        # Get the instance we just created
+        inst = objects.Instance.get_by_uuid(self.context, server['id'])
+        expected_rp_name = (self.compute1.host + '_' +
+                            fakelibvirt.MDEVCAP_DEV2_PCI_ADDR)
+        # Yes, indeed we use the 2nd GPU
+        self.assert_mdev_usage(self.compute1, expected_amount=1,
+                                   expected_rc=orc.VGPU, instance=inst,
+                                   expected_rp_name=expected_rp_name)
+        # ... and what happened to the first GPU inventory ? Well, the whole
+        # Resource Provider disappeared !
+        provider = self._get_resource_provider_by_uuid(physdev1_rp_uuid)
+        self.assertEqual(404, provider['errors'][0]['status'])
+        self.assertIn(
+            "No resource provider with uuid %s found" % physdev1_rp_uuid,
+            provider['errors'][0]['detail'])
+
+
 class VGPULiveMigrationTests(base.LibvirtMigrationMixin, VGPUTestBase):
 
     # Use the right minimum versions for live-migration

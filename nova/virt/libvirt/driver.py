@@ -538,6 +538,8 @@ class LibvirtDriver(driver.ComputeDriver):
         )
         # This set is for knowing all the mdev classes the operator provides
         self.mdev_classes = set([])
+        # this is for knowing how many mdevs can be created by a type
+        self.mdev_type_max_mapping = collections.defaultdict(str)
         self.supported_vgpu_types = self._get_supported_vgpu_types()
 
         # This dict is for knowing which mdevs are already claimed by some
@@ -8217,6 +8219,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     self.mdev_classes = {first_group.mdev_class}
                 return [first_type]
             mdev_class = group.mdev_class
+            # By default, max_instances is None
+            if group.max_instances:
+                self.mdev_type_max_mapping[vgpu_type] = group.max_instances
             for device_address in group.device_addresses:
                 if device_address in self.pgpu_type_mapping:
                     raise exception.InvalidLibvirtMdevConfig(
@@ -8367,18 +8372,44 @@ class LibvirtDriver(driver.ComputeDriver):
         if not enabled_mdev_types:
             return {}
         inventories = {}
+        # counting how many mdevs we are currently supporting per type
+        type_limit_mapping: ty.Dict[str, int] = collections.defaultdict(int)
         count_per_parent = self._count_mediated_devices(enabled_mdev_types)
         for dev_name, count in count_per_parent.items():
+            mdev_type = self._get_vgpu_type_per_pgpu(dev_name)
+            type_limit_mapping[mdev_type] += count
             inventories[dev_name] = {'total': count}
         # Filter how many available mdevs we can create for all the supported
         # types.
         count_per_dev = self._count_mdev_capable_devices(enabled_mdev_types)
         # Combine the counts into the dict that we return to the caller.
         for dev_name, count in count_per_dev.items():
+            mdev_type = self._get_vgpu_type_per_pgpu(dev_name)
+            mdev_limit = self.mdev_type_max_mapping.get(mdev_type)
+            # Some GPU types could have defined limits. For the others, say
+            # they are just unlimited
+            # NOTE(sbauza): Instead of not accepting GPUs if their capacity is
+            # more than the limit, we could just accept them by capping their
+            # total value by the limit.
+            if (mdev_limit and
+                type_limit_mapping[mdev_type] + count > mdev_limit):
+                # We don't have space for creating new mediated devices
+                LOG.debug("Skipping to update %s as the available count of "
+                          "mediated devices (%s) is above the maximum we can "
+                          "use (%s)",
+                          dev_name, count,
+                          mdev_limit - type_limit_mapping[mdev_type])
+                # We want the resource provider to be deleted, so we pass the
+                # inventory with a total of 0 so _ensure_pgpu_providers() will
+                # delete it.
+                inventories[dev_name] = {'total': 0}
+                continue
+            type_limit_mapping[mdev_type] += count
             inv_per_parent = inventories.setdefault(
                 dev_name, {'total': 0})
             inv_per_parent['total'] += count
-            inv_per_parent.update({
+        for dev_name in inventories:
+            inventories[dev_name].update({
                 'min_unit': 1,
                 'step_size': 1,
                 'reserved': 0,
@@ -8386,7 +8417,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # since we can't overallocate vGPU resources
                 'allocation_ratio': 1.0,
                 # FIXME(sbauza): Some vendors could support only one
-                'max_unit': inv_per_parent['total'],
+                'max_unit': inventories[dev_name]['total'],
             })
 
         return inventories
@@ -9388,12 +9419,17 @@ class LibvirtDriver(driver.ComputeDriver):
         # Dict of PGPU RPs keyed by their libvirt PCI name
         pgpu_rps = {}
         for pgpu_dev_id, inventory in inventories_dict.items():
-            # Skip (and omit) inventories with total=0 because placement does
-            # not allow setting total=0 for inventory.
-            if not inventory['total']:
-                continue
             # For each physical GPU, we make sure to have a child provider
             pgpu_rp_name = '%s_%s' % (nodename, pgpu_dev_id)
+            # Skip (and omit) inventories with total=0 because placement does
+            # not allow setting total=0 for inventory. If the inventory already
+            # exists, we rather delete it.
+            if not inventory['total']:
+                if provider_tree.exists(pgpu_rp_name):
+                    LOG.debug('Deleting %s resource provider since it does '
+                              'not longer have any inventory', pgpu_rp_name)
+                    provider_tree.remove(pgpu_rp_name)
+                continue
             if not provider_tree.exists(pgpu_rp_name):
                 # This is the first time creating the child provider so add
                 # it to the tree under the root node provider.
