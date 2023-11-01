@@ -32,7 +32,18 @@ The lifetime of a console auth token (in seconds).
 A console auth token is used in authorizing console access for a user.
 Once the auth token time to live count has elapsed, the token is
 considered expired.  Expired tokens are then deleted.
-""")
+"""),
+    cfg.BoolOpt(
+        'enforce_session_timeout',
+        default=False,
+        help="""
+Enable or disable enforce session timeout for VM console.
+
+This allows operators to enforce a console session timeout.
+When set to True, Nova will automatically close the console session
+at the server end once token_ttl expires, providing enhanced
+control over console session duration.
+"""),
 ]
 
 

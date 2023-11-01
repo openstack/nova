@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    This is a security-enhancing feature that automatically closes console sessions
+    exceeding a defined timeout period. To enable this functionality, operators are
+    required to set the 'enforce_session_timeout' boolean configuration option to True.
+
+    The enforcement is implemented via a timer mechanism, initiating when users access
+    the console and concluding upon the expiration of the set console token.
+
+    This ensures the graceful closure of console sessions on the server side, aligning
+    with security best practices.

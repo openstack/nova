@@ -20,6 +20,7 @@ from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+from oslo_utils import versionutils
 
 from nova.db.main import api as db
 from nova import exception
@@ -38,7 +39,9 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
     # Version 1.1: Add clean_expired_console_auths method.
     #              The clean_expired_console_auths_for_host method
     #              was deprecated.
-    VERSION = '1.1'
+    # Version 1.2: Add expires field.
+    #              This is to see token expire time.
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -52,6 +55,7 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
         # database. A hash of the token is stored instead and is not a
         # field on the object.
         'token': fields.StringField(nullable=False),
+        'expires': fields.IntegerField(nullable=False),
     }
 
     @property
@@ -76,6 +80,12 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
                                   urlparse.urlencode(qparams))
             else:
                 return '%s?token=%s' % (self.access_url_base, self.token)
+
+    def obj_make_compatible(self, primitive, target_version):
+        super().obj_make_compatible(primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'expires' in primitive:
+            primitive.pop('expires', None)
 
     @staticmethod
     def _from_db_object(context, obj, db_obj):

@@ -37,6 +37,9 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 
+from oslo_utils import timeutils
+import threading
+
 # Location of WebSockifyServer class in websockify v0.9.0
 websockifyserver = importutils.try_import('websockify.websockifyserver')
 
@@ -146,6 +149,20 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
             raise exception.InvalidToken(token='***')
 
         return connect_info
+
+    def _close_connection(self, tsock, host, port):
+        """takes target socket and close the connection.
+        """
+        try:
+            tsock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        finally:
+            if tsock.fileno() != -1:
+                tsock.close()
+                self.vmsg(_("%(host)s:%(port)s: "
+                    "Websocket client or target closed") %
+                    {'host': host, 'port': port})
 
     def new_websocket_client(self):
         """Called after a new WebSocket connection has been established."""
@@ -260,14 +277,15 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
 
         # Start proxying
         try:
+            if CONF.consoleauth.enforce_session_timeout:
+                conn_timeout = connect_info.expires - timeutils.utcnow_ts()
+                LOG.info('%s seconds to terminate connection.', conn_timeout)
+                threading.Timer(conn_timeout, self._close_connection,
+                          [tsock, host, port]).start()
+
             self.do_proxy(tsock)
         except Exception:
-            if tsock:
-                tsock.shutdown(socket.SHUT_RDWR)
-                tsock.close()
-                self.vmsg(_("%(host)s:%(port)s: "
-                          "Websocket client or target closed") %
-                          {'host': host, 'port': port})
+            self._close_connection(tsock, host, port)
             raise
 
     def socket(self, *args, **kwargs):

@@ -15,6 +15,7 @@
 """Tests for nova websocketproxy."""
 
 import copy
+import fixtures
 import io
 import socket
 from unittest import mock
@@ -143,6 +144,9 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         self.wh.do_proxy = mock.MagicMock()
         self.wh.headers = mock.MagicMock()
 
+        self.threading_timer_mock = self.useFixture(
+            fixtures.MockPatch('threading.Timer', mock.DEFAULT)).mock
+
     fake_header = {
         'cookie': 'token="123-456-789"',
         'Origin': 'https://example.net:6080',
@@ -207,6 +211,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
             'host': 'node1',
             'port': '10000',
             'console_type': 'novnc',
+            'expires': '100',
             'access_url_base': 'https://example.net:6080'
         }
         validate.return_value = objects.ConsoleAuthToken(**params)
@@ -235,11 +240,13 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
             'host': 'node1',
             'port': '10000',
             'console_type': 'novnc',
+            'expires': '100',
             'access_url_base': 'https://[2001:db8::1]:6080'
         }
         validate.return_value = objects.ConsoleAuthToken(**params)
 
-        self.wh.socket.return_value = '<socket>'
+        tsock = mock.MagicMock()
+        self.wh.socket.return_value = tsock
         self.wh.path = "http://[2001:db8::1]/?token=123-456-789"
         self.wh.headers = self.fake_header_ipv6
 
@@ -247,7 +254,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
 
         validate.assert_called_with(mock.ANY, "123-456-789")
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
-        self.wh.do_proxy.assert_called_with('<socket>')
+        self.wh.do_proxy.assert_called_with(tsock)
 
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_token_invalid(self, validate):
@@ -273,6 +280,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
             'port': '10000',
             'internal_access_path': 'vmid',
             'console_type': 'novnc',
+            'expires': '100',
             'access_url_base': 'https://example.net:6080'
         }
         validate.return_value = objects.ConsoleAuthToken(**params)
@@ -304,6 +312,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
             'port': '10000',
             'internal_access_path': 'xxx',
             'console_type': 'novnc',
+            'expires': '100',
             'access_url_base': 'https://example.net:6080'
         }
         validate.return_value = objects.ConsoleAuthToken(**params)
@@ -409,7 +418,8 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         }
         validate.return_value = objects.ConsoleAuthToken(**params)
 
-        self.wh.socket.return_value = '<socket>'
+        tsock = mock.MagicMock()
+        self.wh.socket.return_value = tsock
         self.wh.path = "http://127.0.0.1/"
         self.wh.headers = self.fake_header_allowed_origin
 
@@ -417,7 +427,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
 
         validate.assert_called_with(mock.ANY, "123-456-789")
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
-        self.wh.do_proxy.assert_called_with('<socket>')
+        self.wh.do_proxy.assert_called_with(tsock)
 
     @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
@@ -455,7 +465,9 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         }
         validate.return_value = objects.ConsoleAuthToken(**params)
 
-        self.wh.socket.return_value = '<socket>'
+        tsock = mock.MagicMock()
+        self.wh.socket.return_value = tsock
+
         self.wh.path = "http://127.0.0.1/"
         self.wh.headers = self.fake_header_no_origin
 
@@ -463,7 +475,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
 
         validate.assert_called_with(mock.ANY, "123-456-789")
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
-        self.wh.do_proxy.assert_called_with('<socket>')
+        self.wh.do_proxy.assert_called_with(tsock)
 
     @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
@@ -693,6 +705,85 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         minver = 'tlsv1_3'
         websocketproxy.NovaWebSocketProxy(ssl_minimum_version=minver)
         mock_select_ssl.assert_called_once_with(minver)
+
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
+                '_check_console_port')
+    @mock.patch('nova.objects.ConsoleAuthToken.validate')
+    def test_enforce_session_timeout_timer_called(
+            self, validate, check_port):
+        params = {
+            'id': 1,
+            'token': '123-456-789',
+            'instance_uuid': uuids.instance,
+            'host': 'node1',
+            'port': '10000',
+            'console_type': 'novnc',
+            'expires': '100',
+            'access_url_base': 'https://example.net:6080'
+        }
+        validate.return_value = objects.ConsoleAuthToken(**params)
+
+        self.wh.socket.return_value = '<socket>'
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
+        self.wh.headers = self.fake_header
+
+        # in CONF, set to enforce session timeout
+        self.flags(enforce_session_timeout=True, group='consoleauth')
+        self.wh.new_websocket_client()
+        self.threading_timer_mock.assert_called_once()
+
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
+                '_check_console_port')
+    @mock.patch('nova.objects.ConsoleAuthToken.validate')
+    def test_enforce_session_timeout_timer_not_called(
+            self, validate, check_port):
+        params = {
+            'id': 1,
+            'token': '123-456-789',
+            'instance_uuid': uuids.instance,
+            'host': 'node1',
+            'port': '10000',
+            'console_type': 'novnc',
+            'expires': '100',
+            'access_url_base': 'https://example.net:6080'
+        }
+        validate.return_value = objects.ConsoleAuthToken(**params)
+
+        self.wh.socket.return_value = '<socket>'
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
+        self.wh.headers = self.fake_header
+
+        self.flags(enforce_session_timeout=False, group='consoleauth')
+        self.wh.new_websocket_client()
+        self.threading_timer_mock.assert_not_called()
+
+    def test__close_connection(self):
+        tsock = mock.MagicMock()
+        self.wh.vmsg = mock.MagicMock()
+        host = 'node1'
+        port = '10000'
+
+        self.wh._close_connection(tsock, host, port)
+        tsock.shutdown.assert_called_once_with(socket.SHUT_RDWR)
+        tsock.close.assert_called_once()
+        self.wh.vmsg.assert_called_once_with(
+            f"{host}:{port}: Websocket client or target closed")
+
+    def test__close_connection_raise_OSError(self):
+        tsock = mock.MagicMock()
+        self.wh.vmsg = mock.MagicMock()
+        host = 'node1'
+        port = '10000'
+
+        tsock.shutdown.side_effect = OSError("Error")
+
+        self.wh._close_connection(tsock, host, port)
+
+        tsock.shutdown.assert_called_once_with(socket.SHUT_RDWR)
+        tsock.close.assert_called_once()
+
+        self.wh.vmsg.assert_called_once_with(
+            f"{host}:{port}: Websocket client or target closed")
 
 
 class NovaWebsocketSecurityProxyTestCase(test.NoDBTestCase):
