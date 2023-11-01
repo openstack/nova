@@ -1615,6 +1615,7 @@ def aggregate_stats_from_cluster(host_stats):
     # to guard against.
     total_hypervisor_count = len(host_stats)
     aggregated_cpu_info = {}
+    hosts_mhz = []
 
     for stats in host_stats.values():
         if not stats["available"]:
@@ -1645,6 +1646,13 @@ def aggregate_stats_from_cluster(host_stats):
             for key, value in cpu_info.items():
                 if aggregated_cpu_info.get(key) != value:
                     aggregated_cpu_info[key] = "Mismatching values"
+        host_mhz = stats["cpu_mhz"]
+        if host_mhz:
+            hosts_mhz.append(host_mhz)
+    hosts_mhz.sort()
+    # NOTE(jakobk): The proper median for an even number of values is the
+    # average of the two middle values, but we don't need that precision.
+    median_cpu_mhz = hosts_mhz[len(hosts_mhz) // 2] if hosts_mhz else 0
 
     # Calculate VM-reservable memory as a ratio of total available
     # memory, depending on either the configured tolerance for failed
@@ -1668,7 +1676,8 @@ def aggregate_stats_from_cluster(host_stats):
         "memory_mb_reserved": total_memory_mb_reserved,
         "max_mem_mb_per_host": max_mem_mb_per_host,
         "vm_reservable_memory_ratio": vm_reservable_memory_ratio,
-        "cpu_info": aggregated_cpu_info
+        "cpu_info": aggregated_cpu_info,
+        "cpu_mhz": median_cpu_mhz,
     }
 
 
@@ -1734,6 +1743,7 @@ def _process_host_stats(obj, host_reservations_map):
         "memory_mb": mem_mb,
         "memory_mb_used": getattr(stats_summary, "overallMemoryUsage", 0),
         "cpu_info": _host_props_to_cpu_info(host_props),
+        "cpu_mhz": getattr(hardware_summary, "cpuMhz"),
     }
 
     _set_hypervisor_type_and_version(stats, host_props)
