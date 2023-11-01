@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Bug 2009280 has been fixed by no longer enabling the evmcs enlightenment in
+    the libvirt driver. evmcs only works on Intel CPUs, and domains with that
+    enlightenment cannot be started on AMD hosts. There is a possible future
+    feature to enable support for generating this enlightenment only when
+    running on Intel hosts.
