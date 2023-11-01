@@ -6230,7 +6230,6 @@ class LibvirtDriver(driver.ComputeDriver):
             hv.reenlightenment = True
             hv.tlbflush = True
             hv.ipi = True
-            hv.evmcs = True
 
             # NOTE(kosamara): Spoofing the vendor_id aims to allow the nvidia
             # driver to work on windows VMs. At the moment, the nvidia driver
