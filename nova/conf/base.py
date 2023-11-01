@@ -144,7 +144,7 @@ definition. The flavor's setting takes precedence if set.
 
 A negative value disables this feature.
 
-See also: nova.utils.get_reserved_memory()
+See also: nova.utils.get_reserved_memory_and_cpu()
 """),
     cfg.StrOpt(
         'bigvm_deployment_rp_name_prefix',

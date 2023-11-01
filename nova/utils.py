@@ -85,6 +85,8 @@ QUOTA_INSTANCE_ONLY_KEY = 'quota:instance_only'
 MEMORY_RESERVABLE_MB_RESOURCE = 'CUSTOM_MEMORY_RESERVABLE_MB'
 MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY = \
     'resources:' + MEMORY_RESERVABLE_MB_RESOURCE
+# Custom extra-spec for reserving CPUs
+CPU_RESERVATION_SPEC_KEY = 'reservation:cpu'
 
 NUMA_TRAIT_SPEC_PREFIX = 'trait:CUSTOM_NUMASIZE_'
 
@@ -1255,26 +1257,33 @@ def is_numa_aligned_flavor(flavor):
                for prop, value in flavor.extra_specs.items())
 
 
-def get_reserved_memory(flavor):
-    # baremetals don't need reservation as they have their whole host
-    if is_baremetal_flavor(flavor):
-        return 0
-
+def _get_reserved_from_flavor_and_conf(flavor_reservable, flavor_value,
+                                       full_threshold):
     # explicit definitions in the flavor take precedence over any heuristic
     try:
-        key = MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY
-        memory_mb = int(flavor.extra_specs[key])
-    except (ValueError, KeyError):
+        value = int(flavor_reservable)
+    except ValueError:
         pass
     else:
-        if memory_mb > 0:
-            return min(flavor.memory_mb, memory_mb)
-
-    if CONF.full_reservation_memory_mb >= 0 \
-            and flavor.memory_mb >= CONF.full_reservation_memory_mb:
-        return flavor.memory_mb
-
+        if value > 0:
+            return min(value, flavor_value)
+    if 0 <= full_threshold <= flavor_value:
+        return flavor_value
     return 0
+
+
+def get_reserved_memory_and_cpu(flavor):
+    # baremetals don't need reservation as they have their whole host
+    if is_baremetal_flavor(flavor):
+        return 0, 0
+
+    memory_mb = _get_reserved_from_flavor_and_conf(
+        flavor.extra_specs.get(MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY, 0),
+        flavor.memory_mb, CONF.full_reservation_memory_mb)
+    cpu = _get_reserved_from_flavor_and_conf(
+        flavor.extra_specs.get(CPU_RESERVATION_SPEC_KEY, 0), flavor.vcpus, -1)
+
+    return memory_mb, cpu
 
 
 def vm_needs_special_spawning(memory_mb, flavor):

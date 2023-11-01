@@ -78,7 +78,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 'memory_mb': 4,
                 'memory_mb_used': 2,
                 'memory_mb_reserved': 1,
-                'cpu_info': VMwareVMUtilTestCase._expected_cpu_info()
+                'cpu_info': VMwareVMUtilTestCase._expected_cpu_info(),
+                'cpu_mhz': 900,
             }
 
     def test_aggregate_stats_from_cluster(self):
@@ -88,7 +89,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         host_stats = {'a': a, 'b': b}
         aggregated = vm_util.aggregate_stats_from_cluster(host_stats)
         for k in a:
-            if k in ('available', 'cpu_info'):
+            if k in ('available', 'cpu_info', 'cpu_mhz'):
                 continue
             self.assertEqual(aggregated[k], sum(item[k]
                 for item in host_stats.values()
@@ -190,7 +191,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                     'memory_mb_used': num_hosts * 512,
                     'memory_mb_reserved': 0,
                     'max_mem_mb_per_host': 4096,
-                    'vm_reservable_memory_ratio': 1.0
+                    'vm_reservable_memory_ratio': 1.0,
+                    'cpu_mhz': 900,
                 }
             self.assertEqual(expected_stats, result)
 
@@ -255,7 +257,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             'memory_mb_used': 2 * 512,
             'memory_mb_reserved': 512 + 256,    # both
             'max_mem_mb_per_host': 4096 - 256,  # host1
-            'vm_reservable_memory_ratio': 1.0
+            'vm_reservable_memory_ratio': 1.0,
+            'cpu_mhz': 900,
         }
         self._test_get_stats_from_cluster(expected_stats=expected)
 

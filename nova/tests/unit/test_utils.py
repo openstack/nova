@@ -36,6 +36,7 @@ from nova.conf import base as conf_base
 from nova import context
 from nova import exception
 from nova.objects import base as obj_base
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
 from nova import test
@@ -1425,3 +1426,36 @@ class RunOnceTests(test.NoDBTestCase):
         self.assertRaises(ValueError, f.reset)
         self.assertFalse(f.called)
         mock_clean.assert_called_once_with()
+
+
+class VmSpecsTestCase(test.NoDBTestCase):
+    def _test_get_reserved_memory_and_cpu(self, extra_specs, expected):
+        flavor = flavor_obj.Flavor(memory_mb=1024, vcpus=2,
+                                   extra_specs=extra_specs)
+        self.assertEqual(utils.get_reserved_memory_and_cpu(flavor), expected)
+
+    def test_get_reserved_memory_and_cpu_reservations_normal(self):
+        self._test_get_reserved_memory_and_cpu({}, (0, 0))
+        self._test_get_reserved_memory_and_cpu(
+            {utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY: '512'}, (512, 0))
+        self._test_get_reserved_memory_and_cpu(
+            {utils.CPU_RESERVATION_SPEC_KEY: '1'}, (0, 1))
+        self._test_get_reserved_memory_and_cpu(
+            {utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY: '512',
+             utils.CPU_RESERVATION_SPEC_KEY: '1'}, (512, 1))
+
+    def test_get_reserved_memory_and_cpu_reserved_invalid(self):
+        self._test_get_reserved_memory_and_cpu(
+            {utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY: 'foo'}, (0, 0))
+        self._test_get_reserved_memory_and_cpu(
+            {utils.CPU_RESERVATION_SPEC_KEY: 'foo'}, (0, 0))
+        self._test_get_reserved_memory_and_cpu(
+            {utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY: '-1'}, (0, 0))
+        self._test_get_reserved_memory_and_cpu(
+            {utils.CPU_RESERVATION_SPEC_KEY: '-1'}, (0, 0))
+
+    @mock.patch.object(utils.CONF, 'full_reservation_memory_mb', 512)
+    def test_get_reserved_memory_and_cpu_reserved_conf_thresholds(self):
+        self._test_get_reserved_memory_and_cpu({}, (1024, 0))
+        self._test_get_reserved_memory_and_cpu(
+            {utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY: '512'}, (512, 0))

@@ -751,6 +751,7 @@ class HostSystem(ManagedObject):
     NUM_CPU_CORES = 8
     NUM_CPU_PKGS = 2
     NUM_CPU_THREADS = 16
+    CPU_MHZ = 1800
 
     @staticmethod
     def create_summary_hardware():
@@ -758,6 +759,7 @@ class HostSystem(ManagedObject):
         hardware.numCpuCores = HostSystem.NUM_CPU_CORES
         hardware.numCpuPkgs = HostSystem.NUM_CPU_PKGS
         hardware.numCpuThreads = HostSystem.NUM_CPU_THREADS
+        hardware.cpuMhz = HostSystem.CPU_MHZ
         hardware.vendor = "Intel"
         hardware.cpuModel = "Intel(R) Xeon(R)"
         hardware.uuid = "host-uuid"

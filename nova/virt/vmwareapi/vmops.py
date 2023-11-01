@@ -418,10 +418,19 @@ class VMwareVMOps(object):
         if CONF.vmware.reserve_all_memory:
             extra_specs.memory_limits.reservation = int(flavor.memory_mb)
         else:
-            memory_reserved_mb = \
-                utils.get_reserved_memory(flavor)
+            memory_reserved_mb, cpu_reserved = \
+                utils.get_reserved_memory_and_cpu(flavor)
             if memory_reserved_mb > 0:
                 extra_specs.memory_limits.reservation = memory_reserved_mb
+            if cpu_reserved > 0:
+                cluster_host_stats = self._vc_state.get_host_stats()
+                cluster_stats = cluster_host_stats.get(
+                                        self._vc_state._cluster_node_name, {})
+                # NOTE(jakobk): CPU reservations are given in MHz, not in
+                # number-of-CPUs, so we have to translate here.
+                cluster_host_mhz = cluster_stats.get('cpu_mhz', 0)
+                extra_specs.cpu_limits.reservation = \
+                    round(cpu_reserved * cluster_host_mhz)
         extra_specs.cpu_limits.validate()
         extra_specs.memory_limits.validate()
         extra_specs.disk_io_limits.validate()
