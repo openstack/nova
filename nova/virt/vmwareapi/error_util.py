@@ -50,3 +50,7 @@ class InvalidHostAddrFormat(exception.NovaException):
 
 class EvcModeDoesNotExist(exception.Invalid):
     msg_fmt = _("The requested EVCMode %(evc_mode)s does not exist")
+
+
+class InClustervMotionCheckError(exception.Invalid):
+    msg_fmt = _("in cluster migration failed: %(reason)s")

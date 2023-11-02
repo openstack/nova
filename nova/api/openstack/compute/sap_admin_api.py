@@ -13,8 +13,12 @@
 #   under the License.
 from webob import exc
 
+from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import sap_admin_api
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
+from nova import exception
 from nova.policies import sap_admin_api as sap_policies
 from nova.quota import QUOTAS
 
@@ -59,6 +63,28 @@ class SAPAdminApiController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=txt)
 
         QUOTAS.clear_cache()
+
+    @wsgi.response(202)
+    @validation.schema(sap_admin_api.in_cluster_vmotion)
+    @_register_endpoint('POST')
+    def in_cluster_vmotion(self, req, body):
+        """Call nova-compute to vMotion a VM inside a cluster
+
+        vMotion will target the given host MoRef
+        """
+        context = req.environ['nova.context']
+        server_id = body['instance_uuid']
+        host_moref_value = body['host']
+        instance = common.get_instance(self.compute_api, context, server_id)
+        context.can(sap_policies.POLICY_ROOT % 'in-cluster-vmotion',
+                    target={'project_id': instance.project_id})
+
+        try:
+            self.compute_api.in_cluster_vmotion(context, instance,
+                                                host_moref_value)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(
+                state_error, 'in_cluster_vmotion', server_id)
 
     @_register_endpoint('GET')
     def endpoints(self, req):

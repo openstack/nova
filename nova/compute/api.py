@@ -6068,6 +6068,15 @@ class API:
         for host in hosts:
             self.compute_rpcapi.sync_server_group(context, host, sg_uuid)
 
+    @check_instance_state(vm_state=[vm_states.ACTIVE],
+                          task_state=None)
+    def in_cluster_vmotion(self, context, instance, host_moref_value):
+        self._record_action_start(context, instance,
+                                  instance_actions.SAP_IN_CLUSTER_VMOTION)
+
+        self.compute_rpcapi.in_cluster_vmotion(context, instance.host,
+                                               instance, host_moref_value)
+
 
 def target_host_cell(fn):
     """Target a host-based function to a cell.

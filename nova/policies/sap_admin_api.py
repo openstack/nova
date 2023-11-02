@@ -44,6 +44,17 @@ sap_admin_api_policies = [
             }
         ],
         scope_types=['system', 'project']),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'in-cluster-vmotion',
+        check_str=base.RULE_ADMIN_API,
+        description="vMotion a VM inside its cluster",
+        operations=[
+            {
+                'method': 'POST',
+                'path': '/sap/in_cluster_vmotion'
+            }
+        ],
+        scope_types=['system', 'project']),
 ]
 
 

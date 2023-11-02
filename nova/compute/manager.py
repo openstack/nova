@@ -11548,6 +11548,26 @@ class ComputeManager(manager.Manager):
         """Calls the driver to update the server-group in the backend"""
         self.driver.sync_server_group(context, sg_uuid)
 
+    def in_cluster_vmotion(self, context, instance, host_moref_value):
+        """Calls the driver to vMotion the instance in the backend"""
+        @utils.synchronized(instance.uuid)
+        def do_in_cluster_vmotion():
+            instance.task_state = task_states.IN_CLUSTER_VMOTION
+            instance.save(expected_task_state=[None])
+            try:
+                self.driver.in_cluster_vmotion(context, instance,
+                                               host_moref_value)
+            except exception.NovaException as e:
+                with excutils.save_and_reraise_exception(reraise=False):
+                    LOG.error(str(e), instance=instance)
+            except Exception:
+                LOG.exception('in cluster vmotion failed', instance=instance)
+            finally:
+                instance.task_state = None
+                instance.save(
+                    expected_task_state=[task_states.IN_CLUSTER_VMOTION])
+        do_in_cluster_vmotion()
+
 
 # TODO(sbauza): Remove this proxy class in the X release once we drop the 5.x
 # support.

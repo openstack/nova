@@ -1548,3 +1548,10 @@ class ComputeAPI(object):
         client = self.router.client(ctxt)
         cctxt = client.prepare(server=host, version=version)
         return cctxt.cast(ctxt, "sync_server_group", sg_uuid=sg_uuid)
+
+    def in_cluster_vmotion(self, ctxt, host, instance, host_moref_value):
+        version = '5.0'
+        client = self.router.client(ctxt)
+        cctxt = client.prepare(server=host, version=version)
+        return cctxt.cast(ctxt, "in_cluster_vmotion",
+                          instance=instance, host_moref_value=host_moref_value)

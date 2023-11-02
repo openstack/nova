@@ -1841,6 +1841,16 @@ class ComputeDriver(object):
         called if a customer changed a server-group for this host via API.
         """
 
+    def in_cluster_vmotion(self, context, instance, host_moref_value):
+        """vMotion the instance onto the given ESXi
+
+        If the driver is vmwareapi and manages multiple HVs in a cluster,
+        calling this method will cause the instance to be moved inside that
+        cluster onto the provided target ESXi identified via its
+        ManagedObjectReference (MoRef) value.
+        """
+        raise NotImplementedError()
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.
