@@ -745,7 +745,9 @@ For example, when using the :command:`openstack server create` command, use the
 
    $ openstack server group create --policy affinity group-1
    $ openstack server create --image IMAGE_ID --flavor 1 \
-     --hint group=SERVER_GROUP_UUID server-1
+       --hint group=SERVER_GROUP_UUID server-1
+
+For more information on server groups, refer to :doc:`/user/server-groups`.
 
 
 .. _ServerGroupAntiAffinityFilter:
@@ -765,7 +767,9 @@ For example, when using the :command:`openstack server create` command, use the
 
    $ openstack server group create --policy anti-affinity group-1
    $ openstack server create --image IMAGE_ID --flavor 1 \
-     --hint group=SERVER_GROUP_UUID server-1
+       --hint group=SERVER_GROUP_UUID server-1
+
+For more information on server groups, refer to :doc:`/user/server-groups`.
 
 
 ``SimpleCIDRAffinityFilter``
