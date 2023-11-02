@@ -46,3 +46,7 @@ class PbmDefaultPolicyDoesNotExist(exception.NovaException):
 class InvalidHostAddrFormat(exception.NovaException):
     msg_fmt = _("The provided host address couldn't be recognised as a valid "
                 "format supported by the VMwareVCDriver.")
+
+
+class InClustervMotionCheckError(exception.Invalid):
+    msg_fmt = _("in cluster migration failed: %(reason)s")

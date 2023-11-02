@@ -367,6 +367,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-volumes-attachments:swap",
 "os_compute_api:servers:create:zero_disk_flavor",
 "os_compute_api:sap:endpoints:list",
+"os_compute_api:sap:in-cluster-vmotion",
 )
 
         self.admin_or_owner_rules = (

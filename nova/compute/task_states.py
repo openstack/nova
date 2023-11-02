@@ -130,3 +130,6 @@ resizing_states = (RESIZE_PREP, RESIZE_MIGRATING, RESIZE_MIGRATED,
 
 # These states indicate a rebuild
 rebuild_states = (REBUILDING, REBUILD_BLOCK_DEVICE_MAPPING, REBUILD_SPAWNING)
+
+# Custom state when migrating inside a cluster
+IN_CLUSTER_VMOTION = fields.InstanceTaskState.IN_CLUSTER_VMOTION
