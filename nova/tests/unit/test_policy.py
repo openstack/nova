@@ -389,6 +389,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-hypervisors:servers",
 "os_compute_api:limits:other_project",
 "os_compute_api:os-flavor-access",
+"os_compute_api:sap:endpoints:list",
 )
 
         self.admin_or_owner_rules = (

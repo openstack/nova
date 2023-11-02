@@ -50,6 +50,7 @@ from nova.policies import quota_class_sets
 from nova.policies import quota_sets
 from nova.policies import remote_consoles
 from nova.policies import rescue
+from nova.policies import sap_admin_api
 from nova.policies import security_groups
 from nova.policies import server_diagnostics
 from nova.policies import server_external_events
@@ -108,6 +109,7 @@ def list_rules():
         quota_sets.list_rules(),
         remote_consoles.list_rules(),
         rescue.list_rules(),
+        sap_admin_api.list_rules(),
         security_groups.list_rules(),
         server_diagnostics.list_rules(),
         server_external_events.list_rules(),

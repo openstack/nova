@@ -65,6 +65,7 @@ from nova.api.openstack.compute import quota_classes
 from nova.api.openstack.compute import quota_sets
 from nova.api.openstack.compute import remote_consoles
 from nova.api.openstack.compute import rescue
+from nova.api.openstack.compute import sap_admin_api
 from nova.api.openstack.compute import security_group_default_rules
 from nova.api.openstack.compute import security_groups
 from nova.api.openstack.compute import server_diagnostics
@@ -349,6 +350,10 @@ virtual_interfaces_controller = functools.partial(_create_controller,
 
 volumes_controller = functools.partial(_create_controller,
     volumes.VolumeController, [])
+
+
+sap_admin_api_controller = functools.partial(_create_controller,
+    sap_admin_api.SAPAdminApiController, [])
 
 
 # NOTE(alex_xu): This is structure of this route list as below:
@@ -839,6 +844,10 @@ ROUTE_LIST = (
     }),
     ('/servers/{server_id}/topology', {
         'GET': [server_topology_controller, 'index']
+    }),
+    ('/sap/{action}', {
+        'GET': [sap_admin_api_controller, 'get'],
+        'POST': [sap_admin_api_controller, 'post']
     }),
 )
 
