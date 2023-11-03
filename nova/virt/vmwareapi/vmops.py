@@ -2238,8 +2238,12 @@ class VMwareVMOps(object):
         boot_from_volume = compute_utils.is_volume_backed_instance(context,
                                                                    instance)
 
-        # Checks if the migration needs a disk resize down.
-        if (not boot_from_volume and (
+        # Checks if the migration needs a disk resize down,
+        # but only errors out if this is a requested resize. If this is an
+        # offline migration, we need to keep our mouths shut and just copy the
+        # disk over.
+        is_resize = flavor.id != instance.flavor.id
+        if (is_resize and not boot_from_volume and (
                 flavor.root_gb < instance.flavor.root_gb or
                 (flavor.root_gb != 0 and
                 flavor.root_gb < vmdk.capacity_in_bytes / units.Gi))):

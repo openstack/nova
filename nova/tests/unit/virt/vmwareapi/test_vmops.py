@@ -115,7 +115,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                  self._context, **self._instance_values)
         self._flavor = objects.Flavor(name='m1.small', memory_mb=512, vcpus=1,
                                       root_gb=10, ephemeral_gb=0, swap=0,
-                                      extra_specs={})
+                                      extra_specs={}, id=3)
         self._instance.flavor = self._flavor
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi,
@@ -1518,6 +1518,14 @@ class VMwareVMOpsTestCase(test.TestCase):
                           self._test_migrate_disk_and_power_off,
                           flavor_root_gb=self._instance.flavor.root_gb - 1)
 
+    def test_migrate_disk_and_power_off_disk_shrink_no_resize(self):
+        """If the flavor id doesn't change, this is an offline migration and we
+        should not fail if the disk is too large
+        """
+        self._test_migrate_disk_and_power_off(
+            flavor_root_gb=self._instance.flavor.root_gb - 1,
+            flavor_id=self._instance.flavor.id)
+
     @ddt.data((129, False, True), (128, False, False),
               (129, True, False), (128, True, False))
     @ddt.unpack
@@ -1563,7 +1571,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                                          fake_image_meta, fake_finish_revert,
                                          fake_is_volume_backed,
                                          flavor_root_gb, flavor_vcpus=None,
-                                         is_efi=True, migrate_fails=False):
+                                         is_efi=True, migrate_fails=False,
+                                         flavor_id=None):
         if flavor_vcpus is None:
             flavor_vcpus = self._instance.flavor.vcpus + 1
 
@@ -1580,7 +1589,10 @@ class VMwareVMOpsTestCase(test.TestCase):
         fake_get_vmdk_info.return_value = vmdk
         fake_get_remove_network_device_change.return_value = ['fake-device']
         fake_get_object_property.return_value = 'efi' if is_efi else 'bios'
+        if flavor_id is None:
+            flavor_id = self._instance.flavor.id + 1
         flavor = fake_flavor.fake_flavor_obj(self._context,
+                                             id=flavor_id,
                                              root_gb=flavor_root_gb,
                                              vcpus=flavor_vcpus)
         if migrate_fails:
