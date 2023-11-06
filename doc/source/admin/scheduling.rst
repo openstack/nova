@@ -1122,10 +1122,9 @@ scheduling.
 Usage scenarios
 ~~~~~~~~~~~~~~~
 
-Since allocation ratios can be set via nova configuration, host aggregate
-metadata and the placement API, it can be confusing to know which should be
-used. This really depends on your scenario. A few common scenarios are detailed
-here.
+Since allocation ratios can be set via nova configuration and the placement
+API, it can be confusing to know which should be used. This really depends on
+your scenario. A few common scenarios are detailed here.
 
 1. When the deployer wants to **always** set an override value for a resource
    on a compute node, the deployer should ensure that the
