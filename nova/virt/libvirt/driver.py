@@ -4512,7 +4512,15 @@ class LibvirtDriver(driver.ComputeDriver):
         return self._get_console_output_file(instance, console_path)
 
     def get_host_ip_addr(self):
-        return CONF.my_ip
+        # NOTE(gibi): We should rename this as we might return a hostname
+        # instead of an IP address. But this is a virt driver interface
+        # method, so it probably does not worth the hashle. Only the
+        # resource_tracker use this today outside the virt driver to set up
+        # the Migration object.
+        addr = CONF.libvirt.migration_inbound_addr
+        if "%s" in addr:
+            addr = addr % self._host.get_hostname()
+        return addr
 
     def get_vnc_console(self, context, instance):
         def get_vnc_port_for_instance(instance_name):
@@ -11461,9 +11469,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _is_path_shared_with(self, dest, path):
         # NOTE (rmk): There are two methods of determining whether we are
-        #             on the same filesystem: the source and dest IP are the
-        #             same, or we create a file on the dest system via SSH
-        #             and check whether the source system can also see it.
+        #             on the same filesystem: the source and dest migration
+        #             address are the same, or we create a file on the dest
+        #             system via SSH and check whether the source system can
+        #             also see it.
         shared_path = (dest == self.get_host_ip_addr())
         if not shared_path:
             tmp_file = uuidutils.generate_uuid(dashed=False) + '.tmp'

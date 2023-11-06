@@ -917,6 +917,28 @@ Related options:
 * ``compute_driver`` (libvirt)
 * ``virt_type`` (qemu)
 """),
+
+    cfg.StrOpt('migration_inbound_addr',
+                       default='$my_ip',
+                       help="""
+The address used as the migration address for this host.
+
+This option indicates the IP address, hostname, or FQDN which should be used as
+the target for cold migration, resize, and evacuate traffic when moving to this
+hypervisor. This metadata is then used by the source of the migration traffic
+to construct the commands used to copy data (e.g. disk image) to the
+destination.
+
+An included "%s" is replaced with the hostname of the migration target
+hypervisor.
+
+
+Related options:
+
+* ``my_ip``
+* ``live_migration_inbound_addr``
+
+"""),
 ]
 
 libvirt_imagebackend_opts = [
