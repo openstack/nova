@@ -2,6 +2,7 @@
 branch = True
 source = nova
 omit = nova/tests/*
+concurrency = eventlet
 
 [report]
 ignore_errors = True
