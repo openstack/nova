@@ -36,6 +36,8 @@
       Takes advantage of the base tox job's install-siblings feature.
     # The job only tests the latest and shouldn't be run on the stable branches
     branches: ^master$
+    # TODO(tkajinam): Make this voting once oslo.utils is bumped to 6.3.0
+    voting: false
     required-projects:
       - name: github.com/sqlalchemy/sqlalchemy
         override-checkout: main
