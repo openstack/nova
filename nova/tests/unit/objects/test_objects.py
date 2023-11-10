@@ -1040,6 +1040,7 @@ class TestArgsSerializer(test.NoDBTestCase):
 class TestRegistry(test.NoDBTestCase):
     @mock.patch('nova.objects.base.objects')
     def test_hook_chooses_newer_properly(self, mock_objects):
+        del mock_objects.MyObj
         reg = base.NovaObjectRegistry()
         reg.registration_hook(MyObj, 0)
 
@@ -1056,6 +1057,7 @@ class TestRegistry(test.NoDBTestCase):
 
     @mock.patch('nova.objects.base.objects')
     def test_hook_keeps_newer_properly(self, mock_objects):
+        del mock_objects.MyObj
         reg = base.NovaObjectRegistry()
         reg.registration_hook(MyObj, 0)
 
