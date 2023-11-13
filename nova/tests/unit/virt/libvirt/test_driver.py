@@ -31623,16 +31623,29 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def test_volume_snapshot_delete_invalid_type(self, mock_get,
                                                  mock_update):
         instance = objects.Instance(**self.inst)
-        self.assertRaises(exception.NovaException,
-                          self.drvr.volume_snapshot_delete,
-                          self.c,
-                          instance,
-                          self.volume_uuid,
-                          self.snapshot_id,
-                          self.delete_info_invalid_type)
+        ex = self.assertRaises(exception.InvalidInput,
+                               self.drvr.volume_snapshot_delete,
+                               self.c,
+                               instance,
+                               self.volume_uuid,
+                               self.snapshot_id,
+                               self.delete_info_invalid_type)
+        self.assertIn('Unknown delete_info type %s'
+                      % self.delete_info_invalid_type['type'], str(ex))
         mock_update.assert_called_once_with(self.c, self.snapshot_id,
                                             'error_deleting')
         mock_get.assert_not_called()
+
+    def test_volume_snapshot_delete_with_delete_type_none(self):
+        instance = objects.Instance(**self.inst)
+        ex = self.assertRaises(exception.InvalidInput,
+                               self.drvr.volume_snapshot_delete,
+                               self.c,
+                               instance,
+                               self.volume_uuid,
+                               self.snapshot_id,
+                               None)
+        self.assertIn('delete_info is required.', str(ex))
 
     @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(host.Host, '_get_domain')
