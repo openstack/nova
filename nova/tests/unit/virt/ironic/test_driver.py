@@ -582,71 +582,58 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_list_instances(self, mock_inst_by_uuid):
-        nodes = []
+        nodes = {}
         instances = []
         for i in range(2):
             uuid = uuidutils.generate_uuid()
+            node_uuid = uuidutils.generate_uuid()
             instances.append(fake_instance.fake_instance_obj(self.ctx,
                                                              id=i,
                                                              uuid=uuid))
-            nodes.append(ironic_utils.get_test_node(instance_id=uuid,
-                                                    fields=['instance_id']))
+            nodes[node_uuid] = ironic_utils.get_test_node(
+                id=node_uuid, instance_id=uuid, fields=('instance_id',))
         mock_inst_by_uuid.side_effect = instances
-        self.mock_conn.nodes.return_value = iter(nodes)
+        self.driver.node_cache = nodes
 
         response = self.driver.list_instances()
 
-        self.mock_conn.nodes.assert_called_with(associated=True,
-                                                fields=['instance_uuid'])
         expected_calls = [mock.call(mock.ANY, instances[0].uuid),
                           mock.call(mock.ANY, instances[1].uuid)]
         mock_inst_by_uuid.assert_has_calls(expected_calls)
         self.assertEqual(['instance-00000000', 'instance-00000001'],
                          sorted(response))
 
-    # NOTE(dustinc) This test ensures we use instance_uuid not instance_id in
-    # 'fields' when calling ironic.
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_cache')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def test_list_instances_uses_instance_uuid(self, mock_inst_by_uuid):
-        self.driver.list_instances()
-
-        self.mock_conn.nodes.assert_called_with(associated=True,
-                                                fields=['instance_uuid'])
-
-    @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def test_list_instances_fail(self, mock_inst_by_uuid):
-        self.mock_conn.nodes.side_effect = exception.NovaException
+    def test_list_instances_fail(self, mock_inst_by_uuid, mock_cache):
+        mock_cache.side_effect = exception.VirtDriverNotReady
 
         self.assertRaises(exception.VirtDriverNotReady,
                           self.driver.list_instances)
-        self.mock_conn.nodes.assert_called_with(associated=True,
-                                                fields=['instance_uuid'])
         self.assertFalse(mock_inst_by_uuid.called)
 
     def test_list_instance_uuids(self):
         num_nodes = 2
-        nodes = []
+        nodes = {}
         for n in range(num_nodes):
-            nodes.append(ironic_utils.get_test_node(
-                                      instance_id=uuidutils.generate_uuid(),
-                                      fields=['instance_id']))
-        self.mock_conn.nodes.return_value = iter(nodes)
+            node_uuid = uuidutils.generate_uuid()
+            instance_uuid = uuidutils.generate_uuid()
+            nodes[instance_uuid] = ironic_utils.get_test_node(
+                                    id=node_uuid,
+                                    instance_id=instance_uuid,
+                                    fields=('instance_id',))
+        self.driver.node_cache = nodes
+        instance_uuids = self.driver.list_instance_uuids()
+        expected = nodes.keys()
 
-        uuids = self.driver.list_instance_uuids()
+        self.assertEqual(sorted(expected), sorted(instance_uuids))
 
-        self.mock_conn.nodes.assert_called_with(associated=True,
-                                                fields=['instance_uuid'])
-        expected = [n.instance_id for n in nodes]
-        self.assertEqual(sorted(expected), sorted(uuids))
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_cache')
+    def test_list_instance_uuids_fail(self, mock_cache):
+        mock_cache.side_effect = exception.VirtDriverNotReady
 
-    # NOTE(dustinc) This test ensures we use instance_uuid not instance_id in
-    # 'fields' when calling ironic.
-    @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def test_list_instance_uuids_uses_instance_uuid(self, mock_inst_by_uuid):
-        self.driver.list_instance_uuids()
-
-        self.mock_conn.nodes.assert_called_with(associated=True,
-                                                fields=['instance_uuid'])
+        self.assertRaises(exception.VirtDriverNotReady,
+                          self.driver.list_instance_uuids)
 
     @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')
