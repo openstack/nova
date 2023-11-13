@@ -1,0 +1,5 @@
+fixes:
+  - Ironic virt driver now uses the node cache and respects partition keys,
+    such as conductor group, for list_instances and list_instance_uuids calls.
+    This fix will improve performance of the periodic queries which use these
+    driver methods and reduce API and DB load on the backing Ironic service.
