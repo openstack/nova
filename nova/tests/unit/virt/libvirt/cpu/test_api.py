@@ -176,11 +176,14 @@ class TestAPI(test.NoDBTestCase):
         api.power_down_all_dedicated_cpus()
         mock_offline.assert_not_called()
 
-    def test_power_down_all_dedicated_cpus_wrong_config(self):
+    @mock.patch.object(core, 'set_offline')
+    def test_power_down_all_dedicated_cpus_no_dedicated_cpus_configured(
+        self, mock_offline
+    ):
         self.flags(cpu_power_management=True, group='libvirt')
         self.flags(cpu_dedicated_set=None, group='compute')
-        self.assertRaises(exception.InvalidConfiguration,
-                          api.power_down_all_dedicated_cpus)
+        api.power_down_all_dedicated_cpus()
+        mock_offline.assert_not_called()
 
     @mock.patch.object(core, 'get_governor')
     @mock.patch.object(core, 'get_online')
@@ -227,3 +230,10 @@ class TestAPI(test.NoDBTestCase):
         mock_warning.assert_called_once_with(
             'CPU0 is in cpu_dedicated_set, but it is not eligible for '
             'state management and will be ignored')
+
+    def test_validate_all_dedicated_cpus_no_cpu(self):
+        self.flags(cpu_power_management=True, group='libvirt')
+        self.flags(cpu_dedicated_set=None, group='compute')
+        api.validate_all_dedicated_cpus()
+        # no assert we want to make sure the validation won't raise if
+        # no dedicated cpus are configured

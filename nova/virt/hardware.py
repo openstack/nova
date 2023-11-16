@@ -78,7 +78,7 @@ def get_cpu_dedicated_set():
 
 def get_cpu_dedicated_set_nozero():
     """Return cpu_dedicated_set without CPU0, if present"""
-    return get_cpu_dedicated_set() - {0}
+    return (get_cpu_dedicated_set() or set()) - {0}
 
 
 def get_cpu_shared_set():

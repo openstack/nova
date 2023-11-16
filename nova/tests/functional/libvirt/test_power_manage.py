@@ -108,14 +108,13 @@ class PowerManagementTests(PowerManagementTestsBase):
         cpu_dedicated_set = hardware.get_cpu_dedicated_set()
         self._assert_cpu_set_state(cpu_dedicated_set, expected='offline')
 
-    def test_hardstop_compute_service_if_wrong_opt(self):
+    def test_compute_service_starts_with_power_management_and_zero_pcpu(self):
         self.flags(cpu_dedicated_set=None, cpu_shared_set=None,
                    group='compute')
         self.flags(vcpu_pin_set=None)
         self.flags(cpu_power_management=True, group='libvirt')
-        self.assertRaises(exception.InvalidConfiguration,
-                          self.start_compute, host_info=self.host_info,
-                                              hostname='compute2')
+        self.start_compute(host_info=self.host_info, hostname='compute2')
+        # NOTE(gibi): we test that no exception is raised by start_compute
 
     def test_create_server(self):
         server = self._create_server(
