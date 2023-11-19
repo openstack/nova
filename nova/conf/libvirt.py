@@ -325,11 +325,11 @@ Please refer to the libvirt documentation for further details.
 Target maximum period of time Nova will try to keep the instance paused
 during the last part of the memory copy, in *milliseconds*.
 
-Will be rounded up to a minimum of 100ms. You can increase this value
-if you want to allow live-migrations to complete faster, or avoid
-live-migration timeout errors by allowing the guest to be paused for
-longer during the live-migration switch over. This value may be exceeded
-if there is any reduction on the transfer rate after the VM is paused.
+Minimum downtime is 100ms. You can increase this value if you want to allow
+live-migrations to complete faster, or avoid live-migration timeout errors
+by allowing the guest to be paused for longer during the live-migration switch
+over. This value may be exceeded if there is any reduction on the transfer rate
+after the VM is paused.
 
 Related options:
 
@@ -341,7 +341,7 @@ Related options:
                help="""
 Number of incremental steps to reach max downtime value.
 
-Will be rounded up to a minimum of 3 steps.
+Minimum number of steps is 3.
 """),
     cfg.IntOpt('live_migration_downtime_delay',
                default=75,
