@@ -86,6 +86,8 @@ Possible Values:
                 default=['osapi_compute', 'metadata'],
                 help="List of APIs to be enabled by default."),
     cfg.ListOpt('enabled_ssl_apis',
+                item_type=cfg.types.String(choices=['osapi_compute',
+                                                    'metadata']),
                 default=[],
                 help="""
 List of APIs with enabled SSL.
