@@ -19,6 +19,7 @@ End user guide
 
    availability-zones
    launch-instances
+   server-groups
    metadata
    manage-ip-addresses
    certificate-validation

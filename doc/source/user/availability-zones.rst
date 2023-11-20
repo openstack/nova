@@ -15,6 +15,12 @@ zone feature. However, the implementation of these features differs vastly
 between these different services. Consult the documentation for these other
 services for more information on their implementation of this feature.
 
+.. tip::
+
+    Server Groups provide another mechanism for configuring the colocation of
+    instances during scheduling. For more information, refer to
+    :doc:`/user/server-groups`.
+
 
 Usage
 -----
