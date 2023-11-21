@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The hyperv driver is marked as experimental and may be removed in a
+    future release. The driver is not tested by the OpenStack project and
+    does not have a clear maintainer.

@@ -146,6 +146,14 @@ class HyperVDriver(driver.ComputeDriver):
                         'in Rocky.')
 
     def init_host(self, host):
+        LOG.warning(
+            'The hyperv driver is not tested by the OpenStack project nor '
+            'does it have clear maintainer(s) and thus its quality can not be '
+            'ensured. It should be considered experimental and may be removed '
+            'in a future release. If you are using the driver in production '
+            'please let us know via the openstack-discuss mailing list.'
+        )
+
         self._serialconsoleops.start_console_handlers()
         event_handler = eventhandler.InstanceEventHandler(
             state_change_callback=self.emit_event)
