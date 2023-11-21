@@ -367,6 +367,12 @@ class LiveMigrationTask(base.TaskBase):
         destination_version = destination_info.hypervisor_version
         if not CONF.workarounds.skip_hypervisor_version_check_on_lm:
             if source_version > destination_version:
+                # NOTE(amorin) adding a log here because the exception
+                # is trapped by scheduling mechanism and it's pretty
+                # hard from logs to understand why.
+                LOG.info('Destination hypervisor %s is too old, live '
+                         'migration cannot continue!', destination,
+                         instance=self.instance)
                 raise exception.DestinationHypervisorTooOld()
         return source_info, destination_info
 
