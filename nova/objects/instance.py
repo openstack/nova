@@ -1548,96 +1548,122 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         return counts
 
     @staticmethod
+    def _recover_flavor_from_instance_extras(context, instance_types,
+                                             missing_itypes):
+        # Not found in flavor db. might be deleted. get it from the
+        # saved info
+        # We first get a list of instance UUIDs - one per flavor -
+        # that use this flavor. Then we do a query against the
+        # instance_extra table with those uuids. This is faster
+        # than a subquery-JOIN, subquery with WHERE, a JOIN, a CTE
+        # with WHERE or a CTE with JOIN.
+        missing_itypes_instance_uuids = [
+            x[0] for x in context.session.query(
+                models.Instance.uuid
+            ).filter(
+                models.Instance.instance_type_id.
+                in_(missing_itypes)
+            ).group_by(
+                models.Instance.instance_type_id
+            ).all()]
+
+        db_flavors = context.session.query(
+                models.InstanceExtra.flavor
+            ).filter(
+                models.InstanceExtra.instance_uuid.
+                in_(missing_itypes_instance_uuids)
+            )
+
+        for db_flavor in db_flavors:
+            flavor_info = jsonutils.loads(db_flavor[0])
+            flavor = objects.Flavor.obj_from_primitive(
+                                                flavor_info['cur'])
+            separate = flavor.extra_specs.get('quota:separate')
+            instance_types[flavor.id] = {
+                'name': 'instances_' + flavor.name,
+                'baremetal': separate == 'true'
+            }
+
+    @staticmethod
+    def _recover_flavor_from_cell_instance_types(context, instance_types,
+                                                  missing_itypes):
+        # Not found in flavor db of upstream api, searching locally
+        # This is probably not necessary anymore, because every
+        # instance we have should have saved flavor information.
+        msg = 'flavor(s) with ref id %s not found in flavor db'
+        LOG.warning(msg, ', '.join(str(x) for x in missing_itypes))
+
+        flavor_query = context.session.query(
+            models.InstanceTypes). \
+            filter(models.InstanceTypes.id.in_(missing_itypes)). \
+            options(joinedload('extra_specs'))
+        for old_flavor in flavor_query:
+            # Bad hack, but works
+            instance_types[old_flavor.id] = {
+                'name': 'instances_' + old_flavor.name,
+                'baremetal': len(old_flavor.extra_specs) > 0
+            }
+
+    @staticmethod
     @db.pick_context_manager_reader
-    def _get_counts_in_db_baremetalaware(context, project_id, user_id=None):
-        def _get_counts(instances):
-            counts = {'instances': 0, 'cores': 0, 'ram': 0}
+    def _get_instance_types(context, wanted_itypes):
+        # TODO(xxx): cache flavor_ids
+        if not wanted_itypes:
+            return {}
 
-            if instances:
-                # TODO(xxx): cache flavor_ids
-                wanted_itypes = set(x[0] for x in instances)
-                instance_types = objects.FlavorList.get_by_id(
-                    context, wanted_itypes)
-                missing_itypes = wanted_itypes - set(instance_types.keys())
+        instance_types = objects.FlavorList.get_by_id(
+            context, wanted_itypes)
+        missing_itypes = wanted_itypes - set(instance_types.keys())
 
-                if missing_itypes:
-                    # Not found in flavor db. might be deleted. get it from the
-                    # saved info
-                    # We first get a list of instance UUIDs - one per flavor -
-                    # that use this flavor. Then we do a query against the
-                    # instance_extra table with those uuids. This is faster
-                    # than a subquery-JOIN, subquery with WHERE, a JOIN, a CTE
-                    # with WHERE or a CTE with JOIN.
-                    missing_itypes_instance_uuids = [
-                        x[0] for x in context.session.query(
-                            models.Instance.uuid
-                        ).filter(
-                            models.Instance.instance_type_id.
-                            in_(missing_itypes)
-                        ).group_by(
-                            models.Instance.instance_type_id
-                        ).all()]
+        if not missing_itypes:
+            return instance_types
 
-                    db_flavors = context.session.query(
-                            models.InstanceExtra.flavor
-                        ).filter(
-                            models.InstanceExtra.instance_uuid.
-                            in_(missing_itypes_instance_uuids)
-                        )
+        InstanceList._recover_flavor_from_instance_extras(context,
+                                                          instance_types,
+                                                          missing_itypes)
 
-                    for db_flavor in db_flavors:
-                        flavor_info = jsonutils.loads(db_flavor[0])
-                        flavor = objects.Flavor.obj_from_primitive(
-                                                            flavor_info['cur'])
-                        separate = flavor.extra_specs.get('quota:separate')
-                        instance_types[flavor.id] = {
-                            'name': 'instances_' + flavor.name,
-                            'baremetal': separate == 'true'
-                        }
+        missing_itypes = wanted_itypes - set(instance_types.keys())
 
-                missing_itypes = wanted_itypes - set(instance_types.keys())
+        if not missing_itypes:
+            return instance_types
 
-                if missing_itypes:
-                    # Not found in flavor db of upstream api, searching locally
-                    # This is probably not necessary anymore, because every
-                    # instance we have should have saved flavor information.
-                    msg = 'flavor(s) with ref id %s not found in flavor db'
-                    LOG.warning(msg, ', '.join(str(x) for x in missing_itypes))
+        InstanceList._recover_flavor_from_cell_instance_types(context,
+                                                              instance_types,
+                                                              missing_itypes)
+        return instance_types
 
-                    flavor_query = context.session.query(
-                        models.InstanceTypes). \
-                        filter(models.InstanceTypes.id.in_(missing_itypes)). \
-                        options(joinedload('extra_specs'))
-                    for old_flavor in flavor_query:
-                        # Bad hack, but works
-                        instance_types[old_flavor.id] = {
-                            'name': 'instances_' + old_flavor.name,
-                            'baremetal': len(old_flavor.extra_specs) > 0
-                        }
+    @staticmethod
+    def _sum_counts(instances, instance_types):
+        counts = {'instances': 0, 'cores': 0, 'ram': 0}
 
-                for type_id, instance_count, cores, ram in instances:
-                    itype = instance_types.get(type_id)
-                    if itype is None:
-                        # log an error, but continue. We need the rest of the
-                        # function to work. We'll just add it to non-baremetal
-                        # instances, so the overall number is correct at least.
-                        # Also this should not happen.
-                        LOG.error('Unknown instance type id %s', type_id)
-                    if itype and itype.get('baremetal', False):
-                        t_name = itype['name']
-                        counts[t_name] = counts.get(t_name, 0) + instance_count
-                    else:
-                        counts['instances'] += instance_count
-                        counts['cores'] += int(cores)
-                        counts['ram'] += int(ram)
-
+        if not instances:
             return counts
 
+        for type_id, instance_count, cores, ram in instances:
+            itype = instance_types.get(type_id)
+            if itype is None:
+                # log an error, but continue. We need the rest of the
+                # function to work. We'll just add it to non-baremetal
+                # instances, so the overall number is correct at least.
+                # Also this should not happen.
+                LOG.error('Unknown instance type id %s', type_id)
+            if itype and itype.get('baremetal', False):
+                t_name = itype['name']
+                counts[t_name] = counts.get(t_name, 0) + instance_count
+            else:
+                counts['instances'] += instance_count
+                counts['cores'] += int(cores)
+                counts['ram'] += int(ram)
+
+        return counts
+
+    @staticmethod
+    def _build_instance_usage_query(context, project_id):
         not_soft_deleted = sa.or_(
             models.Instance.vm_state != vm_states.SOFT_DELETED,
             models.Instance.vm_state == sql.null()
             )
-        project_query = context.session.query(
+        return context.session.query(
             models.Instance.instance_type_id,
             func.count(models.Instance.id),
             func.sum(models.Instance.vcpus),
@@ -1647,13 +1673,26 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             filter_by(project_id=project_id).\
             group_by(models.Instance.instance_type_id)
 
+    @staticmethod
+    @db.pick_context_manager_reader
+    def _get_counts_in_db_baremetalaware(context, project_id, user_id=None):
+        project_query = InstanceList._build_instance_usage_query(context,
+                                                                 project_id)
+
         project_result = project_query.all()
-        project_counts = _get_counts(project_result)
+        instance_types = InstanceList._get_instance_types(
+            context, set(x[0] for x in project_result))
+
+        project_counts = InstanceList._sum_counts(project_result,
+                                                  instance_types)
 
         counts = {'project': project_counts}
         if user_id:
             user_result = project_query.filter_by(user_id=user_id).all()
-            user_counts = _get_counts(user_result)
+            # We can re-use the instance_types, as the instances for the user
+            # in the project are a subset of all instances in the project.
+            # Therefore the instance types are as well.
+            user_counts = InstanceList._sum_counts(user_result, instance_types)
             counts['user'] = user_counts
 
         return counts
