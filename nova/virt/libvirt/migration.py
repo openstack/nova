@@ -62,6 +62,7 @@ def get_updated_guest_xml(instance, guest, migrate_data, get_volume_config,
         xml_doc, migrate_data, instance, get_volume_config)
     xml_doc = _update_perf_events_xml(xml_doc, migrate_data)
     xml_doc = _update_memory_backing_xml(xml_doc, migrate_data)
+    xml_doc = _update_quota_xml(instance, xml_doc)
     if get_vif_config is not None:
         xml_doc = _update_vif_xml(xml_doc, migrate_data, get_vif_config)
     if 'dst_numa_info' in migrate_data:
@@ -69,6 +70,18 @@ def get_updated_guest_xml(instance, guest, migrate_data, get_volume_config,
     if new_resources:
         xml_doc = _update_device_resources_xml(xml_doc, new_resources)
     return etree.tostring(xml_doc, encoding='unicode')
+
+
+def _update_quota_xml(instance, xml_doc):
+    flavor_shares = instance.flavor.extra_specs.get('quota:cpu_shares')
+    cputune = xml_doc.find('./cputune')
+    shares = xml_doc.find('./cputune/shares')
+    if shares is not None and not flavor_shares:
+        cputune.remove(shares)
+    # Remove the cputune element entirely if it has no children left.
+    if cputune is not None and not list(cputune):
+        xml_doc.remove(cputune)
+    return xml_doc
 
 
 def _update_device_resources_xml(xml_doc, new_resources):
