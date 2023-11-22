@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import contextlib
 import typing as ty
 
@@ -1734,12 +1735,25 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
 
     @staticmethod
     def _sum_counts(instances, instance_types):
-        counts = {'instances': 0, 'cores': 0, 'ram': 0}
+        return InstanceList._sum_counts_by_extra_group_keys(instances,
+                                                            instance_types)[()]
+
+    @staticmethod
+    def _sum_counts_by_az(instances, instance_types):
+        counts = InstanceList._sum_counts_by_extra_group_keys(instances,
+                                                              instance_types)
+        return {az: values for (az,), values in counts.items()}
+
+    @staticmethod
+    def _sum_counts_by_extra_group_keys(instances, instance_types):
+        counts_by_extra_group_keys = collections.defaultdict(
+            lambda: {'instances': 0, 'cores': 0, 'ram': 0})
 
         if not instances:
-            return counts
+            return counts_by_extra_group_keys
 
-        for type_id, instance_count, cores, ram in instances:
+        for type_id, instance_count, cores, ram, *xtra_group_keys in instances:
+            counts = counts_by_extra_group_keys[tuple(xtra_group_keys)]
             itype = instance_types.get(type_id)
             if itype is None:
                 # log an error, but continue. We need the rest of the
@@ -1755,7 +1769,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                 counts['cores'] += int(cores)
                 counts['ram'] += int(ram)
 
-        return counts
+        return counts_by_extra_group_keys
 
     @staticmethod
     def _build_instance_usage_query(context, project_id):
@@ -1797,6 +1811,24 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
 
         return counts
 
+    @staticmethod
+    @db.pick_context_manager_reader
+    def _get_counts_in_db_by_az(context, project_id):
+        query = InstanceList._build_instance_usage_query(context, project_id)
+
+        result = (query.
+            add_columns(models.Instance.availability_zone).
+            filter(models.Instance.availability_zone != sql.null()).
+            group_by(models.Instance.availability_zone).all())
+
+        instance_types = InstanceList._get_instance_types(
+            context, set(x[0] for x in result))
+
+        project_counts = InstanceList._sum_counts_by_az(result, instance_types)
+
+        counts = {'project': project_counts}
+        return counts
+
     @base.remotable_classmethod
     def get_counts(cls, context, project_id, user_id=None):
         """Get the counts of Instance objects in the database.
@@ -1816,6 +1848,25 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         """
         return cls._get_counts_in_db_separateaware(context, project_id,
                                                     user_id=user_id)
+
+    @base.remotable_classmethod
+    def get_counts_by_az(cls, context, project_id):
+        """Get the counts of Instance objects in the database.
+
+        :param context: The request context for database access
+        :returns: A dict containing the project-scoped counts. For example:
+                    {'project': {
+                        '<availability-zone>: {
+                            'instances': <count across project in az>,
+                            'cores': <count across project in az>,
+                            'ram': <count across project in az>
+                            'instances_<flavor_name>: <count across...>,
+                            ...
+                            },
+
+                     ...}
+        """
+        return cls._get_counts_in_db_by_az(context, project_id)
 
     @staticmethod
     @db.pick_context_manager_reader

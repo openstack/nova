@@ -11,6 +11,8 @@
 #   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #   License for the specific language governing permissions and limitations
 #   under the License.
+import collections
+
 from webob import exc
 
 from nova.api.openstack import common
@@ -18,7 +20,10 @@ from nova.api.openstack.compute.schemas import sap_admin_api
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
+from nova import context as nova_context
 from nova import exception
+from nova.i18n import _
+from nova import objects
 from nova.policies import sap_admin_api as sap_policies
 from nova.quota import QUOTAS
 
@@ -85,6 +90,38 @@ class SAPAdminApiController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(
                 state_error, 'in_cluster_vmotion', server_id)
+
+    @wsgi.expected_errors((503,))
+    @validation.query_schema(sap_admin_api.usage_by_az_query_params)
+    @_register_endpoint('GET')
+    def usage_by_az(self, req):
+        """Collect the current nominal (i.e. according to the db) resource usage
+          of the given project split by availability-zone
+        """
+        project_id = req.GET['project_id']
+        context = req.environ['nova.context']
+        context.can(sap_policies.POLICY_ROOT % 'usage-by-az')
+        return self._usage_by_az(context, project_id)
+
+    def _usage_by_az(self, context, project_id):
+        results = nova_context.scatter_gather_skip_cell0(
+            context, objects.InstanceList.get_counts_by_az,
+            project_id=project_id)
+
+        aggregated = collections.defaultdict(
+            lambda: collections.defaultdict(int))
+        for cell_name, result in results.items():
+            if nova_context.is_cell_failure_sentinel(result):
+                raise exc.HTTPServiceUnavailable(
+                    _('Could not reach cell {}'.format(cell_name))
+                )
+            for az, cell_usage in result.get('project', {}).items():
+                usage = aggregated[az]
+
+                for key, value in cell_usage.items():
+                    usage[key] += value
+
+        return {'project': aggregated}
 
     @_register_endpoint('GET')
     def endpoints(self, req):

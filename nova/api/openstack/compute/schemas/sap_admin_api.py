@@ -26,3 +26,13 @@ in_cluster_vmotion = {
     'required': ['instance_uuid', 'host'],
     'additionalProperties': False,
 }
+
+usage_by_az_query_params = {
+    'type': 'object',
+    'properties': {
+        'type': 'object',
+        'project_id': parameter_types.single_param(parameter_types.project_id),
+    },
+    'required': ['project_id'],
+    'additionalProperties': False,
+}
