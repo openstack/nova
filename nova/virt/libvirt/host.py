@@ -162,6 +162,8 @@ class Host(object):
         # kernel, QEMU, and/or libvirt. These are determined on demand and
         # memoized by various properties below
         self._supports_amd_sev: ty.Optional[bool] = None
+        self._max_sev_guests: ty.Optional[int] = None
+        self._max_sev_es_guests: ty.Optional[int] = None
         self._supports_uefi: ty.Optional[bool] = None
         self._supports_secure_boot: ty.Optional[bool] = None
 
@@ -1836,10 +1838,28 @@ class Host(object):
                     if feature_is_sev and feature.supported:
                         LOG.info("AMD SEV support detected")
                         self._supports_amd_sev = True
+                        self._max_sev_guests = feature.max_guests
+                        self._max_sev_es_guests = feature.max_es_guests
                         return self._supports_amd_sev
 
         LOG.debug("No AMD SEV support detected for any (arch, machine_type)")
         return self._supports_amd_sev
+
+    @property
+    def max_sev_guests(self) -> ty.Optional[int]:
+        """Determine maximum number of guests with AMD SEV.
+        """
+        if not self.supports_amd_sev:
+            return None
+        return self._max_sev_guests
+
+    @property
+    def max_sev_es_guests(self) -> ty.Optional[int]:
+        """Determine maximum number of guests with AMD SEV-ES.
+        """
+        if not self.supports_amd_sev:
+            return None
+        return self._max_sev_es_guests
 
     @property
     def supports_remote_managed_ports(self) -> bool:

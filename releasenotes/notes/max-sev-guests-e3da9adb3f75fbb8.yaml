@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Now the libvirt driver is capable to detect maximum number of guests with
+    memory encrypted which can run concurrently in its compute host using
+    the new fields in libvirt API available since version 8.0.0.
