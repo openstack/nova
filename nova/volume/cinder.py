@@ -873,6 +873,10 @@ class API(object):
             each.to_dict()) for each in attachments]
 
     @translate_attachment_exception
+    @retrying.retry(stop_max_attempt_number=5,
+                    retry_on_exception=lambda e:
+                    (isinstance(e, cinder_exception.ClientException) and
+                     e.code in (500, 504)))
     def attachment_update(self, context, attachment_id, connector,
                           mountpoint=None):
         """Updates the connector on the volume attachment. An attachment
