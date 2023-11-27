@@ -90,6 +90,11 @@ class CPUSetTestCase(test.NoDBTestCase):
         cpuset_ids = hw.get_cpu_dedicated_set()
         self.assertEqual(set([0, 1, 3, 4, 5, 6]), cpuset_ids)
 
+    def test_get_cpu_dedicated_set_nozero(self):
+        self.flags(cpu_dedicated_set='0-5,6,^2', group='compute')
+        cpuset_ids = hw.get_cpu_dedicated_set_nozero()
+        self.assertEqual(set([1, 3, 4, 5, 6]), cpuset_ids)
+
     def test_get_cpu_dedicated_set__unset(self):
         self.flags(cpu_dedicated_set=None, group='compute')
         cpuset_ids = hw.get_cpu_dedicated_set()
