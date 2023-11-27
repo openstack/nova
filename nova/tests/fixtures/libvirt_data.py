@@ -2182,6 +2182,7 @@ _fake_NodeDevXml = {
         <feature name='rxvlan'/>
         <feature name='txvlan'/>
         <feature name='rxhash'/>
+        <feature name='switchdev'/>
         <capability type='80203'/>
       </capability>
     </device>""",  # noqa:E501
