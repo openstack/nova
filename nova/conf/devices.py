@@ -29,15 +29,20 @@ guest instance.
 
 If more than one single mdev type is provided, then for each *mdev type* an
 additional section, ``[mdev_$(MDEV_TYPE)]``, must be added to the configuration
-file. Each section then **must** be configured with a single configuration
-option, ``device_addresses``, which should be a list of PCI addresses
-corresponding to the physical GPU(s) or mdev-capable hardware to assign to this
-type.
+file. Each section then can be configured with a single configuration option,
+``device_addresses``, which should be a list of PCI addresses corresponding to
+the physical GPU(s) or mdev-capable hardware to assign to this type. If
+`device_addresses` is not provided, then the related GPU type will be the
+default for all the found GPUs that aren't used by other types.
+
 
 If one or more sections are missing (meaning that a specific type is not wanted
-to use for at least one physical device) or if no device addresses are provided
-, then Nova will only use the first type that was provided by
-``[devices]/enabled_mdev_types``.
+to use for at least one physical device), then Nova will only use the first
+type that was provided by ``[devices]/enabled_mdev_types``.
+
+If two or more sections are not set with ``device_addresses`` values, then only
+the first one will be used for defaulting all the non-defined GPUs to use this
+type.
 
 If the same PCI address is provided for two different types, nova-compute will
 return an InvalidLibvirtMdevConfig exception at restart.
@@ -53,6 +58,17 @@ will be accepted. A valid configuration could then be::
 
     [vgpu_nvidia-36]
     device_addresses = 0000:86:00.0
+
+Another valid configuration could be::
+
+    [devices]
+    enabled_mdev_types = nvidia-35, nvidia-36
+
+    [mdev_nvidia-35]
+
+    [mdev_nvidia-36]
+    device_addresses = 0000:86:00.0
+
 
 """)
 ]

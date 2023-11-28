@@ -540,6 +540,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self.mdev_classes = set([])
         # this is for knowing how many mdevs can be created by a type
         self.mdev_type_max_mapping = collections.defaultdict(str)
+        # if we have a wildcard, we default to use this mdev type
+        self.pgpu_type_default = None
         self.supported_vgpu_types = self._get_supported_vgpu_types()
 
         # This dict is for knowing which mdevs are already claimed by some
@@ -8190,38 +8192,36 @@ class LibvirtDriver(driver.ComputeDriver):
         # be calling this method before init_host()
         nova.conf.devices.register_dynamic_opts(CONF)
 
+        enabled_mdev_types = []
         for vgpu_type in CONF.devices.enabled_mdev_types:
+            enabled_mdev_types.append(vgpu_type)
+            # NOTE(sbauza) group is now always set because we register the
+            # dynamic options above
             group = getattr(CONF, 'mdev_%s' % vgpu_type, None)
-            if group is None or not group.device_addresses:
-                first_type = CONF.devices.enabled_mdev_types[0]
-                if len(CONF.devices.enabled_mdev_types) > 1:
-                    # Only provide the warning if the operator provided more
-                    # than one type as it's not needed to provide groups
-                    # if you only use one vGPU type.
-                    msg = ("The mdev type '%(type)s' was listed in '[devices] "
-                           "enabled_mdev_types' but no corresponding "
-                           "'[mdev_%(type)s]' group or "
-                           "'[mdev_%(type)s] device_addresses' "
-                           "option was defined. Only the first type "
-                           "'%(ftype)s' will be used." % {'type': vgpu_type,
-                                                         'ftype': first_type})
-                    LOG.warning(msg)
-                # We need to reset the mapping tables that we started to
-                # provide keys and values from previously processed vGPUs but
-                # since there is a problem for this vGPU type, we only want to
-                # support only the first type.
-                self.pgpu_type_mapping.clear()
-                self.mdev_class_mapping.clear()
-                first_group = getattr(CONF, 'mdev_%s' % first_type, None)
-                if first_group is None:
-                    self.mdev_classes = {orc.VGPU}
-                else:
-                    self.mdev_classes = {first_group.mdev_class}
-                return [first_type]
+            if group is None:
+                # Should never happen but if so, just fails early.
+                raise exception.InvalidLibvirtMdevConfig(
+                    reason="can't find  '[devices]/mdev_%s group' "
+                           "in the configuration" % group
+                )
             mdev_class = group.mdev_class
             # By default, max_instances is None
             if group.max_instances:
                 self.mdev_type_max_mapping[vgpu_type] = group.max_instances
+            if not group.device_addresses:
+                if not self.pgpu_type_default:
+                    self.pgpu_type_default = vgpu_type
+                    self.mdev_classes.add(mdev_class)
+                else:
+                    msg = ("Mdev type default already set to "
+                            " %(default_type)s so %(this_type)s will not "
+                            "be used." % {
+                                'default_type': self.pgpu_type_default,
+                                'this_type': vgpu_type})
+                    LOG.warning(msg)
+                    # we remove the type from the supported list.
+                    enabled_mdev_types.remove(vgpu_type)
+                continue
             for device_address in group.device_addresses:
                 if device_address in self.pgpu_type_mapping:
                     raise exception.InvalidLibvirtMdevConfig(
@@ -8238,7 +8238,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self.pgpu_type_mapping[device_address] = vgpu_type
                 self.mdev_class_mapping[device_address] = mdev_class
                 self.mdev_classes.add(mdev_class)
-        return CONF.devices.enabled_mdev_types
+        return enabled_mdev_types
 
     @staticmethod
     def _get_pci_id_from_libvirt_name(
@@ -8272,16 +8272,14 @@ class LibvirtDriver(driver.ComputeDriver):
         if not self.supported_vgpu_types:
             return
 
-        if len(self.supported_vgpu_types) == 1:
-            first_type = self.supported_vgpu_types[0]
-            group = getattr(CONF, 'mdev_%s' % first_type, None)
-            if group is None or not group.device_addresses:
-                return first_type
-
         device_address = self._get_pci_id_from_libvirt_name(device_address)
         if not device_address:
             return
-        return self.pgpu_type_mapping.get(device_address)
+        mdev_type = self.pgpu_type_mapping.get(device_address)
+        # if we can't find the mdev type by the config, do we have a default
+        # type because of a config group not using device_addresses ?
+        # NOTE(sbauza): By default pgpu_type_default is None if unset
+        return mdev_type or self.pgpu_type_default
 
     def _get_resource_class_for_device(self, device_address):
         """Returns the resource class for the inventory of this device.
