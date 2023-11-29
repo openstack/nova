@@ -112,14 +112,6 @@ def power_down(instance: objects.Instance) -> None:
 def power_down_all_dedicated_cpus() -> None:
     if not CONF.libvirt.cpu_power_management:
         return
-    if (CONF.libvirt.cpu_power_management and
-        not CONF.compute.cpu_dedicated_set
-    ):
-        msg = _("'[compute]/cpu_dedicated_set' is mandatory to be set if "
-                "'[libvirt]/cpu_power_management' is set."
-                "Please provide the CPUs that can be pinned or don't use the "
-                "power management if you only use shared CPUs.")
-        raise exception.InvalidConfiguration(msg)
 
     cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
     for pcpu in cpu_dedicated_set:

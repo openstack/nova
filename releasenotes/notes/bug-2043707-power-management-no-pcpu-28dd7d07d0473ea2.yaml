@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Relaxed the config option checking of the cpu_power_management feature of
+    the libvirt driver. The nova-compute service will start with
+    [libvirt]cpu_power_management=True and an empty [compute]cpu_dedicated_set
+    configuration. The power management is still only applied to dedicated CPUs.
+    So the above configuration only allowed to ensure that cpu_power_management
+    can be enabled independently for configuring cpu_dedicated_set during
+    deployment.
+
