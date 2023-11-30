@@ -126,6 +126,21 @@
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
       # revert this when bug #1940425 is fixed in neutron
       tempest_exclude_regex: (test_live_migration_with_trunk)
+      devstack_localrc: &uec_image_vars
+          # We are using the split kernel/initramfs image by default in an
+          # effort to reduce the occurrence of guest kernel panics in the APIC
+          # timer handler. We will cover testing of the full disk image by
+          # using it in the nova-next job.
+          CIRROS_VERSION: 0.6.2
+          DEFAULT_IMAGE_NAME: cirros-0.6.2-x86_64-uec
+          DEFAULT_IMAGE_FILE_NAME: cirros-0.6.2-x86_64-uec.tar.gz
+          # We need to set the IMAGE_URLS manually in order to get a UEC image
+          # for what Tempest will use for CONF.compute.image_ref_alt. The first
+          # image will be used for CONF.compute.image_ref and the second image
+          # for CONF.compute.image_ref_alt. If we don't do this, the full disk
+          # image will be downloaded and used for image_ref_alt instead.
+          DOWNLOAD_DEFAULT_IMAGES: false
+          IMAGE_URLS: http://download.cirros-cloud.net/0.6.2/cirros-0.6.2-x86_64-uec.tar.gz, http://download.cirros-cloud.net/0.6.1/cirros-0.6.1-x86_64-uec.tar.gz
       devstack_services:
         neutron-trunk: true
       devstack_local_conf:
@@ -167,6 +182,7 @@
       # test_live_migration_with_trunk in this job to keep
       tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot).*)
       devstack_localrc:
+        <<: *uec_image_vars
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
@@ -208,6 +224,7 @@
     group-vars:
       subnode:
         devstack_localrc:
+          <<: *uec_image_vars
           Q_AGENT: openvswitch
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
           Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
@@ -259,6 +276,8 @@
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
       # revert this when bug #1940425 is fixed in neutron
       tempest_exclude_regex: (test_live_migration_with_trunk)
+      devstack_localrc:
+        <<: *uec_image_vars
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
@@ -309,6 +328,7 @@
               resize: false
               cold_migration: false
       devstack_localrc:
+        <<: *uec_image_vars
         NOVA_BACKEND: LVM
         # Do not waste time clearing volumes.
         LVM_VOLUME_CLEAR: none
@@ -351,15 +371,16 @@
       tempest_test_regex: ^tempest\.(api\.compute\.servers|scenario\.test_network_basic_ops)
       tempest_exclude_regex: (^tempest\.(api\.compute\.servers\.(test_attach_interfaces.AttachInterfacesTestJSON.test_create_list_show_delete_interfaces_by_network_port|test_delete_server.DeleteServersTestJSON.test_delete_server_while_in_attached_volume.*|test_list_.*|test_disk_config|test_server_rescue.*|test_server_actions\.ServerActionsTestJSON\.test_resize.*|test_device_tag.*))|.*\[.*\bslow\b.*\])
       devstack_localrc:
-        FORCE_CONFIG_DRIVE=False
-        ADMIN_PASSWORD=emulation
-        DATABASE_PASSWORD=$ADMIN_PASSWORD
-        RABBIT_PASSWORD=$ADMIN_PASSWORD
-        SERVICE_PASSWORD=$ADMIN_PASSWORD
-        SWIFT_HASH=1234abcd
-        DOWNLOAD_DEFAULT_IMAGES=False
-        IMAGE_URLS="http://download.cirros-cloud.net/0.5.2/cirros-0.5.2-aarch64-disk.img"
-        DEFAULT_INSTANCE_TYPE=m1.micro
+        <<: *uec_image_vars
+        FORCE_CONFIG_DRIVE: False
+        ADMIN_PASSWORD: emulation
+        DATABASE_PASSWORD: $ADMIN_PASSWORD
+        RABBIT_PASSWORD: $ADMIN_PASSWORD
+        SERVICE_PASSWORD: $ADMIN_PASSWORD
+        SWIFT_HASH: 1234abcd
+        DOWNLOAD_DEFAULT_IMAGES: False
+        IMAGE_URLS: "http://download.cirros-cloud.net/0.5.2/cirros-0.5.2-aarch64-disk.img"
+        DEFAULT_INSTANCE_TYPE: m1.micro
     pre-run:
       - playbooks/nova-emulation/pre.yaml
 
@@ -389,6 +410,34 @@
     post-run: playbooks/nova-next/post.yaml
     required-projects:
         - novnc/novnc
+    nodeset:
+      nodes:
+        - name: controller
+          label: nested-virt-ubuntu-jammy
+        - name: compute1
+          label: nested-virt-ubuntu-jammy
+      groups:
+        # Node where tests are executed and test results collected
+        - name: tempest
+          nodes:
+            - controller
+        # Nodes running the compute service
+        - name: compute
+          nodes:
+            - controller
+            - compute1
+        # Nodes that are not the controller
+        - name: subnode
+          nodes:
+            - compute1
+        # Switch node for multinode networking setup
+        - name: switch
+          nodes:
+            - controller
+        # Peer nodes for multinode networking setup
+        - name: peers
+          nodes:
+            - compute1
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_exclude_regex.
@@ -457,6 +506,10 @@
             neutron_plugin_options:
               available_type_drivers: flat,geneve,vlan,gre,local,vxlan
       devstack_localrc:
+        # For nested virt
+        LIBVIRT_TYPE: kvm
+        DEFAULT_IMAGE_NAME: cirros-0.6.2-x86_64-disk
+        DEFAULT_IMAGE_FILE_NAME: cirros-0.6.2-x86_64-disk.img
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
@@ -499,6 +552,8 @@
     group-vars:
       subnode:
         devstack_localrc:
+          # For nested virt
+          LIBVIRT_TYPE: kvm
           Q_AGENT: openvswitch
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
           Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
@@ -534,6 +589,7 @@
       tox_envlist: all
       tempest_test_regex: api.*compute
       devstack_localrc:
+        <<: *uec_image_vars
         TEMPEST_COMPUTE_TYPE: compute_legacy
 
 - job:
@@ -545,6 +601,9 @@
       that library.
     required-projects:
       - openstack/oslo.versionedobjects
+    vars:
+      devstack_localrc:
+        <<: *uec_image_vars
 
 - job:
     name: nova-grenade-multinode
@@ -556,6 +615,8 @@
       "legacy-grenade-dsvm-neutron-multinode-live-migration".
     irrelevant-files: *nova-base-irrelevant-files
     vars:
+      devstack_localrc:
+        <<: *uec_image_vars
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
@@ -602,6 +663,7 @@
         # Disable other non-essential services that we don't need for this job.
         c-bak: false
       devstack_localrc:
+        <<: *uec_image_vars
         # Setup two non-cell0 cells (cell1 and cell2).
         NOVA_NUM_CELLS: 2
         # Disable resize to the same host so all resizes will move across
@@ -614,6 +676,7 @@
     group-vars:
       peers:
         devstack_localrc:
+          <<: *uec_image_vars
           NOVA_ALLOW_MOVE_TO_SAME_HOST: true
           LIVE_MIGRATION_AVAILABLE: false
       subnode:
@@ -664,6 +727,7 @@
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
       devstack_localrc:
+        <<: *uec_image_vars
         GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
         DEVSTACK_PARALLEL: True
@@ -736,6 +800,7 @@
       - openstack/neutron-lib
     vars:
       devstack_localrc:
+        <<: *uec_image_vars
         # Enabeling the scope and new defaults for services implemented it.
         # NOTE (gmann): We need to keep keystone scope check disable as
         # services (except ironic) does not support the system scope and
@@ -754,6 +819,7 @@
       This job runs the Tempest tests with Nova RBAC old defaults
     vars:
       devstack_localrc:
+        <<: *uec_image_vars
         NOVA_ENFORCE_SCOPE: false
 
 - project:
