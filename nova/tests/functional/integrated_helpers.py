@@ -18,6 +18,7 @@ Provides common functionality for integrated unit tests
 """
 
 import collections
+import datetime
 import random
 import re
 import string
@@ -393,6 +394,32 @@ class InstanceHelperMixin:
             self.api_fixture.admin_api.post_extra_spec(flavor['id'], spec)
 
         return flavor['id']
+
+    def _create_image(self, metadata):
+        image = {
+            'id': 'c456eb30-91d7-4f43-8f46-2efd9eccd744',
+            'name': 'fake-image-custom-property',
+            'created_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
+            'updated_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
+            'deleted_at': None,
+            'deleted': False,
+            'status': 'active',
+            'is_public': False,
+            'container_format': 'raw',
+            'disk_format': 'raw',
+            'size': '25165824',
+            'min_ram': 0,
+            'min_disk': 0,
+            'protected': False,
+            'visibility': 'public',
+            'tags': ['tag1', 'tag2'],
+            'properties': {
+                'kernel_id': 'nokernel',
+                'ramdisk_id': 'nokernel',
+            },
+        }
+        image['properties'].update(metadata)
+        return self.glance.create(None, image)
 
     def _build_server(self, name=None, image_uuid=None, flavor_id=None,
                       networks=None, az=None, host=None):

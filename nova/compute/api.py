@@ -751,6 +751,9 @@ class API:
         if flavor['memory_mb'] < int(image.get('min_ram') or 0):
             raise exception.FlavorMemoryTooSmall()
 
+        # Verify flavor/image Virtio Packed Ring configuration conflict.
+        hardware.get_packed_virtqueue_constraint(flavor, image)
+
         # Image min_disk is in gb, size is in bytes. For sanity, have them both
         # in bytes.
         image_min_disk = int(image.get('min_disk') or 0) * units.Gi
