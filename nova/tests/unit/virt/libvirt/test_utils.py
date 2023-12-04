@@ -710,6 +710,10 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         os_mach_type = libvirt_utils.get_machine_type(image_meta)
         self.assertEqual('q35', os_mach_type)
 
+    def test_make_reverse_cpu_traits_mapping(self):
+        for k in libvirt_utils.make_reverse_cpu_traits_mapping():
+            self.assertIsInstance(k, str)
+
     def test_get_flags_by_flavor_specs(self):
         flavor = objects.Flavor(
             id=1, flavorid='fakeid-1', name='fake1.small', memory_mb=128,
@@ -718,11 +722,15 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
                 'trait:%s' % os_traits.HW_CPU_X86_3DNOW: 'required',
                 'trait:%s' % os_traits.HW_CPU_X86_SSE2: 'required',
                 'trait:%s' % os_traits.HW_CPU_HYPERTHREADING: 'required',
+                'trait:%s' % os_traits.HW_CPU_X86_INTEL_VMX: 'required',
+                'trait:%s' % os_traits.HW_CPU_X86_VMX: 'required',
+                'trait:%s' % os_traits.HW_CPU_X86_SVM: 'required',
+                'trait:%s' % os_traits.HW_CPU_X86_AMD_SVM: 'required',
             })
         traits = libvirt_utils.get_flags_by_flavor_specs(flavor)
         # we shouldn't see the hyperthreading trait since that's a valid trait
         # but not a CPU flag
-        self.assertEqual(set(['3dnow', 'sse2']), traits)
+        self.assertEqual(set(['3dnow', 'sse2', 'vmx', 'svm']), traits)
 
     @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch('nova.privsep.path.chown')

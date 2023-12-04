@@ -103,8 +103,20 @@ CPU_TRAITS_MAPPING = {
     'xop': os_traits.HW_CPU_X86_XOP
 }
 
+
+def make_reverse_cpu_traits_mapping() -> ty.Dict[str, str]:
+    traits_cpu_mapping = dict()
+    for k, v in CPU_TRAITS_MAPPING.items():
+        if isinstance(v, tuple):
+            for trait in v:
+                traits_cpu_mapping[trait] = k
+        else:
+            traits_cpu_mapping[v] = k
+    return traits_cpu_mapping
+
+
 # Reverse CPU_TRAITS_MAPPING
-TRAITS_CPU_MAPPING = {v: k for k, v in CPU_TRAITS_MAPPING.items()}
+TRAITS_CPU_MAPPING = make_reverse_cpu_traits_mapping()
 
 # global directory for emulated TPM
 VTPM_DIR = '/var/lib/libvirt/swtpm/'
