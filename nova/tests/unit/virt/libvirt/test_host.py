@@ -1343,7 +1343,7 @@ Active:          8381604 kB
             "parent_ifname": "ens1",
             "capabilities": {
                 "network": ["rx", "tx", "sg", "tso", "gso", "gro", "rxvlan",
-                            "txvlan", "rxhash"],
+                            "txvlan", "rxhash", "switchdev"],
                 "sriov": {"pf_mac_address": "52:54:00:1e:59:c6",
                           "vf_num": 1},
                 # Should be obtained from the parent PF in this case.
