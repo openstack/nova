@@ -23,15 +23,11 @@ repos:
     hooks:
       - id: remove-tabs
         exclude: '.*\.(svg)$'
-  - repo: local
+  - repo: https://opendev.org/openstack/hacking
+    rev: 6.0.1
     hooks:
-      - id: flake8
-        name: flake8
-        additional_dependencies:
-          - hacking~=6.0.1
-        language: python
-        entry: flake8
-        files: '^.*\.py$'
+      - id: hacking
+        additional_dependencies: []
         exclude: '^(doc|releasenotes|tools)/.*$'
   - repo: https://github.com/pre-commit/mirrors-autopep8
     rev: v2.0.4
