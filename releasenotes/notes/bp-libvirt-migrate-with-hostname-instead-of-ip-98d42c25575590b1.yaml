@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The new config option ``[libvirt]migration_inbound_addr`` is now used to
+    determine the address for incoming move operations (cold migrate, resize,
+    evacuate). This config is defaulted to [DEFAULT]my_ip to keep the
+    configuration backward compatible. However it allows an explicit hostname
+    or FQDN to be specified, or allows to specify '%s' that is then resolved to
+    the hostname of compute host.
+    Note that this config should only be changed from its default after every
+    compute is upgraded.

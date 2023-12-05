@@ -16626,6 +16626,29 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         ip = drvr.get_host_ip_addr()
         self.assertEqual(ip, CONF.my_ip)
 
+    def test_get_host_ip_addr_defaults_to_my_ip(self):
+        CONF.set_default("my_ip", "10.0.0.3")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ip = drvr.get_host_ip_addr()
+        self.assertEqual(ip, "10.0.0.3")
+
+    def test_get_host_ip_addr_override_via_migration_inbound_addr(self):
+        CONF.set_default("my_ip", "10.0.0.3")
+        CONF.set_default(
+            "migration_inbound_addr", "my-migration-hostname", group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ip = drvr.get_host_ip_addr()
+        self.assertEqual(ip, "my-migration-hostname")
+
+    def test_get_host_ip_addr_override_via_migration_inbound_addr_template(
+        self
+    ):
+        CONF.set_default("my_ip", "10.0.0.3")
+        CONF.set_default("migration_inbound_addr", "%s", group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ip = drvr.get_host_ip_addr()
+        self.assertEqual(ip, "compute1")
+
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_my_ip(self, mock_log):
 
@@ -19332,6 +19355,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_exec.assert_not_called()
         mock_exists.assert_not_called()
         mock_unlink.assert_not_called()
+
+    @mock.patch.object(os, 'unlink')
+    @mock.patch.object(os.path, 'exists')
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_shared_storage_detection_same_host_migration_inbound_addr(
+        self, mock_exec, mock_exists, mock_unlink
+    ):
+        CONF.set_default(
+            "migration_inbound_addr", "source-hostname", group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertTrue(drvr._is_path_shared_with('source-hostname', '/path'))
+        mock_exec.assert_not_called()
+        mock_exists.assert_not_called()
+        mock_unlink.assert_not_called()
+
+    @mock.patch.object(os.path, 'exists')
+    def test_shared_storage_detection_migration_inbound_addr(
+        self, mock_exists
+    ):
+        CONF.set_default(
+            "migration_inbound_addr", "source-hostname", group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        mock_exists.return_value = False
+        with test.nested(
+            mock.patch.object(drvr._remotefs, 'create_file'),
+            mock.patch.object(drvr._remotefs, 'remove_file')
+        ) as (mock_rem_fs_create, mock_rem_fs_remove):
+            self.assertFalse(
+                drvr._is_path_shared_with('dest-hostname', '/path'))
+
+        mock_rem_fs_create.assert_any_call('dest-hostname', mock.ANY)
+        create_args, create_kwargs = mock_rem_fs_create.call_args
+        self.assertTrue(create_args[1].startswith('/path'))
+
+        mock_rem_fs_remove.assert_called_with('dest-hostname', mock.ANY)
+        remove_args, remove_kwargs = mock_rem_fs_remove.call_args
+        self.assertTrue(remove_args[1].startswith('/path'))
 
     def test_store_pid_remove_pid(self):
         instance = objects.Instance(**self.test_instance)
