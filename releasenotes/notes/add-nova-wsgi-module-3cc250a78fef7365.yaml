@@ -1,0 +1,22 @@
+---
+features:
+  - |
+    A new module, ``nova.wsgi``, has been added as a place to gather WSGI
+    ``application`` objects. This is intended to ease deployment by providing
+    a consistent location for these objects. For example, if using uWSGI then
+    instead of:
+
+    .. code-block:: ini
+
+        [uwsgi]
+        wsgi-file = /bin/nova-api-wsgi
+
+    You can now use:
+
+    .. code-block:: ini
+
+        [uwsgi]
+        module = nova.wsgi.osapi_compute:application
+
+    This also simplifies deployment with other WSGI servers that expect module
+    paths such as gunicorn.
