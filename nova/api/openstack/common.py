@@ -153,7 +153,7 @@ def get_sort_params(input_params, default_key='created_at',
     The input parameters are not modified.
 
     :param input_params: webob.multidict of request parameters (from
-                         nova.wsgi.Request.params)
+                         nova.api.wsgi.Request.params)
     :param default_key: default sort key value, added to the list if no
                         'sort_key' parameters are supplied
     :param default_dir: default sort dir value, added to the list if no
