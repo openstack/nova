@@ -102,7 +102,6 @@ class RescueServerPolicyTest(base.BasePolicyTest):
 class RescueServerNoLegacyNoScopePolicyTest(RescueServerPolicyTest):
     """Test rescue/unrescue server APIs policies with no legacy deprecated
     rules and no scope checks which means new defaults only.
-
     """
 
     without_deprecated_rules = True
