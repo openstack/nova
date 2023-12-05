@@ -508,8 +508,6 @@
       devstack_localrc:
         # For nested virt
         LIBVIRT_TYPE: kvm
-        DEFAULT_IMAGE_NAME: cirros-0.6.2-x86_64-disk
-        DEFAULT_IMAGE_FILE_NAME: cirros-0.6.2-x86_64-disk.img
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
