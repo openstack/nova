@@ -1364,16 +1364,13 @@ class IronicDriverTestCase(test.NoDBTestCase):
             self.driver.spawn, self.ctx, instance, None, [], None, {})
         self.assertEqual(0, mock_destroy.call_count)
 
-    def _test_add_instance_info_to_node(self, mock_update=None,
-                                        mock_call=None):
+    def test__add_instance_info_to_node(self):
         node = _get_cached_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
         image_meta = ironic_utils.get_test_image_meta()
         flavor = ironic_utils.get_test_flavor()
         instance.flavor = flavor
-        self.driver._add_instance_info_to_node(node, instance, image_meta,
-                                               flavor)
         expected_patch = [{'path': '/instance_info/image_source', 'op': 'add',
                            'value': image_meta.id},
                           {'path': '/instance_info/root_gb', 'op': 'add',
@@ -1391,52 +1388,20 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           {'path': '/instance_info/local_gb', 'op': 'add',
                            'value': str(node.properties.get('local_gb', 0))}]
 
-        if mock_call is not None:
-            # assert call() is invoked with retry_on_conflict False to
-            # avoid bug #1341420
-            mock_call.assert_called_once_with('node.update', node.uuid,
-                                              expected_patch,
-                                              retry_on_conflict=False)
-        if mock_update is not None:
-            mock_update.assert_called_once_with(node.uuid, expected_patch)
+        self.driver._add_instance_info_to_node(node, instance,
+                                               image_meta, flavor)
 
-    @mock.patch.object(FAKE_CLIENT.node, 'update')
-    def test__add_instance_info_to_node_mock_update(self, mock_update):
-        self._test_add_instance_info_to_node(mock_update=mock_update)
+        # TODO(dustinc): Add check for call to patcher.create
+        self.mock_conn.patch_node.assert_called_once_with(node, expected_patch)
 
-    @mock.patch.object(cw.IronicClientWrapper, 'call')
-    def test__add_instance_info_to_node_mock_call(self, mock_call):
-        self._test_add_instance_info_to_node(mock_call=mock_call)
-
-    @mock.patch.object(FAKE_CLIENT.node, 'update')
-    def test__add_instance_info_to_node_fail(self, mock_update):
-        mock_update.side_effect = ironic_exception.BadRequest()
+    def test__remove_instance_info_from_node(self):
         node = _get_cached_node(driver='fake')
-        instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   node=node.uuid)
-        image_meta = ironic_utils.get_test_image_meta()
-        flavor = ironic_utils.get_test_flavor()
-        self.assertRaises(exception.InstanceDeployFailure,
-                          self.driver._add_instance_info_to_node,
-                          node, instance, image_meta, flavor)
 
-    def _test_remove_instance_info_from_node(self, mock_update):
-        node = _get_cached_node(driver='fake')
-        instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   node=node.uuid)
-        self.driver._remove_instance_info_from_node(node, instance)
-        expected_patch = [{'path': '/instance_info', 'op': 'remove'},
-                          {'path': '/instance_uuid', 'op': 'remove'}]
-        mock_update.assert_called_once_with(node.uuid, expected_patch)
+        self.driver._remove_instance_info_from_node(node)
 
-    @mock.patch.object(FAKE_CLIENT.node, 'update')
-    def test_remove_instance_info_from_node(self, mock_update):
-        self._test_remove_instance_info_from_node(mock_update)
-
-    @mock.patch.object(FAKE_CLIENT.node, 'update')
-    def test_remove_instance_info_from_node_fail(self, mock_update):
-        mock_update.side_effect = ironic_exception.BadRequest()
-        self._test_remove_instance_info_from_node(mock_update)
+        self.mock_conn.update_node.assert_called_once_with(node,
+                                                           instance_id=None,
+                                                           instance_info={})
 
     def _create_fake_block_device_info(self):
         bdm_dict = block_device.BlockDeviceDict({
@@ -1758,7 +1723,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             self.assertFalse(mock_remove_instance_info.called)
         else:
             self.assertFalse(mock_node.set_provision_state.called)
-            mock_remove_instance_info.assert_called_once_with(node, instance)
+            mock_remove_instance_info.assert_called_once_with(node)
 
     def test_destroy(self):
         for state in ironic_states.PROVISION_STATE_LIST:
@@ -1784,13 +1749,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_clean.assert_called_once_with(node, instance, None,
                                            remove_instance_info=False)
 
-    @mock.patch.object(FAKE_CLIENT.node, 'update')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_cleanup_deploy')
-    def test_destroy_trigger_remove_info_fail(self, mock_clean, fake_validate,
-                                              mock_update):
+    def test_destroy_trigger_remove_info_fail(self, mock_clean, fake_validate):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(
             driver='fake', uuid=node_uuid,
@@ -1798,7 +1761,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         fake_validate.return_value = node
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node_uuid)
-        mock_update.side_effect = SystemError('unexpected error')
+        self.mock_conn.update_node.side_effect = SystemError('unexpected '
+                                                             'error')
         self.assertRaises(SystemError, self.driver.destroy,
                           self.ctx, instance, None, None)
         mock_clean.assert_called_once_with(node, instance, None,
@@ -2610,8 +2574,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver, '_unplug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_cleanup_volume_target_info')
-    @mock.patch.object(cw.IronicClientWrapper, 'call')
-    def test__cleanup_deploy(self, mock_call, mock_vol, mock_unvif):
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_remove_instance_info_from_node')
+    def test__cleanup_deploy(self, mock_remove_info, mock_vol, mock_unvif):
         # TODO(TheJulia): This REALLY should be updated to cover all of the
         # calls that take place.
         node = ironic_utils.get_test_node(driver='fake')
@@ -2620,10 +2585,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver._cleanup_deploy(node, instance)
         mock_vol.assert_called_once_with(instance)
         mock_unvif.assert_called_once_with(node, instance, None)
-        expected_patch = [{'path': '/instance_info', 'op': 'remove'},
-                          {'path': '/instance_uuid', 'op': 'remove'}]
-        mock_call.assert_called_once_with('node.update', node.uuid,
-                                          expected_patch)
+        mock_remove_info.assert_called_once_with(node)
 
     @mock.patch.object(ironic_driver.IronicDriver, '_unplug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver,
