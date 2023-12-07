@@ -1119,9 +1119,10 @@ class IronicDriver(virt_driver.ComputeDriver):
                     uncompressed.seek(0)
                     shutil.copyfileobj(uncompressed, gzipped)
 
-                # base64 encode config drive
+                # base64 encode config drive and then decode to utf-8 for JSON
+                # serialization
                 compressed.seek(0)
-                return base64.b64encode(compressed.read())
+                return base64.b64encode(compressed.read()).decode()
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
@@ -1218,9 +1219,11 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         # trigger the node deploy
         try:
-            self.ironicclient.call("node.set_provision_state", node_uuid,
-                                   ironic_states.ACTIVE,
-                                   configdrive=configdrive_value)
+            self.ironic_connection.set_node_provision_state(
+                node_uuid,
+                ironic_states.ACTIVE,
+                config_drive=configdrive_value,
+            )
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error("Failed to request Ironic to provision instance "
@@ -1247,14 +1250,12 @@ class IronicDriver(virt_driver.ComputeDriver):
         already provisioned node after required checks.
         """
         try:
-            self.ironicclient.call("node.set_provision_state", node.uuid,
-                                   "deleted")
+            self.ironic_connection.set_node_provision_state(
+                node.uuid,
+                'deleted',
+            )
         except Exception as e:
             # if the node is already in a deprovisioned state, continue
-            # This should be fixed in Ironic.
-            # TODO(deva): This exception should be added to
-            #             python-ironicclient and matched directly,
-            #             rather than via __name__.
             if getattr(e, '__name__', None) != 'InstanceDeployFailure':
                 raise
 
@@ -1745,15 +1746,16 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         # Trigger the node rebuild/redeploy.
         try:
-            self.ironicclient.call("node.set_provision_state",
-                              node_uuid, ironic_states.REBUILD,
-                              configdrive=configdrive_value)
-        except (exception.NovaException,         # Retry failed
-                ironic.exc.InternalServerError,  # Validations
-                ironic.exc.BadRequest) as e:     # Maintenance
-            msg = (_("Failed to request Ironic to rebuild instance "
-                     "%(inst)s: %(reason)s") % {'inst': instance.uuid,
-                                                'reason': str(e)})
+            self.ironic_connection.set_node_provision_state(
+                node_uuid,
+                ironic_states.REBUILD,
+                config_drive=configdrive_value,
+            )
+        except sdk_exc.SDKException as e:
+            msg = _(
+                "Failed to request Ironic to rebuild instance "
+                "%(inst)s: %(reason)s"
+            ) % {'inst': instance.uuid, 'reason': str(e)}
             raise exception.InstanceDeployFailure(msg)
 
         # Although the target provision state is REBUILD, it will actually go
@@ -2156,9 +2158,11 @@ class IronicDriver(virt_driver.ComputeDriver):
                           reason=node.last_error)
 
         try:
-            self.ironicclient.call("node.set_provision_state",
-                                   node_uuid, ironic_states.RESCUE,
-                                   rescue_password=rescue_password)
+            self.ironic_connection.set_node_provision_state(
+                node_uuid,
+                ironic_states.RESCUE,
+                rescue_password=rescue_password,
+            )
         except Exception as e:
             raise exception.InstanceRescueFailure(reason=str(e))
 
@@ -2195,8 +2199,10 @@ class IronicDriver(virt_driver.ComputeDriver):
                           reason=node.last_error)
 
         try:
-            self.ironicclient.call("node.set_provision_state",
-                                   node_uuid, ironic_states.UNRESCUE)
+            self.ironic_connection.set_node_provision_state(
+                node_uuid,
+                ironic_states.UNRESCUE,
+            )
         except Exception as e:
             raise exception.InstanceUnRescueFailure(reason=str(e))
 
