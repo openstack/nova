@@ -1384,17 +1384,19 @@ class IronicDriver(virt_driver.ComputeDriver):
         hard = True
         if reboot_type == 'SOFT':
             try:
-                self.ironicclient.call("node.set_power_state", node.uuid,
-                                       'reboot', soft=True)
+                self.ironic_connection.set_node_power_state(
+                    node.uuid,
+                    'soft reboot',
+                )
                 hard = False
-            except ironic.exc.BadRequest as exc:
+            except sdk_exc.BadRequestException as exc:
                 LOG.info('Soft reboot is not supported by ironic hardware '
                          'driver. Falling back to hard reboot: %s',
                          exc,
                          instance=instance)
 
         if hard:
-            self.ironicclient.call("node.set_power_state", node.uuid, 'reboot')
+            self.ironic_connection.set_node_power_state(node.uuid, 'reboot')
 
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'reboot')
@@ -1422,8 +1424,13 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         if timeout:
             try:
-                self.ironicclient.call("node.set_power_state", node.uuid,
-                                       'off', soft=True, timeout=timeout)
+                # we don't pass 'wait=True' since we want a configurable
+                # polling interval
+                self.ironic_connection.set_node_power_state(
+                    node.uuid,
+                    'soft power off',
+                    timeout=timeout,
+                )
 
                 timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'soft power off')
@@ -1443,7 +1450,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                           'node': node.uuid,
                           'reason': node.last_error},
                          instance=instance)
-            except ironic.exc.ClientException as e:
+            except sdk_exc.SDKException as e:
                 LOG.info("Failed to soft power off instance "
                          "%(instance)s on baremetal node %(node)s "
                          "due to error: %(reason)s. "
@@ -1453,7 +1460,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                           'reason': e},
                          instance=instance)
 
-        self.ironicclient.call("node.set_power_state", node.uuid, 'off')
+        self.ironic_connection.set_node_power_state(node.uuid, 'power off')
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'power off')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
@@ -1478,7 +1485,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         LOG.debug('Power on called for instance', instance=instance)
         node = self._validate_instance_and_node(instance)
-        self.ironicclient.call("node.set_power_state", node.uuid, 'on')
+        self.ironic_connection.set_node_power_state(node.uuid, 'power on')
 
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'power on')
