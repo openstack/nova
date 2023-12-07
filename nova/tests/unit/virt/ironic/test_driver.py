@@ -1997,8 +1997,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         )
         self.mock_conn.set_node_power_state.assert_has_calls(expected_calls)
 
-    @mock.patch.object(FAKE_CLIENT.node, 'vif_attach')
-    def test_plug_vifs_with_port(self, mock_vatt):
+    def test_plug_vifs_with_port(self):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = _get_cached_node(uuid=node_uuid)
 
@@ -2010,7 +2009,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver._plug_vifs(node, instance, network_info)
 
         # asserts
-        mock_vatt.assert_called_with(node.uuid, vif_id)
+        self.mock_conn.attach_vif_to_node(
+            node.uuid, vif_id, retry_on_conflict=False,
+        )
 
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     def test_plug_vifs(self, mock__plug_vifs):
@@ -2022,8 +2023,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock__plug_vifs.assert_not_called()
 
-    @mock.patch.object(FAKE_CLIENT.node, 'vif_attach')
-    def test_plug_vifs_multiple_ports(self, mock_vatt):
+    def test_plug_vifs_multiple_ports(self):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = _get_cached_node(uuid=node_uuid)
         instance = fake_instance.fake_instance_obj(self.ctx,
@@ -2038,12 +2038,15 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver._plug_vifs(node, instance, network_info)
 
         # asserts
-        calls = (mock.call(node.uuid, first_vif_id),
-                 mock.call(node.uuid, second_vif_id))
-        mock_vatt.assert_has_calls(calls, any_order=True)
+        calls = (
+            mock.call(node.uuid, first_vif_id, retry_on_conflict=False),
+            mock.call(node.uuid, second_vif_id, retry_on_conflict=False),
+        )
+        self.mock_conn.attach_vif_to_node.assert_has_calls(
+            calls, any_order=True,
+        )
 
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    def test_plug_vifs_failure(self, mock_node):
+    def test_plug_vifs_failure(self):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = _get_cached_node(uuid=node_uuid)
         instance = fake_instance.fake_instance_obj(self.ctx,
@@ -2054,16 +2057,19 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                               id=first_vif_id)
         second_vif = ironic_utils.get_test_vif(address='11:FF:FF:FF:FF:FF',
                                                id=second_vif_id)
-        mock_node.vif_attach.side_effect = [None,
-                                            ironic_exception.BadRequest()]
+        self.mock_conn.attach_vif_to_node.side_effect = [
+            None, sdk_exc.BadRequestException(),
+        ]
         network_info = [first_vif, second_vif]
-        self.assertRaises(exception.VirtualInterfacePlugException,
-                          self.driver._plug_vifs, node, instance,
-                          network_info)
+        self.assertRaises(
+            exception.VirtualInterfacePlugException,
+            self.driver._plug_vifs,
+            node,
+            instance,
+            network_info,
+        )
 
-    @mock.patch('time.sleep')
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    def test_plug_vifs_failure_no_conductor(self, mock_node, mock_sleep):
+    def test_plug_vifs_already_attached(self):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = _get_cached_node(uuid=node_uuid)
         instance = fake_instance.fake_instance_obj(self.ctx,
@@ -2074,37 +2080,14 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                               id=first_vif_id)
         second_vif = ironic_utils.get_test_vif(address='11:FF:FF:FF:FF:FF',
                                                id=second_vif_id)
-        msg = 'No conductor service registered which supports driver ipmi.'
-        mock_node.vif_attach.side_effect = [None,
-                                            ironic_exception.BadRequest(msg),
-                                            None]
-        network_info = [first_vif, second_vif]
-        self.driver._plug_vifs(node, instance, network_info)
-        calls = [mock.call(node.uuid, first_vif_id),
-                 mock.call(node.uuid, second_vif_id),
-                 mock.call(node.uuid, second_vif_id)]
-        mock_node.vif_attach.assert_has_calls(calls, any_order=True)
-
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    def test_plug_vifs_already_attached(self, mock_node):
-        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        node = _get_cached_node(uuid=node_uuid)
-        instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   node=node_uuid)
-        first_vif_id = 'aaaaaaaa-vv11-cccc-dddd-eeeeeeeeeeee'
-        second_vif_id = 'aaaaaaaa-vv22-cccc-dddd-eeeeeeeeeeee'
-        first_vif = ironic_utils.get_test_vif(address='22:FF:FF:FF:FF:FF',
-                                              id=first_vif_id)
-        second_vif = ironic_utils.get_test_vif(address='11:FF:FF:FF:FF:FF',
-                                               id=second_vif_id)
-        mock_node.vif_attach.side_effect = [ironic_exception.Conflict(),
-                                            None]
+        self.mock_conn.attach_vif_to_node.side_effect = [
+            sdk_exc.ConflictException(), None,
+        ]
         network_info = [first_vif, second_vif]
         self.driver._plug_vifs(node, instance, network_info)
-        self.assertEqual(2, mock_node.vif_attach.call_count)
+        self.assertEqual(2, self.mock_conn.attach_vif_to_node.call_count)
 
-    @mock.patch.object(FAKE_CLIENT.node, 'vif_attach')
-    def test_plug_vifs_no_network_info(self, mock_vatt):
+    def test_plug_vifs_no_network_info(self):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = _get_cached_node(uuid=node_uuid)
 
@@ -2114,10 +2097,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver._plug_vifs(node, instance, network_info)
 
         # asserts
-        self.assertFalse(mock_vatt.called)
+        self.mock_conn.attach_vif_to_node.assert_not_called()
 
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    def test_unplug_vifs(self, mock_node):
+    def test_unplug_vifs(self):
         node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = _get_cached_node(id=node_id)
         self.mock_conn.get_node.return_value = node
@@ -2131,10 +2113,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         # asserts
         self.mock_conn.get_node.assert_called_once_with(
             node_id, fields=ironic_driver._NODE_FIELDS)
-        mock_node.vif_detach.assert_called_once_with(node.id, vif_id)
+        self.mock_conn.detach_vif_from_node(node.id, vif_id)
 
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    def test_unplug_vifs_port_not_associated(self, mock_node):
+    def test_unplug_vifs_port_not_associated(self):
         node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = _get_cached_node(id=node_id)
 
@@ -2145,14 +2126,16 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         self.mock_conn.get_node.assert_called_once_with(
             node_id, fields=ironic_driver._NODE_FIELDS)
-        self.assertEqual(len(network_info), mock_node.vif_detach.call_count)
+        self.assertEqual(
+            len(network_info),
+            self.mock_conn.detach_vif_from_node.call_count,
+        )
 
-    @mock.patch.object(FAKE_CLIENT.node, 'vif_detach')
-    def test_unplug_vifs_no_network_info(self, mock_vdet):
+    def test_unplug_vifs_no_network_info(self):
         instance = fake_instance.fake_instance_obj(self.ctx)
         network_info = []
         self.driver.unplug_vifs(instance, network_info)
-        self.assertFalse(mock_vdet.called)
+        self.mock_conn.detach_vif_from_node.assert_not_called()
 
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     def test_attach_interface(self, mock_pv):
