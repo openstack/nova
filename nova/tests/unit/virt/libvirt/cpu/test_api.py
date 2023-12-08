@@ -243,3 +243,42 @@ class TestAPI(test.NoDBTestCase):
         api.validate_all_dedicated_cpus()
         # no assert we want to make sure the validation won't raise if
         # no dedicated cpus are configured
+
+    @mock.patch.object(core, 'get_governor')
+    @mock.patch.object(core, 'get_online')
+    def test_validate_all_dedicated_cpus_for_cpu_state_no_governor_ignored(
+        self, mock_get_online, mock_get_governor
+    ):
+        self.flags(cpu_power_management=True, group='libvirt')
+        self.flags(cpu_dedicated_set='0-2', group='compute')
+        self.flags(cpu_power_management_strategy='cpu_state', group='libvirt')
+
+        mock_get_online.return_value = True
+        mock_get_governor.side_effect = FileNotFoundError(
+            "File /sys/devices/system/cpu/cpu1/cpufreq/scaling_governor "
+            "could not be found.")
+
+        api.validate_all_dedicated_cpus()
+
+        self.assertEqual(2, len(mock_get_governor.mock_calls))
+
+    @mock.patch.object(core, 'get_governor')
+    @mock.patch.object(core, 'get_online')
+    def test_validate_all_dedicated_cpus_for_governor_error(
+        self, mock_get_online, mock_get_governor
+    ):
+        self.flags(cpu_power_management=True, group='libvirt')
+        self.flags(cpu_dedicated_set='0-2', group='compute')
+        self.flags(cpu_power_management_strategy='governor', group='libvirt')
+
+        mock_get_online.return_value = True
+        mock_get_governor.side_effect = FileNotFoundError(
+            "File /sys/devices/system/cpu/cpu1/cpufreq/scaling_governor "
+            "could not be found.")
+
+        ex = self.assertRaises(
+            exception.InvalidConfiguration, api.validate_all_dedicated_cpus)
+        self.assertIn(
+            "[libvirt]cpu_power_management_strategy is 'governor', "
+            "but the host OS does not support governors for CPU0",
+            str(ex))

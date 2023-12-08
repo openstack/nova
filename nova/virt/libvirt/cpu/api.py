@@ -143,7 +143,24 @@ def validate_all_dedicated_cpus() -> None:
             continue
         pcpu = Core(pcpu)
         # we need to collect the governors strategy and the CPU states
-        governors.add(pcpu.governor)
+        try:
+            governors.add(pcpu.governor)
+        except FileNotFoundError as e:
+            # NOTE(gibi): When
+            # /sys/devices/system/cpu/cpuX/cpufreq/scaling_governor does
+            # not exist it means the host OS does not support any governors.
+            # If cpu_state strategy is requested we can ignore this as
+            # governors will not be used but if governor strategy is requested
+            # we need to report an error and stop as the host is not properly
+            # configured
+            if CONF.libvirt.cpu_power_management_strategy == 'governor':
+                msg = _(
+                    "[libvirt]cpu_power_management_strategy is 'governor', "
+                    "but the host OS does not support governors for CPU%d"
+                    % pcpu.ident
+                )
+                raise exception.InvalidConfiguration(msg) from e
+
         cpu_states.add(pcpu.online)
     if CONF.libvirt.cpu_power_management_strategy == 'cpu_state':
         # all the cores need to have the same governor strategy
