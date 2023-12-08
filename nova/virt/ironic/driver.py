@@ -2003,10 +2003,12 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param instance: nova instance
         :return: A connector information dictionary
         """
-        node = self.ironicclient.call("node.get", instance.node)
+        node = self.ironic_connection.get_node(instance.node)
         properties = self._parse_node_properties(node)
-        connectors = self.ironicclient.call("node.list_volume_connectors",
-                                            instance.node, detail=True)
+        connectors = self.ironic_connection.volume_connectors(
+            details=True,
+            node=instance.node,
+        )
         values = {}
         for conn in connectors:
             values.setdefault(conn.type, []).append(conn.connector_id)
@@ -2071,24 +2073,42 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param instance: nova instance, used for logging.
         :return: A UUID of a VIF assigned to one of the MAC addresses.
         """
+        def _get_vif(ports):
+            for p in ports:
+                vif_id = (p.internal_info.get('tenant_vif_port_id') or
+                          p.extra.get('vif_port_id'))
+                if vif_id:
+                    LOG.debug(
+                        'VIF %(vif)s for volume connector is '
+                        'retrieved with MAC %(mac)s of node %(node)s',
+                        {
+                            'vif': vif_id,
+                            'mac': mac,
+                            'node': node.uuid,
+                        },
+                        instance=instance,
+                    )
+                    return vif_id
+
         for mac in macs:
-            for method in ['portgroup.list', 'port.list']:
-                ports = self.ironicclient.call(method,
-                                               node=node.uuid,
-                                               address=mac,
-                                               detail=True)
-                for p in ports:
-                    vif_id = (p.internal_info.get('tenant_vif_port_id') or
-                              p.extra.get('vif_port_id'))
-                    if vif_id:
-                        LOG.debug('VIF %(vif)s for volume connector is '
-                                  'retrieved with MAC %(mac)s of node '
-                                  '%(node)s',
-                                  {'vif': vif_id,
-                                   'mac': mac,
-                                   'node': node.uuid},
-                                  instance=instance)
-                        return vif_id
+            port_groups = self.ironic_connection.port_groups(
+                node=node.uuid,
+                address=mac,
+                details=True,
+            )
+            vif_id = _get_vif(port_groups)
+            if vif_id:
+                return vif_id
+
+            ports = self.ironic_connection.ports(
+                node=node.uuid,
+                address=mac,
+                details=True,
+            )
+            vif_id = _get_vif(ports)
+            if vif_id:
+                return vif_id
+
         return None
 
     def _can_send_version(self, min_version=None, max_version=None):

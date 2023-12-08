@@ -2296,8 +2296,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         host_id = self.driver.network_binding_host_id(self.ctx, instance)
         self.assertIsNone(host_id)
 
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    def test_get_volume_connector(self, mock_node):
+    def test_get_volume_connector(self):
         node_uuid = uuids.node_uuid
         node_props = {'cpu_arch': 'x86_64'}
         node = ironic_utils.get_test_node(uuid=node_uuid,
@@ -2327,23 +2326,25 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           'os_type': 'baremetal',
                           'platform': 'x86_64'}
 
-        mock_node.get.return_value = node
-        mock_node.list_volume_connectors.return_value = connectors
+        self.mock_conn.get_node.return_value = node
+        self.mock_conn.volume_connectors.return_value = connectors
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
         props = self.driver.get_volume_connector(instance)
 
         self.assertEqual(expected_props, props)
-        mock_node.get.assert_called_once_with(node_uuid)
-        mock_node.list_volume_connectors.assert_called_once_with(
-            node_uuid, detail=True)
+        self.mock_conn.get_node.assert_called_once_with(node_uuid)
+        self.mock_conn.volume_connectors.assert_called_once_with(
+            node=node_uuid, details=True,
+        )
 
     @mock.patch.object(objects.instance.Instance, 'get_network_info')
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(FAKE_CLIENT.port, 'list')
-    @mock.patch.object(FAKE_CLIENT.portgroup, 'list')
     def _test_get_volume_connector_no_ip(
-            self, mac_specified, mock_pgroup, mock_port, mock_node,
-            mock_nw_info, portgroup_exist=False, no_fixed_ip=False):
+        self,
+        mac_specified,
+        mock_nw_info,
+        portgroup_exist=False,
+        no_fixed_ip=False,
+    ):
         node_uuid = uuids.node_uuid
         node_props = {'cpu_arch': 'x86_64'}
         node = ironic_utils.get_test_node(uuid=node_uuid,
@@ -2368,13 +2369,13 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           'os_type': 'baremetal',
                           'platform': 'x86_64'}
 
-        mock_node.get.return_value = node
-        mock_node.list_volume_connectors.return_value = connectors
+        self.mock_conn.get_node.return_value = node
+        self.mock_conn.volume_connectors.return_value = connectors
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
         port = ironic_utils.get_test_port(
             node_uuid=node_uuid, address='11:22:33:44:55:66',
             internal_info={'tenant_vif_port_id': vif['id']})
-        mock_port.return_value = [port]
+        self.mock_conn.ports.return_value = [port]
         if no_fixed_ip:
             mock_nw_info.return_value = []
             expected_props.pop('ip')
@@ -2385,26 +2386,28 @@ class IronicDriverTestCase(test.NoDBTestCase):
             portgroup = ironic_utils.get_test_portgroup(
                 node_uuid=node_uuid, address='11:22:33:44:55:66',
                 extra={'vif_port_id': vif['id']})
-            mock_pgroup.return_value = [portgroup]
+            self.mock_conn.port_groups.return_value = [portgroup]
         else:
-            mock_pgroup.return_value = []
+            self.mock_conn.port_groups.return_value = []
         props = self.driver.get_volume_connector(instance)
 
         self.assertEqual(expected_props, props)
-        mock_node.get.assert_called_once_with(node_uuid)
-        mock_node.list_volume_connectors.assert_called_once_with(
-            node_uuid, detail=True)
+        self.mock_conn.get_node.assert_called_once_with(node_uuid)
+        self.mock_conn.volume_connectors.assert_called_once_with(
+            node=node_uuid, details=True,
+        )
         if mac_specified:
-            mock_pgroup.assert_called_once_with(
-                node=node_uuid, address='11:22:33:44:55:66', detail=True)
+            self.mock_conn.port_groups.assert_called_once_with(
+                node=node_uuid, address='11:22:33:44:55:66', details=True)
             if not portgroup_exist:
-                mock_port.assert_called_once_with(
-                    node=node_uuid, address='11:22:33:44:55:66', detail=True)
+                self.mock_conn.ports.assert_called_once_with(
+                    node=node_uuid, address='11:22:33:44:55:66', details=True,
+                )
             else:
-                mock_port.assert_not_called()
+                self.mock_conn.ports.assert_not_called()
         else:
-            mock_pgroup.assert_not_called()
-            mock_port.assert_not_called()
+            self.mock_conn.port_groups.assert_not_called()
+            self.mock_conn.ports.assert_not_called()
 
     def test_get_volume_connector_no_ip_with_mac(self):
         self._test_get_volume_connector_no_ip(True)
