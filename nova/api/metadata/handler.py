@@ -141,8 +141,6 @@ class MetadataRequestHandler(wsgi.Application):
 
     def _handle_remote_ip_request(self, req):
         remote_address = req.remote_addr
-        if CONF.api.use_forwarded_for:
-            remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
         try:
             meta_data = self.get_metadata_by_remote_address(remote_address)

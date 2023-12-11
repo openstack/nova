@@ -76,7 +76,6 @@ service-related options:
 - :oslo.config:option:`neutron.service_metadata_proxy`
 - :oslo.config:option:`neutron.metadata_proxy_shared_secret`
 - :oslo.config:option:`api.metadata_cache_expiration`
-- :oslo.config:option:`api.use_forwarded_for`
 - :oslo.config:option:`api.local_metadata_per_cell`
 - :oslo.config:option:`api.dhcp_domain`
 
@@ -105,7 +104,6 @@ following to a :file:`nova-api.conf` file:
     [api]
     dhcp_domain =
     metadata_cache_expiration = 15
-    use_forwarded_for = False
     local_metadata_per_cell = False
     vendordata_providers = StaticJSON
     vendordata_jsonfile_path = /etc/nova/vendor_data.json
@@ -124,7 +122,6 @@ The :program:`nova-api-metadata` application accepts almost the same options:
 - :oslo.config:option:`neutron.service_metadata_proxy`
 - :oslo.config:option:`neutron.metadata_proxy_shared_secret`
 - :oslo.config:option:`api.metadata_cache_expiration`
-- :oslo.config:option:`api.use_forwarded_for`
 - :oslo.config:option:`api.local_metadata_per_cell`
 - :oslo.config:option:`api.dhcp_domain`
 
@@ -151,7 +148,6 @@ file:
     [api]
     dhcp_domain =
     metadata_cache_expiration = 15
-    use_forwarded_for = False
     local_metadata_per_cell = False
 
 .. note::

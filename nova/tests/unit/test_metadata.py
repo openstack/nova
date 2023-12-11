@@ -1152,36 +1152,6 @@ class MetadataHandlerTestCase(test.TestCase):
                                 relpath="/2009-04-04/user-data-invalid")
         self.assertEqual(response.status_int, 404)
 
-    def test_user_data_with_use_forwarded_header(self):
-        expected_addr = "192.192.192.2"
-
-        def fake_get_metadata(self_gm, address):
-            if address == expected_addr:
-                return self.mdinst
-            else:
-                raise Exception("Expected addr of %s, got %s" %
-                                (expected_addr, address))
-
-        self.flags(use_forwarded_for=True, group='api')
-        response = fake_request(self, self.mdinst,
-                                relpath="/2009-04-04/user-data",
-                                address="168.168.168.1",
-                                fake_get_metadata=fake_get_metadata,
-                                headers={'X-Forwarded-For': expected_addr})
-
-        self.assertEqual(response.status_int, 200)
-        response_ctype = response.headers['Content-Type']
-        self.assertTrue(response_ctype.startswith("text/plain"))
-        self.assertEqual(response.body,
-                         base64.decode_as_bytes(self.instance['user_data']))
-
-        response = fake_request(self, self.mdinst,
-                                relpath="/2009-04-04/user-data",
-                                address="168.168.168.1",
-                                fake_get_metadata=fake_get_metadata,
-                                headers=None)
-        self.assertEqual(response.status_int, 500)
-
     @mock.patch('oslo_utils.secretutils.constant_time_compare')
     def test_by_instance_id_uses_constant_time_compare(self, mock_compare):
         mock_compare.side_effect = test.TestingException

@@ -93,8 +93,6 @@ class NovaKeystoneContext(wsgi.Middleware):
     def __call__(self, req):
         # Build a context, including the auth_token...
         remote_address = req.remote_addr
-        if CONF.api.use_forwarded_for:
-            remote_address = req.headers.get('X-Forwarded-For', remote_address)
 
         service_catalog = None
         if req.headers.get('X_SERVICE_CATALOG') is not None:
