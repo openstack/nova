@@ -3379,7 +3379,7 @@ force_evacuate:
       Furthermore, this should not be specified when evacuating instances
       managed by a clustered hypervisor driver like ironic since you
       cannot specify a node, so the compute service will pick a node randomly
-      which may not be able to accomodate the instance.
+      which may not be able to accommodate the instance.
   in: body
   required: false
   type: boolean
@@ -5559,7 +5559,7 @@ os:scheduler_hints_cidr:
     Schedule the server on a host in the network specified with an IP address
     (``os:scheduler_hints:build_near_host_ip``) and this parameter.
     If ``os:scheduler_hints:build_near_host_ip`` is specified and
-    this paramete is omitted, ``/24`` is used.
+    this parameter is omitted, ``/24`` is used.
     It is available when ``SimpleCIDRAffinityFilter`` is available
     on cloud side.
   in: body
@@ -6372,7 +6372,7 @@ server_hostname: &server_hostname
     .. note::
 
         This information is published via the metadata service and requires
-        application such as ``cloud-init`` to propogate it through to the
+        application such as ``cloud-init`` to propagate it through to the
         instance.
   min_version: 2.3
 server_hostname_req:
@@ -6388,7 +6388,7 @@ server_hostname_req:
     .. note::
 
         This information is published via the metadata service and requires
-        application such as ``cloud-init`` to propogate it through to the
+        application such as ``cloud-init`` to propagate it through to the
         instance.
   min_version: 2.90
 server_hostname_update_rebuild:
