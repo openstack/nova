@@ -9,7 +9,7 @@ features:
     virtio interfaces.
 issues:
   - |
-    Nova currenly does not support the following livecycle operations when
+    Nova currently does not support the following lifecycle operations when
     combined with a instance using vDPA ports: shelve, resize, cold migration,
     live migration, evacuate, suspend or interface attach/detach.
     Attempting to use one of the above operations will result in a HTTP 409
@@ -26,7 +26,7 @@ issues:
     This requires the DMA buffers to be locked in memory. As the DMA buffers
     are allocated by the guest and can be allocated anywhere in the guest RAM,
     QEMU locks **all** guest RAM. By default the ``RLIMIT_MEMLOCK`` for a
-    normal QEMU intance is set to 0 and qemu is not allowed to lock guest
+    normal QEMU instance is set to 0 and qemu is not allowed to lock guest
     memory. In the case of SR-IOV, libvirt automatically set the limit to guest
     RAM + 1G which enables QEMU to lock the memory. This does not happen today
     with vDPA ports. As a result if you use VDPA ports without enabling locking
@@ -37,7 +37,7 @@ issues:
     using ``hw:cpu_realtime`` for its side-effect of locking the guest memory,
     this usage does not require the guest or host to use realtime kernels.
     However, all other requirements of ``hw:cpu_realtime`` such as requiring
-    hw:cpu_policy=dedicated still apply. It is also stongly recommended that
-    hugpages be enabled for all instnace with locked memory. This can be done
+    hw:cpu_policy=dedicated still apply. It is also strongly recommended that
+    hugpages be enabled for all instances with locked memory. This can be done
     by setting ``hw:mem_page_size``. This will enable nova to correctly account
     for the fact that the memory is unswapable.

@@ -26,7 +26,7 @@ upgrade:
     * **New Defaults(Admin, Member and Reader)**
 
       Policies are default to Admin, Member and Reader roles. Old roles
-      are also supproted. You can switch to new defaults via config option
+      are also supported. You can switch to new defaults via config option
       ``[oslo_policy]enforce_new_defaults`` in ``nova.conf`` file.
 
     * **Policies granularity**

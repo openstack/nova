@@ -7,5 +7,5 @@ upgrade:
     driver.
     Releases are available on https://pypi.org/project/os-vif-bigswitch/. Major
     version for the package matches upstream neutron version number. Minor
-    version tracks compatiblity with Big Cloud Fabric (BCF) releases, and
+    version tracks compatibility with Big Cloud Fabric (BCF) releases, and
     typically is set to the lowest supported BCF release.

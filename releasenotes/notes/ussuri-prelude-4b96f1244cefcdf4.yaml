@@ -53,7 +53,7 @@ prelude: |
 
       .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#id79
 
-    - Support for `heterogenous virtual GPU types per compute node`__.
+    - Support for `heterogeneous virtual GPU types per compute node`__.
 
       .. __: https://docs.openstack.org/nova/latest/admin/virtual-gpu.html#enable-gpu-types-compute
 

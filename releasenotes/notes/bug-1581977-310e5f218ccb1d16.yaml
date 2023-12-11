@@ -1,7 +1,7 @@
 ---
 fixes:
   - |
-    Nova will now replace periods (``.``) with dashes (``-``) when santizing an
+    Nova will now replace periods (``.``) with dashes (``-``) when sanitizing an
     instance's display name for use as a hostname.
 
     Nova publishes hostnames for instances via the metadata service and config

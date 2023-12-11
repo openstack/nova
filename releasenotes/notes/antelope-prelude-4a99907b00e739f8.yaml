@@ -47,5 +47,5 @@ prelude: |
       stopped on the destination host until manually started.
 
     - Nova APIs now `by default support new RBAC policies <https://docs.openstack.org/nova/latest/configuration/policy.html>`
-      and scopes. See our `Policy Concepts documention <https://docs.openstack.org/nova/latest/configuration/policy-concepts.html>`
+      and scopes. See our `Policy Concepts documentation <https://docs.openstack.org/nova/latest/configuration/policy-concepts.html>`
       for further details.

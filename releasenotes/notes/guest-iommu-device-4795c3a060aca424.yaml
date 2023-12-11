@@ -15,7 +15,7 @@ features:
     neither X86 (Q35) or AArch64.
 
     Note that, enable vIOMMU might introduce significant performance overhead.
-    You can see performance comparision table from
+    You can see performance comparison table from
     `AMD vIOMMU session on KVM Forum 2021`_.
     For above reason, vIOMMU should only be enable for workflow that require it.
     .. _`AMD vIOMMU session on KVM Forum 2021`: https://static.sched.com/hosted_files/kvmforum2021/da/vIOMMU%20KVM%20Forum%202021%20-%20v4.pdf
