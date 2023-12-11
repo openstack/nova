@@ -25,7 +25,7 @@ features:
     The ``[compute] cpu_shared_set`` configuration option will now be used to
     configure the host CPUs that should be used for ``VCPU`` inventory,
     replacing the deprecated ``vcpu_pin_set`` option. Refer to the help text of
-    the ``[compute] cpu_shared_set`` config option for more infomration.
+    the ``[compute] cpu_shared_set`` config option for more information.
   - |
     A new configuration option, ``[workarounds] disable_fallback_pcpu_query``,
     has been added. When creating or moving pinned instances, the scheduler will

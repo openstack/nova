@@ -90,7 +90,7 @@ def _check_update_to_existing_type(
 ) -> None:
     """Check the update to an existing machine type
 
-    The aim here is to block operators from moving between the underying
+    The aim here is to block operators from moving between the underlying
     machine types, between versioned and aliased types or to an older version
     of the same type during an update.
 

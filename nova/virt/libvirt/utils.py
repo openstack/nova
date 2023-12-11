@@ -646,7 +646,7 @@ def mdev_name2uuid(mdev_name: str) -> str:
     :returns: string containing the uuid
     """
     mdev_uuid = mdev_name[5:].replace('_', '-')
-    # Unconditionnally remove the PCI address from the name
+    # Unconditionally remove the PCI address from the name
     mdev_uuid = mdev_uuid[:36]
     return str(uuid.UUID(mdev_uuid))
 

@@ -29,7 +29,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 
 DEPRECATED_REASON = """
 Policies for showing flavor extra specs in server APIs response is
-seprated as new policy. This policy is deprecated only for that but
+separated as new policy. This policy is deprecated only for that but
 not for list extra specs and showing it in flavor API response.
 """
 

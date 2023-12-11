@@ -487,7 +487,7 @@ class ServersController(wsgi.Controller):
         :param target: The target dict for ``context.can`` policy checks
         :param server_dict: The POST /servers request body "server" entry
         :param create_kwargs: dict that gets populated by this method and
-            passed to nova.comptue.api.API.create()
+            passed to nova.compute.api.API.create()
         :raises: webob.exc.HTTPBadRequest if the request parameters are invalid
         :raises: nova.exception.Forbidden if a policy check fails
         """
@@ -538,7 +538,7 @@ class ServersController(wsgi.Controller):
         :param target: The target dict for ``context.can`` policy checks
         :param server_dict: The POST /servers request body "server" entry
         :param create_kwargs: dict that gets populated by this method and
-            passed to nova.comptue.api.API.create()
+            passed to nova.compute.api.API.create()
         :raises: webob.exc.HTTPBadRequest if the request parameters are invalid
         :raises: nova.exception.Forbidden if a policy check fails
         """
@@ -644,7 +644,7 @@ class ServersController(wsgi.Controller):
         :param target: The target dict for ``context.can`` policy checks
         :param server_dict: The POST /servers request body "server" entry
         :param create_kwargs: dict that gets populated by this method and
-            passed to nova.comptue.api.API.create()
+            passed to nova.compute.api.API.create()
         :param host: Forced host of availability_zone
         :param node: Forced node of availability_zone
         :raise: webob.exc.HTTPBadRequest if the request parameters are invalid

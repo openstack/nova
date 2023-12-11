@@ -18,7 +18,7 @@ Metrics Weigher.  Weigh hosts by their metrics.
 
 This weigher can compute the weight based on the compute node host's various
 metrics. The to-be weighed metrics and their weighing ratio are specified
-in the configuration file as the followings:
+in the configuration file as follows:
 
     [metrics]
     weight_setting = name1=1.0, name2=-1.0

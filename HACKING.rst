@@ -63,7 +63,7 @@ Nova Specific Commandments
   assertNotRegexpMatches
 - [N362] Imports for privsep modules should be specific. Use "import nova.privsep.path",
   not "from nova.privsep import path". This ensures callers know that the method they're
-  calling is using priviledge escalation.
+  calling is using privilege escalation.
 - [N363] Disallow ``(not_a_tuple)`` because you meant ``(a_tuple_of_one,)``.
 - [N364] Check non-existent mock assertion methods and attributes.
 - [N365] Check misuse of assertTrue/assertIsNone.

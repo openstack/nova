@@ -148,7 +148,7 @@ class Service(service.Service):
         # See https://bugs.python.org/issue6721 for more information.
         # With python 3.7, it would be possible for oslo.db to make use of the
         # os.register_at_fork() method to reinitialize its lock. Until we
-        # require python 3.7 as a mininum version, we must handle the situation
+        # require python 3.7 as a minimum version, we must handle the situation
         # outside of oslo.db.
         context.CELL_CACHE = {}
 
@@ -424,7 +424,7 @@ class WSGIService(service.Service):
         # See https://bugs.python.org/issue6721 for more information.
         # With python 3.7, it would be possible for oslo.db to make use of the
         # os.register_at_fork() method to reinitialize its lock. Until we
-        # require python 3.7 as a mininum version, we must handle the situation
+        # require python 3.7 as a minimum version, we must handle the situation
         # outside of oslo.db.
         context.CELL_CACHE = {}
 
@@ -438,7 +438,7 @@ class WSGIService(service.Service):
                 service_ref = _create_service_ref(self, ctxt)
             except (exception.ServiceTopicExists,
                     exception.ServiceBinaryExists):
-                # NOTE(danms): If we race to create a record wth a sibling,
+                # NOTE(danms): If we race to create a record with a sibling,
                 # don't fail here.
                 service_ref = objects.Service.get_by_host_and_binary(
                     ctxt, self.host, self.binary)

@@ -6,5 +6,5 @@ features:
     instance also reports the ``COMPUTE_RESCUE_BFV`` trait such as the libvirt
     driver.
 
-    No changes have been made to the request or reponse parameters of the
+    No changes have been made to the request or response parameters of the
     rescue API itself.

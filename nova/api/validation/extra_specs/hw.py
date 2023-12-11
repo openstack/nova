@@ -167,7 +167,7 @@ hugepage_validators = [
         name='hw:locked_memory',
         description=(
             'Determine if **guest** (instance) memory should be locked '
-            'preventing swaping. This is required in rare cases for device '
+            'preventing swapping. This is required in rare cases for device '
             'DMA transfers. Only supported by the libvirt virt driver.'
         ),
         value={

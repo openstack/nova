@@ -9,4 +9,4 @@ upgrade:
   - |
     The required ironic API version is updated to 1.32. The ironic service
     must be upgraded to an ironic release > 8.0 before nova is upgraded,
-    otherwise all ironic intergration will fail.
+    otherwise all ironic integration will fail.
