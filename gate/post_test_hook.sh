@@ -105,7 +105,7 @@ echo "Resource provider allocations were cleaned up properly."
 
 function get_binding_profile_value
 {
-    # Returns the value of the key in the binding profile if exsits or return
+    # Returns the value of the key in the binding profile if exists or return
     # empty.
     local port=${1}
     local key=${2}
@@ -253,7 +253,7 @@ if [[ "$my_key" == "" ]]; then
 fi
 
 echo "Verifying online_data_migrations idempotence"
-# We will re-use the server created earlier for this test. (A server needs to
+# We will reuse the server created earlier for this test. (A server needs to
 # be present during the run of online_data_migrations and archiving).
 
 # Run the online data migrations before archiving.

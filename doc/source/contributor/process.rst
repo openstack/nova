@@ -76,7 +76,7 @@ used by many OpenStack projects, including the following steps.
 
 - Dependency Freeze
 
-  -  time to co-ordinate the final list of dependencies, and give packagers
+  -  time to coordinate the final list of dependencies, and give packagers
      time to package them
   -  generally it is also quite destabilising to take upgrades (beyond
      bug fixes) this late

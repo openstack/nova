@@ -778,7 +778,7 @@ governors on the fly, as explained below.
    supports scaling govenors before modifying the configuration option.
 
 If the strategy is set to ``governor``, a couple of config options are provided
-to define which exact CPU govenor to use for each of the up and down states :
+to define which exact CPU governor to use for each of the up and down states :
 
 - :oslo.config:option:`libvirt.cpu_power_governor_low` will define the governor
   to use for the powerdown state (defaults to ``powersave``)

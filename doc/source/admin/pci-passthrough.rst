@@ -519,7 +519,7 @@ For the viommu attributes:
 
 * ``intremap``, ``caching_mode``, and ``iotlb``
   options for viommu (These attributes are driver attributes defined in
-  `Libvirt IOMMU Domain`_) will direcly enabled.
+  `Libvirt IOMMU Domain`_) will directly enabled.
 
 * ``eim`` will directly enabled if machine type is Q35.
   ``eim`` is driver attribute defined in `Libvirt IOMMU Domain`_.

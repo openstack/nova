@@ -309,7 +309,7 @@ Parameter type
 ~~~~~~~~~~~~~~
 
 The parameters are defined in the parameter file (``parameters.yaml``).
-The type of parameters have to be one of followings:
+The type of parameters have to be one of following:
 
 * ``array``
 

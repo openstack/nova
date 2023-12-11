@@ -1077,7 +1077,7 @@ to a negative number and the weighing has the opposite effect of the default.
 
 This weigher compares hosts and orders them based on their number of instances
 respectively. By default the weigher is doing nothing but you
-can change its behaviour by modifiying the value of
+can change its behaviour by modifying the value of
 :oslo.config:option:`filter_scheduler.num_instances_weight_multiplier`.
 A positive value will favor hosts with a larger number of instances (packing
 strategy) while a negative value will follow a spread strategy that will

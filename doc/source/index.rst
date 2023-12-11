@@ -160,7 +160,7 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
 * :doc:`Running nova-api on wsgi <user/wsgi>`: Considerations for using a real
   WSGI container instead of the baked-in eventlet web server.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
