@@ -338,6 +338,23 @@ class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
         tree = conf.format_dom()
         self.assertIsNone(tree.find("driver[@discard]"))
 
+    def test_libvirt_volume_alias(self):
+        # Check that the name/alias gets set from the volume_id
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_host)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                'device_path': '/foo',
+                'volume_id': str(uuids.volume),
+            },
+            'serial': 'fake_serial',
+        }
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self.assertEqual('ua-%s' % uuids.volume,
+                         tree.find("alias").get('name'))
+
     def test_libvirt_volume_driver_encryption(self):
         fake_secret = FakeSecret()
         fake_host = mock.Mock(spec=host.Host)
