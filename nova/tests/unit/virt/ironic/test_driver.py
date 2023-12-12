@@ -2332,7 +2332,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         props = self.driver.get_volume_connector(instance)
 
         self.assertEqual(expected_props, props)
-        self.mock_conn.get_node.assert_called_once_with(node_uuid)
+        self.mock_conn.get_node.assert_called_once_with(
+            node_uuid, fields=mock.ANY)
         self.mock_conn.volume_connectors.assert_called_once_with(
             node=node_uuid, details=True,
         )
@@ -2392,7 +2393,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         props = self.driver.get_volume_connector(instance)
 
         self.assertEqual(expected_props, props)
-        self.mock_conn.get_node.assert_called_once_with(node_uuid)
+        self.mock_conn.get_node.assert_called_once_with(
+            node_uuid, fields=mock.ANY)
         self.mock_conn.volume_connectors.assert_called_once_with(
             node=node_uuid, details=True,
         )

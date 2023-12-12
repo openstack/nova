@@ -2003,7 +2003,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param instance: nova instance
         :return: A connector information dictionary
         """
-        node = self.ironic_connection.get_node(instance.node)
+        node = self._get_node(instance.node)
         properties = self._parse_node_properties(node)
         connectors = self.ironic_connection.volume_connectors(
             details=True,
