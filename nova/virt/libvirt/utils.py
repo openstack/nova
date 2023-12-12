@@ -122,12 +122,17 @@ TRAITS_CPU_MAPPING = make_reverse_cpu_traits_mapping()
 VTPM_DIR = '/var/lib/libvirt/swtpm/'
 
 
+class EncryptionOptions(ty.TypedDict):
+    secret: str
+    format: str
+
+
 def create_image(
     path: str,
     disk_format: str,
     disk_size: ty.Optional[ty.Union[str, int]],
     backing_file: ty.Optional[str] = None,
-    encryption: ty.Optional[ty.Dict[str, ty.Any]] = None
+    encryption: ty.Optional[EncryptionOptions] = None
 ) -> None:
     """Disk image creation with qemu-img
     :param path: Desired location of the disk image
@@ -140,7 +145,7 @@ def create_image(
         Can be None in the case of a COW image.
     :param backing_file: (Optional) Backing file to use.
     :param encryption: (Optional) Dict detailing various encryption attributes
-                       such as the format and passphrase.
+        such as the format and passphrase.
     """
     cmd = [
         'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'create', '-f', disk_format
@@ -170,7 +175,7 @@ def create_image(
     if encryption:
         with tempfile.NamedTemporaryFile(mode='tr+', encoding='utf-8') as f:
             # Write out the passphrase secret to a temp file
-            f.write(encryption.get('secret'))
+            f.write(encryption['secret'])
 
             # Ensure the secret is written to disk, we can't .close() here as
             # that removes the file when using NamedTemporaryFile
@@ -180,7 +185,7 @@ def create_image(
             encryption_opts = [
                 '--object', f"secret,id=sec,file={f.name}",
                 '-o', 'encrypt.key-secret=sec',
-                '-o', f"encrypt.format={encryption.get('format')}",
+                '-o', f"encrypt.format={encryption['format']}",
             ]
             # Supported luks options:
             #  cipher-alg=<str>       - Name of cipher algorithm and key length
