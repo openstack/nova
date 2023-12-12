@@ -86,3 +86,4 @@ redirectmatch 301 ^/nova/([^/]+)/admin/port_with_resource_request.html$ /nova/$1
 redirectmatch 301 ^/nova/([^/]+)/admin/manage-users.html$ /nova/$1/admin/architecture.html
 redirectmatch 301 ^/nova/([^/]+)/admin/mitigation-for-Intel-MDS-security-flaws.html /nova/$1/admin/cpu-models.html
 redirectmatch 301 ^/nova/([^/]+)/contributor/api-2.html$ /nova/$1/contributor/api.html
+redirectmatch 301 ^/nova/([^/]+)/admin/security-groups.html /nova/$1/user/security-groups.html
