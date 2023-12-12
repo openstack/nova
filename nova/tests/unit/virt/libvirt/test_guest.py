@@ -260,6 +260,84 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual('kvm', result.virt_type)
         self.assertEqual('fake', result.name)
 
+    def test_get_device_by_alias(self):
+        xml = """
+<domain type='qemu'>
+  <name>QEMUGuest1</name>
+  <uuid>c7a5fdbd-edaf-9455-926a-d65c16db1809</uuid>
+  <memory unit='KiB'>219136</memory>
+  <currentMemory unit='KiB'>219136</currentMemory>
+  <vcpu placement='static'>1</vcpu>
+  <os>
+    <type arch='i686' machine='pc'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu</emulator>
+    <disk type='block' device='disk'>
+      <alias name="qemu-disk1"/>
+      <driver name='qemu' type='raw'/>
+      <source dev='/dev/HostVG/QEMUGuest2'/>
+      <target dev='hda' bus='ide'/>
+      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+    </disk>
+    <disk type='network' device='disk'>
+      <alias name="ua-netdisk"/>
+      <driver name='qemu' type='raw'/>
+      <auth username='myname'>
+        <secret type='iscsi' usage='mycluster_myname'/>
+      </auth>
+      <source protocol='iscsi' name='iqn.1992-01.com.example'>
+        <host name='example.org' port='6000'/>
+      </source>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <disk type='network' device='disk'>
+      <driver name='qemu' type='raw'/>
+      <source protocol='iscsi' name='iqn.1992-01.com.example/1'>
+        <host name='example.org' port='6000'/>
+      </source>
+      <target dev='vdb' bus='virtio'/>
+    </disk>
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <source>
+        <address domain='0x0000' bus='0x06' slot='0x12' function='0x5'/>
+      </source>
+    </hostdev>
+    <hostdev mode='subsystem' type='pci' managed='yes'>
+      <source>
+        <address domain='0x0000' bus='0x06' slot='0x12' function='0x6'/>
+      </source>
+    </hostdev>
+    <interface type="bridge">
+      <mac address="fa:16:3e:f9:af:ae"/>
+      <model type="virtio"/>
+      <driver name="qemu"/>
+      <source bridge="qbr84008d03-11"/>
+      <target dev="tap84008d03-11"/>
+    </interface>
+    <controller type='usb' index='0'/>
+    <controller type='pci' index='0' model='pci-root'/>
+    <memballoon model='none'/>
+  </devices>
+</domain>
+"""
+        self.domain.XMLDesc.return_value = xml
+
+        dev = self.guest.get_device_by_alias('qemu-disk1')
+        self.assertIsInstance(dev, vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual('hda', dev.target_dev)
+
+        dev = self.guest.get_device_by_alias('ua-netdisk')
+        self.assertIsInstance(dev, vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual('vda', dev.target_dev)
+
+        self.assertIsNone(self.guest.get_device_by_alias('nope'))
+
     def test_get_devices(self):
         xml = """
 <domain type='qemu'>

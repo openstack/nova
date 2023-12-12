@@ -2715,6 +2715,33 @@ class LibvirtDriver(driver.ComputeDriver):
                 'instance %s: %s', device_name, instance_uuid, str(ex))
             raise
 
+    def _get_guest_disk_device(self, guest, disk_dev, volume_uuid=None,
+                               from_persistent_config=False):
+        """Attempt to find the guest disk
+
+        If a volume_uuid is provided, we will look for the device based
+        on the nova-specified alias. If not, or we do not find it that way,
+        fall back to the old way of using the disk_dev.
+        """
+        if volume_uuid is not None:
+            dev_alias = vconfig.make_libvirt_device_alias(volume_uuid)
+            dev = guest.get_device_by_alias(
+                dev_alias,
+                from_persistent_config=from_persistent_config)
+            if dev:
+                LOG.debug('Found disk %s by alias %s', disk_dev, dev_alias)
+                return dev
+        dev = guest.get_disk(disk_dev,
+                             from_persistent_config=from_persistent_config)
+        if dev:
+            # NOTE(danms): Only log that we fell back to the old way if it
+            # worked. Since we call this method after detach is done to
+            # ensure it is gone, we will always "fall back" to make sure it
+            # is gone by the "old way" and thus shouldn't announce it.
+            LOG.info('Device %s not found by alias %s, falling back',
+                        disk_dev, dev_alias)
+        return dev
+
     def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         disk_dev = mountpoint.rpartition("/")[2]
@@ -2725,7 +2752,11 @@ class LibvirtDriver(driver.ComputeDriver):
             # detaching any attached encryptors or disconnecting the underlying
             # volume in _disconnect_volume. Otherwise, the encryptor or volume
             # driver may report that the volume is still in use.
-            get_dev = functools.partial(guest.get_disk, disk_dev)
+            volume_id = driver_block_device.get_volume_id(connection_info)
+            get_dev = functools.partial(self._get_guest_disk_device,
+                                        guest,
+                                        disk_dev,
+                                        volume_uuid=volume_id)
             self._detach_with_retry(
                 guest,
                 instance.uuid,

@@ -414,6 +414,12 @@ class Guest(object):
 
         return self.get_all_devices(vconfig.LibvirtConfigGuestDisk)
 
+    def get_device_by_alias(self, devalias, devtype=None,
+                            from_persistent_config=False):
+        for dev in self.get_all_devices(devtype):
+            if dev.alias == devalias:
+                return dev
+
     def get_all_devices(
         self,
         devtype: vconfig.LibvirtConfigGuestDevice = None,
