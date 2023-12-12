@@ -7727,7 +7727,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         had_pci = 0
         # care only about the PCI devices
         for dev in cfg.devices:
-            if type(dev) == vconfig.LibvirtConfigGuestHostdevPCI:
+            if type(dev) is vconfig.LibvirtConfigGuestHostdevPCI:
                 had_pci += 1
                 self.assertEqual(dev.type, 'pci')
                 self.assertEqual(dev.managed, 'yes')
@@ -13473,7 +13473,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertGreater(len(job_info_records), 0)
                 rec = job_info_records.pop(0)
 
-                if type(rec) == str:
+                if type(rec) is str:
                     if rec == "thread-finish":
                         finish_event.send()
                     elif rec == "domain-stop":
@@ -14149,7 +14149,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         class AnyEventletEvent(object):
             def __eq__(self, other):
-                return type(other) == eventlet.event.Event
+                return type(other) is eventlet.event.Event
 
         mock_thread.assert_called_once_with(
             drvr._live_migration_operation,

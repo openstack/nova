@@ -820,10 +820,10 @@ class MatchType(object):
         self.wanttype = wanttype
 
     def __eq__(self, other):
-        return type(other) == self.wanttype
+        return type(other) is self.wanttype
 
     def __ne__(self, other):
-        return type(other) != self.wanttype
+        return type(other) is not self.wanttype
 
     def __repr__(self):
         return "<MatchType:" + str(self.wanttype) + ">"

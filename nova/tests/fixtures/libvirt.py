@@ -2157,10 +2157,10 @@ class Connection(object):
 
 def openAuth(uri, auth, flags=0):
 
-    if type(auth) != list:
+    if type(auth) is not list:
         raise Exception("Expected a list for 'auth' parameter")
 
-    if type(auth[0]) != list:
+    if type(auth[0]) is not list:
         raise Exception("Expected a function in 'auth[0]' parameter")
 
     if not callable(auth[1]):

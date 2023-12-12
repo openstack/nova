@@ -399,7 +399,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
 
         for topo_test in testdata:
             image_meta = objects.ImageMeta.from_dict(topo_test["image"])
-            if type(topo_test["expect"]) == tuple:
+            if type(topo_test["expect"]) is tuple:
                 (preferred, maximum) = hw.get_cpu_topology_constraints(
                     topo_test["flavor"], image_meta)
 
@@ -525,7 +525,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
         ]
 
         for topo_test in testdata:
-            if type(topo_test["expect"]) == list:
+            if type(topo_test["expect"]) is list:
                 actual = []
                 for topology in hw._get_possible_cpu_topologies(
                         topo_test["vcpus"],
@@ -1001,7 +1001,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 cpu_policy = hw.get_cpu_policy_constraint(
                     testitem["flavor"], image_meta)
                 self.assertIsNone(cpu_policy)
-            elif type(testitem["expect"]) == type:
+            elif type(testitem["expect"]) is type:
                 self.assertRaises(testitem["expect"],
                                   hw.get_cpu_policy_constraint,
                                   testitem["flavor"],
@@ -1990,7 +1990,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 topology = hw.numa_get_constraints(
                     testitem["flavor"], image_meta)
                 self.assertIsNone(topology)
-            elif type(testitem["expect"]) == type:
+            elif type(testitem["expect"]) is type:
                 self.assertRaises(testitem["expect"],
                                   hw.numa_get_constraints,
                                   testitem["flavor"],

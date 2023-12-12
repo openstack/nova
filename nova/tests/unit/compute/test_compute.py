@@ -12918,7 +12918,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                 self.aggr = aggr
 
             def __eq__(self, other_aggr):
-                if type(self.aggr) != type(other_aggr):
+                if type(self.aggr) is not type(other_aggr):
                     return False
                 return self.aggr.id == other_aggr.id
 

@@ -3114,7 +3114,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    purge_props=False)
         except (NotImplementedError, exception.ImageUnacceptable,
                 exception.Forbidden) as e:
-            if type(e) != NotImplementedError:
+            if type(e) is not NotImplementedError:
                 LOG.warning('Performing standard snapshot because direct '
                             'snapshot failed: %(error)s',
                             {'error': encodeutils.exception_to_unicode(e)})
