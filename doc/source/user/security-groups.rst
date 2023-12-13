@@ -2,19 +2,19 @@
 Security Groups
 ===============
 
-Security groups are sets of IP filter rules that are applied to all project
-servers, which define networking access to the instance. Group rules are
-project specific; project members can edit the default rules for their group
-and add new rule sets.
+Security groups are sets of IP filter rules that are applied to all servers,
+which define networking access to the server. Group rules are project-specific;
+project members can edit the default rules for their group and add new rule
+sets.
 
 All projects have a ``default`` security group which is applied to any port
-that has no other defined security group. Unless you change the default, this
-security group denies all incoming traffic and allows only outgoing traffic to
-your instance.
+that has no other security group defined. Unless you change the default, this
+security group denies all incoming traffic and allows only outgoing traffic
+from your instance.
 
 It's important to note early on that security groups and their quota are
 resources of :neutron-doc:`the networking service, Neutron
-</admin/intro-os-networking.html#security-groups>`. The are modelled as an
+</admin/intro-os-networking.html#security-groups>`. They are modelled as an
 attribute of ports rather than servers. With this said, Nova provides utility
 APIs that allow users to add and remove security groups from all ports attached
 to a server. In addition, it is possible to specify security groups to
@@ -47,13 +47,13 @@ By default, security groups can be created by any project member. For example:
     When adding a new security group, you should pick a descriptive but brief
     name. This name shows up in brief descriptions of the servers that use it
     where the longer description field often does not. For example, seeing that
-    an server is using security group ``http`` is much easier to understand
+    a server is using security group ``http`` is much easier to understand
     than ``bobs_group`` or ``secgrp1``.
 
 Security groups are really only containers for rules. Security group rules
 define the actual IP filter rules that will be applied. Security groups deny
-everything by default, so rules indicated what is allowed. A security group
-rule has a couple of attribute: an IP protocol (one of ICMP, TCP, or UDP), a
+everything by default, so rules indicate what is allowed. A security group
+rule has a couple of attributes: an IP protocol (one of ICMP, TCP, or UDP), a
 destination port or port range, and a remote IP range (in CIDR format). You
 create security group rules by specifying these attributes and the security
 group to which the rules should be added. For example:
@@ -65,7 +65,7 @@ group to which the rules should be added. For example:
         --remote-ip <ip-address> \
         <group>
 
-.. important::
+.. note::
 
     The ``<port-range>`` argument takes the form of ``port`` or
     ``from-port:to-port``. This specifies the range of local ports that
@@ -116,7 +116,7 @@ example:
 
 .. code-block:: console
 
-    $ openstack security group rule show <group> <rule>
+    $ openstack security group rule delete <rule>
 
 .. rubric:: Port operations
 
@@ -161,14 +161,15 @@ It is possible to manipulate and configure security groups on an server-wide
 basis. When you create a new server, networks can be either automatically
 allocated (a feature known as ":neutron-doc:`Get me a network
 </admin/config-auto-allocation.html>`") or manually configured. In both cases,
-attaching a network to server results in the creation of a port. It is possible
-to specify one or more security groups to assign to these ports. For example:
+attaching a network to a server results in the creation of a port. It is
+possible to specify one or more security groups to assign to these ports. For
+example:
 
 .. code-block:: console
 
     $ openstack server create --security-group <group> ... <name>
 
-.. note::
+.. important::
 
     These security groups will only apply to automatically created ports. They
     will not apply to any pre-created ports attached to the server at boot.
