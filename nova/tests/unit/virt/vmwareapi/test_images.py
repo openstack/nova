@@ -337,7 +337,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
     def test_image_defaults(self):
         image = images.VMwareImage(image_id='fake-image-id')
 
-        # N.B. We intentially don't use the defined constants here. Amongst
+        # N.B. We intentionally don't use the defined constants here. Amongst
         # other potential failures, we're interested in changes to their
         # values, which would not otherwise be picked up.
         self.assertEqual('otherGuest', image.os_type)

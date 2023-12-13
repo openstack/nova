@@ -141,7 +141,7 @@ class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
 
 class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
     """Tests that expect the live migration to succeed. Stubs out fakelibvirt's
-    migrateToURI3() with a stub that "suceeds" the migration.
+    migrateToURI3() with a stub that "succeeds" the migration.
     """
 
     def _migrate_stub(self, domain, destination, params, flags):

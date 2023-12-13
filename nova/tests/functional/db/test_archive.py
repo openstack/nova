@@ -190,7 +190,7 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
 
         And when the operator has e.g. 500,000 deleted instances rows (and
         millions of deleted rows total) they are trying to archive, being
-        forced to use a max_rows value serveral orders of magnitude lower than
+        forced to use a max_rows value several orders of magnitude lower than
         the number of rows they need to archive was a poor user experience.
 
         This tests that we are archiving each parent plus their child rows one

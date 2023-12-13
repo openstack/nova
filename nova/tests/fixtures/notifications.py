@@ -53,7 +53,7 @@ class _Sub(object):
                         # notifications = pprint.pformat(
                         #     {event: sub._notifications
                         #      for event, sub in VERSIONED_SUBS.items()})
-                        # FIXME: tranform this to get access to all the
+                        # FIXME: transform this to get access to all the
                         # versioned notifications
                         notifications = []
                         raise AssertionError(

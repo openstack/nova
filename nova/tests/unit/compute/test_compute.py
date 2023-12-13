@@ -1667,10 +1667,10 @@ class ComputeTestCase(BaseTestCase,
                        did_it_add_fault)
 
         @compute_manager.wrap_instance_fault
-        def failer(self2, context, instance):
+        def failure(self2, context, instance):
             raise NotImplementedError()
 
-        self.assertRaises(NotImplementedError, failer,
+        self.assertRaises(NotImplementedError, failure,
                           self.compute, self.context, instance=inst)
 
         self.assertTrue(called['fault_added'])
@@ -1687,10 +1687,10 @@ class ComputeTestCase(BaseTestCase,
                        did_it_add_fault)
 
         @compute_manager.wrap_instance_fault
-        def failer(self2, context, instance):
+        def failure(self2, context, instance):
             raise NotImplementedError()
 
-        self.assertRaises(NotImplementedError, failer,
+        self.assertRaises(NotImplementedError, failure,
                           self.compute, self.context, inst)
 
         self.assertTrue(called['fault_added'])
@@ -1707,10 +1707,10 @@ class ComputeTestCase(BaseTestCase,
                        did_it_add_fault)
 
         @compute_manager.wrap_instance_fault
-        def failer(self2, context, instance):
+        def failure(self2, context, instance):
             raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
-        self.assertRaises(exception.InstanceNotFound, failer,
+        self.assertRaises(exception.InstanceNotFound, failure,
                           self.compute, self.context, inst)
 
         self.assertFalse(called['fault_added'])
@@ -5904,7 +5904,7 @@ class ComputeTestCase(BaseTestCase,
         updated_topology = objects.NUMATopology.obj_from_primitive(
             jsonutils.loads(cn.numa_topology))
 
-        # after confirming resize all cpus on currect host must be free
+        # after confirming resize all cpus on current host must be free
         self.assertEqual(2, len(updated_topology.cells))
         for cell in updated_topology.cells:
             self.assertEqual(set(), cell.pinned_cpus)

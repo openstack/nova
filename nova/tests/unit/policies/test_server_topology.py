@@ -52,7 +52,7 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
         # Check that system reader or and server owner is able to get
         # the server topology.
         # With legacy rule and no scope checks, all admin is able to get
-        # server topology wth host info.
+        # server topology with host info.
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]

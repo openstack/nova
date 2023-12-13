@@ -1033,7 +1033,7 @@ class API:
                             context,
                             ['nova-compute']))
                     if min_version < SUPPORT_VNIC_TYPE_ACCELERATOR:
-                        msg = ("Port with cyborg profile is not avaliable"
+                        msg = ("Port with cyborg profile is not available"
                             " until upgrade finished.")
                         raise exception.ForbiddenPortsWithAccelerator(msg)
 

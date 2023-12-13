@@ -92,7 +92,7 @@ class ForceUpWithDoneEvacuationsv252(ForceUpWithDoneEvacuations):
     """Regression test for bug 1922053 using microversion 2.52.
 
     Required as the PUT /os-services/force-down API used by this test via
-    self.api.force_down_service is superseeded by PUT /os-services/{service_id}
+    self.api.force_down_service is superseded by PUT /os-services/{service_id}
     API used by our parent ForceUpWithDoneEvacuations class from >=2.53.
 
     This test also uses the 'availability_zone' parameter to force the server

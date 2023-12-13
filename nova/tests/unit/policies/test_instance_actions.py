@@ -171,7 +171,7 @@ class InstanceActionsDeprecatedPolicyTest(base.BasePolicyTest):
         self.reader_req = fakes.HTTPRequest.blank('')
         self.reader_req.environ['nova.context'] = self.project_reader_context
         self.deprecated_policy = ia_policies.ROOT_POLICY
-        # Overridde rule with different checks than defaults so that we can
+        # Override rule with different checks than defaults so that we can
         # verify the rule overridden case.
         override_rules = {
             self.deprecated_policy: base_policy.RULE_ADMIN_OR_OWNER,

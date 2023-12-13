@@ -36,7 +36,7 @@ def get_connector_properties(
 
 
 class ISCSIConnector(object):
-    """Mimick the iSCSI connector."""
+    """Mimic the iSCSI connector."""
 
     def __init__(
         self, root_helper, driver=None, execute=None, use_multipath=False,

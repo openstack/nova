@@ -171,7 +171,7 @@ class AttachInterfacesDeprecatedPolicyTest(base.BasePolicyTest):
         self.reader_req = fakes.HTTPRequest.blank('')
         self.reader_req.environ['nova.context'] = self.project_reader_context
         self.deprecated_policy = "os_compute_api:os-attach-interfaces"
-        # Overridde rule with different checks than defaults so that we can
+        # Override rule with different checks than defaults so that we can
         # verify the rule overridden case.
         override_rules = {self.deprecated_policy: base_policy.RULE_ADMIN_API}
         # NOTE(gmann): Only override the deprecated rule in policy file so

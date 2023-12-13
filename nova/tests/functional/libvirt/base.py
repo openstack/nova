@@ -128,9 +128,9 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
             core, and 16GB of RAM.
         :param connection: A fake libvirt connection. You should not provide it
             directly. However it is used by restart_compute_service to
-            implement restart without loosing the hypervisor state.
+            implement restart without losing the hypervisor state.
         :returns: The hostname of the created service, which can be used to
-            lookup the created service and UUID of the assocaited resource
+            lookup the created service and UUID of the associated resource
             provider.
         """
         if connection and (
@@ -264,7 +264,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 class LibvirtMigrationMixin(object):
     """A simple mixin to facilliate successful libvirt live migrations
 
-    Requires that the test class set self.server for the specific test instnace
+    Requires that the test class set self.server for the specific test instance
     and self.{src,dest} to indicate the direction of the migration. For any
     scenarios more complex than this they should override _migrate_stub with
     their own implementation.

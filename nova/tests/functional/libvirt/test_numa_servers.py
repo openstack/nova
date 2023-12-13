@@ -849,7 +849,7 @@ class NUMAServersTest(NUMAServersTestBase):
             self.assertEqual(2, len(src_numa_topology.cells[0].pinned_cpus))
             self.assertEqual(2, len(dst_numa_topology.cells[0].pinned_cpus))
 
-            # before continuing with the actualy confirm process
+            # before continuing with the actually confirm process
             return orig_confirm(*args, **kwargs)
 
         self.stub_out(

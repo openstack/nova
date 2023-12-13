@@ -206,7 +206,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         self.assertFalse(dom.isActive(), 'Defined domain was running.')
         dom.createWithFlags(0)
         self.assertTrue(dom.isActive(),
-                        'Domain wasn\'t running after createWithFlags')
+                        "Domain wasn't running after createWithFlags")
 
     def test_managedSave(self):
         uuid = uuidutils.generate_uuid()

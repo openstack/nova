@@ -254,7 +254,7 @@ class CinderFixture(fixtures.Fixture):
                 'attach_status': 'attached',
                 'attachments': attachments,
             })
-        # Otherwise mark the volume as avilable and detached
+        # Otherwise mark the volume as available and detached
         else:
             volume.update({
                 'status': 'available',

@@ -1132,7 +1132,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
         pci_info_no_sriov = copy.deepcopy(pci_info)
 
-        # Disable SRIOV capabilties in PF and delete the VFs
+        # Disable SRIOV capabilities in PF and delete the VFs
         self._disable_sriov_in_pf(pci_info_no_sriov)
 
         self.start_compute('test_compute0', pci_info=pci_info_no_sriov)
@@ -1178,7 +1178,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         As the vnic_type is changed on the port but the vif_type is hwveb
         instead of macvtap the vif plug logic will try to look up the netdev
-        of the parent VF. Howvere that VF consumed by the instance so the
+        of the parent VF. However that VF consumed by the instance so the
         netdev does not exists. This causes that the compute service will fail
         with an exception during startup
         """
@@ -1750,7 +1750,7 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
             # 1 PF and 2 VFs .
             self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 3)
             server = self._confirm_resize(server)
-            # but once we confrim it should be reduced back to 1 PF and 1 VF
+            # but once we confirm it should be reduced back to 1 PF and 1 VF
             self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
             # assert the hostname has not have changed as part
             # of the resize.
@@ -1849,7 +1849,7 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
 
         self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
         # enable the dest we do not need to disable the source since cold
-        # migrate wont happen to the same host in the libvirt driver
+        # migrate won't happen to the same host in the libvirt driver
         self.api.put_service(
             self.computes['dest'].service_ref.uuid, {'status': 'enabled'})
         with mock.patch(
@@ -1918,7 +1918,7 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
 
         self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
         # enable the dest we do not need to disable the source since cold
-        # migrate wont happen to the same host in the libvirt driver
+        # migrate won't happen to the same host in the libvirt driver
         self.api.put_service(
             self.computes['dest'].service_ref.uuid, {'status': 'enabled'})
 
