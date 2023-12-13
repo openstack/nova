@@ -26,13 +26,12 @@ import tempfile
 import time
 from urllib import parse as urlparse
 
-import microversion_parse
 from openstack import exceptions as sdk_exc
+from openstack import utils as sdk_utils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import excutils
-from oslo_utils import importutils
 from tooz import hashring as hash_ring
 
 from nova.api.metadata import base as instance_metadata
@@ -58,8 +57,6 @@ from nova.virt.ironic import ironic_states
 from nova.virt.ironic import patcher
 from nova.virt import netutils
 
-
-ironic = None
 
 LOG = logging.getLogger(__name__)
 
@@ -185,16 +182,12 @@ class IronicDriver(virt_driver.ComputeDriver):
     rebalances_nodes = True
 
     def __init__(self, virtapi, read_only=False):
-        super(IronicDriver, self).__init__(virtapi)
-        global ironic
-        if ironic is None:
-            ironic = importutils.import_module('ironicclient')
+        super().__init__(virtapi)
 
         self.node_cache = {}
         self.node_cache_time = 0
         self.servicegroup_api = servicegroup.API()
 
-        self.ironicclient = client_wrapper.IronicClientWrapper()
         self._ironic_connection = None
 
     @property
@@ -388,9 +381,11 @@ class IronicDriver(virt_driver.ComputeDriver):
         LOG.debug('Preparing to spawn instance %s.', instance.uuid)
         node_uuid = instance.get('node')
         if not node_uuid:
-            raise ironic.exc.BadRequest(
-                _("Ironic node uuid not supplied to "
-                  "driver for instance %s.") % instance.uuid)
+            msg = _(
+                "Ironic node uuid not supplied to "
+                "driver for instance %s."
+            ) % instance.uuid
+            raise exception.NovaException(msg)
         node = self._get_node(node_uuid)
 
         # Its possible this node has just moved from deleting
@@ -711,7 +706,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 # filter by conductor_group. If it cannot, limiting to
                 # peer_list could end up with a node being managed by multiple
                 # compute services.
-                self._can_send_version(min_version='1.46')
+                self._can_send_version('1.46')
 
                 peer_list = set(CONF.ironic.peer_list)
                 # these configs are mutable; need to check at runtime and init.
@@ -771,7 +766,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         conductor_group = CONF.ironic.conductor_group
         if conductor_group is not None:
             try:
-                self._can_send_version(min_version='1.46')
+                self._can_send_version('1.46')
                 nodes = _get_node_list(conductor_group=conductor_group)
                 LOG.debug('Limiting manageable ironic nodes to conductor '
                           'group %s', conductor_group)
@@ -1153,9 +1148,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         # is a significant issue. It may mean we've been passed the wrong data.
         node_uuid = instance.get('node')
         if not node_uuid:
-            raise ironic.exc.BadRequest(
+            raise exception.NovaException(
                 _("Ironic node uuid not supplied to "
-                  "driver for instance %s.") % instance.uuid)
+                  "driver for instance %s.") % instance.uuid
+            )
 
         node = self._get_node(node_uuid)
         flavor = instance.flavor
@@ -1181,20 +1177,27 @@ class IronicDriver(virt_driver.ComputeDriver):
             instance.save()
 
         # validate we are ready to do the deploy
-        validate_chk = self.ironicclient.call("node.validate", node_uuid)
-        if (not validate_chk.deploy.get('result') or
-                not validate_chk.power.get('result') or
-                not validate_chk.storage.get('result')):
+        # NOTE(stephenfin): we don't pass required since we have to do our own
+        # validation
+        validate_chk = self.ironic_connection.validate_node(
+            node_uuid,
+            required=None,
+        )
+        if (
+            not validate_chk['deploy'].result or
+            not validate_chk['power'].result or
+            not validate_chk['storage'].result
+        ):
             # something is wrong. undo what we have done
             self._cleanup_deploy(node, instance, network_info)
             raise exception.ValidationError(_(
-                "Ironic node: %(id)s failed to validate."
-                " (deploy: %(deploy)s, power: %(power)s,"
-                " storage: %(storage)s)")
+                "Ironic node: %(id)s failed to validate. "
+                "(deploy: %(deploy)s, power: %(power)s, "
+                "storage: %(storage)s)")
                 % {'id': node.uuid,
-                   'deploy': validate_chk.deploy,
-                   'power': validate_chk.power,
-                   'storage': validate_chk.storage})
+                   'deploy': validate_chk['deploy'],
+                   'power': validate_chk['power'],
+                   'storage': validate_chk['storage']})
 
         # Config drive
         configdrive_value = None
@@ -1526,7 +1529,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         LOG.debug('Trigger crash dump called for instance', instance=instance)
         node = self._validate_instance_and_node(instance)
 
-        self.ironicclient.call("node.inject_nmi", node.uuid)
+        self.ironic_connection.inject_nmi_to_node(node.uuid)
 
         LOG.info('Successfully triggered crash dump into Ironic node %s',
                  node.uuid, instance=instance)
@@ -1806,12 +1809,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         node_uuid = node.uuid
 
         def _get_console():
-            """Request ironicclient to acquire node console."""
+            """Request to acquire node console."""
             try:
-                return self.ironicclient.call('node.get_console', node_uuid)
-            except (exception.NovaException,  # Retry failed
-                    ironic.exc.InternalServerError,  # Validations
-                    ironic.exc.BadRequest) as e:  # Maintenance
+                return self.ironic_connection.get_node_console(node_uuid)
+            except sdk_exc.SDKException as e:
                 LOG.error('Failed to acquire console information for '
                           'instance %(inst)s: %(reason)s',
                           {'inst': instance.uuid, 'reason': e})
@@ -1829,13 +1830,10 @@ class IronicDriver(virt_driver.ComputeDriver):
             return False
 
         def _enable_console(mode):
-            """Request ironicclient to enable/disable node console."""
+            """Request to enable/disable node console."""
             try:
-                self.ironicclient.call('node.set_console_mode', node_uuid,
-                                       mode)
-            except (exception.NovaException,  # Retry failed
-                    ironic.exc.InternalServerError,  # Validations
-                    ironic.exc.BadRequest) as e:  # Maintenance
+                self.ironic_connection.set_node_console_mode(node_uuid, mode)
+            except sdk_exc.SDKException as e:
                 LOG.error('Failed to set console mode to "%(mode)s" '
                           'for instance %(inst)s: %(reason)s',
                           {'mode': mode,
@@ -2111,30 +2109,13 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         return None
 
-    def _can_send_version(self, min_version=None, max_version=None):
+    def _can_send_version(self, version=None):
         """Validate if the supplied version is available in the API."""
-        # NOTE(TheJulia): This will effectively just be a pass if no
-        # version negotiation has occured, since there is no way for
-        # us to know without explicitly otherwise requesting that
-        # back-end negotiation occurs. This is a capability that is
-        # present in python-ironicclient, however it may not be needed
-        # in this case.
-        if self.ironicclient.is_api_version_negotiated:
-            current_api_version = self.ironicclient.current_api_version
-            if (min_version and
-                    microversion_parse.parse_version_string(
-                        current_api_version) <
-                    microversion_parse.parse_version_string(
-                        min_version)):
-                raise exception.IronicAPIVersionNotAvailable(
-                    version=min_version)
-            if (max_version and
-                    microversion_parse.parse_version_string(
-                        current_api_version) >
-                    microversion_parse.parse_version_string(
-                        max_version)):
-                raise exception.IronicAPIVersionNotAvailable(
-                    version=max_version)
+        if not sdk_utils.supports_microversion(
+            self.ironic_connection,
+            version,
+        ):
+            raise exception.IronicAPIVersionNotAvailable(version=version)
 
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password, block_device_info):
