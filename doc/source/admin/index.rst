@@ -160,7 +160,6 @@ log management and live migration of instances.
    metadata-service
    unified-limits
    networking
-   security-groups
    security
    vendordata
    notifications

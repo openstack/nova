@@ -87,3 +87,4 @@
 /nova/latest/admin/manage-users.html 301 /nova/latest/admin/architecture.html
 /nova/latest/admin/mitigation-for-Intel-MDS-security-flaws.html 301 /nova/latest/admin/cpu-models.html
 /nova/latest/contributor/api-2.html 301 /nova/latest/contributor/api.html
+/nova/latest/admin/security-groups.html 301 /nova/latest/user/security-groups.html
