@@ -13,12 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
-from ironicclient import exc as ironic_exc
+import fixtures
+from openstack import exceptions as sdk_exc
 from webob import exc
 
-from nova.api.openstack.compute import baremetal_nodes as b_nodes_v21
+from nova.api.openstack.compute import baremetal_nodes
 from nova import context
 from nova import exception
 from nova import test
@@ -26,105 +25,69 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.virt.ironic import utils as ironic_utils
 
 
-def fake_node(**updates):
-    node = {
-        'id': 1,
-        'service_host': "host",
-        'cpus': 8,
-        'memory_mb': 8192,
-        'local_gb': 128,
-        'pm_address': "10.1.2.3",
-        'pm_user': "pm_user",
-        'pm_password': "pm_pass",
-        'terminal_port': 8000,
-        'interfaces': [],
-        'instance_uuid': 'fake-instance-uuid',
-    }
-    if updates:
-        node.update(updates)
-    return node
-
-
-def fake_node_ext_status(**updates):
-    node = fake_node(uuid='fake-uuid',
-                     task_state='fake-task-state',
-                     updated_at='fake-updated-at',
-                     pxe_config_path='fake-pxe-config-path')
-    if updates:
-        node.update(updates)
-    return node
-
-
-FAKE_IRONIC_CLIENT = ironic_utils.FakeClient()
-
-
-@mock.patch.object(b_nodes_v21, '_get_ironic_client',
-                   lambda *_: FAKE_IRONIC_CLIENT)
-class BareMetalNodesTestV21(test.NoDBTestCase):
-    mod = b_nodes_v21
+class BareMetalNodesTest(test.NoDBTestCase):
+    mod = baremetal_nodes
 
     def setUp(self):
-        super(BareMetalNodesTestV21, self).setUp()
+        super().setUp()
 
         self._setup()
         self.context = context.get_admin_context()
         self.request = fakes.HTTPRequest.blank('', use_admin_context=True)
 
-    def _setup(self):
-        self.controller = b_nodes_v21.BareMetalNodeController()
+        # stub out openstacksdk
+        self.mock_conn = self.useFixture(
+            fixtures.MockPatchObject(self.controller, '_ironic_connection'),
+        ).mock
 
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list')
-    def test_index_ironic(self, mock_list):
+    def _setup(self):
+        self.controller = baremetal_nodes.BareMetalNodeController()
+
+    def test_index_ironic(self):
         properties = {'cpus': 2, 'memory_mb': 1024, 'local_gb': 20}
         node = ironic_utils.get_test_node(properties=properties)
-        mock_list.return_value = [node]
+        self.mock_conn.nodes.return_value = iter([node])
 
         res_dict = self.controller.index(self.request)
+
         expected_output = {'nodes':
                             [{'memory_mb': properties['memory_mb'],
                              'host': 'IRONIC MANAGED',
                              'disk_gb': properties['local_gb'],
                              'interfaces': [],
                              'task_state': None,
-                             'id': node.uuid,
+                             'id': node.id,
                              'cpus': properties['cpus']}]}
         self.assertEqual(expected_output, res_dict)
-        mock_list.assert_called_once_with(detail=True)
+        self.mock_conn.nodes.assert_called_once_with(details=True)
 
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list')
-    def test_index_ironic_missing_properties(self, mock_list):
+    def test_index_ironic_missing_properties(self):
         properties = {'cpus': 2}
         node = ironic_utils.get_test_node(properties=properties)
-        mock_list.return_value = [node]
+        self.mock_conn.nodes.return_value = iter([node])
 
         res_dict = self.controller.index(self.request)
+
         expected_output = {'nodes':
                             [{'memory_mb': 0,
                              'host': 'IRONIC MANAGED',
                              'disk_gb': 0,
                              'interfaces': [],
                              'task_state': None,
-                             'id': node.uuid,
+                             'id': node.id,
                              'cpus': properties['cpus']}]}
         self.assertEqual(expected_output, res_dict)
-        mock_list.assert_called_once_with(detail=True)
+        self.mock_conn.nodes.assert_called_once_with(details=True)
 
-    def test_index_ironic_not_implemented(self):
-        with mock.patch.object(self.mod, 'ironic_client', None):
-            self.assertRaises(exc.HTTPNotImplemented,
-                              self.controller.index,
-                              self.request)
-
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list_ports')
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get')
-    def test_show_ironic(self, mock_get, mock_list_ports):
+    def test_show_ironic(self):
         properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
         node = ironic_utils.get_test_node(properties=properties)
         port = ironic_utils.get_test_port()
-        mock_get.return_value = node
-        mock_list_ports.return_value = [port]
+        self.mock_conn.get_node.return_value = node
+        self.mock_conn.ports.return_value = iter([port])
 
-        res_dict = self.controller.show(self.request, node.uuid)
+        res_dict = self.controller.show(self.request, node.id)
+
         expected_output = {'node':
                             {'memory_mb': properties['memory_mb'],
                              'instance_uuid': None,
@@ -132,22 +95,21 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
                              'disk_gb': properties['local_gb'],
                              'interfaces': [{'address': port.address}],
                              'task_state': None,
-                             'id': node.uuid,
+                             'id': node.id,
                              'cpus': properties['cpus']}}
         self.assertEqual(expected_output, res_dict)
-        mock_get.assert_called_once_with(node.uuid)
-        mock_list_ports.assert_called_once_with(node.uuid)
+        self.mock_conn.get_node.assert_called_once_with(node.id)
+        self.mock_conn.ports.assert_called_once_with(node=node.id)
 
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list_ports')
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get')
-    def test_show_ironic_no_properties(self, mock_get, mock_list_ports):
+    def test_show_ironic_no_properties(self):
         properties = {}
         node = ironic_utils.get_test_node(properties=properties)
         port = ironic_utils.get_test_port()
-        mock_get.return_value = node
-        mock_list_ports.return_value = [port]
+        self.mock_conn.get_node.return_value = node
+        self.mock_conn.ports.return_value = iter([port])
 
-        res_dict = self.controller.show(self.request, node.uuid)
+        res_dict = self.controller.show(self.request, node.id)
+
         expected_output = {'node':
                             {'memory_mb': 0,
                              'instance_uuid': None,
@@ -155,38 +117,34 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
                              'disk_gb': 0,
                              'interfaces': [{'address': port.address}],
                              'task_state': None,
-                             'id': node.uuid,
+                             'id': node.id,
                              'cpus': 0}}
         self.assertEqual(expected_output, res_dict)
-        mock_get.assert_called_once_with(node.uuid)
-        mock_list_ports.assert_called_once_with(node.uuid)
+        self.mock_conn.get_node.assert_called_once_with(node.id)
+        self.mock_conn.ports.assert_called_once_with(node=node.id)
 
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list_ports')
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get')
-    def test_show_ironic_no_interfaces(self, mock_get, mock_list_ports):
+    def test_show_ironic_no_interfaces(self):
         properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
         node = ironic_utils.get_test_node(properties=properties)
-        mock_get.return_value = node
-        mock_list_ports.return_value = []
+        self.mock_conn.get_node.return_value = node
+        self.mock_conn.ports.return_value = iter([])
 
-        res_dict = self.controller.show(self.request, node.uuid)
+        res_dict = self.controller.show(self.request, node.id)
+
         self.assertEqual([], res_dict['node']['interfaces'])
-        mock_get.assert_called_once_with(node.uuid)
-        mock_list_ports.assert_called_once_with(node.uuid)
+        self.mock_conn.get_node.assert_called_once_with(node.id)
+        self.mock_conn.ports.assert_called_once_with(node=node.id)
 
-    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get',
-                       side_effect=ironic_exc.NotFound())
-    def test_show_ironic_node_not_found(self, mock_get):
-        error = self.assertRaises(exc.HTTPNotFound, self.controller.show,
-                                  self.request, 'fake-uuid')
+    def test_show_ironic_node_not_found(self):
+        self.mock_conn.get_node.side_effect = sdk_exc.NotFoundException()
+
+        error = self.assertRaises(
+            exc.HTTPNotFound,
+            self.controller.show,
+            self.request, 'fake-uuid',
+        )
+
         self.assertIn('fake-uuid', str(error))
-
-    def test_show_ironic_not_implemented(self):
-        with mock.patch.object(self.mod, 'ironic_client', None):
-            properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
-            node = ironic_utils.get_test_node(properties=properties)
-            self.assertRaises(exc.HTTPNotImplemented, self.controller.show,
-                              self.request, node.uuid)
 
     def test_create_ironic_not_supported(self):
         self.assertRaises(exc.HTTPBadRequest,
@@ -209,11 +167,11 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
                           self.request, 'fake-id', 'fake-body')
 
 
-class BareMetalNodesTestDeprecation(test.NoDBTestCase):
+class BareMetalNodesTestV236(test.NoDBTestCase):
 
     def setUp(self):
-        super(BareMetalNodesTestDeprecation, self).setUp()
-        self.controller = b_nodes_v21.BareMetalNodeController()
+        super().setUp()
+        self.controller = baremetal_nodes.BareMetalNodeController()
         self.req = fakes.HTTPRequest.blank('', version='2.36')
 
     def test_all_apis_return_not_found(self):

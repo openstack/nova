@@ -14,51 +14,65 @@
 
 from unittest import mock
 
+from openstack.baremetal.v1 import _proxy as baremetal_proxy
+from openstack.baremetal.v1 import node
+
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
-class FakeNode(object):
-    def __init__(self, uuid='058d27fa-241b-445a-a386-08c04f96db43'):
-        self.uuid = uuid
-        self.provision_state = 'active'
-        self.properties = {'cpus': '2',
-                           'memory_mb': '1024',
-                           'local_gb': '10'}
-        self.instance_uuid = '1ea4e53e-149a-4f02-9515-590c9fb2315a'
+fake_nodes = [
+    node.Node(
+        id=id_,
+        provision_state='active',
+        properties={
+            'cpus': '2',
+            'memory_mb': '1024',
+            'local_gb': '10',
+        },
+        instance_id='1ea4e53e-149a-4f02-9515-590c9fb2315a',
+    ) for id_ in (
+        '058d27fa-241b-445a-a386-08c04f96db43',
+        'e2025409-f3ce-4d6a-9788-c565cf3b1b1c',
+    )
+]
 
 
-class NodeManager(object):
-    def list(self, detail=False):
-        return [FakeNode(), FakeNode('e2025409-f3ce-4d6a-9788-c565cf3b1b1c')]
-
-    def get(self, id):
-        return FakeNode(id)
-
-    def list_ports(self, id):
-        return []
+def nodes(*args, **kwargs):
+    for fake_node in fake_nodes:
+        yield fake_node
 
 
-class fake_client(object):
-    node = NodeManager()
+def get_node(*args, **kwargs):
+    return fake_nodes[0]
 
 
+def ports(*args, **kwargs):
+    # return an empty generator
+    return
+    yield
+
+
+fake_client = mock.create_autospec(baremetal_proxy.Proxy)
+fake_client.nodes.side_effect = nodes
+fake_client.get_node.side_effect = get_node
+fake_client.ports.side_effect = ports
+
+
+@mock.patch(
+    "nova.api.openstack.compute.baremetal_nodes"
+    ".BareMetalNodeController.ironic_connection",
+    new_callable=mock.PropertyMock,
+    return_value=fake_client,
+)
 class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     sample_dir = "os-baremetal-nodes"
 
-    @mock.patch("nova.api.openstack.compute.baremetal_nodes"
-                "._get_ironic_client")
     def test_baremetal_nodes_list(self, mock_get_irc):
-        mock_get_irc.return_value = fake_client()
-
         response = self._do_get('os-baremetal-nodes')
         self._verify_response('baremetal-node-list-resp', {}, response, 200)
 
-    @mock.patch("nova.api.openstack.compute.baremetal_nodes"
-                "._get_ironic_client")
     def test_baremetal_nodes_get(self, mock_get_irc):
-        mock_get_irc.return_value = fake_client()
-
         response = self._do_get('os-baremetal-nodes/'
                                 '058d27fa-241b-445a-a386-08c04f96db43')
         self._verify_response('baremetal-node-get-resp', {}, response, 200)
