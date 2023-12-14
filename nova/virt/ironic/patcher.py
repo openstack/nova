@@ -29,7 +29,7 @@ CONF = nova.conf.CONF
 def create(node):
     """Create an instance of the appropriate DriverFields class.
 
-    :param node: a node object returned from ironicclient
+    :param node: a node object returned from openstacksdk
     :returns: A GenericDriverFields instance.
     """
     return GenericDriverFields(node)

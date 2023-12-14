@@ -52,16 +52,15 @@ from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
 from nova.virt import hardware
-from nova.virt.ironic import client_wrapper
 from nova.virt.ironic import ironic_states
 from nova.virt.ironic import patcher
 from nova.virt import netutils
 
-
 LOG = logging.getLogger(__name__)
-
-
 CONF = nova.conf.CONF
+
+# The API version required by the Ironic driver
+IRONIC_API_VERSION = (1, 46)
 
 _POWER_STATE_MAP = {
     ironic_states.POWER_ON: power_state.RUNNING,
@@ -575,7 +574,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     def _get_hypervisor_version(self):
         """Returns the version of the Ironic API service endpoint."""
-        return client_wrapper.IRONIC_API_VERSION[0]
+        return IRONIC_API_VERSION[0]
 
     def instance_exists(self, instance):
         """Checks the existence of an instance.
