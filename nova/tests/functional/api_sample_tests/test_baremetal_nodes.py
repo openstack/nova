@@ -48,8 +48,7 @@ def get_node(*args, **kwargs):
 
 def ports(*args, **kwargs):
     # return an empty generator
-    return
-    yield
+    yield from ()
 
 
 fake_client = mock.create_autospec(baremetal_proxy.Proxy)
