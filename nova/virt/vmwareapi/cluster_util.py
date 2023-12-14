@@ -429,3 +429,22 @@ def update_cluster_das_vm_override(session, cluster, vm_ref, operation='add',
     config_spec.dasVmConfigSpec = [das_vm_spec]
 
     reconfigure_cluster(session, cluster, config_spec)
+
+
+def fetch_cluster_das_vm_restart_priority(session, cluster_ref, vm_ref):
+    """Fetch restartPriority DAS override for the VM on the cluster
+
+    The cluster is identified by a cluster_ref and we fetch the cluster_config.
+
+    Returns the restartPriority of one VM as a
+    `ClusterDasVmSettingsRestartPriority` string or None if no overrides
+    configured.
+    """
+    cluster_config = session._call_method(vutil, "get_object_property",
+                                          cluster_ref, "configurationEx")
+
+    overrides = getattr(cluster_config, 'dasVmConfig', [])
+    for o in overrides:
+        if vutil.get_moref_value(o.key) == vutil.get_moref_value(vm_ref):
+            return o.dasSettings.restartPriority
+    return None

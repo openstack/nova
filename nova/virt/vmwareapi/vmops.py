@@ -1503,9 +1503,13 @@ class VMwareVMOps(object):
             LOG.debug("Adding restart priority '%s' for big VM.",
                       restart_priority, instance=instance)
             vm_ref = vm_util.get_vm_ref(self._session, instance)
-            cluster_util.update_cluster_das_vm_override(
-                self._session, self._cluster, vm_ref, operation='add',
-                restart_priority=restart_priority)
+            prev_restart_priority = \
+                cluster_util.fetch_cluster_das_vm_restart_priority(
+                    self._session, self._cluster, vm_ref)
+            if prev_restart_priority is None:
+                cluster_util.update_cluster_das_vm_override(
+                    self._session, self._cluster, vm_ref, operation='add',
+                    restart_priority=restart_priority)
 
     def _clean_up_after_special_spawning(self, context, instance_memory_mb,
                                          instance_flavor):
