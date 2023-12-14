@@ -55,7 +55,7 @@ class BareMetalNodesTest(test.NoDBTestCase):
                              'host': 'IRONIC MANAGED',
                              'disk_gb': properties['local_gb'],
                              'interfaces': [],
-                             'task_state': None,
+                             'task_state': 'available',
                              'id': node.id,
                              'cpus': properties['cpus']}]}
         self.assertEqual(expected_output, res_dict)
@@ -73,7 +73,7 @@ class BareMetalNodesTest(test.NoDBTestCase):
                              'host': 'IRONIC MANAGED',
                              'disk_gb': 0,
                              'interfaces': [],
-                             'task_state': None,
+                             'task_state': 'available',
                              'id': node.id,
                              'cpus': properties['cpus']}]}
         self.assertEqual(expected_output, res_dict)
@@ -94,7 +94,7 @@ class BareMetalNodesTest(test.NoDBTestCase):
                              'host': 'IRONIC MANAGED',
                              'disk_gb': properties['local_gb'],
                              'interfaces': [{'address': port.address}],
-                             'task_state': None,
+                             'task_state': 'available',
                              'id': node.id,
                              'cpus': properties['cpus']}}
         self.assertEqual(expected_output, res_dict)
@@ -116,7 +116,7 @@ class BareMetalNodesTest(test.NoDBTestCase):
                              'host': 'IRONIC MANAGED',
                              'disk_gb': 0,
                              'interfaces': [{'address': port.address}],
-                             'task_state': None,
+                             'task_state': 'available',
                              'id': node.id,
                              'cpus': 0}}
         self.assertEqual(expected_output, res_dict)
