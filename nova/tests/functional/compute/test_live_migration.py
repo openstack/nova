@@ -255,7 +255,8 @@ class LiveMigrationNeutronInteractionsTest(
         the network_info from the instance info cache, and not Neutron.
         """
         def stub_notify(context, instance, event_suffix,
-                        network_info=None, extra_usage_info=None, fault=None):
+                        network_info=None, extra_usage_info=None, fault=None,
+                        best_effort=False):
             vif = network_info[0]
             # Make sure we have the correct VIF (the NeutronFixture
             # deterministically uses port_2 for networks=auto) and that the
