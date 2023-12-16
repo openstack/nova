@@ -406,7 +406,7 @@ def notify_usage_exists(notifier, context, instance_ref, host,
 
 def notify_about_instance_usage(notifier, context, instance, event_suffix,
                                 network_info=None, extra_usage_info=None,
-                                fault=None):
+                                fault=None, best_effort=False):
     """Send an unversioned legacy notification about an instance.
 
     All new notifications should use notify_about_instance_action which sends
@@ -435,7 +435,14 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
     else:
         method = notifier.info
 
-    method(context, 'compute.instance.%s' % event_suffix, usage_info)
+    try:
+        method(context, 'compute.instance.%s' % event_suffix, usage_info)
+    except Exception as e:
+        if best_effort:
+            LOG.error('Exception during notification sending: %s. '
+                      'Attempting to proceed with normal operation.', e)
+        else:
+            raise e
 
 
 def _get_fault_and_priority_from_exception(exception: Exception):
@@ -454,7 +461,7 @@ def _get_fault_and_priority_from_exception(exception: Exception):
 @rpc.if_notifications_enabled
 def notify_about_instance_action(context, instance, host, action, phase=None,
                                  source=fields.NotificationSource.COMPUTE,
-                                 exception=None, bdms=None):
+                                 exception=None, bdms=None, best_effort=False):
     """Send versioned notification about the action made on the instance
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
@@ -481,7 +488,14 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
                     action=action,
                     phase=phase),
             payload=payload)
-    notification.emit(context)
+    try:
+        notification.emit(context)
+    except Exception as e:
+        if best_effort:
+            LOG.error('Exception during notification sending: %s. '
+                      'Attempting to proceed with normal operation.', e)
+        else:
+            raise e
 
 
 @rpc.if_notifications_enabled
