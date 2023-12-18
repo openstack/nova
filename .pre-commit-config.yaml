@@ -24,7 +24,7 @@ repos:
       - id: remove-tabs
         exclude: '.*\.(svg)$'
   - repo: https://opendev.org/openstack/hacking
-    rev: 6.0.1
+    rev: 6.1.0
     hooks:
       - id: hacking
         additional_dependencies: []

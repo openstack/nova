@@ -3390,7 +3390,7 @@ class API:
                              "error_msg": str(exc)})
             attr = 'task_state'
             state = task_states.DELETING
-            if type(ex) == exception.InstanceNotFound:
+            if type(ex) is exception.InstanceNotFound:
                 attr = 'vm_state'
                 state = vm_states.DELETED
             raise exception.InstanceInvalidState(attr=attr,

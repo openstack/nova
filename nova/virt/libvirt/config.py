@@ -269,7 +269,7 @@ class LibvirtConfigDomainCapsDevices(LibvirtConfigObject):
 
     def _get_device(self, device_type):
         for device in self.devices:
-            if type(device) == self.DEVICE_PARSERS.get(device_type):
+            if type(device) is self.DEVICE_PARSERS.get(device_type):
                 return device
         return None
 
