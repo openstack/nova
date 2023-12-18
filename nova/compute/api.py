@@ -3005,7 +3005,7 @@ class API:
 
         The results will be sorted based on the list of sort keys in the
         'sort_keys' parameter (first value is primary sort key, second value is
-        secondary sort ket, etc.). For each sort key, the associated sort
+        secondary sort key, etc.). For each sort key, the associated sort
         direction is based on the list of sort directions in the 'sort_dirs'
         parameter.
 
@@ -4125,7 +4125,7 @@ class API:
             desired destination of the instance during the cold migration
         :param allow_cross_cell_resize: If True, cross-cell resize is allowed
             for this operation and the host could be in a different cell from
-            the one that the instance is currently in. If False, the speciifed
+            the one that the instance is currently in. If False, the specified
             host must be in the same cell as the instance.
         :returns: ComputeNode object of the requested host
         :raises: CannotMigrateToSameHost if the host is the same as the

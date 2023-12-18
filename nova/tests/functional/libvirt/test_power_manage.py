@@ -229,7 +229,7 @@ class PowerManagementTestsGovernorNotSupported(PowerManagementTestsBase):
         self.useFixture(nova_fixtures.SysFileSystemFixture(
             cpufreq_enabled=False))
 
-        # Definining the CPUs to be pinned.
+        # Defining the CPUs to be pinned.
         self.flags(cpu_dedicated_set='1-9', cpu_shared_set=None,
                    group='compute')
         self.flags(vcpu_pin_set=None)

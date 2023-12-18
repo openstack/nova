@@ -602,7 +602,7 @@ class FakeDriver(driver.ComputeDriver):
                          allocations, block_device_info=None, power_on=True):
         injected_files = admin_password = None
         # Finish migration is just like spawning the guest on a destination
-        # host during resize/cold migrate, so re-use the spawn() fake to
+        # host during resize/cold migrate, so reuse the spawn() fake to
         # claim resources and track the instance on this "hypervisor".
         self.spawn(context, instance, image_meta, injected_files,
                    admin_password, allocations,

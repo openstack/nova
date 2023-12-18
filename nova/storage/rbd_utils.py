@@ -128,7 +128,7 @@ class RBDDriver(object):
                  connect_timeout=None):
 
         # NOTE(lyarwood): Ensure the rbd and rados modules have been imported
-        # correctly before continuing, this is done in a seperate private
+        # correctly before continuing, this is done in a separate private
         # method to allow us to skip this check in unit tests etc.
         self._check_for_import_failure()
 

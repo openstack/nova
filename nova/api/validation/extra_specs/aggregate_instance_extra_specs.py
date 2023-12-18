@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-"""Validators for (preferrably) ``aggregate_instance_extra_specs`` namespaced
+"""Validators for (preferably) ``aggregate_instance_extra_specs`` namespaced
 extra specs.
 
 These are used by the ``AggregateInstanceExtraSpecsFilter`` scheduler filter.
@@ -60,7 +60,7 @@ EXTRA_SPEC_VALIDATORS = [
             },
         ],
         value={
-            # this is totally arbitary, since we need to support specific
+            # this is totally arbitrary, since we need to support specific
             # values
             'type': str,
         },

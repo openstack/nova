@@ -11,7 +11,7 @@
 #    under the License.
 
 """
-Hypervisor Version Weigher. Weigh hosts by their relative hypervior version.
+Hypervisor Version Weigher. Weigh hosts by their relative hypervisor version.
 
 The default is to select newer hosts.  If you prefer
 to invert the behavior set the 'hypervisor_version_weight_multiplier' option

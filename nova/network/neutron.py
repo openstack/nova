@@ -1626,7 +1626,7 @@ class API:
                     self._get_vf_pci_device_profile(pci_dev))
 
             if pci_dev.dev_type == obj_fields.PciDeviceType.SRIOV_PF:
-                # In general the MAC address information flows fom the neutron
+                # In general the MAC address information flows from the neutron
                 # port to the device in the backend. Except for direct-physical
                 # ports. In that case the MAC address flows from the physical
                 # device, the PF, to the neutron port. So when such a port is
@@ -2226,7 +2226,7 @@ class API:
         :param port_id: The id of port to be queried
 
         :return: A tuple of vNIC type, trusted status, network ID, resource
-            request of the port if any and port numa affintiy policy,
+            request of the port if any and port numa affinity policy,
             and device_profile.
             Trusted status only affects SR-IOV ports and will always be
             None for other port types. If no port numa policy is
@@ -3783,7 +3783,7 @@ class API:
                 # the migration object...
                 if migration is not None:
                     # NOTE(artom) ... except for live migrations, because the
-                    # conductor has already done that whe calling
+                    # conductor has already done that when calling
                     # bind_ports_to_host().
                     if not migration.is_live_migration:
                         pci_mapping = self._get_pci_mapping_for_migration(

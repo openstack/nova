@@ -760,7 +760,7 @@ class CellV2Commands(object):
         return 0
 
     def _map_cell0(self, database_connection=None):
-        """Faciliate creation of a cell mapping for cell0.
+        """Facilitate creation of a cell mapping for cell0.
         See map_cell0 for more.
         """
         def cell0_default_connection():
@@ -855,7 +855,7 @@ class CellV2Commands(object):
         # iteration, we search for the special name and unmunge the UUID to
         # pick up where we left off. This is done until all mappings are
         # processed. The munging is necessary as there's a unique constraint on
-        # the UUID field and we need something reversable. For more
+        # the UUID field and we need something reversible. For more
         # information, see commit 9038738d0.
 
         if max_count is not None:
@@ -3013,7 +3013,7 @@ class VolumeAttachmentCommands(object):
 
         We can do that here as the command requires that the instance is
         stopped, something that isn't always the case with the current driver
-        BDM approach and thus the two are kept seperate for the time being.
+        BDM approach and thus the two are kept separate for the time being.
 
         :param instance_uuid: UUID of instance
         :param volume_id: ID of volume attached to the instance

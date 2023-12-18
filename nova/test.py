@@ -735,7 +735,7 @@ class SubclassSignatureTestCase(testtools.TestCase, metaclass=abc.ABCMeta):
                 # This is a wrapped function. The signature we're going to
                 # see here is that of the wrapper, which is almost certainly
                 # going to involve varargs and kwargs, and therefore is
-                # unlikely to be what we want. If the wrapper manupulates the
+                # unlikely to be what we want. If the wrapper manipulates the
                 # arguments taken by the wrapped function, the wrapped function
                 # isn't what we want either. In that case we're just stumped:
                 # if it ever comes up, add more knobs here to work round it (or

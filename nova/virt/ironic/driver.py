@@ -606,7 +606,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         try:
             # NOTE(dustinc): The generator returned by the SDK can only be
-            # interated once. Since there are cases where it needs to be
+            # iterated once. Since there are cases where it needs to be
             # iterated more than once, we should return it as a list. In the
             # future it may be worth refactoring these other usages so it can
             # be returned as a generator.
@@ -892,7 +892,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         reserved = False
         if self._node_resources_unavailable(node):
-            # Operators might mark a node as in maintainance,
+            # Operators might mark a node as in maintenance,
             # even when an instance is on the node,
             # either way lets mark this as reserved
             reserved = True
@@ -1585,7 +1585,7 @@ class IronicDriver(virt_driver.ComputeDriver):
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks.
 
-        This method is present for compatability. Any call will result
+        This method is present for compatibility. Any call will result
         in a DEBUG log entry being generated, and will otherwise be
         ignored, as Ironic manages VIF attachments through a node
         lifecycle. Please see ``attach_interface``, which is the

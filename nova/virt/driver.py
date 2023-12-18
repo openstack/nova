@@ -618,7 +618,7 @@ class ComputeDriver(object):
                       disk_bus=None, device_type=None, encryption=None):
         """Attach the disk to the instance at mountpoint using info.
 
-        :raises TooManyDiskDevices: if the maxmimum allowed devices to attach
+        :raises TooManyDiskDevices: if the maximum allowed devices to attach
                                     to a single instance is exceeded.
         """
         raise NotImplementedError()
@@ -1053,7 +1053,7 @@ class ComputeDriver(object):
         node, as well as the inventory, aggregates, and traits associated with
         those resource providers.
 
-        Implementors of this interface are expected to set ``allocation_ratio``
+        Implementers of this interface are expected to set ``allocation_ratio``
         and ``reserved`` values for inventory records, which may be based on
         configuration options, e.g. ``[DEFAULT]/cpu_allocation_ratio``,
         depending on the driver and resource class. If not provided, allocation
@@ -1171,7 +1171,7 @@ class ComputeDriver(object):
         :param disk_info: instance disk information
         :param migrate_data: a LiveMigrateData object
         :returns: migrate_data modified by the driver
-        :raises TooManyDiskDevices: if the maxmimum allowed devices to attach
+        :raises TooManyDiskDevices: if the maximum allowed devices to attach
                                     to a single instance is exceeded.
         """
         raise NotImplementedError()
@@ -1725,7 +1725,7 @@ class ComputeDriver(object):
             The metadata of the image of the instance.
         :param nova.objects.BlockDeviceMapping root_bdm:
             The description of the root device.
-        :raises TooManyDiskDevices: if the maxmimum allowed devices to attach
+        :raises TooManyDiskDevices: if the maximum allowed devices to attach
                                     to a single instance is exceeded.
         """
         raise NotImplementedError()
@@ -1734,7 +1734,7 @@ class ComputeDriver(object):
                                           *block_device_lists):
         """Default the missing device names in the block device mapping.
 
-        :raises TooManyDiskDevices: if the maxmimum allowed devices to attach
+        :raises TooManyDiskDevices: if the maximum allowed devices to attach
                                     to a single instance is exceeded.
         """
         raise NotImplementedError()
@@ -1753,7 +1753,7 @@ class ComputeDriver(object):
                                  implementation if not set.
 
         :returns: The chosen device name.
-        :raises TooManyDiskDevices: if the maxmimum allowed devices to attach
+        :raises TooManyDiskDevices: if the maximum allowed devices to attach
                                     to a single instance is exceeded.
         """
         raise NotImplementedError()

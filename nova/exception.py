@@ -161,7 +161,7 @@ class Forbidden(NovaException):
 
 class NotSupported(NovaException):
     # This exception use return code as 400 and can be used
-    # directly or as base exception for operations whihc are not
+    # directly or as base exception for operations which are not
     # supported in Nova. Any feature that is not yet implemented
     # but plan to implement in future (example: Cyborg
     # integration operations), should use this exception as base

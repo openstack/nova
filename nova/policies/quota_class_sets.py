@@ -25,7 +25,7 @@ quota_class_sets_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
         check_str=base.ADMIN,
-        description="List quotas for specific quota classs",
+        description="List quotas for specific quota classes",
         operations=[
             {
                 'method': 'GET',

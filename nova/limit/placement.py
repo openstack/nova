@@ -197,7 +197,7 @@ def enforce_num_instances_and_flavor(
 def _convert_keys_to_legacy_name(new_dict):
     legacy = {}
     for new_name, old_name in LEGACY_LIMITS.items():
-        # defensive incase oslo or keystone doesn't give us an answer
+        # defensive in case oslo or keystone doesn't give us an answer
         legacy[old_name] = new_dict.get(new_name) or 0
     return legacy
 

@@ -165,7 +165,7 @@ class ServerGroupController(wsgi.Controller):
             # In existing behavior, if non-admin users requesting
             # all projects server groups they do not get error instead
             # get their own server groups. Once we switch to policy
-            # new defaults completly then we can remove the above check.
+            # new defaults completely then we can remove the above check.
             # Until then, let's keep the old behaviour.
             context.can(sg_policies.POLICY_ROOT % 'index:all_projects',
                         target={'project_id': project_id})

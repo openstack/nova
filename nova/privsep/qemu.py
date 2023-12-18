@@ -83,7 +83,7 @@ def unprivileged_convert_image(source, dest, in_format, out_format,
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def privileged_qemu_img_info(path, format=None):
-    """Return an oject containing the parsed output from qemu-img info
+    """Return an object containing the parsed output from qemu-img info
 
     This is a privileged call to qemu-img info using the sys_admin_pctxt
     entrypoint allowing host block devices etc to be accessed.

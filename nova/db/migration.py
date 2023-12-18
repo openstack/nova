@@ -52,7 +52,7 @@ def _find_alembic_conf(database='main'):
 
 
 def _upgrade_alembic(engine, config, version):
-    # re-use the connection rather than creating a new one
+    # reuse the connection rather than creating a new one
     with engine.begin() as connection:
         config.attributes['connection'] = connection
         alembic_api.upgrade(config, version or 'head')

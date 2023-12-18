@@ -35,7 +35,7 @@ class NumInstancesWeigher(weights.BaseHostWeigher):
             CONF.filter_scheduler.num_instances_weight_multiplier)
 
     def _weigh_object(self, host_state, weight_properties):
-        """Higher weights win.  We want to chooose hosts with fewer instances
+        """Higher weights win.  We want to choose hosts with fewer instances
            as the default, hence the negative value of the multiplier.
         """
         return host_state.num_instances

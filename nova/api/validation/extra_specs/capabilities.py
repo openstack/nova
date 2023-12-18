@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-"""Validators for (preferrably) ``capabilities`` namespaced extra specs.
+"""Validators for (preferably) ``capabilities`` namespaced extra specs.
 
 These are used by the ``ComputeCapabilitiesFilter`` scheduler filter. Note that
 we explicitly do not allow the unnamespaced variant of extra specs since this
@@ -72,7 +72,7 @@ for capability in (
             name=f'capabilities:{capability}',
             description=DESCRIPTION.format(capability=capability),
             value={
-                # this is totally arbitary, since we need to support specific
+                # this is totally arbitrary, since we need to support specific
                 # values
                 'type': str,
             },

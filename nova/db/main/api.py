@@ -1590,7 +1590,7 @@ def instance_get_all_by_filters(
 def _get_query_nova_resource_by_changes_time(query, filters, model_object):
     """Filter resources by changes-since or changes-before.
 
-    Special keys are used to tweek the query further::
+    Special keys are used to tweak the query further::
 
     |   'changes-since' - only return resources updated after
     |   'changes-before' - only return resources updated before
@@ -1646,7 +1646,7 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     |       ]
     |   }
 
-    Special keys are used to tweek the query further::
+    Special keys are used to tweak the query further::
 
     |   'changes-since' - only return instances updated after
     |   'changes-before' - only return instances updated before

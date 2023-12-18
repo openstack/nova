@@ -512,7 +512,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.provider_tree: provider_tree.ProviderTree = None
 
         # driver traits will not change during the runtime of the agent
-        # so calcuate them once and save them
+        # so calculate them once and save them
         self._static_traits = None
 
         # The CPU models in the configuration are case-insensitive, but the CPU
@@ -675,7 +675,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(acewit): If the [libvirt]disk_cachemodes is set as
         # `block=writeback` or `block=writethrough` or `block=unsafe`,
-        # whose correponding Linux's IO semantic is not O_DIRECT in
+        # whose corresponding Linux's IO semantic is not O_DIRECT in
         # file nova.conf, then it will result in an attachment failure
         # because of the libvirt bug
         # (https://bugzilla.redhat.com/show_bug.cgi?id=1086704)
@@ -4314,7 +4314,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InstanceNotRescuable(
                     instance_id=instance.uuid, reason=reason % virt_type)
             # NOTE(lyarwood): Stable device rescue provides the original disk
-            # mapping of the instance with the rescue device appened to the
+            # mapping of the instance with the rescue device appended to the
             # end. As a result we need to provide the original image_meta, the
             # new rescue_image_meta and block_device_info when calling
             # get_disk_info.
@@ -5010,7 +5010,7 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.ImageNotFound:
             # We must flatten here in order to remove dependency with an orphan
             # backing file (as snapshot image will be dropped once
-            # unshelve/cross_cell_resize is successfull).
+            # unshelve/cross_cell_resize is successful).
             LOG.warning('Current disk image is created on top of a snapshot '
                         'image and cannot be rebased to original image '
                         'because it is no longer available in the image '
@@ -5156,7 +5156,7 @@ class LibvirtDriver(driver.ComputeDriver):
                               instance=instance)
                     guest.attach_device(cfg)
 
-    # TODO(sean-k-mooney): we should try and converge this fuction with
+    # TODO(sean-k-mooney): we should try and converge this function with
     # _detach_direct_passthrough_vifs which does the same operation correctly
     # for live migration
     def _detach_direct_passthrough_ports(self, context, instance, guest):
@@ -5209,7 +5209,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # interface element.
             # So using it for all devices would break vnic-type direct when
             # using the sriov_nic_agent ml2 driver or vif of vnic_type vdpa.
-            # Since PF ports cant have the same MAC that means that this
+            # Since PF ports can't have the same MAC that means that this
             # use case was for hardware offloaded OVS? many NICs do not allow
             # two VFs to have the same MAC on different VLANs due to the
             # ordering of the VLAN and MAC filters in there static packet
@@ -5217,8 +5217,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # non ovs offload case. We should look into this more closely
             # as from my testing in this patch we appear to use the interface
             # element for hardware offloaded ovs too. Infiniband and vnic_type
-            # direct-physical port type do need this code path, both those cant
-            # have duplicate MACs...
+            # direct-physical port type do need this code path, but those
+            # can't have duplicate MACs...
             self._detach_pci_devices(guest, direct_passthrough_pci_addresses)
 
             # for ports that are attached with interface elements we cannot use
@@ -5426,7 +5426,7 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu.mode = mode
         cpu.model = models[0] if models else None
 
-        # compare flavor trait and cpu models, select the first mathched model
+        # compare flavor trait and cpu models, select the first matched model
         if flavor and mode == "custom":
             flags = libvirt_utils.get_flags_by_flavor_specs(flavor)
             if flags:
@@ -5502,9 +5502,9 @@ class LibvirtDriver(driver.ComputeDriver):
             elif arch == fields.Architecture.PPC64LE:
                 cpu.model = "POWER8"
             # TODO(chateaulav): re-evaluate when libvirtd adds overall
-            # RISCV suuport as a supported architecture, as there is no
+            # RISCV support as a supported architecture, as there is no
             # cpu models associated, this simply associates X vcpus to the
-            # guest according to the flavor. Thes same issue should be
+            # guest according to the flavor. These same issue should be
             # present with mipsel due to same limitation, but has not been
             # tested.
             elif arch == fields.Architecture.MIPSEL:
@@ -6353,7 +6353,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # the guest has the native kernel driver (called "virtio-gpu" in
         # Linux) -- i.e. if the guest has the VirtIO GPU driver, it'll
         # be used; otherwise, the 'virtio' model will gracefully
-        # fallback to VGA compatibiliy mode.
+        # fallback to VGA compatibility mode.
         if (
             guestarch in (
                 fields.Architecture.I686,
@@ -8749,7 +8749,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for cell in topology.cells:
             cpus = set(cpu.id for cpu in cell.cpus)
 
-            # NOTE(artom) We assume we'll never see hardware with multipe
+            # NOTE(artom) We assume we'll never see hardware with multiple
             # sockets in a single NUMA node - IOW, the socket_id for all CPUs
             # in a single cell will be the same. To make that assumption
             # explicit, we leave the cell's socket_id as None if that's the
@@ -10692,7 +10692,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # cancel migration job.
                 self.live_migration_abort(instance)
             except libvirt.libvirtError:
-                LOG.warning("Error occured when trying to abort live ",
+                LOG.warning("Error occurred when trying to abort live ",
                             "migration job, ignoring it.", instance=instance)
             raise
         finally:
@@ -11694,7 +11694,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     shutil.rmtree(swtpm_dir)
 
             # apparently shutil.rmtree() isn't reliable on NFS so don't rely
-            # only on path existance here.
+            # only on path existence here.
             if copy_swtpm_dir and os.path.exists(swtpm_dir):
                 libvirt_utils.restore_vtpm_dir(swtpm_dir)
         elif new_vtpm_config:
@@ -12396,15 +12396,15 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         dom_caps = self._host.get_domain_capabilities()
         supported_models: ty.Set[str] = {fields.VIOMMUModel.AUTO}
-        # our min version of qemu/libvirt supprot q35 and virt machine types.
+        # our min version of qemu/libvirt support q35 and virt machine types.
         # They also support the smmuv3 and intel iommu modeles so if the qemu
-        # binary is avaiable we can report the trait.
+        # binary is available we can report the trait.
         if fields.Architecture.AARCH64 in dom_caps:
             supported_models.add(fields.VIOMMUModel.SMMUV3)
         if fields.Architecture.X86_64 in dom_caps:
             supported_models.add(fields.VIOMMUModel.INTEL)
         # the virtio iommu model requires a newer libvirt then our min
-        # libvirt so we need to check the version explcitly.
+        # libvirt so we need to check the version explicitly.
         if self._host.has_min_version(MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL):
             supported_models.add(fields.VIOMMUModel.VIRTIO)
         return {

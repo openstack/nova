@@ -457,7 +457,7 @@ the Ironic node (by deleting the nova instance) it takes a while
 for Nova to un-reserve that Ironic node in placement. Usually this
 is a good idea, because it avoids placement providing an Ironic
 as a valid candidate when it is still being cleaned.
-Howerver, if you don't use automatic cleaning, it can cause an
+However, if you don't use automatic cleaning, it can cause an
 extra delay before and Ironic node is available for building a
 new Nova instance.
 """),

@@ -380,7 +380,7 @@ class _CyborgClient(object):
         once, the 2nd and later calls will throw errors.
 
         Cyborg deletes the ARQs without error, or returns 404 if there is ARQ
-        which already deleted. In either way, existed ARQs in arq_uuids wil be
+        which already deleted. In either way, existed ARQs in arq_uuids will be
         deleted. Such 404 error can be ignored safely.
 
         If this fails, an error is logged but no exception is raised

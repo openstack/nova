@@ -261,7 +261,7 @@ class Guest(object):
                 LOG.debug(f'No interface of type: {type(cfg)} found in domain')
                 return None
             # FIXME(sean-k-mooney): we should be able to print the list of
-            # interfaces however some tests use incomplete objects that cant
+            # interfaces however some tests use incomplete objects that can't
             # be printed due to incomplete mocks or defects in the libvirt
             # fixture. Lets address this later.
             # LOG.debug(f'within interfaces: {list(interfaces)}')

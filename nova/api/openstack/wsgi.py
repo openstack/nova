@@ -142,7 +142,7 @@ class Request(wsgi.Request):
         # no match. This is also little tricky that 'default' value cannot be
         # None. At least one of default_tag or default must be supplied as
         # an argument to the method, to define the defaulting behavior.
-        # So passing a sentinal value to return None from this function.
+        # So passing a sentinel value to return None from this function.
         best_match = self.accept_language.lookup(
             i18n.get_available_languages(), default='fake_LANG')
 

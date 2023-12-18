@@ -205,7 +205,7 @@ class CrossCellLister(metaclass=abc.ABCMeta):
 
         This is the standard filtered/sorted list method for the data type
         we are trying to list out of the database. Additional kwargs are
-        passsed through.
+        passed through.
 
         :param ctx: A RequestContext
         :param filters: A dict of column=filter items

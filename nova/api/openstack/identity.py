@@ -45,7 +45,7 @@ def verify_project_id(context, project_id):
         msg = _("Nova was unable to find Keystone service endpoint.")
         # TODO(astupnik). It may be reasonable to switch to HTTP 503
         # (HTTP Service Unavailable) instead of HTTP Bad Request here.
-        # If proper Keystone servie is inaccessible, then technially
+        # If proper Keystone service is inaccessible, then technially
         # this is a server side error and not an error in Nova.
         raise webob.exc.HTTPBadRequest(explanation=msg)
     except kse.ClientException:

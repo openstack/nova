@@ -91,7 +91,7 @@ steps:
   needs to track how many slots are available and used in order to
   avoid attempting to exceed that limit in the hardware.
 
-  Since version 8.0.0, libvirt exposes maximun mumber of SEV guests
+  Since version 8.0.0, libvirt exposes maximum number of SEV guests
   which can run concurrently in its host, so the limit is automatically
   detected using this feature.
 

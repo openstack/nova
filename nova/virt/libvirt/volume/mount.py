@@ -98,7 +98,7 @@ class _HostMountStateManager(object):
                 self.cond.notify_all()
 
     def host_up(self, host):
-        """Inialise a new _HostMountState when the libvirt connection comes
+        """Initialise a new _HostMountState when the libvirt connection comes
         up.
 
         host_up will destroy and re-initialise the current state if one

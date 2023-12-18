@@ -1774,7 +1774,7 @@ class Host(object):
             return self._supports_secure_boot
 
         # we only check the host architecture since the libvirt driver doesn't
-        # truely support non-host architectures currently
+        # truly support non-host architectures currently
         arch = self.get_capabilities().host.cpu.arch
         domain_caps = self.get_domain_capabilities()
         for machine_type in domain_caps[arch]:

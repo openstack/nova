@@ -165,7 +165,7 @@ class ProjectMapper(APIMapper):
     def _get_project_id_token(self):
         # NOTE(sdague): project_id parameter is only valid if its hex
         # or hex + dashes (note, integers are a subset of this). This
-        # is required to hand our overlaping routes issues.
+        # is required to hand our overlapping routes issues.
         return '{project_id:[0-9a-f-]+}'
 
     def resource(self, member_name, collection_name, **kwargs):
