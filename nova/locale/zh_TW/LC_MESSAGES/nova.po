@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2023-09-04 13:53+0000\n"
+"POT-Creation-Date: 2023-12-18 23:50+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -643,12 +643,6 @@ msgstr "從 OVA 擷取 VMDK 失敗。"
 #, python-format
 msgid "Failed to access port %(port_id)s: %(reason)s"
 msgstr "無法存取埠 %(port_id)s：%(reason)s"
-
-#, python-format
-msgid ""
-"Failed to add deploy parameters on node %(node)s when provisioning the "
-"instance %(instance)s"
-msgstr "供應實例 %(instance)s 時，無法在節點 %(node)s 上新增部署參數"
 
 #, python-format
 msgid "Failed to allocate the network(s) with error %s, not rescheduling."
@@ -2265,9 +2259,6 @@ msgid ""
 msgstr ""
 "無法將浮動 IP %(address)s 關聯至實例 %(id)s 的固定 IP %(fixed_address)s。錯"
 "誤：%(error)s"
-
-msgid "Unable to authenticate Ironic client."
-msgstr "無法鑑別 Ironic 用戶端。"
 
 #, python-format
 msgid "Unable to convert image to %(format)s: %(exp)s"

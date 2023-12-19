@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2023-09-04 13:53+0000\n"
+"POT-Creation-Date: 2023-12-18 23:50+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -542,14 +542,6 @@ msgstr "OVA'dan vmdk çıkarma başarısız."
 #, python-format
 msgid "Failed to access port %(port_id)s: %(reason)s"
 msgstr "%(port_id)s bağlantı noktasına erişim başarısız: %(reason)s"
-
-#, python-format
-msgid ""
-"Failed to add deploy parameters on node %(node)s when provisioning the "
-"instance %(instance)s"
-msgstr ""
-"%(instance)s sunucusu hazırlanırken %(node)s düğümü üzerinde açma "
-"parametreleri eklenemedi"
 
 #, python-format
 msgid "Failed to allocate the network(s) with error %s, not rescheduling."
@@ -1897,9 +1889,6 @@ msgstr "Jeton bulunamadı"
 
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr "ICMP iletişim kuralı türü için Tür ve Kod tam sayı olmalı"
-
-msgid "Unable to authenticate Ironic client."
-msgstr "Ironic istemcisi doğrulanamıyor."
 
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
