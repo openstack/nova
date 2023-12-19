@@ -96,7 +96,10 @@ class _TestLibvirtLiveMigrateData(object):
             file_backed_memory_discard=False,
             src_supports_numa_live_migration=True,
             dst_supports_numa_live_migration=True,
-            dst_numa_info=migrate_data.LibvirtLiveMigrateNUMAInfo())
+            dst_numa_info=migrate_data.LibvirtLiveMigrateNUMAInfo(),
+            dst_supports_mdev_live_migration=True,
+            source_mdev_types={},
+            target_mdevs={})
         manifest = ovo_base.obj_tree_get_versions(obj.obj_name())
 
         data = lambda x: x['nova_object.data']
@@ -133,6 +136,11 @@ class _TestLibvirtLiveMigrateData(object):
         self.assertNotIn('dst_numa_info', primitive)
         self.assertNotIn('src_supports_numa_live_migration', primitive)
         self.assertNotIn('dst_supports_numa_live_migration', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.10',
+                                              version_manifest=manifest))
+        self.assertNotIn('dst_supports_mdev_live_migration', primitive)
+        self.assertNotIn('source_mdev_types', primitive)
+        self.assertNotIn('target_mdevs', primitive)
 
     def test_bdm_obj_make_compatible(self):
         obj = migrate_data.LibvirtLiveMigrateBDMInfo(
