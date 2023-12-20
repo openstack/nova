@@ -11551,6 +11551,50 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_host_can_support_mdev_live_migration')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_shared_storage_test_file',
+                       return_value='fake')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_compare_cpu')
+    def test_check_can_live_migrate_dest_mdev_lm(
+        self, mock_cpu, mock_test_file, mock_can_sup_mdev_lm,
+    ):
+        mock_can_sup_mdev_lm.return_value = True
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell()])
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+        result = drvr.check_can_live_migrate_destination(
+            self.context, instance_ref, compute_info, compute_info)
+        self.assertTrue(result.dst_supports_mdev_live_migration)
+
+    @mock.patch(
+        'nova.network.neutron.API.has_port_binding_extension',
+        new=mock.Mock(return_value=False))
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_host_can_support_mdev_live_migration')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_shared_storage_test_file',
+                       return_value='fake')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_compare_cpu')
+    def test_check_can_live_migrate_dest_mdev_lm_no_host_support(
+        self, mock_cpu, mock_test_file, mock_can_sup_mdev_lm,
+    ):
+        mock_can_sup_mdev_lm.return_value = False
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell()])
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+        result = drvr.check_can_live_migrate_destination(
+            self.context, instance_ref, compute_info, compute_info)
+        self.assertNotIn('dst_supports_mdev_live_migration', result)
+
+    @mock.patch(
+        'nova.network.neutron.API.has_port_binding_extension',
+        new=mock.Mock(return_value=False))
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareHypervisorCPU')
     def test_check_can_live_migrate_dest_no_instance_cpu_info(
@@ -11654,6 +11698,41 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         for vif in result.vifs:
             self.assertTrue(vif.supports_os_vif_delegation)
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
+    def _test_host_can_support_mdev_lm(self, mock_getversion,
+                                      mock_getlibversion,
+                                      old_libvirt, old_qemu, expected):
+        min_libvirt_ver = versionutils.convert_version_to_int(
+            libvirt_driver.MIN_MDEV_LIVEMIG_LIBVIRT_VERSION)
+        min_qemu_ver = versionutils.convert_version_to_int(
+            libvirt_driver.MIN_MDEV_LIVEMIG_QEMU_VERSION)
+
+        mock_getversion.return_value = (min_qemu_ver - 1 if old_qemu
+                                        else min_qemu_ver)
+        mock_getlibversion.return_value = (min_libvirt_ver - 1 if old_libvirt
+                                        else min_libvirt_ver)
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.assertEqual(expected,
+                         driver._host_can_support_mdev_live_migration())
+
+    def test_host_can_support_mdev_lm(self):
+        self._test_host_can_support_mdev_lm(old_libvirt=False, old_qemu=False,
+                                            expected=True)
+
+    def test_host_can_support_mdev_lm_old_libvirt(self):
+        self._test_host_can_support_mdev_lm(old_libvirt=True, old_qemu=False,
+                                            expected=False)
+
+    def test_host_can_support_mdev_lm_old_qemu(self):
+        self._test_host_can_support_mdev_lm(old_libvirt=False, old_qemu=True,
+                                            expected=False)
+
+    def test_host_can_support_mdev_lm_both_old(self):
+        self._test_host_can_support_mdev_lm(old_libvirt=True, old_qemu=True,
+                                            expected=False)
 
     @mock.patch.object(host.Host, 'compare_hypervisor_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
@@ -11787,16 +11866,27 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_path_exists.assert_called_once_with(tmpfile_path)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_mdev_types_from_uuids')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_assert_source_can_live_migrate_mdevs')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_all_assigned_mediated_devices')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_check_shared_storage_test_file')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_is_shared_block_storage')
     def _test_can_live_migrate_source(self, mock_is_shared, mock_check_shared,
+                                      mock_get_all_assigned_mdevs,
+                                      mock_assert_src_can_lv_mdevs,
+                                      mock_get_types,
                                       block_migration=False,
                                       is_shared_block_storage=False,
                                       is_shared_instance_path=False,
                                       disk_available_mb=1024,
                                       exception=None,
-                                      numa_lm=True):
+                                      numa_lm=True,
+                                      instance_mdevs=False,
+                                      assert_can_lv_mdevs=True):
         instance = objects.Instance(**self.test_instance)
         if numa_lm:
             instance.numa_topology = objects.InstanceNUMATopology(cells=[
@@ -11811,6 +11901,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_is_shared.return_value = is_shared_block_storage
         mock_check_shared.return_value = is_shared_instance_path
+
+        if not instance_mdevs:
+            mock_get_all_assigned_mdevs.return_value = {}
+        else:
+            mock_get_all_assigned_mdevs.return_value = instance_mdevs
+            mock_get_types.return_value = {uuids.mdev1: 'fake_type'}
+            if not assert_can_lv_mdevs:
+                mock_assert_src_can_lv_mdevs.side_effect = exception(
+                    reason='kaboom')
 
         if exception:
             self.assertRaises(exception, drvr.check_can_live_migrate_source,
@@ -11842,6 +11941,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         if is_shared_instance_path:
             self.assertTrue(ret.is_shared_instance_path)
 
+        if instance_mdevs:
+            mock_get_types.assert_called_once_with(instance_mdevs.keys())
+            self.assertEqual({uuids.mdev1: 'fake_type'}, ret.source_mdev_types)
+            if assert_can_lv_mdevs:
+                mock_assert_src_can_lv_mdevs.assert_called_once_with(
+                    instance, dest_check_data)
         return (instance, dest_check_data)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -11893,6 +11998,53 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             block_migration=True, disk_available_mb=0,
             exception=exception.MigrationError)
         mock_get_bdi.assert_called_once_with(instance, None)
+
+    def test_check_can_live_migrate_source_mdev_lm(self):
+        instance_mdevs = {uuids.mdev1: uuids.inst1}
+        self._test_can_live_migrate_source(is_shared_block_storage=True,
+                                           instance_mdevs=instance_mdevs)
+
+    def test_check_can_live_migrate_source_mdev_lm_fails(self):
+        instance_mdevs = {uuids.mdev1: uuids.inst1}
+        self._test_can_live_migrate_source(
+            is_shared_block_storage=True,
+            instance_mdevs=instance_mdevs,
+            assert_can_lv_mdevs=False,
+            exception=exception.MigrationPreCheckError)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_host_can_support_mdev_live_migration')
+    def test_assert_source_can_lv_mdevs_fails_due_to_src(self, mock_host):
+        mock_host.return_value = False
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dest_check_data = objects.LibvirtLiveMigrateData(
+            dst_supports_mdev_live_migration=True)
+        self.assertRaises(exception.MigrationPreCheckError,
+                          drvr._assert_source_can_live_migrate_mdevs,
+                          instance, dest_check_data)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_host_can_support_mdev_live_migration')
+    def test_assert_source_can_lv_mdevs_fails_due_to_dest(self, mock_host):
+        mock_host.return_value = True
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dest_check_data = objects.LibvirtLiveMigrateData()
+        self.assertRaises(exception.MigrationPreCheckError,
+                          drvr._assert_source_can_live_migrate_mdevs,
+                          instance, dest_check_data)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_host_can_support_mdev_live_migration')
+    def test_assert_source_can_lv_mdevs_works(self, mock_host):
+        mock_host.return_value = True
+        instance = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dest_check_data = objects.LibvirtLiveMigrateData(
+            dst_supports_mdev_live_migration=True)
+        drvr._assert_source_can_live_migrate_mdevs(instance, dest_check_data)
+        mock_host.assert_called_once_with()
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
@@ -26801,6 +26953,22 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Since we filter by a type not supported by the physical device,
         # we don't get results.
         self.assertEqual([], drvr._get_mediated_devices(types=['nvidia-12']))
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_mediated_devices')
+    def test_get_mdev_types_from_uuids(self, mock_get_mdevs):
+        mock_get_mdevs.return_value = [
+            {"uuid": uuids.mdev1, "type": "nvidia-11"}]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({uuids.mdev1: "nvidia-11"},
+                         drvr._get_mdev_types_from_uuids([uuids.mdev1,
+                                                          uuids.mdev3]))
+        self.assertEqual({}, drvr._get_mdev_types_from_uuids([uuids.mdev2]))
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_mediated_devices')
+    def test_get_mdev_types_from_uuids_missing(self, mock_get_mdevs):
+        mock_get_mdevs.return_value = []
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({}, drvr._get_mdev_types_from_uuids([uuids.mdev1]))
 
     @mock.patch.object(host.Host, 'list_guests')
     def test_get_all_assigned_mediated_devices(self, list_guests):

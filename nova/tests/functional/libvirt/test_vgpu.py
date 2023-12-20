@@ -25,6 +25,7 @@ import nova.conf
 from nova import context
 from nova import objects
 from nova.tests.fixtures import libvirt as fakelibvirt
+from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -40,8 +41,8 @@ class VGPUTestBase(base.ServersTestBase):
     microversion = 'latest'
     ADMIN_API = True
 
-    FAKE_LIBVIRT_VERSION = 5000000
-    FAKE_QEMU_VERSION = 3001000
+    FAKE_LIBVIRT_VERSION = 7000000
+    FAKE_QEMU_VERSION = 5002000
 
     # Since we run all computes by a single process, we need to identify which
     # current compute service we use at the moment.
@@ -113,12 +114,16 @@ class VGPUTestBase(base.ServersTestBase):
                                                    parent=libvirt_parent)})
         return uuid
 
-    def start_compute_with_vgpu(self, hostname):
-        hostname = self.start_compute(
-            pci_info=fakelibvirt.HostPCIDevicesInfo(
+    def start_compute_with_vgpu(self, hostname, pci_info=None):
+        if not pci_info:
+            pci_info = fakelibvirt.HostPCIDevicesInfo(
                 num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
-            ),
+            )
+        hostname = self.start_compute(
+            pci_info=pci_info,
             hostname=hostname,
+            libvirt_version=self.FAKE_LIBVIRT_VERSION,
+            qemu_version=self.FAKE_QEMU_VERSION
         )
         compute = self.computes[hostname]
         rp_uuid = self.compute_rp_uuids[hostname]
@@ -127,7 +132,8 @@ class VGPUTestBase(base.ServersTestBase):
             inventory = self._get_provider_inventory(rp)
             if orc.VGPU in inventory:
                 usage = self._get_provider_usages(rp)
-                self.assertEqual(16, inventory[orc.VGPU]['total'])
+                # if multiple types, the inventories are different
+                self.assertIn(inventory[orc.VGPU]['total'], [8, 16])
                 self.assertEqual(0, usage[orc.VGPU])
         # Since we haven't created any mdevs yet, we shouldn't find them
         self.assertEqual([], compute.driver._get_mediated_devices())
@@ -421,6 +427,131 @@ class VGPUMultipleTypesTests(VGPUTestBase):
             # We can be deterministic : since we asked for a specific type,
             # we know which pGPU we landed.
             self.assertEqual(expected[trait], mdev_info['parent'])
+
+
+class VGPULiveMigrationTests(base.LibvirtMigrationMixin, VGPUTestBase):
+
+    # Use the right minimum versions for live-migration
+    FAKE_LIBVIRT_VERSION = 8006000
+    FAKE_QEMU_VERSION = 8001000
+
+    def setUp(self):
+        # Prepares two computes (src and dst), each of them having two GPUs
+        # (81:00.0 and 81:01.0) with two types but where the operator only
+        # wants to supports nvidia-11 by 81:00.0 and nvidia-12 by 81:01.0
+        super(VGPULiveMigrationTests, self).setUp()
+
+        # Let's set the configuration correctly.
+        self.flags(
+            enabled_mdev_types=[fakelibvirt.NVIDIA_11_VGPU_TYPE,
+                                fakelibvirt.NVIDIA_12_VGPU_TYPE],
+            group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        MDEVCAP_DEV1_PCI_ADDR = self.libvirt2pci_address(
+            fakelibvirt.MDEVCAP_DEV1_PCI_ADDR)
+        MDEVCAP_DEV2_PCI_ADDR = self.libvirt2pci_address(
+            fakelibvirt.MDEVCAP_DEV2_PCI_ADDR)
+        self.flags(device_addresses=[MDEVCAP_DEV1_PCI_ADDR],
+                   group='mdev_nvidia-11')
+        self.flags(device_addresses=[MDEVCAP_DEV2_PCI_ADDR],
+                   group='mdev_nvidia-12')
+
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
+            multiple_gpu_types=True)
+        self.src = self.start_compute_with_vgpu('src', pci_info=pci_info)
+        self.dest = self.start_compute_with_vgpu('dest', pci_info=pci_info)
+
+        # Add the custom traits to the 4 resource providers (two per host as
+        # we have two pGPUs)
+        self._create_trait('CUSTOM_NVIDIA_11')
+        self._create_trait('CUSTOM_NVIDIA_12')
+        for host in [self.src.host, self.dest.host]:
+            nvidia11_rp_uuid = self._get_provider_uuid_by_name(
+                host + '_' + fakelibvirt.MDEVCAP_DEV1_PCI_ADDR)
+            nvidia12_rp_uuid = self._get_provider_uuid_by_name(
+                host + '_' + fakelibvirt.MDEVCAP_DEV2_PCI_ADDR)
+            self._set_provider_traits(nvidia11_rp_uuid, ['CUSTOM_NVIDIA_11'])
+            self._set_provider_traits(nvidia12_rp_uuid, ['CUSTOM_NVIDIA_12'])
+
+        # We will test to live-migrate an instance using nvidia-11 type.
+        extra_spec = {"resources:VGPU": "1",
+                      "trait:CUSTOM_NVIDIA_11": "required"}
+        self.flavor = self._create_flavor(extra_spec=extra_spec)
+
+    def test_live_migration_fails_on_old_source(self):
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
+            multiple_gpu_types=True)
+        self.src = self.restart_compute_service(
+            self.src.host,
+            pci_info=pci_info,
+            keep_hypervisor_state=False,
+            qemu_version=8000000,
+            libvirt_version=8005000)
+        server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor, networks='auto', host=self.src.host)
+        # now live migrate that server
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._live_migrate,
+            server, 'completed')
+
+        self.assertEqual(500, ex.response.status_code)
+        self.assertIn('NoValidHost', str(ex))
+        log_out = self.stdlog.logger.output
+        self.assertIn('Migration pre-check error: Unable to migrate %s: '
+                      'Either libvirt or QEMU version for compute service '
+                      'source are too old than the supported ones '
+                      '' % server['id'], log_out)
+
+    def test_live_migration_fails_on_old_destination(self):
+        # For the fact to testing that we look at the dest object, we need to
+        # skip the verification for whether the destination HV version is older
+        self.flags(skip_hypervisor_version_check_on_lm=True,
+                   group='workarounds')
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
+            multiple_gpu_types=True)
+        self.dest = self.restart_compute_service(
+            self.dest.host,
+            pci_info=pci_info,
+            keep_hypervisor_state=False,
+            qemu_version=8000000,
+            libvirt_version=8005000)
+        server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor, networks='auto', host=self.src.host)
+        # now live migrate that server
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._live_migrate,
+            server, 'completed')
+
+        self.assertEqual(500, ex.response.status_code)
+        self.assertIn('NoValidHost', str(ex))
+        log_out = self.stdlog.logger.output
+        self.assertIn('Migration pre-check error: Unable to migrate %s: '
+                      'Either libvirt or QEMU version for compute service '
+                      'target are too old than the supported ones '
+                      '' % server['id'],
+                      log_out)
+
+    def test_live_migrate_server(self):
+        self.server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor, networks='auto', host=self.src.host)
+        inst = objects.Instance.get_by_uuid(self.context, self.server['id'])
+        mdevs = self.src.driver._get_all_assigned_mediated_devices(inst)
+        self.assertEqual(1, len(mdevs))
+        self._live_migrate(self.server, 'completed')
+        # FIXME(sbauza): The domain is fully copied to the destination so the
+        # XML contains the original mdev but given the 'devices' attribute on
+        # the fixture doesn't have it, that's why we have a KeyError.
+        self.assertRaises(KeyError, self.assert_mdev_usage, self.dest, 0)
 
 
 class DifferentMdevClassesTests(VGPUTestBase):
