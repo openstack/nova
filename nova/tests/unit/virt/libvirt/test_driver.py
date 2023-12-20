@@ -11699,6 +11699,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         for vif in result.vifs:
             self.assertTrue(vif.supports_os_vif_delegation)
 
+    def test_check_source_migrate_data_at_dest_no_src_mdevs(self):
+        """Noop test in case no mdevs from the source."""
+        instance_ref = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dest_check_data = objects.LibvirtLiveMigrateData(
+            filename="file",
+            block_migration=True,
+            disk_over_commit=False,
+            disk_available_mb=1024)
+        allocations = {uuids.rp1: {'resources': {orc.VGPU: 1}}}
+        result = drvr.check_source_migrate_data_at_dest(
+            self.context, instance_ref, dest_check_data, None, None,
+            allocations)
+        self.assertEqual(dest_check_data, result)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_supported_vgpu_types')
+    def test_check_source_migrate_data_at_dest_types_not_supported(self,
+                                                                   mock_get):
+        """Raises an exception if the destination doesn't support the source
+        mdev types.
+        """
+        mock_get.return_value = ['type1']
+        instance_ref = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dest_check_data = objects.LibvirtLiveMigrateData(
+            filename="file",
+            block_migration=True,
+            disk_over_commit=False,
+            disk_available_mb=1024,
+            source_mdev_types={uuids.mdev1: 'wrongtype'})
+        allocations = {uuids.rp1: {'resources': {orc.VGPU: 1}}}
+        self.assertRaises(exception.MigrationPreCheckError,
+                          drvr.check_source_migrate_data_at_dest,
+                          self.context, instance_ref, dest_check_data,
+                          None, None, allocations)
+
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
     @mock.patch.object(fakelibvirt.Connection, 'getVersion')
     def _test_host_can_support_mdev_lm(self, mock_getversion,

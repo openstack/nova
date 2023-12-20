@@ -8567,6 +8567,10 @@ class ComputeManager(manager.Manager):
                 # Update migrate VIFs with the newly claimed PCI devices
                 self._update_migrate_vifs_profile_with_pci(
                     migrate_data.vifs, port_id_to_pci)
+            # This should always be the last check as we persist some internal
+            # dictionary value in the libvirt driver.
+            migrate_data = self.driver.check_source_migrate_data_at_dest(
+                ctxt, instance, migrate_data, migration, limits, allocs)
         finally:
             self.driver.cleanup_live_migration_destination_check(ctxt,
                     dest_check_data)

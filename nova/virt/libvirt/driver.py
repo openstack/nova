@@ -9771,6 +9771,37 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return data
 
+    def check_source_migrate_data_at_dest(self, ctxt, instance, migrate_data,
+                                         migration, limits, allocs):
+        """Runs the last checks on the destination after the source returned
+        the migrate_data.
+
+        :param ctxt: security context
+        :param instance: nova.db.main.models.Instance
+        :param migrate_data: result of check_can_live_migrate_source
+        :param migration: The Migration object for this live migration
+        :param limits: The SchedulerLimits object for this live migration
+        :param allocs: Allocations for this instance
+        :returns: a LibvirtLiveMigrateData object
+        :raises: MigrationPreCheckError
+        """
+        if ('source_mdev_types' in migrate_data and
+                migrate_data.source_mdev_types):
+            # The instance that needs to be live-migrated has some mdevs
+            src_mdev_types = migrate_data.source_mdev_types
+            # As a reminder, src_mdev_types is a dict of mdev UUID and its type
+            # Are all the types supported by this compute ?
+            if not all(map(lambda m_type: m_type in self.supported_vgpu_types,
+                           src_mdev_types.values())):
+                reason = (_('Unable to migrate %(instance_uuid)s: '
+                            'Source mdev types %(src_types)s are not '
+                            'supported by this compute : %(dest_types)s ' %
+                          {'instance_uuid': instance.uuid,
+                           'src_types': list(src_mdev_types.values()),
+                           'dest_types': self.supported_vgpu_types}))
+                raise exception.MigrationPreCheckError(reason)
+        return migrate_data
+
     def post_claim_migrate_data(self, context, instance, migrate_data, claim):
         migrate_data.dst_numa_info = self._get_live_migrate_numa_info(
             claim.claimed_numa_topology, claim.flavor, claim.image_meta)
