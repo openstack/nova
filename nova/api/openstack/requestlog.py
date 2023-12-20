@@ -71,12 +71,6 @@ class RequestLog(base_wsgi.Middleware):
 
         remote_address = req.environ.get('REMOTE_ADDR', '-')
 
-        # If the API is configured to treat the X-Forwarded-For header as the
-        # canonical remote address, use its value instead.
-        if CONF.api.use_forwarded_for:
-            remote_address = req.environ.get(
-                'HTTP_X_FORWARDED_FOR', remote_address)
-
         data = {
             'REMOTE_ADDR': remote_address,
             'REQUEST_METHOD': req.environ['REQUEST_METHOD'],
