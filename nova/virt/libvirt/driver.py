@@ -7965,8 +7965,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Make sure we register all the types as the compute service could
         # be calling this method before init_host()
-        if len(CONF.devices.enabled_mdev_types) > 1:
-            nova.conf.devices.register_dynamic_opts(CONF)
+        nova.conf.devices.register_dynamic_opts(CONF)
 
         for vgpu_type in CONF.devices.enabled_mdev_types:
             group = getattr(CONF, 'mdev_%s' % vgpu_type, None)
@@ -7990,9 +7989,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 # support only the first type.
                 self.pgpu_type_mapping.clear()
                 self.mdev_class_mapping.clear()
-                # Given we only have one type, we default to only support the
-                # VGPU resource class.
-                self.mdev_classes = {orc.VGPU}
+                first_group = getattr(CONF, 'mdev_%s' % first_type, None)
+                if first_group is None:
+                    self.mdev_classes = {orc.VGPU}
+                else:
+                    self.mdev_classes = {first_group.mdev_class}
                 return [first_type]
             mdev_class = group.mdev_class
             for device_address in group.device_addresses:
@@ -8046,9 +8047,11 @@ class LibvirtDriver(driver.ComputeDriver):
             return
 
         if len(self.supported_vgpu_types) == 1:
-            # The operator wanted to only support one single type so we can
-            # blindly return it for every single pGPU
-            return self.supported_vgpu_types[0]
+            first_type = self.supported_vgpu_types[0]
+            group = getattr(CONF, 'mdev_%s' % first_type, None)
+            if group is None or not group.device_addresses:
+                return first_type
+
         device_address = self._get_pci_id_from_libvirt_name(device_address)
         if not device_address:
             return
