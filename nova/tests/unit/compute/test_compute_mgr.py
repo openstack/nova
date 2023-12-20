@@ -2273,6 +2273,49 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance.power_state = power_state.RUNNING
         self._test_init_instance_cleans_reboot_state(instance)
 
+    def _test_init_instance_cleans_reboot_state_reproducer(self, instance,
+            task_state):
+        instance.host = self.compute.host
+        with test.nested(
+            mock.patch.object(self.compute, '_get_power_state',
+                               return_value=power_state.RUNNING),
+            mock.patch.object(instance, 'save', autospec=True),
+            mock.patch.object(objects.Instance, 'get_network_info')
+          ) as (
+            _get_power_state,
+            instance_save,
+            get_network_info
+          ):
+            self.compute._init_instance(self.context, instance)
+            # By checking save method is not called we confirm that the init
+            # instance does not take into account this use case
+            instance_save.assert_not_called()
+            # So the instance task_state is still task_state
+            self.assertEqual(task_state, instance.task_state)
+            self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+
+    def test_init_instance_cleans_image_state_rebooting(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.REBOOTING
+        instance.power_state = power_state.RUNNING
+        # To uncomment once bug #1999674 is fixed and remove all the code below
+        # self._test_init_instance_cleans_reboot_state(instance)
+        self._test_init_instance_cleans_reboot_state_reproducer(instance,
+                task_states.REBOOTING)
+
+    def test_init_instance_cleans_image_state_rebooting_hard(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.REBOOTING_HARD
+        instance.power_state = power_state.RUNNING
+        # To uncomment once bug #1999674 is fixed and remove all the code below
+        # self._test_init_instance_cleans_reboot_state(instance)
+        self._test_init_instance_cleans_reboot_state_reproducer(instance,
+                task_states.REBOOTING_HARD)
+
     def test_init_instance_retries_power_off(self):
         instance = objects.Instance(self.context)
         instance.uuid = uuids.instance
