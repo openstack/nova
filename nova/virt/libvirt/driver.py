@@ -540,6 +540,11 @@ class LibvirtDriver(driver.ComputeDriver):
         self.mdev_classes = set([])
         self.supported_vgpu_types = self._get_supported_vgpu_types()
 
+        # This dict is for knowing which mdevs are already claimed by some
+        # instance. This is keyed by instance UUID and the value is a list
+        # of mediated device UUIDs.
+        self.instance_claimed_mdevs = {}
+
         # Handles ongoing device manipultion in libvirt where we wait for the
         # events about success or failure.
         self._device_event_handler = AsyncDeviceEventsHandler()
@@ -1732,6 +1737,13 @@ class LibvirtDriver(driver.ComputeDriver):
         vpmems = self._get_vpmems(instance)
         if vpmems:
             self._cleanup_vpmems(vpmems)
+        # we may have some claimed mdev residue, we need to delete it
+        mdevs = self.instance_claimed_mdevs.pop(instance.uuid, None)
+        if mdevs:
+            # The live migration was aborted, we need to remove the reserved
+            # values.
+            LOG.debug("Unclaiming mdevs %s from instance %s",
+                mdevs, instance.uuid)
 
     def _cleanup_vpmems(self, vpmems):
         for vpmem in vpmems:
@@ -8425,6 +8437,12 @@ class LibvirtDriver(driver.ComputeDriver):
                   found in the hypervisor.
         """
         allocated_mdevs = {}
+        # Add the reserved mediated devices for live-migration
+        for instance_uuid, mdev_uuids in self.instance_claimed_mdevs.items():
+            if instance and instance.uuid != instance_uuid:
+                continue
+            for mdev in mdev_uuids:
+                allocated_mdevs[mdev] = instance_uuid
         if instance:
             # NOTE(sbauza): In some cases (like a migration issue), the
             # instance can exist in the Nova database but libvirt doesn't know
@@ -8437,7 +8455,8 @@ class LibvirtDriver(driver.ComputeDriver):
             except exception.InstanceNotFound:
                 # Bail out early if libvirt doesn't know about it since we
                 # can't know the existing mediated devices
-                return {}
+                # Some mdevs could be claimed for that instance
+                return allocated_mdevs
             guests = [guest]
         else:
             guests = self._host.list_guests(only_running=False)
@@ -9800,6 +9819,33 @@ class LibvirtDriver(driver.ComputeDriver):
                            'src_types': list(src_mdev_types.values()),
                            'dest_types': self.supported_vgpu_types}))
                 raise exception.MigrationPreCheckError(reason)
+            dst_mdevs = self._allocate_mdevs(allocs)
+            dst_mdev_types = self._get_mdev_types_from_uuids(dst_mdevs)
+            target_mdevs: ty.Dict[str, str] = {}
+            for src_mdev, src_type in src_mdev_types.items():
+                for dst_mdev, dst_type in dst_mdev_types.items():
+                    # we want to associate by 1:1 between dst and src mdevs
+                    if (src_type == dst_type and
+                            src_type not in target_mdevs and
+                            dst_mdev not in target_mdevs.values()):
+                        target_mdevs[src_mdev] = dst_mdev
+                        continue
+            if len(target_mdevs) != len(src_mdev_types):
+                reason = (_('Unable to migrate %(instance_uuid)s: '
+                            'Source mdevs %(src_mdevs)s are not '
+                            'fully mapped for this compute : %(targets)s ' %
+                          {'instance_uuid': instance.uuid,
+                           'src_mdevs': list(src_mdev_types.keys()),
+                           'targets': target_mdevs}))
+                raise exception.MigrationPreCheckError(reason)
+            LOG.debug('Source mediated devices are now associated with those '
+                      'existing mediated devices '
+                      '(source uuid : dest uuid): %s', str(target_mdevs))
+            migrate_data.target_mdevs = target_mdevs
+            self.instance_claimed_mdevs[instance.uuid] = dst_mdevs
+            LOG.info("Current mediated devices reserved by this host "
+                     "(instance UUID: list of reserved mdev UUIDs) : %s ",
+                      self.instance_claimed_mdevs)
         return migrate_data
 
     def post_claim_migrate_data(self, context, instance, migrate_data, claim):
@@ -10918,6 +10964,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance, migrate_data)
                 if os.path.exists(instance_dir):
                     shutil.rmtree(instance_dir)
+            mdevs = self.instance_claimed_mdevs.pop(instance.uuid, None)
+            if mdevs:
+                # The live migration is aborted, we need to remove the reserved
+                # values.
+                LOG.debug("Unclaiming mdevs %s from instance %s",
+                    mdevs, instance.uuid)
 
     def _pre_live_migration_plug_vifs(self, instance, network_info,
                                       migrate_data):
@@ -11300,6 +11352,12 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         self._reattach_instance_vifs(context, instance, network_info)
         self._qemu_monitor_announce_self(instance)
+        mdevs = self.instance_claimed_mdevs.pop(instance.uuid, None)
+        if mdevs:
+            # The live migration is done, the related mdevs are now associated
+            # to the domain XML so we can remove the reserved values.
+            LOG.debug("Unclaiming mdevs %s from instance %s",
+                mdevs, instance.uuid)
 
     def _get_instance_disk_info_from_config(self, guest_config,
                                             block_device_info):

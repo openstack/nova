@@ -9189,7 +9189,7 @@ class ComputeManager(manager.Manager):
         rollback process
 
         There may be other resources which need cleanup; currently this is
-        limited to vPMEM devices with the libvirt driver.
+        limited to vPMEM and mdev devices with the libvirt driver.
 
         :param migrate_data: implementation specific data
         :param migr_ctxt: specific resources stored in migration_context
@@ -9210,12 +9210,14 @@ class ComputeManager(manager.Manager):
                                    objects.LibvirtVPMEMDevice)):
                         has_vpmem = True
                         break
+            has_mdevs = 'target_mdevs' in migrate_data
             # No instance booting at source host, but instance dir
             # must be deleted for preparing next block migration
             # must be deleted for preparing next live migration w/o shared
             # storage
             # vpmem must be cleaned
-            do_cleanup = not migrate_data.is_shared_instance_path or has_vpmem
+            do_cleanup = (not migrate_data.is_shared_instance_path or
+                          has_vpmem or has_mdevs)
             destroy_disks = not migrate_data.is_shared_block_storage
         elif isinstance(migrate_data, migrate_data_obj.HyperVLiveMigrateData):
             # NOTE(claudiub): We need to cleanup any zombie Planned VM.
