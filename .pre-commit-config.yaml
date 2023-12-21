@@ -4,7 +4,7 @@ default_language_version:
   python: python3
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: mixed-line-ending
@@ -37,12 +37,12 @@ repos:
       - id: autopep8
         files: '^.*\.py$'
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.4
+    rev: v2.2.6
     hooks:
     - id: codespell
       args: ['--ignore-words=doc/dictionary.txt']
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.4.1
+    rev: v1.7.1
     hooks:
       - id: mypy
         additional_dependencies:

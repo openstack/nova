@@ -9345,7 +9345,7 @@ class ComputeManager(manager.Manager):
         # _post_live_migration_remove_source_vol_connections() to clean up
         # source volume connections and prevent potential data leaks. We
         # therefore activate the port bindings in a try block, and, regardless
-        # of any expcetions during that process, clean up volume connections in
+        # of any exceptions during that process, clean up volume connections in
         # a finally block.
         try:
             # NOTE(artom) At this point in time we have not bound the ports to
