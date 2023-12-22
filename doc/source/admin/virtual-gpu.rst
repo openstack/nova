@@ -293,6 +293,36 @@ Caveats
    This information is correct as of the 17.0.0 Queens release. Where
    improvements have been made or issues fixed, they are noted per item.
 
+* When live-migrating an instance using vGPUs, the libvirt guest domain XML
+  isn't updated with the new mediated device UUID to use for the target.
+
+  .. versionchanged:: 29.0.0
+
+   In the 2024.2 Caracal release, Nova now `supports vGPU live-migrations`_. In
+   order to do this, both the source and target compute service need to have
+   minimum versions of libvirt-8.6.0, QEMU-8.1.0 and Linux kernel 5.18.0. You
+   need to ensure that either you use only single common vGPU type between two
+   computes. Where multiple mdev types are configured on the source and
+   destination host, custom traits or custom resource classes must be
+   configured, reported by the host and requested by the instance to make sure
+   that the Placement API correctly returns the supported GPU using the right
+   vGPU type for a migration. Last but not least, if you want to live-migrate
+   nVidia mediated devices, you need to update
+   :oslo.config:option:`libvirt.live_migration_downtime`,
+   :oslo.config:option:`libvirt.live_migration_downtime_steps` and
+   :oslo.config:option:`libvirt.live_migration_downtime_delay`:
+
+   .. code-block:: ini
+
+      live_migration_downtime = 500000
+      live_migration_downtime_steps = 3
+      live_migration_downtime_delay = 3
+
+   You can see an example of a working live-migration `here`__.
+
+   .. __: http://sbauza.github.io/vgpu/vgpu_live_migration.html
+
+
 * Suspending a guest that has vGPUs doesn't yet work because of a libvirt
   limitation (it can't hot-unplug mediated devices from a guest). Workarounds
   using other instance actions (like snapshotting the instance or shelving it)
@@ -355,6 +385,7 @@ For nested vGPUs:
 .. _bug 1778563: https://bugs.launchpad.net/nova/+bug/1778563
 .. _bug 1762688: https://bugs.launchpad.net/nova/+bug/1762688
 .. _bug 1948705: https://bugs.launchpad.net/nova/+bug/1948705
+.. _supports vGPU live-migrations: https://specs.openstack.org/openstack/nova-specs/specs/2024.1/approved/libvirt-mdev-live-migrate.html
 
 .. Links
 .. _Intel GVT-g: https://01.org/igvt-g

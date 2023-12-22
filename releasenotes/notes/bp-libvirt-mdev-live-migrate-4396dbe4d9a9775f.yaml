@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Instances using vGPUs can now be correctly live-migrated by the libvirt
+    driver between compute nodes supporting the same mediated device types used
+    by the instance. In order to be able to do this, the compute hosts need to
+    support at least the minimum versions of libvirt-8.6.0, QEMU-8.1.0 and
+    Linux kernel 5.18.0. If operators use multiple vGPU types per compute, they
+    need to make sure they already use custom traits or custom resource classes
+    for the GPUs resource providers and that the instance was created with a
+    flavor using either a custom resource class or asking for a custom trait in
+    order to make sure that Placement API will provide the right target GPU
+    using the same mdev type for the instance.

@@ -576,10 +576,9 @@ class VGPULiveMigrationTests(base.LibvirtMigrationMixin, VGPUTestBase):
         mdevs = self.src.driver._get_all_assigned_mediated_devices(inst)
         self.assertEqual(1, len(mdevs))
         self._live_migrate(self.server, 'completed')
-        # FIXME(sbauza): The domain is fully copied to the destination so the
-        # XML contains the original mdev but given the 'devices' attribute on
-        # the fixture doesn't have it, that's why we have a KeyError.
-        self.assertRaises(KeyError, self.assert_mdev_usage, self.dest, 0)
+        # Now the destination XML is updated, so the destination mdev is
+        # correctly used.
+        self.assert_mdev_usage(self.dest, 1)
 
 
 class VGPULiveMigrationTestsLMFailed(VGPULiveMigrationTests):
