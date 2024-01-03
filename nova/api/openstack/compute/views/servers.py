@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
@@ -94,7 +96,7 @@ class ViewBuilder(common.ViewBuilder):
     def basic(self, request, instance, show_extra_specs=False,
               show_extended_attr=None, show_host_status=None,
               show_sec_grp=None, bdms=None, cell_down_support=False,
-              show_user_data=False):
+              show_user_data=False, provided_az=None):
         """Generic, non-detailed view of an instance."""
         if cell_down_support and 'display_name' not in instance:
             # NOTE(tssurya): If the microversion is >= 2.69, this boolean will
@@ -218,13 +220,26 @@ class ViewBuilder(common.ViewBuilder):
             unknown_only = True
         return unknown_only
 
+    def _get_pinned_az(self, context, instance, provided_az):
+        pinned_az = ''
+        if provided_az is not None:
+            pinned_az = provided_az
+        else:
+            try:
+                req_spec = objects.RequestSpec.get_by_instance_uuid(
+                        context, instance.uuid)
+                pinned_az = req_spec.availability_zone
+            except exception.RequestSpecNotFound:
+                pinned_az = ''
+        return pinned_az
+
     def show(self, request, instance, extend_address=True,
              show_extra_specs=None, show_AZ=True, show_config_drive=True,
              show_extended_attr=None, show_host_status=None,
              show_keypair=True, show_srv_usg=True, show_sec_grp=True,
              show_extended_status=True, show_extended_volumes=True,
              bdms=None, cell_down_support=False, show_server_groups=False,
-             show_user_data=True):
+             show_user_data=True, provided_az=None):
         """Detailed view of a single instance."""
         if show_extra_specs is None:
             # detail will pre-calculate this for us. If we're doing show,
@@ -291,6 +306,9 @@ class ViewBuilder(common.ViewBuilder):
             # attributes after v2.1. They are only in v2.1 for backward compat
             # with v2.0.
             server["server"]["OS-EXT-AZ:availability_zone"] = az or ''
+            if api_version_request.is_supported(request, min_version='2.96'):
+                pinned_az = self._get_pinned_az(context, instance, provided_az)
+                server['server']['pinned_availability_zone'] = pinned_az
 
         if show_config_drive:
             server["server"]["config_drive"] = instance["config_drive"]
@@ -498,12 +516,23 @@ class ViewBuilder(common.ViewBuilder):
                                   down.
         :returns: Server data in dictionary format
         """
+        req_specs = None
+        req_specs_dict = collections.defaultdict(str)
+        if api_version_request.is_supported(request, min_version='2.96'):
+            context = request.environ['nova.context']
+            instance_uuids = [s.uuid for s in servers]
+            req_specs = objects.RequestSpec.get_by_instance_uuids(
+                    context, instance_uuids)
+            req_specs_dict = {req.instance_uuid: req.availability_zone
+                              for req in req_specs}
+
         server_list = [func(request, server,
                             show_extra_specs=show_extra_specs,
                             show_extended_attr=show_extended_attr,
                             show_host_status=show_host_status,
                             show_sec_grp=show_sec_grp, bdms=bdms,
-                            cell_down_support=cell_down_support)["server"]
+                            cell_down_support=cell_down_support,
+                            provided_az=req_specs_dict[server.uuid])["server"]
                        for server in servers
                        # Filter out the fake marker instance created by the
                        # fill_virtual_interface_list online data migration.

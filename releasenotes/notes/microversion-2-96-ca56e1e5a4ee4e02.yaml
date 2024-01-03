@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The 2.96 microversion has been added. This microversion adds
+    pinned_availability_zone in `server show` and `server list --long`
+    responses.
+

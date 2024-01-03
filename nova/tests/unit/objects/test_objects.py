@@ -1155,7 +1155,7 @@ object_data = {
     'QuotasNoOp': '1.3-d1593cf969c81846bc8192255ea95cce',
     'RequestGroup': '1.3-0458d350a8ec9d0673f9be5640a990ce',
     'RequestLevelParams': '1.1-3a718a0ae0bfdec669e7108631b3f313',
-    'RequestSpec': '1.14-2cdbda368ca07e10905dc5fe96908a58',
+    'RequestSpec': '1.15-c1c9d34236d87a37c008dcf8926199fa',
     'Resource': '1.0-d8a2abbb380da583b995fd118f6a8953',
     'ResourceList': '1.0-4a53826625cc280e15fae64a575e0879',
     'ResourceMetadata': '1.0-77509ea1ea0dd750d5864b9bd87d3f9d',
