@@ -5454,6 +5454,16 @@ class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
                                                    enc_image_prop,
                                                    image_props, error_data)
 
+    def _test_encrypted_memory_support_pc_image_id(self, image_meta,
+                                                       error_data):
+        extra_specs = {'hw:mem_encryption': True}
+        flavor = objects.Flavor(name=self.flavor_name,
+                                extra_specs=extra_specs)
+        exc = self.assertRaises(self.expected_exception,
+                                    hw.get_mem_encryption_constraint,
+                                    flavor, image_meta)
+        self.assertEqual(self.expected_error % error_data, str(exc))
+
     def test_flavor_requires_encrypted_memory_support_pc(self):
         for extra_spec in ('1', 'true', 'True'):
             self._test_encrypted_memory_support_pc(extra_spec, None)
@@ -5467,6 +5477,31 @@ class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
             for image_prop in ('1', 'true', 'True'):
                 self._test_encrypted_memory_support_pc(
                     extra_spec, image_prop)
+
+    def test_encrypted_memory_support_pc_no_image_id(self):
+        image_props = {'hw_mem_encryption': True,
+                       'hw_firmware_type': 'uefi',
+                       'hw_machine_type': 'pc'}
+        image_meta = fake_image_obj(
+            {'name': self.image_name}, {}, image_props)
+        error_data = {'image_id': '<no-id>',
+                      'image_name': self.image_name,
+                      'mtype': 'pc'}
+        self._test_encrypted_memory_support_pc_image_id(image_meta,
+                                                        error_data)
+
+    def test_encrypted_memory_support_pc_has_image_id(self):
+        image_props = {'hw_mem_encryption': True,
+                       'hw_firmware_type': 'uefi',
+                       'hw_machine_type': 'pc'}
+        image_meta = fake_image_obj(
+            {'id': self.image_id, 'name': self.image_name},
+            {}, image_props)
+        error_data = {'image_id': self.image_id,
+                      'image_name': self.image_name,
+                      'mtype': 'pc'}
+        self._test_encrypted_memory_support_pc_image_id(image_meta,
+                                                        error_data)
 
 
 class MemEncryptionRequiredTestCase(test.NoDBTestCase):
@@ -5543,6 +5578,34 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
         self.assertRaises(exception.FlavorImageConflict,
                           hw.get_mem_encryption_constraint, flavor,
                           image_meta)
+
+    @mock.patch.object(hw, 'LOG')
+    def test_encrypted_memory_support_no_id_for_volume(self, mock_log):
+        extra_specs = {'hw:mem_encryption': True}
+        flavor = objects.Flavor(name=self.flavor_name,
+                                extra_specs=extra_specs)
+
+        image_props = {'hw_mem_encryption': True,
+                       'hw_firmware_type': 'uefi'}
+        image_meta = objects.ImageMeta.from_dict({
+            'min_disk': 0,
+            'min_ram': 0,
+            'properties': image_props,
+            'size': 0,
+            'status': 'active'})
+
+        self.assertTrue(hw.get_mem_encryption_constraint(flavor,
+                                                         image_meta))
+
+        requesters = "hw:mem_encryption extra spec in %s flavor and " \
+                     "hw_mem_encryption property of image %s" % \
+                      (self.flavor_name, '<no-id>')
+        # Confirm that it can handle the situation that there is
+        # no image_id when booting from volume. We set it to
+        # '<no-id>' that we can detect later.
+        mock_log.debug.assert_has_calls([
+            mock.call("Memory encryption requested by %s", requesters)
+        ])
 
 
 class PCINUMAAffinityPolicyTest(test.NoDBTestCase):
