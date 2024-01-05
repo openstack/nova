@@ -27,6 +27,7 @@ import time
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import instance_actions
 from nova.compute import rpcapi as compute_rpcapi
@@ -701,6 +702,42 @@ class InstanceHelperMixin:
         for _ in range(new_attachments):
             self.cinder.create_vol_attachment(
                 volume_id, server['id'])
+
+    def _create_server_boot_from_volume(self):
+        bfv_image_id = uuids.bfv_image_uuid
+        timestamp = datetime.datetime(2011, 1, 1, 1, 2, 3)
+
+        image = {
+            'id': bfv_image_id,
+            'name': 'fake_image_name',
+            'created_at': timestamp,
+            'updated_at': timestamp,
+            'deleted_at': None,
+            'deleted': False,
+            'status': 'active',
+            'container_format': 'raw',
+            'disk_format': 'raw',
+            'min_disk': 0
+        }
+
+        self.glance.create(None, image)
+
+        # for bfv, image is not required in server request
+        server = self._build_server()
+        server.pop('imageRef')
+
+        # as bfv-image will be used as source in block_device_mapping_v2
+        # here block device will be created based on bfv-image
+        # i.e bfvimage_id
+        server['block_device_mapping_v2'] = [{
+            'source_type': 'image',
+            'destination_type': 'volume',
+            'boot_index': 0,
+            'uuid': bfv_image_id,
+            'volume_size': 1,
+        }]
+        server = self.api.post_server({'server': server})
+        return self._wait_for_state_change(server, 'ACTIVE')
 
 
 class PlacementHelperMixin:
