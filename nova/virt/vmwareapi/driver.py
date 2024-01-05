@@ -1050,9 +1050,12 @@ class VMwareVCDriver(driver.ComputeDriver):
             self._vmops.sync_instance_server_group(context, instance)
 
     def post_live_migration_at_source(self, context, instance, network_info):
-        # This is mostly for network related cleanup tasks at the source
-        # There is nothing to do for us
-        pass
+        # We have to clean up our VM-moref cache, so that when a VM with
+        # volume attachments comes back to this compute node after being moved
+        # away, the moref is not incorrect/stale and the VMware API, on volume
+        # attachment creation, doesn't complain that the VM
+        # "has already been deleted or has not been completely created".
+        vm_util.vm_ref_cache_delete(instance.uuid)
 
     def post_live_migration_at_destination(self, context, instance,
                                            network_info,
