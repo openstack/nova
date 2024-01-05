@@ -200,6 +200,22 @@ class BootFromVolumeTest(integrated_helpers._IntegratedTestBase):
         self.assertIn('You specified more local devices than the limit allows',
                       str(ex))
 
+    def test_reboot_bfv_instance(self):
+        # verify bdm 'source_type': 'image' and 'destination_type': 'volume'
+        server = self._create_server_boot_from_volume()
+        server = self._reboot_server(server, hard=True)
+        self.assertEqual(server['status'], 'ACTIVE')
+
+    def test_reboot_bfv_instance_snapshot(self):
+        # verify bdm 'source_type': 'snapshot' and 'destination_type': 'volume'
+        server = self._create_server_boot_from_volume()
+        self._snapshot_server(server, 'snap1')
+        images = self.api.get_images()
+        snap_img = [img for img in images if img['name'] == 'snap1'][0]
+        server1 = self._create_server(image_uuid=snap_img['id'])
+        self._reboot_server(server1, hard=True)
+        self.assertEqual(server['status'], 'ACTIVE')
+
 
 class BootFromVolumeLargeRequestTest(test.TestCase,
                                      integrated_helpers.InstanceHelperMixin):

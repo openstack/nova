@@ -4205,8 +4205,7 @@ class ComputeManager(manager.Manager):
         nova_attachments = []
         bdms_to_delete = []
         for bdm in bdms.objects:
-            if bdm.volume_id and bdm.source_type == 'volume' and \
-                bdm.destination_type == 'volume':
+            if bdm.volume_id and bdm.attachment_id:
                 try:
                     self.volume_api.attachment_get(context, bdm.attachment_id)
                 except exception.VolumeAttachmentNotFound:

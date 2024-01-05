@@ -101,7 +101,9 @@ class CinderFixture(fixtures.Fixture):
         # multi-attach, as some flows create a blank 'reservation' attachment
         # before deleting another attachment. However, a non-multiattach volume
         # can only have at most one attachment with a host connector at a time.
+        self.volumes = collections.defaultdict(dict)
         self.volume_to_attachment = collections.defaultdict(dict)
+        self.volume_snapshots = collections.defaultdict(dict)
 
     def setUp(self):
         super().setUp()
@@ -165,6 +167,15 @@ class CinderFixture(fixtures.Fixture):
         self.useFixture(fixtures.MockPatch(
             'nova.volume.cinder.API.attachment_get_all',
             side_effect=self.fake_attachment_get_all, autospec=False))
+        self.useFixture(fixtures.MockPatch(
+            'nova.volume.cinder.API.create_snapshot_force',
+            side_effect=self.fake_create_snapshot_force, autospec=False))
+        self.useFixture(fixtures.MockPatch(
+            'nova.volume.cinder.API.get_snapshot',
+            side_effect=self.fake_get_snapshot, autospec=False))
+        self.useFixture(fixtures.MockPatch(
+            'nova.volume.cinder.API.create',
+            side_effect=self.fake_vol_create, autospec=False))
 
     def _is_multiattach(self, volume_id):
         return volume_id in [
@@ -218,13 +229,16 @@ class CinderFixture(fixtures.Fixture):
         return {'save_volume_id': new_volume_id}
 
     def fake_get(self, context, volume_id, microversion=None):
-        volume = {
-            'display_name': volume_id,
-            'id': volume_id,
-            'size': 1,
-            'multiattach': self._is_multiattach(volume_id),
-            'availability_zone': self.az
-        }
+        if volume_id in self.volumes:
+            volume = self.volumes[volume_id]
+        else:
+            volume = {
+                'display_name': volume_id,
+                'id': volume_id,
+                'size': 1,
+                'multiattach': self._is_multiattach(volume_id),
+                'availability_zone': self.az
+            }
 
         # Add any attachment details the fixture has
         fixture_attachments = self.volume_to_attachment[volume_id]
@@ -466,3 +480,36 @@ class CinderFixture(fixtures.Fixture):
 
     def delete_vol_attachment(self, vol_id):
         del self.volume_to_attachment[vol_id]
+
+    def fake_create_snapshot_force(self, _ctxt, volume_id, name, description):
+        _id = uuidutils.generate_uuid()
+        snapshot = {
+            'id': _id,
+            'volume_id': volume_id,
+            'display_name': name,
+            'display_description': description,
+            'status': 'creating',
+            }
+        self.volume_snapshots[_id] = snapshot
+        return snapshot
+
+    def fake_get_snapshot(self, _ctxt, snap_id):
+        if snap_id in self.volume_snapshots:
+            # because instance is getting unquiesce_instance
+            self.volume_snapshots[snap_id]['status'] = 'available'
+            return self.volume_snapshots[snap_id]
+
+    def fake_vol_create(self, _ctxt, size, name, description,
+            snapshot=None, image_id=None, volume_type=None, metadata=None,
+            availability_zone=None):
+        _id = uuidutils.generate_uuid()
+        volume = {
+            'id': _id,
+            'status': 'available',
+            'display_name': name or 'fake-cinder-vol',
+            'attach_status': 'detached',
+            'size': size,
+            'display_description': description or 'fake-description',
+        }
+        self.volumes[_id] = volume
+        return volume
