@@ -878,7 +878,26 @@ Related options:
   where ``VCPU`` resources should be allocated from.
 * ``vcpu_pin_set``: A legacy option that this option partially replaces.
 """),
-    cfg.BoolOpt('live_migration_wait_for_vif_plug',
+   cfg.StrOpt('cpu_high_priority_set',
+        help="""
+Mask of host CPUs that can be used for prioritized ``PCPU`` resources.
+
+Possible values:
+
+* A comma-separated list of physical CPU numbers that instance VCPUs can be
+  allocated from. Each element should be either a single CPU number, a range of
+  CPU numbers, or a caret followed by a CPU number to be excluded from a
+  previous range. For example::
+
+    cpu_dedicated_set = "4-12,^8,15"
+
+Related options:
+
+* ``[compute] cpu_dedicated_set``: This is the parent option for defining the superset
+  where ``VCPU`` resources should be allocated from. ``[compute] cpu_high_priority_set`` option complements 
+  this option by enabling physical CPU prioritization.
+"""),
+   cfg.BoolOpt('live_migration_wait_for_vif_plug',
         default=True,
         help="""
 Determine if the source compute host should wait for a ``network-vif-plugged``

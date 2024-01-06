@@ -76,6 +76,22 @@ def get_cpu_dedicated_set():
     return cpu_ids
 
 
+def get_cpu_high_priority_set():
+    """Parse ``[compute] cpu_high_priority_set`` config.
+
+    :returns: A set of host CPU IDs that can be used for prioritized PCPU allocations.
+    """
+    if not CONF.compute.cpu_high_priority_set:
+        return None
+
+    cpu_ids = parse_cpu_spec(CONF.compute.cpu_high_priority_set)
+    if not cpu_ids:
+        msg = _("No CPUs available after parsing '[compute] "
+                "cpu_high_priority_set' config, %r")
+        raise exception.Invalid(msg % CONF.compute.cpu_high_priority_set)
+    return cpu_ids
+
+
 def get_cpu_dedicated_set_nozero():
     """Return cpu_dedicated_set without CPU0, if present"""
     return (get_cpu_dedicated_set() or set()) - {0}
@@ -720,8 +736,30 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
         #
         # For an instance_cores=[2, 3], usable_cores=[[0], [4]]
         # vcpus_pinning=[(2, 0), (3, 4)]
-        vcpus_pinning = list(zip(sorted(instance_cores),
-                                 itertools.chain(*usable_cores)))
+
+        # todo  Tharindu: Below is PoC implementation, and not efficient at all.
+        def get_priority_weight(val, high_p_list):
+            if val in high_p_list:
+                return 0
+            return 1
+
+        # todo: properly inject this through conf file: high_priority_cores = get_cpu_high_priority_set()
+        high_priority_cores = [0, 1, 2]
+        usable_cores_list = list(itertools.chain(*usable_cores))
+        if len(high_priority_cores) > 1:
+            usable_cores_list = sorted(usable_cores_list, key=lambda x: get_priority_weight(x, high_priority_cores))
+            msg = ("Using priority core pinning: high priority cores: "
+                   "%(high_priority_cores)s, priority ordered host cores: %(usable_cores_list)s")
+            msg_args = {
+                'high_priority_cores': high_priority_cores,
+                'usable_cores_list': usable_cores_list,
+            }
+            LOG.info(msg, msg_args)
+        vcpus_pinning = list(zip(
+            sorted(instance_cores),
+            usable_cores_list
+        ))
+
         msg = ("Computed NUMA topology CPU pinning: usable pCPUs: "
                "%(usable_cores)s, vCPUs mapping: %(vcpus_pinning)s")
         msg_args = {
@@ -729,6 +767,8 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
             'vcpus_pinning': vcpus_pinning,
         }
         LOG.info(msg, msg_args)
+        # In the prototype: Allocate vm with pinnning enabled + number of cores = 1
+        # Computed NUMA topology CPU pinning: usable pCPUs: [[0], [1], [2], [3]], vCPUs mapping: [(0, 0)]
 
         return vcpus_pinning
 
