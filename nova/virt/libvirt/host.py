@@ -38,6 +38,7 @@ import queue
 import socket
 import threading
 import typing as ty
+import requests as rq
 
 from eventlet import greenio
 from eventlet import greenthread
@@ -760,7 +761,28 @@ class Host(object):
             if cpu_map[cpu]:
                 online_cpus.add(cpu)
 
-        return online_cpus
+        asleep_cpus = self._get_sleeping_cpus()
+        os_online_cpus = online_cpus - asleep_cpus
+        if len(asleep_cpus) > 0:
+            LOG.info('Asleep cpus detected. %(libvirsh_online_cpus)s:%(asleep_cpus)s for '
+                     'os_online %(os_online_cpus)s',
+                     {'libvirsh_online_cpus': online_cpus, 'asleep_cpus': asleep_cpus,
+                      'os_online_cpus': os_online_cpus})
+
+        return os_online_cpus
+
+    def _get_sleeping_cpus(self):
+        """Get the ids of the cores that are sleeping.
+
+        :returns: list of ids that are asleep.
+        """
+        # todo hardcoded:: supports only a single green core which has an id of 3.
+        r = rq.get(url="http://100.70.12.103:4000/gc/is-asleep")
+        data = r.json()
+        is_awake = data['is-awake']
+
+        sleeping_cpus = set() if is_awake else {3}
+        return sleeping_cpus
 
     def get_cpu_model_names(self):
         """Get the cpu models based on host CPU arch
