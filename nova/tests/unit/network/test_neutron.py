@@ -8611,6 +8611,73 @@ class TestAPIPortbinding(TestAPIBase):
         self.assertEqual(call_args['port']['binding:profile'],
             {'key': 'val'})
 
+    def test__get_vf_pci_device_profile_without_serial_num(self):
+        mydev = objects.PciDevice(
+            address='foo',
+            compute_node_id='123',
+            extra_info={
+                'capabilities': jsonutils.dumps({
+                    'sriov': {
+                        'pf_mac_address': '52:54:00:1e:59:c6',
+                        'vf_num': 1,
+                    },
+                    'network': ['gso', 'sg', 'tso', 'tx'],
+                }),
+            },
+        )
+        self.assertEqual(self.api._get_vf_pci_device_profile(mydev),
+                         {'pf_mac_address': '52:54:00:1e:59:c6',
+                          'vf_num': 1,
+                          'capabilities': ['gso', 'sg', 'tso', 'tx']})
+
+    def test__get_vf_pci_device_profile_without_pf_mac_addr(self):
+        mydev = objects.PciDevice(
+            address='foo',
+            compute_node_id='123',
+            extra_info={
+                'capabilities': jsonutils.dumps({
+                    'vpd': {'card_serial_number': 'MT2113X00000'},
+                    'sriov': {'vf_num': 1},
+                    'network': ['gso', 'sg', 'tso', 'tx'],
+                }),
+            },
+        )
+        self.assertEqual(self.api._get_vf_pci_device_profile(mydev),
+                         {'card_serial_number': 'MT2113X00000',
+                          'vf_num': 1,
+                          'capabilities': ['gso', 'sg', 'tso', 'tx']})
+
+    def test__get_vf_pci_device_profile_without_vf_num(self):
+        mydev = objects.PciDevice(
+            address='foo',
+            compute_node_id='123',
+            extra_info={
+                'capabilities': jsonutils.dumps({
+                    'vpd': {'card_serial_number': 'MT2113X00000'},
+                    'sriov': {'pf_mac_address': '52:54:00:1e:59:c6'},
+                    'network': ['gso', 'sg', 'tso', 'tx'],
+                }),
+            },
+        )
+        self.assertEqual(self.api._get_vf_pci_device_profile(mydev),
+                         {'card_serial_number': 'MT2113X00000',
+                          'pf_mac_address': '52:54:00:1e:59:c6',
+                          'capabilities': ['gso', 'sg', 'tso', 'tx']})
+
+    def test__get_vf_pci_device_profile_with_dev_capabilities(self):
+        mydev = objects.PciDevice(
+            address='foo',
+            compute_node_id='123',
+            extra_info={
+                'capabilities': jsonutils.dumps({
+                    'sriov': {},
+                    'network': ['gso', 'sg', 'tso', 'tx'],
+                }),
+            },
+        )
+        self.assertEqual(self.api._get_vf_pci_device_profile(mydev),
+                         {'capabilities': ['gso', 'sg', 'tso', 'tx']})
+
 
 class TestAllocateForInstance(test.NoDBTestCase):
     def setUp(self):

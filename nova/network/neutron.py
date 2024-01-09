@@ -1617,12 +1617,13 @@ class API:
         pf_mac = pci_dev.sriov_cap.get('pf_mac_address')
         vf_num = pci_dev.sriov_cap.get('vf_num')
         card_serial_number = pci_dev.card_serial_number
-        if all((pf_mac, vf_num, card_serial_number)):
-            vf_profile.update({
-                'card_serial_number': card_serial_number,
-                'pf_mac_address': pf_mac,
-                'vf_num': vf_num,
-            })
+
+        if card_serial_number is not None:
+            vf_profile['card_serial_number'] = card_serial_number
+        if pf_mac is not None:
+            vf_profile['pf_mac_address'] = pf_mac
+        if vf_num is not None:
+            vf_profile['vf_num'] = vf_num
 
         # Update port binding capabilities using PCI device's network
         # capabilities if they exist.
