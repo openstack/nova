@@ -52,6 +52,7 @@ AGGREGATE_GENERATION_VERSION = '1.19'
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
 GET_USAGES_VERSION = '1.9'
+PLACEMENTCLIENT = None
 
 AggInfo = collections.namedtuple('AggInfo', ['aggregates', 'generation'])
 TraitInfo = collections.namedtuple('TraitInfo', ['traits', 'generation'])
@@ -65,6 +66,51 @@ def warn_limit(self, msg):
     else:
         self._warn_count = WARN_EVERY
         LOG.warning(msg)
+
+
+def report_client_singleton():
+    """Return a reference to the global placement client singleton.
+
+    This initializes the placement client once and returns a reference
+    to that singleton on subsequent calls. Errors are raised
+    (particularly ks_exc.*) but context-specific error messages are
+    logged for consistency.
+    """
+    # NOTE(danms): The report client maintains internal state in the
+    # form of the provider tree, which will be shared across all users
+    # of this global client. That is not a problem now, but in the
+    # future it may be beneficial to fix that. One idea would be to
+    # change the behavior of the client such that the static-config
+    # pieces of the actual keystone client are separate from the
+    # internal state, so that we can return a new object here with a
+    # context-specific local state object, but with the client bits
+    # shared.
+    global PLACEMENTCLIENT
+    if PLACEMENTCLIENT is None:
+        try:
+            PLACEMENTCLIENT = SchedulerReportClient()
+        except ks_exc.EndpointNotFound:
+            LOG.error('The placement API endpoint was not found.')
+            raise
+        except ks_exc.MissingAuthPlugin:
+            LOG.error('No authentication information found for placement API.')
+            raise
+        except ks_exc.Unauthorized:
+            LOG.error('Placement service credentials do not work.')
+            raise
+        except ks_exc.DiscoveryFailure:
+            LOG.error('Discovering suitable URL for placement API failed.')
+            raise
+        except (ks_exc.ConnectFailure,
+                ks_exc.RequestTimeout,
+                ks_exc.GatewayTimeout):
+            LOG.error('Placement API service is not responding.')
+            raise
+        except Exception:
+            LOG.error('Failed to initialize placement client '
+                      '(is keystone available?)')
+            raise
+    return PLACEMENTCLIENT
 
 
 def safe_connect(f):

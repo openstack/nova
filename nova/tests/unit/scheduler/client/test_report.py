@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import copy
+import ddt
 import time
 from urllib import parse
 
@@ -148,6 +149,41 @@ class SafeConnectedTestCase(test.NoDBTestCase):
         req.reset_mock()
         self.client._get_resource_provider(self.context, "fake")
         self.assertTrue(req.called)
+
+
+@ddt.ddt
+class TestSingleton(test.NoDBTestCase):
+    def test_singleton(self):
+        # Make sure we start with a clean slate
+        self.assertIsNone(report.PLACEMENTCLIENT)
+
+        # Make sure the first call creates the singleton, sets it
+        # globally, and returns it
+        client = report.report_client_singleton()
+        self.assertEqual(client, report.PLACEMENTCLIENT)
+
+        # Make sure that a subsequent call returns the same thing
+        # again and that the global is unchanged
+        self.assertEqual(client, report.report_client_singleton())
+        self.assertEqual(client, report.PLACEMENTCLIENT)
+
+    @ddt.data(ks_exc.EndpointNotFound,
+              ks_exc.MissingAuthPlugin,
+              ks_exc.Unauthorized,
+              ks_exc.DiscoveryFailure,
+              ks_exc.ConnectFailure,
+              ks_exc.RequestTimeout,
+              ks_exc.GatewayTimeout,
+              test.TestingException)
+    def test_errors(self, exc):
+        self._test_error(exc)
+
+    @mock.patch.object(report, 'LOG')
+    def _test_error(self, exc, mock_log):
+        with mock.patch.object(report.SchedulerReportClient, '_create_client',
+                               side_effect=exc):
+            self.assertRaises(exc, report.report_client_singleton)
+        mock_log.error.assert_called_once()
 
 
 class TestConstructor(test.NoDBTestCase):

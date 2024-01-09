@@ -61,6 +61,7 @@ from nova import exception
 from nova import objects
 from nova.objects import base as objects_base
 from nova import quota
+from nova.scheduler.client import report
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import matchers
 from nova import utils
@@ -289,6 +290,9 @@ class TestCase(base.BaseTestCase):
         # make sure that the wsgi app is fully initialized for all testcase
         # instead of only once initialized for test worker
         wsgi_app.init_global_data.reset()
+
+        # Reset the placement client singleton
+        report.PLACEMENTCLIENT = None
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.
