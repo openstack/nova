@@ -11,7 +11,6 @@
 # under the License.
 
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
 
@@ -46,13 +45,7 @@ class ComputeVersion6xPinnedRpcTests(integrated_helpers._IntegratedTestBase):
 
     # We automatically pin to 6.0 if old computes are Yoga or older.
     def test_rebuild_instance_6_0(self):
-        e = self.assertRaises(client.OpenStackApiException,
-            self._test_rebuild_instance_with_compute_rpc_pin, '6.0')
-        self.assertEqual(500, e.response.status_code)
-        # NOTE(sbauza): This returns a TypeError because of
-        # 'reimage_boot_volume' and 'target_state' parameters missing from the
-        # rcpapi caller.
-        self.assertIn('TypeError', e.response.text)
+        self._test_rebuild_instance_with_compute_rpc_pin('6.0')
 
     # We automatically pin to 6.1 if old computes are Zed.
     def test_rebuild_instance_6_1(self):
