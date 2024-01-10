@@ -75,3 +75,5 @@ RESET_STATE = 'resetState'
 # nova-manage instance actions logged to allow operators and users alike to
 # track out of band changes made to their instances.
 NOVA_MANAGE_REFRESH_VOLUME_ATTACHMENT = 'refresh_volume_attachment'
+
+SAP_IN_CLUSTER_VMOTION = 'sap_in_cluster_vmotion'

@@ -1273,52 +1273,57 @@ class VMwareVCDriver(driver.ComputeDriver):
         We do not need to check if instance is part of our cluster, because we
         only get called if the instance belongs to us - in the DB at least.
         """
-        host_ref = vim_util.get_moref(host_moref_value, 'HostSystem')
-        try:
-            host_name = self._session._call_method(
-                vim_util, "get_object_property", host_ref, "name")
-        except vexc.ManagedObjectNotFoundException:
-            msg = f"Cannot find given target node {host_moref_value}"
-            raise error_util.InClustervMotionCheckError(reason=msg)
-        host_stats = self._vc_state.get_host_stats().get(host_name)
-        if not host_stats:
-            msg = (f"Cannot find given node {host_name} in host "
-                   "stats (doesn't belong to this cluster or is a "
-                   "failover host)")
-            raise error_util.InClustervMotionCheckError(reason=msg)
-        if not host_stats['available']:
-            msg = (f"Given node {host_name} is unsuitable "
-                   "(available = False)")
-            raise error_util.InClustervMotionCheckError(reason=msg)
+        # we cannot use wrap_instance_event() here, because that would change
+        # the public interface of our class which breaks testing ...
+        with compute_utils.EventReporter(context,
+                'vmwareapi_in_cluster_vmotion', CONF.host, instance.uuid):
+            host_ref = vim_util.get_moref(host_moref_value, 'HostSystem')
+            try:
+                host_name = self._session._call_method(
+                    vim_util, "get_object_property", host_ref, "name")
+            except vexc.ManagedObjectNotFoundException:
+                msg = f"Cannot find given target node {host_moref_value}"
+                raise error_util.InClustervMotionCheckError(reason=msg)
+            host_stats = self._vc_state.get_host_stats().get(host_name)
+            if not host_stats:
+                msg = (f"Cannot find given node {host_name} in host "
+                       "stats (doesn't belong to this cluster or is a "
+                       "failover host)")
+                raise error_util.InClustervMotionCheckError(reason=msg)
+            if not host_stats['available']:
+                msg = (f"Given node {host_name} is unsuitable "
+                       "(available = False)")
+                raise error_util.InClustervMotionCheckError(reason=msg)
 
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
-        current_host_ref = self._session._call_method(vim_util,
-            "get_object_property", vm_ref, "runtime.host")
-        if vim_util.get_moref_value(current_host_ref) == host_moref_value:
-            LOG.debug("Target host %(host_moref_value)s is the current host",
-                      {'host_moref_value': host_moref_value},
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
+            current_host_ref = self._session._call_method(vim_util,
+                "get_object_property", vm_ref, "runtime.host")
+            if vim_util.get_moref_value(current_host_ref) == host_moref_value:
+                LOG.debug("Target host %(host_moref_value)s is the current "
+                          "host",
+                          {'host_moref_value': host_moref_value},
+                          instance=instance)
+                return
+
+            # Can we do that by using place_vm()? vmops.pre_live_migration()
+            # has some code for that we could re-use
+
+            # build the vMotion task
+            client_factory = self._session.vim.client.factory
+            relocate_spec = vm_util.relocate_vm_spec(
+                client_factory,
+                host=host_ref)
+
+            # run the vMotion and wait for it to finish
+            # start instance relocation
+            LOG.debug('Relocating %s from %s to %s',
+                      vim_util.get_moref_value(vm_ref),
+                      vim_util.get_moref_value(current_host_ref),
+                      vim_util.get_moref_value(host_ref),
                       instance=instance)
-            return
-
-        # Can we do that by using place_vm()? vmops.pre_live_migration() has
-        # some code for that we could re-use
-
-        # build the vMotion task
-        client_factory = self._session.vim.client.factory
-        relocate_spec = vm_util.relocate_vm_spec(
-            client_factory,
-            host=host_ref)
-
-        # run the vMotion and wait for it to finish
-        # start instance relocation
-        LOG.debug('Relocating %s from %s to %s',
-                  vim_util.get_moref_value(vm_ref),
-                  vim_util.get_moref_value(current_host_ref),
-                  vim_util.get_moref_value(host_ref),
-                  instance=instance)
-        vm_util.relocate_vm(self._session, vm_ref, spec=relocate_spec)
-        LOG.debug('Relocated %s from %s to %s',
-                  vim_util.get_moref_value(vm_ref),
-                  vim_util.get_moref_value(current_host_ref),
-                  vim_util.get_moref_value(host_ref),
-                  instance=instance)
+            vm_util.relocate_vm(self._session, vm_ref, spec=relocate_spec)
+            LOG.debug('Relocated %s from %s to %s',
+                      vim_util.get_moref_value(vm_ref),
+                      vim_util.get_moref_value(current_host_ref),
+                      vim_util.get_moref_value(host_ref),
+                      instance=instance)
