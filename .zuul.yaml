@@ -460,7 +460,7 @@
             libvirt:
               # Increase the number of PCIe ports per instance given the q35
               # machine type attaches more devices by default than pc
-              num_pcie_ports: 24
+              num_pcie_ports: 12
               hw_machine_type: "x86_64=q35"
               # Use lower TB cache than default(1GiB), only applicable with
               # libvirt>=8.0.0
