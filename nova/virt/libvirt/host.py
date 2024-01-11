@@ -61,7 +61,7 @@ from nova.objects import fields
 from nova.pci import utils as pci_utils
 from nova import rpc
 from nova import utils
-from nova.virt import event as virtevent
+from nova.virt import event as virtevent, hardware
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
@@ -777,11 +777,13 @@ class Host(object):
         :returns: list of ids that are asleep.
         """
         # todo hardcoded:: supports only a single green core which has an id of 3.
-        r = rq.get(url="http://100.70.12.103:4000/gc/is-asleep")
+        endpoint = CONF.compute.cpu_sleep_info_endpoint
+        r = rq.get(url=endpoint)
         data = r.json()
         is_awake = data['is-awake']
-
-        sleeping_cpus = set() if is_awake else {3}
+        sleeping_cpus = set()
+        if not is_awake:
+            sleeping_cpus = set(hardware.get_cpu_dynamic_set())
         return sleeping_cpus
 
     def get_cpu_model_names(self):
