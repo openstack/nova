@@ -1260,6 +1260,9 @@ class VMwareVCDriver(driver.ComputeDriver):
             LOG.debug("Fixing shadow vms %s", volumes, instance=instance)
             self._volumeops.fixup_shadow_vms(instance, volumes)
 
+        self._vmops._clean_up_after_special_spawning(
+            context, instance.memory_mb, instance.flavor)
+
     def in_cluster_vmotion(self, context, instance, host_moref_value):
         """vMotion the instance onto host_moref, if possible
 
