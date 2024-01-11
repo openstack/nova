@@ -3180,6 +3180,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                                image_id,
                                                metadata,
                                                image_file)
+        except exception.ImageNotFound:
+            with excutils.save_and_reraise_exception():
+                LOG.warning("Failed to snapshot image because it was deleted")
+                failed_snap = metadata.pop('location', None)
+                if failed_snap:
+                    failed_snap = {'url': str(failed_snap)}
+                root_disk.cleanup_direct_snapshot(
+                        failed_snap, also_destroy_volume=True,
+                        ignore_errors=True)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception("Failed to snapshot image")

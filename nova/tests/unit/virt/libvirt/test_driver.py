@@ -29337,6 +29337,36 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         rbd.remove_snap.assert_called_with('c', 'd', ignore_errors=True,
                                            pool='b', force=True)
 
+    @mock.patch.object(libvirt_driver, 'LOG')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
+                new=mock.Mock(return_value='rbd'))
+    @mock.patch('nova.virt.libvirt.utils.find_disk',
+                new=mock.Mock(return_value=('rbd://some/fake/rbd/image',
+                                            'raw')))
+    @mock.patch.object(rbd_utils, 'RBDDriver')
+    @mock.patch.object(rbd_utils, 'rbd')
+    def test_raw_with_rbd_clone_fails_image_deleted(
+            self, mock_rbd, mock_driver, mock_log):
+        self.flags(images_type='rbd', group='libvirt')
+        rbd = mock_driver.return_value
+        rbd.parent_info = mock.Mock(return_value=['test-pool', '', ''])
+        rbd.parse_url = mock.Mock(return_value=['a', 'b', 'c', 'd'])
+        with mock.patch.object(self.image_service, 'update',
+                               side_effect=exception.ImageNotFound(
+                                    image_id=uuids.new_snapshot)):
+            self.assertRaises(exception.ImageNotFound, self._test_snapshot,
+                              disk_format='raw')
+        rbd.clone.assert_called_with(mock.ANY, mock.ANY, dest_pool='test-pool')
+        rbd.flatten.assert_called_with(mock.ANY, pool='test-pool')
+        # Ensure that the direct_snapshot attempt was cleaned up
+        rbd.remove_snap.assert_called_with('c', 'd', ignore_errors=True,
+                                           pool='b', force=True)
+        # Make sure we took the NotFound-specific error path, and thus just
+        # logged a warning, instead of the catch-all which logs exception.
+        mock_log.exception.assert_not_called()
+        mock_log.warning.assert_called_once_with(
+            'Failed to snapshot image because it was deleted')
+
     @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
                 new=mock.Mock(return_value='rbd'))
     @mock.patch('nova.virt.libvirt.utils.find_disk',
