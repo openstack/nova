@@ -39,7 +39,7 @@ class HvRamClassWeigher(weights.BaseHostWeigher, HypervisorSizeMixin):
     def _load_classes(self):
         """Split out from __init__() to be able to unit-test better"""
         config_weights = CONF.filter_scheduler.hv_ram_class_weights_gib
-        classes = [(int(ram * 1024), float(weight))
+        classes = [(int(ram) * 1024, float(weight))
                    for ram, weight in config_weights.items()]
 
         self._classes = sorted(classes, key=itemgetter(0), reverse=True)

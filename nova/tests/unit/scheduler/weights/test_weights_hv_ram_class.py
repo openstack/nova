@@ -108,3 +108,13 @@ class HvRamClassWeigherTestCase(test.NoDBTestCase):
                     'host0', 'host6',
                     'host1', 'host3']
         self.assertEqual(expected, [h.obj.host for h in weighed_hosts])
+
+    def test_load_classes_handles_strings(self):
+        """We get strings from the config file"""
+        CONF.set_override('hv_ram_class_weights_gib',
+                          {'1024': '1', '3027': '0.5'},
+                          group='filter_scheduler')
+        self.weighers[0]._load_classes()
+
+        self.assertEqual({1024 * 1024: 1.0, 3027 * 1024: 0.5},
+                         dict(self.weighers[0]._classes))
