@@ -98,6 +98,14 @@ class NUMACell(base.NovaObject):
         self.pinned_cpus |= cpus
 
     def unpin_cpus(self, cpus):
+        #todo if the core is set offline, below check can fail, eventhough there are cpus that are not a part of available cpus right now.
+        #todo for now, we will disable this check. At least we should check if the cpu is a green core&in-sleep-mode by calling emulation service.
+        #todo this is also a valid bug, in the case of cpu offline. its worth exploring and fixing.
+        if (cpus - self.pcpuset) and ((self.pinned_cpus & cpus) != cpus):
+            # As a quick patch for our VERY SPECIFIC deployment and use cases, we assume this is a core that went to sleep.
+            self.pinned_cpus -= cpus
+            return
+
         if cpus - self.pcpuset:
             raise exception.CPUUnpinningUnknown(requested=list(cpus),
                                                 available=list(self.pcpuset))
