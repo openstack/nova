@@ -266,7 +266,7 @@ Instances found without hw_machine_type set. This warning can be ignored if
 your environment does not contain libvirt based compute hosts.
 Use the `nova-manage machine_type list_unset` command to list these instances.
 For more details see the following:
-https://docs.openstack.org/latest/nova/admin/hw_machine_type.html"""))
+https://docs.openstack.org/nova/latest/admin/hw-machine-type.html"""))
             return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
 
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
@@ -276,7 +276,7 @@ https://docs.openstack.org/latest/nova/admin/hw_machine_type.html"""))
             msg = (_("""
 Service user token configuration is required for all Nova services.
 For more details see the following:
-https://docs.openstack.org/latest/nova/admin/configuration/service-user-token.html"""))  # noqa
+https://docs.openstack.org/nova/latest/admin/configuration/service-user-token.html"""))  # noqa
             return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
