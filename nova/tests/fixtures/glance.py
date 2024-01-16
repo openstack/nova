@@ -300,6 +300,10 @@ class GlanceFixture(fixtures.Fixture):
 
         image_meta = copy.deepcopy(metadata)
 
+        if image_meta.get('min_disk'):
+            # min_disk should be of int type only.
+            image_meta['min_disk'] = int(image_meta['min_disk'])
+
         # Glance sets the size value when an image is created, so we
         # need to do that here to fake things out if it's not provided
         # by the caller. This is needed to avoid a KeyError in the
