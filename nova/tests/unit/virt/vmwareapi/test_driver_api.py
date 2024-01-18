@@ -2722,7 +2722,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def _mock_get_stats_from_cluster_per_host(self,
                                               memory_mb_reserved=0):
         return {
-            'host1': {
+            'host-1': {
+                'name': 'host1',
                 'available': True,
                 'vcpus': 16,
                 'vcpus_used': 0,
@@ -2733,7 +2734,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 'cpu_info': {},
                 'cpu_mhz': 900,
             },
-            'host2': {
+            'host-2': {
+                'name': 'host2',
                 'available': True,
                 'vcpus': 16,
                 'vcpus_used': 0,

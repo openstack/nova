@@ -414,6 +414,15 @@ All VMs in the cluster have to be in a VM group that has a rule specifying a
 must-not-run-on-hostgroup rule for this hostgroup. Putting a host in this
 hostgroup will then result in the host getting freed up by DRS.
 """),
+    cfg.BoolOpt('drs_disabled_stack_vms',
+                default=True,
+                help="""
+Configures the spawning behaviour when DRS is disabled in a cluster.
+
+When this option is enabled and DRS is set to `disabled`, the VMs will
+be stacked by choosing the fullest host still having enough resources free
+to fit that VM.
+"""),
 ]
 
 vmwareapi_driver_opts = [

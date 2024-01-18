@@ -1292,7 +1292,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
             call_method.assert_called_once_with(mock.ANY, 'CreateVM_Task',
                 'fake_vm_folder', config='fake_config_spec',
-                pool='fake_res_pool_ref')
+                pool='fake_res_pool_ref', host=None)
             wait_for_task.assert_called_once_with('fake_create_vm_task')
 
     @mock.patch.object(vm_util.LOG, 'warning')

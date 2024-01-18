@@ -1731,6 +1731,7 @@ def _process_host_stats(obj, host_reservations_map):
     stats = {
         "available": (not runtime_summary.inMaintenanceMode and
                       runtime_summary.connectionState == "connected"),
+        "name": host_props["name"],
         "vcpus": threads,
         "vcpus_used": 0,
         "memory_mb": mem_mb,
@@ -1741,11 +1742,21 @@ def _process_host_stats(obj, host_reservations_map):
 
     _set_hypervisor_type_and_version(stats, host_props)
     _set_host_reservations(stats, host_reservations_map, obj.obj)
-    return host_props["name"], stats
+    return vutil.get_moref_value(obj.obj), stats
 
 
 def get_stats_from_cluster_per_host(session, cluster):
-    """Get the resource stats per host of a cluster."""
+    """Get the hosts with the underlying resource stats.
+
+    Returns a dict containing the host mo-ref value as key, and the
+    host properties and stats as a value.
+    {
+      'host-1234': {
+        'name': 'node001',
+        'memory_mb': 2048,
+      }
+    }
+    """
     host_mors, host_reservations_map = \
         get_hosts_and_reservations_for_cluster(session, cluster)
 
@@ -1919,13 +1930,14 @@ def get_vmdk_adapter_type(adapter_type):
 @loopingcall.RetryDecorator(
     max_retry_count=20, inc_sleep_time=2, max_sleep_time=20,
     exceptions=(vexc.VimFaultException,))
-def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
+def create_vm(session, instance, vm_folder, config_spec, res_pool_ref,
+              host_ref=None):
     """Create VM on ESX host."""
     LOG.debug("Creating VM on the ESX host", instance=instance)
     vm_create_task = session._call_method(
         session.vim,
         "CreateVM_Task", vm_folder,
-        config=config_spec, pool=res_pool_ref)
+        config=config_spec, pool=res_pool_ref, host=host_ref)
     try:
         task_info = session._wait_for_task(vm_create_task)
     except vexc.VMwareDriverException:

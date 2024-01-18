@@ -2267,7 +2267,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                 self._instance, image_info, extra_specs)
             build_virtual_machine.assert_called_once_with(
                 self._instance, self._context, image_info, vi.datastore, [],
-                extra_specs, self._get_metadata(), 'fake_vm_folder')
+                extra_specs, self._get_metadata(), 'fake_vm_folder',
+                host_ref=None)
             enlist_image.assert_called_once_with(image_info.image_id,
                                                  vi.datastore, vi.dc_info.ref)
             fetch_image.assert_called_once_with(self._context, vi)
@@ -2336,7 +2337,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             build_virtual_machine.assert_called_once_with(
                 self._instance, self._context, image_info, vi.datastore, [],
                 extra_specs, self._get_metadata(is_image_used=False),
-                'fake_vm_folder')
+                'fake_vm_folder', host_ref=None)
             volumeops.attach_root_volume.assert_called_once_with(
                 connection_info1, self._instance, vi.datastore.ref,
                 constants.ADAPTER_TYPE_IDE)
@@ -2395,7 +2396,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         build_virtual_machine.assert_called_once_with(
             self._instance, self._context, image_info, vi.datastore, [],
             extra_specs, self._get_metadata(is_image_used=False),
-            'fake_vm_folder')
+            'fake_vm_folder', host_ref=None)
 
     def test_get_ds_browser(self):
         cache = self._vmops._datastore_browser_mapping
@@ -2685,11 +2686,13 @@ class VMwareVMOpsTestCase(test.TestCase):
                            return_value=None),
                 mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps.'
                            '_fetch_image_from_other_datastores',
-                           return_value=None)
+                           return_value=None),
+                mock.patch.object(cluster_util,
+                                  "is_drs_enabled", return_value=True),
         ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image,
               _get_img_svc, _get_inventory_path, _get_extra_specs,
               _get_instance_metadata, file_size, _find_image_template_vm,
-              _fetch_image_from_other_datastores):
+              _fetch_image_from_other_datastores, _is_drs_enabled):
             self._vmops.spawn(self._context, self._instance, image,
                               injected_files='fake_files',
                               admin_password='password',
@@ -2716,7 +2719,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                     self._instance,
                     'fake_vm_folder',
                     'fake_create_spec',
-                    self._cluster.resourcePool)
+                    self._cluster.resourcePool,
+                    host_ref=None)
             mock_get_and_set_vnc_config.assert_called_once_with(
                 self._session.vim.client.factory,
                 self._instance,
@@ -2951,7 +2955,8 @@ class VMwareVMOpsTestCase(test.TestCase):
             self._instance, image_info, extra_specs)
         build_virtual_machine.assert_called_once_with(self._instance,
                                                       self._context,
-            image_info, vi.datastore, [], extra_specs, metadata, 'fake-folder')
+            image_info, vi.datastore, [], extra_specs, metadata, 'fake-folder',
+            host_ref=None)
         enlist_image.assert_called_once_with(image_info.image_id,
                                              vi.datastore, vi.dc_info.ref)
         fetch_image.assert_called_once_with(self._context, vi)
@@ -4073,3 +4078,93 @@ class VMwareVMOpsTestCase(test.TestCase):
         extra_specs = self._vmops._get_extra_specs(
             specced_flavor({'trait:CUSTOM_NUMASIZE_C48_M729': 'forbidden'}))
         self.assertEqual(extra_specs.numa_prefer_ht, '')
+
+    def _test_stack_vm_to_host_if_needed(self, instance_memory_mb,
+                                         hosts, expected):
+        with test.nested(
+                mock.patch.object(vm_util,
+                                  'get_stats_from_cluster_per_host',
+                                  return_value=hosts),
+                mock.patch.object(cluster_util, 'is_drs_enabled',
+                                  return_value=False),
+        ) as (_get_stats_from_cluster_per_host, _is_drs_enabled):
+            instance = self._instance.obj_clone()
+            instance.memory_mb = instance_memory_mb
+
+            if expected is None:
+                self.assertRaises(exception.InstanceUnacceptable,
+                                  self._vmops._stack_vm_to_host_if_needed,
+                                  instance)
+                return
+
+            host_ref = self._vmops._stack_vm_to_host_if_needed(instance)
+
+            _get_stats_from_cluster_per_host.assert_called_once_with(
+                self._session, self._cluster.obj)
+            _is_drs_enabled.assert_called_once_with(self._session,
+                                                    self._cluster.obj)
+            self.assertEqual(expected, host_ref.value if host_ref else None)
+
+    @ddt.unpack
+    @ddt.data(
+        (512, 'host-2'),
+        (1024, 'host-2'),
+        (2048, 'host-2'),
+        (2560, 'host-1'),
+        (3072, None))
+    def test_stack_vm_to_host_if_needed(self, requested_mb, expected):
+        hosts = {
+            'host-1': {
+                'name': 'host2',
+                'available': True,
+                'memory_mb': 4096,
+                'memory_mb_used': 1024,
+                'memory_mb_reserved': 512,
+            },
+            'host-2': {
+                'name': 'host2',
+                'available': True,
+                'memory_mb': 4096,
+                'memory_mb_used': 1024,
+                'memory_mb_reserved': 1024,
+            },
+            # host-3 is the fullest one but never gets
+            # elected because it has available: False
+            'host-3': {
+                'name': 'host3',
+                'available': False,
+                'memory_mb': 4096,
+                'memory_mb_used': 1560,
+                'memory_mb_reserved': 1024,
+            }
+        }
+
+        self._test_stack_vm_to_host_if_needed(
+            requested_mb, hosts, expected)
+
+    @ddt.unpack
+    @ddt.data(
+        (1024, 'host-1'),
+        (2048, 'host-1'))
+    def test_stack_vm_to_host_if_needed_equal_hosts(
+            self, requested_mb, expected):
+        hosts = {
+            'host-1': {
+                'name': 'host1',
+                'available': True,
+                'memory_mb': 4096,
+                'memory_mb_used': 1024,
+                'memory_mb_reserved': 1024,
+            },
+            'host-2': {
+                'name': 'host2',
+                'available': True,
+                'memory_mb': 4096,
+                'memory_mb_used': 1024,
+                'memory_mb_reserved': 1024,
+            }
+        }
+        # the hosts have the same fill-grade, so the order they
+        # were returned into is not changed
+        self._test_stack_vm_to_host_if_needed(
+            requested_mb, hosts, expected)
