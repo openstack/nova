@@ -392,7 +392,7 @@ class VMwareVMOps(object):
 
     def build_virtual_machine(self, instance, context, image_info, datastore,
                               network_info, extra_specs, metadata, vm_folder,
-                              vm_name=None):
+                              vm_name=None, host_ref=None):
         config_spec = self._get_vm_config_spec(instance,
                                                image_info,
                                                datastore,
@@ -403,7 +403,8 @@ class VMwareVMOps(object):
 
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, vm_folder,
-                                   config_spec, self._root_resource_pool)
+                                   config_spec, self._root_resource_pool,
+                                   host_ref=host_ref)
 
         return vm_ref
 
@@ -1301,11 +1302,13 @@ class VMwareVMOps(object):
 
     def _create_instance_from_image_template(self, context, client_factory,
                                              templ_vm_ref, vi,
-                                             extra_specs, network_info):
+                                             extra_specs, network_info,
+                                             host_ref=None):
         rel_spec = vm_util.relocate_vm_spec(
             client_factory,
             res_pool=self._root_resource_pool,
-            disk_move_type="moveAllDiskBackingsAndDisallowSharing")
+            disk_move_type="moveAllDiskBackingsAndDisallowSharing",
+            host=host_ref)
         clone_spec = vm_util.clone_vm_spec(client_factory, rel_spec)
         vm_clone_task = self._session._call_method(
             self._session.vim,
@@ -1419,13 +1422,15 @@ class VMwareVMOps(object):
         boot_from_volume = compute_utils.is_volume_backed_instance(
                                                 instance._context, instance)
 
+        host_ref = self._stack_vm_to_host_if_needed(instance)
+
         if CONF.vmware.image_as_template and instance.image_ref \
                 and not boot_from_volume:
             templ_vm_ref = self._get_vm_template_for_image(
                 context, instance, image_info, extra_specs)
             vm_ref = self._create_instance_from_image_template(
                 context, client_factory, templ_vm_ref, vi,
-                extra_specs, network_info)
+                extra_specs, network_info, host_ref=host_ref)
         else:
             metadata = self._get_instance_metadata(context, instance)
             vm_folder = self._get_project_folder(
@@ -1437,7 +1442,8 @@ class VMwareVMOps(object):
                                                 network_info,
                                                 extra_specs,
                                                 metadata,
-                                                vm_folder)
+                                                vm_folder,
+                                                host_ref=host_ref)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance uuid.
@@ -1588,6 +1594,55 @@ class VMwareVMOps(object):
                 inv_data[special_spawning.BIGVM_RESOURCE]['reserved'] = 1
                 placement_client.set_inventory_for_provider(context, rp.uuid,
                                                             inv_data)
+
+    def _stack_vm_to_host_if_needed(self, instance):
+        """Selects the fullest host that can fit the VM.
+
+        This runs only if DRS is disabled and the configuration
+        CONF.vmware.drs_disabled_stack_vms is set to True
+
+        :returns: None if the DRS was enabled or if stacking VMs
+                  was disabled by the config.
+                  HostSystem mo-ref of the designated host.
+                  Raises InstanceUnacceptable if there was no
+                  host found to fit the VM.
+        """
+        if not CONF.vmware.drs_disabled_stack_vms:
+            return None
+        if cluster_util.is_drs_enabled(self._session, self._cluster):
+            return None
+        LOG.info("DRS is disabled and stacking VMs was enabled.")
+
+        hosts_free = []
+        hosts_full = []
+        for host_ref_value, info in vm_util.get_stats_from_cluster_per_host(
+                self._session, self._cluster).items():
+            if not info['available']:
+                continue
+            memory_mb_free = (info['memory_mb'] -
+                              info['memory_mb_used'] -
+                              info['memory_mb_reserved'])
+            if memory_mb_free < instance.memory_mb:
+                hosts_full.append((info['name'], memory_mb_free))
+            else:
+                hosts_free.append({'host_ref_value': host_ref_value,
+                                   'name': info['name'],
+                                   'memory_mb_free': memory_mb_free})
+
+        if hosts_full:
+            LOG.debug("Placing VM with %(memory_mb)s MiB ignored hosts "
+                      "without enough free memory %(hosts_full)s",
+                      {'memory_mb': instance.memory_mb,
+                       'hosts_full': hosts_full})
+        if not hosts_free:
+            reason = "Didn't find a host with enough memory to fit the VM."
+            raise exception.InstanceUnacceptable(instance_id=instance.uuid,
+                                                 reason=reason)
+
+        info = sorted(hosts_free, key=itemgetter('memory_mb_free'))[0]
+        LOG.debug("Stacking instance %(instance)s on host %(host)s.",
+                  {'instance': instance.uuid, 'host': info['name']})
+        return vutil.get_moref(info['host_ref_value'], "HostSystem")
 
     def _is_bdm_valid(self, block_device_mapping):
         """Checks if the block device mapping is valid."""

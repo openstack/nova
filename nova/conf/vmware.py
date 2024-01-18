@@ -452,6 +452,15 @@ all clusters in the environment.
 Example: "vmx-13" for vSphere 6.5.
 Versions can be looked up here: https://kb.vmware.com/s/article/1003746
 """),
+    cfg.BoolOpt('drs_disabled_stack_vms',
+                default=True,
+                help="""
+Configures the spawning behaviour when DRS is disabled in a cluster.
+
+When this option is enabled and DRS is set to `disabled`, the VMs will
+be stacked by choosing the fullest host still having enough resources free
+to fit that VM.
+"""),
 ]
 
 vmwareapi_driver_opts = [

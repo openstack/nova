@@ -124,9 +124,9 @@ class VCState(object):
             "numa_topology": None,
         }
 
-        for host, stats in per_host_stats.items():
-            data[host] = self._merge_stats(host, stats, defaults)
-
+        for host_ref_value, info in per_host_stats.items():
+            data[info["name"]] = self._merge_stats(info["name"], info,
+                                                   defaults)
         cluster_stats = vm_util.aggregate_stats_from_cluster(per_host_stats)
         cluster_stats["hypervisor_type"] = self._hypervisor_type
         cluster_stats["hypervisor_version"] = self._hypervisor_version
