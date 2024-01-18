@@ -62,6 +62,9 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default(
             'notification_format', "both", group="notifications")
 
+        # oslo.limit requires endpoint_id since 2.3.0
+        self.conf.set_default('endpoint_id', 'ENDPOINT_ID', group='oslo_limit')
+
         config.parse_args([], default_config_files=[], configure_db=False,
                           init_rpc=False)
         policy_opts.set_defaults(self.conf)
