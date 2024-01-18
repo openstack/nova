@@ -754,6 +754,40 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
     encryption_options = sa.Column(sa.String(4096))
 
 
+class ShareMapping(BASE, NovaBase):
+    """Represents share / instance mapping."""
+    __tablename__ = "share_mapping"
+    __table_args__ = (
+        sa.Index('share_idx', 'share_id'),
+        sa.Index('share_mapping_instance_uuid_share_id_idx',
+              'instance_uuid', 'share_id'),
+    )
+    # sqlite> create table my_table(id bigint primary key AUTOINCREMENT,
+    # name text);
+    # Parse error: AUTOINCREMENT is only allowed on an INTEGER PRIMARY KEY
+    # Use BigInteger variant for sqlite to allow unit tests. Other database
+    # should support BigInteger and autoincrement.
+    id = sa.Column(
+        sa.BigInteger().with_variant(sa.Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+        nullable=False,
+    )
+    uuid = sa.Column(sa.String(36))
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
+    instance = orm.relationship(
+        "Instance",
+        foreign_keys=instance_uuid,
+        primaryjoin='and_(ShareMapping.instance_uuid == Instance.uuid,'
+                    'Instance.deleted == 0)'
+    )
+    share_id = sa.Column(sa.String(36))
+    status = sa.Column(sa.String(32))
+    tag = sa.Column(sa.String(48))
+    export_location = sa.Column(sa.Text)
+    share_proto = sa.Column(sa.String(32))
+
+
 # TODO(stephenfin): Remove once we drop the security_groups field from the
 # Instance table. Until then, this is tied to the SecurityGroup table
 class SecurityGroupInstanceAssociation(BASE, NovaBase, models.SoftDeleteMixin):
