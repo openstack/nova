@@ -1779,23 +1779,13 @@ class Host(object):
                 'ram_allocation_ratio configured to 1.0')
 
         if CONF.reserved_host_memory_mb:
-            # this is a hard failure as placement won't allow total < reserved
-            if CONF.reserved_host_memory_mb >= CONF.libvirt.file_backed_memory:
-                msg = _(
-                    "'[libvirt] file_backed_memory', which represents total "
-                    "memory reported to placement, must be greater than "
-                    "reserved memory configured via '[DEFAULT] "
-                    "reserved_host_memory_mb'"
-                )
-                raise exception.InternalError(msg)
-
-            # TODO(stephenfin): Change this to an exception in W or later
-            LOG.warning(
+            msg = _(
                 "Reserving memory via '[DEFAULT] reserved_host_memory_mb' "
-                "is not compatible with file-backed memory. Consider "
-                "setting '[DEFAULT] reserved_host_memory_mb' to 0. This will "
-                "be an error in a future release."
+                "is not compatible with file-backed memory. Set "
+                "'[DEFAULT] reserved_host_memory_mb' to 0."
             )
+            raise exception.InternalError(msg)
+
         return True
 
     @property

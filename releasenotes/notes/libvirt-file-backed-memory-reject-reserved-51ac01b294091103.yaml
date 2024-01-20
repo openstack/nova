@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The libvirt driver now fails when file-backed memory is enabled but
+    the ``[DEFAULT] reserved_host_memory_mb`` option is not set to 0, because
+    reservation is not compatible with file backed memory.
