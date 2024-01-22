@@ -1,0 +1,9 @@
+seqdiag {
+    API; Source;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API -> Source [label = "cast (or call if deleting)", note = "confirm_resize"];
+}

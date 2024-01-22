@@ -1,0 +1,17 @@
+seqdiag {
+    API; Conductor; Source;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API ->> Conductor [label = "cast (or call if deleting)", note = "confirm_snapshot_based_resize"];
+
+    // separator to indicate everything after this is driven by ConfirmResizeTask
+    === ConfirmResizeTask ===
+
+    Conductor => Source [label = "call", note = "confirm_snapshot_based_resize_at_source"];
+    Conductor -> Conductor [note = "hard delete source cell instance"];
+    Conductor -> Conductor [note = "update target cell instance status"];
+
+}

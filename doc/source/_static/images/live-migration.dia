@@ -1,0 +1,29 @@
+seqdiag {
+    Conductor; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    Conductor            ->  Destination [label = "call", note = "check_can_live_migrate_destination"];
+                  Source <-  Destination [label = "call", leftnote = "check_can_live_migrate_source"];
+                  Source --> Destination;
+    Conductor            <-- Destination;
+
+    Conductor ->> Source [label = "cast", note = "live_migrate"];
+                  Source ->  Destination [label = "call", note = "pre_live_migration (set up dest)"];
+                  Source <-- Destination;
+
+    === driver.live_migration (success) ===
+
+              Source ->  Source [leftnote = "post_live_migration (clean up source)"];
+              Source ->  Destination [label = "call", note = "post_live_migration_at_destination (finish dest)"];
+              Source <-- Destination;
+
+    === driver.live_migration (failure) ===
+
+                  Source ->  Source [leftnote = "_rollback_live_migration"];
+                  Source ->  Destination [label = "call", note = "remove_volume_connections"];
+                  Source <-- Destination;
+                  Source ->> Destination [label = "cast", note = "rollback_live_migration_at_destination"];
+}

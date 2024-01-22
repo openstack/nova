@@ -1,0 +1,19 @@
+seqdiag {
+    API; Conductor; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API ->> Conductor [label = "cast", note = "revert_snapshot_based_resize"];
+
+    // separator to indicate everything after this is driven by RevertResizeTask
+    === RevertResizeTask ===
+
+    Conductor -> Conductor [note = "update records from target to source cell"];
+    Conductor -> Conductor [note = "update instance mapping"];
+    Conductor => Destination [label = "call", note = "revert_snapshot_based_resize_at_dest"];
+    Conductor -> Conductor [note = "hard delete target cell instance"];
+    Conductor => Source [label = "call", note = "finish_revert_snapshot_based_resize_at_source"];
+
+}

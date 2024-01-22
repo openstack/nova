@@ -1,0 +1,13 @@
+seqdiag {
+    API; Conductor; Scheduler; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API -> Conductor [label = "cast", note = "resize_instance/migrate_server"];
+           Conductor => Scheduler [label = "call", note = "select_destinations"];
+           Conductor -> Destination [label = "cast", note = "prep_resize"];
+                Source <- Destination [label = "cast", leftnote = "resize_instance"];
+                Source -> Destination [label = "cast", note = "finish_resize"];
+}

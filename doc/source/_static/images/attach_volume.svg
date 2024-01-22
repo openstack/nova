@@ -1,0 +1,169 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg viewBox="0 0 2056 1281" xmlns="http://www.w3.org/2000/svg" xmlns:inkspace="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs id="defs_block">
+    <filter height="1.504" id="filter_blur" inkspace:collect="always" width="1.1575" x="-0.07875" y="-0.252">
+      <feGaussianBlur id="feGaussianBlur3780" inkspace:collect="always" stdDeviation="4.2" />
+    </filter>
+  </defs>
+  <title>blockdiag</title>
+  <desc>seqdiag {
+        user; nova-api; nova-conductor; nova-compute; libvirt-driver; os-brick; cinder-api;
+        edge_length = 300;
+        span_height = 16;
+        activation = none;
+        default_note_color = white;
+        user -&gt;  nova-api [label = "POST /servers/{server_id}/os-volume_attachments"];
+                 nova-api -&gt; nova-compute [label = "RPC call reserve_block_device_name"];
+                             nova-compute -&gt; nova-compute [label = "instance.uuid lock"];
+                             nova-compute -&gt;&gt; nova-conductor [label = "bdm.create"];
+                             nova-compute &lt;&lt;- nova-conductor [label = "return BlockDeviceMapping"];
+                             nova-compute -&gt; libvirt-driver [label = "get_device_name_for_instance"];
+                             nova-compute &lt;- libvirt-driver [label = "Return get_device_name_for_instance"];
+                 nova-api &lt;- nova-compute [label = "Return reserve_block_device_name"];
+                 nova-api -&gt; cinder-api [label = "POST /v3/{project_id}/attachments"];
+                 nova-api &lt;- cinder-api [label = "Return HTTP 200 (without connection_info)"];
+                 nova-api -&gt;&gt; nova-compute [label = "RPC cast attach_volume"];
+        user &lt;-  nova-api [label = "Return HTTP 200 (includes device_name)"];
+                             nova-compute -&gt; nova-compute [label = "instance.uuid lock"];
+                             nova-compute -&gt; os-brick [label = "cinder_backend.uuid lock"];
+                             nova-compute -&gt; cinder-api [label = "PUT /v3/{project_id}/attachments/{attachment_id}"];
+                             nova-compute &lt;- cinder-api [label = "Return HTTP 200 (includes connection_info)"];
+                             nova-compute -&gt; libvirt-driver [label = "attach_volume"];
+                                             libvirt-driver -&gt; os-brick [label = "connect_volume"];
+                                                               os-brick -&gt; os-brick [label = "connect_volume lock"];
+                                             libvirt-driver &lt;- os-brick;
+                                             libvirt-driver -&gt; libvirt-driver [label = "guest.attach_device"];
+                                             libvirt-driver -&gt; libvirt-driver [label = "_build_device_metadata"];
+                                             libvirt-driver -&gt;&gt; nova-conductor [label = "instance.save"];
+                             nova-compute &lt;- libvirt-driver [label = "Return attach_volume"];
+                             nova-compute -&gt;&gt; nova-conductor [label = "bdm.save"];
+                             nova-compute -&gt; cinder-api [label = "POST /v3/{project_id}/attachments/{attachment_id}/action (os-complete)"];
+                             nova-compute &lt;- cinder-api [label = "Return HTTP 200"];
+}
+</desc>
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="22" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="367" y="22" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="667" y="22" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="967" y="22" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="1267" y="22" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="1567" y="22" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="1867" y="22" />
+  <path d="M 128 56 L 128 1281" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 428 56 L 428 1281" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 728 56 L 728 1281" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1028 56 L 1028 1281" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1328 56 L 1328 1281" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1628 56 L 1628 1281" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1928 56 L 1928 1281" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="64" y="16" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="128.0" y="42">user</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="364" y="16" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="48" x="428.0" y="42">nova-api</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="664" y="16" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="84" x="728.0" y="42">nova-conductor</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="964" y="16" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="72" x="1028.0" y="42">nova-compute</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="1264" y="16" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="84" x="1328.0" y="42">libvirt-driver</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="1564" y="16" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="48" x="1628.0" y="42">os-brick</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="1864" y="16" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="60" x="1928.0" y="42">cinder-api</text>
+  <path d="M 136 100 L 420 100" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="412,96 420,100 412,104" stroke="rgb(0,0,0)" />
+  <path d="M 436 141 L 1020 141" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1012,137 1020,141 1012,145" stroke="rgb(0,0,0)" />
+  <path d="M 1036 182 L 1178 182" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1178 182 L 1178 198" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1178 198 L 1036 198" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1044,194 1036,198 1044,202" stroke="rgb(0,0,0)" />
+  <path d="M 736 239 L 1020 239" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 744 235 L 736 239" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 736 239 L 744 243" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 736 280 L 1020 280" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1012 276 L 1020 280" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1020 280 L 1012 284" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1036 321 L 1320 321" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1312,317 1320,321 1312,325" stroke="rgb(0,0,0)" />
+  <path d="M 1036 362 L 1320 362" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1044,358 1036,362 1044,366" stroke="rgb(0,0,0)" />
+  <path d="M 436 403 L 1020 403" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,399 436,403 444,407" stroke="rgb(0,0,0)" />
+  <path d="M 436 444 L 1920 444" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1912,440 1920,444 1912,448" stroke="rgb(0,0,0)" />
+  <path d="M 436 485 L 1920 485" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,481 436,485 444,489" stroke="rgb(0,0,0)" />
+  <path d="M 436 526 L 1020 526" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1012 522 L 1020 526" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1020 526 L 1012 530" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 136 567 L 420 567" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="144,563 136,567 144,571" stroke="rgb(0,0,0)" />
+  <path d="M 1036 608 L 1178 608" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1178 608 L 1178 624" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1178 624 L 1036 624" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1044,620 1036,624 1044,628" stroke="rgb(0,0,0)" />
+  <path d="M 1036 665 L 1620 665" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1612,661 1620,665 1612,669" stroke="rgb(0,0,0)" />
+  <path d="M 1036 706 L 1920 706" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1912,702 1920,706 1912,710" stroke="rgb(0,0,0)" />
+  <path d="M 1036 747 L 1920 747" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1044,743 1036,747 1044,751" stroke="rgb(0,0,0)" />
+  <path d="M 1036 788 L 1320 788" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1312,784 1320,788 1312,792" stroke="rgb(0,0,0)" />
+  <path d="M 1336 829 L 1620 829" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1612,825 1620,829 1612,833" stroke="rgb(0,0,0)" />
+  <path d="M 1636 870 L 1778 870" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1778 870 L 1778 886" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1778 886 L 1636 886" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1644,882 1636,886 1644,890" stroke="rgb(0,0,0)" />
+  <path d="M 1336 912 L 1620 912" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1344,908 1336,912 1344,916" stroke="rgb(0,0,0)" />
+  <path d="M 1336 953 L 1478 953" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1478 953 L 1478 969" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1478 969 L 1336 969" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1344,965 1336,969 1344,973" stroke="rgb(0,0,0)" />
+  <path d="M 1336 1010 L 1478 1010" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1478 1010 L 1478 1026" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1478 1026 L 1336 1026" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1344,1022 1336,1026 1344,1030" stroke="rgb(0,0,0)" />
+  <path d="M 736 1067 L 1320 1067" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 744 1063 L 736 1067" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 736 1067 L 744 1071" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1036 1108 L 1320 1108" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1044,1104 1036,1108 1044,1112" stroke="rgb(0,0,0)" />
+  <path d="M 736 1149 L 1020 1149" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 744 1145 L 736 1149" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 736 1149 L 744 1153" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1036 1190 L 1920 1190" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1912,1186 1920,1190 1912,1194" stroke="rgb(0,0,0)" />
+  <path d="M 1036 1231 L 1920 1231" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1044,1227 1036,1231 1044,1235" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="276" x="282.0" y="83">POST /servers/{server_id}/os-volume_attachment</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="6" x="147.0" y="96">s</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="204" x="546.0" y="137">RPC call reserve_block_device_name</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="108" x="1094.0" y="178">instance.uuid lock</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="60" x="986.0" y="235">bdm.create</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="150" x="819.0" y="276">return BlockDeviceMapping</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="168" x="1128.0" y="317">get_device_name_for_instance</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="210" x="1211.0" y="358">Return get_device_name_for_instance</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="192" x="920.0" y="399">Return reserve_block_device_name</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="198" x="543.0" y="440">POST /v3/{project_id}/attachments</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="246" x="1793.0" y="481">Return HTTP 200 (without connection_info)</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="132" x="510.0" y="522">RPC cast attach_volume</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="228" x="302.0" y="563">Return HTTP 200 (includes device_name)</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="108" x="1094.0" y="604">instance.uuid lock</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="144" x="1116.0" y="661">cinder_backend.uuid lock</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="288" x="1188.0" y="702">PUT /v3/{project_id}/attachments/{attachment_id}</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="252" x="1790.0" y="743">Return HTTP 200 (includes connection_info)</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="78" x="1083.0" y="784">attach_volume</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="84" x="1386.0" y="825">connect_volume</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="114" x="1697.0" y="866">connect_volume lock</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="114" x="1397.0" y="949">guest.attach_device</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="132" x="1406.0" y="1006">_build_device_metadata</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="78" x="1277.0" y="1063">instance.save</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="120" x="1256.0" y="1104">Return attach_volume</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="48" x="992.0" y="1145">bdm.save</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="420" x="1254.0" y="1186">POST /v3/{project_id}/attachments/{attachment_id}/action (os-complete)</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="90" x="1871.0" y="1227">Return HTTP 200</text>
+</svg>

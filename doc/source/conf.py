@@ -42,8 +42,6 @@ extensions = [
     'ext.versioned_notifications',
     'ext.feature_matrix',
     'ext.extra_specs',
-    'sphinxcontrib.actdiag',
-    'sphinxcontrib.seqdiag',
     'sphinxcontrib.rsvgconverter',
 ]
 
@@ -54,12 +52,6 @@ sample_config_basename = '_static/nova'
 policy_generator_config_file = [
     ('../../etc/nova/nova-policy-generator.conf', '_static/nova'),
 ]
-
-actdiag_html_image_format = 'SVG'
-actdiag_antialias = True
-
-seqdiag_html_image_format = 'SVG'
-seqdiag_antialias = True
 
 todo_include_todos = True
 
@@ -204,70 +196,3 @@ openstackdocs_projects = [
 # process. As well as being unnecessary and a bad idea, this breaks on
 # python3.6 (but not python3.7), so don't do that.
 os.environ['OS_NOVA_DISABLE_EVENTLET_PATCHING'] = '1'
-
-
-def monkey_patch_blockdiag():
-    """Monkey patch the blockdiag library.
-
-    The default word wrapping in blockdiag is poor, and breaks on a fixed
-    text width rather than on word boundaries. There's a patch submitted to
-    resolve this [1]_ but it's unlikely to merge anytime soon.
-
-    In addition, blockdiag monkey patches a core library function,
-    ``codecs.getreader`` [2]_, to work around some Python 3 issues. Because
-    this operates in the same environment as other code that uses this library,
-    it ends up causing issues elsewhere. We undo these destructive changes
-    pending a fix.
-
-    TODO: Remove this once blockdiag is bumped to 1.6, which will hopefully
-    include the fix.
-
-    .. [1] https://bitbucket.org/blockdiag/blockdiag/pull-requests/16/
-    .. [2] https://bitbucket.org/blockdiag/blockdiag/src/1.5.3/src/blockdiag/utils/compat.py # noqa
-    """
-    import codecs
-    from codecs import getreader
-
-    from blockdiag.imagedraw import textfolder
-    from blockdiag.utils import compat  # noqa
-
-    # oh, blockdiag. Let's undo the mess you made.
-    codecs.getreader = getreader
-
-    def splitlabel(text):
-        """Split text to lines as generator.
-
-        Every line will be stripped. If text includes characters "\n\n", treat
-        as line separator. Ignore '\n' to allow line wrapping.
-        """
-        lines = [x.strip() for x in text.splitlines()]
-        out = []
-
-        for line in lines:
-            if line:
-                out.append(line)
-            else:
-                yield ' '.join(out)
-                out = []
-
-        yield ' '.join(out)
-
-    def splittext(metrics, text, bound, measure='width'):
-        folded = [' ']
-        for word in text.split():
-            # Try appending the word to the last line
-            tryline = ' '.join([folded[-1], word]).strip()
-            textsize = metrics.textsize(tryline)
-            if getattr(textsize, measure) > bound:
-                # Start a new line. Appends `word` even if > bound.
-                folded.append(word)
-            else:
-                folded[-1] = tryline
-        return folded
-
-    # monkey patch those babies
-    textfolder.splitlabel = splitlabel
-    textfolder.splittext = splittext
-
-
-monkey_patch_blockdiag()
