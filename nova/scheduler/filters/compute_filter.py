@@ -34,6 +34,7 @@ class ComputeFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, spec_obj):
         """Returns True for only active compute nodes."""
+
         service = host_state.service
         if service['disabled']:
             LOG.debug("%(host_state)s is disabled, reason: %(reason)s",
@@ -45,4 +46,18 @@ class ComputeFilter(filters.BaseHostFilter):
                 LOG.warning("%(host_state)s has not been heard from in a "
                             "while", {'host_state': host_state})
                 return False
+
+        def get_cpu_attrs(host_state):
+            vcpus_used = host_state.vcpus_used
+            vcpus_free = (host_state.vcpus_total * 1.0 - host_state.vcpus_used)
+            rcpus_used = host_state.rcpus_used
+            rcpus_free = (host_state.rcpus_total * 1.0 - host_state.rcpus_used)
+            gcpus_used = host_state.gcpus_used
+            gcpus_free = (host_state.gcpus_total * 1.0 - host_state.gcpus_used)
+            return gcpus_free, gcpus_used, rcpus_free, rcpus_used, vcpus_free, vcpus_used
+
+        gcpus_free, gcpus_used, rcpus_free, rcpus_used, vcpus_free, vcpus_used = get_cpu_attrs(host_state)
+        if spec_obj.name.contains('regular') and rcpus_free < spec_obj.vcpus:
+            return False
+
         return True
