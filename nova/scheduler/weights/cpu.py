@@ -21,12 +21,63 @@ stacking, you can set the 'cpu_weight_multiplier' option (by configuration
 or aggregate metadata) to a negative number and the weighing has the opposite
 effect of the default.
 """
+import math
 
 import nova.conf
 from nova.scheduler import utils
 from nova.scheduler import weights
 
 CONF = nova.conf.CONF
+
+
+def get_prefer_non_empty_machines_score(used_gc, free_gc, used_rc, free_rc):
+    if used_gc + used_rc > 0:
+        return 1
+    else:
+        return 0
+
+
+def get_prefer_most_unused_green_cores_score(used_gc, free_gc, used_rc, free_rc):
+    if free_gc + used_gc == 0:
+        return 0
+    else:
+        return free_gc / (free_gc + used_gc)
+
+
+def get_prefer_guranteed_renewable_draw_score(used_gc, free_gc, used_rc, free_rc, vm_rq_spec_obj):
+    if not vm_rq_spec_obj.name.contains('evictable'):
+        return 0
+    vm_vcpu = vm_rq_spec_obj.vcpu
+    overflow = vm_vcpu - free_rc
+    if 0 < overflow <= free_gc:
+        return 1
+    else:
+        return 0
+
+
+def get_worst_fit_on_green_cores_score(used_gc, free_gc, used_rc, free_rc, vm_rq_spec_obj):
+    if free_gc + used_gc == 0:
+        return 0
+    vm_vcpu = vm_rq_spec_obj.vcpu
+    overflow = vm_vcpu - free_rc
+    if 0 < overflow <= free_gc:
+        return free_gc / (free_gc + used_gc)
+    else:
+        return 0
+
+
+def get_best_fit_on_green_cores_score(used_vcpu, free_vcpu, vm_rq_spec_obj):
+    return 1 - (free_vcpu / (used_vcpu + free_vcpu))
+
+
+def get_cpu_attrs(host_state):
+    vcpus_used = host_state.vcpus_used
+    vcpus_free = (host_state.vcpus_total * 1.0 - host_state.vcpus_used)
+    rcpus_used = host_state.rcpus_used
+    rcpus_free = (host_state.rcpus_total * 1.0 - host_state.rcpus_used)
+    gcpus_used = host_state.gcpus_used
+    gcpus_free = (host_state.gcpus_total * 1.0 - host_state.gcpus_used)
+    return gcpus_free, gcpus_used, rcpus_free, rcpus_used, vcpus_free, vcpus_used
 
 
 class CPUWeigher(weights.BaseHostWeigher):
@@ -40,7 +91,18 @@ class CPUWeigher(weights.BaseHostWeigher):
 
     def _weigh_object(self, host_state, weight_properties):
         """Higher weights win.  We want spreading to be the default."""
-        vcpus_free = (
-            host_state.vcpus_total * host_state.cpu_allocation_ratio -
-            host_state.vcpus_used)
-        return vcpus_free
+        # vcpus_free = (
+        #     host_state.vcpus_total * host_state.cpu_allocation_ratio -
+        #     host_state.vcpus_used)
+
+        vm_rq_spec_obj = weight_properties
+
+        gcpus_free, gcpus_used, rcpus_free, rcpus_used, vcpus_free, vcpus_used = get_cpu_attrs(host_state)
+
+        w1 = math.pow(3, 4) * get_prefer_non_empty_machines_score(gcpus_used, gcpus_free, rcpus_used, rcpus_free)
+        w2 = math.pow(3, 3) * get_prefer_most_unused_green_cores_score(gcpus_used, gcpus_free, rcpus_used, rcpus_free)
+        w3 = math.pow(3, 2) * get_prefer_guranteed_renewable_draw_score(gcpus_used, gcpus_free, rcpus_used, rcpus_free, vm_rq_spec_obj)
+        w4 = math.pow(3, 1) * get_worst_fit_on_green_cores_score(gcpus_used, gcpus_free, rcpus_used, rcpus_free, vm_rq_spec_obj)
+        w5 = math.pow(3, 0) * get_best_fit_on_green_cores_score(vcpus_used, vcpus_free, vm_rq_spec_obj)
+
+        return w1 + w2 + w3 + w4 + w5
