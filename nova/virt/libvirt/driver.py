@@ -7924,6 +7924,29 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(0)
         return total
 
+
+    def _get_used_vcpu_lists(self, stable_set, dynamic_set):
+        """Get vcpu usage number of physical computer.
+
+        :returns: The total number of vcpu(s) that are currently being used.
+
+        """
+
+        used_stable = []
+        used_dynamic = []
+
+        for guest in self._host.list_guests():
+            vcpus = [x.cpu for x in list(guest.get_vcpus_info())]
+            for vcpu in vcpus:
+                if vcpu in stable_set:
+                    used_stable.append(vcpu)
+                elif vcpu in dynamic_set:
+                    used_dynamic.append(vcpu)
+            # NOTE(gtt116): give other tasks a chance.
+            greenthread.sleep(0)
+
+        return used_stable, used_dynamic
+
     def _get_supported_vgpu_types(self):
         if not CONF.devices.enabled_mdev_types:
             return []
@@ -9554,7 +9577,6 @@ class LibvirtDriver(driver.ComputeDriver):
         :param nodename: unused in this driver
         :returns: dictionary containing resource info
         """
-
         disk_info_dict = self._get_local_gb_info()
         data = {}
 
@@ -9564,7 +9586,20 @@ class LibvirtDriver(driver.ComputeDriver):
         # See: https://bugs.launchpad.net/nova/+bug/1215593
         data["supported_instances"] = self._get_instance_capabilities()
 
-        data["vcpus"] = len(self._get_vcpu_available())
+        online_vcpus = self._get_vcpu_available() # with dedicated pinning and alloc ratio of 1, this method provide online cpus (regulars + if gc awake)
+        hw_cpu_stable_set = hardware.get_cpu_stable_set()
+        hw_cpu_dynamic_set = hardware.get_cpu_dynamic_set()
+        used_stable, used_dynamic = self._get_used_vcpu_lists(hw_cpu_stable_set, hw_cpu_dynamic_set)
+        data["rcpus"] = len(hw_cpu_stable_set)
+        data["rcpus_used"] = len(used_stable)
+        data["gcpus"] = len(hw_cpu_dynamic_set) if len(online_vcpus) > len(hw_cpu_stable_set) else 0
+        data["gcpus_used"] = len(used_dynamic)
+        LOG.debug("added green core metrics "
+                  "%(rcpus_used)s (node: %(gcpus_used)s)",
+                 {'rcpus_used': data["rcpus_used"],
+                  'gcpus_used': data["gcpus_used"]})
+
+        data["vcpus"] = len(online_vcpus)
         data["memory_mb"] = self._host.get_memory_mb_total()
         data["local_gb"] = disk_info_dict['total']
         data["vcpus_used"] = self._get_vcpu_used()

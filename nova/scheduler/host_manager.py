@@ -118,6 +118,12 @@ class HostState(object):
         self.pci_stats = None
         self.numa_topology = None
 
+        # Green core info.
+        self.gcpus_total = 0
+        self.gcpus_used = 0
+        self.rcpus_total = 0
+        self.rcpus_used = 0
+
         # Additional host information from the compute node stats:
         self.num_instances = 0
         self.num_io_ops = 0
@@ -220,6 +226,10 @@ class HostState(object):
         self.free_disk_mb = free_disk_mb
         self.vcpus_total = compute.vcpus
         self.vcpus_used = compute.vcpus_used
+        self.rcpus_total = compute.rcpus
+        self.rcpus_used = compute.rcpus_used
+        self.gcpus_total = compute.gcpus
+        self.gcpus_used = compute.gcpus_used
         self.updated = compute.updated_at
         # the ComputeNode.numa_topology field is a StringField so deserialize
         self.numa_topology = objects.NUMATopology.obj_from_db_obj(

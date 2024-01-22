@@ -98,6 +98,7 @@ class BaseWeigher(metaclass=abc.ABCMeta):
         """Weigh an specific object."""
 
     def weigh_objects(self, weighed_obj_list, weight_properties):
+        LOG.debug("Weighted objects possibly hosts %(hosts)s", {'hosts': weighed_obj_list})
         """Weigh multiple objects.
 
         Override in a subclass if you need access to all objects in order
