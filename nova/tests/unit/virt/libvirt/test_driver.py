@@ -5406,13 +5406,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 '/usr/share/OVMF/OVMF_VARS.fd', cfg.os_nvram_template)
             self.assertFalse(cfg.os_loader_secure)
 
-    def test_check_uefi_support_aarch64(self):
-        self.mock_uname.return_value = fakelibvirt.os_uname(
-            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        self.assertTrue(drvr._check_uefi_support(image_meta))
-
     def test_get_guest_config_with_block_device(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
@@ -17645,7 +17638,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(2, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        mock_domain.undefineFlags.assert_called_once_with(1)
+        mock_domain.undefineFlags.assert_called_once_with(5)
         mock_domain.undefine.assert_called_once_with()
         mock_save.assert_called_once_with()
 
@@ -17667,7 +17660,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(1, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        mock_domain.undefineFlags.assert_called_once_with(1)
+        mock_domain.undefineFlags.assert_called_once_with(5)
         mock_domain.hasManagedSaveImage.assert_has_calls([mock.call(0)])
         mock_domain.managedSaveRemove.assert_called_once_with(0)
         mock_domain.undefine.assert_called_once_with()
@@ -17692,7 +17685,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(1, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        mock_domain.undefineFlags.assert_called_once_with(1)
+        mock_domain.undefineFlags.assert_called_once_with(5)
         mock_domain.hasManagedSaveImage.assert_has_calls([mock.call(0)])
         mock_domain.undefine.assert_called_once_with()
         mock_save.assert_called_once_with()
@@ -17718,10 +17711,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(1, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        # NVRAM flag should not called only host support uefi
-        mock_domain.undefineFlags.assert_called_once_with(
-            fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE
-        )
+        mock_domain.undefineFlags.assert_has_calls([mock.call(
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_NVRAM
+        )])
         mock_domain.undefine.assert_not_called()
         mock_save.assert_called_once_with()
 
@@ -17746,8 +17739,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(1, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        # undefineFlags should now be called with 5 as uefi supported
-        # by both host and guest
         mock_domain.undefineFlags.assert_has_calls([mock.call(
             fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
             fakelibvirt.VIR_DOMAIN_UNDEFINE_NVRAM
@@ -20676,7 +20667,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         resize_to = 1
         expected_resize_to = resize_to * units.Gi
 
-        drvr._swap_volume(mock_guest, 'vdb', mock_conf, resize_to, None)
+        drvr._swap_volume(mock_guest, 'vdb', mock_conf, resize_to)
 
         # Assert that virDomainBlockCopy is called
         mock_dev.copy.assert_called_once_with(
@@ -20716,7 +20707,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         # Assert that exception.VolumeRebaseFailed is raised
         self.assertRaises(exception.VolumeRebaseFailed, drvr._swap_volume,
-                          mock_guest, 'vdb', mock_conf, 0, None)
+                          mock_guest, 'vdb', mock_conf, 0)
 
         # Assert that virDomainBlockCopy is called
         mock_dev.copy.assert_called_once_with(
@@ -20735,9 +20726,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          swap_volume, disconnect_volume):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         instance = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        hw_firmware_type = image_meta.properties.get(
-            'hw_firmware_type')
         old_connection_info = {'driver_volume_type': 'fake',
                                'serial': 'old-volume-id',
                                'data': {'device_path': '/fake-old-volume',
@@ -20770,8 +20758,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connect_volume.assert_called_once_with(self.context,
                                                new_connection_info, instance)
 
-        swap_volume.assert_called_once_with(guest, 'vdb',
-                                            conf, 1, hw_firmware_type)
+        swap_volume.assert_called_once_with(guest, 'vdb', conf, 1)
         disconnect_volume.assert_called_once_with(self.context,
                                                   old_connection_info,
                                                   instance)
