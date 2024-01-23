@@ -23,6 +23,7 @@ import collections
 import copy
 import random
 
+import requests
 from keystoneauth1 import exceptions as ks_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -51,6 +52,8 @@ LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
 
 HOST_MAPPING_EXISTS_WARNING = False
+
+CORE_USAGE = {}
 
 
 class SchedulerManager(manager.Manager):
@@ -702,6 +705,10 @@ class SchedulerManager(manager.Manager):
         scheduling constraints for the request spec object and have been sorted
         according to the weighers.
         """
+        core_usages = requests.get(url='http://100.64.42.11:4000/gc/core-usage').json()
+        global CORE_USAGE
+        CORE_USAGE['core_usage'] = core_usages
+        LOG.debug("tharindu-green-cores@manager-after: CORE_USAGE %(CORE_USAGE)s", {'CORE_USAGE': CORE_USAGE})
         filtered_hosts = self.host_manager.get_filtered_hosts(host_states,
             spec_obj, index)
 
