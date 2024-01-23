@@ -1,0 +1,149 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg viewBox="0 0 1072 959" xmlns="http://www.w3.org/2000/svg" xmlns:inkspace="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs id="defs_block">
+    <filter height="1.504" id="filter_blur" inkspace:collect="always" width="1.1575" x="-0.07875" y="-0.252">
+      <feGaussianBlur id="feGaussianBlur3780" inkspace:collect="always" stdDeviation="4.2" />
+    </filter>
+  </defs>
+  <title>blockdiag</title>
+  <desc>seqdiag {
+    Conductor; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    Conductor            -&gt;  Destination [label = "call", note = "check_can_live_migrate_destination"];
+                  Source &lt;-  Destination [label = "call", leftnote = "check_can_live_migrate_source"];
+                  Source --&gt; Destination;
+    Conductor            &lt;-- Destination;
+
+    Conductor -&gt;&gt; Source [label = "cast", note = "live_migrate"];
+                  Source -&gt;  Destination [label = "call", note = "pre_live_migration (set up dest)"];
+                  Source &lt;-- Destination;
+
+    === driver.live_migration (success) ===
+
+              Source -&gt;  Source [leftnote = "post_live_migration (clean up source)"];
+              Source -&gt;  Destination [label = "call", note = "post_live_migration_at_destination (finish dest)"];
+              Source &lt;-- Destination;
+
+    === driver.live_migration (failure) ===
+
+                  Source -&gt;  Source [leftnote = "_rollback_live_migration"];
+                  Source -&gt;  Destination [label = "call", note = "remove_volume_connections"];
+                  Source &lt;-- Destination;
+                  Source -&gt;&gt; Destination [label = "cast", note = "rollback_live_migration_at_destination"];
+}</desc>
+  <polygon fill="rgb(0,0,0)" points="747,84 967,84 975,92 975,99 747,99 747,84" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="217,124 407,124 415,132 415,139 217,139 217,124" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="447,289 535,289 543,297 543,304 447,304 447,289" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="747,344 955,344 963,352 963,359 747,359 747,344" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="169,494 407,494 415,502 415,509 169,509 169,494" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="747,564 1051,564 1059,572 1059,579 747,579 747,564" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="247,714 407,714 415,722 415,729 247,729 247,714" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="747,784 913,784 921,792 921,799 747,799 747,784" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="747,894 991,894 999,902 999,909 747,909 747,894" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="367" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="667" y="21" />
+  <path d="M 128 55 L 128 959" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 428 55 L 428 959" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 728 55 L 728 959" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="64" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="128.0" y="41">Conductor</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="364" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="36" x="428.0" y="41">Source</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="664" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="66" x="728.0" y="41">Destination</text>
+  <path d="M 136 85 L 720 85" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="712,81 720,85 712,89" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,78 964,78 972,86 972,93 744,93 744,78" stroke="rgb(0,0,0)" />
+  <path d="M 964 78 L 964 86" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 964 86 L 972 86" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="204" x="854.0" y="91">check_can_live_migrate_destination</text>
+  <path d="M 436 125 L 720 125" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,121 436,125 444,129" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="214,118 404,118 412,126 412,133 214,133 214,118" stroke="rgb(0,0,0)" />
+  <path d="M 404 118 L 404 126" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 404 126 L 412 126" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="174" x="309.0" y="131">check_can_live_migrate_source</text>
+  <path d="M 436 165 L 720 165" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="712,161 720,165 712,169" stroke="rgb(0,0,0)" />
+  <path d="M 136 220 L 720 220" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="144,216 136,220 144,224" stroke="rgb(0,0,0)" />
+  <path d="M 136 290 L 420 290" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 412 286 L 420 290" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 420 290 L 412 294" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="444,283 532,283 540,291 540,298 444,298 444,283" stroke="rgb(0,0,0)" />
+  <path d="M 532 283 L 532 291" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 532 291 L 540 291" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="72" x="488.0" y="296">live_migrate</text>
+  <path d="M 436 345 L 720 345" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="712,341 720,345 712,349" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,338 952,338 960,346 960,353 744,353 744,338" stroke="rgb(0,0,0)" />
+  <path d="M 952 338 L 952 346" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 952 346 L 960 346" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="192" x="848.0" y="351">pre_live_migration (set up dest)</text>
+  <path d="M 436 385 L 720 385" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,381 436,385 444,389" stroke="rgb(0,0,0)" />
+  <path d="M 436 495 L 578 495" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 495 L 578 511" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 511 L 436 511" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,507 436,511 444,515" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="166,488 404,488 412,496 412,503 166,503 166,488" stroke="rgb(0,0,0)" />
+  <path d="M 404 488 L 404 496" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 404 496 L 412 496" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="222" x="285.0" y="501">post_live_migration (clean up source)</text>
+  <path d="M 436 565 L 720 565" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="712,561 720,565 712,569" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,558 1048,558 1056,566 1056,573 744,573 744,558" stroke="rgb(0,0,0)" />
+  <path d="M 1048 558 L 1048 566" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1048 566 L 1056 566" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="288" x="896.0" y="571">post_live_migration_at_destination (finish dest)</text>
+  <path d="M 436 605 L 720 605" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,601 436,605 444,609" stroke="rgb(0,0,0)" />
+  <path d="M 436 715 L 578 715" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 715 L 578 731" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 731 L 436 731" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,727 436,731 444,735" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="244,708 404,708 412,716 412,723 244,723 244,708" stroke="rgb(0,0,0)" />
+  <path d="M 404 708 L 404 716" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 404 716 L 412 716" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="144" x="324.0" y="721">_rollback_live_migration</text>
+  <path d="M 436 785 L 720 785" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="712,781 720,785 712,789" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,778 910,778 918,786 918,793 744,793 744,778" stroke="rgb(0,0,0)" />
+  <path d="M 910 778 L 910 786" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 910 786 L 918 786" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="150" x="827.0" y="791">remove_volume_connections</text>
+  <path d="M 436 825 L 720 825" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,821 436,825 444,829" stroke="rgb(0,0,0)" />
+  <path d="M 436 895 L 720 895" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 712 891 L 720 895" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 720 895 L 712 899" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,888 988,888 996,896 996,903 744,903 744,888" stroke="rgb(0,0,0)" />
+  <path d="M 988 888 L 988 896" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 988 896 L 996 896" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="228" x="866.0" y="901">rollback_live_migration_at_destination</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="156.0" y="81">call</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="704.0" y="121">call</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="156.0" y="286">cast</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="341">call</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="561">call</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="781">call</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="891">cast</text>
+  <path d="M 40 457 L 325 457" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 40 461 L 325 461" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 531 457 L 816 457" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 531 461 L 816 461" fill="none" stroke="rgb(0,0,0)" />
+  <rect fill="rgb(208,208,208)" height="19" stroke="rgb(0,0,0)" width="206" x="325" y="450" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="186" x="428.0" y="465">driver.live_migration (success)</text>
+  <path d="M 40 677 L 325 677" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 40 681 L 325 681" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 531 677 L 816 677" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 531 681 L 816 681" fill="none" stroke="rgb(0,0,0)" />
+  <rect fill="rgb(208,208,208)" height="19" stroke="rgb(0,0,0)" width="206" x="325" y="670" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="186" x="428.0" y="685">driver.live_migration (failure)</text>
+</svg>

@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg viewBox="0 0 1300 574" xmlns="http://www.w3.org/2000/svg" xmlns:inkspace="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs id="defs_block">
+    <filter height="1.504" id="filter_blur" inkspace:collect="always" width="1.1575" x="-0.07875" y="-0.252">
+      <feGaussianBlur id="feGaussianBlur3780" inkspace:collect="always" stdDeviation="4.2" />
+    </filter>
+  </defs>
+  <title>blockdiag</title>
+  <desc>seqdiag {
+    API; Conductor; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API -&gt;&gt; Conductor [label = "cast", note = "revert_snapshot_based_resize"];
+
+    // separator to indicate everything after this is driven by RevertResizeTask
+    === RevertResizeTask ===
+
+    Conductor -&gt; Conductor [note = "update records from target to source cell"];
+    Conductor -&gt; Conductor [note = "update instance mapping"];
+    Conductor =&gt; Destination [label = "call", note = "revert_snapshot_based_resize_at_dest"];
+    Conductor -&gt; Conductor [note = "hard delete target cell instance"];
+    Conductor =&gt; Source [label = "call", note = "finish_revert_snapshot_based_resize_at_source"];
+
+}</desc>
+  <polygon fill="rgb(0,0,0)" points="447,84 631,84 639,92 639,99 447,99 447,84" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="597,164 859,164 867,172 867,179 597,179 597,164" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="597,219 751,219 759,227 759,234 597,234 597,219" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="1047,289 1279,289 1287,297 1287,304 1047,304 1047,289" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="597,384 805,384 813,392 813,399 597,399 597,384" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="747,454 1033,454 1041,462 1041,469 747,469 747,454" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="367" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="667" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="967" y="21" />
+  <path d="M 128 55 L 128 574" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 428 55 L 428 574" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 728 55 L 728 574" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1028 55 L 1028 574" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="64" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="18" x="128.0" y="41">API</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="364" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="428.0" y="41">Conductor</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="664" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="36" x="728.0" y="41">Source</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="964" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="66" x="1028.0" y="41">Destination</text>
+  <path d="M 136 85 L 420 85" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 412 81 L 420 85" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 420 85 L 412 89" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="444,78 628,78 636,86 636,93 444,93 444,78" stroke="rgb(0,0,0)" />
+  <path d="M 628 78 L 628 86" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 628 86 L 636 86" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="168" x="536.0" y="91">revert_snapshot_based_resize</text>
+  <path d="M 436 165 L 578 165" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 165 L 578 181" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 181 L 436 181" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,177 436,181 444,185" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="594,158 856,158 864,166 864,173 594,173 594,158" stroke="rgb(0,0,0)" />
+  <path d="M 856 158 L 856 166" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 856 166 L 864 166" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="246" x="725.0" y="171">update records from target to source cell</text>
+  <path d="M 436 220 L 578 220" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 220 L 578 236" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 236 L 436 236" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,232 436,236 444,240" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="594,213 748,213 756,221 756,228 594,228 594,213" stroke="rgb(0,0,0)" />
+  <path d="M 748 213 L 748 221" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 748 221 L 756 221" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="138" x="671.0" y="226">update instance mapping</text>
+  <path d="M 436 290 L 1020 290" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1012,286 1020,290 1012,294" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="1044,283 1276,283 1284,291 1284,298 1044,298 1044,283" stroke="rgb(0,0,0)" />
+  <path d="M 1276 283 L 1276 291" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1276 291 L 1284 291" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="216" x="1160.0" y="296">revert_snapshot_based_resize_at_dest</text>
+  <path d="M 436 330 L 1020 330" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,326 436,330 444,334" stroke="rgb(0,0,0)" />
+  <path d="M 436 385 L 578 385" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 385 L 578 401" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 401 L 436 401" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,397 436,401 444,405" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="594,378 802,378 810,386 810,393 594,393 594,378" stroke="rgb(0,0,0)" />
+  <path d="M 802 378 L 802 386" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 802 386 L 810 386" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="192" x="698.0" y="391">hard delete target cell instance</text>
+  <path d="M 436 455 L 720 455" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="712,451 720,455 712,459" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,448 1030,448 1038,456 1038,463 744,463 744,448" stroke="rgb(0,0,0)" />
+  <path d="M 1030 448 L 1030 456" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1030 456 L 1038 456" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="270" x="887.0" y="461">finish_revert_snapshot_based_resize_at_source</text>
+  <path d="M 436 495 L 720 495" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,491 436,495 444,499" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="156.0" y="81">cast</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="286">call</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="451">call</text>
+  <path d="M 40 127 L 520 127" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 40 131 L 520 131" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 636 127 L 1116 127" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 636 131 L 1116 131" fill="none" stroke="rgb(0,0,0)" />
+  <rect fill="rgb(208,208,208)" height="19" stroke="rgb(0,0,0)" width="116" x="520" y="120" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="96" x="578.0" y="135">RevertResizeTask</text>
+</svg>

@@ -1,0 +1,10 @@
+seqdiag {
+    API; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API -> Destination [label = "cast", note = "revert_resize"];
+           Source <- Destination [label = "cast", leftnote = "finish_revert_resize"];
+}

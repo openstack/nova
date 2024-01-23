@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg viewBox="0 0 1600 686" xmlns="http://www.w3.org/2000/svg" xmlns:inkspace="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs id="defs_block">
+    <filter height="1.504" id="filter_blur" inkspace:collect="always" width="1.1575" x="-0.07875" y="-0.252">
+      <feGaussianBlur id="feGaussianBlur3780" inkspace:collect="always" stdDeviation="4.2" />
+    </filter>
+  </defs>
+  <title>blockdiag</title>
+  <desc>seqdiag {
+    API; Conductor; Scheduler; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API -&gt;&gt; Conductor [label = "cast", note = "resize_instance/migrate_server"];
+    Conductor =&gt; Scheduler [label = "MigrationTask", note = "select_destinations"];
+    Conductor -&gt; Conductor [label = "TargetDBSetupTask"];
+    Conductor =&gt; Destination [label = "PrepResizeAtDestTask", note = "prep_snapshot_based_resize_at_dest"];
+    Conductor =&gt; Source [label = "PrepResizeAtSourceTask", note = "prep_snapshot_based_resize_at_source"];
+    Conductor =&gt; Destination [label = "FinishResizeAtDestTask", note = "finish_snapshot_based_resize_at_dest"];
+    Conductor -&gt; Conductor [label = "FinishResizeAtDestTask", note = "update instance mapping"];
+}</desc>
+  <polygon fill="rgb(0,0,0)" points="447,84 643,84 651,92 651,99 447,99 447,84" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="747,124 877,124 885,132 885,139 747,139 747,124" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="1347,290 1567,290 1575,298 1575,305 1347,305 1347,290" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="1047,400 1279,400 1287,408 1287,415 1047,415 1047,400" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="1347,510 1579,510 1587,518 1587,525 1347,525 1347,510" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="597,620 751,620 759,628 759,635 597,635 597,620" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="367" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="667" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="967" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="1267" y="21" />
+  <path d="M 128 55 L 128 686" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 428 55 L 428 686" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 728 55 L 728 686" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1028 55 L 1028 686" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1328 55 L 1328 686" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="64" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="18" x="128.0" y="41">API</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="364" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="428.0" y="41">Conductor</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="664" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="728.0" y="41">Scheduler</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="964" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="36" x="1028.0" y="41">Source</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="1264" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="66" x="1328.0" y="41">Destination</text>
+  <path d="M 136 85 L 420 85" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 412 81 L 420 85" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 420 85 L 412 89" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="444,78 640,78 648,86 648,93 444,93 444,78" stroke="rgb(0,0,0)" />
+  <path d="M 640 78 L 640 86" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 640 86 L 648 86" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="180" x="542.0" y="91">resize_instance/migrate_server</text>
+  <path d="M 436 125 L 720 125" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="712,121 720,125 712,129" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,118 874,118 882,126 882,133 744,133 744,118" stroke="rgb(0,0,0)" />
+  <path d="M 874 118 L 874 126" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 874 126 L 882 126" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="114" x="809.0" y="131">select_destinations</text>
+  <path d="M 436 165 L 720 165" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,161 436,165 444,169" stroke="rgb(0,0,0)" />
+  <path d="M 436 235 L 578 235" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 235 L 578 251" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 251 L 436 251" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,247 436,251 444,255" stroke="rgb(0,0,0)" />
+  <path d="M 436 291 L 1320 291" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1312,287 1320,291 1312,295" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="1344,284 1564,284 1572,292 1572,299 1344,299 1344,284" stroke="rgb(0,0,0)" />
+  <path d="M 1564 284 L 1564 292" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1564 292 L 1572 292" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="204" x="1454.0" y="297">prep_snapshot_based_resize_at_dest</text>
+  <path d="M 436 331 L 1320 331" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,327 436,331 444,335" stroke="rgb(0,0,0)" />
+  <path d="M 436 401 L 1020 401" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1012,397 1020,401 1012,405" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="1044,394 1276,394 1284,402 1284,409 1044,409 1044,394" stroke="rgb(0,0,0)" />
+  <path d="M 1276 394 L 1276 402" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1276 402 L 1284 402" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="216" x="1160.0" y="407">prep_snapshot_based_resize_at_source</text>
+  <path d="M 436 441 L 1020 441" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,437 436,441 444,445" stroke="rgb(0,0,0)" />
+  <path d="M 436 511 L 1320 511" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1312,507 1320,511 1312,515" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="1344,504 1576,504 1584,512 1584,519 1344,519 1344,504" stroke="rgb(0,0,0)" />
+  <path d="M 1576 504 L 1576 512" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1576 512 L 1584 512" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="216" x="1460.0" y="517">finish_snapshot_based_resize_at_dest</text>
+  <path d="M 436 551 L 1320 551" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,547 436,551 444,555" stroke="rgb(0,0,0)" />
+  <path d="M 436 621 L 578 621" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 621 L 578 637" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 637 L 436 637" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,633 436,637 444,641" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="594,614 748,614 756,622 756,629 594,629 594,614" stroke="rgb(0,0,0)" />
+  <path d="M 748 614 L 748 622" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 748 622 L 756 622" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="138" x="671.0" y="627">update instance mapping</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="156.0" y="81">cast</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="78" x="483.0" y="121">MigrationTask</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="102" x="491.0" y="231">TargetDBSetupTask</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="120" x="504.0" y="287">PrepResizeAtDestTask</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="132" x="510.0" y="397">PrepResizeAtSourceTask</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="132" x="510.0" y="507">FinishResizeAtDestTask</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="132" x="506.0" y="617">FinishResizeAtDestTask</text>
+</svg>

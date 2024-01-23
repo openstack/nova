@@ -1,0 +1,26 @@
+actdiag {
+    build-spec -> send-spec -> send-reqs -> query -> return-rps ->
+        create -> filter -> claim -> return-hosts -> send-hosts;
+
+    lane conductor {
+        label = "Conductor";
+        build-spec [label = "Build request spec object", height = 38];
+        send-spec [label = "Submit request spec to scheduler", height = 38];
+        send-hosts [label = "Submit list of suitable hosts to target cell", height = 51];
+    }
+
+    lane scheduler {
+        label = "Scheduler";
+        send-reqs [label = "Submit resource requirements to placement", height = 64];
+        create [label = "Create a HostState object for each RP returned from Placement", height = 64];
+        filter [label = "Filter and weigh results", height = 38];
+        return-hosts [label = "Return a list of selected host & alternates, along with their allocations, to the conductor", height = 89];
+    }
+
+    lane placement {
+        label = "Placement";
+        query [label = "Query to determine the RPs representing compute nodes to satisfy requirements", height = 64];
+        return-rps [label = "Return list of resource providers and their corresponding allocations to scheduler", height = 89];
+        claim [label = "Create allocations against selected compute node", height = 64];
+    }
+}

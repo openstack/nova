@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg viewBox="0 0 1462 409" xmlns="http://www.w3.org/2000/svg" xmlns:inkspace="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs id="defs_block">
+    <filter height="1.504" id="filter_blur" inkspace:collect="always" width="1.1575" x="-0.07875" y="-0.252">
+      <feGaussianBlur id="feGaussianBlur3780" inkspace:collect="always" stdDeviation="4.2" />
+    </filter>
+  </defs>
+  <title>blockdiag</title>
+  <desc>seqdiag {
+    API; Conductor; Scheduler; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API -&gt; Conductor [label = "cast", note = "resize_instance/migrate_server"];
+           Conductor =&gt; Scheduler [label = "call", note = "select_destinations"];
+           Conductor -&gt; Destination [label = "cast", note = "prep_resize"];
+                Source &lt;- Destination [label = "cast", leftnote = "resize_instance"];
+                Source -&gt; Destination [label = "cast", note = "finish_resize"];
+}</desc>
+  <polygon fill="rgb(0,0,0)" points="447,84 643,84 651,92 651,99 447,99 447,84" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="747,124 877,124 885,132 885,139 747,139 747,124" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="1347,234 1429,234 1437,242 1437,249 1347,249 1347,234" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="901,289 1007,289 1015,297 1015,304 901,304 901,289" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="1347,344 1441,344 1449,352 1449,359 1347,359 1347,344" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="367" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="667" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="967" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="1267" y="21" />
+  <path d="M 128 55 L 128 409" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 428 55 L 428 409" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 728 55 L 728 409" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1028 55 L 1028 409" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 1328 55 L 1328 409" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="64" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="18" x="128.0" y="41">API</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="364" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="428.0" y="41">Conductor</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="664" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="728.0" y="41">Scheduler</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="964" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="36" x="1028.0" y="41">Source</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="1264" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="66" x="1328.0" y="41">Destination</text>
+  <path d="M 136 85 L 420 85" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="412,81 420,85 412,89" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="444,78 640,78 648,86 648,93 444,93 444,78" stroke="rgb(0,0,0)" />
+  <path d="M 640 78 L 640 86" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 640 86 L 648 86" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="180" x="542.0" y="91">resize_instance/migrate_server</text>
+  <path d="M 436 125 L 720 125" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="712,121 720,125 712,129" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,118 874,118 882,126 882,133 744,133 744,118" stroke="rgb(0,0,0)" />
+  <path d="M 874 118 L 874 126" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 874 126 L 882 126" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="114" x="809.0" y="131">select_destinations</text>
+  <path d="M 436 165 L 720 165" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,161 436,165 444,169" stroke="rgb(0,0,0)" />
+  <path d="M 436 235 L 1320 235" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1312,231 1320,235 1312,239" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="1344,228 1426,228 1434,236 1434,243 1344,243 1344,228" stroke="rgb(0,0,0)" />
+  <path d="M 1426 228 L 1426 236" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1426 236 L 1434 236" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="66" x="1385.0" y="241">prep_resize</text>
+  <path d="M 1036 290 L 1320 290" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1044,286 1036,290 1044,294" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="898,283 1004,283 1012,291 1012,298 898,298 898,283" stroke="rgb(0,0,0)" />
+  <path d="M 1004 283 L 1004 291" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1004 291 L 1012 291" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="90" x="951.0" y="296">resize_instance</text>
+  <path d="M 1036 345 L 1320 345" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="1312,341 1320,345 1312,349" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="1344,338 1438,338 1446,346 1446,353 1344,353 1344,338" stroke="rgb(0,0,0)" />
+  <path d="M 1438 338 L 1438 346" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 1438 346 L 1446 346" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="78" x="1391.0" y="351">finish_resize</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="156.0" y="81">cast</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="121">call</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="231">cast</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="1304.0" y="286">cast</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="1056.0" y="341">cast</text>
+</svg>

@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg viewBox="0 0 1018 409" xmlns="http://www.w3.org/2000/svg" xmlns:inkspace="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs id="defs_block">
+    <filter height="1.504" id="filter_blur" inkspace:collect="always" width="1.1575" x="-0.07875" y="-0.252">
+      <feGaussianBlur id="feGaussianBlur3780" inkspace:collect="always" stdDeviation="4.2" />
+    </filter>
+  </defs>
+  <title>blockdiag</title>
+  <desc>seqdiag {
+    API; Conductor; Source;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API -&gt;&gt; Conductor [label = "cast (or call if deleting)", note = "confirm_snapshot_based_resize"];
+
+    // separator to indicate everything after this is driven by ConfirmResizeTask
+    === ConfirmResizeTask ===
+
+    Conductor =&gt; Source [label = "call", note = "confirm_snapshot_based_resize_at_source"];
+    Conductor -&gt; Conductor [note = "hard delete source cell instance"];
+    Conductor -&gt; Conductor [note = "update target cell instance status"];
+
+}</desc>
+  <polygon fill="rgb(0,0,0)" points="447,84 637,84 645,92 645,99 447,99 447,84" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="747,179 997,179 1005,187 1005,194 747,194 747,179" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="597,274 805,274 813,282 813,289 597,289 597,274" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <polygon fill="rgb(0,0,0)" points="597,329 817,329 825,337 825,344 597,344 597,329" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="367" y="21" />
+  <rect fill="rgb(0,0,0)" height="40" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="667" y="21" />
+  <path d="M 128 55 L 128 409" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 428 55 L 428 409" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <path d="M 728 55 L 728 409" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="8 4" />
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="64" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="18" x="128.0" y="41">API</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="364" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="428.0" y="41">Conductor</text>
+  <rect fill="rgb(255,255,255)" height="40" stroke="rgb(0,0,0)" width="128" x="664" y="15" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="36" x="728.0" y="41">Source</text>
+  <path d="M 136 85 L 420 85" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 412 81 L 420 85" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 420 85 L 412 89" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="444,78 634,78 642,86 642,93 444,93 444,78" stroke="rgb(0,0,0)" />
+  <path d="M 634 78 L 634 86" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 634 86 L 642 86" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="174" x="539.0" y="91">confirm_snapshot_based_resize</text>
+  <path d="M 436 180 L 720 180" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="712,176 720,180 712,184" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="744,173 994,173 1002,181 1002,188 744,188 744,173" stroke="rgb(0,0,0)" />
+  <path d="M 994 173 L 994 181" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 994 181 L 1002 181" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="234" x="869.0" y="186">confirm_snapshot_based_resize_at_source</text>
+  <path d="M 436 220 L 720 220" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4" />
+  <polygon fill="rgb(0,0,0)" points="444,216 436,220 444,224" stroke="rgb(0,0,0)" />
+  <path d="M 436 275 L 578 275" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 275 L 578 291" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 291 L 436 291" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,287 436,291 444,295" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="594,268 802,268 810,276 810,283 594,283 594,268" stroke="rgb(0,0,0)" />
+  <path d="M 802 268 L 802 276" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 802 276 L 810 276" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="192" x="698.0" y="281">hard delete source cell instance</text>
+  <path d="M 436 330 L 578 330" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 330 L 578 346" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 578 346 L 436 346" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="444,342 436,346 444,350" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(255,255,255)" points="594,323 814,323 822,331 822,338 594,338 594,323" stroke="rgb(0,0,0)" />
+  <path d="M 814 323 L 814 331" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 814 331 L 822 331" fill="none" stroke="rgb(0,0,0)" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="204" x="704.0" y="336">update target cell instance status</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="156" x="222.0" y="81">cast (or call if deleting)</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="456.0" y="176">call</text>
+  <path d="M 40 127 L 367 127" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 40 131 L 367 131" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 489 127 L 816 127" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 489 131 L 816 131" fill="none" stroke="rgb(0,0,0)" />
+  <rect fill="rgb(208,208,208)" height="19" stroke="rgb(0,0,0)" width="122" x="367" y="120" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="102" x="428.0" y="135">ConfirmResizeTask</text>
+</svg>

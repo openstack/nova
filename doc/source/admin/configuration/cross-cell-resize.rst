@@ -166,23 +166,9 @@ Resize
 
 This is the sequence of calls to get the server to ``VERIFY_RESIZE`` status.
 
-.. seqdiag::
+.. image:: /_static/images/resize/cross-cell/resize.svg
+   :alt: Resize standard workflow
 
-    seqdiag {
-        API; Conductor; Scheduler; Source; Destination;
-        edge_length = 300;
-        span_height = 15;
-        activation = none;
-        default_note_color = white;
-
-        API ->> Conductor [label = "cast", note = "resize_instance/migrate_server"];
-        Conductor => Scheduler [label = "MigrationTask", note = "select_destinations"];
-        Conductor -> Conductor [label = "TargetDBSetupTask"];
-        Conductor => Destination [label = "PrepResizeAtDestTask", note = "prep_snapshot_based_resize_at_dest"];
-        Conductor => Source [label = "PrepResizeAtSourceTask", note = "prep_snapshot_based_resize_at_source"];
-        Conductor => Destination [label = "FinishResizeAtDestTask", note = "finish_snapshot_based_resize_at_dest"];
-        Conductor -> Conductor [label = "FinishResizeAtDestTask", note = "update instance mapping"];
-    }
 
 Confirm resize
 ~~~~~~~~~~~~~~
@@ -190,25 +176,8 @@ Confirm resize
 This is the sequence of calls when confirming `or deleting`_ a server in
 ``VERIFY_RESIZE`` status.
 
-.. seqdiag::
-
-    seqdiag {
-        API; Conductor; Source;
-        edge_length = 300;
-        span_height = 15;
-        activation = none;
-        default_note_color = white;
-
-        API ->> Conductor [label = "cast (or call if deleting)", note = "confirm_snapshot_based_resize"];
-
-        // separator to indicate everything after this is driven by ConfirmResizeTask
-        === ConfirmResizeTask ===
-
-        Conductor => Source [label = "call", note = "confirm_snapshot_based_resize_at_source"];
-        Conductor -> Conductor [note = "hard delete source cell instance"];
-        Conductor -> Conductor [note = "update target cell instance status"];
-
-    }
+.. image:: /_static/images/resize/cross-cell/resize_confirm.svg
+   :alt: Resize confirm workflow
 
 .. _or deleting: https://opendev.org/openstack/nova/src/tag/20.0.0/nova/compute/api.py#L2171
 
@@ -218,28 +187,8 @@ Revert resize
 This is the sequence of calls when reverting a server in ``VERIFY_RESIZE``
 status.
 
-.. seqdiag::
-
-    seqdiag {
-        API; Conductor; Source; Destination;
-        edge_length = 300;
-        span_height = 15;
-        activation = none;
-        default_note_color = white;
-
-        API ->> Conductor [label = "cast", note = "revert_snapshot_based_resize"];
-
-        // separator to indicate everything after this is driven by RevertResizeTask
-        === RevertResizeTask ===
-
-        Conductor -> Conductor [note = "update records from target to source cell"];
-        Conductor -> Conductor [note = "update instance mapping"];
-        Conductor => Destination [label = "call", note = "revert_snapshot_based_resize_at_dest"];
-        Conductor -> Conductor [note = "hard delete target cell instance"];
-        Conductor => Source [label = "call", note = "finish_revert_snapshot_based_resize_at_source"];
-
-    }
-
+.. image:: /_static/images/resize/cross-cell/resize_revert.svg
+   :alt: Resize revert workflow
 
 Limitations
 -----------

@@ -1,0 +1,15 @@
+seqdiag {
+    API; Conductor; Scheduler; Source; Destination;
+    edge_length = 300;
+    span_height = 15;
+    activation = none;
+    default_note_color = white;
+
+    API ->> Conductor [label = "cast", note = "resize_instance/migrate_server"];
+    Conductor => Scheduler [label = "MigrationTask", note = "select_destinations"];
+    Conductor -> Conductor [label = "TargetDBSetupTask"];
+    Conductor => Destination [label = "PrepResizeAtDestTask", note = "prep_snapshot_based_resize_at_dest"];
+    Conductor => Source [label = "PrepResizeAtSourceTask", note = "prep_snapshot_based_resize_at_source"];
+    Conductor => Destination [label = "FinishResizeAtDestTask", note = "finish_snapshot_based_resize_at_dest"];
+    Conductor -> Conductor [label = "FinishResizeAtDestTask", note = "update instance mapping"];
+}

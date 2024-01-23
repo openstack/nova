@@ -124,21 +124,8 @@ Resize
 
 This is the sequence of calls to get the server to ``VERIFY_RESIZE`` status.
 
-.. seqdiag::
-
-    seqdiag {
-        API; Conductor; Scheduler; Source; Destination;
-        edge_length = 300;
-        span_height = 15;
-        activation = none;
-        default_note_color = white;
-
-        API -> Conductor [label = "cast", note = "resize_instance/migrate_server"];
-               Conductor => Scheduler [label = "call", note = "select_destinations"];
-               Conductor -> Destination [label = "cast", note = "prep_resize"];
-                   Source <- Destination [label = "cast", leftnote = "resize_instance"];
-                   Source -> Destination [label = "cast", note = "finish_resize"];
-    }
+.. image:: /_static/images/resize/resize.svg
+   :alt: Resize standard workflow
 
 Confirm resize
 --------------
@@ -149,17 +136,8 @@ This is the sequence of calls when confirming `or deleting`_ a server in
 Note that in the below diagram, if confirming a resize while deleting a server
 the API synchronously calls the source compute service.
 
-.. seqdiag::
-
-    seqdiag {
-        API; Source;
-        edge_length = 300;
-        span_height = 15;
-        activation = none;
-        default_note_color = white;
-
-        API -> Source [label = "cast (or call if deleting)", note = "confirm_resize"];
-    }
+.. image:: /_static/images/resize/resize_confirm.svg
+   :alt: Resize confirm workflow
 
 Revert resize
 -------------
@@ -167,18 +145,9 @@ Revert resize
 This is the sequence of calls when reverting a server in ``VERIFY_RESIZE``
 status.
 
-.. seqdiag::
+.. image:: /_static/images/resize/resize_revert.svg
+   :alt: Resize revert workflow
 
-    seqdiag {
-        API; Source; Destination;
-        edge_length = 300;
-        span_height = 15;
-        activation = none;
-        default_note_color = white;
-
-        API -> Destination [label = "cast", note = "revert_resize"];
-               Source <- Destination [label = "cast", leftnote = "finish_revert_resize"];
-    }
 
 .. _resize API: https://docs.openstack.org/api-ref/compute/#resize-server-resize-action
 .. _cold migrate API: https://docs.openstack.org/api-ref/compute/#migrate-server-migrate-action

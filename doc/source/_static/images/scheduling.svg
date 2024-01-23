@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg viewBox="0 0 640 1119" xmlns="http://www.w3.org/2000/svg" xmlns:inkspace="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs id="defs_block">
+    <filter height="1.504" id="filter_blur" inkspace:collect="always" width="1.1575" x="-0.07875" y="-0.252">
+      <feGaussianBlur id="feGaussianBlur3780" inkspace:collect="always" stdDeviation="4.2" />
+    </filter>
+  </defs>
+  <title>blockdiag</title>
+  <desc>actdiag {
+    build-spec -&gt; send-spec -&gt; send-reqs -&gt; query -&gt; return-rps -&gt;
+        create -&gt; filter -&gt; claim -&gt; return-hosts -&gt; send-hosts;
+
+    lane conductor {
+        label = "Conductor";
+        build-spec [label = "Build request spec object", height = 38];
+        send-spec [label = "Submit request spec to scheduler", height = 38];
+        send-hosts [label = "Submit list of suitable hosts to target cell", height = 51];
+    }
+
+    lane scheduler {
+        label = "Scheduler";
+        send-reqs [label = "Submit resource requirements to placement", height = 64];
+        create [label = "Create a HostState object for each RP returned from Placement", height = 64];
+        filter [label = "Filter and weigh results", height = 38];
+        return-hosts [label = "Return a list of selected host &amp; alternates, along with their allocations, to the conductor", height = 89];
+    }
+
+    lane placement {
+        label = "Placement";
+        query [label = "Query to determine the RPs representing compute nodes to satisfy requirements", height = 64];
+        return-rps [label = "Return list of resource providers and their corresponding allocations to scheduler", height = 89];
+        claim [label = "Create allocations against selected compute node", height = 64];
+    }
+}</desc>
+  <rect fill="rgb(0,0,0)" height="38" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="126" />
+  <rect fill="rgb(0,0,0)" height="38" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="204" />
+  <rect fill="rgb(0,0,0)" height="64" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="259" y="282" />
+  <rect fill="rgb(0,0,0)" height="64" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="451" y="386" />
+  <rect fill="rgb(0,0,0)" height="89" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="451" y="490" />
+  <rect fill="rgb(0,0,0)" height="64" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="259" y="619" />
+  <rect fill="rgb(0,0,0)" height="38" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="259" y="723" />
+  <rect fill="rgb(0,0,0)" height="64" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="451" y="801" />
+  <rect fill="rgb(0,0,0)" height="89" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="259" y="905" />
+  <rect fill="rgb(0,0,0)" height="51" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1" width="128" x="67" y="1034" />
+  <rect fill="#ffff99" height="62" stroke="#ffff99" width="192" x="32" y="38" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="128.0" y="75">Conductor</text>
+  <rect fill="#ffff99" height="62" stroke="#ffff99" width="192" x="224" y="38" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="320.0" y="75">Scheduler</text>
+  <rect fill="#ffff99" height="62" stroke="#ffff99" width="192" x="416" y="38" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="54" x="512.0" y="75">Placement</text>
+  <rect fill="none" height="1061" stroke="gray" width="576" x="32" y="38" />
+  <path d="M 32 100 L 608 100" fill="none" stroke="gray" />
+  <path d="M 224 38 L 224 1099" fill="none" stroke="gray" />
+  <path d="M 416 38 L 416 1099" fill="none" stroke="gray" />
+  <rect fill="rgb(255,255,255)" height="38" stroke="rgb(0,0,0)" width="128" x="64" y="120" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="128.0" y="138">Build request spec ob</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="24" x="128.0" y="151">ject</text>
+  <rect fill="rgb(255,255,255)" height="38" stroke="rgb(0,0,0)" width="128" x="64" y="198" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="128.0" y="216">Submit request spec t</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="66" x="128.0" y="229">o scheduler</text>
+  <rect fill="rgb(255,255,255)" height="64" stroke="rgb(0,0,0)" width="128" x="256" y="276" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="320.0" y="307">Submit resource requi</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="120" x="320.0" y="320">rements to placement</text>
+  <rect fill="rgb(255,255,255)" height="64" stroke="rgb(0,0,0)" width="128" x="448" y="380" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="512.0" y="398">Query to determine th</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="512.0" y="411">e RPs representing co</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="512.0" y="424">mpute nodes to satisf</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="84" x="512.0" y="437">y requirements</text>
+  <rect fill="rgb(255,255,255)" height="89" stroke="rgb(0,0,0)" width="128" x="448" y="484" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="512.0" y="515">Return list of resour</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="512.0" y="528">ce providers and thei</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="512.0" y="541">r corresponding alloc</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="114" x="512.0" y="554">ations to scheduler</text>
+  <rect fill="rgb(255,255,255)" height="64" stroke="rgb(0,0,0)" width="128" x="256" y="613" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="320.0" y="638">Create a HostState ob</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="320.0" y="651">ject for each RP retu</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="114" x="320.0" y="664">rned from Placement</text>
+  <rect fill="rgb(255,255,255)" height="38" stroke="rgb(0,0,0)" width="128" x="256" y="717" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="320.0" y="735">Filter and weigh resu</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="18" x="320.0" y="748">lts</text>
+  <rect fill="rgb(255,255,255)" height="64" stroke="rgb(0,0,0)" width="128" x="448" y="795" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="512.0" y="820">Create allocations ag</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="512.0" y="833">ainst selected comput</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="36" x="512.0" y="846">e node</text>
+  <rect fill="rgb(255,255,255)" height="89" stroke="rgb(0,0,0)" width="128" x="256" y="899" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="320.0" y="923">Return a list of sele</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="320.0" y="936">cted host &amp; alternate</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="320.0" y="949">s, along with their a</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="320.0" y="962">llocations, to the co</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="42" x="320.0" y="975">nductor</text>
+  <rect fill="rgb(255,255,255)" height="51" stroke="rgb(0,0,0)" width="128" x="64" y="1028" />
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="128.0" y="1046">Submit list of suitab</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="126" x="128.0" y="1059">le hosts to target ce</text>
+  <text fill="rgb(0,0,0)" font-family="sans-serif" font-size="11" font-style="normal" font-weight="normal" text-anchor="middle" textLength="12" x="128.0" y="1072">ll</text>
+  <path d="M 128 158 L 128 190" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="128,197 124,190 132,190 128,197" stroke="rgb(0,0,0)" />
+  <path d="M 128 236 L 128 256" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 128 256 L 320 256" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 320 256 L 320 268" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="320,275 316,268 324,268 320,275" stroke="rgb(0,0,0)" />
+  <path d="M 320 340 L 320 360" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 320 360 L 512 360" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 512 360 L 512 372" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="512,379 508,372 516,372 512,379" stroke="rgb(0,0,0)" />
+  <path d="M 512 444 L 512 476" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="512,483 508,476 516,476 512,483" stroke="rgb(0,0,0)" />
+  <path d="M 512 573 L 512 593" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 320 593 L 512 593" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 320 593 L 320 605" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="320,612 316,605 324,605 320,612" stroke="rgb(0,0,0)" />
+  <path d="M 320 677 L 320 709" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="320,716 316,709 324,709 320,716" stroke="rgb(0,0,0)" />
+  <path d="M 320 755 L 320 775" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 320 775 L 512 775" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 512 775 L 512 787" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="512,794 508,787 516,787 512,794" stroke="rgb(0,0,0)" />
+  <path d="M 512 859 L 512 879" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 320 879 L 512 879" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 320 879 L 320 891" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="320,898 316,891 324,891 320,898" stroke="rgb(0,0,0)" />
+  <path d="M 320 988 L 320 1008" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 128 1008 L 320 1008" fill="none" stroke="rgb(0,0,0)" />
+  <path d="M 128 1008 L 128 1020" fill="none" stroke="rgb(0,0,0)" />
+  <polygon fill="rgb(0,0,0)" points="128,1027 124,1020 132,1020 128,1027" stroke="rgb(0,0,0)" />
+</svg>

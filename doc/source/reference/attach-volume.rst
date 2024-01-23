@@ -31,4 +31,5 @@ attach volume flow. In this example these include locks against the
 itself. This final ``connect_volume`` lock also being held when detaching and
 disconnecting a volume from the host by ``os-brick``.
 
-.. seqdiag:: attach_volume.diag
+.. image:: /_static/images/attach_volume.svg
+   :alt: Attach volume workflow
