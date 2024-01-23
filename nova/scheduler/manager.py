@@ -348,12 +348,6 @@ class SchedulerManager(manager.Manager):
         hosts = self._get_all_host_states(
             elevated, spec_obj, provider_summaries)
 
-        LOG.debug(
-            'host states are %(hosts)'
-            '',
-            {'hosts': hosts})
-
-
         # alloc_reqs_by_rp_uuid is None during rebuild, so this mean we cannot
         # run filters that are using allocation candidates during rebuild
         if alloc_reqs_by_rp_uuid is not None:

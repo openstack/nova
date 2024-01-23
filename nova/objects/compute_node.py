@@ -384,8 +384,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         # can be copied into the compute node. The names and representation
         # do not exactly match.
         # TODO(pmurray): the resources dict should be formalized.
-        keys = ["vcpus","gcpus","rcpus", "memory_mb", "local_gb", "cpu_info",
-                "vcpus_used","gcpus_used","rcpus_used", "memory_mb_used", "local_gb_used",
+        keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",
+                "vcpus_used", "memory_mb_used", "local_gb_used",
                 "numa_topology", "hypervisor_type",
                 "hypervisor_version", "hypervisor_hostname",
                 "disk_available_least", "host_ip", "uuid"]

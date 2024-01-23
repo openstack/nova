@@ -1096,15 +1096,10 @@ class ResourceTracker(object):
         free_ram_mb = resources['memory_mb'] - resources['memory_mb_used']
         free_disk_gb = resources['local_gb'] - resources['local_gb_used']
         vcpus = resources['vcpus']
-        rcpus = resources['rcpus']
-        gcpus = resources['gcpus']
         if vcpus:
             free_vcpus = vcpus - resources['vcpus_used']
         else:
             free_vcpus = 'unknown'
-
-        free_rcpus = rcpus - resources['rcpus_used']
-        free_gcpus = gcpus - resources['gcpus_used']
 
         pci_devices = resources.get('pci_passthrough_devices')
 
@@ -1113,15 +1108,11 @@ class ResourceTracker(object):
                   "free_ram=%(free_ram)sMB "
                   "free_disk=%(free_disk)sGB "
                   "free_vcpus=%(free_vcpus)s "
-                  "free_rcpus=%(free_rcpus)s "
-                  "free_gcpus=%(free_gcpus)s "
                   "pci_devices=%(pci_devices)s",
                   {'node': nodename,
                    'free_ram': free_ram_mb,
                    'free_disk': free_disk_gb,
                    'free_vcpus': free_vcpus,
-                   'free_rcpus': free_rcpus,
-                   'free_gcpus': free_gcpus,
                    'pci_devices': pci_devices})
 
     def _report_final_resource_view(self, nodename):
@@ -1834,8 +1825,8 @@ class ResourceTracker(object):
             context, instance.uuid, force=True)
 
     def _verify_resources(self, resources):
-        resource_keys = ["vcpus", "rcpus", "gcpus", "memory_mb", "local_gb", "cpu_info",
-                         "vcpus_used", "rcpus_used", "gcpus_used", "memory_mb_used", "local_gb_used",
+        resource_keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",
+                         "vcpus_used", "memory_mb_used", "local_gb_used",
                          "numa_topology"]
 
         missing_keys = [k for k in resource_keys if k not in resources]
