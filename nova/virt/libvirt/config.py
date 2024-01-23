@@ -28,6 +28,7 @@ import typing as ty
 
 from collections import OrderedDict
 from lxml import etree
+from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import units
 
@@ -37,6 +38,7 @@ from nova.objects import fields
 from nova.pci import utils as pci_utils
 from nova.virt import hardware
 
+LOG = logging.getLogger(__name__)
 
 # Namespace to use for Nova specific metadata items in XML
 NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.1"
@@ -83,7 +85,11 @@ class LibvirtConfigObject(object):
         return self._new_node(self.root_name)
 
     def parse_str(self, xmlstr):
-        self.parse_dom(etree.fromstring(xmlstr))
+        try:
+            self.parse_dom(etree.fromstring(xmlstr))
+        except etree.Error:
+            LOG.debug("Failed to parse the libvirt XML: %s", xmlstr)
+            raise
 
     def parse_dom(self, xmldoc):
         if self.root_name != xmldoc.tag:
