@@ -295,12 +295,11 @@ class Guest(object):
             yield VCPUInfo(
                 id=vcpu[0], cpu=vcpu[3], state=vcpu[1], time=vcpu[2])
 
-    def delete_configuration(self, support_uefi=False):
+    def delete_configuration(self):
         """Undefines a domain from hypervisor."""
         try:
             flags = libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE
-            if support_uefi:
-                flags |= libvirt.VIR_DOMAIN_UNDEFINE_NVRAM
+            flags |= libvirt.VIR_DOMAIN_UNDEFINE_NVRAM
             self._domain.undefineFlags(flags)
         except libvirt.libvirtError:
             LOG.debug("Error from libvirt during undefineFlags for guest "
