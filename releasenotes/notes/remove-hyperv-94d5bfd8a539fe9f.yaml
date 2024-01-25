@@ -1,0 +1,29 @@
+---
+upgrade:
+  - |
+    The ``HyperV`` virt driver has been removed. It was deprecated in the
+    Nova 27.2.0 (Antelope) release. This driver was untested and has no
+    maintainers. In addition, it has a dependency on the OpenStack Winstacker
+    project that also has been retired.
+  - |
+    The following config options which only apply for the ``HyperV`` virt
+    driver also been removed:
+
+    * ``[hyperv] dynamic_memory_ratio``
+    * ``[hyperv] enable_instance_metrics_collection``
+    * ``[hyperv] instances_path_share``
+    * ``[hyperv] limit_cpu_features``
+    * ``[hyperv] mounted_disk_query_retry_count``
+    * ``[hyperv] mounted_disk_query_retry_interval``
+    * ``[hyperv] power_state_check_timeframe``
+    * ``[hyperv] power_state_event_polling_interval``
+    * ``[hyperv] qemu_img_cmd``
+    * ``[hyperv] vswitch_name``
+    * ``[hyperv] wait_soft_reboot_seconds``
+    * ``[hyperv] config_drive_cdrom``
+    * ``[hyperv] config_drive_inject_password``
+    * ``[hyperv] volume_attach_retry_count``
+    * ``[hyperv] volume_attach_retry_interval``
+    * ``[hyperv] enable_remotefx``
+    * ``[hyperv] use_multipath_io``
+    * ``[hyperv] iscsi_initiator_list``

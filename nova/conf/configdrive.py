@@ -44,10 +44,6 @@ Related options:
      config drive option
   3. the image used to create the instance requires a config drive,
      this is defined by ``img_config_drive`` property for that image.
-
-* A compute node running Hyper-V hypervisor can be configured to attach
-  config drive as a CD drive. To attach the config drive as a CD drive, set the
-  ``[hyperv] config_drive_cdrom`` option to true.
 """),
     cfg.BoolOpt('force_config_drive',
         default=False,
@@ -71,11 +67,6 @@ Related options:
 * Use the 'mkisofs_cmd' flag to set the path where you install the
   genisoimage program. If genisoimage is in same path as the
   nova-compute service, you do not need to set this flag.
-* To use a config drive with Hyper-V, you must set the
-  'mkisofs_cmd' value to the full path to an mkisofs.exe installation.
-  Additionally, you must set the qemu_img_cmd value in the hyperv
-  configuration section to the full path to an qemu-img command
-  installation.
 """),
     cfg.StrOpt('mkisofs_cmd',
         default='genisoimage',
@@ -86,11 +77,6 @@ Use the ``mkisofs_cmd`` flag to set the path where you install the
 ``genisoimage`` program. If ``genisoimage`` is on the system path, you do not
 need to change the default value.
 
-To use a config drive with Hyper-V, you must set the ``mkisofs_cmd`` value to
-the full path to an ``mkisofs.exe`` installation. Additionally, you must set
-the ``qemu_img_cmd`` value in the hyperv configuration section to the full path
-to an ``qemu-img`` command installation.
-
 Possible values:
 
 * Name of the ISO image creator program, in case it is in the same directory
@@ -100,9 +86,6 @@ Possible values:
 Related options:
 
 * This option is meaningful when config drives are enabled.
-* To use config drive with Hyper-V, you must set the ``qemu_img_cmd``
-  value in the hyperv configuration section to the full path to an ``qemu-img``
-  command installation.
 """),
 ]
 

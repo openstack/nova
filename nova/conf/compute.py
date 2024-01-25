@@ -40,7 +40,6 @@ Possible values:
 * ``fake.FakeDriver``
 * ``ironic.IronicDriver``
 * ``vmwareapi.VMwareVCDriver``
-* ``hyperv.HyperVDriver``
 * ``zvm.ZVMDriver``
 """),
     cfg.BoolOpt('allow_resize_to_same_host',
