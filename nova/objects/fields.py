@@ -526,6 +526,25 @@ class RNGModel(BaseNovaEnum):
     ALL = (VIRTIO,)
 
 
+class ShareMappingStatus(BaseNovaEnum):
+    """Represents the possible status of a share mapping"""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    ERROR = "error"
+
+    ALL = (ACTIVE, INACTIVE, ERROR)
+
+
+class ShareMappingProto(BaseNovaEnum):
+    """Represents the possible protocol used by a share mapping"""
+
+    NFS = "NFS"
+    CEPHFS = "CEPHFS"
+
+    ALL = (NFS, CEPHFS)
+
+
 class TPMModel(BaseNovaEnum):
 
     TIS = "tpm-tis"
@@ -1285,6 +1304,14 @@ class OSTypeField(BaseEnumField):
 
 class RNGModelField(BaseEnumField):
     AUTO_TYPE = RNGModel()
+
+
+class ShareMappingStatusField(BaseEnumField):
+    AUTO_TYPE = ShareMappingStatus()
+
+
+class ShareMappingProtoField(BaseEnumField):
+    AUTO_TYPE = ShareMappingProto()
 
 
 class TPMModelField(BaseEnumField):
