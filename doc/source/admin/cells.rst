@@ -29,7 +29,7 @@ Overview
 The purpose of the cells functionality in nova is to allow larger deployments
 to shard their many compute nodes into cells. All nova deployments are by
 definition cells deployments, even if most will only ever have a single cell.
-This means a multi-cell deployment will not b radically different from a
+This means a multi-cell deployment will not be radically different from a
 "standard" nova deployment.
 
 Consider such a deployment. It will consists of the following components:
