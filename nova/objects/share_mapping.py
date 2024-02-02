@@ -87,11 +87,12 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_instance_uuid_and_share_id(
-        # This query returns only one element as a share can be
-        # associated only one time to an instance.
-        # Note: the REST API prevent the user to create duplicate share
-        # mapping by raising an exception.ShareMappingAlreadyExists.
             cls, context, instance_uuid, share_id):
+        """This query returns only one element as a share can be
+        associated only one time to an instance.
+        Note: the REST API prevent the user to create duplicate share
+        mapping by raising an exception.ShareMappingAlreadyExists.
+        """
         share_mapping = ShareMapping(context)
         db_share_mapping = db.share_mapping_get_by_instance_uuid_and_share_id(
             context, instance_uuid, share_id)
