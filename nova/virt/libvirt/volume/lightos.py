@@ -52,7 +52,7 @@ class LibvirtLightOSVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
         super(LibvirtLightOSVolumeDriver, self).disconnect_volume(
             connection_info, instance, force=force)
 
-    def extend_volume(self, connection_info, instance, requested_size=None):
+    def extend_volume(self, connection_info, instance, requested_size):
         """Extend the volume."""
         LOG.debug("calling os-brick to extend LightOS Volume."
                   "instance:%s, volume_id:%s",

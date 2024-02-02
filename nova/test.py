@@ -726,9 +726,13 @@ class SubclassSignatureTestCase(testtools.TestCase, metaclass=abc.ABCMeta):
         # getmembers returns all members, including members inherited from
         # the base class. It's redundant for us to test these, but as
         # they'll always pass it's not worth the complexity to filter them out.
-        for (name, method) in inspect.getmembers(cls, inspect.ismethod):
+        for (name, method) in inspect.getmembers(cls, inspect.isfunction):
             # Subclass __init__ methods can usually be legitimately different
             if name == '__init__':
+                continue
+
+            # Skip subclass private functions
+            if name.startswith('_'):
                 continue
 
             while hasattr(method, '__wrapped__'):
