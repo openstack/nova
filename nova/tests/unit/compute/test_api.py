@@ -2376,6 +2376,39 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_resize.assert_not_called()
         mock_save.assert_not_called()
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=True)
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(quotas_obj.Quotas, 'limit_check_project_and_user')
+    @mock.patch.object(quotas_obj.Quotas, 'count_as_dict')
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize_vol_backed_smaller_min_ram(self, mock_get_flavor,
+                                               mock_count, mock_limit,
+                                               mock_record, mock_save,
+                                               mock_is_vol_backed):
+        mock_resize = self.useFixture(fixtures.MockPatchObject(
+            self.compute_api.compute_task_api, 'resize_instance')).mock
+        # Resize down from 512 MB to 64 MB.
+        params = dict(image_ref='', system_metadata={'min_ram': 512})
+        fake_inst = self._create_instance_obj(params=params)
+        new_flavor = self._create_flavor(id=200, flavorid=200,
+                                         name='new_flavor', disabled=False,
+                                         memory_mb=64)
+        mock_get_flavor.return_value = new_flavor
+        self.assertRaises(exception.FlavorMemoryTooSmall,
+                          self.compute_api.resize, self.context,
+                          fake_inst, flavor_id=new_flavor.id)
+        mock_get_flavor.assert_called_once_with(200, read_deleted='no')
+        # Should never reach these.
+        mock_count.assert_not_called()
+        mock_limit.assert_not_called()
+        mock_record.assert_not_called()
+        mock_resize.assert_not_called()
+        mock_save.assert_not_called()
+
     @mock.patch('nova.servicegroup.api.API.service_is_up',
                 new=mock.Mock(return_value=True))
     @mock.patch.object(objects.Instance, 'save')

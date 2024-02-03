@@ -4269,6 +4269,12 @@ class API:
             if volume_backed:
                 self._validate_flavor_image_numa_pci(
                     image, new_flavor, validate_pci=True)
+                # The server that image-backed already has the verification of
+                # image min_ram when calling _validate_flavor_image_nostatus.
+                # Here, the verification is added for the server that
+                # volume-backed.
+                if new_flavor['memory_mb'] < int(image.get('min_ram', 0)):
+                    raise exception.FlavorMemoryTooSmall()
             else:
                 self._validate_flavor_image_nostatus(
                     context, image, new_flavor, root_bdm=None,
