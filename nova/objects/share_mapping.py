@@ -11,6 +11,9 @@
 #    under the License.
 
 import logging
+
+from oslo_utils import versionutils
+
 from nova.db.main import api as db
 from nova import exception
 from nova.objects import base
@@ -21,8 +24,10 @@ LOG = logging.getLogger(__name__)
 
 @base.NovaObjectRegistry.register
 class ShareMapping(base.NovaTimestampObject, base.NovaObject):
-    # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.0: Initial version.
+    # Version 1.1: Add "attaching" and "detaching" to possible values
+    #              of status field.
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -34,6 +39,22 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
         'export_location': fields.StringField(nullable=False),
         'share_proto': fields.ShareMappingProtoField()
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(ShareMapping, self).obj_make_compatible(
+            primitive, target_version
+        )
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            status = primitive.get('status')
+            if status in (
+                fields.ShareMappingStatus.ATTACHING,
+                fields.ShareMappingStatus.DETACHING,
+            ):
+                raise exception.ObjectActionError(
+                    action='obj_make_compatible',
+                    reason='status=%s not supported in version %s' % (
+                        status, target_version))
 
     @staticmethod
     def _from_db_object(context, share_mapping, db_share_mapping):
@@ -52,7 +73,7 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
 
     def create(self):
         LOG.info(
-            "Associate share '%s' to instance '%s'.",
+            "Attaching share '%s' to instance '%s'.",
             self.share_id, self.instance_uuid)
 
         self.save()
@@ -60,7 +81,7 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
     @base.remotable
     def delete(self):
         LOG.info(
-            "Dissociate share '%s' from instance '%s'.",
+            "Detaching share '%s' from instance '%s'.",
             self.share_id,
             self.instance_uuid,
         )
@@ -68,17 +89,17 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
             self._context, self.instance_uuid, self.share_id
         )
 
-    def attach(self):
+    def activate(self):
         LOG.info(
-            "Share '%s' about to be attached to instance '%s'.",
+            "Share '%s' about to be activated on instance '%s'.",
             self.share_id, self.instance_uuid)
 
         self.status = fields.ShareMappingStatus.ACTIVE
         self.save()
 
-    def detach(self):
+    def deactivate(self):
         LOG.info(
-            "Share '%s' about to be detached from instance '%s'.",
+            "Share '%s' about to be deactivated on instance '%s'.",
             self.share_id,
             self.instance_uuid,
         )
@@ -135,10 +156,10 @@ class ShareMappingList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(
             context, cls(context), ShareMapping, db_share_mappings)
 
-    def attach_all(self):
+    def activate_all(self):
         for share in self:
-            share.attach()
+            share.activate()
 
-    def detach_all(self):
+    def deactivate_all(self):
         for share in self:
-            share.detach()
+            share.deactivate()
