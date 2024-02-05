@@ -176,8 +176,8 @@ from the relevant third party test, on the latest patchset, before a +2 vote
 can be applied.
 Specifically, changes to nova/virt/driver/<NNNN> need a +1 vote from the
 respective third party CI.
-For example, if you change something in the Hyper-V virt driver, you must wait
-for a +1 from the Hyper-V CI on the latest patchset, before you can give that
+For example, if you change something in the VMware virt driver, you must wait
+for a +1 from the VMware CI on the latest patchset, before you can give that
 patch set a +2 vote.
 
 This is important to ensure:

@@ -134,7 +134,7 @@ Secure Boot
 
   .. note::
 
-     Supported by the Hyper-V and libvirt drivers.
+     Supported by the libvirt driver.
 
   .. versionchanged:: 23.0.0 (Wallaby)
 

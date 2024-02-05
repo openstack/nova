@@ -76,9 +76,6 @@ availability zones. Nova supports the following hypervisors:
 
 - :ironic-doc:`Baremetal <>`
 
-- `Hyper-V
-  <https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-technology-overview>`__
-
 - `Kernel-based Virtual Machine (KVM)
   <https://www.linux-kvm.org/page/Main_Page>`__
 
