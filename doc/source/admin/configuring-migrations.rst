@@ -314,6 +314,15 @@ memory-intensive instances succeed.
       interrupted, page faults cannot be resolved anymore and the instance is
       rebooted.
 
+   .. important::
+
+      You may need to enable ``unprivileged_userfaultfd`` on newer kernels in
+      order for post-copy to work.
+
+      .. code-block:: console
+
+         sysctl vm.unprivileged_userfaultfd=1
+
 .. TODO Bernd: I *believe* that it is certain to succeed,
 .. but perhaps I am missing something.
 
