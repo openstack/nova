@@ -90,3 +90,4 @@ Compute API in the past, but no longer exist.
 .. include:: os-consoles.inc
 .. include:: os-security-group-default-rules.inc
 .. include:: os-agents.inc
+.. include:: servers-action-rdp-remote-consoles.inc

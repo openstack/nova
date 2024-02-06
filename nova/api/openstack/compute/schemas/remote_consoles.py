@@ -50,25 +50,6 @@ get_spice_console = {
     'additionalProperties': False,
 }
 
-get_rdp_console = {
-    'type': 'object',
-    'properties': {
-        'os-getRDPConsole': {
-            'type': 'object',
-            'properties': {
-                'type': {
-                    'type': 'string',
-                    'enum': ['rdp-html5'],
-                },
-            },
-            'required': ['type'],
-            'additionalProperties': False,
-        },
-    },
-    'required': ['os-getRDPConsole'],
-    'additionalProperties': False,
-}
-
 get_serial_console = {
     'type': 'object',
     'properties': {
@@ -96,12 +77,11 @@ create_v26 = {
             'properties': {
                 'protocol': {
                     'type': 'string',
-                    'enum': ['vnc', 'spice', 'rdp', 'serial'],
+                    'enum': ['vnc', 'spice', 'serial'],
                 },
                 'type': {
                     'type': 'string',
-                    'enum': ['novnc', 'xvpvnc', 'rdp-html5',
-                             'spice-html5', 'serial'],
+                    'enum': ['novnc', 'xvpvnc', 'spice-html5', 'serial'],
                 },
             },
             'required': ['protocol', 'type'],
@@ -120,12 +100,12 @@ create_v28 = {
             'properties': {
                 'protocol': {
                     'type': 'string',
-                    'enum': ['vnc', 'spice', 'rdp', 'serial', 'mks'],
+                    'enum': ['vnc', 'spice', 'serial', 'mks'],
                 },
                 'type': {
                     'type': 'string',
-                    'enum': ['novnc', 'xvpvnc', 'rdp-html5',
-                             'spice-html5', 'serial', 'webmks'],
+                    'enum': ['novnc', 'xvpvnc', 'spice-html5', 'serial',
+                             'webmks'],
                 },
             },
             'required': ['protocol', 'type'],

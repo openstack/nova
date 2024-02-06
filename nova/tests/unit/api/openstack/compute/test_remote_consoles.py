@@ -208,65 +208,12 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
             self.validation_error,
             body)
 
-    @mock.patch.object(compute_api.API, 'get_rdp_console',
-                       return_value={'url': 'http://fake'})
-    def test_get_rdp_console(self, mock_get_rdp_console):
+    def test_get_rdp_console_bad_request(self):
         body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
         req = fakes.HTTPRequest.blank('')
-        output = self.controller.get_rdp_console(req, fakes.FAKE_UUID,
-                                                 body=body)
-        self.assertEqual(output,
-            {u'console': {u'url': u'http://fake', u'type': u'rdp-html5'}})
-        mock_get_rdp_console.assert_called_once_with(
-            req.environ['nova.context'], self.instance, 'rdp-html5')
-
-    def test_get_rdp_console_not_ready(self):
-        body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
-        self._check_console_failure(
-            self.controller.get_rdp_console,
-            webob.exc.HTTPConflict,
-            body,
-            'get_rdp_console',
-            exception.InstanceNotReady(instance_id=fakes.FAKE_UUID))
-
-    def test_get_rdp_console_no_type(self):
-        body = {'os-getRDPConsole': {}}
-        self._check_console_failure(
-            self.controller.get_rdp_console,
-            self.validation_error,
-            body)
-
-    def test_get_rdp_console_no_instance(self):
-        body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
-        self._check_console_failure(
-            self.controller.get_rdp_console,
-            webob.exc.HTTPNotFound,
-            body,
-            'get',
-            exception.InstanceNotFound(instance_id=fakes.FAKE_UUID))
-
-    def test_get_rdp_console_no_instance_on_console_get(self):
-        body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
-        self._check_console_failure(
-            self.controller.get_rdp_console,
-            webob.exc.HTTPNotFound,
-            body,
-            'get_rdp_console',
-            exception.InstanceNotFound(instance_id=fakes.FAKE_UUID))
-
-    def test_get_rdp_console_invalid_type(self):
-        body = {'os-getRDPConsole': {'type': 'invalid'}}
-        self._check_console_failure(
-            self.controller.get_rdp_console,
-            self.validation_error,
-            body)
-
-    def test_get_rdp_console_type_unavailable(self):
-        body = {'os-getRDPConsole': {'type': 'unavailable'}}
-        self._check_console_failure(
-            self.controller.get_rdp_console,
-            self.validation_error,
-            body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.get_rdp_console,
+                          req, fakes.FAKE_UUID, body=body)
 
     def test_get_vnc_console_with_undefined_param(self):
         body = {'os-getVNCConsole': {'type': 'novnc', 'undefined': 'foo'}}
@@ -280,13 +227,6 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
                                       'undefined': 'foo'}}
         self._check_console_failure(
             self.controller.get_spice_console,
-            self.validation_error,
-            body)
-
-    def test_get_rdp_console_with_undefined_param(self):
-        body = {'os-getRDPConsole': {'type': 'rdp-html5', 'undefined': 'foo'}}
-        self._check_console_failure(
-            self.controller.get_rdp_console,
             self.validation_error,
             body)
 
@@ -412,18 +352,14 @@ class ConsolesExtensionTestV26(test.NoDBTestCase):
         mock_handler.assert_called_once_with(self.context, self.instance,
                                              'spice-html5')
 
-    def test_create_rdp_console(self):
+    def test_create_rdp_console_bad_request(self):
         mock_handler = mock.MagicMock()
         mock_handler.return_value = {'url': "http://fake"}
         self.controller.handlers['rdp'] = mock_handler
 
         body = {'remote_console': {'protocol': 'rdp', 'type': 'rdp-html5'}}
-        output = self.controller.create(self.req, fakes.FAKE_UUID, body=body)
-        self.assertEqual({'remote_console': {'protocol': 'rdp',
-                                             'type': 'rdp-html5',
-                                             'url': 'http://fake'}}, output)
-        mock_handler.assert_called_once_with(self.context, self.instance,
-                                             'rdp-html5')
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_serial_console(self):
         mock_handler = mock.MagicMock()

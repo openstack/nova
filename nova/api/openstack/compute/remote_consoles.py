@@ -29,7 +29,6 @@ class RemoteConsolesController(wsgi.Controller):
         self.compute_api = compute.API()
         self.handlers = {'vnc': self.compute_api.get_vnc_console,
                          'spice': self.compute_api.get_spice_console,
-                         'rdp': self.compute_api.get_rdp_console,
                          'serial': self.compute_api.get_serial_console,
                          'mks': self.compute_api.get_mks_console}
 
@@ -95,32 +94,11 @@ class RemoteConsolesController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getRDPConsole')
-    @validation.schema(remote_consoles.get_rdp_console)
     def get_rdp_console(self, req, id, body):
-        """Get text console output."""
-        context = req.environ['nova.context']
-        context.can(rc_policies.BASE_POLICY_NAME)
-
-        # If type is not supplied or unknown, get_rdp_console below will cope
-        console_type = body['os-getRDPConsole'].get('type')
-
-        instance = common.get_instance(self.compute_api, context, id)
-        try:
-            # NOTE(mikal): get_rdp_console() can raise InstanceNotFound, so
-            # we still need to catch it here.
-            output = self.compute_api.get_rdp_console(context,
-                                                      instance,
-                                                      console_type)
-        except exception.ConsoleTypeUnavailable as e:
-            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceNotReady as e:
-            raise webob.exc.HTTPConflict(explanation=e.format_message())
-        except NotImplementedError:
-            common.raise_feature_not_supported()
-
-        return {'console': {'type': console_type, 'url': output['url']}}
+        """RDP console was available only for HyperV driver which has been
+        removed from Nova in 29.0.0 (Caracal) release.
+        """
+        raise webob.exc.HTTPBadRequest()
 
     @wsgi.Controller.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))

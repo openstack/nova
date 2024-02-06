@@ -32,10 +32,6 @@ class ConsoleVNC(Console):
     pass
 
 
-class ConsoleRDP(Console):
-    pass
-
-
 class ConsoleSpice(Console):
     def __init__(self, host, port, tlsPort, internal_access_path=None):
         super(ConsoleSpice, self).__init__(host, port, internal_access_path)

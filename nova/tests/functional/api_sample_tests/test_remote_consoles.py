@@ -31,7 +31,6 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         self.api.microversion = self.microversion
         self.flags(enabled=True, group='vnc')
         self.flags(enabled=True, group='spice')
-        self.flags(enabled=True, group='rdp')
         self.flags(enabled=True, group='serial_console')
 
     def test_get_vnc_console(self):
@@ -66,13 +65,13 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         self._verify_response('get-spice-console-post-resp', {'url': HTTP_RE},
                               response, 200)
 
-    def test_get_rdp_console(self):
+    def test_get_rdp_console_bad_request(self):
+        """Ensure http 400 error is return from RDP console request"""
         uuid = self._post_server()
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-rdp-console-post-req',
                                 {'action': 'os-getRDPConsole'})
-        self._verify_response('get-rdp-console-post-resp', {'url': HTTP_RE},
-                              response, 200)
+        self.assertEqual(400, response.status_code)
 
     def test_get_serial_console(self):
         uuid = self._post_server()
@@ -99,6 +98,14 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
                                  'create-vnc-console-req', body)
         self._verify_response('create-vnc-console-resp', {'url': HTTP_RE},
                               response, 200)
+
+    def test_create_rdp_console_bad_request(self):
+        """Ensure http 400 error is return from RDP console request"""
+        uuid = self._post_server()
+        body = {'protocol': 'rdp', 'type': 'rdp-html5'}
+        response = self._do_post('servers/%s/remote-consoles' % uuid,
+                                 'create-rdp-console-req', body)
+        self.assertEqual(400, response.status_code)
 
 
 class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):

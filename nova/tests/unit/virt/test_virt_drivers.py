@@ -542,12 +542,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertIsInstance(spice_console, ctype.ConsoleSpice)
 
     @catch_notimplementederror
-    def test_get_rdp_console(self):
-        instance_ref, network_info = self._get_running_instance()
-        rdp_console = self.connection.get_rdp_console(self.ctxt, instance_ref)
-        self.assertIsInstance(rdp_console, ctype.ConsoleRDP)
-
-    @catch_notimplementederror
     def test_get_serial_console(self):
         self.flags(enabled=True, group='serial_console')
         instance_ref, network_info = self._get_running_instance()

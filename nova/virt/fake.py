@@ -467,11 +467,6 @@ class FakeDriver(driver.ComputeDriver):
                                   port=6969,
                                   tlsPort=6970)
 
-    def get_rdp_console(self, context, instance):
-        return ctype.ConsoleRDP(internal_access_path='FAKE',
-                                host='fakerdpconsole.com',
-                                port=6969)
-
     def get_serial_console(self, context, instance):
         return ctype.ConsoleSerial(internal_access_path='FAKE',
                                    host='fakerdpconsole.com',

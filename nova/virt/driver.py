@@ -547,16 +547,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def get_rdp_console(self, context, instance):
-        """Get connection info for a rdp console.
-
-        :param context: security context
-        :param instance: nova.objects.instance.Instance
-
-        :returns: an instance of console.type.ConsoleRDP
-        """
-        raise NotImplementedError()
-
     def get_serial_console(self, context, instance):
         """Get connection info for a serial console.
 

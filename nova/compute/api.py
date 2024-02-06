@@ -4857,15 +4857,6 @@ class API:
     @check_instance_host()
     @reject_instance_state(
         task_state=[task_states.DELETING, task_states.MIGRATING])
-    def get_rdp_console(self, context, instance, console_type):
-        """Get a url to an instance Console."""
-        connect_info = self.compute_rpcapi.get_rdp_console(context,
-                instance=instance, console_type=console_type)
-        return {'url': connect_info['access_url']}
-
-    @check_instance_host()
-    @reject_instance_state(
-        task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_serial_console(self, context, instance, console_type):
         """Get a url to a serial console."""
         connect_info = self.compute_rpcapi.get_serial_console(context,

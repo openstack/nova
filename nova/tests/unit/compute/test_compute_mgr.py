@@ -6034,19 +6034,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertEqual(args[1], self.compute.host)
         self.assertEqual(args[2], mock.sentinel.inst_uuid)
 
-    @ddt.data(('vnc', 'spice', 'rdp', 'serial_console', 'mks'),
-              ('spice', 'vnc', 'rdp', 'serial_console', 'mks'),
-              ('rdp', 'vnc', 'spice', 'serial_console', 'mks'),
-              ('serial_console', 'vnc', 'spice', 'rdp', 'mks'),
-              ('mks', 'vnc', 'spice', 'rdp', 'serial_console'))
+    @ddt.data(('vnc', 'spice', 'serial_console', 'mks'),
+              ('spice', 'vnc', 'serial_console', 'mks'),
+              ('serial_console', 'vnc', 'spice', 'mks'),
+              ('mks', 'vnc', 'spice', 'serial_console'))
     @ddt.unpack
     @mock.patch('nova.objects.ConsoleAuthToken.'
                 'clean_console_auths_for_instance')
-    def test_clean_instance_console_tokens(self, g1, g2, g3, g4, g5,
+    def test_clean_instance_console_tokens(self, g1, g2, g3, g4,
                                            mock_clean):
         # Enable one of each of the console types and disable the rest
         self.flags(enabled=True, group=g1)
-        for g in [g2, g3, g4, g5]:
+        for g in [g2, g3, g4]:
             self.flags(enabled=False, group=g)
         instance = objects.Instance(uuid=uuids.instance)
         self.compute._clean_instance_console_tokens(self.context, instance)
@@ -6056,7 +6055,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 'clean_console_auths_for_instance')
     def test_clean_instance_console_tokens_no_consoles_enabled(self,
                                                                mock_clean):
-        for g in ['vnc', 'spice', 'rdp', 'serial_console', 'mks']:
+        for g in ['vnc', 'spice', 'serial_console', 'mks']:
             self.flags(enabled=False, group=g)
         instance = objects.Instance(uuid=uuids.instance)
         self.compute._clean_instance_console_tokens(self.context, instance)
@@ -9843,7 +9842,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     def test_consoles_enabled(self):
         self.flags(enabled=False, group='vnc')
         self.flags(enabled=False, group='spice')
-        self.flags(enabled=False, group='rdp')
         self.flags(enabled=False, group='serial_console')
         self.assertFalse(self.compute._consoles_enabled())
 
@@ -9851,7 +9849,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertTrue(self.compute._consoles_enabled())
         self.flags(enabled=False, group='vnc')
 
-        for console in ['spice', 'rdp', 'serial_console']:
+        for console in ['spice', 'serial_console']:
             self.flags(enabled=True, group=console)
             self.assertTrue(self.compute._consoles_enabled())
             self.flags(enabled=False, group=console)
