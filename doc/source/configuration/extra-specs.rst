@@ -176,10 +176,9 @@ They are only supported by the libvirt virt driver.
 ``os``
 ~~~~~~
 
-The following extra specs are used to configure various attributes of
-instances when using the HyperV virt driver.
+The following extra specs are used to configure secure_boot.
 
-They are only supported by the HyperV virt driver.
+They are only supported by the libvirt virt driver.
 
 .. extra-specs:: os
 

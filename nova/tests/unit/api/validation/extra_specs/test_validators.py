@@ -105,8 +105,6 @@ class TestValidators(test.NoDBTestCase):
     def test_value__int(self):
         valid_specs = (
             ('hw:numa_nodes', '1'),
-            ('os:monitors', '1'),
-            ('os:monitors', '8'),
         )
         for key, value in valid_specs:
             validators.validate(key, value)
@@ -115,8 +113,6 @@ class TestValidators(test.NoDBTestCase):
             ('hw:serial_port_count', 'five'),  # NaN
             ('hw:serial_port_count', '!'),  # NaN
             ('hw:numa_nodes', '0'),  # has min
-            ('os:monitors', '0'),  # has min
-            ('os:monitors', '9'),  # has max
         )
         for key, value in invalid_specs:
             with testtools.ExpectedException(exception.ValidationError):
