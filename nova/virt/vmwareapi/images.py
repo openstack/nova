@@ -30,6 +30,7 @@ from oslo_utils import units
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.image_transfer import image_pull_from_url
 from oslo_vmware import rw_handles
+from oslo_vmware import vim_util as vutil
 
 from nova import exception
 from nova.i18n import _
@@ -51,6 +52,9 @@ IMAGE_API = glance.API()
 QUEUE_BUFFER_SIZE = 10
 NFC_LEASE_UPDATE_PERIOD = 60  # update NFC lease every 60sec.
 CHUNK_SIZE = 64 * units.Ki  # default chunk size for image transfer
+
+# VMDK images having this size are considered invalid/incomplete downloads
+INVALID_VMDK_SIZE = 4096000
 
 
 class VMwareImage(object):
@@ -394,6 +398,10 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
     LOG.info("Downloaded image file data %(image_ref)s",
              {'image_ref': instance.image_ref}, instance=instance)
     vmdk = vm_util.get_vmdk_info(session, imported_vm_ref)
+    if not ensure_valid_template_vm(session,
+                                    imported_vm_ref,
+                                    vmdk.capacity_in_bytes):
+        raise vexc.ImageTransferException("Incomplete VMDK download.")
     vm_util.mark_vm_as_template(session, instance, imported_vm_ref)
     return vmdk.capacity_in_bytes, vmdk.path
 
@@ -587,3 +595,22 @@ def upload_image_stream_optimized(context, image_id, instance, session,
 
     LOG.debug("Uploaded image %s to the Glance image server", image_id,
               instance=instance)
+
+
+def ensure_valid_template_vm(session, templ_vm_ref, vmdk_size):
+    """Deletes an invalid template VM by checking the vmdk_size."""
+    if vmdk_size != INVALID_VMDK_SIZE:
+        return True
+
+    try:
+        LOG.warning("Deleting invalid template VM %s",
+                    vutil.get_moref_value(templ_vm_ref))
+        destroy_task = session._call_method(
+            session.vim,
+            "Destroy_Task",
+            templ_vm_ref)
+        session._wait_for_task(destroy_task)
+    except Exception:
+        LOG.exception("Failed to delete the template VM %s",
+                      vutil.get_moref_value(templ_vm_ref))
+    return False
