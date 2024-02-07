@@ -49,33 +49,11 @@ class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.context = self.req.environ['nova.context']
 
-    @mock.patch('nova.objects.ConsoleAuthToken.validate',
-                return_value=objects.ConsoleAuthToken(
-                    instance_uuid=fakes.FAKE_UUID, host='fake_host',
-                    port='1234', internal_access_path='fake_access_path',
-                    console_type='rdp-html5', token=fakes.FAKE_UUID))
+    @mock.patch.object(objects.ConsoleAuthToken, 'validate')
     def test_get_console_connect_info(self, mock_validate):
-        output = self.controller.show(self.req, fakes.FAKE_UUID)
-        self.assertEqual(self._EXPECTED_OUTPUT_DB, output)
-        mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
-
-    @mock.patch('nova.objects.ConsoleAuthToken.validate',
-                side_effect=exception.InvalidToken(token='***'))
-    def test_get_console_connect_info_token_not_found(self, mock_validate):
-        self.assertRaises(webob.exc.HTTPNotFound,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.show, self.req, fakes.FAKE_UUID)
-        mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
-
-    @mock.patch('nova.objects.ConsoleAuthToken.validate',
-                return_value=objects.ConsoleAuthToken(
-                    instance_uuid=fakes.FAKE_UUID, host='fake_host',
-                    port='1234', internal_access_path='fake_access_path',
-                    console_type='unauthorized_console_type',
-                    token=fakes.FAKE_UUID))
-    def test_get_console_connect_info_nonrdp_console_type(self, mock_validate):
-        self.assertRaises(webob.exc.HTTPUnauthorized,
-                          self.controller.show, self.req, fakes.FAKE_UUID)
-        mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
+        mock_validate.assert_not_called()
 
 
 class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
@@ -91,7 +69,14 @@ class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
                     port='1234', internal_access_path='fake_access_path',
                     console_type='webmks',
                     token=fakes.FAKE_UUID))
-    def test_get_console_connect_info_nonrdp_console_type(self, mock_validate):
+    def test_get_console_connect_info(self, mock_validate):
         output = self.controller.show(self.req, fakes.FAKE_UUID)
         self.assertEqual(self._EXPECTED_OUTPUT_DB, output)
+        mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
+
+    @mock.patch('nova.objects.ConsoleAuthToken.validate',
+                side_effect=exception.InvalidToken(token='***'))
+    def test_get_console_connect_info_token_not_found(self, mock_validate):
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, self.req, fakes.FAKE_UUID)
         mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
