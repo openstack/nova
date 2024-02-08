@@ -39,7 +39,7 @@ compute host and image.
 
 .. rubric:: Compute host requirements
 
-The following virt drivers support the config drive: libvirt, Hyper-V and
+The following virt drivers support the config drive: libvirt and
 VMware. The Bare Metal service also supports the config drive.
 
 - To use config drives with libvirt or VMware, you must first
@@ -48,12 +48,6 @@ VMware. The Bare Metal service also supports the config drive.
   install the :command:`genisoimage` program. If :command:`genisoimage` is in
   the same path as the :program:`nova-compute` service, you do not need to set
   this flag.
-
-- To use config drives with Hyper-V, you must set the
-  :oslo.config:option:`mkisofs_cmd` config option to the full path to an
-  :command:`mkisofs.exe` installation. Additionally, you must set the
-  :oslo.config:option:`hyperv.qemu_img_cmd` config option to the full path to an
-  :command:`qemu-img` command installation.
 
 - To use config drives with the Bare Metal service, you do not need to prepare
   anything.
@@ -80,11 +74,6 @@ options:
 - :oslo.config:option:`api.config_drive_skip_versions`
 - :oslo.config:option:`force_config_drive`
 - :oslo.config:option:`config_drive_format`
-
-If using the HyperV compute driver, the following additional options are
-supported:
-
-- :oslo.config:option:`hyperv.config_drive_cdrom`
 
 For example, to ensure nova always provides a config drive to instances but
 versions ``2018-08-27`` (Rocky) and ``2017-02-22`` (Ocata) are skipped, add the

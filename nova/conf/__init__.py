@@ -35,7 +35,6 @@ from nova.conf import devices
 from nova.conf import ephemeral_storage
 from nova.conf import glance
 from nova.conf import guestfs
-from nova.conf import hyperv
 from nova.conf import imagecache
 from nova.conf import ironic
 from nova.conf import key_manager
@@ -84,7 +83,6 @@ devices.register_opts(CONF)
 ephemeral_storage.register_opts(CONF)
 glance.register_opts(CONF)
 guestfs.register_opts(CONF)
-hyperv.register_opts(CONF)
 mks.register_opts(CONF)
 imagecache.register_opts(CONF)
 ironic.register_opts(CONF)
