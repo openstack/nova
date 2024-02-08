@@ -1512,3 +1512,14 @@ def is_non_vmware_spec(spec_obj):
             return True
 
     return False
+
+
+def get_memory_mb_max_unit(host_state):
+    """Gets the memory_mb_max_unit stat reported by a HostState
+
+    This is a stat reported by the VMware compute hosts and
+    represents the free RAM of the freest host in the cluster.
+
+    Returns None if the stat is missing
+    """
+    return host_state.stats.get("memory_mb_max_unit")
