@@ -19,6 +19,7 @@ from nova.scheduler import filters
 from nova.scheduler.mixins import ProjectTagMixin
 from nova.scheduler import utils
 from nova import utils as nova_utils
+from nova.utils import BIGVM_EXCLUSIVE_TRAIT
 
 LOG = logging.getLogger(__name__)
 
@@ -35,8 +36,9 @@ class ShardFilter(filters.BaseHostFilter, ProjectTagMixin):
     """
 
     _ALL_SHARDS = "sharding_enabled"
+    _HANA_USE_SHARDING = "use_individual_shard_tags_hana"
     _SHARD_PREFIX = 'vc-'
-    _PROJECT_TAG_TAGS = [_ALL_SHARDS]
+    _PROJECT_TAG_TAGS = [_ALL_SHARDS, _HANA_USE_SHARDING]
     _PROJECT_TAG_PREFIX = _SHARD_PREFIX
 
     def _get_shards(self, project_id):
@@ -44,6 +46,14 @@ class ShardFilter(filters.BaseHostFilter, ProjectTagMixin):
         # NOTE(jkulik): We wrap _get_tags() here to change the name to
         # _get_shards() so it's clear what we return
         return self._get_tags(project_id)
+
+    def filter_all(self, filter_obj_list, spec_obj):
+        if self._ignore_hana_flavor(spec_obj):
+            LOG.debug("Hana/BigVM flavor requested. Ignoring sharding.")
+            return filter_obj_list
+
+        return super(ShardFilter, self).filter_all(
+            filter_obj_list, spec_obj)
 
     def host_passes(self, host_state, spec_obj):
         # Only VMware
@@ -94,3 +104,20 @@ class ShardFilter(filters.BaseHostFilter, ProjectTagMixin):
                        'host_shard': host_shard_names,
                        'project_shards': shards})
             return False
+
+    def _ignore_hana_flavor(self, spec_obj):
+        if not CONF.filter_scheduler.sharding_ignore_hana:
+            return False
+
+        proj_tags = self._get_tags(spec_obj.project_id)
+        if self._HANA_USE_SHARDING in proj_tags:
+            return False
+
+        strategy = CONF.filter_scheduler.hana_detection_strategy
+        extra_specs = spec_obj.flavor.extra_specs
+
+        if strategy == "hana_exclusive_host":
+            trait = f"trait:{BIGVM_EXCLUSIVE_TRAIT}"
+            return extra_specs.get(trait) == "required"
+        elif strategy == "memory_mb":
+            return spec_obj.flavor.memory_mb >= CONF.bigvm_mb

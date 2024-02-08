@@ -36,6 +36,7 @@ from nova.scheduler.client.report import NESTED_PROVIDER_API_VERSION
 from nova.scheduler.client.report import SchedulerReportClient
 from nova.scheduler.utils import ResourceRequest
 from nova import utils
+from nova.utils import BIGVM_EXCLUSIVE_TRAIT
 from nova.virt.vmwareapi import special_spawning
 
 LOG = logging.getLogger(__name__)
@@ -45,7 +46,6 @@ CONF = nova.conf.CONF
 MEMORY_MB = orc.MEMORY_MB
 BIGVM_RESOURCE = special_spawning.BIGVM_RESOURCE
 BIGVM_DISABLED_TRAIT = 'CUSTOM_BIGVM_DISABLED'
-BIGVM_EXCLUSIVE_TRAIT = 'CUSTOM_HANA_EXCLUSIVE_HOST'
 MEMORY_RESERVABLE_MB_RESOURCE = utils.MEMORY_RESERVABLE_MB_RESOURCE
 VMWARE_HV_TYPE = 'VMware vCenter Server'
 SHARD_PREFIX = 'vc-'
