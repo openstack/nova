@@ -1085,18 +1085,28 @@ class LibvirtDriver(driver.ComputeDriver):
                 "'kvm'; found '%s'.")
             raise exception.InvalidConfiguration(msg % CONF.libvirt.virt_type)
 
-        # These executables need to be installed for libvirt to make use of
-        # emulated TPM.
-        # NOTE(stephenfin): This checks using the PATH of the user running
-        # nova-compute rather than the libvirtd service, meaning it's an
-        # imperfect check but the best we can do
-        if not all(shutil.which(cmd) for cmd in (
-                'swtpm_ioctl', 'swtpm_setup', 'swtpm')):
-            msg = _(
-                "vTPM support is configured but some (or all) of the 'swtpm', "
-                "'swtpm_setup' and 'swtpm_ioctl' binaries could not be found "
-                "on PATH.")
-            raise exception.InvalidConfiguration(msg)
+        vtpm_support = self._host.supports_vtpm
+        if vtpm_support is not None:
+            # libvirt >= 8.0.0 presents availability of vTPM support and swtpm
+            # in domain capabilities
+            if not vtpm_support:
+                msg = _(
+                    "vTPM support is configured but it's not supported by "
+                    "libvirt.")
+                raise exception.InvalidConfiguration(msg)
+        else:
+            # These executables need to be installed for libvirt to make use of
+            # emulated TPM.
+            # NOTE(stephenfin): This checks using the PATH of the user running
+            # nova-compute rather than the libvirtd service, meaning it's an
+            # imperfect check but the best we can do
+            if not all(shutil.which(cmd) for cmd in (
+                    'swtpm_ioctl', 'swtpm_setup', 'swtpm')):
+                msg = _(
+                    "vTPM support is configured but some (or all) of "
+                    "the 'swtpm', 'swtpm_setup' and 'swtpm_ioctl' binaries "
+                    "could not be found on PATH.")
+                raise exception.InvalidConfiguration(msg)
 
         # The user and group must be valid on this host for cold migration and
         # resize to function.
@@ -12888,9 +12898,26 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_tpm_traits(self) -> ty.Dict[str, bool]:
         # Assert or deassert TPM support traits
+        if not CONF.libvirt.swtpm_enabled:
+            return {
+                ot.COMPUTE_SECURITY_TPM_2_0: False,
+                ot.COMPUTE_SECURITY_TPM_1_2: False,
+            }
+
+        tpm_versions = self._host.tpm_versions
+        # libvirt < 8.6 does not provide supported versions in domain
+        # capabilities
+
+        # TODO(tkajinam): Remove this once libvirt>=8.6.0 is required.
+        if tpm_versions is None:
+            return {
+                ot.COMPUTE_SECURITY_TPM_2_0: True,
+                ot.COMPUTE_SECURITY_TPM_1_2: True,
+            }
+
         return {
-            ot.COMPUTE_SECURITY_TPM_2_0: CONF.libvirt.swtpm_enabled,
-            ot.COMPUTE_SECURITY_TPM_1_2: CONF.libvirt.swtpm_enabled,
+            ot.COMPUTE_SECURITY_TPM_2_0: '2.0' in tpm_versions,
+            ot.COMPUTE_SECURITY_TPM_1_2: '1.2' in tpm_versions,
         }
 
     def _get_vif_model_traits(self) -> ty.Dict[str, bool]:

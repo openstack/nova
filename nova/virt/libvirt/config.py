@@ -247,10 +247,45 @@ class LibvirtConfigDomainCapsDiskBuses(LibvirtConfigObject):
                       xmldoc.xpath("//enum[@name='bus']/value/text()")}
 
 
+class LibvirtConfigDomainCapsTpm(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super().__init__(root_name='tpm', **kwargs)
+        self.supported = False
+        self.models = []
+        self.backend_models = []
+        # TODO(tkajinam): Change default to [] once libvirt >= 8.6.0 is
+        #                 required
+        self.backend_versions = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigDomainCapsTpm, self).parse_dom(xmldoc)
+
+        if xmldoc.get('supported'):
+            self.supported = (xmldoc.get('supported') == 'yes')
+        for c in xmldoc:
+            if c.tag == 'enum':
+                if c.get('name') == 'model':
+                    for c2 in c:
+                        if c2.tag == 'value':
+                            self.models.append(c2.text)
+                if c.get('name') == 'backendModel':
+                    for c2 in c:
+                        if c2.tag == 'value':
+                            self.backend_models.append(c2.text)
+                if c.get('name') == 'backendVersion':
+                    for c2 in c:
+                        if c2.tag == 'value':
+                            if self.backend_versions is None:
+                                self.backend_versions = []
+                            self.backend_versions.append(c2.text)
+
+
 class LibvirtConfigDomainCapsDevices(LibvirtConfigObject):
     DEVICE_PARSERS = {
         'video': LibvirtConfigDomainCapsVideoModels,
         'disk': LibvirtConfigDomainCapsDiskBuses,
+        'tpm': LibvirtConfigDomainCapsTpm,
     }
 
     def __init__(self, **kwargs):
@@ -280,6 +315,10 @@ class LibvirtConfigDomainCapsDevices(LibvirtConfigObject):
     @property
     def video(self):
         return self._get_device('video')
+
+    @property
+    def tpm(self):
+        return self._get_device('tpm')
 
 
 class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):
