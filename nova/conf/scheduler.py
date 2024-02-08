@@ -494,6 +494,14 @@ Possible values:
 * An integer or float value, where the value corresponds to the multipler
   ratio for this weigher.
 """),
+    cfg.FloatOpt("hana_binpack_weight_multiplier",
+        default=1.0,
+        help="""
+Multiplier used for weighing HANA/BigVM flavors only.
+
+A positive value will stack/bin-pack the instances, while a negative value
+will spread them.
+"""),
     cfg.FloatOpt("cpu_weight_multiplier",
         default=1.0,
         help="""

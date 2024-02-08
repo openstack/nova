@@ -403,7 +403,31 @@ class VMwareVCDriver(driver.ComputeDriver):
                                       CONF.reserved_host_cpus)
         stats["cpu_info"] = jsonutils.dumps(stats['cpu_info'], sort_keys=True)
 
+        # Report additional stats which will be stored in the
+        # ComputeNode.stats dict and will be available to the scheduler
+        if nodename == self._nodename:
+            stats["stats"] = self._get_cluster_stats(host_stats)
+
         return stats
+
+    def _get_cluster_stats(self, host_stats):
+        # memory_mb_max_unit represents the free memory of the freest host
+        # available in the cluster. Can be used by the scheduler to determine
+        # if the cluster can accommodate a big VM.
+        memory_mb_max_unit = 0
+        for nodename, resources in host_stats.items():
+            # Skip the cluster node
+            if nodename == self._nodename:
+                continue
+            memory_mb_free = (resources['memory_mb'] -
+                              resources['memory_mb_used'] -
+                              resources['memory_mb_reserved'])
+            if memory_mb_max_unit < memory_mb_free:
+                memory_mb_max_unit = memory_mb_free
+
+        return {
+            "memory_mb_max_unit": memory_mb_max_unit
+        }
 
     def get_available_resource(self, nodename):
         """Retrieve resource info.
