@@ -136,8 +136,6 @@ from nova.volume import cinder
 
 libvirt: ty.Any = None
 
-uefi_logged = False
-
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
@@ -6648,13 +6646,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     hw_firmware_type = fields.FirmwareType.UEFI
 
             if hw_firmware_type == fields.FirmwareType.UEFI:
-                global uefi_logged
-                if not uefi_logged:
-                    LOG.warning("uefi support is without some kind of "
-                                "functional testing and therefore "
-                                "considered experimental.")
-                    uefi_logged = True
-
                 if not self._host.supports_uefi:
                     raise exception.UEFINotSupported()
 
