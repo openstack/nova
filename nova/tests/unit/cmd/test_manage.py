@@ -3489,6 +3489,18 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
             self.assertIn('Failed to open fake_path', output)
 
     @mock.patch('os.path.exists')
+    def test_refresh_connector_file_oserr(self, mock_exists):
+        """Test refresh with connector file having no read permission.
+        """
+        mock_exists.return_value = True
+        with self.patch_open('fake_path', b'invalid json') as mock_file:
+            mock_file.side_effect = OSError("Permission denied")
+            ret = self.commands.refresh(
+                uuidsentinel.volume, uuidsentinel.instance, 'fake_path'
+            )
+            self.assertEqual(3, ret)
+
+    @mock.patch('os.path.exists')
     def _test_refresh(self, mock_exists):
         ctxt = context.get_admin_context()
         cell_ctxt = context.get_admin_context()
