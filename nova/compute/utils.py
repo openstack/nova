@@ -1063,7 +1063,17 @@ def upsize_quota_delta(new_flavor, old_flavor):
     :param old_flavor: the original instance type
     """
     def _quota_delta(resource):
-        return (new_flavor[resource] - old_flavor[resource])
+        if new_flavor.extra_specs.get(utils.QUOTA_INSTANCE_ONLY_KEY) == 'true':
+            new_count = 0
+        else:
+            new_count = new_flavor[resource]
+
+        if old_flavor.extra_specs.get(utils.QUOTA_INSTANCE_ONLY_KEY) == 'true':
+            old_count = 0
+        else:
+            old_count = old_flavor[resource]
+
+        return (new_count - old_count)
 
     deltas = {}
     if _quota_delta('vcpus') > 0:
