@@ -120,8 +120,7 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
         """Tests a scenario where a server is created on a host, the host
         goes down, the server is evacuated to another host, and then the
         source host compute service is deleted. After that the deleted
-        compute service is restarted. Related placement resources are checked
-        throughout.
+        compute service is restarted and starts successfully.
         """
         # Create our source host that we will evacuate *from* later.
         host1 = self._start_compute('host1')
@@ -152,23 +151,15 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
         services = self.admin_api.get_services(
             binary='nova-compute', host='host1')
         self.assertEqual(0, len(services), services)
-        # FIXME(mriedem): This is bug 1829479 where the compute service is
-        # deleted but the resource provider is not because there are still
-        # allocations against the provider from the evacuated server.
+        # Then the resource provider is also deleted.
         resp = self.placement.get('/resource_providers/%s' % rp_uuid)
-        self.assertEqual(200, resp.status)
-        self.assertFlavorMatchesUsage(rp_uuid, flavor)
-        # Try to restart the host1 compute service to create a new resource
-        # provider.
+        self.assertEqual(404, resp.status)
+        # Try to restart the host1 compute service to create a new service
+        # and a new resource provider.
         self.restart_compute_service(host1)
-        # FIXME(mriedem): This is bug 1817833 where restarting the now-deleted
-        # compute service attempts to create a new resource provider with a
-        # new uuid but the same name which results in a conflict. The service
-        # does not die, however, because _update_available_resource_for_node
-        # catches and logs but does not re-raise the error.
-        log_output = self.stdlog.logger.output
-        self.assertIn('Error updating resources for node host1.', log_output)
-        self.assertIn('Failed to create resource provider host1', log_output)
+        # Make sure the compute service record for host1 is recreated.
+        service = self.admin_api.get_services(
+            binary='nova-compute', host='host1')[0]
 
     def test_migrate_confirm_after_deleted_source_compute(self):
         """Tests a scenario where a server is cold migrated and while in
