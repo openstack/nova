@@ -1582,7 +1582,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             separate = flavor.extra_specs.get('quota:separate')
             instance_types[flavor.id] = {
                 'name': 'instances_' + flavor.name,
-                'baremetal': separate == 'true'
+                'separate': separate == 'true'
             }
 
     @staticmethod
@@ -1602,7 +1602,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             # Bad hack, but works
             instance_types[old_flavor.id] = {
                 'name': 'instances_' + old_flavor.name,
-                'baremetal': len(old_flavor.extra_specs) > 0
+                'separate': len(old_flavor.extra_specs) > 0
             }
 
     @staticmethod
@@ -1657,11 +1657,11 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             itype = instance_types.get(type_id)
             if itype is None:
                 # log an error, but continue. We need the rest of the
-                # function to work. We'll just add it to non-baremetal
+                # function to work. We'll just add it to non-separate
                 # instances, so the overall number is correct at least.
                 # Also this should not happen.
                 LOG.error('Unknown instance type id %s', type_id)
-            if itype and itype.get('baremetal', False):
+            if itype and itype.get('separate', False):
                 t_name = itype['name']
                 counts[t_name] = counts.get(t_name, 0) + instance_count
             else:
@@ -1689,7 +1689,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
 
     @staticmethod
     @db.pick_context_manager_reader
-    def _get_counts_in_db_baremetalaware(context, project_id, user_id=None):
+    def _get_counts_in_db_separateaware(context, project_id, user_id=None):
         project_query = InstanceList._build_instance_usage_query(context,
                                                                  project_id)
 
@@ -1746,7 +1746,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                               'cores': <count across user>,
                               'ram': <count across user>}}
         """
-        return cls._get_counts_in_db_baremetalaware(context, project_id,
+        return cls._get_counts_in_db_separateaware(context, project_id,
                                                     user_id=user_id)
 
     @base.remotable_classmethod

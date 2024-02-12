@@ -697,7 +697,7 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_id(cls, context, ids):
 
-        def is_baremetal(extra_specs):
+        def is_separate(extra_specs):
             for spec in extra_specs:
                 if spec.key == 'quota:separate' and spec.value == 'true':
                     return True
@@ -710,5 +710,5 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
         res = {}
         for x in query:
             res.update({x.id: {'name': 'instances_' + x.name,
-                               'baremetal': is_baremetal(x.extra_specs)}})
+                               'separate': is_separate(x.extra_specs)}})
         return res
