@@ -709,6 +709,6 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
 
         res = {}
         for x in query:
-            res.update({x.id: {'name': 'instances_' + x.name,
+            res.update({x.id: {'name': x.name,
                                'separate': is_separate(x.extra_specs)}})
         return res
