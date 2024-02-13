@@ -121,6 +121,7 @@ class FakeDriver(driver.ComputeDriver):
         "supports_remote_managed_ports": True,
         "supports_address_space_passthrough": True,
         "supports_address_space_emulated": True,
+        "supports_stateless_firmware": True,
 
         # Supported image types
         "supports_image_type_raw": True,

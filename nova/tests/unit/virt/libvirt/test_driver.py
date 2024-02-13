@@ -21829,6 +21829,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(
             driver.capabilities.get('supports_address_space_emulated'))
 
+    def test_update_host_specific_capabilities_without_stateless_firmware(
+            self):
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        driver._update_host_specific_capabilities()
+        self.assertFalse(
+            driver.capabilities.get('supports_stateless_firmware'))
+
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_MAXPHYSADDR))

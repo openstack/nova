@@ -163,6 +163,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         "supports_remote_managed_ports": False,
         "supports_address_space_passthrough": False,
         "supports_address_space_emulated": False,
+        "supports_stateless_firmware": False,
 
         # Image type support flags
         "supports_image_type_aki": False,
