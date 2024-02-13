@@ -1938,3 +1938,38 @@ class ComputeNodeIdFixture(fixtures.Fixture):
             'nova.compute.manager.ComputeManager.'
             '_ensure_existing_node_identity',
             mock.DEFAULT))
+
+
+class GreenThreadPoolShutdownWait(fixtures.Fixture):
+    """Always wait for greenlets in greenpool to finish.
+
+    We use the futurist.GreenThreadPoolExecutor, for example, in compute
+    manager to run live migration jobs. It runs those jobs in bare greenlets
+    created by eventlet.spawn_n(). Bare greenlets cannot be killed the same
+    way as GreenThreads created by eventlet.spawn().
+
+    Because they cannot be killed, in the test environment we must either let
+    them run to completion or move on while they are still running (which can
+    cause test failures as the leaked greenlets attempt to access structures
+    that have already been torn down).
+
+    When a compute service is stopped by Service.stop(), the compute manager's
+    cleanup_host() method is called and while cleaning up, the compute manager
+    calls the GreenThreadPoolExecutor.shutdown() method with wait=False. This
+    means that a test running GreenThreadPoolExecutor jobs will not wait for
+    the bare greenlets to finish running -- it will instead move on immediately
+    while greenlets are still running.
+
+    This fixture will ensure GreenThreadPoolExecutor.shutdown() is always
+    called with wait=True in an effort to reduce the number of leaked bare
+    greenlets.
+
+    See https://bugs.launchpad.net/nova/+bug/1946339 for details.
+    """
+
+    def setUp(self):
+        super().setUp()
+        real_shutdown = futurist.GreenThreadPoolExecutor.shutdown
+        self.useFixture(fixtures.MockPatch(
+            'futurist.GreenThreadPoolExecutor.shutdown',
+            lambda self, wait: real_shutdown(self, wait=True)))
