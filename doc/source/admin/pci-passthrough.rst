@@ -83,28 +83,6 @@ are required:
   ``amd_iommu=on`` parameter to the kernel parameters
 * Assignable PCIe devices
 
-To enable PCI passthrough on a Hyper-V compute node, the following are
-required:
-
-* Windows 10 or Windows / Hyper-V Server 2016 or newer
-* VT-d enabled on the host
-* Assignable PCI devices
-
-In order to check the requirements above and if there are any assignable PCI
-devices, run the following Powershell commands:
-
-.. code-block:: console
-
-    Start-BitsTransfer https://raw.githubusercontent.com/Microsoft/Virtualization-Documentation/master/hyperv-samples/benarm-powershell/DDA/survey-dda.ps1
-     .\survey-dda.ps1
-
-If the compute node passes all the requirements, the desired assignable PCI
-devices to be disabled and unmounted from the host, in order to be assignable
-by Hyper-V. The following can be read for more details: `Hyper-V PCI
-passthrough`__.
-
-.. __: https://devblogs.microsoft.com/scripting/passing-through-devices-to-hyper-v-vms-by-using-discrete-device-assignment/
-
 Configure ``nova-compute``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 

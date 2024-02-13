@@ -64,8 +64,7 @@ Customizing instance NUMA placement policies
 .. important::
 
    The functionality described below is currently only supported by the
-   libvirt/KVM and Hyper-V driver. The Hyper-V driver may require :ref:`some
-   host configuration <configure-hyperv-numa>` for this to work.
+   libvirt/KVM driver.
 
 When running workloads on NUMA hosts, it is important that the vCPUs executing
 processes are on the same NUMA node as the memory used by these processes.
@@ -223,11 +222,6 @@ memory mapping between the two nodes, run:
    are greater than the available number of CPUs or memory respectively, an
    exception will be raised.
 
-.. note::
-
-    Hyper-V does not support asymmetric NUMA topologies, and the Hyper-V
-    driver will not spawn instances with such topologies.
-
 For more information about the syntax for ``hw:numa_nodes``, ``hw:numa_cpus.N``
 and ``hw:num_mem.N``, refer to :doc:`/configuration/extra-specs`.
 
@@ -241,8 +235,7 @@ Customizing instance CPU pinning policies
 
    The functionality described below is currently only supported by the
    libvirt/KVM driver and requires :ref:`some host configuration
-   <configure-libvirt-pinning>` for this to work. Hyper-V does not support CPU
-   pinning.
+   <configure-libvirt-pinning>` for this to work.
 
 .. note::
 
@@ -377,7 +370,6 @@ Customizing instance CPU thread pinning policies
    The functionality described below requires the use of pinned instances and
    is therefore currently only supported by the libvirt/KVM driver and requires
    :ref:`some host configuration <configure-libvirt-pinning>` for this to work.
-   Hyper-V does not support CPU pinning.
 
 When running pinned instances on SMT hosts, it may also be necessary to
 consider the impact that thread siblings can have on the instance workload. The
@@ -493,7 +485,6 @@ Customizing instance emulator thread pinning policies
    The functionality described below requires the use of pinned instances and
    is therefore currently only supported by the libvirt/KVM driver and requires
    :ref:`some host configuration <configure-libvirt-pinning>` for this to work.
-   Hyper-V does not support CPU pinning.
 
 In addition to the work of the guest OS and applications running in an
 instance, there is a small amount of overhead associated with the underlying
@@ -825,48 +816,6 @@ if those arbitrary rules aren't enforced :
   governors *MUST* be identical.
 - if they decide using ``governor``, then all dedicated CPU cores *MUST* be
   online.
-
-Configuring Hyper-V compute nodes for instance NUMA policies
-------------------------------------------------------------
-
-Hyper-V is configured by default to allow instances to span multiple NUMA
-nodes, regardless if the instances have been configured to only span N NUMA
-nodes. This behaviour allows Hyper-V instances to have up to 64 vCPUs and 1 TB
-of memory.
-
-Checking NUMA spanning can easily be done by running this following PowerShell
-command:
-
-.. code-block:: console
-
-   (Get-VMHost).NumaSpanningEnabled
-
-In order to disable this behaviour, the host will have to be configured to
-disable NUMA spanning. This can be done by executing these following
-PowerShell commands:
-
-.. code-block:: console
-
-   Set-VMHost -NumaSpanningEnabled $false
-   Restart-Service vmms
-
-In order to restore this behaviour, execute these PowerShell commands:
-
-.. code-block:: console
-
-   Set-VMHost -NumaSpanningEnabled $true
-   Restart-Service vmms
-
-The *Virtual Machine Management Service* (*vmms*) is responsible for managing
-the Hyper-V VMs. The VMs will still run while the service is down or
-restarting, but they will not be manageable by the ``nova-compute`` service. In
-order for the effects of the host NUMA spanning configuration to take effect,
-the VMs will have to be restarted.
-
-Hyper-V does not allow instances with a NUMA topology to have dynamic
-memory allocation turned on. The Hyper-V driver will ignore the configured
-``dynamic_memory_ratio`` from the given ``nova.conf`` file when spawning
-instances with a NUMA topology.
 
 .. Links
 .. _`Image metadata`: https://docs.openstack.org/image-guide/introduction.html#image-metadata
