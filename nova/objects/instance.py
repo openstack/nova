@@ -1579,7 +1579,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             flavor_info = jsonutils.loads(db_flavor[0])
             flavor = objects.Flavor.obj_from_primitive(
                                                 flavor_info['cur'])
-            separate = flavor.extra_specs.get('quota:separate')
+            separate = flavor.extra_specs.get(utils.QUOTA_SEPARATE_KEY)
             instance_types[flavor.id] = {
                 'name': flavor.name,
                 'separate': separate == 'true'

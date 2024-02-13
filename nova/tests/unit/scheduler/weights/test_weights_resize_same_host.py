@@ -22,6 +22,7 @@ from nova.scheduler import weights
 from nova.scheduler.weights import resize_same_host
 from nova import test
 from nova.tests.unit.scheduler import fakes
+from nova import utils
 from oslo_utils.fixture import uuidsentinel
 
 
@@ -36,7 +37,7 @@ class PreferSameHostOnResizeWeigherTestCase(test.NoDBTestCase):
         flavor_small = objects.Flavor(id=2, name='small',
                                       memory_mb=1024 * 256, extra_specs={})
         baremetal_extra_specs = {'capabilities:cpu_arch': 'x86_64',
-                                 'quota:separate': 'true'}
+                                 utils.QUOTA_SEPARATE_KEY: 'true'}
         flavor_bm_big = objects.Flavor(id=3, name='bm_big',
                                        memory_mb=1024 * 512,
                                        extra_specs=baremetal_extra_specs)

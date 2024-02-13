@@ -811,7 +811,7 @@ class BaseResource(object):
                      which specifies the default value of the quota
                      for this resource.
         :param default: Explicitly overwrite the default value. Used for
-                        handling dynamic resources e.g. via quota:separate.
+                        handling dynamic resources e.g. via QUOTA_SEPARATE_KEY.
         """
 
         self.name = name
@@ -886,7 +886,7 @@ class CountableResource(AbsoluteResource):
                      which specifies the default value of the quota
                      for this resource.
         :param default: Explicitly overwrite the default value. Used for
-                        handling dynamic resources e.g. via quota:separate.
+                        handling dynamic resources e.g. via QUOTA_SEPARATE_KEY
         """
 
         super(CountableResource, self).__init__(name, flag=flag,
@@ -1147,7 +1147,7 @@ class SAPQuotaEngine(QuotaEngine):
         for flavor in objects.FlavorList.get_all(ctx):
             extra_specs = flavor['extra_specs']
 
-            if extra_specs.get('quota:separate') == 'true':
+            if extra_specs.get(utils.QUOTA_SEPARATE_KEY) == 'true':
                 additional_resources.add(f"instances_{flavor.name}")
 
         for resource_name in additional_resources:

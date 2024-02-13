@@ -1072,14 +1072,14 @@ def upsize_quota_delta(new_flavor, old_flavor):
         deltas['ram'] = _quota_delta('memory_mb')
 
     # NOTE(jkulik): We need to add the instances_* resource only if we resize
-    # towards a quota:separate flavor, as we're interested in positive deltas
-    # only. Since we only need resource deltas, the old flavor having the same
-    # quota:separate between new and old flavor adds no delta.
+    # towards a QUOTA_SEPARATE_KEY flavor, as we're interested in positive
+    # deltas only. Since we only need resource deltas, the old flavor having
+    # the same QUOTA_SEPARATE_KEY between new and old flavor adds no delta.
     new_extra_specs = new_flavor.get('extra_specs', {})
-    new_separate = new_extra_specs.get('quota:separate') == 'true'
+    new_separate = new_extra_specs.get(utils.QUOTA_SEPARATE_KEY) == 'true'
     if new_separate:
         old_extra_specs = old_flavor.get('extra_specs', {})
-        old_separate = old_extra_specs.get('quota:separate') == 'true'
+        old_separate = old_extra_specs.get(utils.QUOTA_SEPARATE_KEY) == 'true'
         if not old_separate or new_flavor['name'] != old_flavor['name']:
             deltas[f"instances_{new_flavor['name']}"] = 1
 
@@ -1133,14 +1133,14 @@ def check_num_instances_quota(
     deltas = {'instances': max_count, 'cores': req_cores, 'ram': req_ram}
 
     quota_key_instances = 'instances'
-    if flavor.get('extra_specs', {}).get('quota:separate', 'false') == 'true':
+    if flavor.get('extra_specs', {}).get(utils.QUOTA_SEPARATE_KEY) == 'true':
         quota_key_instances = 'instances_' + flavor.name
         deltas[quota_key_instances] = max_count
         deltas['instances'] = 0
         deltas['cores'] = 0
         deltas['ram'] = 0
     reserve_cpu_ram = flavor.get('extra_specs', {}).get(
-        'quota:instance_only', 'false') != 'true'
+        utils.QUOTA_INSTANCE_ONLY_KEY) != 'true'
     if reserve_cpu_ram:
         deltas.update(cores=req_cores, ram=req_ram)
 

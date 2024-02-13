@@ -32,6 +32,7 @@ from nova.notifications.objects import flavor as flavor_notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova import utils
 
 
 OPTIONAL_FIELDS = ['extra_specs', 'projects']
@@ -699,7 +700,8 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
 
         def is_separate(extra_specs):
             for spec in extra_specs:
-                if spec.key == 'quota:separate' and spec.value == 'true':
+                if spec.key == utils.QUOTA_SEPARATE_KEY \
+                        and spec.value == 'true':
                     return True
             return False
 
