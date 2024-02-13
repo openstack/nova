@@ -1080,6 +1080,17 @@ _SUPPORTS_SOFT_AFFINITY = None
 _SUPPORTS_SOFT_ANTI_AFFINITY = None
 
 
+def reset_globals():
+    global _SUPPORTS_AFFINITY
+    _SUPPORTS_AFFINITY = None
+    global _SUPPORTS_ANTI_AFFINITY
+    _SUPPORTS_ANTI_AFFINITY = None
+    global _SUPPORTS_SOFT_AFFINITY
+    _SUPPORTS_SOFT_AFFINITY = None
+    global _SUPPORTS_SOFT_ANTI_AFFINITY
+    _SUPPORTS_SOFT_ANTI_AFFINITY = None
+
+
 def _get_group_details(context, instance_uuid, user_group_hosts=None):
     """Provide group_hosts and group_policies sets related to instances if
     those instances are belonging to a group and if corresponding filters are
