@@ -327,6 +327,9 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         return self.is_shared_block_storage or self.is_shared_instance_path
 
 
+# TODO(gmann): HyperV virt driver has been removed in Nova 29.0.0 (OpenStack
+# 2024.1) release but we kept this object for a couple of cycle. This can be
+# removed too in Nova 31.0.0 (OpenStack 2025.1) or later.
 @obj_base.NovaObjectRegistry.register
 class HyperVLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
