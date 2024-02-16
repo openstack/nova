@@ -6866,8 +6866,6 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         when networks is 'none' which means no network will be allocated.
         """
         with test.nested(
-            mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                       return_value=14),
             mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
                               return_value=objects.Flavor()),
             mock.patch.object(
