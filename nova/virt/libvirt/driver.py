@@ -6227,7 +6227,6 @@ class LibvirtDriver(driver.ComputeDriver):
             hv.synic = True
             hv.reset = True
             hv.frequencies = True
-            hv.reenlightenment = True
             hv.tlbflush = True
             hv.ipi = True
 
