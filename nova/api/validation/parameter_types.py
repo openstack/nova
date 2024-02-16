@@ -341,15 +341,6 @@ description = {
     'maxLength': 255,
 }
 
-# TODO(stephenfin): This is no longer used and should be removed
-tcp_udp_port = {
-    'type': ['integer', 'string'],
-    'pattern': '^[0-9]*$',
-    'minimum': 0,
-    'maximum': 65535,
-    'minLength': 1,
-}
-
 project_id = {
     'type': 'string',
     'pattern': '^[a-zA-Z0-9-]*$',
