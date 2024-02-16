@@ -37,7 +37,6 @@ from nova.api.openstack.compute import evacuate
 from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import fixed_ips
 from nova.api.openstack.compute import flavor_access
-from nova.api.openstack.compute import flavor_manage
 from nova.api.openstack.compute import flavors
 from nova.api.openstack.compute import flavors_extraspecs
 from nova.api.openstack.compute import floating_ip_dns
@@ -143,7 +142,6 @@ fixed_ips_controller = functools.partial(_create_controller,
 flavor_controller = functools.partial(_create_controller,
     flavors.FlavorsController,
     [
-        flavor_manage.FlavorManageController,
         flavor_access.FlavorActionController
     ]
 )

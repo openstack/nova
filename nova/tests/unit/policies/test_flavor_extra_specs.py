@@ -14,7 +14,6 @@ from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova.api.openstack.compute import flavor_manage
 from nova.api.openstack.compute import flavors
 from nova.api.openstack.compute import flavors_extraspecs
 from nova.policies import flavor_extra_specs as policies
@@ -36,7 +35,7 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
         super(FlavorExtraSpecsPolicyTest, self).setUp()
         self.controller = flavors_extraspecs.FlavorExtraSpecsController()
         self.flavor_ctrl = flavors.FlavorsController()
-        self.fm_ctrl = flavor_manage.FlavorManageController()
+        self.fm_ctrl = flavors.FlavorsController()
         self.req = fakes.HTTPRequest.blank('')
 
         def get_flavor_extra_specs(context, flavor_id):
@@ -168,7 +167,7 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
         }
         authorize_res, unauthorize_res = self.common_policy_auth(
             self.all_project_authorized_contexts,
-            rule_name, self.fm_ctrl._create, req, body=body,
+            rule_name, self.fm_ctrl.create, req, body=body,
             fatal=False)
         for resp in authorize_res:
             self.assertIn('extra_specs', resp['flavor'])
@@ -188,7 +187,7 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
 
         authorize_res, unauthorize_res = self.common_policy_auth(
             self.all_project_authorized_contexts,
-            rule_name, self.fm_ctrl._update, req, '1',
+            rule_name, self.fm_ctrl.update, req, '1',
             body={'flavor': {'description': None}},
             fatal=False)
         for resp in authorize_res:

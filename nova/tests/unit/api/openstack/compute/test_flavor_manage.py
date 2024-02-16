@@ -20,7 +20,7 @@ from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import flavor_access as flavor_access_v21
-from nova.api.openstack.compute import flavor_manage as flavormanage_v21
+from nova.api.openstack.compute import flavors as flavors_v21
 from nova.compute import flavors
 from nova.db import constants as db_const
 from nova import exception
@@ -57,7 +57,7 @@ def fake_create_without_swap(newflavor):
 
 
 class FlavorManageTestV21(test.NoDBTestCase):
-    controller = flavormanage_v21.FlavorManageController()
+    controller = flavors_v21.FlavorsController()
     validation_error = exception.ValidationError
     base_url = '/v2/%s/flavors' % fakes.FAKE_PROJECT_ID
     microversion = '2.1'
@@ -91,13 +91,13 @@ class FlavorManageTestV21(test.NoDBTestCase):
 
     @mock.patch('nova.objects.Flavor.destroy')
     def test_delete(self, mock_destroy):
-        res = self.controller._delete(self._get_http_request(), 1234)
+        res = self.controller.delete(self._get_http_request(), 1234)
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
         if isinstance(self.controller,
-                      flavormanage_v21.FlavorManageController):
-            status_int = self.controller._delete.wsgi_code
+                      flavors_v21.FlavorsController):
+            status_int = self.controller.delete.wsgi_code
         else:
             status_int = res.status_int
         self.assertEqual(202, status_int)
@@ -105,7 +105,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         # subsequent delete should fail
         mock_destroy.side_effect = exception.FlavorNotFound(flavor_id=1234)
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller._delete, self._get_http_request(),
+                          self.controller.delete, self._get_http_request(),
                           1234)
 
     def _test_create_missing_parameter(self, parameter):
@@ -125,7 +125,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
 
         del body['flavor'][parameter]
 
-        self.assertRaises(self.validation_error, self.controller._create,
+        self.assertRaises(self.validation_error, self.controller.create,
                           self._get_http_request(), body=body)
 
     def test_create_missing_name(self):
@@ -172,7 +172,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                              self.expected_flavor["flavor"][key])
 
     def _create_flavor_bad_request_case(self, body):
-        self.assertRaises(self.validation_error, self.controller._create,
+        self.assertRaises(self.validation_error, self.controller.create,
                           self._get_http_request(), body=body)
 
     def test_create_invalid_name(self):
@@ -321,7 +321,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
             raise exception.FlavorExists(name=name)
 
         self.stub_out('nova.compute.flavors.create', fake_create)
-        self.assertRaises(webob.exc.HTTPConflict, self.controller._create,
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.create,
                           self._get_http_request(), body=expected)
 
     def test_invalid_memory_mb(self):
@@ -341,7 +341,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         """With microversion <2.55 this should return a failure."""
         self.request_body['flavor']['description'] = 'invalid'
         ex = self.assertRaises(
-            self.validation_error, self.controller._create,
+            self.validation_error, self.controller.create,
             self._get_http_request(), body=self.request_body)
         self.assertIn('description', str(ex))
 
@@ -349,7 +349,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         """With microversion <2.55 this should return a failure."""
         flavor = self._create_flavor_success_case(self.request_body)['flavor']
         self.assertRaises(
-            exception.VersionNotFoundForAPIMethod, self.controller._update,
+            exception.VersionNotFoundForAPIMethod, self.controller.update,
             self._get_http_request(), flavor['id'],
             body={'flavor': {'description': 'nope'}})
 
@@ -387,7 +387,7 @@ class FlavorManageTestV2_55(FlavorManageTestV21):
         self.assertEqual('test description', flavor['description'])
         mock_get.return_value = self.get_flavor(flavor)
         # Now null out the flavor description.
-        flavor = self.controller._update(
+        flavor = self.controller.update(
             self._get_http_request(), flavor['id'],
             body={'flavor': {'description': None}})['flavor']
         self.assertIsNone(flavor['description'])
@@ -400,7 +400,7 @@ class FlavorManageTestV2_55(FlavorManageTestV21):
     def test_flavor_update_not_found(self, mock_get):
         """Tests that a 404 is returned if the flavor is not found."""
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller._update,
+                          self.controller.update,
                           self._get_http_request(), 'notfound',
                           body={'flavor': {'description': None}})
 
@@ -409,7 +409,7 @@ class FlavorManageTestV2_55(FlavorManageTestV21):
         is provided in the update request body.
         """
         self.assertRaises(self.validation_error,
-                          self.controller._update,
+                          self.controller.update,
                           self._get_http_request(), 'invalid',
                           body={'flavor': {}})
 
@@ -420,7 +420,7 @@ class FlavorManageTestV2_55(FlavorManageTestV21):
         for description in ('bad !@#!$%\x00 description',   # printable chars
                             'a' * 65536):                   # maxLength
             self.request_body['flavor']['description'] = description
-            self.assertRaises(self.validation_error, self.controller._create,
+            self.assertRaises(self.validation_error, self.controller.create,
                               self._get_http_request(), body=self.request_body)
 
     @mock.patch('nova.objects.Flavor.get_by_flavor_id')
@@ -443,7 +443,7 @@ class FlavorManageTestV2_55(FlavorManageTestV21):
         for description in ('bad !@#!$%\x00 description',   # printable chars
                             'a' * 65536):                   # maxLength
             self.request_body['flavor']['description'] = description
-            self.assertRaises(self.validation_error, self.controller._update,
+            self.assertRaises(self.validation_error, self.controller.update,
                               self._get_http_request(), flavor['id'],
                               body={'flavor': {'description': description}})
 
@@ -467,7 +467,7 @@ class FlavorManageTestV2_61(FlavorManageTestV2_55):
         # First create a flavor.
         flavor = self._create_flavor_success_case(self.request_body)['flavor']
         mock_get.return_value = self.get_flavor(flavor)
-        flavor = self.controller._update(
+        flavor = self.controller.update(
             self._get_http_request(), flavor['id'],
             body={'flavor': {'description': None}})['flavor']
         self.assertEqual({"key1": "value1"}, flavor['extra_specs'])
@@ -509,7 +509,7 @@ class FlavorManageTestV2_75(FlavorManageTestV2_61):
         req = fakes.HTTPRequest.blank('/%s/flavors' % fakes.FAKE_PROJECT_ID,
                                       version='2.74')
         req.method = 'PUT'
-        response = self.controller._update(
+        response = self.controller.update(
             req, flavor['id'],
             body={'flavor': {'description': None}})['flavor']
         self.assertEqual(response['swap'], '')
@@ -530,14 +530,14 @@ class FlavorManageTestV2_75(FlavorManageTestV2_61):
         flavor = self._create_flavor_success_case(self.request_body)['flavor']
         req = fakes.HTTPRequest.blank('/%s/flavors' % fakes.FAKE_PROJECT_ID,
                                       version=self.microversion)
-        response = self.controller._update(
+        response = self.controller.update(
             req, flavor['id'],
             body={'flavor': {'description': None}})['flavor']
         self.assertEqual(response['swap'], 0)
 
 
 class PrivateFlavorManageTestV21(test.TestCase):
-    controller = flavormanage_v21.FlavorManageController()
+    controller = flavors_v21.FlavorsController()
     base_url = '/v2/%s/flavors' % fakes.FAKE_PROJECT_ID
 
     def setUp(self):
