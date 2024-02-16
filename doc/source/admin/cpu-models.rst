@@ -2,8 +2,9 @@
 CPU models
 ==========
 
-Nova allows you to control the guest CPU model that is exposed to instances.
-Use cases include:
+Nova allows you to configure features of the virtual CPU that are exposed to
+instances. The combined set of CPU features is collectively referred to as the
+*CPU model*. Use cases include:
 
 * To maximize performance of instances by exposing new host CPU features to the
   guest
@@ -11,42 +12,45 @@ Use cases include:
 * To ensure a consistent default behavior across all machines, removing
   reliance on system defaults.
 
+To configure the virtual CPU, you can configure a :ref:`CPU mode <cpu-modes>`,
+configure one or more :ref:`named CPU models <cpu-models>`, and explicitly
+request :ref:`cpu-feature-flags`.
+
+The `Effective Virtual CPU configuration in Nova`__ presentation from the 2018
+Berlin Summit provides a good overview of this topic.
+
+.. note::
+
+   It is also possible to configure the topology of the CPU. This is discussed
+   in :doc:`cpu-topologies`.
+
 .. important::
 
    The functionality described below is currently only supported by the
    libvirt driver.
 
+.. __: https://www.openstack.org/videos/summits/berlin-2018/effective-virtual-cpu-configuration-in-nova
+
+
+.. _cpu-modes:
 
 CPU modes
 ---------
 
-In libvirt, the CPU is specified by providing a base CPU model name (which is a
-shorthand for a set of feature flags), a set of additional feature flags, and
-the topology (sockets/cores/threads). The libvirt KVM driver provides a number
-of standard CPU model names. These models are defined in
-``/usr/share/libvirt/cpu_map/*.xml``. You can inspect these files to determine
-which models are supported by your local installation.
-
-Two Compute configuration options in the :oslo.config:group:`libvirt` group
-of ``nova.conf`` define which type of CPU model is exposed to the hypervisor
-when using KVM: :oslo.config:option:`libvirt.cpu_mode` and
-:oslo.config:option:`libvirt.cpu_models`.
-
-The :oslo.config:option:`libvirt.cpu_mode` option can take one of the following
-values: ``none``, ``host-passthrough``, ``host-model``, and ``custom``.
-
-See `Effective Virtual CPU configuration in Nova`__ for a recorded presentation
-about this topic.
-
-.. __: https://www.openstack.org/videos/summits/berlin-2018/effective-virtual-cpu-configuration-in-nova
+The first step in configuring the guest CPU is configuring the CPU *mode*.
+The CPU mode determines whether the CPU model is configured manually based on
+admin configuration or is automatically configured based on the host CPU.
+The CPU mode is configured using the :oslo.config:option:`libvirt.cpu_mode`
+config option. This option can accepts one of the following values: ``none``,
+``host-passthrough``, ``host-model``, and ``custom``.
 
 Host model
 ~~~~~~~~~~
 
-If :oslo.config:option:`cpu_mode=host-model <libvirt.cpu_mode>`, the CPU model
-in ``/usr/share/libvirt/cpu_map/*.xml`` that most closely matches the host and
-requests additional CPU flags to complete the match. This CPU model has a
-number of advantages:
+If :oslo.config:option:`cpu_mode=host-model <libvirt.cpu_mode>`, libvirt
+requests the :ref:`named CPU model <cpu-models>` that most closely matches the
+host and requests additional CPU flags to complete the match. This CPU model
+has a number of advantages:
 
 * It provides almost all of the host CPU features to the guest, thus providing
   close to the maximum functionality and performance possible.
@@ -62,8 +66,9 @@ In general, using ``host-model`` is a safe choice if your compute node CPUs are
 largely identical. However, if your compute nodes span multiple processor
 generations, you may be better advised to select a ``custom`` CPU model.
 
-The ``host-model`` CPU model is the default for the KVM & QEMU hypervisors
-(:oslo.config:option:`libvirt.virt_type`\ =``kvm``/``qemu``)
+The ``host-model`` CPU mode is the effective default for the KVM & QEMU
+hypervisors (:oslo.config:option:`libvirt.virt_type`\ =\ ``kvm``/``qemu``) on
+x86-64 hosts. This default is provided by libvirt itself.
 
 .. note::
 
@@ -72,9 +77,9 @@ The ``host-model`` CPU model is the default for the KVM & QEMU hypervisors
    definition is transferred to the destination host as-is. This results in the
    migrated guest on the destination seeing exactly the same CPU model as on
    source even if the destination compute host is capable of providing more CPU
-   features. However, shutting down and restarting the guest on the may present
-   different hardware to the guest, as per the new capabilities of the
-   destination compute.
+   features. However, shutting down and restarting the guest may result in a
+   different hardware configuration for the guest, as per the new capabilities
+   of the destination compute.
 
 Host passthrough
 ~~~~~~~~~~~~~~~~
@@ -107,28 +112,28 @@ Custom
 ~~~~~~
 
 If :oslo.config:option:`cpu_mode=custom <libvirt.cpu_mode>`, you can explicitly
-specify an ordered list of supported named models using the
-:oslo.config:option:`libvirt.cpu_models` configuration option. It is expected
-that the list is ordered so that the more common and less advanced CPU models
-are listed earlier.
+specify an ordered list of one or more supported named CPU models using the
+:oslo.config:option:`libvirt.cpu_models` configuration option. This accepts any
+named CPU model that is valid for the given host, as discussed in
+:ref:`cpu-models` below. When more than one CPU model is provided, it is
+expected that the list will be ordered so that the more common and less
+advanced CPU models are listed first.
 
-In selecting the ``custom`` mode, along with a
-:oslo.config:option:`libvirt.cpu_models` that matches the oldest of your compute
-node CPUs, you can ensure that live migration between compute nodes will always
-be possible. However, you should ensure that the
-:oslo.config:option:`libvirt.cpu_models` you select passes the correct CPU
-feature flags to the guest.
+In selecting the ``custom`` mode, along with a named CPU model that matches the
+oldest of your compute node CPUs, you can ensure that live migration between
+compute nodes will always be possible. However, you should ensure that the CPU
+model you select passes the correct CPU feature flags to the guest.
 
 If you need to further tweak your CPU feature flags in the ``custom`` mode, see
-`CPU feature flags`_.
+:ref:`cpu-feature-flags`.
 
 .. note::
 
-  If :oslo.config:option:`libvirt.cpu_models` is configured,
-  the CPU models in the list needs to be compatible with the host CPU. Also, if
-  :oslo.config:option:`libvirt.cpu_model_extra_flags` is configured, all flags
-  needs to be compatible with the host CPU. If incompatible CPU models or flags
-  are specified, nova service will raise an error and fail to start.
+   If :oslo.config:option:`libvirt.cpu_models` is configured,
+   the CPU models in the list needs to be compatible with the host CPU. Also, if
+   :oslo.config:option:`libvirt.cpu_model_extra_flags` is configured, all flags
+   needs to be compatible with the host CPU. If incompatible CPU models or flags
+   are specified, nova service will raise an error and fail to start.
 
 None
 ~~~~
@@ -136,9 +141,128 @@ None
 If :oslo.config:option:`cpu_mode=none <libvirt.cpu_mode>`, libvirt does not
 specify a CPU model. Instead, the hypervisor chooses the default model.
 
-The ``none`` CPU model is the default for all non-KVM.QEMU hypervisors.
+The ``none`` CPU model is the default for all non-KVM/QEMU hypervisors.
 (:oslo.config:option:`libvirt.virt_type`\ !=``kvm``/``qemu``)
 
+
+.. _cpu-models:
+
+CPU models
+----------
+
+When :oslo.config:option:`libvirt.cpu_mode` is set to ``custom``, it is
+possible to configure one or more explicit CPU models that should be used.
+These CPU model names are shorthand for a set of feature flags.
+The libvirt KVM driver provides a number of standard CPU model names.
+These models are defined in ``/usr/share/libvirt/cpu_map/*.xml``.
+You can inspect these files to determine which models are supported by your
+local installation. For example, consider a host that provides the following
+(incomplete) set of CPU models:
+
+.. code-block:: bash
+
+    $ ls /usr/share/libvirt/cpu_map/x86_*.xml -1
+    ...
+    /usr/share/libvirt/cpu_map/x86_Broadwell-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_Broadwell-noTSX-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_Broadwell-noTSX.xml
+    /usr/share/libvirt/cpu_map/x86_Broadwell.xml
+    /usr/share/libvirt/cpu_map/x86_Haswell-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_Haswell-noTSX-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_Haswell-noTSX.xml
+    /usr/share/libvirt/cpu_map/x86_Haswell.xml
+    /usr/share/libvirt/cpu_map/x86_Icelake-Client-noTSX.xml
+    /usr/share/libvirt/cpu_map/x86_Icelake-Client.xml
+    /usr/share/libvirt/cpu_map/x86_Icelake-Server-noTSX.xml
+    /usr/share/libvirt/cpu_map/x86_Icelake-Server.xml
+    /usr/share/libvirt/cpu_map/x86_IvyBridge-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_IvyBridge.xml
+    /usr/share/libvirt/cpu_map/x86_SandyBridge-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_SandyBridge.xml
+    /usr/share/libvirt/cpu_map/x86_Skylake-Client-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_Skylake-Client-noTSX-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_Skylake-Client.xml
+    /usr/share/libvirt/cpu_map/x86_Skylake-Server-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_Skylake-Server-noTSX-IBRS.xml
+    /usr/share/libvirt/cpu_map/x86_Skylake-Server.xml
+    ...
+
+Each of these files contains information about the feature set provided by the
+CPU model. For example:
+
+.. code-block:: bash
+
+    $ cat /usr/share/libvirt/cpu_map/x86_SandyBridge-IBRS.xml
+    <cpus>
+      <model name='SandyBridge-IBRS'>
+        <decode host='on' guest='on'/>
+        <signature family='6' model='42'/> <!-- 0206a0 -->
+        <signature family='6' model='45'/> <!-- 0206d0 -->
+        <vendor name='Intel'/>
+        <feature name='aes'/>
+        <feature name='apic'/>
+        ...
+      </model>
+    </cpus>
+
+You can also list these CPU models using ``virsh cpu-models ARCH``.
+For example:
+
+.. code-block:: bash
+
+    $ virsh cpu-models x86_64
+    ...
+    SandyBridge
+    SandyBridge-IBRS
+    IvyBridge
+    IvyBridge-IBRS
+    Haswell-noTSX
+    Haswell-noTSX-IBRS
+    Haswell
+    Haswell-IBRS
+    Broadwell-noTSX
+    Broadwell-noTSX-IBRS
+    Broadwell
+    Broadwell-IBRS
+    Skylake-Client
+    Skylake-Client-IBRS
+    Skylake-Client-noTSX-IBRS
+    Skylake-Server
+    Skylake-Server-IBRS
+    Skylake-Server-noTSX-IBRS
+    Icelake-Client
+    Icelake-Client-noTSX
+    Icelake-Server
+    Icelake-Server-noTSX
+    ...
+
+By settings :oslo.config:option:`cpu_mode=custom <libvirt.cpu_mode>`, it is
+possible to list one or more of these CPU models in the
+:oslo.config:option:`libvirt.cpu_models` config option in ``nova.conf``. For
+example:
+
+.. code-block:: ini
+
+    [libvirt]
+    cpu_mode = custom
+    cpu_models = IvyBridge
+
+Typically you will only need to list a single model here, but it can be useful
+to list multiple CPU models to support requesting CPU feature flags via traits.
+To do this, simply list the additional CPU models in order of oldest (and
+therefore most widely supported) to newest. For example:
+
+.. code-block:: ini
+
+    [libvirt]
+    cpu_mode = custom
+    cpu_models = Penryn,IvyBridge,Haswell,Broadwell,Skylake-Client
+
+More details on how to request CPU feature flags and why you might wish to
+specify multiple CPU models are provided in :ref:`cpu-feature-flags` below.
+
+
+.. _cpu-feature-flags:
 
 CPU feature flags
 -----------------
