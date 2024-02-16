@@ -12902,23 +12902,43 @@ class LibvirtDriver(driver.ComputeDriver):
             return {
                 ot.COMPUTE_SECURITY_TPM_2_0: False,
                 ot.COMPUTE_SECURITY_TPM_1_2: False,
+                ot.COMPUTE_SECURITY_TPM_TIS: False,
+                ot.COMPUTE_SECURITY_TPM_CRB: False,
             }
 
+        tpm_models = self._host.tpm_models
         tpm_versions = self._host.tpm_versions
         # libvirt < 8.6 does not provide supported versions in domain
         # capabilities
 
-        # TODO(tkajinam): Remove this once libvirt>=8.6.0 is required.
+        tr = {}
+        if tpm_models is None:
+            # TODO(tkajinam): Remove this fallback once libvirt>=8.0.0 is
+            # required.
+            tr.update({
+                ot.COMPUTE_SECURITY_TPM_TIS: True,
+                ot.COMPUTE_SECURITY_TPM_CRB: True,
+            })
+        else:
+            tr.update({
+                ot.COMPUTE_SECURITY_TPM_TIS: 'tpm-tis' in tpm_models,
+                ot.COMPUTE_SECURITY_TPM_CRB: 'tpm-crb' in tpm_models,
+            })
+
         if tpm_versions is None:
-            return {
+            # TODO(tkajinam): Remove this fallback once libvirt>=8.6.0 is
+            # required.
+            tr.update({
                 ot.COMPUTE_SECURITY_TPM_2_0: True,
                 ot.COMPUTE_SECURITY_TPM_1_2: True,
-            }
+            })
+        else:
+            tr.update({
+                ot.COMPUTE_SECURITY_TPM_2_0: '2.0' in tpm_versions,
+                ot.COMPUTE_SECURITY_TPM_1_2: '1.2' in tpm_versions,
+            })
 
-        return {
-            ot.COMPUTE_SECURITY_TPM_2_0: '2.0' in tpm_versions,
-            ot.COMPUTE_SECURITY_TPM_1_2: '1.2' in tpm_versions,
-        }
+        return tr
 
     def _get_vif_model_traits(self) -> ty.Dict[str, bool]:
         """Get vif model traits based on the currently enabled virt_type.

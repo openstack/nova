@@ -920,7 +920,7 @@ class HostTestCase(test.NoDBTestCase):
                          type(caps.devices.tpm))
         self.assertTrue(caps.devices.tpm.supported)
         self.assertEqual(
-            ['tpm-tis', 'tpm-crb'],
+            ['tpm-tis'],
             caps.devices.tpm.models
         )
         self.assertEqual(

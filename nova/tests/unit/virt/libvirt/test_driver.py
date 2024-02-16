@@ -997,6 +997,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_NET_VIRTIO_PACKED': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
+            'COMPUTE_SECURITY_TPM_TIS': False,
+            'COMPUTE_SECURITY_TPM_CRB': False,
             'COMPUTE_STORAGE_BUS_VIRTIO': True,
             'COMPUTE_VIOMMU_MODEL_AUTO': True,
             'COMPUTE_VIOMMU_MODEL_INTEL': True,
@@ -1049,6 +1051,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_NET_VIRTIO_PACKED': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
+            'COMPUTE_SECURITY_TPM_TIS': False,
+            'COMPUTE_SECURITY_TPM_CRB': False,
             'COMPUTE_VIOMMU_MODEL_AUTO': True,
             'COMPUTE_VIOMMU_MODEL_INTEL': True,
             'COMPUTE_VIOMMU_MODEL_SMMUV3': True,
@@ -22506,7 +22510,9 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     def test_update_provider_tree_with_tpm_traits(self):
         self.flags(swtpm_enabled=True, group='libvirt')
         self._test_update_provider_tree()
-        for trait in ('COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
+        for trait in (
+                'COMPUTE_SECURITY_TPM_TIS', 'COMPUTE_SECURITY_TPM_CRB',
+                'COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
             self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
     @mock.patch.object(
@@ -22516,7 +22522,9 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     def test_update_provider_tree_with_tpm_traits_supported(self):
         self.flags(swtpm_enabled=True, group='libvirt')
         self._test_update_provider_tree()
-        for trait in ('COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
+        for trait in (
+                'COMPUTE_SECURITY_TPM_TIS', 'COMPUTE_SECURITY_TPM_CRB',
+                'COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
             self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
     @mock.patch.object(
@@ -22527,9 +22535,9 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     def test_update_provider_tree_with_tpm_traits_versions(self):
         self.flags(swtpm_enabled=True, group='libvirt')
         self._test_update_provider_tree()
-        for trait in ('COMPUTE_SECURITY_TPM_2_0',):
+        for trait in ('COMPUTE_SECURITY_TPM_TIS', 'COMPUTE_SECURITY_TPM_2_0'):
             self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
-        for trait in ('COMPUTE_SECURITY_TPM_1_2',):
+        for trait in ('COMPUTE_SECURITY_TPM_CRB', 'COMPUTE_SECURITY_TPM_1_2',):
             self.assertNotIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'

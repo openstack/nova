@@ -295,14 +295,20 @@ class ResourceRequest(object):
         if not vtpm_config:
             return
 
-        # Require the appropriate vTPM version support trait on a host.
-        if vtpm_config.version == obj_fields.TPMVersion.v1_2:
-            trait = os_traits.COMPUTE_SECURITY_TPM_1_2
-        else:
-            trait = os_traits.COMPUTE_SECURITY_TPM_2_0
+        # Require the appropriate vTPM model support trait on a host.
+        model_trait = os_traits.COMPUTE_SECURITY_TPM_TIS
+        if vtpm_config.model == obj_fields.TPMModel.CRB:
+            model_trait = os_traits.COMPUTE_SECURITY_TPM_CRB
 
-        self._add_trait(trait, 'required')
-        LOG.debug("Requiring emulated TPM support via trait %s.", trait)
+        # Require the appropriate vTPM version support trait on a host.
+        version_trait = os_traits.COMPUTE_SECURITY_TPM_1_2
+        if vtpm_config.version == obj_fields.TPMVersion.v2_0:
+            version_trait = os_traits.COMPUTE_SECURITY_TPM_2_0
+
+        self._add_trait(model_trait, 'required')
+        self._add_trait(version_trait, 'required')
+        LOG.debug("Requiring emulated TPM support via trait %s and %s.",
+                  version_trait, model_trait)
 
     def _translate_memory_encryption(self, flavor, image):
         """When the hw:mem_encryption extra spec or the hw_mem_encryption

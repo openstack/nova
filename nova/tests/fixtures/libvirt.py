@@ -2122,7 +2122,6 @@ class Connection(object):
     <tpm supported='yes'>
       <enum name='model'>
         <value>tpm-tis</value>
-        <value>tpm-crb</value>
       </enum>
       <enum name='backendModel'>
         <value>passthrough</value>
