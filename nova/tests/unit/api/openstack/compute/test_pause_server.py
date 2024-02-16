@@ -32,22 +32,35 @@ class PauseServerTestsV21(admin_only_action_common.CommonTests):
                       lambda *a, **kw: self.controller)
 
     def test_pause_unpause(self):
-        self._test_actions(['_pause', '_unpause'])
+        self._test_actions(
+            ['_pause', '_unpause'],
+            body_map={'_pause': {'pause': None}, '_unpause': {'unpause': None}}
+        )
 
     def test_actions_raise_on_not_implemented(self):
-        for action in ['_pause', '_unpause']:
-            self._test_not_implemented_state(action)
+        self._test_not_implemented_state('_pause', {'pause': None})
+        self._test_not_implemented_state('_unpause', {'unpause': None})
 
     def test_pause_unpause_with_non_existed_instance(self):
-        self._test_actions_with_non_existed_instance(['_pause', '_unpause'])
+        self._test_actions_with_non_existed_instance(
+            ['_pause', '_unpause'],
+            body_map={'_pause': {'pause': None}, '_unpause': {'unpause': None}}
+        )
 
     def test_pause_unpause_with_non_existed_instance_in_compute_api(self):
-        self._test_actions_instance_not_found_in_compute_api(['_pause',
-                                                              '_unpause'])
+        self._test_actions_instance_not_found_in_compute_api(
+            ['_pause', '_unpause'],
+            body_map={'_pause': {'pause': None}, '_unpause': {'unpause': None}}
+        )
 
     def test_pause_unpause_raise_conflict_on_invalid_state(self):
-        self._test_actions_raise_conflict_on_invalid_state(['_pause',
-                                                            '_unpause'])
+        self._test_actions_raise_conflict_on_invalid_state(
+            ['_pause', '_unpause'],
+            body_map={'_pause': {'pause': None}, '_unpause': {'unpause': None}}
+        )
 
     def test_actions_with_locked_instance(self):
-        self._test_actions_with_locked_instance(['_pause', '_unpause'])
+        self._test_actions_with_locked_instance(
+            ['_pause', '_unpause'],
+            body_map={'_pause': {'pause': None}, '_unpause': {'unpause': None}}
+        )

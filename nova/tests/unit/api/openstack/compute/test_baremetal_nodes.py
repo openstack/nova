@@ -149,7 +149,7 @@ class BareMetalNodesTest(test.NoDBTestCase):
     def test_create_ironic_not_supported(self):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.create,
-                          self.request, {'node': object()})
+                          self.request, body={'node': object()})
 
     def test_delete_ironic_not_supported(self):
         self.assertRaises(exc.HTTPBadRequest,
@@ -159,12 +159,12 @@ class BareMetalNodesTest(test.NoDBTestCase):
     def test_add_interface_ironic_not_supported(self):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller._add_interface,
-                          self.request, 'fake-id', 'fake-body')
+                          self.request, 'fake-id', body={})
 
     def test_remove_interface_ironic_not_supported(self):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller._remove_interface,
-                          self.request, 'fake-id', 'fake-body')
+                          self.request, 'fake-id', body={})
 
 
 class BareMetalNodesTestV236(test.NoDBTestCase):

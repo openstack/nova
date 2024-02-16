@@ -67,7 +67,8 @@ class AdminActionsPolicyTest(base.BasePolicyTest):
             self.common_policy_auth(self.project_action_authorized_contexts,
                                     rule_name,
                                     self.controller._inject_network_info,
-                                    self.req, self.instance.uuid, body={})
+                                    self.req, self.instance.uuid,
+                                    body={'injectNetworkInfo': None})
 
 
 class AdminActionsNoLegacyNoScopePolicyTest(AdminActionsPolicyTest):

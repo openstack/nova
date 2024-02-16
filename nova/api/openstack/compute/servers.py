@@ -982,6 +982,7 @@ class ServersController(wsgi.Controller):
     @wsgi.response(204)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('confirmResize')
+    @validation.schema(schema_servers.confirm_resize)
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
@@ -1004,6 +1005,7 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('revertResize')
+    @validation.schema(schema_servers.revert_resize)
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
@@ -1435,6 +1437,7 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))
     @wsgi.action('os-start')
+    @validation.schema(schema_servers.start_server)
     def _start_server(self, req, id, body):
         """Start an instance."""
         context = req.environ['nova.context']
@@ -1453,6 +1456,7 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))
     @wsgi.action('os-stop')
+    @validation.schema(schema_servers.stop_server)
     def _stop_server(self, req, id, body):
         """Stop an instance."""
         context = req.environ['nova.context']
@@ -1465,8 +1469,9 @@ class ServersController(wsgi.Controller):
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                'stop', id)
+            common.raise_http_conflict_for_instance_invalid_state(
+                state_error, 'stop', id
+            )
 
     @wsgi.Controller.api_version("2.17")
     @wsgi.response(202)
@@ -1485,8 +1490,9 @@ class ServersController(wsgi.Controller):
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                'trigger_crash_dump', id)
+            common.raise_http_conflict_for_instance_invalid_state(
+                state_error, 'trigger_crash_dump', id
+            )
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):

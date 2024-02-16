@@ -12,6 +12,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE(stephenfin): This schema is intentionally empty since the action has
+# been removed
+reset_network = {}
+
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+inject_network_info = {
+    'type': 'object',
+    'properties': {
+        'injectNetworkInfo': {},
+    },
+    'required': ['injectNetworkInfo'],
+    'additionalProperties': False,
+}
+
 reset_state = {
     'type': 'object',
     'properties': {

@@ -19,7 +19,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import shelve as shelve_schemas
+from nova.api.openstack.compute.schemas import shelve as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -37,6 +37,7 @@ class ShelveController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 403, 409, 400))
     @wsgi.action('shelve')
+    @validation.schema(schema.shelve)
     def _shelve(self, req, id, body):
         """Move an instance into shelved mode."""
         context = req.environ["nova.context"]
@@ -61,6 +62,7 @@ class ShelveController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('shelveOffload')
+    @validation.schema(schema.shelve_offload)
     def _shelve_offload(self, req, id, body):
         """Force removal of a shelved instance from the compute node."""
         context = req.environ["nova.context"]
@@ -83,19 +85,16 @@ class ShelveController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('unshelve')
+    @validation.schema(schema.unshelve, '2.1', '2.76')
     # In microversion 2.77 we support specifying 'availability_zone' to
     # unshelve a server. But before 2.77 there is no request body
     # schema validation (because of body=null).
-    @validation.schema(
-        shelve_schemas.unshelve_v277,
-        min_version='2.77',
-        max_version='2.90'
-    )
+    @validation.schema(schema.unshelve_v277, '2.77', '2.90')
     # In microversion 2.91 we support specifying 'host' to
     # unshelve an instance to a specific hostself.
     # 'availability_zone' = None is supported as well to unpin the
     # availability zone of an instance bonded to this availability_zone
-    @validation.schema(shelve_schemas.unshelve_v291, min_version='2.91')
+    @validation.schema(schema.unshelve_v291, '2.91')
     def _unshelve(self, req, id, body):
         """Restore an instance from shelved mode."""
         context = req.environ["nova.context"]

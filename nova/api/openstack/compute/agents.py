@@ -15,7 +15,9 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import agents as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class AgentController(wsgi.Controller):
@@ -28,6 +30,7 @@ class AgentController(wsgi.Controller):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.update)
     def update(self, req, id, body):
         raise exc.HTTPGone()
 
@@ -36,5 +39,6 @@ class AgentController(wsgi.Controller):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.create)
     def create(self, req, body):
         raise exc.HTTPGone()

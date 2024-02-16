@@ -102,7 +102,7 @@ class CommonMixin(object):
                                               expected_attrs=expected_attrs,
                                               cell_down_support=False)
 
-    def _test_not_implemented_state(self, action, method=None):
+    def _test_not_implemented_state(self, action, body=None, method=None):
         # Reset the mock.
         self.mock_get.reset_mock()
 
@@ -114,7 +114,6 @@ class CommonMixin(object):
             method = action.replace('_', '')
 
         instance = self._stub_instance_get()
-        body = {}
         compute_api_args_map = {}
         args, kwargs = compute_api_args_map.get(action, ((), {}))
 

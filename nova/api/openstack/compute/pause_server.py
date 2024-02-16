@@ -16,7 +16,9 @@
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import pause_server as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova import exception
 from nova.policies import pause_server as ps_policies
@@ -30,6 +32,7 @@ class PauseServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('pause')
+    @validation.schema(schema.pause)
     def _pause(self, req, id, body):
         """Permit Admins to pause the server."""
         ctxt = req.environ['nova.context']
@@ -52,6 +55,7 @@ class PauseServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('unpause')
+    @validation.schema(schema.unpause)
     def _unpause(self, req, id, body):
         """Permit Admins to unpause the server."""
         ctxt = req.environ['nova.context']

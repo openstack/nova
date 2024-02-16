@@ -115,6 +115,7 @@ class FloatingIPController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
+    @validation.schema(floating_ips.create)
     def create(self, req, body=None):
         context = req.environ['nova.context']
         context.can(fi_policies.BASE_POLICY_NAME % 'create',

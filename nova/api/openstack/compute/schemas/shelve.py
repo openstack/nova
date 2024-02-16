@@ -14,6 +14,35 @@
 
 from nova.api.validation import parameter_types
 
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+shelve = {
+    'type': 'object',
+    'properties': {
+        'shelve': {},
+    },
+    'required': ['shelve'],
+    'additionalProperties': False,
+}
+
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+shelve_offload = {
+    'type': 'object',
+    'properties': {
+        'shelveOffload': {},
+    },
+    'required': ['shelveOffload'],
+    'additionalProperties': False,
+}
+
+unshelve = {
+    'type': 'object',
+    'properties': {
+        'unshelve': {},
+    },
+    'required': ['unshelve'],
+    'additionalProperties': False,
+}
+
 # NOTE(brinzhang): For older microversion there will be no change as
 # schema is applied only for version < 2.91 with unshelve a server API.
 # Anything working in old version keep working as it is.

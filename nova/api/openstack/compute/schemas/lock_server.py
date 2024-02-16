@@ -10,7 +10,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-lock_v2_73 = {
+lock = {
+    'type': 'object',
+    'properties': {
+        'lock': {},
+    },
+    'required': ['lock'],
+    'additionalProperties': False,
+}
+
+lock_v273 = {
     'type': 'object',
     'properties': {
         'lock': {
@@ -24,5 +33,15 @@ lock_v2_73 = {
         },
     },
     'required': ['lock'],
+    'additionalProperties': False,
+}
+
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+unlock = {
+    'type': 'object',
+    'properties': {
+        'unlock': {},
+    },
+    'required': ['unlock'],
     'additionalProperties': False,
 }

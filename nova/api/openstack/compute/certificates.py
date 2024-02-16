@@ -14,7 +14,9 @@
 
 import webob.exc
 
+from nova.api.openstack.compute.schemas import certificates as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class CertificatesController(wsgi.Controller):
@@ -26,6 +28,7 @@ class CertificatesController(wsgi.Controller):
         raise webob.exc.HTTPGone()
 
     @wsgi.expected_errors((410))
+    @validation.schema(schema.create)
     def create(self, req, body=None):
         """Create a certificate."""
         raise webob.exc.HTTPGone()

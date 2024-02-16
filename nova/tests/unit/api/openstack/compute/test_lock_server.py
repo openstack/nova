@@ -38,12 +38,12 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
 
     def test_lock_unlock(self):
         args_map = {'_lock': ((), {"reason": None})}
-        body_map = {'_lock': {"lock": None}}
+        body_map = {'_lock': {'lock': None}, '_unlock': {'unlock': None}}
         self._test_actions(['_lock', '_unlock'], args_map=args_map,
             body_map=body_map)
 
     def test_lock_unlock_with_non_existed_instance(self):
-        body_map = {'_lock': {"lock": None}}
+        body_map = {'_lock': {'lock': None}, '_unlock': {'unlock': None}}
         self._test_actions_with_non_existed_instance(['_lock', '_unlock'],
             body_map=body_map)
 

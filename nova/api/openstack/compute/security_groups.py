@@ -408,6 +408,7 @@ class SecurityGroupActionController(wsgi.Controller):
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('addSecurityGroup')
+    @validation.schema(schema.add_security_group)
     def _addSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)
@@ -429,6 +430,7 @@ class SecurityGroupActionController(wsgi.Controller):
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('removeSecurityGroup')
+    @validation.schema(schema.remove_security_group)
     def _removeSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)

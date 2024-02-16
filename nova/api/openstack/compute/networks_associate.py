@@ -12,7 +12,9 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import networks_associate as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class NetworkAssociateActionController(wsgi.Controller):
@@ -20,15 +22,18 @@ class NetworkAssociateActionController(wsgi.Controller):
 
     @wsgi.action("disassociate_host")
     @wsgi.expected_errors(410)
+    @validation.schema(schema.disassociate)
     def _disassociate_host_only(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.action("disassociate_project")
     @wsgi.expected_errors(410)
+    @validation.schema(schema.disassociate_project)
     def _disassociate_project_only(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.action("associate_host")
     @wsgi.expected_errors(410)
+    @validation.schema(schema.associate_host)
     def _associate_host(self, req, id, body):
         raise exc.HTTPGone()

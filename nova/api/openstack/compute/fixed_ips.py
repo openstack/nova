@@ -14,7 +14,9 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import fixed_ips as schema_fixed_ips
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class FixedIPController(wsgi.Controller):
@@ -25,10 +27,12 @@ class FixedIPController(wsgi.Controller):
 
     @wsgi.expected_errors((410))
     @wsgi.action('reserve')
+    @validation.schema(schema_fixed_ips.reserve)
     def reserve(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors((410))
     @wsgi.action('unreserve')
+    @validation.schema(schema_fixed_ips.unreserve)
     def unreserve(self, req, id, body):
         raise exc.HTTPGone()
