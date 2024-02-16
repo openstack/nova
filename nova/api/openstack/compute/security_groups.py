@@ -369,7 +369,9 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
             raise exc.HTTPBadRequest(explanation=exp.format_message())
 
 
-class ServerSecurityGroupController(SecurityGroupControllerBase):
+class ServerSecurityGroupController(
+    SecurityGroupControllerBase, wsgi.Controller
+):
 
     @wsgi.expected_errors(404)
     def index(self, req, server_id):
