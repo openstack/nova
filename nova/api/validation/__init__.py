@@ -193,6 +193,9 @@ def query_schema(query_params_schema, min_version=None,
                 # those additional parameters.
                 _strip_additional_query_parameters(query_params_schema, req)
             return func(*args, **kwargs)
+
+        wrapper._query_schema = query_params_schema
+
         return wrapper
 
     return add_validator
