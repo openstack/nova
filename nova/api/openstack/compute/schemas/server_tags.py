@@ -31,3 +31,17 @@ update = {
     "title": "Server tag",
     "type": "null",
 }
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

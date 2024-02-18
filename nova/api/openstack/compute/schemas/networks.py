@@ -16,3 +16,6 @@
 create = {}
 add = {}
 disassociate = {}
+
+index_query = {}
+show_query = {}

@@ -12,7 +12,9 @@
 #    under the License.
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import server_topology as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova.policies import server_topology as st_policies
 
@@ -25,6 +27,7 @@ class ServerTopologyController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.78")
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.query_params_v21)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         instance = common.get_instance(self.compute_api, context, server_id,

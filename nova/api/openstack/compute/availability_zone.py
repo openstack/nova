@@ -12,7 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.openstack.compute.schemas import availability_zone as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import availability_zones
 from nova.compute import api as compute
 import nova.conf
@@ -103,6 +105,7 @@ class AvailabilityZoneController(wsgi.Controller):
         return {'availabilityZoneInfo': result}
 
     @wsgi.expected_errors(())
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         """Returns a summary list of availability zone."""
         context = req.environ['nova.context']
@@ -111,6 +114,7 @@ class AvailabilityZoneController(wsgi.Controller):
         return self._describe_availability_zones(context)
 
     @wsgi.expected_errors(())
+    @validation.query_schema(schema.detail_query)
     def detail(self, req):
         """Returns a detailed list of availability zone."""
         context = req.environ['nova.context']

@@ -49,3 +49,17 @@ update_all = {
     'required': ['metadata'],
     'additionalProperties': False,
 }
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

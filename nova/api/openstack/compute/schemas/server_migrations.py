@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 force_complete = {
     'type': 'object',
     'properties': {
@@ -23,4 +22,18 @@ force_complete = {
     },
     'required': ['force_complete'],
     'additionalProperties': False,
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
 }

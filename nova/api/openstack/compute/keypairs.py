@@ -177,8 +177,8 @@ class KeypairController(wsgi.Controller):
             return user_id
 
     @wsgi.Controller.api_version("2.10")
-    @validation.query_schema(keypairs.show_query_schema_v275, '2.75')
     @validation.query_schema(keypairs.show_query_schema_v210, '2.10', '2.74')
+    @validation.query_schema(keypairs.show_query_schema_v275, '2.75')
     @wsgi.expected_errors(404)
     def show(self, req, id):
         # handle optional user-id for admin only

@@ -15,13 +15,17 @@
 
 import webob.exc
 
+from nova.api.openstack.compute.schemas import versions as schema
 from nova.api.openstack.compute import versions
 from nova.api.openstack.compute.views import versions as views_versions
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class VersionsController(wsgi.Controller):
+
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id='v2.1'):
         builder = views_versions.get_view_builder(req)
         if req.is_legacy_v2():

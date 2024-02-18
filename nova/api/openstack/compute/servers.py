@@ -459,6 +459,7 @@ class ServersController(wsgi.Controller):
         return objects.NetworkRequestList(objects=networks)
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema_servers.show_query)
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']

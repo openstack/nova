@@ -49,6 +49,7 @@ class AggregateController(wsgi.Controller):
         self.conductor_tasks = conductor.ComputeTaskAPI()
 
     @wsgi.expected_errors(())
+    @validation.query_schema(aggregates.index_query)
     def index(self, req):
         """Returns a list a host aggregate's id, name, availability_zone."""
         context = _get_context(req)
@@ -94,6 +95,7 @@ class AggregateController(wsgi.Controller):
         return agg
 
     @wsgi.expected_errors((400, 404))
+    @validation.query_schema(aggregates.show_query)
     def show(self, req, id):
         """Shows the details of an aggregate, hosts and metadata included."""
         context = _get_context(req)

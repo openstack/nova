@@ -144,3 +144,17 @@ detail_query = index_query
 
 index_query_275 = copy.deepcopy(index_query)
 index_query_275['additionalProperties'] = False
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+snapshot_show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True
+}

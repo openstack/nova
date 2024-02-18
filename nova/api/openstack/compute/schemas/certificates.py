@@ -14,3 +14,5 @@
 # been removed
 
 create = {}
+
+show_query = {}

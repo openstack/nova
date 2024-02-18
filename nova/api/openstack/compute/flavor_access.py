@@ -19,7 +19,7 @@ import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import flavor_access
+from nova.api.openstack.compute.schemas import flavor_access as schema
 from nova.api.openstack import identity
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -39,7 +39,9 @@ def _marshall_flavor_access(flavor):
 
 class FlavorAccessController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
+
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.index_query)
     def index(self, req, flavor_id):
         context = req.environ['nova.context']
         context.can(fa_policies.BASE_POLICY_NAME)
@@ -60,7 +62,7 @@ class FlavorActionController(wsgi.Controller):
 
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action("addTenantAccess")
-    @validation.schema(flavor_access.add_tenant_access)
+    @validation.schema(schema.add_tenant_access)
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         context.can(fa_policies.POLICY_ROOT % "add_tenant_access", target={})
@@ -85,7 +87,7 @@ class FlavorActionController(wsgi.Controller):
 
     @wsgi.expected_errors((400, 403, 404))
     @wsgi.action("removeTenantAccess")
-    @validation.schema(flavor_access.remove_tenant_access)
+    @validation.schema(schema.remove_tenant_access)
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         context.can(

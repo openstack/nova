@@ -738,3 +738,9 @@ query_params_v275['properties'].update({
 # 2. Make 'additionalProperties' False.
 query_params_v275['additionalProperties'] = False
 # *****Schema updates for microversion 2.75 end here*******
+
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

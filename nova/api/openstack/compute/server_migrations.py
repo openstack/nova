@@ -92,6 +92,7 @@ class ServerMigrationsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.23")
     @wsgi.expected_errors(404)
+    @validation.query_schema(server_migrations.index_query)
     def index(self, req, server_id):
         """Return all migrations of an instance in progress."""
         context = req.environ['nova.context']
@@ -114,6 +115,7 @@ class ServerMigrationsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.23")
     @wsgi.expected_errors(404)
+    @validation.query_schema(server_migrations.show_query)
     def show(self, req, server_id, id):
         """Return the migration of an instance in progress by id."""
         context = req.environ['nova.context']

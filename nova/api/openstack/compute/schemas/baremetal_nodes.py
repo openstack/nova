@@ -14,7 +14,8 @@
 # deprecated proxy APIs
 
 create = {}
-
 add_interface = {}
-
 remove_interface = {}
+
+index_query = {}
+show_query = {}

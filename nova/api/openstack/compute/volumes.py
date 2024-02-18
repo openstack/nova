@@ -22,6 +22,7 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import volume_attachment as volume_attachment_schema  # noqa: E501
 from nova.api.openstack.compute.schemas import volumes as volumes_schema
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -110,6 +111,7 @@ class VolumeController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
+    @validation.query_schema(volumes_schema.show_query)
     def show(self, req, id):
         """Return data about the given volume."""
         context = req.environ['nova.context']
@@ -140,8 +142,8 @@ class VolumeController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @validation.query_schema(volumes_schema.index_query)
     @wsgi.expected_errors(())
+    @validation.query_schema(volumes_schema.index_query)
     def index(self, req):
         """Returns a summary list of volumes."""
         context = req.environ['nova.context']
@@ -150,8 +152,8 @@ class VolumeController(wsgi.Controller):
         return self._items(req, entity_maker=_translate_volume_summary_view)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @validation.query_schema(volumes_schema.detail_query)
     @wsgi.expected_errors(())
+    @validation.query_schema(volumes_schema.detail_query)
     def detail(self, req):
         """Returns a detailed list of volumes."""
         context = req.environ['nova.context']
@@ -327,6 +329,7 @@ class VolumeAttachmentController(wsgi.Controller):
         return {'volumeAttachments': results}
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(volume_attachment_schema.show_query)
     def show(self, req, server_id, id):
         """Return data about the given volume attachment."""
         context = req.environ['nova.context']
@@ -607,6 +610,7 @@ class SnapshotController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
+    @validation.query_schema(volumes_schema.snapshot_show_query)
     def show(self, req, id):
         """Return data about the given snapshot."""
         context = req.environ['nova.context']
@@ -635,8 +639,8 @@ class SnapshotController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @validation.query_schema(volumes_schema.index_query)
     @wsgi.expected_errors(())
+    @validation.query_schema(volumes_schema.index_query)
     def index(self, req):
         """Returns a summary list of snapshots."""
         context = req.environ['nova.context']
@@ -645,8 +649,8 @@ class SnapshotController(wsgi.Controller):
         return self._items(req, entity_maker=_translate_snapshot_summary_view)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @validation.query_schema(volumes_schema.detail_query)
     @wsgi.expected_errors(())
+    @validation.query_schema(volumes_schema.detail_query)
     def detail(self, req):
         """Returns a detailed list of snapshots."""
         context = req.environ['nova.context']

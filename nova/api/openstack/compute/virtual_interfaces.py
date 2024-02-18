@@ -17,7 +17,9 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import virtual_interfaces as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 _removal_reason = """\
 This API only works with *nova-network*, which was deprecated in the
@@ -31,5 +33,6 @@ class ServerVirtualInterfaceController(wsgi.Controller):
 
     @wsgi.expected_errors((410))
     @wsgi.removed('18.0.0', _removal_reason)
+    @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
         raise exc.HTTPGone()

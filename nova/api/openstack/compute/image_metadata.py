@@ -45,6 +45,7 @@ class ImageMetadataController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @wsgi.expected_errors((403, 404))
+    @validation.query_schema(image_metadata.index_query)
     def index(self, req, image_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
@@ -53,6 +54,7 @@ class ImageMetadataController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @wsgi.expected_errors((403, 404))
+    @validation.query_schema(image_metadata.show_query)
     def show(self, req, image_id, id):
         context = req.environ['nova.context']
         metadata = self._get_image(context, image_id)['properties']

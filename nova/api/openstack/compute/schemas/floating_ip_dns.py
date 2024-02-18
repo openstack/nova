@@ -14,3 +14,6 @@
 # been removed
 
 update = {}
+
+index_query = {}
+show_query = {}

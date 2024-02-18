@@ -33,6 +33,7 @@ class AgentController(wsgi.Controller):
     """
     @wsgi.expected_errors(410)
     @wsgi.removed('22.0.0', _removal_reason)
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         raise exc.HTTPGone()
 

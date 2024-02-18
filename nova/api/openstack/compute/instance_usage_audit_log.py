@@ -13,12 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 import datetime
 
 import webob.exc
 
+from nova.api.openstack.compute.schemas import instance_usage_audit_log as schema  # noqa: E501
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova.compute import rpcapi as compute_rpcapi
 from nova.i18n import _
@@ -33,6 +34,7 @@ class InstanceUsageAuditLogController(wsgi.Controller):
         self.host_api = compute.HostAPI()
 
     @wsgi.expected_errors(())
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         context = req.environ['nova.context']
         context.can(iual_policies.BASE_POLICY_NAME % 'list', target={})
@@ -40,6 +42,7 @@ class InstanceUsageAuditLogController(wsgi.Controller):
         return {'instance_usage_audit_logs': task_log}
 
     @wsgi.expected_errors(400)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(iual_policies.BASE_POLICY_NAME % 'show', target={})

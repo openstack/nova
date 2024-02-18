@@ -17,7 +17,7 @@ import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import flavors_extraspecs
+from nova.api.openstack.compute.schemas import flavors_extraspecs as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.api.validation.extra_specs import validators
@@ -56,6 +56,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
                 validators.validate(name, value)
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.index_query)
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
@@ -67,7 +68,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     # +microversions because the flavor extra specs has been created
     # completely when returning a response.
     @wsgi.expected_errors((400, 404, 409))
-    @validation.schema(flavors_extraspecs.create)
+    @validation.schema(schema.create)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
         context.can(fes_policies.POLICY_ROOT % 'create', target={})
@@ -85,7 +86,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
         return body
 
     @wsgi.expected_errors((400, 404, 409))
-    @validation.schema(flavors_extraspecs.update)
+    @validation.schema(schema.update)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
         context.can(fes_policies.POLICY_ROOT % 'update', target={})
@@ -105,6 +106,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
         return body
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.show_query)
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']

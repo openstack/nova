@@ -83,6 +83,7 @@ class InstanceActionsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.57")
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema_instance_actions.list_query)
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
@@ -96,9 +97,9 @@ class InstanceActionsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.58")  # noqa
     @wsgi.expected_errors((400, 404))
-    @validation.query_schema(schema_instance_actions.list_query_params_v266,
+    @validation.query_schema(schema_instance_actions.list_query_v266,
                              "2.66")
-    @validation.query_schema(schema_instance_actions.list_query_params_v258,
+    @validation.query_schema(schema_instance_actions.list_query_v258,
                              "2.58", "2.65")
     def index(self, req, server_id):  # noqa
         """Returns the list of actions recorded for a given instance."""
@@ -139,6 +140,7 @@ class InstanceActionsController(wsgi.Controller):
         return actions_dict
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema_instance_actions.show_query)
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']

@@ -78,16 +78,19 @@ class QuotaClassSetsController(wsgi.Controller):
 
     @wsgi.Controller.api_version('2.1', '2.49')
     @wsgi.expected_errors(())
+    @validation.query_schema(quota_classes.show_query)
     def show(self, req, id):
         return self._show(req, id, exclude_server_groups=True)
 
     @wsgi.Controller.api_version('2.50', '2.56')  # noqa
     @wsgi.expected_errors(())
+    @validation.query_schema(quota_classes.show_query)
     def show(self, req, id):  # noqa
         return self._show(req, id, FILTERED_QUOTAS_2_50)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(())
+    @validation.query_schema(quota_classes.show_query)
     def show(self, req, id):  # noqa
         return self._show(req, id, FILTERED_QUOTAS_2_57)
 

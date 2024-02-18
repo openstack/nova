@@ -227,9 +227,9 @@ class HypervisorsController(wsgi.Controller):
         return hypervisors_dict
 
     @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
-    @validation.query_schema(hyper_schema.list_query_schema_v253,
-                             UUID_FOR_ID_MIN_VERSION)
     @wsgi.expected_errors((400, 404))
+    @validation.query_schema(hyper_schema.index_query_v253,
+                             UUID_FOR_ID_MIN_VERSION)
     def index(self, req):
         """Starting with the 2.53 microversion, the id field in the response
         is the compute_nodes.uuid value. Also, the search and servers routes
@@ -241,14 +241,15 @@ class HypervisorsController(wsgi.Controller):
         return self._index(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
-    @validation.query_schema(hyper_schema.list_query_schema_v233)
     @wsgi.expected_errors(400)
+    @validation.query_schema(hyper_schema.index_query_v233)
     def index(self, req):  # noqa
         limit, marker = common.get_limit_and_marker(req)
         return self._index(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.1", "2.32")  # noqa
     @wsgi.expected_errors(())
+    @validation.query_schema(hyper_schema.index_query)
     def index(self, req):  # noqa
         return self._index(req)
 
@@ -259,9 +260,9 @@ class HypervisorsController(wsgi.Controller):
                                      marker=marker, links=links)
 
     @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
-    @validation.query_schema(hyper_schema.list_query_schema_v253,
-                             UUID_FOR_ID_MIN_VERSION)
     @wsgi.expected_errors((400, 404))
+    @validation.query_schema(hyper_schema.index_query_v253,
+                             UUID_FOR_ID_MIN_VERSION)
     def detail(self, req):
         """Starting with the 2.53 microversion, the id field in the response
         is the compute_nodes.uuid value. Also, the search and servers routes
@@ -273,14 +274,15 @@ class HypervisorsController(wsgi.Controller):
         return self._detail(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
-    @validation.query_schema(hyper_schema.list_query_schema_v233)
     @wsgi.expected_errors((400))
+    @validation.query_schema(hyper_schema.index_query_v233)
     def detail(self, req):  # noqa
         limit, marker = common.get_limit_and_marker(req)
         return self._detail(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.1", "2.32")  # noqa
     @wsgi.expected_errors(())
+    @validation.query_schema(hyper_schema.index_query)
     def detail(self, req):  # noqa
         return self._detail(req)
 
@@ -317,9 +319,9 @@ class HypervisorsController(wsgi.Controller):
                 raise webob.exc.HTTPNotFound(explanation=msg)
 
     @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
-    @validation.query_schema(hyper_schema.show_query_schema_v253,
-                             UUID_FOR_ID_MIN_VERSION)
     @wsgi.expected_errors((400, 404))
+    @validation.query_schema(hyper_schema.show_query_v253,
+                             UUID_FOR_ID_MIN_VERSION)
     def show(self, req, id):
         """The 2.53 microversion requires that the id is a uuid and as a result
         it can also return a 400 response if an invalid uuid is passed.
@@ -333,6 +335,7 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.52")     # noqa F811
     @wsgi.expected_errors(404)
+    @validation.query_schema(hyper_schema.show_query)
     def show(self, req, id):  # noqa
         return self._show(req, id)
 
@@ -377,6 +380,7 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version('2.1', '2.87')
     @wsgi.expected_errors((400, 404, 501))
+    @validation.query_schema(hyper_schema.uptime_query)
     def uptime(self, req, id):
         """Prior to microversion 2.88, you could retrieve a special version of
         the hypervisor detail view that included uptime. Starting in 2.88, this
@@ -429,6 +433,7 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version('2.1', '2.52')
     @wsgi.expected_errors(404)
+    @validation.query_schema(hyper_schema.search_query)
     def search(self, req, id):
         """Prior to microversion 2.53 you could search for hypervisors by a
         hostname pattern on a dedicated route. Starting with 2.53, searching
@@ -467,6 +472,7 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version('2.1', '2.52')
     @wsgi.expected_errors(404)
+    @validation.query_schema(hyper_schema.servers_query)
     def servers(self, req, id):
         """Prior to microversion 2.53 you could search for hypervisors by a
         hostname pattern and include servers on those hosts in the response on
@@ -512,6 +518,7 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version('2.1', '2.87')
     @wsgi.expected_errors(())
+    @validation.query_schema(hyper_schema.statistics_query)
     def statistics(self, req):
         """Prior to microversion 2.88, you could get statistics for the
         hypervisor. Most of these are now accessible from placement and the few

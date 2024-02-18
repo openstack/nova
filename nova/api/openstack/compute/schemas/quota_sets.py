@@ -80,7 +80,7 @@ del update_quota_set_v257['injected_file_path_bytes']
 update_v257 = copy.deepcopy(update_v236)
 update_v257['properties']['quota_set']['properties'] = update_quota_set_v257
 
-query_schema = {
+show_query = {
     'type': 'object',
     'properties': {
         'user_id': parameter_types.multi_params({'type': 'string'})
@@ -92,5 +92,12 @@ query_schema = {
     'additionalProperties': True
 }
 
-query_schema_275 = copy.deepcopy(query_schema)
-query_schema_275['additionalProperties'] = False
+show_query_v275 = copy.deepcopy(show_query)
+show_query_v275['additionalProperties'] = False
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+defaults_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

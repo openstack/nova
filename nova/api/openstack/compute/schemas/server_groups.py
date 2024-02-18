@@ -77,7 +77,7 @@ sg_properties['properties']['rules'] = {
     'additionalProperties': False,
 }
 
-server_groups_query_param = {
+index_query = {
     'type': 'object',
     'properties': {
         'all_projects': parameter_types.multi_params({'type': 'string'}),
@@ -91,5 +91,11 @@ server_groups_query_param = {
     'additionalProperties': True
 }
 
-server_groups_query_param_275 = copy.deepcopy(server_groups_query_param)
-server_groups_query_param_275['additionalProperties'] = False
+index_query_v275 = copy.deepcopy(index_query)
+index_query_v275['additionalProperties'] = False
+
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

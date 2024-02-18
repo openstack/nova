@@ -107,22 +107,23 @@ class QuotaSetsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     def show(self, req, id):
         return self._show(req, id, [])
 
-    @wsgi.Controller.api_version(  # noqa
-        MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     def show(self, req, id):  # noqa
         return self._show(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
+    @validation.query_schema(quota_sets.show_query_v275, '2.75')
     def show(self, req, id):  # noqa
         return self._show(req, id, FILTERED_QUOTAS_2_57)
 
-    @validation.query_schema(quota_sets.query_schema_275, '2.75')
-    @validation.query_schema(quota_sets.query_schema, '2.0', '2.74')
     def _show(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'show', {'project_id': id})
@@ -136,22 +137,24 @@ class QuotaSetsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     def detail(self, req, id):
         return self._detail(req, id, [])
 
-    @wsgi.Controller.api_version(  # noqa
-        MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
+    @validation.query_schema(quota_sets.show_query_v275, '2.75')
     def detail(self, req, id):  # noqa
         return self._detail(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
+    @validation.query_schema(quota_sets.show_query_v275, '2.75')
     def detail(self, req, id):  # noqa
         return self._detail(req, id, FILTERED_QUOTAS_2_57)
 
-    @validation.query_schema(quota_sets.query_schema_275, '2.75')
-    @validation.query_schema(quota_sets.query_schema, '2.0', '2.74')
     def _detail(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'detail', {'project_id': id})
@@ -169,21 +172,21 @@ class QuotaSetsController(wsgi.Controller):
     def update(self, req, id, body):
         return self._update(req, id, body, [])
 
-    @wsgi.Controller.api_version(  # noqa
-        MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
     @wsgi.expected_errors(400)
     @validation.schema(quota_sets.update_v236)
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     def update(self, req, id, body):  # noqa
         return self._update(req, id, body, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(400)
     @validation.schema(quota_sets.update_v257)
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
+    @validation.query_schema(quota_sets.show_query_v275, '2.75')
     def update(self, req, id, body):  # noqa
         return self._update(req, id, body, FILTERED_QUOTAS_2_57)
 
-    @validation.query_schema(quota_sets.query_schema_275, '2.75')
-    @validation.query_schema(quota_sets.query_schema, '2.0', '2.74')
     def _update(self, req, id, body, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'update', {'project_id': id})
@@ -248,17 +251,19 @@ class QuotaSetsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.0", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.defaults_query)
     def defaults(self, req, id):
         return self._defaults(req, id, [])
 
-    @wsgi.Controller.api_version(  # noqa
-        MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.defaults_query)
     def defaults(self, req, id):  # noqa
         return self._defaults(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(400)
+    @validation.query_schema(quota_sets.defaults_query)
     def defaults(self, req, id):  # noqa
         return self._defaults(req, id, FILTERED_QUOTAS_2_57)
 
@@ -275,8 +280,8 @@ class QuotaSetsController(wsgi.Controller):
     # +microversions because the resource quota-set has been deleted completely
     # when returning a response.
     @wsgi.expected_errors(())
-    @validation.query_schema(quota_sets.query_schema_275, '2.75')
-    @validation.query_schema(quota_sets.query_schema, '2.0', '2.74')
+    @validation.query_schema(quota_sets.show_query_v275, '2.75')
+    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']

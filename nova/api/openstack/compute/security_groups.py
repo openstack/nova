@@ -136,6 +136,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         """Return data about the given security group."""
         context = req.environ['nova.context']
@@ -354,6 +355,7 @@ class ServerSecurityGroupController(
 ):
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.server_sg_index_query)
     def index(self, req, server_id):
         """Returns a list of security groups for the given instance."""
         context = req.environ['nova.context']

@@ -16,8 +16,10 @@
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import addresses as schema
 from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova.i18n import _
 from nova.policies import ips as ips_policies
@@ -32,6 +34,7 @@ class IPsController(wsgi.Controller):
         self._compute_api = compute.API()
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         instance = common.get_instance(self._compute_api, context, server_id)
@@ -41,6 +44,7 @@ class IPsController(wsgi.Controller):
         return self._view_builder.index(req, networks)
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.show_query)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         instance = common.get_instance(self._compute_api, context, server_id)

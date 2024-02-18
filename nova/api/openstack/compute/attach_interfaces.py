@@ -64,6 +64,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         self.network_api = neutron.API()
 
     @wsgi.expected_errors((404, 501))
+    @validation.query_schema(attach_interfaces.index_query)
     def index(self, req, server_id):
         """Returns the list of interface attachments for a given instance."""
         context = req.environ['nova.context']
@@ -106,6 +107,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         return {'interfaceAttachments': results}
 
     @wsgi.expected_errors((403, 404))
+    @validation.query_schema(attach_interfaces.show_query)
     def show(self, req, server_id, id):
         """Return data about the given interface attachment."""
         context = req.environ['nova.context']

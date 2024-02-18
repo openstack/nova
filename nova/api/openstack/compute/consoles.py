@@ -35,6 +35,7 @@ class ConsolesController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
+    @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
         raise exc.HTTPGone()
 
@@ -46,6 +47,7 @@ class ConsolesController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
+    @validation.query_schema(schema.show_query)
     def show(self, req, server_id, id):
         raise exc.HTTPGone()
 

@@ -31,6 +31,7 @@ class CertificatesController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.removed('16.0.0', _removal_reason)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         """Return certificate information."""
         raise webob.exc.HTTPGone()

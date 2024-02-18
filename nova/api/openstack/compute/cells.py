@@ -36,26 +36,31 @@ class CellsController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.removed('20.0.0', _removal_reason)
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('20.0.0', _removal_reason)
+    @validation.query_schema(schema.detail_query)
     def detail(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('20.0.0', _removal_reason)
+    @validation.query_schema(schema.info_query)
     def info(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('20.0.0', _removal_reason)
+    @validation.query_schema(schema.capacities_query)
     def capacities(self, req, id=None):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('20.0.0', _removal_reason)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         raise exc.HTTPGone()
 

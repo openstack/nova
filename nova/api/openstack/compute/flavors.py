@@ -155,6 +155,7 @@ class FlavorsController(wsgi.Controller):
             req, limited_flavors, include_extra_specs=include_extra_specs)
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         """Return data about the given flavor id."""
         context = req.environ['nova.context']
