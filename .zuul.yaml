@@ -311,6 +311,8 @@
       - ^tools/.*$
       - ^tox.ini$
     vars:
+      # Increase the swap size to avoid OOM errors when running the tests.
+      configure_swap_size: 8192
       # We use the "all" environment for tempest_test_regex and
       # tempest_exclude_regex.
       tox_envlist: all
