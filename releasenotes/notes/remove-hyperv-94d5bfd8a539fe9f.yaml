@@ -5,7 +5,14 @@ upgrade:
     Nova 27.2.0 (Antelope) release. This driver was untested and has no
     maintainers. In addition, it has a dependency on the OpenStack Winstacker
     project that also has been retired.
-  - |
+
+    The RDP console was only available for the HyperV driver, therefore its
+    connection information via below API ``os-console-auth-tokens`` will now
+    return HTTP ``400 (BadRequest)`` error:
+
+    * Show Console Connection Information:
+      GET /os-console-auth-tokens/{console_token}
+
     The following config options which only apply for the ``HyperV`` virt
     driver also been removed:
 

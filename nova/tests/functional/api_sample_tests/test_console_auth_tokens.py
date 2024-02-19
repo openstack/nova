@@ -22,20 +22,22 @@ from nova.tests.functional.api_sample_tests import test_servers
 class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
     ADMIN_API = True
     sample_dir = "os-console-auth-tokens"
+    microversion = '2.31'
+    scenarios = [('v2_31', {'api_major_version': 'v2.1'})]
 
     def _get_console_url(self, data):
-        return jsonutils.loads(data)["console"]["url"]
+        return jsonutils.loads(data)["remote_console"]["url"]
 
     def _get_console_token(self, uuid):
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'get-rdp-console-post-req',
-                                 {'action': 'os-getRDPConsole'})
+        body = {'protocol': 'serial', 'type': 'serial'}
+        response = self._do_post('servers/%s/remote-consoles' % uuid,
+                                 'create-serial-console-req', body)
 
         url = self._get_console_url(response.content)
         return re.match('.+?token=([^&]+)', url).groups()[0]
 
     def test_get_console_connect_info(self):
-        self.flags(enabled=True, group='rdp')
+        self.flags(enabled=True, group='serial_console')
 
         uuid = self._post_server()
         token = self._get_console_token(uuid)
