@@ -341,34 +341,49 @@ class GlanceImageServiceV2(object):
         if not any(check(mode) for check in (stat.S_ISFIFO, stat.S_ISSOCK)):
             os.fsync(fileno)
 
+    def _try_special_handlers(self, context, image_id, dst_path, verifier):
+        image = self.show(context, image_id, include_locations=True)
+        for entry in image.get('locations', []):
+            loc_url = entry['url']
+            loc_meta = entry['metadata']
+            o = urlparse.urlparse(loc_url)
+            xfer_method = self._get_transfer_method(o.scheme)
+            if not xfer_method:
+                continue
+
+            try:
+                xfer_method(context, o, dst_path, loc_meta)
+                LOG.info("Successfully transferred using %s", o.scheme)
+
+                if not verifier:
+                    return True
+
+                # Load chunks from the downloaded image file
+                # for verification
+                with open(dst_path, 'rb') as fh:
+                    downloaded_length = os.path.getsize(dst_path)
+                    image_chunks = glance_utils.IterableWithLength(fh,
+                        downloaded_length)
+                    self._verify_and_write(context, image_id, verifier,
+                                            image_chunks, None, None)
+                return True
+            except Exception:
+                LOG.exception("Download image error")
+
+        return False
+
     def download(self, context, image_id, data=None, dst_path=None,
                  trusted_certs=None):
         """Calls out to Glance for data and writes data."""
+        # First, try to get the verifier, so we do not even start to download
+        # the image and then fail on the metadata
+        verifier = self._get_verifier(context, image_id, trusted_certs)
 
-        # First, check if image could be directly downloaded by special handler
+        # Second, try to delegate image download to a special handler
         if (self._download_handlers and dst_path is not None):
-            image = self.show(context, image_id, include_locations=True)
-            for entry in image.get('locations', []):
-                loc_url = entry['url']
-                loc_meta = entry['metadata']
-                o = urlparse.urlparse(loc_url)
-                xfer_method = self._get_transfer_method(o.scheme)
-                if xfer_method:
-                    try:
-                        xfer_method(context, o, dst_path, loc_meta)
-                        LOG.info("Successfully transferred using %s", o.scheme)
-
-                        # Load chunks from the downloaded image file
-                        # for verification (if required)
-                        with open(dst_path, 'rb') as fh:
-                            downloaded_length = os.path.getsize(dst_path)
-                            image_chunks = glance_utils.IterableWithLength(fh,
-                                downloaded_length)
-                            self._verify_and_write(context, image_id,
-                                trusted_certs, image_chunks, None, None)
-                        return
-                    except Exception:
-                        LOG.exception("Download image error")
+            if self._try_special_handlers(context, image_id, dst_path,
+                                          verifier):
+                return
 
         # By default (or if direct download has failed), use glance client call
         # to fetch the image and fill image_chunks
@@ -384,10 +399,10 @@ class GlanceImageServiceV2(object):
             raise exception.ImageUnacceptable(image_id=image_id,
                 reason='Image has no associated data')
 
-        return self._verify_and_write(context, image_id, trusted_certs,
+        return self._verify_and_write(context, image_id, verifier,
                                       image_chunks, data, dst_path)
 
-    def _verify_and_write(self, context, image_id, trusted_certs,
+    def _verify_and_write(self, context, image_id, verifier,
                           image_chunks, data, dst_path):
         """Perform image signature verification and save the image file if needed.
 
@@ -397,9 +412,7 @@ class GlanceImageServiceV2(object):
         be written out but instead image_chunks iterator is returned.
 
         :param image_id: The UUID of the image
-        :param trusted_certs: A 'nova.objects.trusted_certs.TrustedCerts'
-                              object with a list of trusted image certificate
-                              IDs.
+        :param verifier: An instance of a 'cursive.verifier'
         :param image_chunks An iterator pointing to the image data
         :param data: File object to use when writing the image.
             If passed as None and dst_path is provided, new file is opened.
@@ -420,15 +433,9 @@ class GlanceImageServiceV2(object):
             write_image = False
 
         try:
-            # Retrieve properties for verification of Glance image signature
-            verifier = self._get_verifier(context, image_id, trusted_certs)
-
             # Exit early if we do not need write nor verify
-            if verifier is None and write_image is False:
-                if data is None:
-                    return image_chunks
-                else:
-                    return
+            if verifier is None and not write_image:
+                return image_chunks
 
             for chunk in image_chunks:
                 if verifier:
@@ -463,8 +470,6 @@ class GlanceImageServiceV2(object):
                 data.flush()
                 self._safe_fsync(data)
                 data.close()
-            if isinstance(image_chunks, glance_utils.IterableWithLength):
-                image_chunks.iterable.close()
 
         if data is None:
             return image_chunks
