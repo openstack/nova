@@ -751,7 +751,6 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
         # For an instance_cores=[2, 3], usable_cores=[[0], [4]]
         # vcpus_pinning=[(2, 0), (3, 4)]
 
-        # todo  Tharindu: Below is PoC implementation, and not efficient at all.
         def get_priority_weight(val, high_p_list):
             if val in high_p_list:
                 return 0
@@ -780,8 +779,6 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
             'vcpus_pinning': vcpus_pinning,
         }
         LOG.info(msg, msg_args)
-        # In the prototype: Allocate vm with pinnning enabled + number of cores = 1
-        # Computed NUMA topology CPU pinning: usable pCPUs: [[0], [1], [2], [3]], vCPUs mapping: [(0, 0)]
 
         return vcpus_pinning
 

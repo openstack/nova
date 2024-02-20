@@ -708,7 +708,6 @@ class SchedulerManager(manager.Manager):
         core_usages = requests.get(url='http://100.64.42.11:4000/gc/core-usage').json()
         global CORE_USAGE
         CORE_USAGE['core_usage'] = core_usages
-        LOG.debug("tharindu-green-cores@manager-after: CORE_USAGE %(CORE_USAGE)s", {'CORE_USAGE': CORE_USAGE})
         filtered_hosts = self.host_manager.get_filtered_hosts(host_states,
             spec_obj, index)
 

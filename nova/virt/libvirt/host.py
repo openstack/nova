@@ -776,7 +776,6 @@ class Host(object):
 
         :returns: list of ids that are asleep.
         """
-        # todo hardcoded:: supports only a single green core which has an id of 3.
         endpoint = CONF.compute.cpu_sleep_info_endpoint
         r = rq.get(url=endpoint)
         data = r.json()

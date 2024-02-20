@@ -137,20 +137,8 @@ class CPUWeigher(weights.BaseHostWeigher):
 
     def _weigh_object(self, host_state, weight_properties):
         """Higher weights win.  We want spreading to be the default."""
-        LOG.debug("tharindu-green-cores: CORE_USAGE['core_usage'] %(weight_properties)s",
-                  {'weight_properties': CORE_USAGE['core_usage']})
-        LOG.debug("tharindu-green-cores@weighter: host ip %(ip)s", {'ip': host_state.host_ip})
-        LOG.debug("tharindu-green-cores@weighter: weight_properties %(weight_properties)s",
-                  {'weight_properties': weight_properties})
-        # vcpus_free = (
-        #     host_state.vcpus_total * host_state.cpu_allocation_ratio -
-        #     host_state.vcpus_used)
-        # return vcpus_free
-
         host_ip = host_state.host_ip
         core_usage = list(filter(lambda x: x['host-ip'] == str(host_ip), CORE_USAGE['core_usage']))
-        LOG.debug("tharindu-green-cores@cpu: host_ip %(host_ip)s", {'host_ip': host_ip})
-        LOG.debug("tharindu-green-cores@cpu: core_usage %(core_usage)s", {'core_usage': core_usage})
         core_usage = core_usage[0]
 
         rcpus_avl = core_usage['reg-cores-avl']
