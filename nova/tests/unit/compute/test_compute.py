@@ -3996,20 +3996,6 @@ class ComputeTestCase(BaseTestCase,
             context=self.context, instance=instance, port="5900",
             console_type="spice-html5"))
 
-    def test_validate_console_port_rdp(self):
-        self.flags(enabled=True, group='rdp')
-        instance = self._create_fake_instance_obj()
-
-        def fake_driver_get_console(*args, **kwargs):
-            return ctype.ConsoleRDP(host="fake_host", port=5900)
-
-        self.stub_out("nova.virt.fake.FakeDriver.get_rdp_console",
-                       fake_driver_get_console)
-
-        self.assertTrue(self.compute.validate_console_port(
-            context=self.context, instance=instance, port="5900",
-            console_type="rdp-html5"))
-
     def test_validate_console_port_serial(self):
         self.flags(enabled=True, group='serial_console')
         instance = self._create_fake_instance_obj()
@@ -4197,70 +4183,6 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.terminate_instance(self.context, instance, [])
 
-    def test_rdphtml5_rdp_console(self):
-        # Make sure we can a rdp console for an instance.
-        self.flags(enabled=False, group='vnc')
-        self.flags(enabled=True, group='rdp')
-
-        instance = self._create_fake_instance_obj()
-        self.compute.build_and_run_instance(self.context,
-            instance, {}, {}, {}, [], block_device_mapping=[])
-
-        # Try with the full instance
-        console = self.compute.get_rdp_console(self.context, 'rdp-html5',
-                                               instance=instance)
-        self.assertTrue(console)
-
-        # Verify that the console auth has also been stored in the
-        # database backend.
-        auth = objects.ConsoleAuthToken.validate(self.context,
-                                                 console['token'])
-        self.assertIsNotNone(auth)
-
-        self.compute.terminate_instance(self.context, instance, [])
-
-    def test_invalid_rdp_console_type(self):
-        # Raise useful error if console type is an unrecognised string
-        self.flags(enabled=False, group='vnc')
-        self.flags(enabled=True, group='rdp')
-
-        instance = self._create_fake_instance_obj()
-        self.compute.build_and_run_instance(self.context,
-            instance, {}, {}, {}, [], block_device_mapping=[])
-
-        self.assertRaises(messaging.ExpectedException,
-                          self.compute.get_rdp_console,
-                          self.context, 'invalid', instance=instance)
-
-        self.compute = utils.ExceptionHelper(self.compute)
-
-        self.assertRaises(exception.ConsoleTypeInvalid,
-                          self.compute.get_rdp_console,
-                          self.context, 'invalid', instance=instance)
-
-        self.compute.terminate_instance(self.context, instance, [])
-
-    def test_missing_rdp_console_type(self):
-        # Raise useful error is console type is None
-        self.flags(enabled=False, group='vnc')
-        self.flags(enabled=True, group='rdp')
-
-        instance = self._create_fake_instance_obj()
-        self.compute.build_and_run_instance(self.context,
-            instance, {}, {}, {}, [], block_device_mapping=[])
-
-        self.assertRaises(messaging.ExpectedException,
-                          self.compute.get_rdp_console,
-                          self.context, None, instance=instance)
-
-        self.compute = utils.ExceptionHelper(self.compute)
-
-        self.assertRaises(exception.ConsoleTypeInvalid,
-                          self.compute.get_rdp_console,
-                          self.context, None, instance=instance)
-
-        self.compute.terminate_instance(self.context, instance, [])
-
     def test_vnc_console_instance_not_ready(self):
         self.flags(enabled=True, group='vnc')
         self.flags(enabled=False, group='spice')
@@ -4297,24 +4219,6 @@ class ComputeTestCase(BaseTestCase,
                 self.compute.get_spice_console, self.context, 'spice-html5',
                 instance=instance)
 
-    def test_rdp_console_instance_not_ready(self):
-        self.flags(enabled=False, group='vnc')
-        self.flags(enabled=True, group='rdp')
-        instance = self._create_fake_instance_obj(
-                params={'vm_state': vm_states.BUILDING})
-
-        def fake_driver_get_console(*args, **kwargs):
-            raise exception.InstanceNotFound(instance_id=instance['uuid'])
-
-        self.stub_out("nova.virt.fake.FakeDriver.get_rdp_console",
-                       fake_driver_get_console)
-
-        self.compute = utils.ExceptionHelper(self.compute)
-
-        self.assertRaises(exception.InstanceNotReady,
-                self.compute.get_rdp_console, self.context, 'rdp-html5',
-                instance=instance)
-
     def test_vnc_console_disabled(self):
         self.flags(enabled=False, group='vnc')
         instance = self._create_fake_instance_obj(
@@ -4335,17 +4239,6 @@ class ComputeTestCase(BaseTestCase,
 
         self.assertRaises(exception.ConsoleTypeUnavailable,
                 self.compute.get_spice_console, self.context, 'spice-html5',
-                instance=instance)
-
-    def test_rdp_console_disabled(self):
-        self.flags(enabled=False, group='rdp')
-        instance = self._create_fake_instance_obj(
-                params={'vm_state': vm_states.BUILDING})
-
-        self.compute = utils.ExceptionHelper(self.compute)
-
-        self.assertRaises(exception.ConsoleTypeUnavailable,
-                self.compute.get_rdp_console, self.context, 'rdp-html5',
                 instance=instance)
 
     def test_diagnostics(self):
@@ -10282,8 +10175,6 @@ class ComputeAPITestCase(BaseTestCase):
 
     @ddt.data(('spice', task_states.DELETING),
               ('spice', task_states.MIGRATING),
-              ('rdp', task_states.DELETING),
-              ('rdp', task_states.MIGRATING),
               ('vnc', task_states.DELETING),
               ('vnc', task_states.MIGRATING),
               ('mks', task_states.DELETING),
@@ -10298,36 +10189,6 @@ class ComputeAPITestCase(BaseTestCase):
             exception.InstanceInvalidState,
             getattr(self.compute_api, 'get_%s_console' % console_type),
             self.context, instance, console_type)
-
-    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_rdp_console')
-    def test_rdp_console(self, mock_rdp):
-        # Make sure we can a rdp console for an instance.
-        fake_instance = self._fake_instance({
-                         'uuid': 'f3000000-0000-0000-0000-000000000000',
-                         'host': 'fake_compute_host'})
-        fake_console_type = "rdp-html5"
-        fake_connect_info = {'token': 'fake_token',
-                             'console_type': fake_console_type,
-                             'host': 'fake_console_host',
-                             'port': 'fake_console_port',
-                             'internal_access_path': 'fake_access_path',
-                             'instance_uuid': fake_instance.uuid,
-                             'access_url': 'fake_console_url'}
-        mock_rdp.return_value = fake_connect_info
-
-        console = self.compute_api.get_rdp_console(self.context,
-                fake_instance, fake_console_type)
-
-        self.assertEqual(console, {'url': 'fake_console_url'})
-        mock_rdp.assert_called_once_with(self.context, instance=fake_instance,
-                                         console_type=fake_console_type)
-
-    def test_get_rdp_console_no_host(self):
-        instance = self._create_fake_instance_obj(params={'host': ''})
-
-        self.assertRaises(exception.InstanceNotReady,
-                          self.compute_api.get_rdp_console,
-                          self.context, instance, 'rdp')
 
     def test_serial_console(self):
         # Make sure we can  get a serial proxy url for an instance.

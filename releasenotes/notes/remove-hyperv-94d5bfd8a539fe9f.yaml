@@ -6,15 +6,24 @@ upgrade:
     maintainers. In addition, it has a dependency on the OpenStack Winstacker
     project that also has been retired.
 
-    The RDP console was only available for the HyperV driver, therefore its
-    connection information via below API ``os-console-auth-tokens`` will now
-    return HTTP ``400 (BadRequest)`` error:
+    The RDP console was only available for the HyperV driver, therefore the
+    RDP console related APIs below will return HTTP ``400 (BadRequest)`` error:
 
-    * Show Console Connection Information:
-      GET /os-console-auth-tokens/{console_token}
+    * GET RDP console:
+
+      * Server Action Get RDP Console:
+        POST /servers/{server_id}/action (os-getRDPConsole Action)
+
+      * RDP protocol support from remote console API:
+        POST /servers/{server_id}/remote-consoles
+
+    * GET RDP console connection information:
+
+      * Show Console Connection Information:
+        GET /os-console-auth-tokens/{console_token}
 
     The following config options which only apply for the ``HyperV`` virt
-    driver also been removed:
+    driver or RDP console APIs also have been removed:
 
     * ``[hyperv] dynamic_memory_ratio``
     * ``[hyperv] enable_instance_metrics_collection``
@@ -34,3 +43,5 @@ upgrade:
     * ``[hyperv] enable_remotefx``
     * ``[hyperv] use_multipath_io``
     * ``[hyperv] iscsi_initiator_list``
+    * ``[rdp] enabled``
+    * ``[rdp] html5_proxy_base_url``

@@ -42,11 +42,6 @@ class TypeTestCase(test.NoDBTestCase):
 
         self.assertIsInstance(c, ctype.Console)
 
-    def test_console_rdp(self):
-        c = ctype.ConsoleRDP(host='127.0.0.1', port=8945)
-
-        self.assertIsInstance(c, ctype.Console)
-
     def test_console_spice(self):
         c = ctype.ConsoleSpice(host='127.0.0.1', port=8945, tlsPort=6547)
 

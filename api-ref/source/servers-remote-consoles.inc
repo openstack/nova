@@ -17,7 +17,7 @@ The API provides a unified request for creating a remote console. The user can
 get a URL to connect the console from this API. The URL includes the token
 which is used to get permission to access the console. Servers may support
 different console protocols. To return a remote console using a specific
-protocol, such as RDP, set the ``protocol`` parameter to ``rdp``.
+protocol, such as VNC, set the ``protocol`` parameter to ``vnc``.
 
 Normal response codes: 200
 

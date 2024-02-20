@@ -89,8 +89,8 @@ Method titles spelling and case
 
 The spelling and the case of method names in the title have to match
 what is in the code. For instance, the title for the section on method
-"Get Rdp Console" should be "Get Rdp Console (os-getRDPConsole Action)"
-NOT "Get Rdp Console (Os-Getrdpconsole Action)"
+"Get VNC Console" should be "Get VNC Console (os-getVNCConsole Action)"
+NOT "Get VNC Console (Os-Getvncconsole Action)"
 
 Description
 -----------

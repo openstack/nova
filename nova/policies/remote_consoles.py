@@ -30,15 +30,10 @@ remote_consoles_policies = [
 This policy is for ``POST /remote-consoles`` API and below Server actions APIs
 are deprecated:
 
-- ``os-getRDPConsole``
 - ``os-getSerialConsole``
 - ``os-getSPICEConsole``
 - ``os-getVNCConsole``.""",
         operations=[
-            {
-                'method': 'POST',
-                'path': '/servers/{server_id}/action (os-getRDPConsole)'
-            },
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (os-getSerialConsole)'

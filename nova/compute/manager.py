@@ -7337,6 +7337,9 @@ class ComputeManager(manager.Manager):
 
         return connect_info
 
+    # TODO(gmann): HyperV virt driver has been removed in Nova 29.0.0
+    # but we need to keep this method to avoid RPC error in case of using
+    # old controller with new compute. This can be removed in RPC API 7.0
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
                                    exception.InstanceNotFound,
@@ -7346,38 +7349,10 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def get_rdp_console(self, context, console_type, instance):
         """Return connection information for a RDP console."""
-        context = context.elevated()
-        LOG.debug("Getting RDP console", instance=instance)
 
-        if not CONF.rdp.enabled:
-            raise exception.ConsoleTypeUnavailable(console_type=console_type)
-
-        if console_type != 'rdp-html5':
-            raise exception.ConsoleTypeInvalid(console_type=console_type)
-
-        try:
-            # Retrieve connect info from driver, and then decorate with our
-            # access info token
-            console = self.driver.get_rdp_console(context, instance)
-            console_auth = objects.ConsoleAuthToken(
-                context=context,
-                console_type=console_type,
-                host=console.host,
-                port=console.port,
-                internal_access_path=console.internal_access_path,
-                instance_uuid=instance.uuid,
-                access_url_base=CONF.rdp.html5_proxy_base_url,
-            )
-            console_auth.authorize(CONF.consoleauth.token_ttl)
-            connect_info = console.get_connection_info(
-                console_auth.token, console_auth.access_url)
-
-        except exception.InstanceNotFound:
-            if instance.vm_state != vm_states.BUILDING:
-                raise
-            raise exception.InstanceNotReady(instance_id=instance.uuid)
-
-        return connect_info
+        msg = ("RDP console is applicable for HyperV virt driver only which "
+               "has been removed in Nova 29.0.0")
+        raise NotImplementedError(msg)
 
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
@@ -7474,8 +7449,6 @@ class ComputeManager(manager.Manager):
     def validate_console_port(self, ctxt, instance, port, console_type):
         if console_type == "spice-html5":
             console_info = self.driver.get_spice_console(ctxt, instance)
-        elif console_type == "rdp-html5":
-            console_info = self.driver.get_rdp_console(ctxt, instance)
         elif console_type == "serial":
             console_info = self.driver.get_serial_console(ctxt, instance)
         elif console_type == "webmks":
@@ -9478,7 +9451,7 @@ class ComputeManager(manager.Manager):
     def _consoles_enabled(self):
         """Returns whether a console is enable."""
         return (CONF.vnc.enabled or CONF.spice.enabled or
-                CONF.rdp.enabled or CONF.serial_console.enabled or
+                CONF.serial_console.enabled or
                 CONF.mks.enabled)
 
     def _clean_instance_console_tokens(self, ctxt, instance):

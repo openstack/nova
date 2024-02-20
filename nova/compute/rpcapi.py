@@ -837,13 +837,6 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'get_spice_console',
                           instance=instance, console_type=console_type)
 
-    def get_rdp_console(self, ctxt, instance, console_type):
-        version = self._ver(ctxt, '5.0')
-        cctxt = self.router.client(ctxt).prepare(
-                server=_compute_host(None, instance), version=version)
-        return cctxt.call(ctxt, 'get_rdp_console',
-                          instance=instance, console_type=console_type)
-
     def get_mks_console(self, ctxt, instance, console_type):
         version = self._ver(ctxt, '5.0')
         cctxt = self.router.client(ctxt).prepare(

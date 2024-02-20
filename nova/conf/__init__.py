@@ -49,7 +49,6 @@ from nova.conf import paths
 from nova.conf import pci
 from nova.conf import placement
 from nova.conf import quota
-from nova.conf import rdp
 from nova.conf import rpc
 from nova.conf import scheduler
 from nova.conf import serial_console
@@ -97,7 +96,6 @@ paths.register_opts(CONF)
 pci.register_opts(CONF)
 placement.register_opts(CONF)
 quota.register_opts(CONF)
-rdp.register_opts(CONF)
 rpc.register_opts(CONF)
 scheduler.register_opts(CONF)
 serial_console.register_opts(CONF)

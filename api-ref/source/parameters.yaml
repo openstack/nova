@@ -5956,15 +5956,15 @@ remote_console:
 remote_console_protocol:
   description: |
     The protocol of remote console. The valid values are ``vnc``, ``spice``,
-    ``rdp``, ``serial`` and ``mks``. The protocol ``mks`` is added since
-    Microversion ``2.8``.
+    ``serial`` and ``mks``. The protocol ``mks`` is added since Microversion
+    ``2.8``.
   in: body
   required: true
   type: string
 remote_console_type:
   description: |
     The type of remote console. The valid values are ``novnc``,
-    ``rdp-html5``, ``spice-html5``, ``serial``, and ``webmks``. The type
+    ``spice-html5``, ``serial``, and ``webmks``. The type
     ``webmks`` is added since Microversion ``2.8``.
   in: body
   required: true
