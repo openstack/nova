@@ -26,6 +26,7 @@ from nova.compute import power_state
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.virt import block_device
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
@@ -703,21 +704,10 @@ class VMwareVolumeOps(object):
             if state != power_state.SHUTDOWN:
                 raise exception.Invalid(_('%s does not support disk '
                                           'hotplug.') % adapter_type)
-        cf = self._session.vim.client.factory
-        fcd_id = data['id']
-        ds_ref_val = data['ds_ref_val']
-        disk_id = vm_util._create_fcd_id_obj(cf, fcd_id)
-        vstorage_mgr = self._session.vim.service_content.vStorageObjectManager
-        fcd_obj = self._session.invoke_api(
-            self._session.vim,
-            'RetrieveVStorageObject',
-            vstorage_mgr,
-            id=disk_id,
-            datastore=ds_ref_val)
-        vmdk_path = fcd_obj.config.backing.filePath
-        hw_devs = vm_util.get_hardware_devices(self._session, vm_ref)
-        device = vm_util.get_vmdk_volume_disk(hw_devs, vmdk_path)
-        volume_uuid = fcd_obj.config.name.replace('volume-', '')
+        volume_uuid = block_device.get_volume_id(connection_info)
+        # Copy the volume_id to data, as we need this for device search
+        data['volume_id'] = volume_uuid
+        device = self._get_vmdk_backed_disk_device(vm_ref, data)
         self.detach_disk_from_vm(vm_ref, instance, device,
                                  volume_uuid=volume_uuid)
 
@@ -831,6 +821,9 @@ class VMwareVolumeOps(object):
         for disk in block_device_mapping:
             connection_info = disk["connection_info"]
             try:
+                driver_type = connection_info['driver_volume_type']
+                if driver_type == constants.DISK_FORMAT_FCD:
+                    continue
                 data = connection_info["data"]
                 volume_ref = self._get_volume_ref(data)
                 destroy_task = session._call_method(session.vim,

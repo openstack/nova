@@ -435,17 +435,17 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(vm_util, 'get_vm_ref')
     @mock.patch.object(vm_util, 'get_vm_state')
-    @mock.patch.object(vm_util, 'get_vmdk_volume_disk')
+    @mock.patch.object(vm_util, 'get_vmdk_backed_disk_device')
     @mock.patch.object(vm_util, '_create_fcd_id_obj')
     @mock.patch.object(vm_util, 'detach_fcd')
     def _test__detach_volume_fcd(
-            self, detach_fcd, _create_fcd_id_obj, get_vmdk_volume_disk,
+            self, detach_fcd, _create_fcd_id_obj, get_vmdk_backed_disk_device,
             get_vm_state, get_vm_ref, adapter_type=constants.ADAPTER_TYPE_IDE,
             powered_off=True):
         vm_ref = mock.sentinel.vm_ref
         get_vm_ref.return_value = vm_ref
         _create_fcd_id_obj.return_value = mock.sentinel.disk_id
-        get_vmdk_volume_disk.return_value = mock.sentinel.device
+        get_vmdk_backed_disk_device.return_value = mock.sentinel.device
 
         if adapter_type == constants.ADAPTER_TYPE_IDE:
             get_vm_state.return_value = (
@@ -455,7 +455,9 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         ds_ref_val = mock.sentinel.ds_ref_val
         connection_info = {'data': {'id': fcd_id,
                                     'ds_ref_val': ds_ref_val,
-                                    'adapter_type': adapter_type}}
+                                    'adapter_type': adapter_type},
+                           'volume_id': 'volume-fake-id',
+                           'serial': 'volume-fake-id'}
         instance = mock.sentinel.instance
 
         if adapter_type == constants.ADAPTER_TYPE_IDE and not powered_off:
@@ -468,19 +470,12 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             with mock.patch.object(self._volumeops, '_session') as session, \
                     mock.patch.object(self._volumeops, 'detach_disk_from_vm') \
                         as detach_disk_from_vm:
-                fcd_obj = mock.Mock()
-                fcd_obj.config.backing.filePath = mock.sentinel.filepath
-                fcd_obj.config.name = f"volume-{uuids.volume}"
-                session.invoke_api.return_value = fcd_obj
-
+                disk_to_detach = mock.sentinel.device
+                session.invoke_api.return_value = [disk_to_detach]
                 self._volumeops._detach_volume_fcd(connection_info, instance)
                 detach_fcd.assert_not_called()
-                session.invoke_api.assert_called_once_with(session.vim,
-                    'RetrieveVStorageObject',
-                    session.vim.service_content.vStorageObjectManager,
-                    id=mock.sentinel.disk_id, datastore=ds_ref_val)
                 detach_disk_from_vm.assert_called_once_with(vm_ref, instance,
-                    mock.sentinel.device, volume_uuid=uuids.volume)
+                    mock.sentinel.device, volume_uuid='volume-fake-id')
 
     @ddt.data(
         constants.ADAPTER_TYPE_BUSLOGIC, constants.ADAPTER_TYPE_IDE,
