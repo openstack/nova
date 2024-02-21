@@ -147,7 +147,26 @@ class PowerManagementTests(PowerManagementTestsBase):
         self.assertTrue(
             numa_topology.cpu_pinning.isdisjoint(
                 numa_topology.cpuset_reserved))
-        # FIXME(artom) We've not actually powered on the emulator threads core
+        self._assert_cpu_set_state(numa_topology.cpuset_reserved,
+                                   expected='online')
+
+    def test_start_stop_server_with_emulator_threads_isolate(self):
+        server = self._create_server(
+            flavor_id=self.isolate_flavor_id,
+            expected_state='ACTIVE')
+        # Let's verify that the pinned CPUs are now online
+        self._assert_server_cpus_state(server, expected='online')
+        instance = objects.Instance.get_by_uuid(self.ctxt, server['id'])
+        numa_topology = instance.numa_topology
+        # Make sure we've pinned the emulator threads to a separate core
+        self.assertTrue(numa_topology.cpuset_reserved)
+        self.assertTrue(
+            numa_topology.cpu_pinning.isdisjoint(
+                numa_topology.cpuset_reserved))
+        self._assert_cpu_set_state(numa_topology.cpuset_reserved,
+                                   expected='online')
+        # Stop and assert we've powered down the emulator threads core as well
+        server = self._stop_server(server)
         self._assert_cpu_set_state(numa_topology.cpuset_reserved,
                                    expected='offline')
 
