@@ -82,7 +82,8 @@ def power_up(instance: objects.Instance) -> None:
         return
 
     cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
-    pcpus = instance.numa_topology.cpu_pinning
+    pcpus = instance.numa_topology.cpu_pinning.union(
+        instance.numa_topology.cpuset_reserved)
     powered_up = set()
     for pcpu in pcpus:
         if pcpu in cpu_dedicated_set:
@@ -102,7 +103,8 @@ def power_down(instance: objects.Instance) -> None:
         return
 
     cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
-    pcpus = instance.numa_topology.cpu_pinning
+    pcpus = instance.numa_topology.cpu_pinning.union(
+        instance.numa_topology.cpuset_reserved)
     powered_down = set()
     for pcpu in pcpus:
         if pcpu in cpu_dedicated_set:
