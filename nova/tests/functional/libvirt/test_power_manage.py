@@ -59,12 +59,15 @@ class PowerManagementTestsBase(base.ServersTestBase):
             'hw:cpu_policy': 'dedicated',
             'hw:cpu_thread_policy': 'prefer',
         }
+        self.isolate_extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'hw:cpu_thread_policy': 'prefer',
+            'hw:emulator_threads_policy': 'isolate',
+        }
         self.pcpu_flavor_id = self._create_flavor(
             vcpu=4, extra_spec=self.extra_spec)
         self.isolate_flavor_id = self._create_flavor(
-            vcpu=4, extra_spec={'hw:cpu_policy': 'dedicated',
-                                'hw:cpu_thread_policy': 'prefer',
-                                'hw:emulator_threads_policy': 'isolate'})
+            vcpu=4, extra_spec=self.isolate_extra_spec)
 
     def _assert_server_cpus_state(self, server, expected='online'):
         inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
@@ -117,8 +120,8 @@ class CoresStub(object):
         return self.cores[i]
 
 
-class PowerManagementLiveMigrationTests(base.LibvirtMigrationMixin,
-                                        PowerManagementTestsBase):
+class PowerManagementLiveMigrationTestsBase(base.LibvirtMigrationMixin,
+                                            PowerManagementTestsBase):
 
     def setUp(self):
         super().setUp()
@@ -129,10 +132,13 @@ class PowerManagementLiveMigrationTests(base.LibvirtMigrationMixin,
         self.flags(vcpu_pin_set=None)
         self.flags(cpu_power_management=True, group='libvirt')
 
-        # NOTE(artom) Fill up all dedicated CPUs. This makes the assertions
-        # further down easier.
+        # NOTE(artom) Fill up all dedicated CPUs (either with only the
+        # instance's CPUs, or instance CPUs + 1 emulator thread). This makes
+        # the assertions further down easier.
         self.pcpu_flavor_id = self._create_flavor(
             vcpu=9, extra_spec=self.extra_spec)
+        self.isolate_flavor_id = self._create_flavor(
+            vcpu=8, extra_spec=self.isolate_extra_spec)
 
         self.start_compute(
             host_info=fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
@@ -156,14 +162,61 @@ class PowerManagementLiveMigrationTests(base.LibvirtMigrationMixin,
         for i in cores:
             self.assertEqual(online, host.driver.cpu_api.core(i).online)
 
+
+class PowerManagementLiveMigrationTests(PowerManagementLiveMigrationTestsBase):
+
     def test_live_migrate_server(self):
         self.server = self._create_server(
             flavor_id=self.pcpu_flavor_id,
             expected_state='ACTIVE', host='src')
         server = self._live_migrate(self.server)
         self.assertEqual('dest', server['OS-EXT-SRV-ATTR:host'])
-        # FIXME(artom) We've not powered up the dest cores, and left the src
-        # cores powered on.
+        # We've powered down the source cores, and powered up the destination
+        # ones.
+        self.assert_cores(self.src, range(1, 10), online=False)
+        self.assert_cores(self.dest, range(1, 10), online=True)
+
+    def test_live_migrate_server_with_emulator_threads_isolate(self):
+        self.server = self._create_server(
+            flavor_id=self.isolate_flavor_id,
+            expected_state='ACTIVE', host='src')
+        server = self._live_migrate(self.server)
+        self.assertEqual('dest', server['OS-EXT-SRV-ATTR:host'])
+        # We're using a flavor with 8 CPUs, but with the extra dedicated CPU
+        # for the emulator threads, we expect all 9 cores to be powered up on
+        # the dest, and down on the source.
+        self.assert_cores(self.src, range(1, 10), online=False)
+        self.assert_cores(self.dest, range(1, 10), online=True)
+
+
+class PowerManagementLiveMigrationRollbackTests(
+    PowerManagementLiveMigrationTestsBase):
+
+    def _migrate_stub(self, domain, destination, params, flags):
+        conn = self.src.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        dom.fail_job()
+
+    def test_live_migrate_server_rollback(self):
+        self.server = self._create_server(
+            flavor_id=self.pcpu_flavor_id,
+            expected_state='ACTIVE', host='src')
+        server = self._live_migrate(self.server,
+                                    migration_expected_state='failed')
+        self.assertEqual('src', server['OS-EXT-SRV-ATTR:host'])
+        self.assert_cores(self.src, range(1, 10), online=True)
+        self.assert_cores(self.dest, range(1, 10), online=False)
+
+    def test_live_migrate_server_with_emulator_threads_isolate_rollback(self):
+        self.server = self._create_server(
+            flavor_id=self.isolate_flavor_id,
+            expected_state='ACTIVE', host='src')
+        server = self._live_migrate(self.server,
+                                    migration_expected_state='failed')
+        self.assertEqual('src', server['OS-EXT-SRV-ATTR:host'])
+        # We're using a flavor with 8 CPUs, but with the extra dedicated CPU
+        # for the emulator threads, we expect all 9 cores to be powered back
+        # down on the dest, and up on the source.
         self.assert_cores(self.src, range(1, 10), online=True)
         self.assert_cores(self.dest, range(1, 10), online=False)
 

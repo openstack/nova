@@ -9188,12 +9188,16 @@ class ComputeManager(manager.Manager):
                                    objects.LibvirtVPMEMDevice)):
                         has_vpmem = True
                         break
+            power_management_possible = (
+                'dst_numa_info' in migrate_data and
+                migrate_data.dst_numa_info is not None)
             # No instance booting at source host, but instance dir
             # must be deleted for preparing next block migration
             # must be deleted for preparing next live migration w/o shared
             # storage
             # vpmem must be cleaned
-            do_cleanup = not migrate_data.is_shared_instance_path or has_vpmem
+            do_cleanup = (not migrate_data.is_shared_instance_path or
+                          has_vpmem or power_management_possible)
             destroy_disks = not migrate_data.is_shared_block_storage
         elif isinstance(migrate_data, migrate_data_obj.HyperVLiveMigrateData):
             # NOTE(claudiub): We need to cleanup any zombie Planned VM.
