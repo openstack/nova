@@ -4331,15 +4331,17 @@ class VMwareVMOps(object):
 
             rule_members_by_name = {}
             if sg.policy == 'soft-anti-affinity':
-                # we chunk by available hosts, because we can spawn only as
-                # many VMs as there are hosts as VMware doesn't provide any
-                # "soft" anti-affinity except for VM-Host relations
+                # we chunk by available hosts - 1, because we can spawn only as
+                # many VMs as there are hosts as VMWare doesn't provide any
+                # "soft" anti-affinity except for VM-Host relations, while we
+                # still allow 1 host to go into maintenance mode.
                 # Only hosts have an 'available' field - the cluster doesn't.
                 # Therefore, we don't have to filter out the aggregated cluster
                 # stats explicitly.
                 member_chunk_size = len(
                     [stat for stat in self._vc_state.get_host_stats().values()
                      if stat.get('available', False)])
+                member_chunk_size = max(member_chunk_size - 1, 1)
 
                 # to generate stable chunks we have to sort the expected
                 # members. we also need a list to be able to access parts of
