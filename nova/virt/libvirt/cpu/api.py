@@ -91,19 +91,14 @@ class API(object):
         """
         return Core(i)
 
-    def power_up(self, instance: objects.Instance) -> None:
+    def _power_up(self, cpus: ty.Set[int]) -> None:
         if not CONF.libvirt.cpu_power_management:
             return
-        if instance.numa_topology is None:
-            return
-
         cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
-        pcpus = instance.numa_topology.cpu_pinning.union(
-            instance.numa_topology.cpuset_reserved)
         powered_up = set()
-        for pcpu in pcpus:
-            if pcpu in cpu_dedicated_set:
-                pcpu = self.core(pcpu)
+        for cpu in cpus:
+            if cpu in cpu_dedicated_set:
+                pcpu = self.core(cpu)
                 if CONF.libvirt.cpu_power_management_strategy == 'cpu_state':
                     pcpu.online = True
                 else:
@@ -111,25 +106,54 @@ class API(object):
                 powered_up.add(str(pcpu))
         LOG.debug("Cores powered up : %s", powered_up)
 
-    def power_down(self, instance: objects.Instance) -> None:
-        if not CONF.libvirt.cpu_power_management:
-            return
+    def power_up_for_instance(self, instance: objects.Instance) -> None:
         if instance.numa_topology is None:
             return
-
-        cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
         pcpus = instance.numa_topology.cpu_pinning.union(
             instance.numa_topology.cpuset_reserved)
+        self._power_up(pcpus)
+
+    def power_up_for_migration(
+        self, dst_numa_info: objects.LibvirtLiveMigrateNUMAInfo
+    ) -> None:
+        pcpus = set()
+        if 'emulator_pins' in dst_numa_info and dst_numa_info.emulator_pins:
+            pcpus = dst_numa_info.emulator_pins
+        for pins in dst_numa_info.cpu_pins.values():
+            pcpus = pcpus.union(pins)
+        self._power_up(pcpus)
+
+    def _power_down(self, cpus: ty.Set[int]) -> None:
+        if not CONF.libvirt.cpu_power_management:
+            return
+        cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
         powered_down = set()
-        for pcpu in pcpus:
-            if pcpu in cpu_dedicated_set:
-                pcpu = self.core(pcpu)
+        for cpu in cpus:
+            if cpu in cpu_dedicated_set:
+                pcpu = self.core(cpu)
                 if CONF.libvirt.cpu_power_management_strategy == 'cpu_state':
                     pcpu.online = False
                 else:
                     pcpu.set_low_governor()
                 powered_down.add(str(pcpu))
         LOG.debug("Cores powered down : %s", powered_down)
+
+    def power_down_for_migration(
+        self, dst_numa_info: objects.LibvirtLiveMigrateNUMAInfo
+    ) -> None:
+        pcpus = set()
+        if 'emulator_pins' in dst_numa_info and dst_numa_info.emulator_pins:
+            pcpus = dst_numa_info.emulator_pins
+        for pins in dst_numa_info.cpu_pins.values():
+            pcpus = pcpus.union(pins)
+        self._power_down(pcpus)
+
+    def power_down_for_instance(self, instance: objects.Instance) -> None:
+        if instance.numa_topology is None:
+            return
+        pcpus = instance.numa_topology.cpu_pinning.union(
+            instance.numa_topology.cpuset_reserved)
+        self._power_down(pcpus)
 
     def power_down_all_dedicated_cpus(self) -> None:
         if not CONF.libvirt.cpu_power_management:
