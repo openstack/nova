@@ -540,6 +540,34 @@ class VGPULiveMigrationTests(base.LibvirtMigrationMixin, VGPUTestBase):
                       '' % server['id'],
                       log_out)
 
+    def test_live_migration_fails_due_to_non_supported_mdev_types(self):
+        self.flags(
+            enabled_mdev_types=[fakelibvirt.NVIDIA_11_VGPU_TYPE],
+            group='devices')
+        self.src = self.restart_compute_service(self.src.host)
+        self.flags(
+            enabled_mdev_types=[fakelibvirt.NVIDIA_12_VGPU_TYPE],
+            group='devices')
+        self.dest = self.restart_compute_service(self.dest.host)
+        # Force a periodic run in order to make sure all service resources
+        # are changed before we call create_service()
+        self._run_periodics()
+        self.server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor, networks='auto', host=self.src.host)
+        # now live migrate that server
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._live_migrate,
+            self.server, 'completed')
+        self.assertEqual(500, ex.response.status_code)
+        self.assertIn('NoValidHost', str(ex))
+        log_out = self.stdlog.logger.output
+        # The log is fully JSON-serialized, so just check the phrase.
+        self.assertIn('Unable to migrate %s: ' % self.server['id'], log_out)
+        self.assertIn('Source mdev types ', log_out)
+        self.assertIn('are not supported by this compute : ', log_out)
+
     def test_live_migrate_server(self):
         self.server = self._create_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',

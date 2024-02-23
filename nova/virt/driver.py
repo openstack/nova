@@ -1312,6 +1312,22 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def check_source_migrate_data_at_dest(self, ctxt, instance, migrate_data,
+                                         migration, limits, allocs):
+        """Runs the last checks on the destination after the source returned
+        the migrate_data.
+
+        :param ctxt: security context
+        :param instance: nova.db.main.models.Instance
+        :param migrate_data: result of check_can_live_migrate_source
+        :param migration: The Migration object for this live migration
+        :param limits: The SchedulerLimits object for this live migration
+        :param allocs: Allocations for this instance
+        :returns: a LibvirtLiveMigrateData object
+        :raises: MigrationPreCheckError
+        """
+        return migrate_data
+
     def post_claim_migrate_data(self, context, instance, migrate_data, claim):
         """Returns migrate_data augmented with any information obtained from
         the claim. Intended to run on the destination of a live-migration

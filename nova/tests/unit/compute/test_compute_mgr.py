@@ -3576,16 +3576,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               '_update_migrate_vifs_profile_with_pci'),
             mock.patch.object(self.compute, '_dest_can_numa_live_migrate'),
             mock.patch('nova.compute.manager.LOG'),
+            mock.patch.object(self.compute.driver,
+                              'check_source_migrate_data_at_dest'),
         ) as (mock_lm_claim, mock_get, mock_check_dest, mock_check_src,
               mock_check_clean, mock_fault_create, mock_event,
               mock_create_mig_vif, mock_nw_info, mock_claim_pci,
-              mock_update_mig_vif, mock_dest_can_numa, mock_log):
+              mock_update_mig_vif, mock_dest_can_numa, mock_log,
+              mock_post_check):
             mock_get.side_effect = (src_info, dest_info)
             mock_check_dest.return_value = dest_check_data
             mock_dest_can_numa.return_value = dest_check_data
             post_claim_md = objects.LibvirtLiveMigrateData(
                 dst_numa_info=objects.LibvirtLiveMigrateNUMAInfo())
             mock_lm_claim.return_value = post_claim_md
+
+            # In the case of a NUMA related claim, migrate_data is updated
+            post_claim_mig_data = post_claim_md if src_numa_lm else mig_data
+            mock_post_check.return_value = post_claim_mig_data
 
             if do_raise:
                 mock_check_src.side_effect = test.TestingException
@@ -3631,6 +3638,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock_event.assert_called_once_with(
                 self.context, 'compute_check_can_live_migrate_destination',
                 CONF.host, instance.uuid, graceful_exit=False)
+            mock_post_check.assert_called_once_with(
+                self.context, instance, post_claim_mig_data, migration, limits,
+                None)
             return result
 
     @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
