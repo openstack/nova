@@ -1103,18 +1103,22 @@ class QuotaEngine(object):
 class SAPQuotaEngine(QuotaEngine):
     """SAP specific quota engine
 
-    We extend the resources on startup based on information from the "flavors"
-    quota-class.
+    We extend the resources dynamically on startup based on information in
+    flavors' extra_specs. Through that, we create instance-type quota of the
+    form "instances_<flavor name>".
     """
     def __init__(self, quota_driver=None, resources=None):
-        self._original_resources = None
+        self._original_resources = {}
         self.__resources = None
         super().__init__(resources=resources, quota_driver=quota_driver)
 
     @property
     def _resources(self):
         if self.__resources is None:
-            self.update_resources_from_quota_classes()
+            resources = {}
+            self.update_resources_from_flavors(resources)
+            resources.update(self._original_resources)
+            self.__resources = resources
         return self.__resources
 
     @_resources.setter
@@ -1122,28 +1126,23 @@ class SAPQuotaEngine(QuotaEngine):
         self._original_resources = resources
         self.__resources = None
 
-    def update_resources_from_quota_classes(self):
-        """Update the __resources dict to contain all current resources
+    def update_resources_from_flavors(self, resources):
+        """Update the resources dict to contain flavor based resources
 
-        This should be called whenever there's a new dynamic resource added
-        i.e. a resource in the "flavors" quota class.
+        Flavors can contain properties in their extra_specs which define that
+        we need custom quota resources for them e.g. separate instances quota.
         """
-        # NOTE(jkulik): We cannot call this method when getting an API request
-        # to update a quota-class, because then only one of the nova-api pods
-        # would be updated and the others would not - as only a single pod is
-        # handling the request.
-        flavor_quotas = objects.Quotas.get_all_class_by_name(
-            nova_context.get_admin_context(), 'flavors')
-        del flavor_quotas['class_name']
+        additional_resources = set()
+        ctx = nova_context.get_admin_context()
+        for flavor in objects.FlavorList.get_all(ctx):
+            extra_specs = flavor['extra_specs']
 
-        resources = {}
-        for key, value in flavor_quotas.items():
-            resources[key] = SAPCustomResource(key,
-                _instances_cores_ram_count, default=value)
+            if extra_specs.get('quota:separate') == 'true':
+                additional_resources.add(f"instances_{flavor.name}")
 
-        resources.update(self._original_resources)
-
-        self.__resources = resources
+        for resource_name in additional_resources:
+            resources[resource_name] = SAPCustomResource(resource_name,
+                _instances_cores_ram_count, default=0)
 
 
 @api_db_api.context_manager.reader
