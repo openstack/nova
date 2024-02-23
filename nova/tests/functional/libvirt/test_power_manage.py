@@ -61,6 +61,10 @@ class PowerManagementTestsBase(base.ServersTestBase):
         }
         self.pcpu_flavor_id = self._create_flavor(
             vcpu=4, extra_spec=self.extra_spec)
+        self.isolate_flavor_id = self._create_flavor(
+            vcpu=4, extra_spec={'hw:cpu_policy': 'dedicated',
+                                'hw:cpu_thread_policy': 'prefer',
+                                'hw:emulator_threads_policy': 'isolate'})
 
     def _assert_server_cpus_state(self, server, expected='online'):
         inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
@@ -129,6 +133,23 @@ class PowerManagementTests(PowerManagementTestsBase):
         cpu_dedicated_set = hardware.get_cpu_dedicated_set()
         unused_cpus = cpu_dedicated_set - instance_pcpus
         self._assert_cpu_set_state(unused_cpus, expected='offline')
+
+    def test_create_server_with_emulator_threads_isolate(self):
+        server = self._create_server(
+            flavor_id=self.isolate_flavor_id,
+            expected_state='ACTIVE')
+        # Let's verify that the pinned CPUs are now online
+        self._assert_server_cpus_state(server, expected='online')
+        instance = objects.Instance.get_by_uuid(self.ctxt, server['id'])
+        numa_topology = instance.numa_topology
+        # Make sure we've pinned the emulator threads to a separate core
+        self.assertTrue(numa_topology.cpuset_reserved)
+        self.assertTrue(
+            numa_topology.cpu_pinning.isdisjoint(
+                numa_topology.cpuset_reserved))
+        # FIXME(artom) We've not actually powered on the emulator threads core
+        self._assert_cpu_set_state(numa_topology.cpuset_reserved,
+                                   expected='offline')
 
     def test_stop_start_server(self):
         server = self._create_server(
