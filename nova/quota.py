@@ -22,6 +22,7 @@ from oslo_log import log as logging
 from oslo_utils import importutils
 from sqlalchemy import sql
 
+from nova import cache_utils as cache
 import nova.conf
 from nova import context as nova_context
 from nova.db.api import api as api_db_api
@@ -1106,25 +1107,34 @@ class SAPQuotaEngine(QuotaEngine):
     We extend the resources dynamically on startup based on information in
     flavors' extra_specs. Through that, we create instance-type quota of the
     form "instances_<flavor name>".
+
+    Since an update to the DB should update our view, we have to re-build the
+    resources regularly. Therefore, we use a cache. Depending on the cache
+    backend, the resources can be different in different processes until their
+    individual caches expire.
     """
+    _CACHE_KEY = 'quota:resources'
+
     def __init__(self, quota_driver=None, resources=None):
         self._original_resources = {}
-        self.__resources = None
+        expiration_time = CONF.quota.sap_resources_cache_time
+        self._cache = cache.get_client(expiration_time=expiration_time)
         super().__init__(resources=resources, quota_driver=quota_driver)
 
     @property
     def _resources(self):
-        if self.__resources is None:
+        resources = self._cache.get(self._CACHE_KEY)
+        if resources is None:
             resources = {}
             self.update_resources_from_flavors(resources)
             resources.update(self._original_resources)
-            self.__resources = resources
-        return self.__resources
+            self._cache.set(self._CACHE_KEY, resources)
+        return resources
 
     @_resources.setter
     def _resources(self, resources):
         self._original_resources = resources
-        self.__resources = None
+        self._cache.delete(self._CACHE_KEY)
 
     def update_resources_from_flavors(self, resources):
         """Update the resources dict to contain flavor based resources
