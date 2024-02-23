@@ -239,6 +239,10 @@ ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 
 VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
+# Minimum versions supporting mdev live-migration.
+MIN_MDEV_LIVEMIG_LIBVIRT_VERSION = (8, 6, 0)
+MIN_MDEV_LIVEMIG_QEMU_VERSION = (8, 1, 0)
+
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
 # Maxphysaddr minimal support version.
@@ -8394,6 +8398,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 mediated_devices.append(device)
         return mediated_devices
 
+    def _get_mdev_types_from_uuids(self, mdev_uuids):
+        """Returns a dict of mdevs and their type from a list of mediated
+        device UUIDs. If no mdevs are actually using those UUIDs, it returns an
+        empty dict.
+
+        :param mdev_uuids: List of existing mediated device UUIDs.
+        :returns: dict where key is the mdev UUID and the value is its type.
+        """
+        host_mdevs = self._get_mediated_devices()
+        inst_dev_infos = filter(lambda dev: dev['uuid'] in mdev_uuids,
+                                host_mdevs)
+        return {mdev['uuid']: mdev['type'] for mdev in inst_dev_infos}
+
     def _get_all_assigned_mediated_devices(self, instance=None):
         """Lookup all instances from the host and return all the mediated
         devices that are assigned to a guest.
@@ -9745,6 +9762,11 @@ class LibvirtDriver(driver.ComputeDriver):
             for vif in data.vifs:
                 vif.supports_os_vif_delegation = True
 
+        # Just flag the fact we can live-migrate mdevs even if we don't use
+        # them so the source will know we can use this compute.
+        if self._host_can_support_mdev_live_migration():
+            data.dst_supports_mdev_live_migration = True
+
         return data
 
     def post_claim_migrate_data(self, context, instance, migrate_data, claim):
@@ -9924,7 +9946,55 @@ class LibvirtDriver(driver.ComputeDriver):
         if instance.numa_topology:
             dest_check_data.src_supports_numa_live_migration = True
 
+        # If we have mediated devices to live-migrate, just verify we can
+        # support them.
+        instance_mdevs = self._get_all_assigned_mediated_devices(instance)
+        if instance_mdevs:
+            # This can raise a MigrationPreCheckError if the target is too old
+            # or if the current QEMU or libvirt versions from this compute are
+            # too old (only if the current instance uses mdevs)
+            self._assert_source_can_live_migrate_mdevs(instance,
+                                                       dest_check_data)
+            mdev_types = self._get_mdev_types_from_uuids(instance_mdevs.keys())
+            dest_check_data.source_mdev_types = mdev_types
+
         return dest_check_data
+
+    def _host_can_support_mdev_live_migration(self):
+        return self._host.has_min_version(
+            lv_ver=MIN_MDEV_LIVEMIG_LIBVIRT_VERSION,
+            hv_ver=MIN_MDEV_LIVEMIG_QEMU_VERSION,
+            hv_type=host.HV_DRIVER_QEMU,
+        )
+
+    def _assert_source_can_live_migrate_mdevs(self, instance, dest_check_data):
+        """Check if the source can live migrate the instance by looking at the
+        QEMU and libvirt versions but also at the destination object.
+
+        :param instance: nova.objects.instance.Instance object
+        :param migrate_data: nova.objects.LibvirtLiveMigrateData object
+        :raises: MigrationPreCheckError if the versions are too old or if the
+                dst_supports_mdev_live_migration sentinel is not True.
+        """
+
+        failed = ''
+        if not self._host_can_support_mdev_live_migration():
+            failed = 'source'
+        elif not ('dst_supports_mdev_live_migration' in dest_check_data and
+                  dest_check_data.dst_supports_mdev_live_migration):
+            failed = 'target'
+        if failed:
+            reason = (_('Unable to migrate %(instance_uuid)s: '
+                        'Either libvirt or QEMU version for compute service '
+                        '%(host)s are too old than the supported ones : '
+                        '(QEMU: %(qemu_v)s, libvirt: %(libv_v)s)' %
+                      {'instance_uuid': instance.uuid,
+                       'host': failed,
+                       'qemu_v': libvirt_utils.version_to_string(
+                           MIN_MDEV_LIVEMIG_QEMU_VERSION),
+                       'libv_v': libvirt_utils.version_to_string(
+                           MIN_MDEV_LIVEMIG_LIBVIRT_VERSION)}))
+            raise exception.MigrationPreCheckError(reason=reason)
 
     def _is_shared_block_storage(self, instance, dest_check_data,
                                  block_device_info=None):
