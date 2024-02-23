@@ -29,10 +29,12 @@ fake_obj_numa_topology = objects.InstanceNUMATopology(
     instance_uuid=fake_instance_uuid,
     cells=[
         objects.InstanceNUMACell(
-            id=0, cpuset=set(), pcpuset=set([1, 2]), memory=512,
+            id=0, cpuset=set(), pcpuset=set([1, 2]),
+            cpuset_reserved=set([5, 6]), memory=512,
             pagesize=2048),
         objects.InstanceNUMACell(
-            id=1, cpuset=set(), pcpuset=set([3, 4]), memory=512,
+            id=1, cpuset=set(), pcpuset=set([3, 4]),
+            cpuset_reserved=set([7, 8]), memory=512,
             pagesize=2048),
     ])
 
@@ -154,6 +156,10 @@ class _TestInstanceNUMACell(object):
 
         topo_obj.cells[1].pin_vcpus((3, 0), (4, 1))
         self.assertEqual(set([0, 1, 10, 11]), topo_obj.cpu_pinning)
+
+    def test_cpuset_reserved(self):
+        topo_obj = get_fake_obj_numa_topology(self.context)
+        self.assertEqual(set([5, 6, 7, 8]), topo_obj.cpuset_reserved)
 
     def test_clear_host_pinning(self):
         topo_obj = get_fake_obj_numa_topology(self.context)
