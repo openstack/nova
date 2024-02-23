@@ -184,18 +184,19 @@ class DbQuotaDriver(object):
             # such as AbsoluteResources.
             if not isinstance(resource, CountableResource):
                 continue
-            if resource.name in usages or 'instances' in usages and \
-                    resource.name.startswith('instances_'):
+            if resource.name in usages or \
+                    isinstance(resource, SAPCustomResource) and \
+                    resource.usage_check_key in usages:
                 # This is needed because for any of the resources:
                 # ('instances', 'cores', 'ram'), they are counted at the same
                 # time for efficiency (query the instances table once instead
                 # of multiple times). So, a count of any one of them contains
                 # counts for the others and we can avoid re-counting things.
-                # NOTE(jkulik): If 'instances' is in there, our resources for
-                # baremetal flavors, which all start with `instances_` also
-                # have to be in there. If they are not in there, the
-                # user/project has no instance with that resource and we don't
-                # list it. Still, we don't have to re-compute the usages.
+                # NOTE(jkulik): SAP custom resources do not necessarily add
+                # their key to the usages if the user/project does not use any
+                # of them. Therefore, we check for the pre-defined key that
+                # should always be there if our usage-reporting function was
+                # called already.
                 continue
             if resource.name in ('key_pairs', 'server_group_members'):
                 # These per user resources are special cases whose usages
@@ -892,6 +893,18 @@ class CountableResource(AbsoluteResource):
         self.count_as_dict = count_as_dict
 
 
+class SAPCustomResource(CountableResource):
+    """Extend CountableResource to check already included usages
+
+    We can use `usage_check_key` to see if we have to run the associated
+    function to update the usage report, because some of our custom resources
+    only add a key if the project/user uses any of these resources.
+    """
+    def __init__(self, *args, usage_check_key='instances', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usage_check_key = usage_check_key
+
+
 class QuotaEngine(object):
     """Represent the set of recognized quotas."""
 
@@ -1125,7 +1138,7 @@ class SAPQuotaEngine(QuotaEngine):
 
         resources = {}
         for key, value in flavor_quotas.items():
-            resources[key] = CountableResource(key,
+            resources[key] = SAPCustomResource(key,
                 _instances_cores_ram_count, default=value)
 
         resources.update(self._original_resources)
