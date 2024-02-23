@@ -904,10 +904,9 @@ class QuotaEngine(object):
         :param resources: iterable of Resource objects
         """
         resources = resources or []
-        self._original_resources = {
+        self._resources = {
             resource.name: resource for resource in resources
         }
-        self._resources = None
         # NOTE(mriedem): quota_driver is ever only supplied in tests with a
         # fake driver.
         self.__driver = quota_driver
@@ -925,7 +924,7 @@ class QuotaEngine(object):
         :param context: The request context, for access checks.
         """
 
-        return self._driver.get_defaults(context, self.resources)
+        return self._driver.get_defaults(context, self._resources)
 
     def get_class_quotas(self, context, quota_class):
         """Retrieve the quotas for the given quota class.
@@ -935,7 +934,7 @@ class QuotaEngine(object):
                             quotas for.
         """
 
-        return self._driver.get_class_quotas(context, self.resources,
+        return self._driver.get_class_quotas(context, self._resources,
                                              quota_class)
 
     def get_user_quotas(self, context, project_id, user_id, quota_class=None,
@@ -951,7 +950,7 @@ class QuotaEngine(object):
         :param usages: If True, the current counts will also be returned.
         """
 
-        return self._driver.get_user_quotas(context, self.resources,
+        return self._driver.get_user_quotas(context, self._resources,
                                             project_id, user_id,
                                             quota_class=quota_class,
                                             usages=usages)
@@ -970,7 +969,7 @@ class QuotaEngine(object):
                         will be returned.
         """
 
-        return self._driver.get_project_quotas(context, self.resources,
+        return self._driver.get_project_quotas(context, self._resources,
                                                project_id,
                                                quota_class=quota_class,
                                                usages=usages)
@@ -983,7 +982,7 @@ class QuotaEngine(object):
         :param project_id: The ID of the project to return quotas for.
         :param user_id: The ID of the user to return quotas for.
         """
-        return self._driver.get_settable_quotas(context, self.resources,
+        return self._driver.get_settable_quotas(context, self._resources,
                                                 project_id,
                                                 user_id=user_id)
 
@@ -1006,7 +1005,7 @@ class QuotaEngine(object):
         """
 
         # Get the resource
-        res = self.resources.get(resource)
+        res = self._resources.get(resource)
         if not res or not hasattr(res, 'count_as_dict'):
             raise exception.QuotaResourceUnknown(unknown=[resource])
 
@@ -1042,7 +1041,7 @@ class QuotaEngine(object):
                         common user.
         """
 
-        return self._driver.limit_check(context, self.resources, values,
+        return self._driver.limit_check(context, self._resources, values,
                                         project_id=project_id, user_id=user_id)
 
     def limit_check_project_and_user(self, context, project_values=None,
@@ -1075,12 +1074,43 @@ class QuotaEngine(object):
                         different user than in the context
         """
         return self._driver.limit_check_project_and_user(
-            context, self.resources, project_values=project_values,
-            user_values=user_values, project_id=project_id,
-            user_id=user_id)
+            context, self._resources, project_values=project_values,
+            user_values=user_values, project_id=project_id, user_id=user_id)
+
+    @property
+    def resources(self):
+        return sorted(self._resources.keys())
+
+    def get_reserved(self):
+        if isinstance(self._driver, NoopQuotaDriver):
+            return -1
+        return 0
+
+
+class SAPQuotaEngine(QuotaEngine):
+    """SAP specific quota engine
+
+    We extend the resources on startup based on information from the "flavors"
+    quota-class.
+    """
+    def __init__(self, quota_driver=None, resources=None):
+        self._original_resources = None
+        self.__resources = None
+        super().__init__(resources=resources, quota_driver=quota_driver)
+
+    @property
+    def _resources(self):
+        if self.__resources is None:
+            self.update_resources_from_quota_classes()
+        return self.__resources
+
+    @_resources.setter
+    def _resources(self, resources):
+        self._original_resources = resources
+        self.__resources = None
 
     def update_resources_from_quota_classes(self):
-        """Update the _resources dict to contain all current resources
+        """Update the __resources dict to contain all current resources
 
         This should be called whenever there's a new dynamic resource added
         i.e. a resource in the "flavors" quota class.
@@ -1100,18 +1130,7 @@ class QuotaEngine(object):
 
         resources.update(self._original_resources)
 
-        self._resources = resources
-
-    @property
-    def resources(self):
-        if self._resources is None:
-            self.update_resources_from_quota_classes()
-        return self._resources
-
-    def get_reserved(self):
-        if isinstance(self._driver, NoopQuotaDriver):
-            return -1
-        return 0
+        self.__resources = resources
 
 
 @api_db_api.context_manager.reader
@@ -1360,7 +1379,7 @@ def _server_group_count(context, project_id, user_id=None):
                                                 user_id=user_id)
 
 
-QUOTAS = QuotaEngine(
+QUOTAS = SAPQuotaEngine(
     resources=[
         CountableResource(
             'instances', _instances_cores_ram_count, 'instances'),

@@ -55,7 +55,7 @@ class QuotaClassSetsController(wsgi.Controller):
             result = dict(id=str(quota_class))
         else:
             result = {}
-        original_quotas = list(QUOTAS.resources)
+        original_quotas = QUOTAS.resources
         if filtered_quotas:
             original_quotas = [resource for resource in original_quotas
                                if resource not in filtered_quotas]
