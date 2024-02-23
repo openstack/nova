@@ -582,6 +582,50 @@ class VGPULiveMigrationTests(base.LibvirtMigrationMixin, VGPUTestBase):
         self.assertRaises(KeyError, self.assert_mdev_usage, self.dest, 0)
 
 
+class VGPULiveMigrationTestsLMFailed(VGPULiveMigrationTests):
+    """Tests that expect the live migration to fail, and exist to test the
+    rollback code. Stubs out fakelibvirt's migrateToURI3() with a stub that
+    "fails" the migration.
+    """
+
+    def _migrate_stub(self, domain, destination, params, flags):
+        """Designed to stub fakelibvirt's migrateToURI3 and "fail" the
+        live migration by monkeypatching jobStats() to return an error.
+        """
+
+        # During the migration, we reserved a mdev in the dest
+        self.assert_mdev_usage(self.src, 1)
+        self.assert_mdev_usage(self.dest, 1)
+
+        # The resource update periodic task should not change the consumed
+        # mdevs, as the migration is still happening. As usual, running
+        # periodics is not necessary to make the test pass, but it's good to
+        # make sure it does the right thing.
+        self._run_periodics()
+        self.assert_mdev_usage(self.src, 1)
+        self.assert_mdev_usage(self.dest, 1)
+
+        source = self.computes['src']
+        conn = source.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        dom.fail_job()
+        self.migrate_stub_ran = True
+
+    def test_live_migrate_server(self):
+        self.server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor, networks='auto', host=self.src.host)
+        inst = objects.Instance.get_by_uuid(self.context, self.server['id'])
+        mdevs = self.src.driver._get_all_assigned_mediated_devices(inst)
+        self.assertEqual(1, len(mdevs))
+
+        self._live_migrate(self.server, 'failed')
+
+        # We released the reserved mdev after the migration failed.
+        self.assert_mdev_usage(self.src, 1)
+        self.assert_mdev_usage(self.dest, 0)
+
+
 class DifferentMdevClassesTests(VGPUTestBase):
 
     def setUp(self):

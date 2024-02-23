@@ -11736,6 +11736,73 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           self.context, instance_ref, dest_check_data,
                           None, None, allocations)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_mdev_types_from_uuids')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_allocate_mdevs')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_supported_vgpu_types')
+    def test_check_source_migrate_data_at_dest_types_missing_mdevs(self,
+                                                                   mock_get,
+                                                                   mock_alloc,
+                                                                   mock_gmtfu):
+        """Raises an exception if the destination doesn't allocate all the
+        necessary mediated devices.
+        """
+        mock_get.return_value = ['type1']
+        mock_alloc.return_value = [uuids.dst_mdev1]
+        mock_gmtfu.return_value = {uuids.dst_mdev1: 'type1'}
+        instance_ref = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({}, drvr.instance_claimed_mdevs)
+        dest_check_data = objects.LibvirtLiveMigrateData(
+            filename="file",
+            block_migration=True,
+            disk_over_commit=False,
+            disk_available_mb=1024,
+            src_supports_mdev_live_migration=True,
+            source_mdev_types={uuids.src_mdev1: 'type1',
+                               uuids.src_mdev2: 'type1'})
+        allocations = {uuids.rp1: {'resources': {orc.VGPU: 2}}}
+        self.assertRaises(exception.MigrationPreCheckError,
+                          drvr.check_source_migrate_data_at_dest,
+                          self.context, instance_ref, dest_check_data,
+                          None, None, allocations)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_mdev_types_from_uuids')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_allocate_mdevs')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_supported_vgpu_types')
+    def test_check_source_migrate_data_at_dest_types_claim_mdevs(self,
+                                                                 mock_get,
+                                                                 mock_alloc,
+                                                                 mock_gmtfu):
+        mock_get.return_value = ['type1']
+        mock_alloc.return_value = [uuids.dst_mdev1]
+        mock_gmtfu.return_value = {uuids.dst_mdev1: 'type1'}
+        instance_ref = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({}, drvr.instance_claimed_mdevs)
+        dest_check_data = objects.LibvirtLiveMigrateData(
+            filename="file",
+            block_migration=True,
+            disk_over_commit=False,
+            disk_available_mb=1024,
+            src_supports_mdev_live_migration=True,
+            source_mdev_types={uuids.src_mdev1: 'type1'})
+        allocations = {uuids.rp1: {'resources': {orc.VGPU: 1}}}
+        drvr.check_source_migrate_data_at_dest(
+            self.context, instance_ref, dest_check_data, None, None,
+            allocations)
+        mock_alloc.assert_called_once_with(allocations)
+        mock_gmtfu.assert_called_once_with([uuids.dst_mdev1])
+        self.assertEqual({uuids.src_mdev1: uuids.dst_mdev1},
+                          dest_check_data.target_mdevs)
+        self.assertEqual({instance_ref.uuid: [uuids.dst_mdev1]},
+                         drvr.instance_claimed_mdevs)
+
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
     @mock.patch.object(fakelibvirt.Connection, 'getVersion')
     def _test_host_can_support_mdev_lm(self, mock_getversion,
@@ -13426,12 +13493,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_instance_path.return_value = fake_instance_path
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
+        instance = objects.Instance(id=1, uuid=uuids.instance)
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=False,
             instance_relative_path=False)
         self.assertRaises(exception.Invalid,
                           drvr.rollback_live_migration_at_destination,
-                          "context", "instance", [], None, True, migrate_data)
+                          "context", instance, [], None, True, migrate_data)
         mock_exist.assert_called_once_with(fake_instance_path)
         mock_shutil.assert_called_once_with(fake_instance_path)
 
@@ -13453,17 +13521,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_destroy.side_effect = fake_destroy
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({}, drvr.instance_claimed_mdevs)
 
+        instance = objects.Instance(id=1, uuid=uuids.instance)
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=True,
             instance_relative_path=False)
-        drvr.rollback_live_migration_at_destination("context", "instance", [],
+        drvr.instance_claimed_mdevs = {instance.uuid: [uuids.mdev1],
+                                       uuids.other_inst: [uuids.mdev2]}
+        drvr.rollback_live_migration_at_destination("context", instance, [],
                                                     None, True, migrate_data)
-        mock_destroy.assert_called_once_with("context", "instance", [],
+        mock_destroy.assert_called_once_with("context", instance, [],
                                              None, True)
         self.assertFalse(mock_get_instance_path.called)
         self.assertFalse(mock_exist.called)
         self.assertFalse(mock_shutil.called)
+        # Assert we delete existing claimed mdevs for the instance
+        self.assertEqual({uuids.other_inst: [uuids.mdev2]},
+                         drvr.instance_claimed_mdevs)
 
     @mock.patch.object(fakelibvirt.Domain, "XMLDesc")
     def test_live_migration_copy_disk_paths_tunnelled(self, mock_xml):
@@ -20257,15 +20332,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_guest.return_value = guest
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({}, drvr.instance_claimed_mdevs)
         net_info = network_model.NetworkInfo()
         mock_get_interfaces.return_type = []
         mock_image_meta.return_value = mock.sentinel.image_meta
+        drvr.instance_claimed_mdevs = {instance.uuid: [uuids.mdev1],
+                                       uuids.other_inst: [uuids.mdev2]}
         drvr.post_live_migration_at_destination(mock.ANY, instance, net_info)
         # Assert that we don't try to write anything to the destination node
         # since the source live migrated with the VIR_MIGRATE_PERSIST_DEST flag
         mock_write_instance_config.assert_not_called()
         mock_attach.assert_not_called()
-
+        # Assert we delete existing claimed mdevs for the instance
+        self.assertEqual({uuids.other_inst: [uuids.mdev2]},
+                         drvr.instance_claimed_mdevs)
         vif = network_model.VIF(id=uuids.port_id,
             vnic_type=network_model.VNIC_TYPE_NORMAL)
         vif_direct = network_model.VIF(id=uuids.port_id,
@@ -27058,6 +27138,40 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual({},
                          drvr._get_all_assigned_mediated_devices(fake_inst))
 
+    @mock.patch.object(host.Host, 'list_guests')
+    def test_get_all_assigned_mediated_devices_with_claimed_mdevs(self,
+                                                                  list_guests):
+        dom_with_vgpu = """
+              <domain type="kvm">
+                <devices>
+                 <hostdev mode='subsystem' type='mdev' model='vfio-pci'>
+                  <source>
+                   <address uuid='%s'/>
+                  </source>
+                 </hostdev>
+                </devices>
+              </domain>
+              """ % uuids.mdev
+        guest1 = libvirt_guest.Guest(FakeVirtDomain())
+        guest2 = libvirt_guest.Guest(FakeVirtDomain(fake_xml=dom_with_vgpu))
+        list_guests.return_value = [guest1, guest2]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({}, drvr.instance_claimed_mdevs)
+        # Just add some claimed mdevs by the live migration
+        drvr.instance_claimed_mdevs = {uuids.inst1: [uuids.mdev1, uuids.mdev2],
+                                       uuids.inst2: [uuids.mdev3]}
+        self.assertEqual({uuids.mdev: guest2.uuid,
+                          uuids.mdev1: uuids.inst1,
+                          uuids.mdev2: uuids.inst1,
+                          uuids.mdev3: uuids.inst2},
+                         drvr._get_all_assigned_mediated_devices())
+
+        # Just double-check we only return claimed mdevs from inst2 if we ask
+        # for it
+        fake_inst2 = objects.Instance(uuid=uuids.inst2)
+        self.assertEqual({uuids.mdev3: uuids.inst2},
+                         drvr._get_all_assigned_mediated_devices(fake_inst2))
+
     def test_allocate_mdevs_with_no_vgpu_allocations(self):
         allocations = {
             'rp1': {
@@ -30011,6 +30125,17 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
               </devices>
             </domain>'''
         self.assertXmlEqual(expected, guest.to_xml())
+
+    def test_cleanup_lingering_instance_resources_deletes_mdevs(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({}, drvr.instance_claimed_mdevs)
+        # Adding some claimed mdevs
+        instance = objects.Instance(id=1, uuid=uuids.instance, resources=None)
+        drvr.instance_claimed_mdevs = {instance.uuid: [uuids.mdev1],
+                                       uuids.other_inst: [uuids.mdev2]}
+        drvr.cleanup_lingering_instance_resources(instance)
+        self.assertEqual({uuids.other_inst: [uuids.mdev2]},
+                         drvr.instance_claimed_mdevs)
 
 
 @ddt.ddt
