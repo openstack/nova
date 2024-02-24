@@ -27596,6 +27596,142 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertRaises(exception.InvalidLibvirtMdevConfig,
                           drvr.init_host, host='foo')
 
+    @mock.patch('oslo_utils.uuidutils.generate_uuid')
+    def test_create_mdev(self, mock_generate_uuid, uuid=None, drvr=None):
+        if drvr is None:
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+            drvr._host = mock.Mock()
+
+        r = drvr._create_mdev(
+            mock.sentinel.dev_name, mock.sentinel.mdev_type, uuid=uuid)
+
+        drvr._host.device_create.assert_called_once()
+        dev_conf = drvr._host.device_create.call_args.args[0]
+        self.assertIsInstance(dev_conf, vconfig.LibvirtConfigNodeDevice)
+        self.assertEqual(mock.sentinel.dev_name, dev_conf.parent)
+        self.assertEqual(
+            mock.sentinel.mdev_type, dev_conf.mdev_information.type)
+        expected_uuid = uuid or mock_generate_uuid.return_value
+        self.assertEqual(expected_uuid, dev_conf.mdev_information.uuid)
+        drvr._host.device_define.assert_called_once_with(dev_conf)
+        drvr._host.device_set_autostart.assert_called_once_with(
+            drvr._host.device_define.return_value, autostart=True)
+        self.assertEqual(expected_uuid, r)
+
+    def test_create_mdev_with_uuid(self):
+        self.test_create_mdev(uuid=uuids.mdev)
+
+    @mock.patch('nova.virt.libvirt.driver.LOG.info')
+    def test_create_mdev_autostart_error(self, mock_log_info):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._host = mock.Mock()
+        drvr._host.device_set_autostart.side_effect = test.TestingException(
+            'error')
+
+        self.test_create_mdev(uuid=uuids.mdev, drvr=drvr)
+
+        mock_log_info.assert_called_once_with(
+            'Failed to set autostart to True for mdev '
+            f'{drvr._host.device_define.return_value.name.return_value} with '
+            f'UUID {uuids.mdev}: error.')
+
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver,
+        '_register_all_undefined_instance_details', new=mock.Mock())
+    def test_start_inactive_mediated_devices_on_init_host(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        device1 = mock.MagicMock()
+        device2 = mock.MagicMock()
+        drvr._host = mock.Mock()
+        drvr._host.list_all_devices.return_value = [device1, device2]
+
+        drvr.init_host(host='foo')
+
+        flags = (
+            fakelibvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_MDEV |
+            fakelibvirt.VIR_CONNECT_LIST_NODE_DEVICES_INACTIVE)
+        drvr._host.list_all_devices.assert_called_once_with(flags)
+        self.assertEqual(
+            [mock.call(device1), mock.call(device2)],
+            drvr._host.device_start.mock_calls)
+
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_get_all_assigned_mediated_devices',
+        new=mock.Mock(return_value={}))
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, 'destroy', new=mock.Mock())
+    @mock.patch('oslo_utils.fileutils.ensure_tree', new=mock.Mock())
+    @mock.patch(
+        'nova.virt.libvirt.blockinfo.get_disk_info',
+        new=mock.Mock(return_value=mock.sentinel.disk_info))
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_allocate_mdevs')
+    @mock.patch('nova.objects.Instance.image_meta')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_guest_xml')
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_create_images_and_backing',
+        new=mock.Mock())
+    @mock.patch(
+        'oslo_service.loopingcall.FixedIntervalLoopingCall', new=mock.Mock())
+    def _test_hard_reboot_allocate_missing_mdevs(
+            self, mock_get_xml, mock_image_meta, mock_allocate_mdevs):
+        mock_compute = mock.Mock()
+        mock_compute.reportclient.get_allocations_for_consumer.return_value = (
+            mock.sentinel.allocations)
+        virtapi = manager.ComputeVirtAPI(mock_compute)
+        drvr = libvirt_driver.LibvirtDriver(virtapi, True)
+        ctxt = context.get_admin_context()
+        instance = objects.Instance(
+            uuid=uuids.instance,
+            system_metadata={},
+            image_ref=uuids.image,
+            flavor=objects.Flavor(extra_specs={'resources:VGPU': 1}))
+
+        drvr._hard_reboot(ctxt, instance, mock.sentinel.network_info)
+
+        (mock_compute.reportclient.get_allocations_for_consumer.
+            assert_called_once_with(ctxt, instance.uuid))
+        mock_allocate_mdevs.assert_called_once_with(mock.sentinel.allocations)
+        mock_get_xml.assert_called_once_with(
+            ctxt, instance, mock.sentinel.network_info,
+            mock.sentinel.disk_info, mock_image_meta, block_device_info=None,
+            mdevs=mock_allocate_mdevs.return_value, accel_info=None)
+
+        return ctxt, mock_get_xml, instance
+
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_create_guest_with_network',
+        new=mock.Mock())
+    def test_hard_reboot_allocate_missing_mdevs(self):
+        # Test a scenario where the instance's flavor requests VGPU but for
+        # whatever reason (example: libvirt error raised after the domain was
+        # undefined) it is missing assigned mdevs.
+        self._test_hard_reboot_allocate_missing_mdevs()
+
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_create_guest_with_network')
+    def test_hard_reboot_allocate_missing_mdevs_fail(self, mock_create_guest):
+        # Test the scenario where a libvirt error is raised the first time we
+        # try to create the guest after allocating missing mdevs.
+        err_msg = (
+            'error getting device from group 0: Input/output error '
+            'Verify all devices in group 0 are bound to vfio-<bus> or pci-stub'
+            'and not already in use')
+        error = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, err_msg, error_message=err_msg,
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
+        # First attempt to create the guest fails and the second succeeds.
+        mock_create_guest.side_effect = [error, None]
+
+        ctxt, mock_get_xml, instance = (
+            self._test_hard_reboot_allocate_missing_mdevs())
+
+        call = mock.call(
+            ctxt, mock_get_xml.return_value, instance,
+            mock.sentinel.network_info, None, vifs_already_plugged=True,
+            external_events=[])
+        # We should have tried to create the guest twice.
+        self.assertEqual([call, call], mock_create_guest.mock_calls)
+
     @mock.patch.object(libvirt_guest.Guest, 'detach_device')
     def _test_detach_mediated_devices(self, side_effect, detach_device):
 

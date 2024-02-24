@@ -3350,6 +3350,9 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         self.assertEqual(12, obj.mdev_information.iommu_group)
         self.assertIsNone(obj.mdev_information.uuid)
 
+        xmlout = obj.to_xml()
+        self.assertXmlEqual(xmlin, xmlout)
+
     def test_config_mdev_device_uuid(self):
         xmlin = """
         <device>
@@ -3374,6 +3377,19 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         self.assertEqual(57, obj.mdev_information.iommu_group)
         self.assertEqual("b2107403-110c-45b0-af87-32cc91597b8a",
                          obj.mdev_information.uuid)
+
+        expected_xml = """
+        <device>
+          <name>mdev_b2107403_110c_45b0_af87_32cc91597b8a_0000_41_00_0</name>
+          <parent>pci_0000_41_00_0</parent>
+          <capability type='mdev'>
+            <type id='nvidia-442'/>
+            <uuid>b2107403-110c-45b0-af87-32cc91597b8a</uuid>
+            <iommuGroup number='57'/>
+          </capability>
+        </device>"""
+        xmlout = obj.to_xml()
+        self.assertXmlEqual(expected_xml, xmlout)
 
     def test_config_vdpa_device(self):
         xmlin = """
