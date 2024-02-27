@@ -793,7 +793,21 @@
     description: |
       This job runs the Tempest tests with scope and new defaults enabled
       for Nova, Neutron, Glance, and Cinder services.
-    # TODO (gmann): There were few fixes in neutron and neutron-lib for the
+    irrelevant-files: &policies-irrelevant-files
+      - ^api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/tests/.*$
+      - ^nova/test.py$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tools/.*$
+      - ^tox.ini$
+# TODO (gmann): There were few fixes in neutron and neutron-lib for the
     # RBAC but they are not yet released so we need to add both projcts as
     # the required-projects. Those can be removed once new version of neutron
     # and neutron-lib is released.
@@ -873,20 +887,7 @@
            # integration test jobs. Running only tempest and grenade
            # common jobs will be enough along with nova functional
            # and unit tests.
-           irrelevant-files: &policies-irrelevant-files
-             - ^api-.*$
-             - ^(test-|)requirements.txt$
-             - ^.*\.rst$
-             - ^.git.*$
-             - ^doc/.*$
-             - ^nova/hacking/.*$
-             - ^nova/locale/.*$
-             - ^nova/tests/.*$
-             - ^nova/test.py$
-             - ^releasenotes/.*$
-             - ^setup.cfg$
-             - ^tools/.*$
-             - ^tox.ini$
+           irrelevant-files: *policies-irrelevant-files
            vars:
              devstack_localrc:
                <<: *uec_image_vars
@@ -974,6 +975,7 @@
         # Runs emulation feature functionality test less frequently due
         # to being the initial release and experimental in nature.
         - nova-emulation
+        - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode-shard
         - tempest-centos9-stream-fips:
             vars:
               devstack_localrc:
@@ -985,7 +987,7 @@
             vars:
               devstack_localrc:
                 <<: *uec_image_vars
-        - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode:
+        - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode-shard:
             irrelevant-files: *nova-base-irrelevant-files
             vars:
               devstack_localrc:
