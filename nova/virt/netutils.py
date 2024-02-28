@@ -289,7 +289,8 @@ def _get_nets(vif, subnet, version, net_num, link_id):
     net_type = ''
     if subnet.get_meta('ipv6_address_mode') is not None:
         net_type = '_%s' % subnet.get_meta('ipv6_address_mode')
-    elif subnet.get_meta('dhcp_server') is not None:
+    elif (subnet.get_meta('dhcp_server') is not None or
+          subnet.get_meta('enable_dhcp')):
         net_info = {
             'id': 'network%d' % net_num,
             'type': 'ipv%d_dhcp' % version,
