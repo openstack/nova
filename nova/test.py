@@ -56,6 +56,7 @@ import testtools
 from nova.api.openstack import wsgi_app
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
+import nova.crypto
 from nova.db.main import api as db_api
 from nova import exception
 from nova import objects
@@ -324,6 +325,9 @@ class TestCase(base.BaseTestCase):
         # (like the database) that have already been torn down and can cause
         # the currently running test to fail.
         self.useFixture(nova_fixtures.GreenThreadPoolShutdownWait())
+
+        # Reset the global key manager
+        nova.crypto._KEYMGR = None
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.
