@@ -15,6 +15,7 @@
 """Validators for ``quota`` namespaced extra specs."""
 
 from nova.api.validation.extra_specs import base
+from nova import utils
 
 
 EXTRA_SPEC_VALIDATORS = []
@@ -184,6 +185,32 @@ for stat in ('inbound', 'outbound'):
                 },
             )
         )
+
+
+# SAP custom quotas
+EXTRA_SPEC_VALIDATORS.extend([
+    base.ExtraSpecValidator(
+        name=utils.QUOTA_SEPARATE_KEY,
+        description=(
+            'if the flavor needs flavor-specific instances quota. '
+            'defaults to false'
+        ),
+        value={
+            'type': bool,
+        },
+    ),
+    base.ExtraSpecValidator(
+        name=utils.QUOTA_INSTANCE_ONLY_KEY,
+        description=(
+            "if set, the flavor does not consume cores/ram quota, only "
+            "instances quota. usually combined with "
+            f"{utils.QUOTA_SEPARATE_KEY}. defaults to false"
+        ),
+        value={
+            'type': bool,
+        },
+    ),
+])
 
 
 def register():
