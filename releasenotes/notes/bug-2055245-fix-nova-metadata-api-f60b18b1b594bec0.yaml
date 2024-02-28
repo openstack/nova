@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    With the change from ml2/ovs DHCP agents towards OVN implementation
+    in neutron there is no port with device_owner ``network:dhcp`` anymore.
+    Instead DHCP is provided by ``network:distributed`` port.
+    Fix relies on enable_dhcp provided by neutron-api if no port with
+    ``network:dhcp`` owner is found. See `bug 2055245
+    <https://bugs.launchpad.net/nova/+bug/2055245>`__ for details.
