@@ -4910,7 +4910,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if swap_mb > 0:
             size = swap_mb * units.Mi
-            swap = image('disk.swap')
+            disk_info_mapping = disk_mapping['disk.swap']
+            swap = image('disk.swap', disk_info_mapping=disk_info_mapping)
             # Short circuit the exists() tests if we already created a disk
             created_disks = created_disks or not swap.exists()
             swap.cache(fetch_func=self._create_swap, context=context,
