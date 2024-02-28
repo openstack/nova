@@ -560,6 +560,13 @@ class TPMVersion(BaseNovaEnum):
     ALL = (v1_2, v2_0)
 
 
+class MaxPhyAddrMode(BaseNovaEnum):
+    PASSTHROUGH = "passthrough"
+    EMULATE = "emulate"
+
+    ALL = (PASSTHROUGH, EMULATE)
+
+
 class SCSIModel(BaseNovaEnum):
 
     BUSLOGIC = "buslogic"
@@ -1292,6 +1299,10 @@ class ImageSignatureKeyTypeField(BaseEnumField):
 
 class InputBusField(BaseEnumField):
     AUTO_TYPE = InputBus()
+
+
+class MaxPhysAddrModeField(BaseEnumField):
+    AUTO_TYPE = MaxPhyAddrMode()
 
 
 class MigrationTypeField(BaseEnumField):

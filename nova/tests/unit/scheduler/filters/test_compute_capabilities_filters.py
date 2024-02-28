@@ -102,6 +102,30 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
             especs={'capabilities:cpu_info:vendor': 'Intel'},
             passes=False)
 
+    def test_compute_filter_pass_maxphysaddr_bits(self):
+        cpu_info = '{"maxphysaddr": {"mode": "emulate", "bits": 42}}'
+
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'cpu_info': cpu_info},
+            especs={'hw:maxphysaddr_bits': '42'},
+            passes=True)
+
+    def test_compute_filter_fails_maxphysaddr_bits(self):
+        cpu_info = '{"maxphysaddr": {"mode": "emulate", "bits": 20}}'
+
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'cpu_info': cpu_info},
+            especs={'hw:maxphysaddr_bits': '42'},
+            passes=False)
+
+    def test_compute_filter_fails_without_maxphysaddr_bits(self):
+        cpu_info = '{ }'
+
+        self._do_test_compute_filter_extra_specs(
+            ecaps={'cpu_info': cpu_info},
+            especs={'hw:maxphysaddr_bits': '42'},
+            passes=False)
+
     def test_compute_filter_passes_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'stats': {'opt1': 1, 'opt2': 2}},
