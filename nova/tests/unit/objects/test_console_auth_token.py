@@ -53,7 +53,7 @@ class _TestConsoleAuthToken(object):
 
         expected = copy.deepcopy(fakes.fake_token_dict)
         del expected['token_hash']
-        del expected['expires']
+        expected['expires'] = expires
         expected['token'] = fakes.fake_token
         expected['console_type'] = console_type
 
@@ -84,6 +84,14 @@ class _TestConsoleAuthToken(object):
                 fakes.fake_token_dict['access_url_base'],
                 path)
         self.assertEqual(expected_url, url)
+
+        # verify auth_token 'expires' backward version compatibility
+        data = lambda x: x['nova_object.data']
+        console_auth_obj_primitive = data(obj.obj_to_primitive())
+        self.assertIn('expires', console_auth_obj_primitive)
+        obj.obj_make_compatible(console_auth_obj_primitive, '1.1')
+        self.assertIn('token', console_auth_obj_primitive)
+        self.assertNotIn('expires', console_auth_obj_primitive)
 
     def test_authorize(self):
         self._test_authorize(fakes.fake_token_dict['console_type'])
