@@ -45,3 +45,10 @@ upgrade:
     * ``[hyperv] iscsi_initiator_list``
     * ``[rdp] enabled``
     * ``[rdp] html5_proxy_base_url``
+
+    The following extra specs which only apply for the ``HyperV`` virt
+    driver have been removed.
+
+    * ``os:resolution``
+    * ``os:monitors``
+    * ``os:vram``

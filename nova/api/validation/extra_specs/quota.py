@@ -146,14 +146,12 @@ EXTRA_SPEC_VALIDATORS.extend(
 )
 
 
-# Disk quotas (libvirt, HyperV)
+# Disk quotas (libvirt)
 for stat in ('read', 'write', 'total'):
     for metric in ('bytes', 'iops'):
         EXTRA_SPEC_VALIDATORS.append(
             base.ExtraSpecValidator(
                 name=f'quota:disk_{stat}_{metric}_sec',
-                # NOTE(stephenfin): HyperV supports disk_total_{metric}_sec
-                # too; update
                 description=(
                     f'The quota {stat} {metric} for disk. '
                     f'Only supported by the libvirt virt driver.'
