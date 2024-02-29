@@ -427,7 +427,7 @@ class VMwareVMOps(object):
             if memory_reserved_mb > 0:
                 extra_specs.memory_limits.reservation = memory_reserved_mb
             if cpu_reserved > 0:
-                cluster_host_stats = self._vc_state.get_host_stats().values()
+                cluster_host_stats = self._vc_state.get_host_stats()
                 cluster_stats = cluster_host_stats.get(
                                         self._vc_state._cluster_node_name, {})
                 # NOTE(jakobk): CPU reservations are given in MHz, not in
