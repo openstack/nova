@@ -23,3 +23,55 @@ show_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+_extension_obj = {
+    'type': 'object',
+    'properties': {
+        'alias': {'type': 'string'},
+        'description': {'type': 'string'},
+        'links': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'href': {
+                        'type': 'string',
+                        'format': 'url'
+                    },
+                    'rel': {
+                        'type': 'string'
+                    },
+                }
+            },
+        },
+        'name': {'type': 'string'},
+        'namespace': {'type': 'string'},
+        'updated': {'type': 'string', 'format': 'date-time'},
+    },
+    'required': [
+        'alias', 'description', 'links', 'name', 'namespace', 'updated'
+    ],
+    'additionalProperties': False,
+}
+
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'extensions': {
+            'type': 'array',
+            'items': _extension_obj,
+        }
+    },
+    'required': ['extensions'],
+    'additionalProperties': False,
+}
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'extension': _extension_obj,
+    },
+    'required': ['extension'],
+    'additionalProperties': False,
+}

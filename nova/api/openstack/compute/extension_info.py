@@ -856,6 +856,7 @@ class ExtensionInfoController(wsgi.Controller):
 
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         context = req.environ['nova.context']
         context.can(ext_policies.BASE_POLICY_NAME, target={})
@@ -869,6 +870,7 @@ class ExtensionInfoController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(ext_policies.BASE_POLICY_NAME, target={})
