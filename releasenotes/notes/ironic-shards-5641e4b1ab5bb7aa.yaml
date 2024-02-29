@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Ironic nova-compute services can now target a specific shard of ironic
+    nodes by setting the config ``[ironic]shard``.
+    This is particularly useful when using active-passive methods to choose
+    on which physical host your ironic nova-compute process is running,
+    while ensuring ``[DEFAULT]host`` stays the same for each shard.
+    You can use this alongside ``[ironic]conductor_group`` to further limit
+    which ironic nodes are managed by each nova-compute service.
+    Note that when you use ``[ironic]shard`` the ``[ironic]peer_list``
+    is hard coded to a single nova-compute service.
