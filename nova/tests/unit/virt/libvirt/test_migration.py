@@ -190,6 +190,40 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         new_xml = new_xml.replace("/dev/dax0.2", "/dev/dax2.0")
         self.assertXmlEqual(res, new_xml)
 
+    def test_update_mdev_xml(self):
+        xml_pattern = """<domain>
+  <devices>
+    <hostdev mode="subsystem" type="mdev" model="vfio-pci">
+      <source>
+        <address uuid="%s"/>
+      </source>
+    </hostdev>
+  </devices>
+</domain>"""
+        data = objects.LibvirtLiveMigrateData(
+            target_mdevs={uuids.src_mdev: uuids.dst_mdev})
+        doc = etree.fromstring(xml_pattern % uuids.src_mdev)
+        res = migration._update_mdev_xml(doc, data.target_mdevs)
+        self.assertEqual(xml_pattern % uuids.dst_mdev,
+                         etree.tostring(res, encoding='unicode'))
+
+    def test_update_mdev_xml_fails_on_notfound_mdev(self):
+        xml_pattern = """<domain>
+  <devices>
+    <hostdev mode="subsystem" type="mdev" model="vfio-pci">
+      <source>
+        <address uuid="%s"/>
+      </source>
+    </hostdev>
+  </devices>
+</domain>"""
+        data = objects.LibvirtLiveMigrateData(
+            target_mdevs={uuids.other_mdev: uuids.dst_mdev})
+        doc = etree.fromstring(xml_pattern % uuids.src_mdev)
+        # src_mdev UUID doesn't exist in target_mdevs dict
+        self.assertRaises(exception.NovaException,
+                          migration._update_mdev_xml, doc, data.target_mdevs)
+
     def test_update_numa_xml(self):
         doc = etree.fromstring("""
             <domain>

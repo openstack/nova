@@ -67,6 +67,8 @@ def get_updated_guest_xml(instance, guest, migrate_data, get_volume_config,
         xml_doc = _update_vif_xml(xml_doc, migrate_data, get_vif_config)
     if 'dst_numa_info' in migrate_data:
         xml_doc = _update_numa_xml(xml_doc, migrate_data)
+    if 'target_mdevs' in migrate_data:
+        xml_doc = _update_mdev_xml(xml_doc, migrate_data.target_mdevs)
     if new_resources:
         xml_doc = _update_device_resources_xml(xml_doc, new_resources)
     return etree.tostring(xml_doc, encoding='unicode')
@@ -103,6 +105,28 @@ def _update_vpmems_xml(xml_doc, vpmems):
         if memory_dev.get('model') == 'nvdimm':
             devpath = memory_dev.find('./source/path')
             devpath.text = vpmems[pos].devpath
+    return xml_doc
+
+
+def _update_mdev_xml(xml_doc, target_mdevs):
+    for dev in xml_doc.findall('./devices/hostdev'):
+        if dev.get('type') == 'mdev':
+            address_tag = dev.find('source/address')
+            if address_tag is None:
+                continue
+            src_mdev = address_tag.get('uuid')
+            if src_mdev is not None:
+                dst_mdev = target_mdevs.get(src_mdev)
+                if dst_mdev is None:
+                    # For some reason, we don't know which mdev to use
+                    # so we prefer to abort the live-migration.
+                    raise exception.NovaException(
+                        'Unable to find the destination mediated device UUID '
+                        'to use for this source mdev UUID : %s' % src_mdev)
+                else:
+                    address_tag.set('uuid', dst_mdev)
+    LOG.debug('_update_mdev_xml output xml=%s',
+              etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
     return xml_doc
 
 
