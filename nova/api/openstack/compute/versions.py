@@ -83,6 +83,7 @@ class Versions(wsgi.Resource):
         super(Versions, self).__init__(None)
 
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, body=None):
         """Return all versions."""
         builder = views_versions.get_view_builder(req)
@@ -90,6 +91,7 @@ class Versions(wsgi.Resource):
 
     @wsgi.response(300)
     @validation.query_schema(schema.multi_query)
+    @validation.response_body_schema(schema.multi_response)
     def multi(self, req, body=None):
         """Return multiple choices."""
         builder = views_versions.get_view_builder(req)
@@ -111,7 +113,10 @@ class VersionsV2(wsgi.Resource):
     def __init__(self):
         super(VersionsV2, self).__init__(None)
 
+    # NOTE(stephenfin): Despite being called index, this is actually called as
+    # a show action
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def index(self, req, body=None):
         builder = views_versions.get_view_builder(req)
         ver = 'v2.0' if req.is_legacy_v2() else 'v2.1'

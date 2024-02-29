@@ -26,6 +26,7 @@ class VersionsController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id='v2.1'):
         builder = views_versions.get_view_builder(req)
         if req.is_legacy_v2():
