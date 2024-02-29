@@ -52,11 +52,12 @@ By default, security groups can be created by any project member. For example:
 
 Security groups are really only containers for rules. Security group rules
 define the actual IP filter rules that will be applied. Security groups deny
-everything by default, so rules indicate what is allowed. A security group
-rule has a couple of attributes: an IP protocol (one of ICMP, TCP, or UDP), a
-destination port or port range, and a remote IP range (in CIDR format). You
-create security group rules by specifying these attributes and the security
-group to which the rules should be added. For example:
+everything by default, so rules indicate what is allowed. Typically, a security
+group rule will be configured with the following attributes: an IP protocol
+(one of ICMP, TCP, or UDP), a destination port or port range, and a remote IP
+range (in CIDR format). You create security group rules by specifying these
+attributes and the security group to which the rules should be added. For
+example:
 
 .. code-block:: console
 
@@ -72,7 +73,7 @@ group to which the rules should be added. For example:
     connections are allowed to access, **not** the source and destination ports
     of the connection.
 
-Alternatively, rather than specifying a remote IP range, we can specify a
+Alternatively, rather than specifying a remote IP range, you can specify a
 remote security group. A remote group will allow requests with the specified
 protocol(s) and port(s) from any server with said port. If you create a
 security group rule with remote group ``foo`` and apply the security group to
@@ -173,6 +174,12 @@ example:
 
     These security groups will only apply to automatically created ports. They
     will not apply to any pre-created ports attached to the server at boot.
+    If no security group is specified, the ``default`` security group for the
+    current project will be used. It is not possible to specify that no
+    security group should be applied to automatically created ports. If you
+    wish to remove the ``default`` security group from a server's ports, you
+    will need to use pre-created ports or remove the security group after the
+    server has been created.
 
 Once a server has been created, it is possible to add or remove a security
 group from all ports attached to the server. For example:
@@ -181,6 +188,13 @@ group from all ports attached to the server. For example:
 
     $ openstack server add security group <server> <group>
     $ openstack server remove security group <server> <group>
+
+.. note::
+
+    Unless customised, the ``default`` security group allows egress traffic
+    from the server. If you remove this group and do not allow egress traffic
+    via another security group, your server will no longer be able to
+    communicate with the :ref:`metadata service <metadata-service>`.
 
 It is also possible to view the security groups associated with a server. For
 example:
