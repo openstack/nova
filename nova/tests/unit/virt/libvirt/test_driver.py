@@ -709,6 +709,7 @@ def _create_test_instance():
         'resources': None,
         'migration_context': None,
         'info_cache': None,
+        'cleaned': False,
     }
 
 
@@ -30417,3 +30418,519 @@ class AsyncDeviceEventsHandlerTestCase(test.NoDBTestCase):
         # the third client timed out
         self.assertIsNone(received_event3)
         self.assert_handler_clean()
+
+
+@ddt.ddt
+class EphemeralEncryptionTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.useFixture(nova_fixtures.LibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
+
+        self.context = context.get_admin_context()
+
+        self.drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.drvr._host = mock.Mock()
+
+        self.instance = objects.Instance(**_create_test_instance())
+        # Avoid a lazy load on orphaned Instance object.
+        self.instance.root_device_name = '/dev/vda'
+
+        self.img_bdm = block_device_obj.BlockDeviceMapping(
+            id=1, uuid=uuids.image, image_id=uuids.image_id,
+            device_type='disk', disk_bus='virtio', no_device=False,
+            device_name='/dev/vda', volume_size=1, source_type='image',
+            destination_type='local', guest_format=None, encrypted=True,
+            encryption_format=None, encryption_options=None,
+            encryption_secret_uuid=None)
+        self.eph_bdm = block_device_obj.BlockDeviceMapping(
+            id=2, uuid=uuids.ephemeral, device_type='disk', disk_bus='virtio',
+            no_device=False, device_name='/dev/vdb', volume_size=1,
+            source_type='blank', destination_type='local', guest_format=None,
+            encrypted=True, encryption_format=None, encryption_options=None,
+            encryption_secret_uuid=None)
+        self.swap_bdm = block_device_obj.BlockDeviceMapping(
+            id=3, uuid=uuids.swap, device_type='disk', disk_bus='virtio',
+            no_device=False, device_name='/dev/vdc', volume_size=1,
+            source_type='blank', destination_type='local', guest_format='swap',
+            encrypted=True, encryption_format=None, encryption_options=None,
+            encryption_secret_uuid=None)
+
+        # Mock things we need to assert.
+        self.mock_save = self.useFixture(fixtures.MockPatch(
+            'nova.virt.block_device.DriverBlockDevice.save')).mock
+        self.mock_create_secret = self.useFixture(fixtures.MockPatch(
+            'nova.crypto.create_encryption_secret')).mock
+        self.mock_get_secret = self.useFixture(fixtures.MockPatch(
+            'nova.crypto.get_encryption_secret')).mock
+        self.mock_delete_secret = self.useFixture(fixtures.MockPatch(
+            'nova.crypto.delete_encryption_secret')).mock
+
+        # Mock things we don't need to assert.
+        self.useFixture(fixtures.MockPatchObject(
+            libvirt_driver.LibvirtDriver, 'get_info',
+            return_value = hardware.InstanceInfo(state=power_state.RUNNING)))
+        self.useFixture(fixtures.MockPatchObject(
+            libvirt_driver.LibvirtDriver,
+            '_register_undefined_instance_details'))
+        self.useFixture(fixtures.MockPatchObject(
+            libvirt_driver.LibvirtDriver, '_create_guest_with_network'))
+        self.useFixture(fixtures.MockPatchObject(
+            libvirt_driver.LibvirtDriver, '_get_guest_xml'))
+
+    def _test_spawn_with_ephemeral_encryption(self, encryption_format=None):
+        # Test that encryption defaults are set during spawn() if not
+        # specified.
+        for bdm in (self.img_bdm, self.eph_bdm, self.swap_bdm):
+            bdm.encryption_format = encryption_format
+
+        expected_format = (
+            encryption_format or
+            CONF.ephemeral_storage_encryption.default_format)
+
+        self.mock_create_secret.side_effect = [
+            (uuids.secret1, mock.sentinel.secret1),
+            (uuids.secret2, mock.sentinel.secret2),
+            (uuids.secret3, mock.sentinel.secret3),
+        ]
+        # Simulate finding one already existing libvirt secret. We should
+        # delete it before re-creating it.
+        self.drvr._host.find_secret.side_effect = [
+            None, mock.sentinel.libvirt_secret, None]
+
+        block_device_info = driver.get_block_device_info(
+            self.instance, [self.img_bdm, self.eph_bdm, self.swap_bdm])
+        image_meta = objects.ImageMeta.from_dict({})
+
+        self.drvr.spawn(
+            self.context, self.instance, image_meta, [], None, {},
+            block_device_info=block_device_info)
+
+        # image - Assert that the format and secret reflect the expected
+        # values. Initially encryption_format and encryption_secret_uuid were
+        # None.
+        driver_bdm = block_device_info['image'][0]
+        self.assertEqual(expected_format, driver_bdm['encryption_format'])
+        self.assertEqual(uuids.secret1, driver_bdm['encryption_secret_uuid'])
+        keymgr_call1 = mock.call(self.context, self.instance, driver_bdm)
+        libvirt_call1 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}",
+            password=mock.sentinel.secret1, uuid=uuids.secret1)
+
+        # ephemerals - Assert that the format and secret reflect the expected
+        # values. Initially encryption_format and encryption_secret_uuid were
+        # None.
+        driver_bdm = block_device_info['ephemerals'][0]
+        self.assertEqual(expected_format, driver_bdm['encryption_format'])
+        self.assertEqual(uuids.secret2, driver_bdm['encryption_secret_uuid'])
+        keymgr_call2 = mock.call(self.context, self.instance, driver_bdm)
+        libvirt_call2 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}",
+            password=mock.sentinel.secret2, uuid=uuids.secret2)
+
+        # swap - Assert that the format and secret reflect the expected
+        # values. Initially encryption_format and encryption_secret_uuid were
+        # None.
+        driver_bdm = block_device_info['swap']
+        self.assertEqual(expected_format, driver_bdm['encryption_format'])
+        self.assertEqual(uuids.secret3, driver_bdm['encryption_secret_uuid'])
+        keymgr_call3 = mock.call(self.context, self.instance, driver_bdm)
+        libvirt_call3 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}",
+            password=mock.sentinel.secret3, uuid=uuids.secret3)
+
+        # Assert that we generated key manager and libvirt secrets.
+        self.assertEqual(
+            [keymgr_call1, keymgr_call2, keymgr_call3],
+            self.mock_create_secret.mock_calls)
+        self.assertEqual(
+            [libvirt_call1, libvirt_call2, libvirt_call3],
+            self.drvr._host.create_secret.mock_calls)
+
+        # And we did not retrieve an existing secret.
+        self.mock_get_secret.assert_not_called()
+
+        # Assert that updates were saved to the database.
+        self.assertEqual(3, self.mock_save.call_count)
+
+        # Assert that no key manager secrets were deleted.
+        self.mock_delete_secret.assert_not_called()
+
+        # Assert that one already existing libvirt secret was deleted.
+        self.drvr._host.delete_secret.assert_called_once_with(
+            'volume', f'{self.instance.uuid}_{self.eph_bdm.uuid}')
+
+    def test_spawn_with_ephemeral_encryption_defaults(self):
+        # Test that encryption defaults are set during spawn() if not
+        # specified.
+        self._test_spawn_with_ephemeral_encryption()
+
+    def test_spawn_with_ephemeral_encryption_non_default(self):
+        # Test that specified encryption attributes are used during spawn().
+        self._test_spawn_with_ephemeral_encryption(encryption_format='plain')
+
+    def test_spawn_with_ephemeral_encryption_secret_not_found(self):
+        # Test that we fail if any existing key manager secret is not found.
+        self.mock_get_secret.side_effect = [
+            mock.sentinel.secret1, mock.sentinel.secret2, None]
+        # Mock that there are currently no libvirt secrets but there will be
+        # after they are created.
+        self.drvr._host.find_secret.side_effect = [
+            None, None, mock.sentinel.secret1, mock.sentinel.secret2]
+
+        # If we're trying to retrieve secrets from the key manager it's because
+        # the BDMs have existing secret UUIDs.
+        self.img_bdm.encryption_secret_uuid = uuids.secret1
+        self.eph_bdm.encryption_secret_uuid = uuids.secret2
+        self.swap_bdm.encryption_secret_uuid = uuids.secret3
+
+        block_device_info = driver.get_block_device_info(
+            self.instance, [self.img_bdm, self.eph_bdm, self.swap_bdm])
+        image_meta = objects.ImageMeta.from_dict({})
+
+        self.assertRaises(
+            exception.EphemeralEncryptionSecretNotFound, self.drvr.spawn,
+            self.context, self.instance, image_meta, [], None, {},
+            block_device_info=block_device_info)
+
+        # Assert that we didn't generate any key manager secrets.
+        self.mock_create_secret.assert_not_called()
+
+        # We should have attempted to retrieve 3 secrets.
+        call1 = mock.call(self.context, uuids.secret1)
+        call2 = mock.call(self.context, uuids.secret2)
+        call3 = mock.call(self.context, uuids.secret3)
+        self.assertEqual(
+            [call1, call2, call3], self.mock_get_secret.mock_calls)
+
+        # Assert that we generated only two libvirt secrets since we failed
+        # retrieving the last one. Also assert the contents of
+        # block_device_info now contain the expected values. Initially
+        # encryption_format was None and encryption_secret_uuid was
+        # uuids.secretN. So they should have the same initial values as before
+        # the fail.
+        driver_bdm = block_device_info['image'][0]
+        self.assertIsNone(driver_bdm['encryption_format'])
+        self.assertEqual(uuids.secret1, driver_bdm['encryption_secret_uuid'])
+        create_call1 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}",
+            password=mock.sentinel.secret1, uuid=uuids.secret1)
+        delete_call1 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}")
+
+        driver_bdm = block_device_info['ephemerals'][0]
+        self.assertIsNone(driver_bdm['encryption_format'])
+        self.assertEqual(uuids.secret2, driver_bdm['encryption_secret_uuid'])
+        create_call2 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}",
+            password=mock.sentinel.secret2, uuid=uuids.secret2)
+        delete_call2 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}")
+
+        # Assert that we created and deleted two libvirt secrets.
+        self.assertEqual(
+            [create_call1, create_call2],
+            self.drvr._host.create_secret.mock_calls)
+        self.assertEqual(
+            [delete_call1, delete_call2],
+            self.drvr._host.delete_secret.mock_calls)
+
+        # Assert that updates were saved to the database. There should be two
+        # from before the third secret was not found and three during cleanup
+        # for setting the driver BDMs attributes to their original values.
+        self.assertEqual(5, self.mock_save.call_count)
+
+        # Assert that no key manager secrets were deleted.
+        self.mock_delete_secret.assert_not_called()
+
+    def test_spawn_with_ephemeral_encryption_secret_create_fail(self):
+        # Test that we clean up created secrets if one fails.
+        self.mock_create_secret.side_effect = [
+            (uuids.secret1, mock.sentinel.secret1),
+            (uuids.secret2, mock.sentinel.secret2),
+            test.TestingException('oops!'),
+        ]
+        # Mock that there are currently no libvirt secrets but there will be
+        # after they are created.
+        self.drvr._host.find_secret.side_effect = [
+            None, None, mock.sentinel.secret1, mock.sentinel.secret2]
+
+        block_device_info = driver.get_block_device_info(
+            self.instance, [self.img_bdm, self.eph_bdm, self.swap_bdm])
+        image_meta = objects.ImageMeta.from_dict({})
+
+        self.assertRaises(
+            test.TestingException, self.drvr.spawn, self.context,
+            self.instance, image_meta, [], None, {},
+            block_device_info=block_device_info)
+
+        # Assert that we attempted to generate three key manager secrets and
+        # only two libvirt secrets since we failed creating the last key
+        # manager secret. The contents of block_device_info should now contain
+        # the expected values, they should have the same initial values as
+        # before the fail.
+        driver_bdm = block_device_info['image'][0]
+        self.assertIsNone(driver_bdm['encryption_format'])
+        self.assertIsNone(driver_bdm['encryption_secret_uuid'])
+        keymgr_call1 = mock.call(self.context, self.instance, driver_bdm)
+        libvirt_call1 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}",
+            password=mock.sentinel.secret1, uuid=uuids.secret1)
+        driver_bdm = block_device_info['ephemerals'][0]
+        self.assertIsNone(driver_bdm['encryption_format'])
+        self.assertIsNone(driver_bdm['encryption_secret_uuid'])
+        keymgr_call2 = mock.call(self.context, self.instance, driver_bdm)
+        libvirt_call2 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}",
+            password=mock.sentinel.secret2, uuid=uuids.secret2)
+        driver_bdm = block_device_info['swap']
+        self.assertIsNone(driver_bdm['encryption_format'])
+        self.assertIsNone(driver_bdm['encryption_secret_uuid'])
+        keymgr_call3 = mock.call(self.context, self.instance, driver_bdm)
+
+        self.assertEqual(
+            [keymgr_call1, keymgr_call2, keymgr_call3],
+            self.mock_create_secret.mock_calls)
+        self.assertEqual(
+            [libvirt_call1, libvirt_call2],
+            self.drvr._host.create_secret.mock_calls)
+
+        # Assert that updates were saved to the database. There should be two
+        # from before the third secret failed to be created and three after the
+        # created secrets were cleaned up and deleted.
+        self.assertEqual(5, self.mock_save.call_count)
+
+        # Two key manager secrets that were created should have been deleted
+        # after the fail.
+        self.assertEqual(2, self.mock_delete_secret.call_count)
+        call1 = mock.call(self.context, self.instance.uuid, uuids.secret1)
+        call2 = mock.call(self.context, self.instance.uuid, uuids.secret2)
+        self.assertEqual([call1, call2], self.mock_delete_secret.mock_calls)
+
+        # Two libvirt secrets that were created by the first two successful key
+        # manager secret retrievals should have been deleted after the fail.
+        driver_bdm = block_device_info['image'][0]
+        call1 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}")
+        driver_bdm = block_device_info['ephemerals'][0]
+        call2 = mock.call(
+            'volume', f"{self.instance.uuid}_{driver_bdm['uuid']}")
+        self.assertEqual(
+            [call1, call2], self.drvr._host.delete_secret.mock_calls)
+
+    @mock.patch('nova.virt.libvirt.driver.LOG.exception')
+    def test_spawn_with_ephemeral_encryption_cleanup_fails(self, mock_log_exc):
+        # Mock that two key manager secret creates succeed and the third fails.
+        self.mock_create_secret.side_effect = [
+            (uuids.secret1, mock.sentinel.secret1),
+            (uuids.secret2, mock.sentinel.secret2),
+            test.TestingException('oops!'),
+        ]
+        # Mock that there are currently no libvirt secrets but there will be
+        # after they are created.
+        self.drvr._host.find_secret.side_effect = [
+            None, None, mock.sentinel.secret1, mock.sentinel.secret2]
+
+        # Mock that the first key manager key delete during cleanup fails and
+        # the second succeeds.
+        self.mock_delete_secret.side_effect = [
+            test.TestingException('key manager fail'), None]
+
+        # Mock that the first libvirt secret delete during cleanup succeeds and
+        # the second fails.
+        self.drvr._host.delete_secret.side_effect = [
+            None, test.TestingException('libvirt fail')]
+
+        block_device_info = driver.get_block_device_info(
+            self.instance, [self.img_bdm, self.eph_bdm, self.swap_bdm])
+        image_meta = objects.ImageMeta.from_dict({})
+
+        self.assertRaises(
+            test.TestingException, self.drvr.spawn, self.context,
+            self.instance, image_meta, [], None, {},
+            block_device_info=block_device_info)
+
+        call1 = mock.call(
+            f'Failed to delete encryption secret {uuids.secret1} '
+            'in the key manager', instance=self.instance)
+        call2 = mock.call(
+            'Failed to delete libvirt secret '
+            f'{self.instance.uuid}_{self.eph_bdm.uuid}',
+            instance=self.instance)
+        self.assertEqual([call1, call2], mock_log_exc.mock_calls)
+
+    def test_spawn_with_ephemeral_encryption_mix_with_without_secrets(self):
+        # Test that we fail fast if we detect a mix of driver BDMs that have
+        # encryption_secret_uuid set and not set (None). It is not a valid
+        # state.
+        img_bdm = {'encrypted': True, 'encryption_secret_uuid': uuids.secret1}
+        eph_bdm = {'encrypted': True, 'encryption_secret_uuid': None}
+        swap_bdm = {'encrypted': True, 'encryption_secret_uuid': uuids.secret2}
+        block_device_info = {
+            'image': [img_bdm],
+            'ephemerals': [eph_bdm],
+            'swap': swap_bdm,
+        }
+        image_meta = objects.ImageMeta.from_dict({})
+
+        #  Call spawn() with encrypted ephemeral block device.
+        ex = self.assertRaises(
+            exception.InvalidBDM, self.drvr.spawn, self.context, self.instance,
+            image_meta, [], None, {}, block_device_info=block_device_info)
+        self.assertIn(
+            'Found a mix of encrypted BDMs with and without existing '
+            'encryption secrets', ex.message)
+        self.mock_create_secret.assert_not_called()
+        self.mock_get_secret.assert_not_called()
+        self.mock_delete_secret.assert_not_called()
+        self.drvr._host.create_secret.assert_not_called()
+        self.drvr._host.find_secret.assert_not_called()
+        self.drvr._host.delete_secret.assert_not_called()
+
+    @mock.patch('nova.objects.instance.Instance.save', new=mock.Mock())
+    def _test_cleanup_with_ephemeral_encryption(
+        self, has_key_mgr_secret=True, has_libvirt_secret=True,
+        destroy_disks=True
+    ):
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
+        mock_domain.ID.return_value = 123
+
+        self.drvr._host._get_domain.return_value = mock_domain
+        self.drvr.delete_instance_files = mock.Mock(return_value=None)
+        self.drvr.get_info = mock.Mock(return_value=hardware.InstanceInfo(
+            state=power_state.SHUTDOWN, internal_id=-1))
+        if not has_libvirt_secret:
+            self.drvr._host.find_secret.return_value = None
+
+        # Create a DriverBlockDevice list from a BlockDeviceMapping object.
+        encryption_secret_uuid = uuids.secret if has_key_mgr_secret else None
+        bdm = block_device_obj.BlockDeviceMapping(
+            id=1, uuid=uuids.ephemeral, device_type='disk', disk_bus='virtio',
+            no_device=False, device_name='/dev/vdb', volume_size=1,
+            source_type='blank', destination_type='local', guest_format=None,
+            encrypted=True, encryption_format='plain',
+            encryption_options=None,
+            encryption_secret_uuid=encryption_secret_uuid,
+        )
+        ephemerals = [driver_block_device.DriverEphemeralBlockDevice(bdm)]
+        block_device_info = {'ephemerals': ephemerals}
+        self.instance.cleaned = True
+
+        # Call cleanup() with encrypted ephemeral block device.
+        self.drvr.cleanup(
+            self.context, self.instance, [],
+            block_device_info=block_device_info, destroy_disks=destroy_disks)
+
+        # Assert that we did not delete the key manager secret.
+        self.mock_delete_secret.assert_not_called()
+
+        # Assert that we deleted the libvirt secret.
+        if has_libvirt_secret and destroy_disks:
+            secret_usage = f'{self.instance.uuid}_{uuids.ephemeral}'
+            self.drvr._host.delete_secret.assert_called_once_with(
+                'volume', secret_usage)
+        else:
+            self.drvr._host.delete_secret.assert_not_called()
+
+    def test_cleanup_with_ephemeral_encryption(self):
+        self._test_cleanup_with_ephemeral_encryption()
+
+    def test_cleanup_with_ephemeral_encryption_no_key_mgr_secret(self):
+        self._test_cleanup_with_ephemeral_encryption(has_key_mgr_secret=False)
+
+    def test_cleanup_with_ephemeral_encryption_no_libvirt_secret(self):
+        self._test_cleanup_with_ephemeral_encryption(has_libvirt_secret=False)
+
+    def test_cleanup_with_ephemeral_encryption_no_destroy_disks(self):
+        self._test_cleanup_with_ephemeral_encryption(destroy_disks=False)
+
+    def test__cleanup_delete_secret_fails(self):
+        # Test exception handling when libvirt secret deletion fails during
+        # cleanup.
+        error = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, msg='error',
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
+
+        self.drvr._host.find_secret.return_value = mock.sentinel.secret
+        # Secret delete for img_bdm and eph_bdm fail but swap_bdm succeeds.
+        self.drvr._host.delete_secret.side_effect = [error, error, None]
+
+        block_device_info = driver.get_block_device_info(
+            self.instance, [self.img_bdm, self.eph_bdm, self.swap_bdm])
+
+        exp = self.assertRaises(
+            exception.EphemeralEncryptionCleanupFailed,
+            self.drvr._cleanup_ephemeral_encryption_secrets,
+            self.context, self.instance, block_device_info)
+
+        expected_msg = (
+            'Failed to clean up ephemeral encryption secrets: '
+            f'Failed to delete libvirt secret '
+            f'{self.instance.uuid}_{self.img_bdm.uuid}: error\n'
+            f'Failed to delete libvirt secret '
+            f'{self.instance.uuid}_{self.eph_bdm.uuid}: error')
+        self.assertEqual(expected_msg, str(exp))
+
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_cleanup_lvm', new=mock.Mock())
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_cleanup_rbd', new=mock.Mock())
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_cleanup_ephemeral_encryption_secrets')
+    @ddt.data('raw', 'flat', 'qcow2', 'lvm', 'rbd', 'ploop', 'default')
+    def test__cleanup_with_ephemeral_encryption_no_cleanup_instance_dir(
+            self, images_type, mock_cleanup_secrets):
+        bdm_dict = {
+            'source_type': 'image',
+            'destination_type': 'local',
+            'encrypted': True,
+            'encryption_format': 'luks',
+            'encryption_options': None,
+            'encryption_secret_uuid': None,
+        }
+        bdm = fake_block_device.fake_bdm_object(self.context, bdm_dict)
+        bdi = {'image': [driver_block_device.DriverImageBlockDevice(bdm)]}
+        # Pass clean_instance_dir=False + clean_instance_disks=True
+        self.flags(images_type=images_type, group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._cleanup(
+            self.context, self.instance, [], block_device_info=bdi,
+            cleanup_instance_dir=False, cleanup_instance_disks=True)
+        if images_type not in ('lvm', 'rbd'):
+            # We should not have cleaned up encryption secrets because the
+            # disks were not deleted.
+            mock_cleanup_secrets.assert_not_called()
+        else:
+            # For 'lvm' and 'rbd' we should have cleaned up the secrets
+            # because cleanup for their disks is not related to the
+            # instance directory.
+            mock_cleanup_secrets.assert_called_once_with(
+                self.context, self.instance, bdi)
+        mock_cleanup_secrets.reset_mock()
+
+    @mock.patch('nova.objects.instance.Instance.save', new=mock.Mock())
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files')
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_cleanup_ephemeral_encryption_secrets')
+    def test__cleanup_with_ephemeral_encryption_cleanup_instance_dir_failed(
+            self, mock_cleanup_secrets, mock_delete_files):
+        # Simulate a failure to delete the instance files.
+        mock_delete_files.return_value = False
+        bdm_dict = {
+            'source_type': 'image',
+            'destination_type': 'local',
+            'encrypted': True,
+            'encryption_format': 'luks',
+            'encryption_options': None,
+            'encryption_secret_uuid': None,
+        }
+        bdm = fake_block_device.fake_bdm_object(self.context, bdm_dict)
+        bdi = {'image': [driver_block_device.DriverImageBlockDevice(bdm)]}
+        # Pass clean_instance_dir=True + clean_instance_disks=True
+        self.drvr._cleanup(
+            self.context, self.instance, [], block_device_info=bdi,
+            cleanup_instance_dir=True, cleanup_instance_disks=True)
+        # We should not have cleaned up encryption secrets because the disks
+        # were not deleted.
+        mock_cleanup_secrets.assert_not_called()

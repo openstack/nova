@@ -314,36 +314,74 @@ class VTPMTest(test.NoDBTestCase):
             self.ctxt, uuids.vtpm,
         )
 
+
+class EncryptionSecretTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.ctxt = nova_context.get_admin_context()
+
+    @mock.patch('oslo_serialization.base64.encode_as_text')
+    @mock.patch('castellan.common.objects.passphrase.Passphrase')
     @mock.patch.object(crypto, '_get_key_manager')
-    def test_delete_vtpm_secret_error(self, mock_get_manager):
-        """Check behavior when we fail to retrieve the secret via castellan.
+    def _test_create_encryption_secret(
+            self, mock_get_manager, mock_pass, mock_text, for_detail=None):
 
-        We should carry on and delete the reference from the instance.
-        """
-        instance = objects.Instance()
-        instance.system_metadata = {'vtpm_secret_uuid': uuids.vtpm}
-        mock_get_manager.return_value.delete.side_effect = (
-            castellan_exception.ManagedObjectNotFoundError(uuid=uuids.vtpm))
+        instance = objects.Instance(uuid=uuids.instance)
+        driver_bdm = {'uuid': uuids.driver_bdm}
+        passphrase = mock.Mock()
+        mock_pass.return_value = passphrase
+        if for_detail is None:
+            for_detail = f'instance {instance.uuid} BDM {driver_bdm["uuid"]}'
+        secret_name = f'Ephemeral encryption secret for {for_detail}'
 
-        with mock.patch.object(instance, 'save') as mock_save:
-            crypto.delete_vtpm_secret(self.ctxt, instance)
+        secret_uuid, secret = crypto.create_encryption_secret(
+            self.ctxt, instance, driver_bdm, for_detail=for_detail)
 
-        self.assertNotIn('vtpm_secret_uuid', instance.system_metadata)
-        mock_save.assert_called_once()
-        mock_get_manager.assert_called_once()
+        self.assertEqual(
+            mock_get_manager.return_value.store.return_value, secret_uuid)
+        self.assertEqual(secret, mock_text.return_value)
+        mock_pass.assert_called_once_with(
+            mock_text.return_value, name=secret_name)
+        mock_get_manager.return_value.store.assert_called_once_with(
+            self.ctxt, passphrase)
+
+    def test_create_encryption_secret(self):
+        self._test_create_encryption_secret()
+
+    def test_create_encryption_secret_for_image(self):
+        self._test_create_encryption_secret(for_detail='image fake-image')
+
+    @mock.patch.object(crypto, '_get_key_manager')
+    def test_get_encryption_secret(self, mock_get_manager):
+        passphrase = FakePassphrase()
+        mock_get_manager.return_value.get.return_value = passphrase
+        secret = crypto.get_encryption_secret(self.ctxt, uuids.secret)
+        self.assertEqual(passphrase.get_encoded(), secret)
+        mock_get_manager.return_value.get.assert_called_once_with(
+            self.ctxt, uuids.secret)
+
+    @mock.patch.object(crypto, '_get_key_manager')
+    def test_get_encryption_secret_not_found(self, mock_get_manager):
+        mock_get_manager.return_value.get.side_effect = (
+            castellan_exception.ManagedObjectNotFoundError())
+        secret = crypto.get_encryption_secret(self.ctxt, uuids.secret)
+        self.assertIsNone(secret)
+        mock_get_manager.return_value.get.assert_called_once_with(
+            self.ctxt, uuids.secret)
+
+    @mock.patch.object(crypto, '_get_key_manager')
+    def test_delete_encryption_secret(self, mock_get_manager):
+        instance = objects.Instance(uuid=uuids.instance)
+        crypto.delete_encryption_secret(self.ctxt, instance.uuid, uuids.secret)
         mock_get_manager.return_value.delete.assert_called_once_with(
-            self.ctxt, uuids.vtpm,
-        )
+            self.ctxt, uuids.secret)
 
     @mock.patch.object(crypto, '_get_key_manager')
-    def test_delete_vtpm_secret_no_secret(self, mock_get_manager):
-        """Check behavior when instance has no associated vTPM secret.
-
-        This should be effectively a no-op.
-        """
-        instance = objects.Instance()
-        instance.system_metadata = {}
-
-        crypto.delete_vtpm_secret(self.ctxt, instance)
-
-        mock_get_manager.assert_not_called()
+    def test_delete_encryption_secret_not_found(self, mock_get_manager):
+        mock_get_manager.return_value.delete.side_effect = (
+            castellan_exception.ManagedObjectNotFoundError())
+        instance = objects.Instance(uuid=uuids.instance)
+        crypto.delete_encryption_secret(self.ctxt, instance.uuid, uuids.secret)
+        mock_get_manager.return_value.delete.assert_called_once_with(
+            self.ctxt, uuids.secret)
