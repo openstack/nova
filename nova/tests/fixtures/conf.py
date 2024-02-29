@@ -58,6 +58,9 @@ class ConfFixture(config_fixture.Config):
         # tests.
         self.conf.set_default('keep_alive', False, group="wsgi")
 
+        # api group
+        self.conf.set_default('response_validation', 'error', group='api')
+
         # many tests synchronizes on the reception of versioned notifications
         self.conf.set_default(
             'notification_format', "both", group="notifications")

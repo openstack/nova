@@ -396,12 +396,44 @@ so if your hypervisor does not support password injection, set this to False.
 """)
 ]
 
+validation_opts = [
+    cfg.StrOpt(
+        "response_validation",
+        choices=(
+            (
+                "error",
+                "Raise a HTTP 500 (Server Error) for responses that fail "
+                "schema validation",
+            ),
+            (
+                "warn",
+                "Log a warning for responses that fail schema validation",
+            ),
+            (
+                "ignore",
+                "Ignore schema validation failures",
+            ),
+        ),
+        default="warn",
+        help="""\
+Configure validation of API responses.
+
+``warn`` is the current recommendation for production environments. This is
+expected to change to ``error`` in a future release.
+
+If you find it necessary to enable the ``ignore`` option, please report the
+issues you are seeing to the Nova team so we can improve our schemas.
+""",
+    ),
+]
+
 API_OPTS = (auth_opts +
             metadata_opts +
             file_opts +
             osapi_opts +
             os_network_opts +
-            enable_inst_pw_opts)
+            enable_inst_pw_opts +
+            validation_opts)
 
 
 def register_opts(conf):
