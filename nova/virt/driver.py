@@ -1156,6 +1156,26 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def is_node_deleted(self, nodename):
+        """Check this compute node has been deleted.
+
+        This method is called when the compute manager notices that a
+        node that was previously reported as available is no longer
+        available.
+        In this case, we need to know if the node has actually been
+        deleted, or if it is simply no longer managed by this
+        nova-compute service.
+        If True is returned, the database and placement records will
+        be removed.
+
+        :param nodename:
+            node which the caller wants to check if its deleted
+        :returns: True if the node is safe to delete
+        """
+        # For most driver, compute nodes should never get deleted
+        # during a periodic task, they are only deleted via the API
+        return False
+
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
         """Prepare an instance for live migration
