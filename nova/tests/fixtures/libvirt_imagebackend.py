@@ -20,10 +20,14 @@ from unittest import mock
 
 import fixtures
 
+import nova.conf
 from nova.virt.libvirt import config
 from nova.virt.libvirt import driver
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import utils as libvirt_utils
+
+
+CONF = nova.conf.CONF
 
 
 class LibvirtImageBackendFixture(fixtures.Fixture):
@@ -206,6 +210,9 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
         setattr(
             image_init, 'is_file_in_instance_path', is_file_in_instance_path)
 
+        image_init.SUPPORTS_LUKS = (
+            backend_self.BACKEND[CONF.libvirt.images_type].SUPPORTS_LUKS)
+
         return image_init
 
     def _fake_cache(self, fetch_func, filename, size=None, *args, **kwargs):
@@ -228,6 +235,8 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
     ):
         # For tests in test_virt_drivers which expect libvirt_info to be
         # functional
+        # This is where the guest disk XML is first generated and is what tests
+        # will see when LibvirtFixture Domain XML are read and written.
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'file'
         info.source_device = mock_disk.disk_info_mapping['type']
@@ -238,4 +247,15 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
         info.source_path = mock_disk.path
         if boot_order:
             info.boot_order = boot_order
+        if mock_disk.disk_info_mapping.get('encrypted'):
+            info.ephemeral_encryption = (
+                config.LibvirtConfigGuestDiskEncryption())
+            info.ephemeral_encryption.secret = (
+                config.LibvirtConfigGuestDiskEncryptionSecret())
+            info.ephemeral_encryption.secret.type = 'passphrase'
+            info.ephemeral_encryption.secret.uuid = (
+                mock_disk.disk_info_mapping['encryption_secret_uuid'])
+            info.ephemeral_encryption.format = (
+                mock_disk.disk_info_mapping['encryption_format'])
+
         return info

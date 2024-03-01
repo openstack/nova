@@ -890,6 +890,13 @@ def _parse_disk_info(element):
         if not disk_info['source']:
             disk_info['source'] = source.get('path')
 
+        encryption = element.find('./source/encryption')
+        if encryption is not None and len(encryption):
+            disk_info['encryption_format'] = encryption.get('format')
+            secret = encryption.find('./secret')
+            if secret is not None:
+                disk_info['encryption_secret'] = secret.get('uuid')
+
     target = element.find('./target')
     if target is not None:
         disk_info['target_dev'] = target.get('dev')
@@ -1416,12 +1423,23 @@ class Domain(object):
             else:
                 source_attr = 'dev'
 
-            disks += '''<disk type='%(type)s' device='%(device)s'>
+            strformat = """
+    <disk type='%(type)s' device='%(device)s'>
       <driver name='%(driver_name)s' type='%(driver_type)s'/>
-      <source %(source_attr)s='%(source)s'/>
+      <source %(source_attr)s='%(source)s'"""
+            if 'encryption_format' not in disk:
+                strformat += '/>'
+            else:
+                strformat += """>
+        <encryption format='%(encryption_format)s'>
+          <secret type='passphrase' uuid='%(encryption_secret)s'/>
+        </encryption>
+      </source>"""
+            strformat += """
       <target dev='%(target_dev)s' bus='%(target_bus)s'/>
       <address type='drive' controller='0' bus='0' unit='0'/>
-    </disk>''' % dict(source_attr=source_attr, **disk)
+    </disk>"""
+            disks += strformat % dict(source_attr=source_attr, **disk)
         nics = ''
         for func, nic in enumerate(self._def['devices']['nics']):
             if func > 7:
@@ -1700,6 +1718,11 @@ class Secret(object):
         tree = etree.fromstring(xml)
         self._uuid = tree.find('./uuid').text
         self._private = tree.get('private') == 'yes'
+        self._usage_id = None
+        usage = tree.find('./usage')
+        if usage is not None:
+            if usage.get('type') == 'volume':
+                self._usage_id = usage.find('volume').text
 
     def setValue(self, value, flags=0):
         self._value = value
@@ -1725,6 +1748,14 @@ class Secret(object):
 
     def undefine(self):
         self._connection._remove_secret(self)
+
+    def UUIDString(self):
+        if self._uuid is not None:
+            return self._uuid
+
+    def usageID(self):
+        if self._usage_id is not None:
+            return self._usage_id
 
 
 class Connection(object):
@@ -2128,8 +2159,15 @@ class Connection(object):
                     <feature policy='require' name='aes'/>
                   </cpu>"""
 
+    def listAllSecrets(self, flags):
+        return [secret for secret in self._secrets.values()]
+
     def secretLookupByUsage(self, usage_type_obj, usage_id):
-        pass
+        for secret in self._secrets.values():
+            # Ignore usage_type_obj because we don't have a way to map libvrt
+            # usage type constants to strings.
+            if secret._usage_id == usage_id:
+                return secret
 
     def secretDefineXML(self, xml):
         secret = Secret(self, xml)
