@@ -196,7 +196,7 @@ class Image(metaclass=abc.ABCMeta):
             secret.uuid = self.disk_info_mapping.get('encryption_secret_uuid')
             encryption.secret = secret
             encryption.format = self.disk_info_mapping.get('encryption_format')
-            info.encryption = encryption
+            info.ephemeral_encryption = encryption
 
         if disk_bus == 'scsi':
             self.disk_scsi(info, disk_unit)

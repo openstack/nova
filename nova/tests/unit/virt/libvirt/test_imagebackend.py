@@ -256,13 +256,14 @@ class _ImageTestCase(object):
         self.assertEqual("1", disk.boot_order)
 
         self.assertIsInstance(
-            disk.encryption, vconfig.LibvirtConfigGuestDiskEncryption)
+            disk.ephemeral_encryption,
+            vconfig.LibvirtConfigGuestDiskEncryption)
         self.assertIsInstance(
-            disk.encryption.secret,
+            disk.ephemeral_encryption.secret,
             vconfig.LibvirtConfigGuestDiskEncryptionSecret)
-        self.assertEqual("passphrase", disk.encryption.secret.type)
-        self.assertEqual(uuids.secret, disk.encryption.secret.uuid)
-        self.assertEqual("luks", disk.encryption.format)
+        self.assertEqual("passphrase", disk.ephemeral_encryption.secret.type)
+        self.assertEqual(uuids.secret, disk.ephemeral_encryption.secret.uuid)
+        self.assertEqual("luks", disk.ephemeral_encryption.format)
 
 
 class FlatTestCase(_ImageTestCase, test.NoDBTestCase):

@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 from lxml import etree
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
@@ -738,6 +739,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
         """)
 
 
+@ddt.ddt
 class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
 
     def test_config_file(self):
@@ -982,7 +984,8 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         obj.parse_dom(xmldoc)
         self.assertEqual(obj.mirror.ready, "yes")
 
-    def test_config_disk_encryption_format(self):
+    @ddt.data('volume_encryption', 'ephemeral_encryption')
+    def test_config_disk_encryption_format(self, encryption):
         d = config.LibvirtConfigGuestDisk()
         e = config.LibvirtConfigGuestDiskEncryption()
         s = config.LibvirtConfigGuestDiskEncryptionSecret()
@@ -1001,42 +1004,57 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
         s.type = "passphrase"
         s.uuid = uuids.secret
         e.secret = s
-        d.encryption = e
+        setattr(d, encryption, e)
 
         xml = d.to_xml()
-        expected_xml = """
-            <disk type="file" device="disk">
-              <driver name="qemu" type="qcow2" cache="none" io="native"/>
-              <source file="/tmp/hello.qcow2"/>
-              <target bus="ide" dev="/dev/hda"/>
-              <serial>%s</serial>
-              <boot order="1"/>
-              <encryption format='luks'>
-                <secret type='passphrase' uuid='%s'/>
-              </encryption>
-            </disk>""" % (uuids.serial, uuids.secret)
+        if encryption == 'volume_encryption':
+            expected_xml = """
+                <disk type="file" device="disk">
+                  <driver name="qemu" type="qcow2" cache="none" io="native"/>
+                  <source file="/tmp/hello.qcow2"/>
+                  <target bus="ide" dev="/dev/hda"/>
+                  <serial>%s</serial>
+                  <boot order="1"/>
+                  <encryption format='luks'>
+                    <secret type='passphrase' uuid='%s'/>
+                  </encryption>
+                </disk>""" % (uuids.serial, uuids.secret)
+        elif encryption == 'ephemeral_encryption':
+            expected_xml = """
+                <disk type="file" device="disk">
+                  <driver name="qemu" type="qcow2" cache="none" io="native"/>
+                  <source file="/tmp/hello.qcow2">
+                    <encryption format='luks'>
+                      <secret type='passphrase' uuid='%s'/>
+                    </encryption>
+                  </source>
+                  <target bus="ide" dev="/dev/hda"/>
+                  <serial>%s</serial>
+                  <boot order="1"/>
+                </disk>""" % (uuids.secret, uuids.serial)
         self.assertXmlEqual(expected_xml, xml)
 
     def test_config_disk_encryption_parse(self):
         xml = """
 <disk type="file" device="disk">
   <driver name="qemu" type="qcow2" cache="none" io="native"/>
-  <source file="/tmp/hello.qcow2"/>
+  <source file="/tmp/hello.qcow2">
+    <encryption format='luks'>
+      <secret type='passphrase' uuid='%s'/>
+    </encryption>
+  </source>
   <target bus="ide" dev="/dev/hda"/>
   <serial>%s</serial>
   <boot order="1"/>
-  <encryption format='luks'>
-    <secret type='passphrase' uuid='%s'/>
-  </encryption>
-</disk>""" % (uuids.serial, uuids.secret)
+</disk>""" % (uuids.secret, uuids.serial)
 
         xmldoc = etree.fromstring(xml)
         d = config.LibvirtConfigGuestDisk()
         d.parse_dom(xmldoc)
 
-        self.assertEqual(d.encryption.format, "luks")
-        self.assertEqual(d.encryption.secret.type, "passphrase")
-        self.assertEqual(d.encryption.secret.uuid, uuids.secret)
+        self.assertEqual(d.ephemeral_encryption.format, "luks")
+        self.assertEqual(d.ephemeral_encryption.secret.type, "passphrase")
+        self.assertEqual(d.ephemeral_encryption.secret.uuid, uuids.secret)
 
     def test_config_boot_order_parse(self):
         xml = """

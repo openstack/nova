@@ -1173,7 +1173,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.device_addr = None
         self.boot_order = None
         self.mirror = None
-        self.encryption = None
+        self.volume_encryption = None
+        self.ephemeral_encryption = None
         self.alias = None
 
     def _format_iotune(self, dev):
@@ -1266,11 +1267,14 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
             dev.append(alias)
 
         if self.source_type == "file":
-            dev.append(etree.Element("source", file=self.source_path))
+            source = etree.Element("source", file=self.source_path)
+            dev.append(source)
         elif self.source_type == "block":
-            dev.append(etree.Element("source", dev=self.source_path))
+            source = etree.Element("source", dev=self.source_path)
+            dev.append(source)
         elif self.source_type == "mount":
-            dev.append(etree.Element("source", dir=self.source_path))
+            source = etree.Element("source", dir=self.source_path)
+            dev.append(source)
         elif self.source_type == "network" and self.source_protocol:
             source = etree.Element("source", protocol=self.source_protocol)
             if self.source_name is not None:
@@ -1282,6 +1286,14 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                     host.set('port', port)
                 source.append(host)
             dev.append(source)
+
+        if self.ephemeral_encryption:
+            # NOTE(melwitt): <encryption> should be a sub element of <source>
+            # in order to ensure the image uses encryption.
+            # See the following for more details:
+            #   https://libvirt.org/formatdomain.html#hard-drives-floppy-disks-cdroms
+            #   https://bugzilla.redhat.com/show_bug.cgi?id=1371022#c13
+            source.append(self.ephemeral_encryption.format_dom())
 
         if self.auth_secret_type is not None:
             auth = etree.Element("auth")
@@ -1325,8 +1337,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.device_addr:
             dev.append(self.device_addr.format_dom())
 
-        if self.encryption:
-            dev.append(self.encryption.format_dom())
+        if self.volume_encryption:
+            dev.append(self.volume_encryption.format_dom())
 
         return dev
 
@@ -1358,6 +1370,11 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                         if sub.tag == 'host':
                             self.source_hosts.append(sub.get('name'))
                             self.source_ports.append(sub.get('port'))
+                for sub in c:
+                    if sub.tag == 'encryption':
+                        e = LibvirtConfigGuestDiskEncryption()
+                        e.parse_dom(sub)
+                        self.ephemeral_encryption = e
 
             elif c.tag == 'serial':
                 self.serial = c.text
@@ -1388,7 +1405,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
             elif c.tag == 'encryption':
                 e = LibvirtConfigGuestDiskEncryption()
                 e.parse_dom(c)
-                self.encryption = e
+                self.volume_encryption = e
             elif c.tag == 'alias':
                 self.alias = c.get('name')
 
