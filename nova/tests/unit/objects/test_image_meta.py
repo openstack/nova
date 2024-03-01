@@ -14,6 +14,8 @@
 
 import datetime
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
 from nova import exception
 from nova import objects
 from nova.objects import fields
@@ -570,3 +572,22 @@ class TestImageMetaProps(test.NoDBTestCase):
         # and is absent on older versions
         primitive = obj.obj_to_primitive('1.33')
         self.assertNotIn('hw_viommu_model', primitive['nova_object.data'])
+
+    def test_obj_make_compatible_ephemeral_encryption_secret_uuid(self):
+        """Check 'hw_ephemeral_encryption_secret_uuid' compatibility."""
+        obj = objects.ImageMetaProps(
+            hw_ephemeral_encryption_secret_uuid=uuids.secret)
+
+        primitive = obj.obj_to_primitive('1.37')
+        self.assertIn(
+            'hw_ephemeral_encryption_secret_uuid',
+            primitive['nova_object.data'])
+        self.assertEqual(
+            uuids.secret,
+            primitive[
+                'nova_object.data']['hw_ephemeral_encryption_secret_uuid'])
+
+        primitive = obj.obj_to_primitive('1.36')
+        self.assertNotIn(
+            'hw_ephemeral_encryption_secret_uuid',
+            primitive['nova_object.data'])

@@ -133,9 +133,6 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.13: Added 'hw_virtio_packed_ring' field
     VERSION = '1.13'
 
-    SCHEMA = {
-        k: ('image_meta_props', k) for k in image_meta.ImageMetaProps.fields}
-
     # NOTE(efried): This logic currently relies on all of the fields of
     # ImageMetaProps being initialized with no arguments. See the docstring.
     # NOTE(efried): It's possible this could just be:
@@ -143,7 +140,11 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     #  But it is not clear that OVO can tolerate the same *instance* of a type
     #  class being used in more than one place.
     fields = {
-        k: v.__class__() for k, v in image_meta.ImageMetaProps.fields.items()}
+        k: v.__class__() for k, v in image_meta.ImageMetaProps.fields.items()
+            if k not in ('hw_ephemeral_encryption_secret_uuid',)}
+
+    SCHEMA = {
+        k: ('image_meta_props', k) for k in fields}
 
     def __init__(self, image_meta_props):
         super(ImageMetaPropsPayload, self).__init__()
