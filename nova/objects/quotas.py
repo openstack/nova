@@ -363,9 +363,9 @@ class Quotas(base.NovaObject):
             # to report this resource as it's in the deltas.
             if resource.startswith('instances_'):
                 if resource not in check_kwargs['project_values']:
-                    check_kwargs['project_values'][resource] = deltas[res]
+                    check_kwargs['project_values'][resource] = deltas[resource]
                 if resource not in check_kwargs['user_values']:
-                    check_kwargs['user_values'][resource] = deltas[res]
+                    check_kwargs['user_values'][resource] = deltas[resource]
         if check_project_id is not None:
             check_kwargs['project_id'] = check_project_id
         if check_user_id is not None:
