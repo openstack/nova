@@ -27,6 +27,7 @@ import fixtures
 from oslo_concurrency import lockutils
 from oslo_config import fixture as config_fixture
 from oslo_service import loopingcall
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import imageutils
 from oslo_utils import units
 from oslo_utils import uuidutils
@@ -226,6 +227,42 @@ class _ImageTestCase(object):
     @ddt.data(5, None)
     def test_libvirt_info_scsi_with_unit(self, disk_unit):
         self._test_libvirt_info_scsi_with_unit(disk_unit)
+
+    def test_libvirt_info_with_encryption(self):
+        disk_info = {
+            'bus': 'virtio',
+            'dev': '/dev/vda',
+            'type': 'disk',
+            'encrypted': True,
+            'encryption_format': 'luks',
+            'encryption_secret_uuid': uuids.secret,
+        }
+        image = self.image_class(
+            self.INSTANCE, self.NAME, disk_info_mapping=disk_info)
+
+        if not image.SUPPORTS_LUKS:
+            classname = type(image).__name__
+            self.skipTest(
+                f"LUKS encryption is not supported with {classname}")
+
+        disk = image.libvirt_info(
+            cache_mode="none", extra_specs={}, boot_order="1")
+
+        self.assertIsInstance(disk, vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual("/dev/vda", disk.target_dev)
+        self.assertEqual("virtio", disk.target_bus)
+        self.assertEqual("none", disk.driver_cache)
+        self.assertEqual("disk", disk.source_device)
+        self.assertEqual("1", disk.boot_order)
+
+        self.assertIsInstance(
+            disk.encryption, vconfig.LibvirtConfigGuestDiskEncryption)
+        self.assertIsInstance(
+            disk.encryption.secret,
+            vconfig.LibvirtConfigGuestDiskEncryptionSecret)
+        self.assertEqual("passphrase", disk.encryption.secret.type)
+        self.assertEqual(uuids.secret, disk.encryption.secret.uuid)
+        self.assertEqual("luks", disk.encryption.format)
 
 
 class FlatTestCase(_ImageTestCase, test.NoDBTestCase):

@@ -185,6 +185,19 @@ class Image(metaclass=abc.ABCMeta):
         info.source_path = self.path
         info.boot_order = boot_order
 
+        if (self.SUPPORTS_LUKS and
+            self.disk_info_mapping and
+            self.disk_info_mapping.get('encrypted') and
+            self.disk_info_mapping.get('encryption_format') == 'luks'
+        ):
+            encryption = vconfig.LibvirtConfigGuestDiskEncryption()
+            secret = vconfig.LibvirtConfigGuestDiskEncryptionSecret()
+            secret.type = 'passphrase'
+            secret.uuid = self.disk_info_mapping.get('encryption_secret_uuid')
+            encryption.secret = secret
+            encryption.format = self.disk_info_mapping.get('encryption_format')
+            info.encryption = encryption
+
         if disk_bus == 'scsi':
             self.disk_scsi(info, disk_unit)
 
