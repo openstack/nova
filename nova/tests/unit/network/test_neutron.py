@@ -3615,8 +3615,8 @@ class TestAPI(TestAPIBase):
 
         subnets = self.api._get_subnets_from_port(self.context, port_data)
 
-        self.assertEqual(subnet_data1[0]['gateway_ip'],
-                         subnets[0]['meta']['dhcp_server'])
+        self.assertEqual(subnet_data1[0]['enable_dhcp'],
+                         subnets[0]['meta']['enable_dhcp'])
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_physnet_tunneled_info_multi_segment(self, mock_get_client):
