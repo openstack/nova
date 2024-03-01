@@ -1,0 +1,24 @@
+{
+    "servers": [
+        {
+            "id": "3cfb801c-f03c-45ce-834b-d097b34e9534",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/3cfb801c-f03c-45ce-834b-d097b34e9534",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/3cfb801c-f03c-45ce-834b-d097b34e9534",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "new-server-test"
+        }
+    ],
+    "servers_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers?limit=1&marker=3cfb801c-f03c-45ce-834b-d097b34e9534",
+            "rel": "next"
+        }
+    ]
+}

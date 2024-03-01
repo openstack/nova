@@ -1247,3 +1247,11 @@ Any evacuated instances will be now stopped at destination. This
 requires minimum nova release 27.0.0, OpenStack release 2023.1
 Antelope.  Operators can still use previous microversion for older
 behavior.
+
+.. _microversion 2.96:
+
+2.96
+----
+
+The ``server show`` and ``server list --long`` responses now include the
+pinned availability zone as well.

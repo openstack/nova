@@ -5695,6 +5695,18 @@ personality:
   required: false
   type: array
   max_version: 2.56
+pinned_availability_zone:
+  description: |
+    This is the availability zone requested during server creation.
+    Also when cross_az_attach option is false and booting an instance from
+    volume, the instance can be pinned to AZ and in that case, instance will
+    be scheduled on host belonging to pinned AZ.
+    Also when default_schedule_zone config option set to specific AZ, in that
+    case, instance would be pinned to that specific AZ, and instance will be
+    scheduled on host belonging to pinned AZ.
+  in: body
+  type: string
+  min_version: 2.96
 policies:
   description: |
     A list of exactly one policy name to associate with the server group. The

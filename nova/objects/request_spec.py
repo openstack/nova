@@ -59,7 +59,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.12: Added requested_resources
     # Version 1.13: Added request_level_params
     # Version 1.14: Added requested_networks
-    VERSION = '1.14'
+    # Version 1.15: Added get_by_instance_uuids()
+    VERSION = '1.15'
 
     fields = {
         'id': fields.IntegerField(),
@@ -781,6 +782,23 @@ class RequestSpec(base.NovaObject):
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_spec = cls._get_by_instance_uuid_from_db(context, instance_uuid)
         return cls._from_db_object(context, cls(), db_spec)
+
+    @staticmethod
+    @api_db_api.context_manager.reader
+    def _get_by_instance_uuids_from_db(context, instance_uuids):
+        db_specs = context.session.query(api_models.RequestSpec).filter(
+            api_models.RequestSpec.instance_uuid.in_(instance_uuids)).all()
+        return db_specs
+
+    @base.remotable_classmethod
+    def get_by_instance_uuids(cls, context, instance_uuids):
+        req_specs = []
+        if not instance_uuids:
+            return req_specs
+        db_specs = cls._get_by_instance_uuids_from_db(context, instance_uuids)
+        for db_spec in db_specs:
+            req_specs.append(cls._from_db_object(context, cls(), db_spec))
+        return req_specs
 
     @staticmethod
     @api_db_api.context_manager.writer
