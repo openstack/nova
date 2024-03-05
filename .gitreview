@@ -2,4 +2,4 @@
 host=review.opendev.org
 port=29418
 project=openstack/nova.git
-defaultbranch=stable/wallaby
+defaultbranch=unmaintained/wallaby
