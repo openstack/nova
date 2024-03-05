@@ -3,4 +3,4 @@ Xena Series Release Notes
 =========================
 
 .. release-notes::
-   :branch: stable/xena
+   :branch: unmaintained/xena
