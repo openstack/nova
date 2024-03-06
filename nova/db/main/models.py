@@ -761,6 +761,16 @@ class ShareMapping(BASE, NovaBase):
         sa.Index('share_idx', 'share_id'),
         sa.Index('share_mapping_instance_uuid_share_id_idx',
               'instance_uuid', 'share_id'),
+        sa.UniqueConstraint(
+            "instance_uuid",
+            "share_id",
+            name="uniq_key_pairs0instance_uuid0share_id",
+        ),
+        sa.UniqueConstraint(
+            "instance_uuid",
+            "tag",
+            name="uniq_key_pairs0instance_uuid0tag",
+        ),
     )
     # sqlite> create table my_table(id bigint primary key AUTOINCREMENT,
     # name text);
