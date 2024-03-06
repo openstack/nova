@@ -1087,7 +1087,7 @@ def upsize_quota_delta(new_flavor, old_flavor):
 
 
 def get_headroom(quotas, usages, deltas):
-    headroom = {res: quotas[res] - usages[res]
+    headroom = {res: quotas[res] - usages.get(res, 0)
                 for res in quotas.keys()}
     # If quota_cores is unlimited [-1]:
     # - set cores headroom based on instances headroom:
