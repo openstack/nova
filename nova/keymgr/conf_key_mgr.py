@@ -129,3 +129,13 @@ class ConfKeyManager(key_manager.KeyManager):
                 reason="cannot delete non-existent key")
 
         LOG.warning("Not deleting key %s", managed_object_id)
+
+    def add_consumer(self, context, managed_object_id, consumer_data):
+        raise NotImplementedError(
+            'ConfKeyManager does not implement adding consumers'
+        )
+
+    def remove_consumer(self, context, managed_object_id, consumer_data):
+        raise NotImplementedError(
+            'ConfKeyManager does not implement removing consumers'
+        )
