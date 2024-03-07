@@ -434,7 +434,7 @@ class VMwareVMOps(object):
                 # number-of-CPUs, so we have to translate here.
                 cluster_host_mhz = cluster_stats.get('cpu_mhz', 0)
                 extra_specs.cpu_limits.reservation = \
-                    cpu_reserved * cluster_host_mhz
+                    round(cpu_reserved * cluster_host_mhz)
         extra_specs.cpu_limits.validate()
         extra_specs.memory_limits.validate()
         extra_specs.disk_io_limits.validate()

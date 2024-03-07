@@ -1730,9 +1730,11 @@ def _process_host_stats(obj, host_reservations_map):
     runtime_summary = host_props["summary.runtime"]
     hardware_summary = host_props.get("summary.hardware")
     stats_summary = host_props.get("summary.quickStats")
-    # Total vcpus is the sum of all pCPUs of individual hosts
+    # Total vCPUs is the sum of all CPU threads of individual hosts.
     # The overcommitment ratio is factored in by the scheduler
     threads = getattr(hardware_summary, "numCpuThreads", 0)
+    pcpus = getattr(hardware_summary, "numCpuCores", 0)
+    vcpu_ratio = (pcpus / threads) if pcpus and threads else 1.0
     mem_mb = getattr(hardware_summary, "memorySize", 0) // units.Mi
 
     stats = {
@@ -1743,7 +1745,7 @@ def _process_host_stats(obj, host_reservations_map):
         "memory_mb": mem_mb,
         "memory_mb_used": getattr(stats_summary, "overallMemoryUsage", 0),
         "cpu_info": _host_props_to_cpu_info(host_props),
-        "cpu_mhz": getattr(hardware_summary, "cpuMhz", 0),
+        "cpu_mhz": getattr(hardware_summary, "cpuMhz", 0) * vcpu_ratio,
     }
 
     _set_hypervisor_type_and_version(stats, host_props)

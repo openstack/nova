@@ -2860,7 +2860,7 @@ class VMwareAPIVMTestCase(test.TestCase,
                 'memory_mb_used': 0,
                 'memory_mb_reserved': memory_mb_reserved,
                 'cpu_info': {},
-                'cpu_mhz': 1800,
+                'cpu_mhz': 900,
             },
             'host2': {
                 'available': True,
@@ -2871,7 +2871,7 @@ class VMwareAPIVMTestCase(test.TestCase,
                 'memory_mb_used': 0,
                 'memory_mb_reserved': 0,
                 'cpu_info': {},
-                'cpu_mhz': 1800,
+                'cpu_mhz': 900,
             },
         }
 
