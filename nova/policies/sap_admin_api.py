@@ -66,6 +66,17 @@ sap_admin_api_policies = [
             }
         ],
         scope_types=['system', 'project']),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'get-scheduler-settings',
+        check_str=base.RULE_ADMIN_API,
+        description="Expose the current scheduler settings",
+        operations=[
+            {
+                'method': 'GET',
+                'path': '/sap/get_scheduler_settings'
+            }
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
