@@ -151,6 +151,9 @@ class HostState(object):
         # Host cell (v2) membership
         self.cell_uuid = cell_uuid
 
+        # Traits from Placement
+        self.traits = None
+
         self.updated = None
 
         self.allocation_candidates = []
@@ -260,6 +263,9 @@ class HostState(object):
 
         # update failed_builds counter reported by the compute
         self.failed_builds = int(self.stats.get('failed_builds', 0))
+
+    def update_from_provider_summary(self, provider_summary):
+        self.traits = provider_summary.get('traits')
 
     def consume_from_request(self, spec_obj):
         """Incrementally update host state from a RequestSpec object."""

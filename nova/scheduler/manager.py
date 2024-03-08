@@ -754,8 +754,10 @@ class SchedulerManager(manager.Manager):
         compute_uuids = None
         if provider_summaries is not None:
             compute_uuids = list(provider_summaries.keys())
-        return self.host_manager.get_host_states_by_uuids(
+        hosts = self.host_manager.get_host_states_by_uuids(
             context, compute_uuids, spec_obj)
+        return self._update_hosts_from_provider_summaries(
+            hosts, provider_summaries)
 
     def update_aggregates(self, ctxt, aggregates):
         """Updates HostManager internal aggregates information.
@@ -796,3 +798,20 @@ class SchedulerManager(manager.Manager):
         """
         self.host_manager.sync_instance_info(
             context, host_name, instance_uuids)
+
+    @staticmethod
+    def _update_hosts_from_provider_summaries(hosts, provider_summaries):
+        """Updates the 'hosts' generator with provider_summaries
+
+        :returns: a new generator with the updated host states
+        """
+        if not provider_summaries:
+            return hosts
+
+        def _update_host(host_state):
+            provider_summary = provider_summaries.get(host_state.uuid)
+            if provider_summary:
+                host_state.update_from_provider_summary(provider_summary)
+            return host_state
+
+        return (_update_host(host) for host in hosts)
