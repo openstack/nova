@@ -24,6 +24,7 @@ class TestAPI(test.NoDBTestCase):
     def setUp(self):
         super(TestAPI, self).setUp()
         self.core_1 = api.Core(1)
+        self.api = api.API()
 
         # Create a fake instance with two pinned CPUs but only one is on the
         # dedicated set
@@ -82,7 +83,7 @@ class TestAPI(test.NoDBTestCase):
         self.flags(cpu_power_management=True, group='libvirt')
         self.flags(cpu_dedicated_set='1-2', group='compute')
 
-        api.power_up(self.fake_inst)
+        self.api.power_up(self.fake_inst)
         # only core #2 can be set as core #0 is not on the dedicated set
         # As a reminder, core(i).online calls set_online(i)
         mock_online.assert_called_once_with(2)
@@ -93,7 +94,7 @@ class TestAPI(test.NoDBTestCase):
         self.flags(cpu_power_management_strategy='governor', group='libvirt')
         self.flags(cpu_dedicated_set='1-2', group='compute')
 
-        api.power_up(self.fake_inst)
+        self.api.power_up(self.fake_inst)
         # only core #2 can be set as core #1 is not on the dedicated set
         # As a reminder, core(i).set_high_governor calls set_governor(i)
         mock_set_governor.assert_called_once_with(2, 'performance')
@@ -101,13 +102,13 @@ class TestAPI(test.NoDBTestCase):
     @mock.patch.object(core, 'set_online')
     def test_power_up_skipped(self, mock_online):
         self.flags(cpu_power_management=False, group='libvirt')
-        api.power_up(self.fake_inst)
+        self.api.power_up(self.fake_inst)
         mock_online.assert_not_called()
 
     @mock.patch.object(core, 'set_online')
     def test_power_up_skipped_if_standard_instance(self, mock_online):
         self.flags(cpu_power_management=True, group='libvirt')
-        api.power_up(objects.Instance(numa_topology=None))
+        self.api.power_up(objects.Instance(numa_topology=None))
         mock_online.assert_not_called()
 
     @mock.patch.object(core, 'set_offline')
@@ -115,7 +116,7 @@ class TestAPI(test.NoDBTestCase):
         self.flags(cpu_power_management=True, group='libvirt')
         self.flags(cpu_dedicated_set='1-2', group='compute')
 
-        api.power_down(self.fake_inst)
+        self.api.power_down(self.fake_inst)
         # only core #2 can be set as core #1 is not on the dedicated set
         # As a reminder, core(i).online calls set_online(i)
         mock_offline.assert_called_once_with(2)
@@ -126,7 +127,7 @@ class TestAPI(test.NoDBTestCase):
         self.flags(cpu_power_management_strategy='governor', group='libvirt')
         self.flags(cpu_dedicated_set='0-1', group='compute')
 
-        api.power_down(self.fake_inst)
+        self.api.power_down(self.fake_inst)
 
         # Make sure that core #0 is ignored, since it is special and cannot
         # be powered down.
@@ -138,7 +139,7 @@ class TestAPI(test.NoDBTestCase):
         self.flags(cpu_power_management_strategy='governor', group='libvirt')
         self.flags(cpu_dedicated_set='1-2', group='compute')
 
-        api.power_down(self.fake_inst)
+        self.api.power_down(self.fake_inst)
 
         # only core #2 can be set as core #0 is not on the dedicated set
         # As a reminder, core(i).set_high_governor calls set_governor(i)
@@ -147,13 +148,13 @@ class TestAPI(test.NoDBTestCase):
     @mock.patch.object(core, 'set_offline')
     def test_power_down_skipped(self, mock_offline):
         self.flags(cpu_power_management=False, group='libvirt')
-        api.power_down(self.fake_inst)
+        self.api.power_down(self.fake_inst)
         mock_offline.assert_not_called()
 
     @mock.patch.object(core, 'set_offline')
     def test_power_down_skipped_if_standard_instance(self, mock_offline):
         self.flags(cpu_power_management=True, group='libvirt')
-        api.power_down(objects.Instance(numa_topology=None))
+        self.api.power_down(objects.Instance(numa_topology=None))
         mock_offline.assert_not_called()
 
     @mock.patch.object(core, 'set_offline')
@@ -161,7 +162,7 @@ class TestAPI(test.NoDBTestCase):
         self.flags(cpu_power_management=True, group='libvirt')
         self.flags(cpu_dedicated_set='0-2', group='compute')
 
-        api.power_down_all_dedicated_cpus()
+        self.api.power_down_all_dedicated_cpus()
         # All dedicated CPUs are turned offline, except CPU0
         mock_offline.assert_has_calls([mock.call(1), mock.call(2)])
 
@@ -171,7 +172,7 @@ class TestAPI(test.NoDBTestCase):
         self.flags(cpu_power_management_strategy='governor', group='libvirt')
         self.flags(cpu_dedicated_set='0-2', group='compute')
 
-        api.power_down_all_dedicated_cpus()
+        self.api.power_down_all_dedicated_cpus()
         # All dedicated CPUs are turned offline, except CPU0
         mock_set_governor.assert_has_calls([mock.call(1, 'powersave'),
                                             mock.call(2, 'powersave')])
@@ -179,7 +180,7 @@ class TestAPI(test.NoDBTestCase):
     @mock.patch.object(core, 'set_offline')
     def test_power_down_all_dedicated_cpus_skipped(self, mock_offline):
         self.flags(cpu_power_management=False, group='libvirt')
-        api.power_down_all_dedicated_cpus()
+        self.api.power_down_all_dedicated_cpus()
         mock_offline.assert_not_called()
 
     @mock.patch.object(core, 'set_offline')
@@ -188,7 +189,7 @@ class TestAPI(test.NoDBTestCase):
     ):
         self.flags(cpu_power_management=True, group='libvirt')
         self.flags(cpu_dedicated_set=None, group='compute')
-        api.power_down_all_dedicated_cpus()
+        self.api.power_down_all_dedicated_cpus()
         mock_offline.assert_not_called()
 
     @mock.patch.object(core, 'get_governor')
@@ -201,7 +202,7 @@ class TestAPI(test.NoDBTestCase):
         mock_get_governor.return_value = 'performance'
         mock_get_online.side_effect = (True, False)
         self.assertRaises(exception.InvalidConfiguration,
-                          api.validate_all_dedicated_cpus)
+                          self.api.validate_all_dedicated_cpus)
 
     @mock.patch.object(core, 'get_governor')
     @mock.patch.object(core, 'get_online')
@@ -213,7 +214,7 @@ class TestAPI(test.NoDBTestCase):
         mock_get_online.return_value = True
         mock_get_governor.side_effect = ('powersave', 'performance')
         self.assertRaises(exception.InvalidConfiguration,
-                          api.validate_all_dedicated_cpus)
+                          self.api.validate_all_dedicated_cpus)
 
     @mock.patch.object(core, 'get_governor')
     @mock.patch.object(core, 'get_online')
@@ -227,7 +228,7 @@ class TestAPI(test.NoDBTestCase):
         mock_get_online.return_value = True
         mock_get_governor.return_value = 'performance'
 
-        api.validate_all_dedicated_cpus()
+        self.api.validate_all_dedicated_cpus()
 
         # Make sure we skipped CPU0
         mock_get_online.assert_has_calls([mock.call(1), mock.call(2)])
@@ -240,6 +241,6 @@ class TestAPI(test.NoDBTestCase):
     def test_validate_all_dedicated_cpus_no_cpu(self):
         self.flags(cpu_power_management=True, group='libvirt')
         self.flags(cpu_dedicated_set=None, group='compute')
-        api.validate_all_dedicated_cpus()
+        self.api.validate_all_dedicated_cpus()
         # no assert we want to make sure the validation won't raise if
         # no dedicated cpus are configured
