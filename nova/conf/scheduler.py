@@ -480,6 +480,20 @@ Possible values:
 * An integer or float value, where the value corresponds to the multipler
   ratio for this weigher.
 """),
+    cfg.FloatOpt("decommissioning_weight_multiplier",
+                 default=1.0,
+                 help="""
+Multiplier used for de-prioritizing hosts having the CUSTOM_DECOMMISSIONING
+trait associated.
+
+A positive value will de-prioritize the hosts, while a negative value
+will increase their priority.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multipler
+  ratio for this weigher.
+"""),
     cfg.FloatOpt("cpu_weight_multiplier",
         default=1.0,
         help="""
