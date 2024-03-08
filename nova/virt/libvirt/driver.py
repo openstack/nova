@@ -544,6 +544,15 @@ class LibvirtDriver(driver.ComputeDriver):
         # events about success or failure.
         self._device_event_handler = AsyncDeviceEventsHandler()
 
+        # NOTE(artom) From a pure functionality point of view, there's no need
+        # for this to be an attribute of self. However, we want to test power
+        # management in multinode scenarios (ex: live migration) in our
+        # functional tests. If the power management code was just a bunch of
+        # module level functions, the functional tests would not be able to
+        # distinguish between cores on the source and destination hosts.
+        # See also nova.virt.libvirt.cpu.api.API.core().
+        self.cpu_api = libvirt_cpu.API()
+
     def _discover_vpmems(self, vpmem_conf=None):
         """Discover vpmems on host and configuration.
 
@@ -824,13 +833,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # modified by Nova before. Note that it can provide an exception if
         # either the governor strategies are different between the cores or if
         # the cores are offline.
-        libvirt_cpu.validate_all_dedicated_cpus()
+        self.cpu_api.validate_all_dedicated_cpus()
         # NOTE(sbauza): We powerdown all dedicated CPUs but if some instances
         # exist that are pinned for some CPUs, then we'll later powerup those
         # CPUs when rebooting the instance in _init_instance()
         # Note that it can provide an exception if the config options are
         # wrongly modified.
-        libvirt_cpu.power_down_all_dedicated_cpus()
+        self.cpu_api.power_down_all_dedicated_cpus()
 
         # TODO(sbauza): Remove this code once mediated devices are persisted
         # across reboots.
@@ -1554,7 +1563,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if CONF.libvirt.virt_type == 'lxc':
                 self._teardown_container(instance)
             # We're sure the instance is gone, we can shutdown the core if so
-            libvirt_cpu.power_down(instance)
+            self.cpu_api.power_down(instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, destroy_secrets=True):
@@ -3208,7 +3217,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         current_power_state = guest.get_power_state(self._host)
 
-        libvirt_cpu.power_up(instance)
+        self.cpu_api.power_up(instance)
         # TODO(stephenfin): Any reason we couldn't use 'self.resume' here?
         guest.launch(pause=current_power_state == power_state.PAUSED)
 
@@ -7696,7 +7705,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 post_xml_callback()
 
             if power_on or pause:
-                libvirt_cpu.power_up(instance)
+                self.cpu_api.power_up(instance)
                 guest.launch(pause=pause)
 
             return guest
