@@ -20,6 +20,7 @@ from nova.api.openstack.compute.schemas import sap_admin_api
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
+import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -32,6 +33,8 @@ from nova.quota import QUOTAS
 # This variable is used to validate called endpoints and to be able to list
 # available endpoints.
 _ENDPOINTS = {'GET': [], 'POST': []}
+
+CONF = nova.conf.CONF
 
 
 def _register_endpoint(method):
@@ -122,6 +125,25 @@ class SAPAdminApiController(wsgi.Controller):
                     usage[key] += value
 
         return {'project': aggregated}
+
+    @_register_endpoint('GET')
+    def get_scheduler_settings(self, req):
+        """Exposes the current scheduler settings used by nova-scheduler"""
+        context = req.environ['nova.context']
+        context.can(sap_policies.POLICY_ROOT % 'get-scheduler-settings')
+
+        config = collections.defaultdict(dict)
+
+        for item in nova.conf.base.sap_base_options:
+            config['DEFAULT'][item.name] = CONF[item.name]
+
+        for group, items in nova.conf.scheduler.list_opts().items():
+            for item in items:
+                config[group.name][item.name] = CONF[group.name][item.name]
+
+        return {
+            'config': config,
+        }
 
     @_register_endpoint('GET')
     def endpoints(self, req):

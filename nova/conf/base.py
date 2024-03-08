@@ -117,7 +117,9 @@ Instance memory usage identifying it as big VM
 For a couple of operations, e.g. scheduling decisions and special settings when
 spawning, we have to identify a big VM and handle them differently. Every VM
 having more or equal to this setting's amount of RAM is a big VM.
-"""),
+""")]
+
+sap_base_options = [
     cfg.IntOpt(
         'largevm_mb',
         default=512 * 1024 + 10,      # a little over 512 GB
@@ -212,11 +214,13 @@ metrics_opts = [
                help='Host of the statsd service.'),
 ]
 
+options = base_options + sap_base_options
+
 
 def register_opts(conf):
-    conf.register_opts(base_options)
+    conf.register_opts(options)
     conf.register_opts(metrics_opts)
 
 
 def list_opts():
-    return {'DEFAULT': base_options}
+    return {'DEFAULT': options}
