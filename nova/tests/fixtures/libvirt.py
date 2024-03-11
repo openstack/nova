@@ -905,6 +905,13 @@ def _parse_disk_info(element):
     return disk_info
 
 
+def _parse_vcpu_info(element):
+    vcpu_info = {}
+    vcpu_info['number'] = int(element.text)
+    vcpu_info['cpuset'] = element.get('cpuset')
+    return vcpu_info
+
+
 def _parse_nic_info(element):
     nic_info = {}
     nic_info['type'] = element.get('type', 'bridge')
@@ -1097,7 +1104,7 @@ class Domain(object):
 
         vcpu = tree.find('./vcpu')
         if vcpu is not None:
-            definition['vcpu'] = int(vcpu.text)
+            definition['vcpu'] = _parse_vcpu_info(vcpu)
 
         memory = tree.find('./memory')
         if memory is not None:
@@ -1543,12 +1550,16 @@ class Domain(object):
                 <source host="-1" service="-1" mode="bind"/>
                 </serial>"""
 
+        vcpuset = ''
+        if self._def['vcpu'].get('cpuset'):
+            vcpuset = ' cpuset="' + self._def['vcpu']['cpuset'] + '"'
+
         return '''<domain type='kvm'>
   <name>%(name)s</name>
   <uuid>%(uuid)s</uuid>
   <memory>%(memory)s</memory>
   <currentMemory>%(memory)s</currentMemory>
-  <vcpu>%(vcpu)s</vcpu>
+  <vcpu%(vcpuset)s>%(vcpu)s</vcpu>
   <os>
     <type arch='%(arch)s' machine='pc-0.12'>hvm</type>
     <boot dev='hd'/>
@@ -1596,7 +1607,8 @@ class Domain(object):
 </domain>''' % {'name': self._def['name'],
                 'uuid': self._def['uuid'],
                 'memory': self._def['memory'],
-                'vcpu': self._def['vcpu'],
+                'vcpuset': vcpuset,
+                'vcpu': self._def['vcpu']['number'],
                 'arch': self._def['os']['arch'],
                 'disks': disks,
                 'nics': nics,
@@ -1628,7 +1640,7 @@ class Domain(object):
 
     def vcpus(self):
         vcpus = ([], [])
-        for i in range(0, self._def['vcpu']):
+        for i in range(0, self._def['vcpu']['number']):
             vcpus[0].append((i, 1, 120405, i))
             vcpus[1].append((True, True, True, True))
         return vcpus
