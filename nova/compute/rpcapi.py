@@ -428,6 +428,7 @@ class ComputeAPI(object):
         'zed': '6.1',
         'antelope': '6.2',
         'bobcat': '6.2',
+        'caracal': '6.3',
     }
 
     @property
