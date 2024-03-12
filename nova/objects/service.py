@@ -262,6 +262,7 @@ SERVICE_VERSION_ALIASES = {
     'Zed': 64,
     'Antelope': 66,
     'Bobcat': 66,
+    'Caracal': 66,
 }
 
 
