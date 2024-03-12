@@ -11540,12 +11540,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest = self._host.get_guest(instance)
                 guest.announce_self()
             except Exception:
-                LOG.warning('Failed to send announce-self command to '
-                    'QEMU monitor. Attempt %(current_attempt)s of '
-                    '%(max_attempts)s',
-                    {'current_attempt': current_attempt,
-                     'max_attempts': max_attempts}, instance=instance)
-                LOG.exception()
+                LOG.exception('Failed to send announce-self command to '
+                        'QEMU monitor. Attempt %(current_attempt)s of '
+                        '%(max_attempts)s',
+                        {'current_attempt': current_attempt,
+                            'max_attempts': max_attempts}, instance=instance)
 
     def post_live_migration_at_destination(self, context,
                                            instance,
