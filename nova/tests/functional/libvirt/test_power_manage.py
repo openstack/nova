@@ -88,6 +88,86 @@ class PowerManagementTestsBase(base.ServersTestBase):
                 self.assertEqual('performance', core.governor)
 
 
+class FakeCore(object):
+
+    def __init__(self, i):
+        self.ident = i
+        self.power_state = 'online'
+
+    @property
+    def online(self):
+        return self.power_state == 'online'
+
+    @online.setter
+    def online(self, state):
+        if state:
+            self.power_state = 'online'
+        else:
+            self.power_state = 'offline'
+
+
+class CoresStub(object):
+
+    def __init__(self):
+        self.cores = {}
+
+    def __call__(self, i):
+        if i not in self.cores:
+            self.cores[i] = FakeCore(i)
+        return self.cores[i]
+
+
+class PowerManagementLiveMigrationTests(base.LibvirtMigrationMixin,
+                                        PowerManagementTestsBase):
+
+    def setUp(self):
+        super().setUp()
+
+        self.useFixture(nova_fixtures.SysFileSystemFixture())
+        self.flags(cpu_dedicated_set='1-9', cpu_shared_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+        self.flags(cpu_power_management=True, group='libvirt')
+
+        # NOTE(artom) Fill up all dedicated CPUs. This makes the assertions
+        # further down easier.
+        self.pcpu_flavor_id = self._create_flavor(
+            vcpu=9, extra_spec=self.extra_spec)
+
+        self.start_compute(
+            host_info=fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                           cpu_cores=5, cpu_threads=2),
+            hostname='src')
+        self.src = self.computes['src']
+        self.src.driver.cpu_api.core = CoresStub()
+        # NOTE(artom) In init_host() the libvirt driver calls
+        # power_down_all_dedicated_cpus(). Call it again now after swapping to
+        # our stub to fake reality.
+        self.src.driver.cpu_api.power_down_all_dedicated_cpus()
+
+        self.start_compute(
+            host_info=fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                           cpu_cores=5, cpu_threads=2),
+            hostname='dest')
+        self.dest = self.computes['dest']
+        self.dest.driver.cpu_api.power_down_all_dedicated_cpus()
+
+    def assert_cores(self, host, cores, online=True):
+        for i in cores:
+            self.assertEqual(online, host.driver.cpu_api.core(i).online)
+
+    def test_live_migrate_server(self):
+        self.server = self._create_server(
+            flavor_id=self.pcpu_flavor_id,
+            expected_state='ACTIVE', host='src')
+        server = self._live_migrate(self.server)
+        self.assertEqual('dest', server['OS-EXT-SRV-ATTR:host'])
+        # FIXME(artom) We've not powered up the dest cores, and left the src
+        # cores powered on.
+        self.assert_cores(self.src, range(1, 10), online=True)
+        self.assert_cores(self.dest, range(1, 10), online=False)
+
+
 class PowerManagementTests(PowerManagementTestsBase):
     """Test suite for a single host with 9 dedicated cores and 1 used for OS"""
 
