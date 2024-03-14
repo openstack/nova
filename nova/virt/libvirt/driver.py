@@ -1568,7 +1568,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if CONF.libvirt.virt_type == 'lxc':
                 self._teardown_container(instance)
             # We're sure the instance is gone, we can shutdown the core if so
-            self.cpu_api.power_down(instance)
+            self.cpu_api.power_down_for_instance(instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, destroy_secrets=True):
@@ -3310,7 +3310,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         current_power_state = guest.get_power_state(self._host)
 
-        self.cpu_api.power_up(instance)
+        self.cpu_api.power_up_for_instance(instance)
         # TODO(stephenfin): Any reason we couldn't use 'self.resume' here?
         guest.launch(pause=current_power_state == power_state.PAUSED)
 
@@ -7963,7 +7963,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 post_xml_callback()
 
             if power_on or pause:
-                self.cpu_api.power_up(instance)
+                self.cpu_api.power_up_for_instance(instance)
                 guest.launch(pause=pause)
 
             return guest
@@ -11179,6 +11179,16 @@ class LibvirtDriver(driver.ComputeDriver):
                         serial_console.release_port(
                             host=migrate_data.serial_listen_addr, port=port)
 
+                if (
+                    'dst_numa_info' in migrate_data and
+                    migrate_data.dst_numa_info
+                ):
+                    self.cpu_api.power_down_for_migration(
+                        migrate_data.dst_numa_info)
+                else:
+                    LOG.debug('No dst_numa_info in migrate_data, '
+                              'no cores to power down in rollback.')
+
             if not is_shared_instance_path:
                 instance_dir = libvirt_utils.get_instance_path_at_destination(
                     instance, migrate_data)
@@ -11351,6 +11361,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 migrate_data.bdms.append(bdmi)
 
+        if 'dst_numa_info' in migrate_data and migrate_data.dst_numa_info:
+            self.cpu_api.power_up_for_migration(migrate_data.dst_numa_info)
+        else:
+            LOG.debug('No dst_numa_info in migrate_data, '
+                      'no cores to power up in pre_live_migration.')
+
         return migrate_data
 
     def _try_fetch_image_cache(self, image, fetch_func, context, filename,
@@ -11514,6 +11530,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param network_info: instance network information
         """
         self.unplug_vifs(instance, network_info)
+        self.cpu_api.power_down_for_instance(instance)
 
     def _qemu_monitor_announce_self(self, instance):
         """Send announce_self command to QEMU monitor.
