@@ -3132,25 +3132,16 @@ class VolumeAttachmentCommands(object):
 
             # RPC call to the compute to cleanup the connections, which
             # will in turn unmap the volume from the compute host
-            # TODO(lyarwood): Add delete_attachment as a kwarg to
-            # remove_volume_connection as is available in the private
-            # method within the manager.
             if instance.host == connector['host']:
                 compute_rpcapi.remove_volume_connection(
-                    cctxt, instance, volume_id, instance.host)
+                    cctxt, instance, volume_id, instance.host,
+                    delete_attachment=True)
             else:
                 msg = (
                     f"The compute host '{connector['host']}' in the "
                     f"connector does not match the instance host "
                     f"'{instance.host}'.")
                 raise exception.HostConflict(_(msg))
-
-            # Delete the existing volume attachment if present in the bdm.
-            # This isn't present when the original attachment was made
-            # using the legacy cinderv2 APIs before the cinderv3 attachment
-            # based APIs were present.
-            if bdm.attachment_id:
-                volume_api.attachment_delete(cctxt, bdm.attachment_id)
 
             # Update the attachment with host connector, this regenerates
             # the connection_info that we can now stash in the bdm.

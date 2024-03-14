@@ -965,7 +965,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_remove_volume_connection(self):
         self._test_compute_api('remove_volume_connection', 'call',
                 instance=self.fake_instance_obj, volume_id='id', host='host',
-                version='6.0')
+                delete_attachment=True, version='6.3')
 
     def test_rescue_instance(self):
         self._test_compute_api('rescue_instance', 'cast',
