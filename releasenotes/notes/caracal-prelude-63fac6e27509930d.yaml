@@ -1,0 +1,80 @@
+---
+prelude: |
+    The OpenStack 2024.1 (Nova 29.0.0) release includes many new features and
+    bug fixes. Please be sure to read the upgrade section which describes the
+    required actions to upgrade your cloud from 28.0.0 (2023.2) to 29.0.0
+    (2024.1).
+    As a reminder, OpenStack 2024.1 is a `Skip-Level-Upgrade Release`__
+    (starting from now, we name it a `SLURP release`) meaning that you can
+    do rolling-upgrade from 2023.1 and skip 2023.2.
+
+    .. __: https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for 2024.1 is `v2.96`__.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-2024-1-caracal
+
+    - The Ironic driver ``[ironic]/peer_list`` configuration option has been
+      deprecated. The Ironic driver now more closely models other Nova drivers
+      where compute nodes do not move between compute service instances. If
+      high availability of a single compute service is required, operators
+      should use active/passive failover between 2 compute service agents
+      configured to share the same compute service host
+      value``[DEFAULT]/host``. Ironic nova-compute services can now be
+      configured to target a specific shard of ironic nodes by setting the
+      ``[ironic]/shard`` configuration option and a new ``nova-manage db
+      ironic_compute_node_move`` command can help the operators when upgrading
+      their computes to specify which shard they should manage.
+
+    - Instances using `vGPUs can now be live-migrated
+      <https://docs.openstack.org/nova/latest/admin/virtual-gpu.html#caveats>`_
+      if both of the compute nodes support libvirt-8.6.0 and QEMU-8.1.0, as the
+      source mediated device will migrate the GPU memory to another target
+      mediated device automatically. In order to do this,
+      ``[libvirt/live_migration_downtime`` config option needs to be modified
+      according to the aforementioned documentation.
+
+    - As of the new 2.96 microversion, the ``server show`` and ``server list``
+      APIs now return a new parameter called ``pinned_availability_zone`` that
+      indicates whether the instance is confined to a specific AZ. This field
+      supplements the existing ``availability_zone`` field which reports the
+      availability zone of the host where the service resides. The two values
+      may be different if the service is shelved or is not pinned to an AZ
+      which can help operators plan maintenance and better understand the
+      workload constraints.
+
+    - Instances using virtio-net will see an increase in performance between
+      10% and 20% if their image uses a new ``hw_virtio_packed_ring=true``
+      property or their flavor contains ``hw:virtio_packed_ring=true`` extra
+      spec, provided libvirt version is >= 6.3 and QEMU >= 4.2.
+
+    - As a security mechanism, a new ``[consoleauth]/enforce_session_timeout``
+      configuration option provides the ability to automatically close a server
+      console session when the token expires. This is disabled by default to
+      preserve the existing behaviour for upgrades.
+
+    - The libvirt driver now supports requesting a configurable memory address
+      space for the instances. This allows `instances with large RAM
+      requirements
+      <https://specs.openstack.org/openstack/nova-specs/specs/2024.1/implemented/libvirt-maxphysaddr-support.html#flavor-extra-specs>`_
+      to be created by specifying either ``hw:maxphysaddr_mode=emulate`` and
+      ``hw:maxphysaddr_bits`` flavor extra specs or  ``hw_maxphysaddr_mode``
+      and ``hw_maxphysaddr_bits``image properties. The
+      ``ImagePropertiesFilter`` and ``ComputeCapabilitiesFilter`` filters are
+      required to support this functionality.
+
+    - The Hyper-V virt driver has been removed. It was deprecated in the Nova
+      27.2.0 (Antelope) release. This driver was untested and has no
+      maintainers. In addition, it had a dependency on the OpenStack Winstacker
+      project that also has been retired.
+
+    - A couple of other improvements target reducing the number of bugs we
+      have: one automatically detecting the maximum number of instances with
+      memory encryption which can run concurrently, another one allows
+      specifying a specific IP address or hostname for incoming move operations
+      (by setting ``[libvirt]/migration_inbound_addr``) and yet another one
+      that improves stability of block device management using libvirt device
+      aliases.
