@@ -89,6 +89,15 @@ def register_dynamic_opts(conf):
                  'CUSTOM_ if it is not VGPU.')
         conf.register_opt(class_opt, group='mdev_%s' % mdev_type)
 
+        # Register the '[mdev_$(MDEV_TYPE)]/max_instances' opts
+        max_inst_opt = cfg.IntOpt(
+            'max_instances',
+            default=None, min=1,
+            help='Number of mediated devices that type can create. '
+                 'If not set, it implies that we use the maximum allowed by '
+                 'the type.')
+        conf.register_opt(max_inst_opt, group='mdev_%s' % mdev_type)
+
 
 def list_opts():
     return {devices_group: mdev_opts}

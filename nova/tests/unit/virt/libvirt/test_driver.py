@@ -26833,6 +26833,42 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self._test_get_gpu_inventories(drvr, expected, ['nvidia-11',
                                                         'nvidia-12'])
 
+    def test_get_gpu_inventories_with_max_instances_per_type(self):
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        self.flags(device_addresses=['0000:06:00.0'], group='mdev_nvidia-11')
+        self.flags(device_addresses=['0000:07:00.0'], group='mdev_nvidia-12')
+        # We will cap the max vGPUs for nvidia-11 for 2 but we leave nvidia-12
+        # uncapped
+        self.flags(max_instances=2, group='mdev_nvidia-11')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        expected = {
+            # we don't accept this PCI device because max_instance is less than
+            # its capacity
+            'pci_0000_06_00_0': {'total': 0,
+                                 'max_unit': 0,
+                                 'min_unit': 1,
+                                 'step_size': 1,
+                                 'reserved': 0,
+                                 'allocation_ratio': 1.0,
+                                 },
+            # the second GPU supports nvidia-12 but the existing mdev is not
+            # using this type, so we only count the availableInstances value
+            # for nvidia-12.
+            'pci_0000_07_00_0': {'total': 10,
+                                 'max_unit': 10,
+                                 'min_unit': 1,
+                                 'step_size': 1,
+                                 'reserved': 0,
+                                 'allocation_ratio': 1.0,
+                                 },
+        }
+        self._test_get_gpu_inventories(drvr, expected, ['nvidia-11',
+                                                        'nvidia-12'])
+
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_supported_vgpu_types(self, mock_warning):
         # Verify that by default we don't support vGPU types
@@ -26846,6 +26882,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # devices or mdev classes *yet* if we don't have a vgpu type section.
         self.assertEqual({}, drvr.pgpu_type_mapping)
         self.assertEqual({}, drvr.mdev_class_mapping)
+        self.assertEqual({}, drvr.mdev_type_max_mapping)
         # Remember, we only support the VGPU resource class if we only have
         # one needed vGPU type without a specific vgpu type section.
         self.assertEqual({orc.VGPU}, drvr.mdev_classes)
@@ -26865,6 +26902,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(['nvidia-11'], drvr._get_supported_vgpu_types())
         self.assertEqual({}, drvr.pgpu_type_mapping)
         self.assertEqual({}, drvr.mdev_class_mapping)
+        self.assertEqual({}, drvr.mdev_type_max_mapping)
         # Here we only support one vGPU type
         self.assertEqual({orc.VGPU}, drvr.mdev_classes)
         msg = ("The mdev type '%(type)s' was listed in '[devices] "
@@ -26882,6 +26920,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
         self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
         self.flags(mdev_class='CUSTOM_NOTVGPU', group='mdev_nvidia-12')
+        self.flags(max_instances=2, group='mdev_nvidia-11')
         self.assertEqual(['nvidia-11', 'nvidia-12'],
                          drvr._get_supported_vgpu_types())
         self.assertEqual({'0000:84:00.0': 'nvidia-11',
@@ -26890,6 +26929,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           '0000:85:00.0': 'CUSTOM_NOTVGPU'},
                           drvr.mdev_class_mapping)
         self.assertEqual({orc.VGPU, 'CUSTOM_NOTVGPU'}, drvr.mdev_classes)
+        # nvidia-12 is unlimited
+        self.assertEqual({'nvidia-11': 2}, drvr.mdev_type_max_mapping)
         mock_warning.assert_not_called()
 
     def test_get_supported_vgpu_types_with_duplicate_types(self):
