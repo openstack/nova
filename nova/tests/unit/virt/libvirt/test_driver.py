@@ -26870,7 +26870,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                                         'nvidia-12'])
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_get_supported_vgpu_types(self, mock_warning):
+    def test_get_supported_vgpu_types_fails(self, mock_warning):
         # Verify that by default we don't support vGPU types
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertEqual([], drvr._get_supported_vgpu_types())
@@ -26889,34 +26889,34 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Since the operator wanted to only support one type, it's fine to not
         # provide config groups
         mock_warning.assert_not_called()
-        # For further checking
-        mock_warning.reset_mock()
 
-        # Now two types without forgetting to provide the pGPU addresses
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_supported_vgpu_types_two_types_unset(self, mock_warning):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # Now two types without providing the pGPU addresses
         self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
                    group='devices')
-        # we need to call the below again to ensure the updated
-        # 'device_addresses' value is read and the new groups created
-        nova.conf.devices.register_dynamic_opts(CONF)
-        self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
         self.assertEqual(['nvidia-11'], drvr._get_supported_vgpu_types())
         self.assertEqual({}, drvr.pgpu_type_mapping)
         self.assertEqual({}, drvr.mdev_class_mapping)
         self.assertEqual({}, drvr.mdev_type_max_mapping)
         # Here we only support one vGPU type
         self.assertEqual({orc.VGPU}, drvr.mdev_classes)
-        msg = ("The mdev type '%(type)s' was listed in '[devices] "
-               "enabled_mdev_types' but no corresponding "
-               "'[mdev_%(type)s]' group or "
-               "'[mdev_%(type)s] device_addresses' "
-               "option was defined. Only the first type '%(ftype)s' "
-               "will be used." % {'type': 'nvidia-12',
-                                  'ftype': 'nvidia-11'})
+        msg = ("Mdev type default already set to "
+                            " %(default_type)s so %(this_type)s will not "
+                            "be used." % {
+                                'default_type': 'nvidia-11',
+                                'this_type': 'nvidia-12'})
         mock_warning.assert_called_once_with(msg)
-        # For further checking
-        mock_warning.reset_mock()
 
-        # And now do it correctly !
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_supported_vgpu_types(self, mock_warning):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
         self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
         self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
         self.flags(mdev_class='CUSTOM_NOTVGPU', group='mdev_nvidia-12')
@@ -26957,20 +26957,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           libvirt_driver.LibvirtDriver,
                           fake.FakeVirtAPI(), False)
 
-    @mock.patch.object(nova.conf.devices, 'register_dynamic_opts')
-    def test_get_supported_vgpu_types_registering_dynamic_opts(self, rdo):
-        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
-                   group='devices')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr._get_supported_vgpu_types()
-
-        # Okay below is confusing, but remember, ._get_supported_vgpu_types()
-        # is first called by the LibvirtDriver object creation, so when
-        # calling the above drvr._get_supported_vgpu_types() method, it will
-        # be the second time that register_dynamic_opts() will be called.
-        rdo.assert_has_calls([mock.call(CONF), mock.call(CONF)])
-
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_supported_vgpu_types_with_a_single_type(self, mock_warning):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -26989,6 +26975,49 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           drvr.mdev_class_mapping)
         self.assertEqual({'CUSTOM_NOTVGPU'}, drvr.mdev_classes)
         mock_warning.assert_not_called()
+
+    def test_get_supported_vgpu_types_with_default_type(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        # Enable nvidia-11 as a the default type for all GPUs but 0000:84:00.0
+        self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-12')
+
+        self.assertEqual(['nvidia-11', 'nvidia-12'],
+                         drvr._get_supported_vgpu_types())
+        self.assertEqual({'0000:84:00.0': 'nvidia-12'}, drvr.pgpu_type_mapping)
+        self.assertEqual('nvidia-11', drvr.pgpu_type_default)
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_supported_vgpu_types_with_duplicate_default_type(
+            self, mock_warning):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12', 'nvidia-13'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+
+        # Add a specific GPU for a third type
+        self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-13')
+        # As both nvidia-11 and nvidia-12 aren't set with device_addresses,
+        # only one of them should be the default.
+
+        # nvidia-12 won't be supported since none of the GPUs will use it.
+        self.assertEqual(['nvidia-11', 'nvidia-13'],
+                         drvr._get_supported_vgpu_types())
+        self.assertEqual({'0000:84:00.0': 'nvidia-13'}, drvr.pgpu_type_mapping)
+        # There can be only one :-)
+        self.assertEqual('nvidia-11', drvr.pgpu_type_default)
+        msg = ("Mdev type default already set to "
+               " %(default_type)s so %(this_type)s will not "
+               "be used." % {
+                    'default_type': 'nvidia-11',
+                    'this_type': 'nvidia-12'})
+        mock_warning.assert_called_once_with(msg)
 
     def test_get_vgpu_type_per_pgpu(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -27045,6 +27074,20 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         # 0000:86:00.0 wasn't configured
         self.assertIsNone(drvr._get_vgpu_type_per_pgpu('pci_0000_86_00_0'))
+
+    def test_get_vgpu_type_per_pgpu_with_default_type(self):
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual('nvidia-11',
+                         drvr._get_vgpu_type_per_pgpu('pci_0000_84_00_0'))
+        # Any GPU but 0000:84:00.0 defaults now to nvidia-12
+        self.assertEqual('nvidia-12',
+                         drvr._get_vgpu_type_per_pgpu('pci_0000_85_00_0'))
 
     def test_get_resource_class_for_device(self):
         self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
