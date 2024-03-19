@@ -880,5 +880,8 @@ class APIRouterV21(base_wsgi.Router):
 
     @classmethod
     def factory(cls, global_config, **local_config):
-        """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one."""
+        """Simple paste factory.
+
+        :class:`nova.api.wsgi.Router` doesn't have one.
+        """
         return cls()
