@@ -1159,6 +1159,8 @@ class ComputeManager(manager.Manager):
         try_reboot, reboot_type = self._retry_reboot(
             instance, current_power_state)
 
+        # NOTE(amorin)
+        # If the instance is in power_state_SHUTDOWN, we will try_reboot
         if try_reboot:
             LOG.debug("Instance in transitional state (%(task_state)s) at "
                       "start-up and power state is (%(power_state)s), "
@@ -1181,9 +1183,14 @@ class ComputeManager(manager.Manager):
                                  reboot_type=reboot_type)
             return
 
+        # NOTE(plestang): an instance might be in power_state.RUNNING with a
+        # transient state when a host is brutally shutdown or rebooted while a
+        # reboot/pause/unpause is scheduled on client side
         elif (current_power_state == power_state.RUNNING and
               instance.task_state in [task_states.REBOOT_STARTED,
                                       task_states.REBOOT_STARTED_HARD,
+                                      task_states.REBOOTING_HARD,
+                                      task_states.REBOOTING,
                                       task_states.PAUSING,
                                       task_states.UNPAUSING]):
             LOG.warning("Instance in transitional state "
@@ -1343,7 +1350,9 @@ class ComputeManager(manager.Manager):
             current_task_state == task_states.REBOOT_PENDING_HARD and
             instance.vm_state in vm_states.ALLOW_HARD_REBOOT)
         started_not_running = (current_task_state in
-                               [task_states.REBOOT_STARTED,
+                               [task_states.REBOOTING,
+                                task_states.REBOOTING_HARD,
+                                task_states.REBOOT_STARTED,
                                 task_states.REBOOT_STARTED_HARD] and
                                current_power_state != power_state.RUNNING)
 

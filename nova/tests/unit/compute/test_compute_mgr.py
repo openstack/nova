@@ -2278,18 +2278,30 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance.host = self.compute.host
         with test.nested(
             mock.patch.object(self.compute, '_get_power_state',
-                               return_value=power_state.RUNNING),
+                               return_value=instance.power_state),
             mock.patch.object(instance, 'save', autospec=True),
-            mock.patch.object(objects.Instance, 'get_network_info')
+            mock.patch.object(objects.Instance, 'get_network_info'),
+            mock.patch.object(self.compute, 'reboot_instance'),
           ) as (
             _get_power_state,
             instance_save,
-            get_network_info
+            get_network_info,
+            reboot_instance,
           ):
             self.compute._init_instance(self.context, instance)
-            instance_save.assert_called_once_with()
-            self.assertIsNone(instance.task_state)
-            self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+            # If instance was running, the instance should stay running,
+            # and tasks are discarded
+            if instance.power_state == power_state.RUNNING:
+                instance_save.assert_called_once_with()
+                self.assertIsNone(instance.task_state)
+                self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+            # If instance was not running, but we request to reboot it,
+            # we should try a reboot
+            else:
+                call = mock.call(self.context, instance,
+                                 block_device_info=None, reboot_type=mock.ANY)
+                reboot_instance.assert_has_calls([call])
+                self.assertEqual(vm_states.STOPPED, instance.vm_state)
 
     def test_init_instance_cleans_image_state_reboot_started(self):
         instance = objects.Instance(self.context)
@@ -2307,37 +2319,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance.power_state = power_state.RUNNING
         self._test_init_instance_cleans_reboot_state(instance)
 
-    def _test_init_instance_cleans_reboot_state_reproducer(self, instance,
-            task_state):
-        instance.host = self.compute.host
-        with test.nested(
-            mock.patch.object(self.compute, '_get_power_state',
-                               return_value=power_state.RUNNING),
-            mock.patch.object(instance, 'save', autospec=True),
-            mock.patch.object(objects.Instance, 'get_network_info')
-          ) as (
-            _get_power_state,
-            instance_save,
-            get_network_info
-          ):
-            self.compute._init_instance(self.context, instance)
-            # By checking save method is not called we confirm that the init
-            # instance does not take into account this use case
-            instance_save.assert_not_called()
-            # So the instance task_state is still task_state
-            self.assertEqual(task_state, instance.task_state)
-            self.assertEqual(vm_states.ACTIVE, instance.vm_state)
-
     def test_init_instance_cleans_image_state_rebooting(self):
         instance = objects.Instance(self.context)
         instance.uuid = uuids.instance
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.REBOOTING
         instance.power_state = power_state.RUNNING
-        # To uncomment once bug #1999674 is fixed and remove all the code below
-        # self._test_init_instance_cleans_reboot_state(instance)
-        self._test_init_instance_cleans_reboot_state_reproducer(instance,
-                task_states.REBOOTING)
+        self._test_init_instance_cleans_reboot_state(instance)
 
     def test_init_instance_cleans_image_state_rebooting_hard(self):
         instance = objects.Instance(self.context)
@@ -2345,10 +2333,39 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.REBOOTING_HARD
         instance.power_state = power_state.RUNNING
-        # To uncomment once bug #1999674 is fixed and remove all the code below
-        # self._test_init_instance_cleans_reboot_state(instance)
-        self._test_init_instance_cleans_reboot_state_reproducer(instance,
-                task_states.REBOOTING_HARD)
+        self._test_init_instance_cleans_reboot_state(instance)
+
+    def test_init_instance_cleans_shutdown_reboot_started(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.vm_state = vm_states.STOPPED
+        instance.task_state = task_states.REBOOT_STARTED
+        instance.power_state = power_state.SHUTDOWN
+        self._test_init_instance_cleans_reboot_state(instance)
+
+    def test_init_instance_cleans_shutdown_reboot_started_hard(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.vm_state = vm_states.STOPPED
+        instance.task_state = task_states.REBOOT_STARTED_HARD
+        instance.power_state = power_state.SHUTDOWN
+        self._test_init_instance_cleans_reboot_state(instance)
+
+    def test_init_instance_cleans_shutdown_rebooting(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.vm_state = vm_states.STOPPED
+        instance.task_state = task_states.REBOOTING
+        instance.power_state = power_state.SHUTDOWN
+        self._test_init_instance_cleans_reboot_state(instance)
+
+    def test_init_instance_cleans_shutdown_rebooting_hard(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.vm_state = vm_states.STOPPED
+        instance.task_state = task_states.REBOOTING_HARD
+        instance.power_state = power_state.SHUTDOWN
+        self._test_init_instance_cleans_reboot_state(instance)
 
     def test_init_instance_retries_power_off(self):
         instance = objects.Instance(self.context)
