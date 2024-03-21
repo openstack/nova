@@ -16,6 +16,7 @@ from unittest import mock
 import urllib
 
 from alembic.runtime import migration as alembic_migration
+from sqlalchemy.engine import url as sa_url
 
 from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api
@@ -69,11 +70,11 @@ class TestDBSync(test.NoDBTestCase):
     def test_db_sync(self, mock_get_engine, mock_find_conf, mock_upgrade):
 
         # return an encoded URL to mimic sqlalchemy
-        mock_get_engine.return_value.url = (
-           'mysql+pymysql://nova:pass@192.168.24.3/nova?'
-           'read_default_file=%2Fetc%2Fmy.cnf.d%2Fnova.cnf'
-           '&read_default_group=nova'
-       )
+        mock_get_engine.return_value.url = sa_url.make_url(
+            'mysql+pymysql://nova:pass@192.168.24.3/nova?'
+            'read_default_file=%2Fetc%2Fmy.cnf.d%2Fnova.cnf'
+            '&read_default_group=nova'
+        )
 
         migration.db_sync()
 

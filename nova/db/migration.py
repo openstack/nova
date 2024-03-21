@@ -83,7 +83,7 @@ def db_sync(version=None, database='main', context=None):
     # string using a mix of url encode styles for different parts of the url.
     # since we are updating the alembic config parser instance we need to
     # escape '%' to '%%' to account for ConfigParser's string interpolation.
-    url = str(engine.url).replace('%', '%%')
+    url = engine.url.render_as_string(hide_password=False).replace('%', '%%')
     config.set_main_option('sqlalchemy.url', url)
 
     # apply anything later
