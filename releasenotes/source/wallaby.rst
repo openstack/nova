@@ -3,4 +3,4 @@ Wallaby Series Release Notes
 ============================
 
 .. release-notes::
-   :branch: stable/wallaby
+   :branch: unmaintained/wallaby
