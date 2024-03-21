@@ -253,7 +253,7 @@ NODE_IDENTITY_VERSION = 65
 #    and value be the latest service version that the release supports (for
 #    example, before Bobcat RC1, please add 'Bobcat': XX where X is the latest
 #    servion version that was added)
-OLDEST_SUPPORTED_SERVICE_VERSION = 'Antelope'
+OLDEST_SUPPORTED_SERVICE_VERSION = 'Caracal'
 SERVICE_VERSION_ALIASES = {
     'Victoria': 52,
     'Wallaby': 54,
