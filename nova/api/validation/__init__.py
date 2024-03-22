@@ -18,11 +18,21 @@ Request Body validating middleware.
 
 import functools
 import re
+import typing as ty
+
+from oslo_log import log as logging
+from oslo_serialization import jsonutils
+import webob
 
 from nova.api.openstack import api_version_request as api_version
+from nova.api.openstack import wsgi
 from nova.api.validation import validators
+import nova.conf
 from nova import exception
 from nova.i18n import _
+
+CONF = nova.conf.CONF
+LOG = logging.getLogger(__name__)
 
 
 def _schema_validation_helper(schema, target, min_version, max_version,
@@ -91,25 +101,106 @@ def _schema_validation_helper(schema, target, min_version, max_version,
     return False
 
 
-def schema(request_body_schema, min_version=None, max_version=None):
+# TODO(stephenfin): This decorator should take the five schemas we validate:
+# request body, request query string, request headers, response body, and
+# response headers. As things stand, we're going to need five separate
+# decorators.
+def schema(
+    request_body_schema: ty.Dict[str, ty.Any],
+    min_version: ty.Optional[str] = None,
+    max_version: ty.Optional[str] = None,
+) -> ty.Dict[str, ty.Any]:
     """Register a schema to validate request body.
 
     Registered schema will be used for validating request body just before
     API method executing.
 
-    :argument dict request_body_schema: a schema to validate request body
-
+    :param dict request_body_schema: a schema to validate request body
+    :param dict response_body_schema: a schema to validate response body
+    :param str min_version: Minimum API microversion that the schema applies to
+    :param str max_version: Maximum API microversion that the schema applies to
     """
 
     def add_validator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            _schema_validation_helper(request_body_schema, kwargs['body'],
-                                      min_version, max_version,
-                                      args, kwargs)
+            _schema_validation_helper(
+                request_body_schema,
+                kwargs['body'],
+                min_version,
+                max_version,
+                args,
+                kwargs
+            )
             return func(*args, **kwargs)
 
         wrapper._request_schema = request_body_schema
+
+        return wrapper
+
+    return add_validator
+
+
+def response_body_schema(
+    response_body_schema: ty.Dict[str, ty.Any],
+    min_version: ty.Optional[str] = None,
+    max_version: ty.Optional[str] = None,
+):
+    """Register a schema to validate response body.
+
+    Registered schema will be used for validating response body just after
+    API method executing.
+
+    :param dict response_body_schema: a schema to validate response body
+    :param str min_version: Minimum API microversion that the schema applies to
+    :param str max_version: Maximum API microversion that the schema applies to
+    """
+
+    def add_validator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            response = func(*args, **kwargs)
+
+            if CONF.api.response_validation == 'ignore':
+                # don't waste our time checking anything if we're ignoring
+                # schema errors
+                return response
+
+            # NOTE(stephenfin): If our response is an object, we need to
+            # serializer and deserialize to convert e.g. date-time to strings
+            if isinstance(response, wsgi.ResponseObject):
+                serializer = wsgi.JSONDictSerializer()
+                _body = serializer.serialize(response.obj)
+            # TODO(stephenfin): We should replace all instances of this with
+            # wsgi.ResponseObject
+            elif isinstance(response, webob.Response):
+                _body = response.body
+            else:
+                serializer = wsgi.JSONDictSerializer()
+                _body = serializer.serialize(response)
+
+            if _body == b'':
+                body = None
+            else:
+                body = jsonutils.loads(_body)
+
+            try:
+                _schema_validation_helper(
+                    response_body_schema,
+                    body,
+                    min_version,
+                    max_version,
+                    args,
+                    kwargs
+                )
+            except exception.ValidationError:
+                if CONF.api.response_validation == 'warning':
+                    LOG.exception('Schema failed to validate')
+                else:
+                    raise
+            return response
+
+        wrapper._response_schema = response_body_schema
 
         return wrapper
 

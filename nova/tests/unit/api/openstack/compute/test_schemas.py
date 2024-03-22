@@ -49,6 +49,14 @@ class SchemaTest(test.NoDBTestCase):
                     except jsonschema.exceptions.SchemaError:
                         invalid_schemas.add(func.__qualname__)
 
+            # TODO(stephenfin): Check for missing schemas once we have added
+            # them all
+            if hasattr(func, '_response_schema'):
+                try:
+                    self.meta_schema.check_schema(func._response_schema)
+                except jsonschema.exceptions.SchemaError:
+                    invalid_schemas.add(func.__qualname__)
+
         for route in self.router.map.matchlist:
             if 'controller' not in route.defaults:
                 continue
