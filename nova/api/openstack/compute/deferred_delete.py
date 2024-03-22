@@ -35,6 +35,7 @@ class DeferredDeleteController(wsgi.Controller):
     @wsgi.expected_errors((403, 404, 409))
     @wsgi.action('restore')
     @validation.schema(schema.restore)
+    @validation.response_body_schema(schema.restore_response)
     def _restore(self, req, id, body):
         """Restore a previously deleted instance."""
         context = req.environ["nova.context"]
@@ -53,6 +54,7 @@ class DeferredDeleteController(wsgi.Controller):
     @wsgi.expected_errors((404, 409))
     @wsgi.action('forceDelete')
     @validation.schema(schema.force_delete)
+    @validation.response_body_schema(schema.force_delete_response)
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
         context = req.environ["nova.context"]

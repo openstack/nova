@@ -29,3 +29,11 @@ unpause = {
     'required': ['unpause'],
     'additionalProperties': False
 }
+
+pause_response = {
+    'type': 'null',
+}
+
+unpause_response = {
+    'type': 'null',
+}

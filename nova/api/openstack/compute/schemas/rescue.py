@@ -40,3 +40,17 @@ unrescue = {
     'required': ['unrescue'],
     'additionalProperties': False,
 }
+
+rescue_response = {
+    'type': 'object',
+    'properties': {
+        'adminPass': {
+            'type': 'string',
+        },
+    },
+    'additionalProperties': False,
+}
+
+unrescue_response = {
+    'type': 'null',
+}

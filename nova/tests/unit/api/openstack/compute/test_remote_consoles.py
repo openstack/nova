@@ -65,8 +65,8 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('')
         output = self.controller.get_vnc_console(req, fakes.FAKE_UUID,
                                                  body=body)
-        self.assertEqual(output,
-            {u'console': {u'url': u'http://fake', u'type': u'novnc'}})
+        self.assertEqual(
+            output, {'console': {'url': 'http://fake', 'type': 'novnc'}})
         mock_get_vnc_console.assert_called_once_with(
             req.environ['nova.context'], self.instance, 'novnc')
 
@@ -146,8 +146,8 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('')
         output = self.controller.get_spice_console(req, fakes.FAKE_UUID,
                                                    body=body)
-        self.assertEqual(output,
-            {u'console': {u'url': u'http://fake', u'type': u'spice-html5'}})
+        self.assertEqual(
+            output, {'console': {'url': 'http://fake', 'type': 'spice-html5'}})
         mock_get_spice_console.assert_called_once_with(
             req.environ['nova.context'], self.instance, 'spice-html5')
 
@@ -224,7 +224,7 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
 
     def test_get_spice_console_with_undefined_param(self):
         body = {'os-getSPICEConsole': {'type': 'spice-html5',
-                                      'undefined': 'foo'}}
+                                       'undefined': 'foo'}}
         self._check_console_failure(
             self.controller.get_spice_console,
             self.validation_error,
@@ -237,9 +237,8 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('')
         output = self.controller.get_serial_console(req, fakes.FAKE_UUID,
                                                     body=body)
-        self.assertEqual({u'console': {u'url': u'ws://fake',
-                                       u'type': u'serial'}},
-                         output)
+        self.assertEqual(
+            output, {'console': {'url': 'ws://fake', 'type': 'serial'}})
         mock_get_serial_console.assert_called_once_with(
             req.environ['nova.context'], self.instance, 'serial')
 

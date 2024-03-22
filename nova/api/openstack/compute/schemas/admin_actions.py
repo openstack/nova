@@ -44,3 +44,11 @@ reset_state = {
     'required': ['os-resetState'],
     'additionalProperties': False,
 }
+
+inject_network_info_response = {
+    'type': 'null',
+}
+
+reset_state_response = {
+    'type': 'null',
+}

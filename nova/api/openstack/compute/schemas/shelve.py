@@ -116,3 +116,15 @@ unshelve_v291 = {
     "required": ["unshelve"],
     "additionalProperties": False
 }
+
+shelve_response = {
+    'type': 'null',
+}
+
+shelve_offload_response = {
+    'type': 'null',
+}
+
+unshelve_response = {
+    'type': 'null',
+}

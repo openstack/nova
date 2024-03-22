@@ -32,6 +32,7 @@ class LockServerController(wsgi.Controller):
     @wsgi.action('lock')
     @validation.schema(schema.lock, "2.1", "2.72")
     @validation.schema(schema.lock_v273, "2.73")
+    @validation.response_body_schema(schema.lock_response)
     def _lock(self, req, id, body):
         """Lock a server instance."""
         context = req.environ['nova.context']
@@ -49,6 +50,7 @@ class LockServerController(wsgi.Controller):
     @wsgi.expected_errors(404)
     @wsgi.action('unlock')
     @validation.schema(schema.unlock, "2.1", "2.72")
+    @validation.response_body_schema(schema.unlock_response)
     def _unlock(self, req, id, body):
         """Unlock a server instance."""
         context = req.environ['nova.context']

@@ -30,3 +30,7 @@ change_password = {
     'required': ['changePassword'],
     'additionalProperties': False,
 }
+
+change_password_response = {
+    'type': 'null',
+}

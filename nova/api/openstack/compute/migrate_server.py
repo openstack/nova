@@ -20,7 +20,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import migrate_server
+from nova.api.openstack.compute.schemas import migrate_server as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -39,7 +39,8 @@ class MigrateServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('migrate')
-    @validation.schema(migrate_server.migrate_v2_56, "2.56")
+    @validation.schema(schema.migrate, "2.56")
+    @validation.response_body_schema(schema.migrate_response)
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host."""
         context = req.environ['nova.context']
@@ -84,10 +85,11 @@ class MigrateServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('os-migrateLive')
-    @validation.schema(migrate_server.migrate_live, "2.0", "2.24")
-    @validation.schema(migrate_server.migrate_live_v2_25, "2.25", "2.29")
-    @validation.schema(migrate_server.migrate_live_v2_30, "2.30", "2.67")
-    @validation.schema(migrate_server.migrate_live_v2_68, "2.68")
+    @validation.schema(schema.migrate_live, "2.0", "2.24")
+    @validation.schema(schema.migrate_live_v2_25, "2.25", "2.29")
+    @validation.schema(schema.migrate_live_v2_30, "2.30", "2.67")
+    @validation.schema(schema.migrate_live_v2_68, "2.68")
+    @validation.response_body_schema(schema.migrate_live_response)
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]

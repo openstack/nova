@@ -17,7 +17,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import server_migrations
+from nova.api.openstack.compute.schemas import server_migrations as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -69,7 +69,8 @@ class ServerMigrationsController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('force_complete')
-    @validation.schema(server_migrations.force_complete)
+    @validation.schema(schema.force_complete)
+    @validation.response_body_schema(schema.force_complete_response)
     def _force_complete(self, req, id, server_id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
@@ -92,7 +93,7 @@ class ServerMigrationsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.23")
     @wsgi.expected_errors(404)
-    @validation.query_schema(server_migrations.index_query)
+    @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
         """Return all migrations of an instance in progress."""
         context = req.environ['nova.context']
@@ -115,7 +116,7 @@ class ServerMigrationsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.23")
     @wsgi.expected_errors(404)
-    @validation.query_schema(server_migrations.show_query)
+    @validation.query_schema(schema.show_query)
     def show(self, req, server_id, id):
         """Return the migration of an instance in progress by id."""
         context = req.environ['nova.context']

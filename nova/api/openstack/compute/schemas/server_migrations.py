@@ -37,3 +37,7 @@ show_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+force_complete_response = {
+    'type': 'null',
+}

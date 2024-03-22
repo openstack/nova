@@ -411,6 +411,7 @@ class SecurityGroupActionController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.action('addSecurityGroup')
     @validation.schema(schema.add_security_group)
+    @validation.response_body_schema(schema.add_security_group_response)
     def _addSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)
@@ -419,8 +420,8 @@ class SecurityGroupActionController(wsgi.Controller):
 
         group_name = self._parse(body, 'addSecurityGroup')
         try:
-            return security_group_api.add_to_instance(context, instance,
-                                                      group_name)
+            security_group_api.add_to_instance(
+                context, instance, group_name)
         except (exception.SecurityGroupNotFound,
                 exception.InstanceNotFound) as exp:
             raise exc.HTTPNotFound(explanation=exp.format_message())
@@ -434,6 +435,7 @@ class SecurityGroupActionController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.action('removeSecurityGroup')
     @validation.schema(schema.remove_security_group)
+    @validation.response_body_schema(schema.remove_security_group_response)
     def _removeSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)
@@ -443,8 +445,8 @@ class SecurityGroupActionController(wsgi.Controller):
         group_name = self._parse(body, 'removeSecurityGroup')
 
         try:
-            return security_group_api.remove_from_instance(context, instance,
-                                                           group_name)
+            security_group_api.remove_from_instance(
+                context, instance, group_name)
         except (exception.SecurityGroupNotFound,
                 exception.InstanceNotFound) as exp:
             raise exc.HTTPNotFound(explanation=exp.format_message())

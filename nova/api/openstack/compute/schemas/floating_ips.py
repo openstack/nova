@@ -61,3 +61,11 @@ remove_floating_ip = {
 # deprecated proxy APIs
 show_query = {}
 index_query = {}
+
+add_floating_ip_response = {
+    'type': 'null',
+}
+
+remove_floating_ip_response = {
+    'type': 'null',
+}
