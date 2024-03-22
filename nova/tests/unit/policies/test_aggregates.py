@@ -13,6 +13,7 @@
 from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
+from oslo_utils import timeutils
 
 from nova.api.openstack.compute import aggregates
 from nova import objects
@@ -39,6 +40,20 @@ class AggregatesPolicyTest(base.BasePolicyTest):
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
+        now = timeutils.utcnow()
+        self.fake_aggregate = objects.Aggregate(
+            **{
+                "created_at": now,
+                "name": "aggregate1",
+                "id": "1",
+                "metadata": {'availability_zone': 'nova1'},
+                "hosts": ["host1", "host2"],
+                "deleted": False,
+                "deleted_at": None,
+                "updated_at": now,
+            }
+        )
+
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate_list')
     def test_list_aggregate_policy(self, mock_list):
         rule_name = "os_compute_api:os-aggregates:index"
@@ -49,10 +64,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.create_aggregate')
     def test_create_aggregate_policy(self, mock_create):
         rule_name = "os_compute_api:os-aggregates:create"
-        mock_create.return_value = objects.Aggregate(**{"name": "aggregate1",
-                                   "id": "1",
-                                   "metadata": {'availability_zone': 'nova1'},
-                                   "hosts": ["host1", "host2"]})
+        mock_create.return_value = self.fake_aggregate
         body = {"aggregate": {"name": "test",
                               "availability_zone": "nova1"}}
         self.common_policy_auth(self.project_admin_authorized_contexts,
@@ -63,6 +75,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.update_aggregate')
     def test_update_aggregate_policy(self, mock_update):
         rule_name = "os_compute_api:os-aggregates:update"
+        mock_update.return_value = self.fake_aggregate
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.update,
                                 self.req, 1,
@@ -71,6 +84,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.delete_aggregate')
     def test_delete_aggregate_policy(self, mock_delete):
         rule_name = "os_compute_api:os-aggregates:delete"
+        mock_delete.return_value = None
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.delete,
@@ -79,6 +93,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate')
     def test_show_aggregate_policy(self, mock_show):
         rule_name = "os_compute_api:os-aggregates:show"
+        mock_show.return_value = self.fake_aggregate
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.show,
                                 self.req, 1)
@@ -86,6 +101,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.update_aggregate_metadata')
     def test_set_metadata_aggregate_policy(self, mock_metadata):
         rule_name = "os_compute_api:os-aggregates:set_metadata"
+        mock_metadata.return_value = self.fake_aggregate
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
@@ -95,6 +111,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.add_host_to_aggregate')
     def test_add_host_aggregate_policy(self, mock_add):
         rule_name = "os_compute_api:os-aggregates:add_host"
+        mock_add.return_value = self.fake_aggregate
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller._add_host,
                                 self.req, 1,
@@ -103,6 +120,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.remove_host_from_aggregate')
     def test_remove_host_aggregate_policy(self, mock_remove):
         rule_name = "os_compute_api:os-aggregates:remove_host"
+        mock_remove.return_value = self.fake_aggregate
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller._remove_host,
