@@ -94,7 +94,7 @@ def _create_controller(main_controller, action_controller_list):
 
     controller = wsgi.Resource(main_controller())
     for ctl in action_controller_list:
-        controller.register_actions(ctl())
+        controller.register_subcontroller_actions(ctl())
     return controller
 
 

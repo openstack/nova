@@ -396,8 +396,8 @@ class Resource(wsgi.Application):
         """:param controller: object that implement methods created by routes
                               lib
         """
-
         self.controller = controller
+        self.sub_controllers = []
 
         self.default_serializers = dict(json=JSONDictSerializer)
 
@@ -412,6 +412,13 @@ class Resource(wsgi.Application):
         actions = getattr(controller, 'wsgi_actions', {})
         for key, method_name in actions.items():
             self.wsgi_actions[key] = getattr(controller, method_name)
+
+    def register_subcontroller_actions(self, sub_controller):
+        """Registers sub-controller actions with this resource."""
+        self.sub_controllers.append(sub_controller)
+        actions = getattr(sub_controller, 'wsgi_actions', {})
+        for key, method_name in actions.items():
+            self.wsgi_actions[key] = getattr(sub_controller, method_name)
 
     def get_action_args(self, request_environment):
         """Parse dictionary created by routes library."""
