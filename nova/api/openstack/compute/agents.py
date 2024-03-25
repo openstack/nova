@@ -19,6 +19,12 @@ from nova.api.openstack.compute.schemas import agents as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 
+_removal_reason = """\
+This API only works with the Xen virt driver, which was deprecated in the
+20.0.0 (Train) release.
+It was removed in the 23.0.0 (Wallaby) release.
+"""
+
 
 class AgentController(wsgi.Controller):
     """(Removed) Controller for agent resources.
@@ -26,19 +32,23 @@ class AgentController(wsgi.Controller):
     This was removed during the Victoria release along with the XenAPI driver.
     """
     @wsgi.expected_errors(410)
+    @wsgi.removed('22.0.0', _removal_reason)
     def index(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('22.0.0', _removal_reason)
     @validation.schema(schema.update)
     def update(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('22.0.0', _removal_reason)
     def delete(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('22.0.0', _removal_reason)
     @validation.schema(schema.create)
     def create(self, req, body):
         raise exc.HTTPGone()

@@ -18,23 +18,34 @@ from nova.api.openstack.compute.schemas import floating_ips_bulk as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 
+_removal_reason = """\
+This API only works with *nova-network*, which was deprecated in the
+14.0.0 (Newton) release.
+It fails with HTTP 404 starting from microversion 2.36.
+It was removed in the 18.0.0 (Rocky) release.
+"""
+
 
 class FloatingIPBulkController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     def index(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     def show(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.create)
     def create(self, req, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.update)
     def update(self, req, id, body):
         raise exc.HTTPGone()
