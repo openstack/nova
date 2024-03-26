@@ -48,7 +48,9 @@ port_data1 = {
     "admin_state_up": True,
     "status": "ACTIVE",
     "mac_address": "aa:aa:aa:aa:aa:aa",
-    "fixed_ips": ["10.0.1.2"],
+    "fixed_ips": [
+        {"ip_address": "10.0.1.2", "subnet_id": FAKE_UUID2},
+    ],
     "device_id": FAKE_UUID1,
 }
 
@@ -58,7 +60,9 @@ port_data2 = {
     "admin_state_up": True,
     "status": "ACTIVE",
     "mac_address": "bb:bb:bb:bb:bb:bb",
-    "fixed_ips": ["10.0.2.2"],
+    "fixed_ips": [
+        {"ip_address": "10.0.2.2", "subnet_id": FAKE_UUID2},
+    ],
     "device_id": FAKE_UUID1,
 }
 
@@ -68,7 +72,9 @@ port_data3 = {
     "admin_state_up": True,
     "status": "ACTIVE",
     "mac_address": "bb:bb:bb:bb:bb:bb",
-    "fixed_ips": ["10.0.2.2"],
+    "fixed_ips": [
+        {"ip_address": "10.0.3.2", "subnet_id": FAKE_UUID2},
+    ],
     "device_id": '',
 }
 
@@ -529,6 +535,13 @@ class InterfaceAttachTestsV249(test.NoDBTestCase):
     def setUp(self):
         super(InterfaceAttachTestsV249, self).setUp()
         self.attachments = self.controller_cls()
+        show_port_patch = mock.patch.object(self.attachments.network_api,
+                                            'show_port', fake_show_port)
+        show_port_patch.start()
+        self.addCleanup(show_port_patch.stop)
+        self.stub_out('nova.compute.api.API.attach_interface',
+                      fake_attach_interface)
+
         self.req = fakes.HTTPRequest.blank('', version='2.49')
 
     def test_tagged_interface_attach_invalid_tag_comma(self):
@@ -550,12 +563,12 @@ class InterfaceAttachTestsV249(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError, self.attachments.create,
                           self.req, FAKE_UUID1, body=body)
 
-    @mock.patch('nova.compute.api.API.attach_interface')
     @mock.patch('nova.compute.api.API.get', fake_get_instance)
-    def test_tagged_interface_attach_valid_tag(self, _):
-        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID2,
+    def test_tagged_interface_attach_valid_tag(self):
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID1,
                                         'tag': 'foo'}}
-        with mock.patch.object(self.attachments, 'show'):
+        with mock.patch.object(self.attachments.network_api, 'show_port',
+                               fake_show_port):
             self.attachments.create(self.req, FAKE_UUID1, body=body)
 
 

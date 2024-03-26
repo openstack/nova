@@ -20,7 +20,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import attach_interfaces
+from nova.api.openstack.compute.schemas import attach_interfaces as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -64,7 +64,9 @@ class InterfaceAttachmentController(wsgi.Controller):
         self.network_api = neutron.API()
 
     @wsgi.expected_errors((404, 501))
-    @validation.query_schema(attach_interfaces.index_query)
+    @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response, '2.1', '2.69')
+    @validation.response_body_schema(schema.index_response_v270, '2.70')
     def index(self, req, server_id):
         """Returns the list of interface attachments for a given instance."""
         context = req.environ['nova.context']
@@ -107,7 +109,9 @@ class InterfaceAttachmentController(wsgi.Controller):
         return {'interfaceAttachments': results}
 
     @wsgi.expected_errors((403, 404))
-    @validation.query_schema(attach_interfaces.show_query)
+    @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response, '2.1', '2.69')
+    @validation.response_body_schema(schema.show_response_v270, '2.70')
     def show(self, req, server_id, id):
         """Return data about the given interface attachment."""
         context = req.environ['nova.context']
@@ -135,8 +139,10 @@ class InterfaceAttachmentController(wsgi.Controller):
                     show_tag=api_version_request.is_supported(req, '2.70'))}
 
     @wsgi.expected_errors((400, 403, 404, 409, 500, 501))
-    @validation.schema(attach_interfaces.create, '2.0', '2.48')
-    @validation.schema(attach_interfaces.create_v249, '2.49')
+    @validation.schema(schema.create, '2.0', '2.48')
+    @validation.schema(schema.create_v249, '2.49')
+    @validation.response_body_schema(schema.create_response, '2.1', '2.69')
+    @validation.response_body_schema(schema.create_response_v270, '2.70')
     def create(self, req, server_id, body):
         """Attach an interface to an instance."""
         context = req.environ['nova.context']
@@ -206,6 +212,7 @@ class InterfaceAttachmentController(wsgi.Controller):
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409, 501))
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, server_id, id):
         """Detach an interface from an instance."""
         context = req.environ['nova.context']

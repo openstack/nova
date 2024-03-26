@@ -80,7 +80,12 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
             "admin_state_up": True,
             "status": "ACTIVE",
             "mac_address": "bb:bb:bb:bb:bb:bb",
-            "fixed_ips": ["10.0.2.2"],
+            "fixed_ips": [
+                {
+                    "ip_address": "10.0.2.2",
+                    "subnet_id": uuids.subnet_id,
+                },
+            ],
             "device_id": server_id,
         }}
         self.common_policy_auth(self.project_reader_authorized_contexts,
@@ -89,15 +94,29 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
                                 self.req, server_id, port_id)
 
     @mock.patch('nova.compute.api.API.get')
-    @mock.patch('nova.api.openstack.compute.attach_interfaces'
-        '.InterfaceAttachmentController.show')
+    @mock.patch('nova.network.neutron.API.show_port')
     @mock.patch('nova.compute.api.API.attach_interface')
     def test_attach_interface(self, mock_interface, mock_port, mock_get):
         rule_name = "os_compute_api:os-attach-interfaces:create"
+        server_id = uuids.fake_id
+        mock_port.return_value = {'port': {
+            "id": uuids.port_id,
+            "network_id": uuids.fake_id,
+            "admin_state_up": True,
+            "status": "ACTIVE",
+            "mac_address": "bb:bb:bb:bb:bb:bb",
+            "fixed_ips": [
+                {
+                    "ip_address": "10.0.2.2",
+                    "subnet_id": uuids.subnet_id,
+                },
+            ],
+            "device_id": server_id,
+        }}
         body = {'interfaceAttachment': {'net_id': uuids.fake_id}}
         self.common_policy_auth(self.project_member_authorized_contexts,
                                 rule_name, self.controller.create,
-                                self.req, uuids.fake_id, body=body)
+                                self.req, server_id, body=body)
 
     @mock.patch('nova.compute.api.API.get')
     @mock.patch('nova.compute.api.API.detach_interface')

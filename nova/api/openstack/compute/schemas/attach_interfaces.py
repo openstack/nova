@@ -48,8 +48,7 @@ create = {
 }
 
 create_v249 = copy.deepcopy(create)
-create_v249['properties']['interfaceAttachment'][
-            'properties']['tag'] = parameter_types.tag
+create_v249['properties']['interfaceAttachment']['properties']['tag'] = parameter_types.tag  # noqa: E501
 
 # TODO(stephenfin): Remove additionalProperties in a future API version
 index_query = {
@@ -63,4 +62,79 @@ show_query = {
     'type': 'object',
     'properties': {},
     'additionalProperties': True,
+}
+
+_interface_attachment = {
+    'type': 'object',
+    'properties': {
+        'fixed_ips': {
+            'type': ['null', 'array'],
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'ip_address': {
+                        'type': 'string',
+                        'anyOf': [
+                            {'format': 'ipv4'},
+                            {'format': 'ipv6'},
+                        ],
+                    },
+                    'subnet_id': {'type': 'string', 'format': 'uuid'},
+                },
+                'required': ['ip_address', 'subnet_id'],
+                'additionalProperties': False,
+            },
+        },
+        'mac_addr': {'type': 'string', 'format': 'mac-address'},
+        'net_id': {'type': 'string', 'format': 'uuid'},
+        'port_id': {'type': 'string', 'format': 'uuid'},
+        'port_state': {'type': 'string'},
+    },
+    'required': ['fixed_ips', 'mac_addr', 'net_id', 'port_id', 'port_state'],
+    'additionalProperties': False,
+}
+
+_interface_attachment_v270 = copy.deepcopy(_interface_attachment)
+_interface_attachment_v270['properties']['tag'] = {
+    'type': ['null', 'string'],
+}
+_interface_attachment_v270['required'].append('tag')
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'interfaceAttachments': {
+            'type': 'array',
+            'items': copy.deepcopy(_interface_attachment),
+        },
+    },
+    'required': ['interfaceAttachments'],
+    'additionalProperties': False,
+}
+
+index_response_v270 = copy.deepcopy(index_response)
+index_response_v270['properties']['interfaceAttachments']['items'] = copy.deepcopy(  # noqa: E501
+    _interface_attachment_v270
+)
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'interfaceAttachment': copy.deepcopy(_interface_attachment),
+    },
+    'required': ['interfaceAttachment'],
+    'additionalProperties': False,
+}
+
+show_response_v270 = copy.deepcopy(show_response)
+show_response_v270['properties']['interfaceAttachment'] = copy.deepcopy(
+    _interface_attachment_v270
+)
+
+# create responses are identical to show, including microversions
+create_response = copy.deepcopy(show_response)
+create_response_v270 = copy.deepcopy(show_response_v270)
+
+delete_response = {
+    'type': 'null',
 }
