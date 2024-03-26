@@ -17,7 +17,7 @@ import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import create_backup
+from nova.api.openstack.compute.schemas import create_backup as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -33,8 +33,14 @@ class CreateBackupController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('createBackup')
-    @validation.schema(create_backup.create_backup_v20, '2.0', '2.0')
-    @validation.schema(create_backup.create_backup, '2.1')
+    @validation.schema(schema.create_backup_v20, '2.0', '2.0')
+    @validation.schema(schema.create_backup, '2.1')
+    @validation.response_body_schema(
+        schema.create_backup_response, '2.1', '2.44',
+    )
+    @validation.response_body_schema(
+        schema.create_backup_response_v245, '2.45'
+    )
     def _create_backup(self, req, id, body):
         """Backup a server instance.
 

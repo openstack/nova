@@ -13,7 +13,7 @@
             "extra_specs": {
                 "hw:numa_nodes": "2"
             },
-            "projects": ["fake_tenant"],
+            "projects": ["6f70656e737461636b20342065766572"],
             "swap": 0,
             "rxtx_factor": 2.0,
             "is_public": false,

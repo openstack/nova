@@ -16,11 +16,11 @@
 import datetime
 from unittest import mock
 
+from oslo_utils.fixture import uuidsentinel as uuids
 from webob import exc
 
 from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack.compute import flavor_access \
-        as flavor_access_v21
+from nova.api.openstack.compute import flavor_access
 from nova.api.openstack.compute import flavors as flavors_api
 from nova import context
 from nova import exception
@@ -57,9 +57,9 @@ FLAVORS = {
 
 
 ACCESS_LIST = [
-    {'flavor_id': '2', 'project_id': 'proj2'},
-    {'flavor_id': '2', 'project_id': 'proj3'},
-    {'flavor_id': '3', 'project_id': 'proj3'},
+    {'flavor_id': '2', 'project_id': uuids.proj2},
+    {'flavor_id': '2', 'project_id': uuids.proj3},
+    {'flavor_id': '3', 'project_id': uuids.proj3},
 ]
 
 
@@ -126,8 +126,8 @@ def fake_get_flavor_projects_from_db(context, flavorid):
 
 class FlavorAccessTestV21(test.NoDBTestCase):
     api_version = "2.1"
-    FlavorAccessController = flavor_access_v21.FlavorAccessController
-    FlavorActionController = flavor_access_v21.FlavorActionController
+    FlavorAccessController = flavor_access.FlavorAccessController
+    FlavorActionController = flavor_access.FlavorActionController
     _prefix = "/v2/%s" % fakes.FAKE_PROJECT_ID
     validation_ex = exception.ValidationError
 
@@ -175,8 +175,8 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         req.environ = {"nova.context": context.RequestContext(
             'fake_user', fakes.FAKE_PROJECT_ID)}
         expected = {'flavor_access': [
-            {'flavor_id': '2', 'tenant_id': 'proj2'},
-            {'flavor_id': '2', 'tenant_id': 'proj3'}]}
+            {'flavor_id': '2', 'tenant_id': uuids.proj2},
+            {'flavor_id': '2', 'tenant_id': uuids.proj3}]}
         result = self.flavor_access_controller.index(req, '2')
         self.assertEqual(result, expected)
 
@@ -192,7 +192,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}, {'id': '2'}]}
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors',
                                       use_admin_context=True)
-        req.environ['nova.context'].project_id = 'proj2'
+        req.environ['nova.context'].project_id = uuids.proj2
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
@@ -217,7 +217,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         url = self._prefix + '/flavors?is_public=false'
         req = fakes.HTTPRequest.blank(url,
                                       use_admin_context=True)
-        req.environ['nova.context'].project_id = 'proj2'
+        req.environ['nova.context'].project_id = uuids.proj2
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
@@ -264,12 +264,13 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     def test_add_tenant_access(self):
         def stub_add_flavor_access(context, flavor_id, projectid):
             self.assertEqual(3, flavor_id, "flavor_id")
-            self.assertEqual("proj2", projectid, "projectid")
+            self.assertEqual(uuids.proj2, projectid, "projectid")
         self.stub_out('nova.objects.Flavor._flavor_add_project',
                       stub_add_flavor_access)
-        expected = {'flavor_access':
-            [{'flavor_id': '3', 'tenant_id': 'proj3'}]}
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        expected = {
+            'flavor_access': [{'flavor_id': '3', 'tenant_id': uuids.proj3}]
+        }
+        body = {'addTenantAccess': {'tenant': uuids.proj2}}
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
 
@@ -280,7 +281,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     @mock.patch('nova.objects.Flavor.get_by_flavor_id',
                 side_effect=exception.FlavorNotFound(flavor_id='1'))
     def test_add_tenant_access_with_flavor_not_found(self, mock_get):
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        body = {'addTenantAccess': {'tenant': uuids.proj2}}
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
@@ -290,7 +291,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     def test_add_tenant_access_with_no_tenant(self):
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
-        body = {'addTenantAccess': {'foo': 'proj2'}}
+        body = {'addTenantAccess': {'foo': uuids.proj2}}
         self.assertRaises(self.validation_ex,
                           self.flavor_action_controller._add_tenant_access,
                           req, '2', body=body)
@@ -309,7 +310,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
             self._prefix + '/flavors/3/os-flavor-access')
         req.environ = {"nova.context": context.RequestContext(
             'fake_user', fakes.FAKE_PROJECT_ID)}
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        body = {'addTenantAccess': {'tenant': uuids.proj2}}
         self.assertRaises(exc.HTTPConflict,
                           self.flavor_action_controller._add_tenant_access,
                           req, '3', body=body)
@@ -320,7 +321,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
                                                  project_id=projectid)
         self.stub_out('nova.objects.Flavor._flavor_del_project',
                       stub_remove_flavor_access)
-        body = {'removeTenantAccess': {'tenant': 'proj2'}}
+        body = {'removeTenantAccess': {'tenant': uuids.proj2}}
         req = fakes.HTTPRequest.blank(
             self._prefix + '/flavors/3/os-flavor-access')
         req.environ = {"nova.context": context.RequestContext(
@@ -330,7 +331,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
                           req, '3', body=body)
 
     def test_add_tenant_access_is_public(self):
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        body = {'addTenantAccess': {'tenant': uuids.proj2}}
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
         req.api_version_request = api_version.APIVersionRequest('2.7')
@@ -343,7 +344,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     def test_delete_tenant_access_with_no_tenant(self, mock_api_get):
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
-        body = {'removeTenantAccess': {'foo': 'proj2'}}
+        body = {'removeTenantAccess': {'foo': uuids.proj2}}
         self.assertRaises(self.validation_ex,
                           self.flavor_action_controller._remove_tenant_access,
                           req, '2', body=body)
@@ -359,30 +360,32 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         """Tests the case that the tenant does not exist in Keystone."""
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
-        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        body = {'addTenantAccess': {'tenant': uuids.proj2}}
         self.assertRaises(exc.HTTPBadRequest,
                           self.flavor_action_controller._add_tenant_access,
                           req, '2', body=body)
         mock_verify.assert_called_once_with(
-            req.environ['nova.context'], 'proj2')
+            req.environ['nova.context'], uuids.proj2)
 
     @mock.patch('nova.objects.Flavor.remove_access')
-    @mock.patch('nova.api.openstack.identity.verify_project_id',
-                side_effect=exc.HTTPBadRequest(
-                    explanation="Project ID proj2 is not a valid project."))
+    @mock.patch('nova.api.openstack.identity.verify_project_id')
     def test_remove_tenant_access_with_invalid_tenant(self,
                                                       mock_verify,
                                                       mock_remove_access):
         """Tests the case that the tenant does not exist in Keystone."""
+        mock_verify.side_effect = exc.HTTPBadRequest(explanation=(
+            f"Project ID {uuids.proj2} is not a valid project."
+        ))
+
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
-        body = {'removeTenantAccess': {'tenant': 'proj2'}}
+        body = {'removeTenantAccess': {'tenant': uuids.proj2}}
 
         self.flavor_action_controller._remove_tenant_access(
             req, '2', body=body)
         mock_verify.assert_called_once_with(
-            req.environ['nova.context'], 'proj2')
-        mock_remove_access.assert_called_once_with('proj2')
+            req.environ['nova.context'], uuids.proj2)
+        mock_remove_access.assert_called_once_with(uuids.proj2)
 
     @mock.patch('nova.api.openstack.identity.verify_project_id',
                 side_effect=exc.HTTPBadRequest(
@@ -395,10 +398,10 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         """
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
-        body = {'removeTenantAccess': {'tenant': 'proj2'}}
+        body = {'removeTenantAccess': {'tenant': uuids.proj2}}
 
         self.assertRaises(exc.HTTPBadRequest,
                           self.flavor_action_controller._remove_tenant_access,
                           req, '2', body=body)
         mock_verify.assert_called_once_with(
-            req.environ['nova.context'], 'proj2')
+            req.environ['nova.context'], uuids.proj2)

@@ -63,6 +63,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action("addTenantAccess")
     @validation.schema(schema.add_tenant_access)
+    @validation.response_body_schema(schema.add_tenant_access_response)
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         context.can(fa_policies.POLICY_ROOT % "add_tenant_access", target={})
@@ -88,6 +89,7 @@ class FlavorActionController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 404))
     @wsgi.action("removeTenantAccess")
     @validation.schema(schema.remove_tenant_access)
+    @validation.response_body_schema(schema.remove_tenant_access_response)
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         context.can(

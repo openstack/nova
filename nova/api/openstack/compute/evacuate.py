@@ -80,9 +80,13 @@ class EvacuateController(wsgi.Controller):
     @wsgi.action('evacuate')
     @validation.schema(evacuate.evacuate, "2.0", "2.13")
     @validation.schema(evacuate.evacuate_v214, "2.14", "2.28")
-    @validation.schema(evacuate.evacuate_v2_29, "2.29", "2.67")
-    @validation.schema(evacuate.evacuate_v2_68, "2.68", "2.94")
-    @validation.schema(evacuate.evacuate_v2_95, "2.95")
+    @validation.schema(evacuate.evacuate_v229, "2.29", "2.67")
+    @validation.schema(evacuate.evacuate_v268, "2.68", "2.94")
+    @validation.schema(evacuate.evacuate_v295, "2.95")
+    @validation.response_body_schema(
+        evacuate.evacuate_response, "2.0", "2.13"
+    )
+    @validation.response_body_schema(evacuate.evacuate_response_v214, "2.14")
     def _evacuate(self, req, id, body):
         """Permit admins to evacuate a server from a failed host
         to a new one.

@@ -34,3 +34,12 @@ get_console_output = {
     'required': ['os-getConsoleOutput'],
     'additionalProperties': False,
 }
+
+get_console_output_response = {
+    'type': 'object',
+    'properties': {
+        'output': {'type': 'string'},
+    },
+    'required': ['output'],
+    'additionalProperties': False,
+}

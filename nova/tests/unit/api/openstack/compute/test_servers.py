@@ -171,7 +171,7 @@ def fake_get_inst_mappings_by_instance_uuids_from_db(*args, **kwargs):
             'transport_url': 'fake://nowhere/', 'updated_at': None,
             'database_connection': uuids.cell1, 'created_at': None,
             'disabled': False},
-        'project_id': 'fake-project'
+        'project_id': fakes.FAKE_PROJECT_ID,
     }]
 
 
@@ -265,7 +265,7 @@ class _ServersControllerTest(ControllerTest):
         return {
             "server": {
                 "id": uuid,
-                "user_id": "fake_user",
+                "user_id": fakes.FAKE_USER_ID,
                 "created": "2010-10-10T12:00:00Z",
                 "updated": "2010-11-11T11:00:00Z",
                 "progress": progress,
@@ -3767,6 +3767,21 @@ class ServersControllerRebuildTestV275(ControllerTest):
     microversion = '2.75'
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
 
+    def setUp(self):
+        super().setUp()
+
+        mock_rebuild = mock.patch(
+            'nova.compute.api.API.rebuild', return_value=None)
+        self.mock_rebuild = mock_rebuild.start()
+        self.addCleanup(mock_rebuild.stop)
+
+        self.mock_get_instance_host_status = self.useFixture(
+            fixtures.MockPatchObject(
+                compute_api.API, 'get_instance_host_status',
+                return_value='UP'
+            )
+        ).mock
+
     def test_rebuild_response_no_show_server_only_attributes_old_version(self):
         # There are some old server attributes which were added only for
         # GET server APIs not for Rebuild. GET server and Rebuild server share
@@ -3799,11 +3814,29 @@ class ServersControllerRebuildTestV275(ControllerTest):
         req = fakes.HTTPRequest.blank(self.path_with_query % 'unknown=1',
                                       use_admin_context=True,
                                       version=self.microversion)
-        fake_get = fakes.fake_compute_get(
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            id=2,
+            display_description="",
+            uuid=FAKE_UUID,
+            node="node-fake",
+            reservation_id="r-1",
+            launch_index=0,
+            kernel_id=UUID1,
+            ramdisk_id=UUID2,
+            display_name="server2",
+            host='host',
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None,
+            task_state="ACTIVE",
             vm_state=vm_states.ACTIVE,
+            power_state=1,
             project_id=req.environ['nova.context'].project_id,
             user_id=req.environ['nova.context'].user_id)
-        self.mock_get.side_effect = fake_get
+
         res_dict = self.controller._action_rebuild(req, FAKE_UUID,
                                                    body=body).obj
         for field in GET_ONLY_FIELDS:
@@ -3829,6 +3862,13 @@ class ServersControllerRebuildTestV290(ControllerTest):
         self.mock_rebuild = mock_rebuild.start()
         self.addCleanup(mock_rebuild.stop)
 
+        self.mock_get_instance_host_status = self.useFixture(
+            fixtures.MockPatchObject(
+                compute_api.API, 'get_instance_host_status',
+                return_value='UP'
+            )
+        ).mock
+
     def _get_request(self, body=None):
         req = fakes.HTTPRequest.blank(
             self.path_action % FAKE_UUID,
@@ -3850,6 +3890,29 @@ class ServersControllerRebuildTestV290(ControllerTest):
             }
         }
         req = self._get_request(body)
+
+        self.mock_get.side_effect = fakes.fake_compute_get(
+            id=2,
+            display_description="",
+            uuid=FAKE_UUID,
+            node="node-fake",
+            reservation_id="r-1",
+            launch_index=0,
+            kernel_id=UUID1,
+            ramdisk_id=UUID2,
+            display_name="server2",
+            host='host',
+            root_device_name="/dev/vda",
+            user_data="userdata",
+            metadata={"seq": "2"},
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None,
+            task_state="ACTIVE",
+            vm_state=vm_states.ACTIVE,
+            power_state=1,
+            project_id=req.environ['nova.context'].project_id,
+            user_id=req.environ['nova.context'].user_id)
 
         # There's nothing to check here from the return value since the
         # 'rebuild' API is a cast and we immediately fetch the instance from
@@ -5826,7 +5889,7 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
         mock_count.return_value = count
         mock_get_all_p.return_value = {'project_id': fakes.FAKE_PROJECT_ID}
         mock_get_all_pu.return_value = {'project_id': fakes.FAKE_PROJECT_ID,
-                                        'user_id': 'fake_user'}
+                                        'user_id': fakes.FAKE_USER_ID}
         if resource in db.PER_PROJECT_QUOTAS:
             mock_get_all_p.return_value[resource] = quota
         else:
@@ -7235,7 +7298,7 @@ class ServersControllerCreateTestV274(_ServersControllerCreateTest):
     def setUp(self):
         super(ServersControllerCreateTestV274, self).setUp()
         self.req.environ['nova.context'] = fakes.FakeRequestContext(
-            user_id='fake_user',
+            user_id=fakes.FAKE_USER_ID,
             project_id=self.project_id,
             is_admin=True)
         self.mock_get = self.useFixture(
@@ -7533,8 +7596,8 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
+                "user_id": fakes.FAKE_USER_ID,
+                "tenant_id": fakes.FAKE_PROJECT_ID,
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -7552,12 +7615,12 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
                 },
                 "flavor": {
                     "id": "1",
-                  "links": [
-                                            {
-                          "rel": "bookmark",
-                          "href": flavor_bookmark,
-                      },
-                  ],
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": flavor_bookmark,
+                        },
+                    ],
                 },
                 "addresses": {
                     'test1': [
@@ -7623,8 +7686,8 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
+                "user_id": fakes.FAKE_USER_ID,
+                "tenant_id": fakes.FAKE_PROJECT_ID,
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "name": "test_server",
@@ -7641,12 +7704,12 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
                 },
                 "flavor": {
                     "id": "1",
-                  "links": [
-                                            {
-                          "rel": "bookmark",
-                          "href": flavor_bookmark,
-                      },
-                  ],
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": flavor_bookmark,
+                        },
+                    ],
                 },
                 "addresses": {
                     'test1': [
@@ -7822,8 +7885,8 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
+                "user_id": fakes.FAKE_USER_ID,
+                "tenant_id": fakes.FAKE_PROJECT_ID,
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 100,
@@ -7841,12 +7904,12 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
                 },
                 "flavor": {
                     "id": "1",
-                  "links": [
-                                            {
-                          "rel": "bookmark",
-                          "href": flavor_bookmark,
-                      },
-                  ],
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": flavor_bookmark,
+                        },
+                    ],
                 },
                 "addresses": {
                     'test1': [
@@ -7914,8 +7977,8 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
         expected_server = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
+                "user_id": fakes.FAKE_USER_ID,
+                "tenant_id": fakes.FAKE_PROJECT_ID,
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -7934,7 +7997,7 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
                 "flavor": {
                     "id": "1",
                     "links": [
-                                              {
+                        {
                             "rel": "bookmark",
                             "href": flavor_bookmark,
                         },
@@ -8042,8 +8105,8 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
         expected = {
             "servers": [{
                 "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
+                "user_id": fakes.FAKE_USER_ID,
+                "tenant_id": fakes.FAKE_PROJECT_ID,
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
@@ -8225,8 +8288,8 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
         expected = {
             "server": {
                 "id": self.uuid,
-                "user_id": "fake_user",
-                "tenant_id": "fake_project",
+                "user_id": fakes.FAKE_USER_ID,
+                "tenant_id": fakes.FAKE_PROJECT_ID,
                 "created": '1955-11-05T00:00:00Z',
                 "status": "UNKNOWN",
                 "image": {
@@ -8288,7 +8351,7 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
             "server": {
                 "id": self.uuid,
                 "user_id": "UNKNOWN",
-                "tenant_id": "fake_project",
+                "tenant_id": fakes.FAKE_PROJECT_ID,
                 "created": '1955-11-05T00:00:00Z',
                 "status": "UNKNOWN",
                 "image": "",

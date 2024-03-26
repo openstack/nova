@@ -15,12 +15,12 @@
 
 from unittest import mock
 
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack import common
-from nova.api.openstack.compute import create_backup \
-        as create_backup_v21
+from nova.api.openstack.compute import create_backup
 from nova.compute import api
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -32,7 +32,7 @@ from nova.tests.unit import fake_instance
 
 class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                         test.NoDBTestCase):
-    create_backup = create_backup_v21
+    create_backup = create_backup
     controller_name = 'CreateBackupController'
     validation_error = exception.ValidationError
 
@@ -54,7 +54,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
             },
         }
 
-        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
+        image = dict(id=uuids.image_id, status='ACTIVE', name='Backup 1',
                      properties=metadata)
 
         instance = fake_instance.fake_instance_obj(self.context)
@@ -70,7 +70,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                                               extra_properties=metadata)
 
         self.assertEqual(202, res.status_int)
-        self.assertIn('fake-image-id', res.headers['Location'])
+        self.assertIn(uuids.image_id, res.headers['Location'])
 
     def test_create_backup_no_name(self):
         # Name is required for backups.
@@ -107,7 +107,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                 'rotation': 1,
             },
         }
-        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
+        image = dict(id=uuids.image_id, status='ACTIVE', name='Backup 1',
                      properties={})
         instance = fake_instance.fake_instance_obj(self.context)
         self.mock_get.return_value = instance
@@ -217,7 +217,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
             },
         }
 
-        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
+        image = dict(id=uuids.image_id, status='ACTIVE', name='Backup 1',
                      properties={})
         instance = fake_instance.fake_instance_obj(self.context)
         self.mock_get.return_value = instance
@@ -246,7 +246,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
             },
         }
 
-        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
+        image = dict(id=uuids.image_id, status='ACTIVE', name='Backup 1',
                      properties={})
         instance = fake_instance.fake_instance_obj(self.context)
         self.mock_get.return_value = instance
@@ -261,7 +261,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                                               extra_properties={})
 
         self.assertEqual(202, res.status_int)
-        self.assertIn('fake-image-id', res.headers['Location'])
+        self.assertIn(uuids.image_id, res.headers['Location'])
 
     @mock.patch.object(common, 'check_img_metadata_properties_quota')
     @mock.patch.object(api.API, 'backup')
@@ -275,7 +275,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
             },
         }
 
-        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
+        image = dict(id=uuids.image_id, status='ACTIVE', name='Backup 1',
                      properties={})
         instance = fake_instance.fake_instance_obj(self.context)
         self.mock_get.return_value = instance
@@ -289,11 +289,11 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                                               'daily', 1,
                                               extra_properties={})
         self.assertEqual(202, res.status_int)
-        self.assertIn('fake-image-id', res.headers['Location'])
+        self.assertIn(uuids.image_id, res.headers['Location'])
 
     @mock.patch.object(common, 'check_img_metadata_properties_quota')
     @mock.patch.object(api.API, 'backup', return_value=dict(
-        id='fake-image-id', status='ACTIVE', name='Backup 1', properties={}))
+        id=uuids.image_id, status='ACTIVE', name='Backup 1', properties={}))
     def test_create_backup_v2_45(self, mock_backup, mock_check_image):
         """Tests the 2.45 microversion to ensure the Location header is not
         in the response.
@@ -310,7 +310,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
         req = fakes.HTTPRequest.blank('', version='2.45')
         res = self.controller._create_backup(req, instance['uuid'], body=body)
         self.assertIsInstance(res, dict)
-        self.assertEqual('fake-image-id', res['image_id'])
+        self.assertEqual(uuids.image_id, res['image_id'])
 
     @mock.patch.object(common, 'check_img_metadata_properties_quota')
     @mock.patch.object(api.API, 'backup')
@@ -396,7 +396,7 @@ class CreateBackupTestsV239(test.NoDBTestCase):
 
     def setUp(self):
         super(CreateBackupTestsV239, self).setUp()
-        self.controller = create_backup_v21.CreateBackupController()
+        self.controller = create_backup.CreateBackupController()
         self.req = fakes.HTTPRequest.blank('', version='2.39')
 
     @mock.patch.object(common, 'check_img_metadata_properties_quota')
