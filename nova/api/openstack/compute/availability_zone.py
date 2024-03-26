@@ -106,6 +106,7 @@ class AvailabilityZoneController(wsgi.Controller):
 
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """Returns a summary list of availability zone."""
         context = req.environ['nova.context']
@@ -115,6 +116,7 @@ class AvailabilityZoneController(wsgi.Controller):
 
     @wsgi.expected_errors(())
     @validation.query_schema(schema.detail_query)
+    @validation.response_body_schema(schema.detail_response)
     def detail(self, req):
         """Returns a detailed list of availability zone."""
         context = req.environ['nova.context']
