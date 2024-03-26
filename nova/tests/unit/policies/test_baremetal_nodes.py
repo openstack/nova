@@ -59,8 +59,9 @@ class BaremetalNodesPolicyTest(base.BasePolicyTest):
 
     def test_show_node_policy(self):
         rule_name = "os_compute_api:os-baremetal-nodes:show"
-        properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
-        node = ironic_utils.get_test_node(properties=properties)
+        properties = {'cpus': '1', 'memory_mb': '512', 'local_gb': '10'}
+        node = ironic_utils.get_test_node(
+            instance_id=uuids.instance, properties=properties)
         self.mock_conn.get_node.return_value = node
         self.mock_conn.ports.return_value = iter([])
 
