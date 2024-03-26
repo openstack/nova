@@ -19,7 +19,7 @@
 from oslo_serialization import jsonutils
 from webob import exc
 
-from nova.api.openstack.compute.schemas import assisted_volume_snapshots
+from nova.api.openstack.compute.schemas import assisted_volume_snapshots as schema  # noqa: E501
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -35,7 +35,8 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.expected_errors(400)
-    @validation.schema(assisted_volume_snapshots.snapshots_create)
+    @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
@@ -66,11 +67,10 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(204)
-    @validation.query_schema(assisted_volume_snapshots.delete_query_275,
-                             '2.75')
-    @validation.query_schema(assisted_volume_snapshots.delete_query, '2.0',
-                             '2.74')
     @wsgi.expected_errors((400, 404))
+    @validation.query_schema(schema.delete_query, '2.0', '2.74')
+    @validation.query_schema(schema.delete_query_275, '2.75')
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']
@@ -91,8 +91,8 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=str(e))
 
         try:
-            self.compute_api.volume_snapshot_delete(context, volume_id,
-                    id, delete_info)
+            self.compute_api.volume_snapshot_delete(
+                context, volume_id, id, delete_info)
         except (exception.VolumeBDMNotFound,
                 exception.InvalidVolume) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())

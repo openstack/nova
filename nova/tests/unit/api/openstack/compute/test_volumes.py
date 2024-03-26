@@ -1775,6 +1775,12 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
 
     @mock.patch.object(compute_api.API, 'volume_snapshot_create')
     def test_assisted_create(self, mock_volume_snapshot_create):
+        mock_volume_snapshot_create.return_value = {
+            'snapshot': {
+                'id': uuids.snapshot_id,
+                'volumeId': uuids.volume_id,
+            },
+        }
         req = fakes.HTTPRequest.blank(self.url)
         expected_create_info = {'type': 'qcow2',
                                 'new_file': 'new_file',

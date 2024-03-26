@@ -16,7 +16,7 @@ import copy
 
 from nova.api.validation import parameter_types
 
-snapshots_create = {
+create = {
     'type': 'object',
     'properties': {
         'snapshot': {
@@ -67,3 +67,24 @@ delete_query = {
 
 delete_query_275 = copy.deepcopy(delete_query)
 delete_query_275['additionalProperties'] = False
+
+create_response = {
+    'type': 'object',
+    'properties': {
+        'snapshot': {
+            'type': 'object',
+            'properties': {
+                'id': {'type': ['null', 'string'], 'format': 'uuid'},
+                'volumeId': {'type': 'string', 'format': 'uuid'},
+            },
+            'required': ['id', 'volumeId'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['snapshot'],
+    'additionalProperties': False,
+}
+
+delete_response = {
+    'type': 'null',
+}
