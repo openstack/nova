@@ -67,11 +67,15 @@ class ConsoleAuthTokensController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.30")
     @wsgi.expected_errors((400, 401, 404))
     @validation.query_schema(schema.show_query)
+    # NOTE(stephenfin): Technically this will never return a response now (as
+    # an exception will be raised instead) but we use the same schema for
+    # documentation purposes
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         """Until microversion 2.30, this API was available only for the
         rdp-html5 console type which has been removed along with the HyperV
         driver in the Nova 29.0.0 (Caracal) release. As this method is for
-        microversion <=2.30, it will return an http 400 error. Starting
+        microversion <= 2.30, it will return an http 400 error. Starting
         from 2.31 microversion, this API works for all the supported
         console types that are handled by the separate show method
         defined below.
@@ -81,5 +85,6 @@ class ConsoleAuthTokensController(wsgi.Controller):
     @wsgi.Controller.api_version("2.31")  # noqa
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):  # noqa
         return self._show(req, id)

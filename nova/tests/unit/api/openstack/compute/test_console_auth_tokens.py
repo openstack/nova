@@ -33,15 +33,14 @@ class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
     _EXPECTED_OUTPUT = {'console': {'instance_uuid': fakes.FAKE_UUID,
                                     'host': 'fake_host',
                                     'port': '1234',
-                                    'internal_access_path':
-                                    'fake_access_path'}}
+                                    'internal_access_path': fakes.FAKE_UUID}}
 
     # The database backend returns a ConsoleAuthToken.to_dict() and o.vo
     # StringField are unicode. And the port is an IntegerField.
     _EXPECTED_OUTPUT_DB = copy.deepcopy(_EXPECTED_OUTPUT)
     _EXPECTED_OUTPUT_DB['console'].update(
-        {'host': u'fake_host', 'port': 1234,
-         'internal_access_path': u'fake_access_path'})
+        {'host': 'fake_host', 'port': 1234,
+         'internal_access_path': fakes.FAKE_UUID})
 
     def setUp(self):
         super(ConsoleAuthTokensExtensionTestV21, self).setUp()
@@ -66,7 +65,7 @@ class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
     @mock.patch('nova.objects.ConsoleAuthToken.validate',
                 return_value = objects.ConsoleAuthToken(
                     instance_uuid=fakes.FAKE_UUID, host='fake_host',
-                    port='1234', internal_access_path='fake_access_path',
+                    port='1234', internal_access_path=fakes.FAKE_UUID,
                     console_type='webmks',
                     token=fakes.FAKE_UUID))
     def test_get_console_connect_info(self, mock_validate):
