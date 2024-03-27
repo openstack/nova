@@ -16,26 +16,35 @@ import copy
 
 from nova.api.validation import parameter_types
 
+_metadata_key = '^[a-zA-Z0-9-_:. ]{1,255}$'
 # NOTE(oomichi): The metadata of flavor_extraspecs should accept numbers
 # as its values.
-metadata = copy.deepcopy(parameter_types.metadata)
-metadata['patternProperties']['^[a-zA-Z0-9-_:. ]{1,255}$']['type'] = \
-    ['string', 'number']
+_metadata = copy.deepcopy(parameter_types.metadata)
+_metadata['patternProperties'][_metadata_key]['type'] = [
+    'string', 'number'
+]
+
 create = {
     'type': 'object',
     'properties': {
-        'extra_specs': metadata
+        'extra_specs': _metadata
     },
     'required': ['extra_specs'],
     'additionalProperties': False,
 }
 
-
-update = copy.deepcopy(metadata)
+update = copy.deepcopy(_metadata)
 update.update({
      'minProperties': 1,
      'maxProperties': 1
 })
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
 
 # TODO(stephenfin): Remove additionalProperties in a future API version
 show_query = {
@@ -44,9 +53,29 @@ show_query = {
     'additionalProperties': True,
 }
 
-# TODO(stephenfin): Remove additionalProperties in a future API version
-index_query = {
+index_response = {
     'type': 'object',
-    'properties': {},
-    'additionalProperties': True,
+    'properties': {
+        # NOTE(stephenfin): While we accept numbers as values, we always return
+        # strings
+        'extra_specs': parameter_types.metadata,
+    },
+    'required': ['extra_specs'],
+    'additionalProperties': False,
+}
+
+# NOTE(stephenfin): We return the request back to the user unmodified, meaning
+# if the user provided a number key then they'll get a number key back, even
+# though later requests will return a string
+create_response = copy.deepcopy(create)
+
+# NOTE(stephenfin): As above
+update_response = copy.deepcopy(update)
+
+# NOTE(stephenfin): Since we are retrieving here, we always return string keys
+# (like index)
+show_response = copy.deepcopy(parameter_types.metadata)
+
+delete_response = {
+    'type': 'null',
 }

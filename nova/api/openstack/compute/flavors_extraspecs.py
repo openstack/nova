@@ -57,6 +57,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
@@ -69,6 +70,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     # completely when returning a response.
     @wsgi.expected_errors((400, 404, 409))
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
         context.can(fes_policies.POLICY_ROOT % 'create', target={})
@@ -87,6 +89,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
 
     @wsgi.expected_errors((400, 404, 409))
     @validation.schema(schema.update)
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
         context.can(fes_policies.POLICY_ROOT % 'update', target={})
@@ -107,6 +110,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
@@ -125,6 +129,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     # +microversions because the flavor extra specs has been deleted
     # completely when returning a response.
     @wsgi.expected_errors(404)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
