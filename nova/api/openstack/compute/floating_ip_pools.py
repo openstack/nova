@@ -44,6 +44,7 @@ class FloatingIPPoolsController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """Return a list of pools."""
         context = req.environ['nova.context']

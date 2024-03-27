@@ -16,3 +16,22 @@ index_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'floating_ip_pools': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string'}
+                },
+                'required': ['name'],
+                'additionalProperties': False,
+            },
+        },
+    },
+    'required': ['floating_ip_pools'],
+    'additionalProperties': True,
+}
