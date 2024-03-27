@@ -42,6 +42,7 @@ class FlavorAccessController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, flavor_id):
         context = req.environ['nova.context']
         context.can(fa_policies.BASE_POLICY_NAME)
