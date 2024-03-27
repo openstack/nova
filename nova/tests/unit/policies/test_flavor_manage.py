@@ -15,6 +15,7 @@ from unittest import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import flavors
+from nova import objects
 from nova.policies import flavor_manage as fm_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
@@ -69,6 +70,18 @@ class FlavorManagePolicyTest(base.BasePolicyTest):
     @mock.patch('nova.objects.Flavor.save')
     def test_update_flavor_policy(self, mock_save, mock_get):
         rule_name = fm_policies.POLICY_ROOT % 'update'
+        mock_get.return_value = objects.Flavor(
+            flavorid=uuids.fake_id,
+            name='test',
+            memory_mb=512,
+            vcpus=2,
+            root_gb=1,
+            ephemeral_gb=1,
+            swap=512,
+            rxtx_factor=1.0,
+            is_public=True,
+            disabled=False,
+        )
         req = fakes.HTTPRequest.blank('', version='2.55')
         self.common_policy_auth(self.admin_authorized_contexts,
                                 rule_name, self.controller.update,

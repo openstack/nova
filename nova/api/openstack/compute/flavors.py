@@ -41,6 +41,7 @@ class FlavorsController(wsgi.Controller):
     # return no response body.
     @wsgi.response(202)
     @wsgi.expected_errors(404)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         context = req.environ['nova.context']
         context.can(fm_policies.POLICY_ROOT % 'delete', target={})
@@ -56,8 +57,11 @@ class FlavorsController(wsgi.Controller):
     @wsgi.expected_errors((400, 409))
     @validation.schema(schema.create_v20, '2.0', '2.0')
     @validation.schema(schema.create, '2.1', '2.54')
-    @validation.schema(schema.create_v2_55,
-                       flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
+    @validation.schema(schema.create_v255, '2.55')
+    @validation.response_body_schema(schema.create_response, '2.0', '2.54')
+    @validation.response_body_schema(schema.create_response_v255, '2.55', '2.60')  # noqa: E501
+    @validation.response_body_schema(schema.create_response_v261, '2.61', '2.74')  # noqa: E501
+    @validation.response_body_schema(schema.create_response_v275, '2.75')
     def create(self, req, body):
         context = req.environ['nova.context']
         context.can(fm_policies.POLICY_ROOT % 'create', target={})
@@ -106,10 +110,12 @@ class FlavorsController(wsgi.Controller):
         return self._view_builder.show(req, flavor, include_description,
                                        include_extra_specs=include_extra_specs)
 
-    @wsgi.Controller.api_version(flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
+    @wsgi.Controller.api_version('2.55')
     @wsgi.expected_errors((400, 404))
-    @validation.schema(schema.update_v2_55,
-                       flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
+    @validation.schema(schema.update, '2.55')
+    @validation.response_body_schema(schema.update_response, '2.55', '2.60')
+    @validation.response_body_schema(schema.update_response_v261, '2.61', '2.74')  # noqa: E501
+    @validation.response_body_schema(schema.update_response_v275, '2.75')
     def update(self, req, id, body):
         # Validate the policy.
         context = req.environ['nova.context']
@@ -131,17 +137,22 @@ class FlavorsController(wsgi.Controller):
         return self._view_builder.show(req, flavor, include_description=True,
                                        include_extra_specs=include_extra_specs)
 
-    @validation.query_schema(schema.index_query_275, '2.75')
-    @validation.query_schema(schema.index_query, '2.0', '2.74')
     @wsgi.expected_errors(400)
+    @validation.query_schema(schema.index_query, '2.0', '2.74')
+    @validation.query_schema(schema.index_query_275, '2.75')
+    @validation.response_body_schema(schema.index_response, '2.0', '2.54')
+    @validation.response_body_schema(schema.index_response_v255, '2.55')
     def index(self, req):
         """Return all flavors in brief."""
         limited_flavors = self._get_flavors(req)
         return self._view_builder.index(req, limited_flavors)
 
-    @validation.query_schema(schema.index_query_275, '2.75')
-    @validation.query_schema(schema.index_query, '2.0', '2.74')
     @wsgi.expected_errors(400)
+    @validation.query_schema(schema.index_query, '2.0', '2.74')
+    @validation.query_schema(schema.index_query_275, '2.75')
+    @validation.response_body_schema(schema.detail_response, '2.0', '2.54')
+    @validation.response_body_schema(schema.detail_response_v255, '2.55', '2.60')  # noqa: E501
+    @validation.response_body_schema(schema.detail_response_v261, '2.61')
     def detail(self, req):
         """Return all flavors in detail."""
         context = req.environ['nova.context']
@@ -156,6 +167,10 @@ class FlavorsController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response, '2.0', '2.54')
+    @validation.response_body_schema(schema.show_response_v255, '2.55', '2.60')
+    @validation.response_body_schema(schema.show_response_v261, '2.61', '2.74')
+    @validation.response_body_schema(schema.show_response_v275, '2.75')
     def show(self, req, id):
         """Return data about the given flavor id."""
         context = req.environ['nova.context']
@@ -222,8 +237,8 @@ class FlavorsController(wsgi.Controller):
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
-            limited_flavors = objects.FlavorList.get_all(context,
-                filters=filters, sort_key=sort_key, sort_dir=sort_dir,
+            limited_flavors = objects.FlavorList.get_all(
+                context, filters=filters, sort_key=sort_key, sort_dir=sort_dir,
                 limit=limit, marker=marker)
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
