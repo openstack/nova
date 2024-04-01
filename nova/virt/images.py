@@ -157,6 +157,15 @@ def fetch_to_raw(context, image_href, path, trusted_certs=None):
                 reason=(_("fmt=%(fmt)s backed by: %(backing_file)s") %
                         {'fmt': fmt, 'backing_file': backing_file}))
 
+        try:
+            data_file = data.format_specific['data']['data-file']
+        except (KeyError, TypeError, AttributeError):
+            data_file = None
+        if data_file is not None:
+            raise exception.ImageUnacceptable(image_id=image_href,
+                reason=(_("fmt=%(fmt)s has data-file: %(data_file)s") %
+                        {'fmt': fmt, 'data_file': data_file}))
+
         if fmt == 'vmdk':
             check_vmdk_image(image_href, data)
 

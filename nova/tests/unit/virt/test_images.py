@@ -112,6 +112,37 @@ class QemuTestCase(test.NoDBTestCase):
                                images.fetch_to_raw,
                                None, 'href123', '/no/path')
 
+    @mock.patch.object(images, 'convert_image',
+                       side_effect=exception.ImageUnacceptable)
+    @mock.patch.object(images, 'qemu_img_info')
+    @mock.patch.object(images, 'fetch')
+    def test_fetch_to_raw_data_file(self, convert_image, qemu_img_info_fn,
+                                    fetch):
+        # NOTE(danms): the above test needs the following line as well, as it
+        # is broken without it.
+        qemu_img_info = qemu_img_info_fn.return_value
+        qemu_img_info.backing_file = None
+        qemu_img_info.file_format = 'qcow2'
+        qemu_img_info.virtual_size = 20
+        qemu_img_info.format_specific = {'data': {'data-file': 'somefile'}}
+        self.assertRaisesRegex(exception.ImageUnacceptable,
+                               'Image href123 is unacceptable.*somefile',
+                               images.fetch_to_raw,
+                               None, 'href123', '/no/path')
+
+    @mock.patch('os.rename')
+    @mock.patch.object(images, 'qemu_img_info')
+    @mock.patch.object(images, 'fetch')
+    def test_fetch_to_raw_from_raw(self, fetch, qemu_img_info_fn, mock_rename):
+        # Make sure we support a case where we fetch an already-raw image and
+        # qemu-img returns None for "format_specific".
+        qemu_img_info = qemu_img_info_fn.return_value
+        qemu_img_info.file_format = 'raw'
+        qemu_img_info.backing_file = None
+        qemu_img_info.format_specific = None
+        images.fetch_to_raw(None, 'href123', '/no/path')
+        mock_rename.assert_called_once_with('/no/path.part', '/no/path')
+
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
