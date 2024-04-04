@@ -34,7 +34,7 @@ prelude: |
       if both of the compute nodes support libvirt-8.6.0 and QEMU-8.1.0, as the
       source mediated device will migrate the GPU memory to another target
       mediated device automatically. In order to do this,
-      ``[libvirt/live_migration_downtime`` config option needs to be modified
+      ``[libvirt]/live_migration_downtime`` config option needs to be modified
       according to the aforementioned documentation.
 
     - As of the new 2.96 microversion, the ``server show`` and ``server list``
