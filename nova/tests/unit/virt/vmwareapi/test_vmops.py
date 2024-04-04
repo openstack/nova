@@ -510,15 +510,15 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                   vm_ref=vm_ref)
 
     def test_unrescue_power_on(self):
-        self._test_unrescue(True)
+        self._test_unrescue(power_on=True)
 
     def test_unrescue_power_off(self):
-        self._test_unrescue(False)
+        self._test_unrescue(power_on=False)
 
     def test_unrescue_efi(self):
-        self._test_unrescue(False, efi=True)
+        self._test_unrescue(power_on=False, efi=True)
 
-    def _test_unrescue(self, power_on, efi=False):
+    def _test_unrescue(self, power_on=False, efi=False):
         _volumeops = mock.Mock()
         self._vmops._volumeops = _volumeops
         vm_ref = mock.Mock()
@@ -530,10 +530,11 @@ class VMwareVMOpsTestCase(test.TestCase):
             expected_args = next(get_object_property_args)
             self.assertEqual('get_object_property', method)
             self.assertEqual(expected_args, args)
-            if expected_args[1] == 'config.firmware':
-                return 'efi'
-            else:
-                return 'bios'
+            if args[1] == 'config.firmware':
+                if efi:
+                    return 'efi'
+                else:
+                    return 'bios'
 
         with test.nested(
                 mock.patch.object(vm_util, 'power_on_instance'),
@@ -559,15 +560,18 @@ class VMwareVMOpsTestCase(test.TestCase):
             _volumeops.detach_disk_from_vm.assert_called_once_with(
                 vm_ref, self._instance, mock.ANY, destroy_disk=True)
 
+            fake_factory = vmwareapi_fake.FakeFactory()
+            expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
+            boot_options = fake_factory.create('ns0:VirtualMachineBootOptions')
+            boot_options.bootOrder = []
+            expected.bootOptions = boot_options
             if efi:
-                fake_factory = vmwareapi_fake.FakeFactory()
-                expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
                 opt = fake_factory.create('ns0:OptionValue')
                 opt.key = 'efi.quickBoot.enabled'
                 opt.value = ''
                 expected.extraConfig = [opt]
-                _reconfigure_vm.assert_called_once_with(self._session, vm_ref,
-                    expected)
+            _reconfigure_vm.assert_called_once_with(self._session, vm_ref,
+                expected)
 
     @mock.patch.object(time, 'sleep')
     @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')

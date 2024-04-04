@@ -2181,16 +2181,10 @@ class VMwareVMOps(object):
 
         firmware = vim_util.get_object_property(self._session, vm_ref,
                                                 'config.firmware')
-        if firmware == 'efi':
-            # Enable quickBoot again, since we only needed it to find the
-            # rescue disk
-            factory = self._session.vim.client.factory
-            config_spec = factory.create('ns0:VirtualMachineConfigSpec')
-            opt = factory.create('ns0:OptionValue')
-            opt.key = 'efi.quickBoot.enabled'
-            opt.value = ''  # an empty value deletes the option
-            config_spec.extraConfig = [opt]
-            vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
+        factory = self._session.vim.client.factory
+        boot_spec = vm_util.get_vm_boot_spec(factory, is_efi=(
+            firmware == 'efi'))
+        vm_util.reconfigure_vm(self._session, vm_ref, boot_spec)
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
