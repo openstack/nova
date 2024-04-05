@@ -242,7 +242,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     #               dst_supports_numa_live_migration fields
     # Version 1.11: Added dst_supports_mdev_live_migration,
     #               source_mdev_types and target_mdevs fields
-    VERSION = '1.11'
+    # Version 1.12: Added dst_cpu_shared_set_info
+    VERSION = '1.12'
 
     fields = {
         'filename': fields.StringField(),
@@ -280,12 +281,15 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'source_mdev_types': fields.DictOfStringsField(),
         # key is source mdev UUID and value is the destination mdev UUID.
         'target_mdevs': fields.DictOfStringsField(),
+        'dst_cpu_shared_set_info': fields.SetOfIntegersField(),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if (target_version < (1, 12)):
+            primitive.pop('dst_cpu_shared_set_info', None)
         if target_version < (1, 11):
             primitive.pop('target_mdevs', None)
             primitive.pop('source_mdev_types', None)
