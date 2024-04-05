@@ -261,9 +261,9 @@ class LiveMigrationWithCpuSharedSet(
         conn = self.dest.driver._host.get_connection()
         dom = conn.lookupByUUIDString(self.server['id'])
         xml = dom.XMLDesc(0)
-        # The destination should be updated to "3-4" but it is not the case.
-        self.assertIn('<vcpu cpuset="0-1">1</vcpu>', xml)
-        self.assertNotIn('<vcpu cpuset="3-4">1</vcpu>', xml)
+        # The destination should be updated to "3-4".
+        self.assertNotIn('<vcpu cpuset="0-1">1</vcpu>', xml)
+        self.assertIn('<vcpu cpuset="3-4">1</vcpu>', xml)
 
     def test_live_migration_to_no_cpu_shared_set(self):
         """Reproducer for bug 1869804 #2.
@@ -302,10 +302,9 @@ class LiveMigrationWithCpuSharedSet(
         dom = conn.lookupByUUIDString(self.server['id'])
         xml = dom.XMLDesc(0)
         # The destination cpuset should be removed because the
-        # host has no cpu_shared_set configured. Which is not the case due to
-        # the bug.
-        self.assertIn('<vcpu cpuset="0-1">1</vcpu>', xml)
-        self.assertNotIn('<vcpu>1</vcpu>', xml)
+        # host has no cpu_shared_set configured.
+        self.assertNotIn('<vcpu cpuset="0-1">1</vcpu>', xml)
+        self.assertIn('<vcpu>1</vcpu>', xml)
 
     def test_live_migration_from_no_cpu_shared_set_to_cpu_shared_set(self):
         """Reproducer for bug 1869804 #3.
@@ -329,5 +328,5 @@ class LiveMigrationWithCpuSharedSet(
         dom = conn.lookupByUUIDString(self.server['id'])
         xml = dom.XMLDesc(0)
         # The destination should be updated to "0-1".
-        self.assertIn('<vcpu>1</vcpu>', xml)
-        self.assertNotIn('<vcpu cpuset="0-1">1</vcpu>', xml)
+        self.assertNotIn('<vcpu>1</vcpu>', xml)
+        self.assertIn('<vcpu cpuset="0-1">1</vcpu>', xml)

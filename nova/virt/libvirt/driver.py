@@ -10007,6 +10007,12 @@ class LibvirtDriver(driver.ComputeDriver):
         if instance.numa_topology:
             data.dst_supports_numa_live_migration = True
 
+        data.dst_cpu_shared_set_info = (
+            hardware.get_cpu_shared_set() or
+            hardware.get_vcpu_pin_set() or
+            set()
+        )
+
         # NOTE(sean-k-mooney): The migrate_data vifs field is used to signal
         # that we are using the multiple port binding workflow so we can only
         # populate it if we are using multiple port bindings.
