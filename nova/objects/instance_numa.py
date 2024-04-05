@@ -293,6 +293,12 @@ class InstanceNUMATopology(base.NovaObject,
             cell.cpu_pinning.values() for cell in self.cells
             if cell.cpu_pinning]))
 
+    @property
+    def cpuset_reserved(self):
+        return set(itertools.chain.from_iterable([
+            cell.cpuset_reserved for cell in self.cells
+            if cell.cpuset_reserved]))
+
     def clear_host_pinning(self):
         """Clear any data related to how instance is pinned to the host.
 
