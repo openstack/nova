@@ -153,19 +153,69 @@ code still needs modularity. Here are rules for how to separate modules:
   in existing extended models. New extended attributes needn't any namespace
   prefix anymore.
 
-JSON-Schema
-~~~~~~~~~~~
+Validation
+~~~~~~~~~~
 
-The v2.1 API validates a REST request body with JSON-Schema library.
-Valid body formats are defined with JSON-Schema in the directory
-``nova/api/openstack/compute/schemas``. Each definition is used at the
-corresponding method with the ``validation.schema`` decorator like:
+.. versionchanged:: 2024.2 (Dalmatian)
+
+   Added response body schema validation, to complement request body and
+   request query string validation.
+
+The v2.1 API uses JSON Schema for validation. Before 2024.2 (Dalmatian), this
+was used for request body and request query string validation. Since then, it
+is also used for response body validation. The request body and query string
+validation is used at runtime and is non-optional, while the response body
+validation is only used for test and documentation purposes and should not be
+enabled at runtime.
+
+Validation is added for a given resource and method using decorators provided
+in ``nova.api.validation`` while the schemas themselves can be found in
+``nova.api.openstack.compute.schemas``. We use unit tests to ensure all method
+are decorated correctly and schemas are defined. The decorators accept optional
+``min_version`` and ``max_version`` arguments, allowing you to define different
+schemas for different microversions. For example:
 
 .. code-block:: python
 
-    @validation.schema(schema.update_something)
-        def update(self, req, id, body):
+   @validation.schema(schema.update, '2.1', '2.77')
+   @validation.schema(schema.update_v278, '2.78')
+   @validation.query_schema(schema.update_query)
+   @validation.response_body_schema(schema.update_response, '2.1', '2.6')
+   @validation.response_body_schema(schema.update_response_v27, '2.7', '2.77')
+   @validation.response_body_schema(schema.update_response_v278, '2.78')
+   def update(self, req, id, body):
+       ...
 
+In addition to the JSON Schema validation decorator, we provide decorators for
+indicating expected response and error codes, indicating removed APIs, and
+indicating "action" APIs. These can be found in ``nova.api.openstack.wsgi``.
+For example, to indicate that an API can return ``400 (Bad Request)``, ``404
+(Not Found)``, or ``409 (Conflict)`` error codes but returns ``200 (OK)`` in
+the success case:
+
+.. code-block:: python
+
+   @wsgi.expected_errors((400, 404, 409))
+   @wsgi.response(201)
+   def update(self, req, id, body):
+       ...
+
+To define a new action, ``foo``, for a given resource:
+
+.. code-block:: python
+
+   @wsgi.action('foo')
+   def update(self, req, id, body):
+       ...
+
+To indicate that an API has been removed and will now return ``410 (Gone)`` for
+all requests:
+
+.. code-block:: python
+
+   @wsgi.removed('30.0.0', 'This API was removed because...')
+   def update(self, req, id, body):
+       ...
 
 Unit Tests
 ----------
@@ -262,7 +312,7 @@ to users that they should stop using the REST API.
 The general steps for deprecating a REST API are:
 
 * Set a maximum allowed microversion for the route. Requests beyond that
-  microversion on that route will result in a ``404 HTTPNotFound`` error.
+  microversion on that route will result in a ``404 (Not Found)`` error.
 
 * Update the Compute API reference documentation to indicate the route is
   deprecated and move it to the bottom of the list with the other deprecated
@@ -284,8 +334,8 @@ REST API must also be effectively removed.
 The general steps for removing support for a deprecated REST API are:
 
 * The `route mapping`_ will remain but all methods will return a
-  ``410 HTTPGone`` error response. This is slightly different then the
-  ``404 HTTPNotFound`` error response a user will get for trying to use a
+  ``410 (Gone)`` error response. This is slightly different to the
+  ``404 (Not Found)`` error response a user will get for trying to use a
   microversion that does not support a deprecated API. 410 means the resource
   is gone and not coming back, which is more appropriate when the API is
   fully removed and will not work at any microversion.
