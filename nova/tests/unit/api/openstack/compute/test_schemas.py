@@ -10,7 +10,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import jsonschema.exceptions
+
 from nova.api.openstack import compute
+from nova.api.validation import validators
 from nova import test
 
 
@@ -19,15 +22,22 @@ class SchemaTest(test.NoDBTestCase):
     def setUp(self):
         super().setUp()
         self.router = compute.APIRouterV21()
+        self.meta_schema = validators._SchemaValidator.validator_org
 
     def test_schemas(self):
         missing_schemas = set()
+        invalid_schemas = set()
 
         def _validate_func(func, method):
             if method in ("POST", "PUT", "PATCH"):
                 # request body validation
                 if not hasattr(func, '_request_schema'):
                     missing_schemas.add(func.__qualname__)
+                else:
+                    try:
+                        self.meta_schema.check_schema(func._request_schema)
+                    except jsonschema.exceptions.SchemaError:
+                        invalid_schemas.add(func.__qualname__)
 
         for route in self.router.map.matchlist:
             if 'controller' not in route.defaults:
@@ -103,4 +113,10 @@ class SchemaTest(test.NoDBTestCase):
             raise test.TestingException(
                 f"Found API resources without schemas: "
                 f"{sorted(missing_schemas)}"
+            )
+
+        if invalid_schemas:
+            raise test.TestingException(
+                f"Found API resources with invalid schemas: "
+                f"{sorted(invalid_schemas)}"
             )
