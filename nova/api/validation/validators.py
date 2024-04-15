@@ -271,7 +271,7 @@ class FormatChecker(jsonschema.FormatChecker):
 class _SchemaValidator(object):
     """A validator class
 
-    This class is changed from Draft4Validator to validate minimum/maximum
+    This class is changed from Draft202012Validator to validate minimum/maximum
     value of a string number(e.g. '10'). This changes can be removed when
     we tighten up the API definition and the XML conversion.
     Also FormatCheckers are added for checking data formats which would be
@@ -279,7 +279,7 @@ class _SchemaValidator(object):
 
     """
     validator = None
-    validator_org = jsonschema.Draft4Validator
+    validator_org = jsonschema.Draft202012Validator
 
     def __init__(self, schema, relax_additional_properties=False,
                  is_body=True):

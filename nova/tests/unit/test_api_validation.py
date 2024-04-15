@@ -548,9 +548,9 @@ class IntegerTestCase(APIValidationTestCase):
         self.check_validation_error(self.post, body={'foo': '0xffff'},
                                     expected_detail=detail)
 
-        detail = ("Invalid input for field/attribute foo. Value: 1.0."
-                  " 1.0 is not of type 'integer', 'string'")
-        self.check_validation_error(self.post, body={'foo': 1.0},
+        detail = ("Invalid input for field/attribute foo. Value: 1.01."
+                  " 1.01 is not of type 'integer', 'string'")
+        self.check_validation_error(self.post, body={'foo': 1.01},
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: 1.0."
