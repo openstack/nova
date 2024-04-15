@@ -29,12 +29,12 @@ update = {
                       'Enable', 'Disable',
                       'ENABLE', 'DISABLE'],
         },
-        'anyOf': [
-            {'required': ['status']},
-            {'required': ['maintenance_mode']}
-        ],
     },
-    'additionalProperties': False
+    'anyOf': [
+        {'required': ['status']},
+        {'required': ['maintenance_mode']}
+    ],
+    'additionalProperties': False,
 }
 
 index_query = {

@@ -18,8 +18,8 @@ from nova.api.openstack.compute.schemas import quota_sets
 update = {
     'type': 'object',
     'properties': {
-        'type': 'object',
         'quota_class_set': {
+            'type': 'object',
             'properties': quota_sets.quota_resources,
             'additionalProperties': False,
         },

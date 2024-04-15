@@ -59,8 +59,8 @@ del update_quota_set_v236['networks']
 update = {
     'type': 'object',
     'properties': {
-        'type': 'object',
         'quota_set': {
+            'type': 'object',
             'properties': update_quota_set,
             'additionalProperties': False,
         },

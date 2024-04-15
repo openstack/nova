@@ -30,6 +30,4 @@ update_all = {
 update = {
     "title": "Server tag",
     "type": "null",
-    'required': [],
-    'additionalProperties': False
 }
