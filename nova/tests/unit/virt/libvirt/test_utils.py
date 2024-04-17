@@ -29,6 +29,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import exception
+from nova.image import format_inspector
 from nova import objects
 from nova.objects import fields as obj_fields
 import nova.privsep.fs
@@ -386,11 +387,13 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         mock_images.assert_called_once_with(
             _context, image_id, target, trusted_certs)
 
+    @mock.patch.object(images, 'IMAGE_API')
+    @mock.patch.object(format_inspector, 'get_inspector')
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('nova.privsep.qemu.unprivileged_convert_image')
     def test_fetch_raw_image(self, mock_convert_image, mock_direct_io,
-                             mock_disk_op_sema):
+                             mock_disk_op_sema, mock_gi, mock_glance):
 
         def fake_rename(old, new):
             self.executes.append(('mv', old, new))
@@ -401,7 +404,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         def fake_rm_on_error(path, remove=None):
             self.executes.append(('rm', '-f', path))
 
-        def fake_qemu_img_info(path):
+        def fake_qemu_img_info(path, format=None):
             class FakeImgInfo(object):
                 pass
 
@@ -430,6 +433,8 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self.stub_out('oslo_utils.fileutils.delete_if_exists',
                       fake_rm_on_error)
 
+        mock_inspector = mock_gi.return_value.from_file.return_value
+
         # Since the remove param of fileutils.remove_path_on_error()
         # is initialized at load time, we must provide a wrapper
         # that explicitly resets it to our fake delete_if_exists()
@@ -440,6 +445,9 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         context = 'opaque context'
         image_id = '4'
 
+        # Make sure qcow2 gets converted to raw
+        mock_inspector.safety_check.return_value = True
+        mock_glance.get.return_value = {'disk_format': 'qcow2'}
         target = 't.qcow2'
         self.executes = []
         expected_commands = [('rm', 't.qcow2.part'),
@@ -451,14 +459,28 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             't.qcow2.part', 't.qcow2.converted', 'qcow2', 'raw',
             CONF.instances_path, False)
         mock_convert_image.reset_mock()
+        mock_inspector.safety_check.assert_called_once_with()
+        mock_gi.assert_called_once_with('qcow2')
 
+        # Make sure raw does not get converted
+        mock_gi.reset_mock()
+        mock_inspector.safety_check.reset_mock()
+        mock_inspector.safety_check.return_value = True
+        mock_glance.get.return_value = {'disk_format': 'raw'}
         target = 't.raw'
         self.executes = []
         expected_commands = [('mv', 't.raw.part', 't.raw')]
         images.fetch_to_raw(context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
         mock_convert_image.assert_not_called()
+        mock_inspector.safety_check.assert_called_once_with()
+        mock_gi.assert_called_once_with('raw')
 
+        # Make sure safety check failure prevents us from proceeding
+        mock_gi.reset_mock()
+        mock_inspector.safety_check.reset_mock()
+        mock_inspector.safety_check.return_value = False
+        mock_glance.get.return_value = {'disk_format': 'qcow2'}
         target = 'backing.qcow2'
         self.executes = []
         expected_commands = [('rm', '-f', 'backing.qcow2.part')]
@@ -466,6 +488,24 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
                           images.fetch_to_raw, context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
         mock_convert_image.assert_not_called()
+        mock_inspector.safety_check.assert_called_once_with()
+        mock_gi.assert_called_once_with('qcow2')
+
+        # Make sure a format mismatch prevents us from proceeding
+        mock_gi.reset_mock()
+        mock_inspector.safety_check.reset_mock()
+        mock_inspector.safety_check.side_effect = (
+            format_inspector.ImageFormatError)
+        mock_glance.get.return_value = {'disk_format': 'qcow2'}
+        target = 'backing.qcow2'
+        self.executes = []
+        expected_commands = [('rm', '-f', 'backing.qcow2.part')]
+        self.assertRaises(exception.ImageUnacceptable,
+                          images.fetch_to_raw, context, image_id, target)
+        self.assertEqual(self.executes, expected_commands)
+        mock_convert_image.assert_not_called()
+        mock_inspector.safety_check.assert_called_once_with()
+        mock_gi.assert_called_once_with('qcow2')
 
         del self.executes
 

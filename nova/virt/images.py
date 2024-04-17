@@ -30,6 +30,7 @@ from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.image import format_inspector
 from nova.image import glance
 import nova.privsep.qemu
 
@@ -138,13 +139,57 @@ def check_vmdk_image(image_id, data):
         raise exception.ImageUnacceptable(image_id=image_id, reason=msg)
 
 
+def do_image_deep_inspection(img, image_href, path):
+    disk_format = img['disk_format']
+    try:
+        # NOTE(danms): Use our own cautious inspector module to make sure
+        # the image file passes safety checks.
+        # See https://bugs.launchpad.net/nova/+bug/2059809 for details.
+        inspector_cls = format_inspector.get_inspector(disk_format)
+        if not inspector_cls.from_file(path).safety_check():
+            raise exception.ImageUnacceptable(
+                image_id=image_href,
+                reason=(_('Image does not pass safety check')))
+    except format_inspector.ImageFormatError:
+        # If the inspector we chose based on the image's metadata does not
+        # think the image is the proper format, we refuse to use it.
+        raise exception.ImageUnacceptable(
+            image_id=image_href,
+            reason=_('Image content does not match disk_format'))
+    except AttributeError:
+        # No inspector was found
+        LOG.warning('Unable to perform deep image inspection on type %r',
+                    img['disk_format'])
+        if disk_format in ('ami', 'aki', 'ari'):
+            # A lot of things can be in a UEC, although it is typically a raw
+            # filesystem. We really have nothing we can do other than treat it
+            # like a 'raw', which is what qemu-img will detect a filesystem as
+            # anyway. If someone puts a qcow2 inside, we should fail because
+            # we won't do our inspection.
+            disk_format = 'raw'
+        else:
+            raise exception.ImageUnacceptable(
+                image_id=image_href,
+                reason=_('Image not in a supported format'))
+    return disk_format
+
+
 def fetch_to_raw(context, image_href, path, trusted_certs=None):
     path_tmp = "%s.part" % path
     fetch(context, image_href, path_tmp, trusted_certs)
 
     with fileutils.remove_path_on_error(path_tmp):
-        data = qemu_img_info(path_tmp)
+        if not CONF.workarounds.disable_deep_image_inspection:
+            # If we're doing deep inspection, we take the determined format
+            # from it.
+            img = IMAGE_API.get(context, image_href)
+            force_format = do_image_deep_inspection(img, image_href, path_tmp)
+        else:
+            force_format = None
 
+        # Only run qemu-img after we have done deep inspection (if enabled).
+        # If it was not enabled, we will let it detect the format.
+        data = qemu_img_info(path_tmp, format=force_format)
         fmt = data.file_format
         if fmt is None:
             raise exception.ImageUnacceptable(
