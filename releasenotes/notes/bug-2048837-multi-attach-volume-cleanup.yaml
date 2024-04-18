@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    When deleting multiple instances that share the same multi-attach volume
+    on the same compute host in parallel, the volume connection could be left
+    attached to the host even after all instances were deleted, preventing the
+    volume from being properly detached and reused. Nova now correctly cleans
+    up multi-attach volume connections when deleting instances, including when
+    multiple instances sharing the same volume are deleted concurrently. For
+    more details, see `bug 2048837 <https://bugs.launchpad.net/nova/+bug/2048837>`__.
+

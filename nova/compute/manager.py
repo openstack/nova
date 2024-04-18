@@ -22,7 +22,6 @@ handles RPC calls relating to creating instances.  It is responsible for
 building a disk image, launching it via the underlying virtualization driver,
 responding to calls to check its state, attaching persistent storage, and
 terminating it.
-
 """
 
 import base64
@@ -3328,6 +3327,21 @@ class ComputeManager(manager.Manager):
         if original_exception is not None and raise_exc:
             raise original_exception
 
+    def _get_multiattach_volume_lock_names_bdms(
+        self, bdms: objects.BlockDeviceMappingList) -> ty.List[str]:
+        """Get the lock names for multiattach volumes.
+
+        :param bdms: BlockDeviceMappingList object
+        :return: List of lock names
+        """
+        if not bdms:
+            return []
+        return [
+            f"multi_attach_volume_{bdm.volume_id}"
+            for bdm in bdms
+            if bdm.is_multiattach
+        ]
+
     def _delete_instance(self, context, instance, bdms):
         """Delete an instance on this host.
 
@@ -3345,35 +3359,38 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.DELETE,
                 phase=fields.NotificationPhase.START, bdms=bdms)
+        with utils.FairLockGuard(
+            self._get_multiattach_volume_lock_names_bdms(bdms)
+        ):
+            self._shutdown_instance(context, instance, bdms)
 
-        self._shutdown_instance(context, instance, bdms)
+            # NOTE(vish): We have already deleted the instance, so we have
+            #             to ignore problems cleaning up the volumes. It
+            #             would be nice to let the user know somehow that
+            #             the volume deletion failed, but it is not
+            #             acceptable to have an instance that can not be
+            #             deleted. Perhaps this could be reworked in the
+            #             future to set an instance fault the first time
+            #             and to only ignore the failure if the instance
+            #             is already in ERROR.
 
-        # NOTE(vish): We have already deleted the instance, so we have
-        #             to ignore problems cleaning up the volumes. It
-        #             would be nice to let the user know somehow that
-        #             the volume deletion failed, but it is not
-        #             acceptable to have an instance that can not be
-        #             deleted. Perhaps this could be reworked in the
-        #             future to set an instance fault the first time
-        #             and to only ignore the failure if the instance
-        #             is already in ERROR.
+            # NOTE(ameeda): The volumes have already been detached during
+            #               the above _shutdown_instance() call and this is
+            #               why detach is not requested from
+            #               _cleanup_volumes() in this case
 
-        # NOTE(ameeda): The volumes have already been detached during
-        #               the above _shutdown_instance() call and this is
-        #               why detach is not requested from
-        #               _cleanup_volumes() in this case
+            self._cleanup_volumes(context, instance, bdms,
+                    raise_exc=False, detach=False)
+            # if a delete task succeeded, always update vm state and task
+            # state without expecting task state to be DELETING
+            instance.vm_state = vm_states.DELETED
+            instance.task_state = None
+            instance.power_state = power_state.NOSTATE
+            instance.terminated_at = timeutils.utcnow()
+            instance.save()
 
-        self._cleanup_volumes(context, instance, bdms,
-                raise_exc=False, detach=False)
         # Delete Cyborg ARQs if the instance has a device profile.
         compute_utils.delete_arqs_if_needed(context, instance)
-        # if a delete task succeeded, always update vm state and task
-        # state without expecting task state to be DELETING
-        instance.vm_state = vm_states.DELETED
-        instance.task_state = None
-        instance.power_state = power_state.NOSTATE
-        instance.terminated_at = timeutils.utcnow()
-        instance.save()
 
         self._complete_deletion(context, instance)
         # only destroy the instance in the db if the _complete_deletion

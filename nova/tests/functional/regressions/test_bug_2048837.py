@@ -11,13 +11,11 @@
 # under the License.
 
 import fixtures
-import threading
-import time
+
+from oslo_concurrency import lockutils
 
 from unittest import mock
 
-from nova import context as nova_context
-from nova import objects
 from nova.tests.functional.libvirt import base
 from nova.virt import libvirt
 
@@ -66,15 +64,22 @@ class TestConcurrentMultiAttachCleanup(base.ServersTestBase):
         self.server_b = self._create_server(networks='none')
         self.notifier.wait_for_versioned_notifications('instance.create.end')
         self._attach_volume(self.server_b, self.volume_id)
-        self.lock = threading.Lock()
+        # we use a reader writer lock because the allow any number of readers
+        # to progress as long as no one holds the write lock.
+        self.lock = lockutils.ReaderWriterLock()
         # run periodics to allow async tasks to complete
         self._run_periodics()
 
     def _should_disconnect(self, *args, **kwargs):
-        with self.lock:
+        # use a read locks to not block concurrent requests
+        # when the write lock is not held.
+        self.lock.acquire_read_lock()
+        try:
             result = self._orgi_should_disconnect(
                 self.compute_manager.driver, *args, **kwargs)
             return result
+        finally:
+            self.lock.release_read_lock()
 
     def test_serial_server_delete(self):
         # Now that we have 2 vms both using the same multi attach volume
@@ -83,10 +88,12 @@ class TestConcurrentMultiAttachCleanup(base.ServersTestBase):
         self.disconnect_volume_mock.assert_not_called()
 
         self._delete_server(self.server_a)
-        self.should_disconnect_mock.assert_called()
+        self.should_disconnect_mock.assert_called_once()
+        self.should_disconnect_mock.reset_mock()
         self.disconnect_volume_mock.assert_not_called()
         self._delete_server(self.server_b)
         self.disconnect_volume_mock.assert_called()
+        self.should_disconnect_mock.assert_called_once()
 
     def test_concurrent_server_delete(self):
         # Now that we have 2 vms both using the same multi attach volume
@@ -94,33 +101,20 @@ class TestConcurrentMultiAttachCleanup(base.ServersTestBase):
         # cleaning up
         self.should_disconnect_mock.assert_not_called()
         self.disconnect_volume_mock.assert_not_called()
-        # emulate concurrent delete
-        context = nova_context.get_admin_context()
-        servers_this_host = objects.InstanceList.get_uuids_by_host(
-                context, self.hostname)
-        with mock.patch('nova.objects.InstanceList.get_uuids_by_host',
-                        return_value=servers_this_host):
-            self.lock.acquire()
-            self.api.delete_server(self.server_a['id'])
-            self.api.delete_server(self.server_b['id'])
-            self.disconnect_volume_mock.assert_not_called()
-            # this mostly stabilizes the test but it may not be 100% reliable.
-            # locally with time.sleep(1) it passed 42 back to back executions
-            # im not sure why this is required given the lock but it is likely
-            # due to a the lock being released before a background task is
-            # completed. i.e. the conductor or resource trakcer updating state.
-            time.sleep(1)
-            self.lock.release()
+        # emulate concurrent delete by acquiring the lock to prevent
+        # the delete from progressing to far. We want to pause
+        # at the call to _should_disconnect so we acquire the write
+        # lock to block all readers.
+        self.lock.acquire_write_lock()
+        self.api.delete_server(self.server_a['id'])
+        self.api.delete_server(self.server_b['id'])
+        self.disconnect_volume_mock.assert_not_called()
+        # now that both delete are submitted and we are stopped at
+        # nova.virt.libvirt.LibvirtDriver._should_disconnect_target
+        # we can release the lock and allow the deletes to complete.
+        self.lock.release_write_lock()
         self._wait_until_deleted(self.server_a)
         self._wait_until_deleted(self.server_b)
-        self.should_disconnect_mock.assert_called()
-        # Fixme(sean-k-mooney): this is bug 2048837
-        try:
-            self.disconnect_volume_mock.assert_not_called()
-        except AssertionError:
-            # NOTE(sean-k-mooney): this reproducer is not 100%
-            # reliable so we convert a failure to a skip to avoid
-            # gating issues. the bug is addressed in the follow up patch
-            # and that test is stable so it is not worth fixing this test
-            # beyond the time.sleep(1) above.
-            self.skipTest("Bug 2048837: volume disconnect not called")
+        self.assertEqual(2, len(self.should_disconnect_mock.call_args_list))
+        # this validates bug 2048837
+        self.disconnect_volume_mock.assert_called_once()

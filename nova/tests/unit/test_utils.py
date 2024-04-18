@@ -15,7 +15,9 @@
 import datetime
 import hashlib
 import os
+import os.path
 import threading
+import time
 from unittest import mock
 
 import fixtures
@@ -1705,3 +1707,261 @@ class OsloServiceBackendSelectionTestCase(test.NoDBTestCase):
         ex = self.assertRaises(ValueError, monkey_patch.patch, backend='foo')
         self.assertEqual(
             "the backend can only be 'eventlet' or 'threading'", str(ex))
+
+
+class TestFairLockGuard(test.NoDBTestCase):
+
+    def test_aquire_single_lock(self):
+        lock_name = 'test_aquire_single_lock'
+        test_lock = utils.NOVA_FAIR_LOCKS.get(lock_name)
+        self.assertFalse(test_lock.has_pending_writers)
+        lock_guard = utils.FairLockGuard([lock_name])
+        with lock_guard:
+            self.assertTrue(lock_guard.is_locked())
+            self.assertIs(lock_guard.locks[0], test_lock)
+            self.assertTrue(test_lock.is_writer())
+
+    def test_aquire_multiple_locks(self):
+        lock_names = ['test_aquire_multiple_locks1',
+            'test_aquire_multiple_locks2']
+        test_locks = [utils.NOVA_FAIR_LOCKS.get(
+            lock_name) for lock_name in lock_names]
+        for lock in test_locks:
+            self.assertFalse(lock.has_pending_writers)
+        lock_guard = utils.FairLockGuard(lock_names)
+        with lock_guard:
+            self.assertTrue(lock_guard.is_locked())
+            for i, lock in enumerate(lock_guard.locks):
+                self.assertIs(lock, test_locks[i])
+                self.assertTrue(lock_guard.locks[i].is_writer())
+
+    def test_aquire_multiple_locks_sorted(self):
+        lock_names = ['test_aquire_multiple_locks_sorted2',
+            'test_aquire_multiple_locks_sorted1']
+        self.assertNotEqual(lock_names, sorted(lock_names))
+        test_locks = [utils.NOVA_FAIR_LOCKS.get(
+            lock_name) for lock_name in lock_names]
+        for lock in test_locks:
+            self.assertFalse(lock.has_pending_writers)
+        lock_guard = utils.FairLockGuard(lock_names)
+        with lock_guard:
+            self.assertTrue(lock_guard.is_locked())
+            for i, name in enumerate(sorted(lock_names)):
+                self.assertIs(lock_guard.locks[i],
+                              utils.NOVA_FAIR_LOCKS.get(name))
+                self.assertTrue(lock_guard.locks[i].is_writer())
+
+    def test_locks_are_released_on_exception(self):
+        lock_names = ['test_locks_are_released_on_exception1',
+            'test_locks_are_released_on_exception2']
+        test_locks = [utils.NOVA_FAIR_LOCKS.get(
+            lock_name) for lock_name in lock_names]
+        lock_guard = utils.FairLockGuard(lock_names)
+        try:
+            with lock_guard:
+                self.assertTrue(lock_guard.is_locked())
+                raise ValueError()
+        except ValueError:
+            pass
+        self.assertFalse(lock_guard.is_locked())
+        for lock in test_locks:
+            self.assertFalse(lock.is_writer())
+
+    def test_partial_acquire(self):
+        lock_names = ['test_partial_acquire1', 'test_partial_acquire2']
+        test_locks = [utils.NOVA_FAIR_LOCKS.get(
+            lock_name) for lock_name in lock_names]
+
+        lock_acquired = threading.Event()
+        lock_released = threading.Event()
+        worker_continue = threading.Event()
+
+        def worker():
+            test_locks[0].acquire_write_lock()
+            lock_acquired.set()
+            worker_continue.wait()
+            time.sleep(1)
+            test_locks[0].release_write_lock()
+            lock_released.set()
+
+        thread = threading.Thread(target=worker)
+        thread.start()
+        lock_guard = utils.FairLockGuard(lock_names)
+        self.assertFalse(lock_guard.is_locked())
+        lock_acquired.wait()
+        # we should not have acquired the lock yet
+        # as the worker thread is still holding it
+        self.assertFalse(test_locks[0].is_writer())
+        # Note the first lock is still held by the worker thread
+        # so this will block until the worker releases it
+        worker_continue.set()
+        with lock_guard:
+            self.assertTrue(lock_guard.is_locked())
+            self.assertTrue(test_locks[0].is_writer())
+            self.assertTrue(test_locks[1].is_writer())
+            self.assertTrue(lock_released.is_set())
+        thread.join()
+        self.assertFalse(lock_guard.is_locked())
+        self.assertFalse(test_locks[0].is_writer())
+        self.assertFalse(test_locks[1].is_writer())
+
+    def test_thread_ordering_subset_locks(self):
+        """Test that a thread requesting a subset of locks waits for the
+        first thread that requested all locks to complete first.
+        """
+        lock_names_t1 = ['test_thread_ordering_A',
+                         'test_thread_ordering_B',
+                         'test_thread_ordering_C']
+        lock_names_t2 = ['test_thread_ordering_A',
+                         'test_thread_ordering_B']
+        test_locks = [utils.NOVA_FAIR_LOCKS.get(
+            lock_name) for lock_name in lock_names_t1]
+
+        t1_acquired = threading.Event()
+        t1_acquired_time = None
+        t1_released = threading.Event()
+        t2_started = threading.Event()
+        t2_acquired = threading.Event()
+        t2_acquired_time = None
+        t1_continue = threading.Event()
+
+        def thread1():
+            lock_guard = utils.FairLockGuard(lock_names_t1)
+            with lock_guard:
+                nonlocal t1_acquired_time
+                t1_acquired_time = time.time()
+                t1_acquired.set()
+                # Wait for T2 to start trying to acquire locks
+                t2_started.wait()
+                # Give T2 time to block on the locks
+                time.sleep(0.1)
+                t1_continue.wait()
+                # Hold locks for a bit to ensure T2 is waiting
+                time.sleep(0.5)
+            t1_released.set()
+
+        def thread2():
+            t2_started.set()
+            lock_guard = utils.FairLockGuard(lock_names_t2)
+            # This should block until T1 releases all locks
+            with lock_guard:
+                nonlocal t2_acquired_time
+                t2_acquired_time = time.time()
+                t2_acquired.set()
+
+        t1 = threading.Thread(target=thread1)
+        t2 = threading.Thread(target=thread2)
+
+        t1.start()
+        # Wait for T1 to acquire all locks
+        self.assertTrue(t1_acquired.wait(timeout=2))
+        self.assertIsNotNone(t1_acquired_time)
+        t2.start()
+        # Wait for T2 to start trying to acquire locks
+        self.assertTrue(t2_started.wait(timeout=2))
+        # T2 should not have acquired locks yet
+        self.assertIsNone(t2_acquired_time)
+        t1_continue.set()
+        t1.join()
+        t2.join()
+
+        # T1 should have released all locks
+        self.assertTrue(t1_released.is_set())
+        # T2 should have acquired its subset of locks
+        self.assertTrue(t2_acquired.is_set())
+        self.assertIsNotNone(t2_acquired_time)
+        # T1 should have acquired its locks before T2
+        self.assertLess(t1_acquired_time, t2_acquired_time)
+
+        # and since all thread are now finished,
+        # all locks should be released
+        for lock in test_locks:
+            self.assertFalse(lock.is_writer())
+
+    def test_context_manager_shared_between_threads(self):
+        """Test that a context manager can be shared between threads
+        and that the locks are acquired in the correct order.
+        Do not do this in production code, while it works this is not
+        the intended usage pattern.
+        """
+        lock_names = ['test_context_manager_shared_between_threads1',
+            'test_context_manager_shared_between_threads2']
+        lock_guard = utils.FairLockGuard(lock_names)
+        sum = 0
+        started = threading.Event()
+
+        def worker(id, lock_guard):
+            started.wait()
+            nonlocal sum
+            with lock_guard:
+                sum += id
+        thread1 = threading.Thread(target=worker, args=(1, lock_guard))
+        thread2 = threading.Thread(target=worker, args=(2, lock_guard))
+        thread1.start()
+        thread2.start()
+        started.set()
+        thread1.join()
+        thread2.join()
+        self.assertEqual(3, sum)
+
+    def test_context_manager_can_be_acquired_multiple_times(self):
+        lock_names = ['test_context_manager_can_be_acquired_multiple_times1',
+            'test_context_manager_can_be_acquired_multiple_times2']
+        test_locks = [utils.NOVA_FAIR_LOCKS.get(
+            lock_name) for lock_name in lock_names]
+        lock_guard = utils.FairLockGuard(lock_names)
+        with lock_guard:
+            self.assertTrue(lock_guard.is_locked())
+            self.assertTrue(test_locks[0].is_writer())
+            self.assertTrue(test_locks[1].is_writer())
+
+        self.assertFalse(lock_guard.is_locked())
+        for lock in test_locks:
+            self.assertFalse(lock.is_writer())
+        with lock_guard:
+            self.assertTrue(lock_guard.is_locked())
+            self.assertTrue(test_locks[0].is_writer())
+            self.assertTrue(test_locks[1].is_writer())
+
+    def test_nested_context_managers(self):
+        lock_names = ['test_nested_context_managers1',
+            'test_nested_context_managers2']
+        test_locks = [utils.NOVA_FAIR_LOCKS.get(
+            lock_name) for lock_name in lock_names]
+        lock_guard = utils.FairLockGuard(lock_names)
+        lock_guard2 = utils.FairLockGuard(lock_names)
+
+        # on any one thread we can acquire the same lock
+        # multiple times provided we use separate context managers.
+        # In other words the locks are renterent.
+        # This is an implementation detail of the ReaderWriterLock
+        # provided by fasteners. if this test fails the api behavior
+        # of the FairLock has changed.
+        with lock_guard:
+            self.assertTrue(lock_guard.is_locked())
+            self.assertTrue(test_locks[0].is_writer())
+            self.assertTrue(test_locks[1].is_writer())
+            with lock_guard2:
+                self.assertTrue(lock_guard2.is_locked())
+                self.assertTrue(test_locks[0].is_writer())
+                self.assertTrue(test_locks[1].is_writer())
+            self.assertTrue(lock_guard.is_locked())
+            self.assertTrue(test_locks[0].is_writer())
+            self.assertTrue(test_locks[1].is_writer())
+
+        # attempting to nest the same context manager instance
+        # should raise a TypeError.
+        with lock_guard:
+            self.assertTrue(lock_guard.is_locked())
+            self.assertTrue(test_locks[0].is_writer())
+            self.assertTrue(test_locks[1].is_writer())
+            with self.assertRaisesRegex(
+                TypeError,
+                "Cannot enter FairLockGuard while it is already active."):
+                with lock_guard:
+                    pass
+            # after the TypeError, the outer context should still
+            # be active.
+            self.assertTrue(lock_guard.is_locked())
+            self.assertTrue(test_locks[0].is_writer())
+            self.assertTrue(test_locks[1].is_writer())

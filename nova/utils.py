@@ -59,6 +59,7 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 synchronized = lockutils.synchronized_with_prefix('nova-')
+NOVA_FAIR_LOCKS = lockutils.FairLocks()
 
 SM_IMAGE_PROP_PREFIX = "image_"
 SM_INHERITABLE_KEYS = (
@@ -1169,6 +1170,107 @@ def latch_error_on_raise(retryable=(_SentinelException,)):
         wrapper.reset = functools.partial(reset, wrapper)
         return wrapper
     return outer_wrapper
+
+
+class FairLockGuard:
+    """A lock guard context manager
+
+    This class support acquiring multiple locks safely by name
+    and releasing them via the context manager protocol
+    i.e. with FairLockGuard([list of lock names]):
+
+    The intended usage model for this context manager is to
+    mediate access to a set of locks by name, not by pre-creating
+    the locks and passing them in. Lock creation and management
+    is handled entirely internally.
+
+    If you are using this between threads, Thread-A and Thread-B
+    should both create there own context manager instead of sharing
+    a single context manager between treads.
+
+    Nesting is supported by creating a new context manager instance
+    for each nested context with the same or different lock names
+    as the outer context. Attempting to nest the same context manager
+    instance should raise a TypeError.
+
+    Example Valid Usage:
+    ```
+    with FairLockGuard(['lock1', 'lock2']) as lock_guard:
+        with FairLockGuard(['lock1', 'lock2']) as lock_guard2:
+            pass
+    ```
+
+    Example Invalid Usage:
+    ```
+    with FairLockGuard(['lock1', 'lock2']) as lock_guard:
+        with lock_guard:
+            pass
+    ```
+    This will raise a TypeError because the same context manager instance
+    is being nested.
+
+    In general you should avoid naming the context manager instance
+    and only construct it in the with statement to avoid incorrect usage.
+    """
+
+    def __init__(self, names):
+        # we need to sort the lock to ensure we acquire
+        # them in the same order. This ensures we do not
+        # fall afoul of the Dining philosophers problem
+        # https://en.wikipedia.org/wiki/Dining_philosophers_problem
+        # by implementing the simplest Ordered solution
+        # https://howardhinnant.github.io/dining_philosophers.html
+        self.names = sorted(names)
+        self.locks = []
+        # NOTE(sean-k-mooney): this is technically not required
+        # but it protect the internal state of self.locks list
+        # from incorrect usage where a context manager instance is
+        # shared between threads. We use a reader-writer lock to
+        # allow concurrent reads in is_locked() while ensuring
+        # exclusive access for state modifications.
+        self.locks_lock = lockutils.ReaderWriterLock()
+        self._active = False
+
+    def __enter__(self):
+        with self.locks_lock.write_lock():
+            if self._active:
+                raise TypeError(
+                    "Cannot enter FairLockGuard while it is already active. "
+                    "Create a new instance for nested usage or wait for the "
+                    "current context to exit.")
+            for name in self.names:
+                named_lock = NOVA_FAIR_LOCKS.get(name)
+                self.locks.append(named_lock)
+                # we ensure we add it to the list
+                # before we acquire the lock to make sure
+                # we release it if there is an exception
+                named_lock.acquire_write_lock()
+            self._active = True
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        with self.locks_lock.write_lock():
+            for lock in self.locks:
+                # This should always be true but since
+                # we add the lock to the list before we
+                # acquire it check anyway.
+                if lock.is_writer():
+                    lock.release_write_lock()
+            self.locks = []
+            self._active = False
+
+    def is_locked(self):
+        # NOTE(sean-k-mooney): LockGuards exist in several programming
+        # languages such as c++, in general a LockGuard can support a
+        # single lock or many but by convention a LockGuard is only
+        # considered locked if all locks are acquired. FairLocks in
+        # oslo are implemented as ReaderWriter inter-process locks.
+        # that means that we hold the lock if we are hold the writer
+        # lock aka if the lock is the writer. We use a read lock here
+        # to allow concurrent reads while state modifications use write
+        # locks.
+        with self.locks_lock.read_lock():
+            return (
+                self.locks and all(lock.is_writer() for lock in self.locks))
 
 
 def concurrency_mode_threading():
