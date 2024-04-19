@@ -13,6 +13,7 @@
 import fixtures
 
 from nova.tests.fixtures import libvirt as fakelibvirt
+from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 
 
@@ -56,5 +57,11 @@ class Bug2007968RegressionTest(base.ServersTestBase):
         # This can cause the instance for boot from volume to be allowed to
         # get to the resize verify status, but the instance's application runs
         # abnormally due to insufficient memory, and it may be killed by OOM.
-        server = self._resize_server(server, new_flavor)
-        self.assertEqual(server['status'], 'VERIFY_RESIZE')
+
+        # After the fix, compute api will directly raise FlavorMemoryTooSmall
+        # and will not continue the resize.
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self._resize_server, server, new_flavor)
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Flavor\'s memory is too small for requested image.',
+                      ex.response.text)
