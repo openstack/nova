@@ -703,7 +703,8 @@ class InstanceHelperMixin:
             self.cinder.create_vol_attachment(
                 volume_id, server['id'])
 
-    def _create_server_boot_from_volume(self):
+    def _create_server_boot_from_volume(self, image_args=None,
+                                        flavor_id=None, networks=None):
         bfv_image_id = uuids.bfv_image_uuid
         timestamp = datetime.datetime(2011, 1, 1, 1, 2, 3)
 
@@ -719,11 +720,13 @@ class InstanceHelperMixin:
             'disk_format': 'raw',
             'min_disk': 0
         }
+        if image_args:
+            image.update(image_args)
 
         self.glance.create(None, image)
 
         # for bfv, image is not required in server request
-        server = self._build_server()
+        server = self._build_server(networks=networks, flavor_id=flavor_id)
         server.pop('imageRef')
 
         # as bfv-image will be used as source in block_device_mapping_v2
