@@ -439,7 +439,8 @@ class SecurityGroupActionController(wsgi.Controller):
         except (exception.SecurityGroupNotFound,
                 exception.InstanceNotFound) as exp:
             raise exc.HTTPNotFound(explanation=exp.format_message())
-        except exception.NoUniqueMatch as exp:
+        except (exception.NoUniqueMatch,
+                exception.SecurityGroupConnectionStateConflict) as exp:
             raise exc.HTTPConflict(explanation=exp.format_message())
         except exception.SecurityGroupCannotBeApplied as exp:
             raise exc.HTTPBadRequest(explanation=exp.format_message())
