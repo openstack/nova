@@ -21,6 +21,11 @@ Starting from API version 2.68, the ``force`` parameter is no longer accepted
 as this could not be meaningfully supported by servers with complex resource
 allocations.
 
+Starting from API version 2.95, the server will remain stopped on the
+destination until it is manually started. If the server should end in the same
+power state on the destination as it had on the source before the evacuation,
+older microversions can be used.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
