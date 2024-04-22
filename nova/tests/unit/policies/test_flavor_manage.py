@@ -14,7 +14,7 @@ from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova.api.openstack.compute import flavor_manage
+from nova.api.openstack.compute import flavors
 from nova.policies import flavor_manage as fm_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
@@ -30,7 +30,7 @@ class FlavorManagePolicyTest(base.BasePolicyTest):
 
     def setUp(self):
         super(FlavorManagePolicyTest, self).setUp()
-        self.controller = flavor_manage.FlavorManageController()
+        self.controller = flavors.FlavorsController()
         self.req = fakes.HTTPRequest.blank('')
         # With legacy rule and no scope checks, all admin can manage
         # the flavors.
@@ -62,7 +62,7 @@ class FlavorManagePolicyTest(base.BasePolicyTest):
             }
         }
         self.common_policy_auth(self.admin_authorized_contexts,
-                                rule_name, self.controller._create,
+                                rule_name, self.controller.create,
                                 self.req, body=body)
 
     @mock.patch('nova.objects.Flavor.get_by_flavor_id')
@@ -71,7 +71,7 @@ class FlavorManagePolicyTest(base.BasePolicyTest):
         rule_name = fm_policies.POLICY_ROOT % 'update'
         req = fakes.HTTPRequest.blank('', version='2.55')
         self.common_policy_auth(self.admin_authorized_contexts,
-                                rule_name, self.controller._update,
+                                rule_name, self.controller.update,
                                 req, uuids.fake_id,
                                 body={'flavor': {'description': None}})
 
@@ -79,7 +79,7 @@ class FlavorManagePolicyTest(base.BasePolicyTest):
     def test_delete_flavor_policy(self, mock_delete):
         rule_name = fm_policies.POLICY_ROOT % 'delete'
         self.common_policy_auth(self.admin_authorized_contexts,
-                                rule_name, self.controller._delete,
+                                rule_name, self.controller.delete,
                                 self.req, uuids.fake_id)
 
 
