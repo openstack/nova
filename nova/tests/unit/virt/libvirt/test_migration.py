@@ -68,15 +68,18 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
             'spice': None}, addrs)
 
     @mock.patch('lxml.etree.tostring')
+    @mock.patch.object(migration, '_remove_cpu_shared_set_xml')
+    @mock.patch.object(migration, '_update_cpu_shared_set_xml')
     @mock.patch.object(migration, '_update_memory_backing_xml')
     @mock.patch.object(migration, '_update_perf_events_xml')
     @mock.patch.object(migration, '_update_graphics_xml')
     @mock.patch.object(migration, '_update_serial_xml')
     @mock.patch.object(migration, '_update_volume_xml')
-    def test_get_updated_guest_xml(
-            self, mock_volume, mock_serial, mock_graphics,
-            mock_perf_events_xml, mock_memory_backing, mock_tostring):
-        data = objects.LibvirtLiveMigrateData()
+    def _test_get_updated_guest_xml(
+        self, data, check_cpu_shared_set, mock_volume, mock_serial,
+        mock_graphics, mock_perf_events_xml, mock_memory_backing,
+        mock_update_cpu_shared_set, mock_remove_cpu_shared_set, mock_tostring
+    ):
         mock_guest = mock.Mock(spec=libvirt_guest.Guest)
         get_volume_config = mock.MagicMock()
         mock_guest.get_xml_desc.return_value = '<domain></domain>'
@@ -91,6 +94,57 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         mock_perf_events_xml.assert_called_once_with(mock.ANY, data)
         mock_memory_backing.assert_called_once_with(mock.ANY, data)
         self.assertEqual(1, mock_tostring.called)
+        if check_cpu_shared_set is not None:
+            check_cpu_shared_set(
+                mock_update_cpu_shared_set, mock_remove_cpu_shared_set)
+
+    def test_get_updated_guest_xml(self):
+        data = objects.LibvirtLiveMigrateData()
+        self._test_get_updated_guest_xml(data, None)
+
+    def test_get_updated_guest_xml_dst_cpu_shared_set_info_unset(self):
+        data = objects.LibvirtLiveMigrateData()
+
+        def check_cpu_shared_set(
+            mock_update_cpu_shared_set, mock_remove_cpu_shared_set
+        ):
+            mock_update_cpu_shared_set.assert_not_called()
+            mock_remove_cpu_shared_set.assert_not_called()
+
+        self._test_get_updated_guest_xml(data, check_cpu_shared_set)
+
+    def test_get_updated_guest_xml_dst_cpu_shared_set_info_set_to_none(self):
+        """Ensure this test fails as dst_cpu_shared_set_info cannot be None
+        """
+        def set_dst_cpu_shared_set_info():
+            data.dst_cpu_shared_set_info = None
+
+        data = objects.LibvirtLiveMigrateData()
+        self.assertRaises(ValueError, set_dst_cpu_shared_set_info)
+
+    def test_get_updated_guest_xml_dst_cpu_shared_set_info_set_to_empty(self):
+        data = objects.LibvirtLiveMigrateData()
+        data.dst_cpu_shared_set_info = set()
+
+        def check_cpu_shared_set(
+            mock_update_cpu_shared_set, mock_remove_cpu_shared_set
+        ):
+            mock_update_cpu_shared_set.assert_not_called()
+            mock_remove_cpu_shared_set.assert_called_once_with(mock.ANY, data)
+
+        self._test_get_updated_guest_xml(data, check_cpu_shared_set)
+
+    def test_get_updated_guest_xml_dst_cpu_shared_set_info_set(self):
+        data = objects.LibvirtLiveMigrateData()
+        data.dst_cpu_shared_set_info = set([2, 3])
+
+        def check_cpu_shared_set(
+            mock_update_cpu_shared_set, mock_remove_cpu_shared_set
+        ):
+            mock_update_cpu_shared_set.assert_called_once_with(mock.ANY, data)
+            mock_remove_cpu_shared_set.assert_not_called()
+
+        self._test_get_updated_guest_xml(data, check_cpu_shared_set)
 
     def test_update_quota_xml(self):
         old_xml = """<domain>
@@ -223,6 +277,44 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         # src_mdev UUID doesn't exist in target_mdevs dict
         self.assertRaises(exception.NovaException,
                           migration._update_mdev_xml, doc, data.target_mdevs)
+
+    def test_update_cpu_shared_set_xml(self):
+        doc = etree.fromstring("""
+            <domain>
+              <vcpu cpuset="0-1">1</vcpu>
+            </domain>""")
+        data = objects.LibvirtLiveMigrateData(
+            dst_cpu_shared_set_info=set([3, 4]))
+
+        result = etree.tostring(
+            migration._update_cpu_shared_set_xml(copy.deepcopy(doc), data),
+            encoding='unicode')
+
+        expected = textwrap.dedent("""
+            <domain>
+              <vcpu cpuset="3-4">1</vcpu>
+            </domain>""")
+
+        self.assertXmlEqual(expected, result)
+
+    def test_remove_cpu_shared_set_xml(self):
+        doc = etree.fromstring("""
+            <domain>
+              <vcpu cpuset="0-1">1</vcpu>
+            </domain>""")
+        data = objects.LibvirtLiveMigrateData(
+            dst_cpu_shared_set_info=set())
+
+        result = etree.tostring(
+            migration._remove_cpu_shared_set_xml(copy.deepcopy(doc), data),
+            encoding='unicode')
+
+        expected = textwrap.dedent("""
+            <domain>
+              <vcpu>1</vcpu>
+            </domain>""")
+
+        self.assertXmlEqual(expected, result)
 
     def test_update_numa_xml(self):
         doc = etree.fromstring("""

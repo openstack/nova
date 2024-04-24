@@ -65,6 +65,25 @@ def get_updated_guest_xml(instance, guest, migrate_data, get_volume_config,
     xml_doc = _update_quota_xml(instance, xml_doc)
     if get_vif_config is not None:
         xml_doc = _update_vif_xml(xml_doc, migrate_data, get_vif_config)
+
+    # If 'dst_cpu_shared_set_info' is set, we are migrating a VM to a
+    # destination host, patched to fix bug 1869804.
+    # Then, if dst_cpu_shared_set_info is empty (set()), it means that there
+    # is no cpu_shared_set configuration on the destination host.
+    if (
+        'dst_cpu_shared_set_info' in migrate_data and
+        not migrate_data.dst_cpu_shared_set_info
+    ):
+        # There is no cpu_shared_set configured on destination host. So we
+        # need to remove the VM cpuset if any.
+        xml_doc = _remove_cpu_shared_set_xml(xml_doc, migrate_data)
+    if (
+        'dst_cpu_shared_set_info' in migrate_data and
+        migrate_data.dst_cpu_shared_set_info
+    ):
+        # There is cpu_shared_set configured on destination host. So we need
+        # to update the VM cpuset.
+        xml_doc = _update_cpu_shared_set_xml(xml_doc, migrate_data)
     if 'dst_numa_info' in migrate_data:
         xml_doc = _update_numa_xml(xml_doc, migrate_data)
     if 'target_mdevs' in migrate_data:
@@ -126,6 +145,34 @@ def _update_mdev_xml(xml_doc, target_mdevs):
                 else:
                     address_tag.set('uuid', dst_mdev)
     LOG.debug('_update_mdev_xml output xml=%s',
+              etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
+    return xml_doc
+
+
+def _update_cpu_shared_set_xml(xml_doc, migrate_data):
+    LOG.debug('_update_cpu_shared_set_xml input xml=%s',
+              etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
+
+    vcpu = xml_doc.find('./vcpu')
+    vcpu.set('cpuset', hardware.format_cpu_spec(
+        migrate_data.dst_cpu_shared_set_info, True))
+
+    LOG.debug('_update_cpu_shared_set_xml output xml=%s',
+              etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
+    return xml_doc
+
+
+def _remove_cpu_shared_set_xml(xml_doc, migrate_data):
+    LOG.debug('_remove_cpu_shared_set_xml input xml=%s',
+              etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
+
+    vcpu = xml_doc.find('./vcpu')
+    if vcpu is not None:
+        cpuset = vcpu.get('cpuset')
+        if cpuset:
+            del vcpu.attrib['cpuset']
+
+    LOG.debug('_remove_cpu_shared_set_xml output xml=%s',
               etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
     return xml_doc
 

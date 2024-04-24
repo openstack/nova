@@ -11400,6 +11400,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'dst_wants_file_backed_memory': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
+                          'dst_cpu_shared_set_info': (),
                           'serial_listen_addr': None},
                          return_value.obj_to_primitive()['nova_object.data'])
 
@@ -11440,6 +11441,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'dst_wants_file_backed_memory': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
+                          'dst_cpu_shared_set_info': (),
                           'serial_listen_addr': None},
                          return_value.obj_to_primitive()['nova_object.data'])
 
@@ -11477,6 +11479,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'dst_wants_file_backed_memory': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
+                          'dst_cpu_shared_set_info': (),
                           'serial_listen_addr': None},
                          return_value.obj_to_primitive()['nova_object.data'])
 
@@ -11563,6 +11566,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'dst_wants_file_backed_memory': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
+                          'dst_cpu_shared_set_info': (),
                           'serial_listen_addr': None},
                          result.obj_to_primitive()['nova_object.data'])
 
@@ -11703,6 +11707,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'dst_wants_file_backed_memory': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
+                          'dst_cpu_shared_set_info': (),
                           'serial_listen_addr': None},
                          return_value.obj_to_primitive()['nova_object.data'])
 
