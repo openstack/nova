@@ -22,7 +22,7 @@ netifaces>=0.10.4 # MIT
 paramiko>=2.7.1 # LGPLv2.1+
 iso8601>=0.1.11 # MIT
 jsonschema>=4.0.0 # MIT
-python-cinderclient!=4.0.0,>=3.3.0 # Apache-2.0
+python-cinderclient>=4.0.1 # Apache-2.0
 keystoneauth1>=3.16.0 # Apache-2.0
 python-neutronclient>=7.1.0 # Apache-2.0
 python-glanceclient>=2.8.0 # Apache-2.0
@@ -58,7 +58,7 @@ castellan>=0.16.0 # Apache-2.0
 microversion-parse>=0.2.1 # Apache-2.0
 tooz>=1.58.0 # Apache-2.0
 cursive>=0.2.1 # Apache-2.0
-retrying>=1.3.3,!=1.3.0 # Apache-2.0
+retrying>=1.3.3 # Apache-2.0
 os-service-types>=1.7.0 # Apache-2.0
 python-dateutil>=2.7.0 # BSD
 futurist>=1.8.0 # Apache-2.0
