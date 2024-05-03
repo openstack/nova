@@ -1308,7 +1308,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
             dev.append(etree.Element("target", dev=self.target_dev,
                                      bus=self.target_bus))
 
-        if self.serial is not None:
+        if self.serial is not None and self.source_device != 'lun':
             dev.append(self._text_node("serial", self.serial))
 
         self._format_iotune(dev)

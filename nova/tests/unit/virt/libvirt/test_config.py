@@ -1089,6 +1089,48 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <target bus="ide" dev="/dev/hdc"/>
             </disk>""")
 
+    def test_config_block_serial(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "block"
+        obj.source_path = "/tmp/hello"
+        obj.source_device = "cdrom"
+        obj.driver_name = "qemu"
+        obj.target_dev = "/dev/hdc"
+        obj.target_bus = "ide"
+        obj.alias = "ua-this-is-my-disk"
+        obj.serial = "123"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="block" device="cdrom">
+              <driver name="qemu"/>
+              <alias name="ua-this-is-my-disk"/>
+              <source dev="/tmp/hello"/>
+              <target bus="ide" dev="/dev/hdc"/>
+              <serial>123</serial>
+            </disk>""")
+
+    def test_config_block_lun_no_serial(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "block"
+        obj.source_path = "/tmp/hello"
+        obj.source_device = "lun"
+        obj.driver_name = "qemu"
+        obj.target_dev = "/dev/sda"
+        obj.target_bus = "scsi"
+        obj.alias = "ua-this-is-my-disk"
+        # This should not be included in the XML because source_device=lun
+        obj.serial = "123"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="block" device="lun">
+              <driver name="qemu"/>
+              <alias name="ua-this-is-my-disk"/>
+              <source dev="/tmp/hello"/>
+              <target bus="scsi" dev="/dev/sda"/>
+            </disk>""")
+
     def test_config_block_parse(self):
         xml = """<disk type="block" device="cdrom">
                    <driver name="qemu"/>
