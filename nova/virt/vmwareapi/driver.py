@@ -415,6 +415,10 @@ class VMwareVCDriver(driver.ComputeDriver):
         # available in the cluster. Can be used by the scheduler to determine
         # if the cluster can accommodate a big VM.
         memory_mb_max_unit = 0
+        # vcpus_max_unit represents the vCPUs of a physical node from the
+        # cluster. It can be used to determine if a VM can be powered-on in
+        # this cluster, by comparing its flavor.vcpus to this value.
+        vcpus_max_unit = 0
         for nodename, resources in host_stats.items():
             # Skip the cluster node
             if nodename == self._nodename:
@@ -425,8 +429,13 @@ class VMwareVCDriver(driver.ComputeDriver):
             if memory_mb_max_unit < memory_mb_free:
                 memory_mb_max_unit = memory_mb_free
 
+            vcpus = resources['vcpus']
+            if vcpus_max_unit < vcpus:
+                vcpus_max_unit = vcpus
+
         return {
-            "memory_mb_max_unit": memory_mb_max_unit
+            "memory_mb_max_unit": memory_mb_max_unit,
+            "vcpus_max_unit": vcpus_max_unit
         }
 
     def get_available_resource(self, nodename):

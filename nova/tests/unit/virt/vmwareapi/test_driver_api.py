@@ -2256,9 +2256,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.assertEqual(
                 [("i686", "vmware", "hvm"), ("x86_64", "vmware", "hvm")],
                 stats['supported_instances'])
-        max_unit = stats['stats']['memory_mb_max_unit']
+        memory_mbmax_unit = stats['stats']['memory_mb_max_unit']
+        vcpus_max_unit = stats['stats']['vcpus_max_unit']
         # memory_mb_used = fake.HostSystem.overallMemoryUsage = 500
-        self.assertEqual(max_unit, 1024 - 500)
+        self.assertEqual(memory_mbmax_unit, 1024 - 500)
+        # vcpus_max_unit = fake.HostSystem.summary.hardware.numCpuThreads
+        self.assertEqual(vcpus_max_unit, 16)
 
     @mock.patch('nova.virt.vmwareapi.ds_util.get_available_datastores')
     def test_update_provider_tree(self, mock_get_avail_ds):
