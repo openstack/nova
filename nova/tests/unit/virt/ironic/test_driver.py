@@ -1823,7 +1823,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
         self.driver.reboot(self.ctx, instance, None, 'HARD')
         self.mock_conn.set_node_power_state.assert_called_once_with(
-            node.id, 'reboot',
+            node.id, _node.PowerAction.REBOOT,
         )
 
     @mock.patch.object(ironic_driver.IronicDriver,
@@ -1858,7 +1858,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
         self.driver.reboot(self.ctx, instance, None, 'SOFT')
         self.mock_conn.set_node_power_state.assert_called_once_with(
-            node.id, 'soft reboot',
+            node.id, _node.PowerAction.SOFT_REBOOT,
         )
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
@@ -1878,8 +1878,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver.reboot(self.ctx, instance, None, 'SOFT')
         self.mock_conn.set_node_power_state.assert_has_calls(
             [
-                mock.call(node.id, 'soft reboot'),
-                mock.call(node.id, 'reboot'),
+                mock.call(node.id, _node.PowerAction.SOFT_REBOOT),
+                mock.call(node.id, _node.PowerAction.REBOOT),
             ]
         )
 
@@ -1916,7 +1916,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         )
 
         self.mock_conn.set_node_power_state.assert_called_once_with(
-            node.id, 'power on',
+            node.id, _node.PowerAction.POWER_ON,
         )
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
@@ -1937,7 +1937,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self._test_power_off()
 
         self.mock_conn.set_node_power_state.assert_called_once_with(
-            node.id, 'power off',
+            node.id, _node.PowerAction.POWER_OFF,
         )
 
     @mock.patch.object(ironic_driver.IronicDriver,
@@ -1950,7 +1950,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self._test_power_off(timeout=30)
 
         self.mock_conn.set_node_power_state.assert_called_once_with(
-            node.id, 'soft power off', timeout=30,
+            node.id, _node.PowerAction.SOFT_POWER_OFF, timeout=30,
         )
 
     @mock.patch.object(ironic_driver.IronicDriver,
@@ -1965,8 +1965,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self._test_power_off(timeout=30)
 
         expected_calls = [
-            mock.call(node.id, 'soft power off', timeout=30),
-            mock.call(node.id, 'power off'),
+            mock.call(node.id, _node.PowerAction.SOFT_POWER_OFF, timeout=30),
+            mock.call(node.id, _node.PowerAction.POWER_OFF),
         ]
         self.assertEqual(
             len(expected_calls),
@@ -1983,8 +1983,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self._test_power_off(timeout=30)
 
         expected_calls = [
-            mock.call(node.id, 'soft power off', timeout=30),
-            mock.call(node.id, 'power off'),
+            mock.call(node.id, _node.PowerAction.SOFT_POWER_OFF, timeout=30),
+            mock.call(node.id, _node.PowerAction.POWER_OFF),
         ]
         self.assertEqual(
             len(expected_calls),
