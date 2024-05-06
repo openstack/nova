@@ -589,6 +589,25 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_no_data_no_dest_path_iterator_v2(
+            self, show_mock, open_mock):
+        glance_iterable = mock.MagicMock(spec=io.BytesIO)
+        fake_img_data = ['A', 'B', 'C']
+        glance_iterable.__iter__.return_value = fake_img_data
+        iterable = glanceclient.common.utils.IterableWithLength(
+                iterable=glance_iterable, length=len(fake_img_data))
+        client = mock.MagicMock()
+        client.call.return_value = fake_glance_response(iterable)
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id)
+        self.assertFalse(show_mock.called)
+        self.assertFalse(open_mock.called)
+        self.assertEqual(iterable, res)
+        self.assertFalse(glance_iterable.close.called)
+
+    @mock.patch('builtins.open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_data_no_dest_path_v2(self, show_mock, open_mock):
         client = mock.MagicMock()
         client.call.return_value = fake_glance_response([1, 2, 3])
@@ -709,9 +728,9 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_verifier')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    def test_download_direct_rbd_uri_v2(
+    def _test_download_direct_rbd_uri_v2(
             self, show_mock, get_tran_mock, get_verifier_mock, log_mock,
-            open_mock, getsize_mock):
+            open_mock, getsize_mock, with_verifier=True):
         self.flags(enable_rbd_download=True, group='glance')
         show_mock.return_value = {
             'locations': [
@@ -734,7 +753,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         open_mock.return_value = writer
         service = glance.GlanceImageServiceV2(client)
 
-        verifier = mock.MagicMock()
+        verifier = mock.MagicMock() if with_verifier else None
         get_verifier_mock.return_value = verifier
 
         res = service.download(ctx, mock.sentinel.image_id,
@@ -748,33 +767,40 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         tran_mod.assert_called_once_with(ctx, mock.ANY,
                                          mock.sentinel.dst_path,
                                          mock.sentinel.loc_meta)
-        open_mock.assert_called_once_with(mock.sentinel.dst_path, 'rb')
-        get_tran_mock.assert_called_once_with('rbd')
 
         # no client call, chunks were read right after xfer_mod.download:
         client.call.assert_not_called()
 
-        # verifier called with the value we got from rbd download
-        verifier.update.assert_has_calls(
+        if verifier:
+            open_mock.assert_called_once_with(mock.sentinel.dst_path, 'rb')
+
+            # verifier called with the value we got from rbd download
+            verifier.update.assert_has_calls(
+                    [
+                        mock.call("rbd1"),
+                        mock.call("rbd2")
+                    ]
+            )
+            verifier.verify.assert_called()
+            log_mock.info.assert_has_calls(
                 [
-                    mock.call("rbd1"),
-                    mock.call("rbd2")
+                    mock.call('Successfully transferred using %s', 'rbd'),
+                    mock.call(
+                        'Image signature verification succeeded for image %s',
+                        mock.sentinel.image_id)
                 ]
-        )
-        verifier.verify.assert_called()
-        log_mock.info.assert_has_calls(
-            [
-                mock.call('Successfully transferred using %s', 'rbd'),
-                mock.call(
-                    'Image signature verification succeeded for image %s',
-                    mock.sentinel.image_id)
-            ]
-        )
+            )
 
         # not opened for writing (already written)
         self.assertFalse(open_mock(mock.sentinel.dst_path, 'rw').called)
         # write not called (written by rbd download)
         writer.write.assert_not_called()
+
+    def test_download_direct_rbd_uri_v2(self):
+        self._test_download_direct_rbd_uri_v2()
+
+    def test_download_direct_rbd_uri_without_verifier_v2(self):
+        self._test_download_direct_rbd_uri_v2(with_verifier=False)
 
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
@@ -999,7 +1025,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
                           service.download,
                           context=None, image_id=None,
                           data=None, dst_path=None)
-        self.assertEqual(mock_log.error.call_count, 2)
+        self.assertEqual(mock_log.error.call_count, 1)
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
@@ -1069,13 +1095,12 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
             glanceclient.common.utils.IterableWithLength(
                 iterable=glance_iterable, length=len(self.fake_img_data)))
         service = glance.GlanceImageServiceV2(self.client)
-        mock_get_verifier.side_effect = \
-            cursive_exception.SignatureVerificationError
+        mock_get_verifier.return_value = self.BadVerifier()
         mock_dest = mock.MagicMock()
         mock_open.return_value = mock_dest
         mock_show.return_value = self.fake_img_props
         fake_path = 'FAKE_PATH'
-        self.assertRaises(cursive_exception.SignatureVerificationError,
+        self.assertRaises(cryptography.exceptions.InvalidSignature,
                           service.download,
                           context=None, image_id=None,
                           data=None, dst_path=fake_path)
