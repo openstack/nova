@@ -1251,7 +1251,7 @@ class SAPQuotaEngine(QuotaEngine):
     @_resources.setter
     def _resources(self, resources):
         self._original_resources = resources
-        self._cache.delete(self._CACHE_KEY)
+        self.clear_cache()
 
     def update_resources_from_flavors(self, resources):
         """Update the resources dict to contain flavor based resources
@@ -1270,6 +1270,9 @@ class SAPQuotaEngine(QuotaEngine):
         for resource_name in additional_resources:
             resources[resource_name] = SAPCustomResource(resource_name,
                 _instances_cores_ram_count, default=0)
+
+    def clear_cache(self):
+        self._cache.delete(self._CACHE_KEY)
 
 
 @api_db_api.context_manager.reader

@@ -16,6 +16,7 @@ from webob import exc
 from nova.api.openstack import wsgi
 from nova.compute import api as compute
 from nova.policies import sap_admin_api as sap_policies
+from nova.quota import QUOTAS
 
 
 # list of endpoints registered with _register_endpoint below
@@ -43,6 +44,21 @@ class SAPAdminApiController(wsgi.Controller):
     def __init__(self):
         super().__init__()
         self.compute_api = compute.API()
+
+    @wsgi.response(202)
+    @wsgi.expected_errors(404)
+    @_register_endpoint('POST')
+    def clear_quota_resources_cache(self, req, body):
+        """Clears the cache used by the SAPQuotaEngine"""
+        context = req.environ['nova.context']
+        context.can(sap_policies.POLICY_ROOT % 'clear-quota-resources-cache')
+
+        # if we're not running with our custom quota engine for some reason
+        if not hasattr(QUOTAS, 'clear_cache'):
+            txt = 'Quota engine does not support cache clearing'
+            raise exc.HTTPNotFound(explanation=txt)
+
+        QUOTAS.clear_cache()
 
     @_register_endpoint('GET')
     def endpoints(self, req):

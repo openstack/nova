@@ -33,6 +33,17 @@ sap_admin_api_policies = [
             }
         ],
         scope_types=['system', 'project']),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'clear-quota-resources-cache',
+        check_str=base.RULE_ADMIN_API,
+        description="Clear the cache of known resources in the quota engine",
+        operations=[
+            {
+                'method': 'POST',
+                'path': '/sap/clear_quota_resources_cache'
+            }
+        ],
+        scope_types=['system', 'project']),
 ]
 
 

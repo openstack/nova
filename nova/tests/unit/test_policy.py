@@ -391,6 +391,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:limits:other_project",
 "os_compute_api:os-flavor-access",
 "os_compute_api:sap:endpoints:list",
+"os_compute_api:sap:clear-quota-resources-cache",
 )
 
         self.admin_or_owner_rules = (
