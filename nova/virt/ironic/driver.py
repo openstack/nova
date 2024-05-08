@@ -26,6 +26,7 @@ import tempfile
 import time
 from urllib import parse as urlparse
 
+from openstack.baremetal.v1.node import PowerAction
 from openstack import exceptions as sdk_exc
 from openstack import utils as sdk_utils
 from oslo_log import log as logging
@@ -1407,7 +1408,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             try:
                 self.ironic_connection.set_node_power_state(
                     node.id,
-                    'soft reboot',
+                    PowerAction.SOFT_REBOOT,
                 )
                 hard = False
             except sdk_exc.BadRequestException as exc:
@@ -1417,7 +1418,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                          instance=instance)
 
         if hard:
-            self.ironic_connection.set_node_power_state(node.id, 'reboot')
+            self.ironic_connection.set_node_power_state(
+                node.id, PowerAction.REBOOT)
 
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'reboot')
@@ -1449,7 +1451,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 # polling interval
                 self.ironic_connection.set_node_power_state(
                     node.id,
-                    'soft power off',
+                    PowerAction.SOFT_POWER_OFF,
                     timeout=timeout,
                 )
 
@@ -1481,7 +1483,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                           'reason': e},
                          instance=instance)
 
-        self.ironic_connection.set_node_power_state(node.id, 'power off')
+        self.ironic_connection.set_node_power_state(
+            node.id, PowerAction.POWER_OFF)
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'power off')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
@@ -1506,7 +1509,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         LOG.debug('Power on called for instance', instance=instance)
         node = self._validate_instance_and_node(instance)
-        self.ironic_connection.set_node_power_state(node.id, 'power on')
+        self.ironic_connection.set_node_power_state(
+            node.id, PowerAction.POWER_ON)
 
         timer = loopingcall.FixedIntervalLoopingCall(
                     self._wait_for_power_state, instance, 'power on')
