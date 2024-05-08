@@ -2529,73 +2529,146 @@ class NUMATopologyTest(test.NoDBTestCase):
 
 
 class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
-    def test_fit_instance_cell_success_no_limit(self):
+    def test_fit_instance_cell_no_host_mempages(self):
+        """Validate fitting without host or guest mempages.
+
+        This tests overcommitting without host mempages, which is allowed, and
+        self overcommit, which is not.
+        """
+        # host cell has 1024 MiB memory with no mempages reported
         host_cell = objects.NUMACell(
             id=4,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=1024,
             cpu_usage=0,
-            memory_usage=0,
-            pinned_cpus=set(),
-            mempages=[objects.NUMAPagesTopology(
-                size_kb=4, total=524288, used=0)],
-            siblings=[set([1]), set([2])])
+            memory_usage=512,
+            mempages=[],
+            siblings=[set([1]), set([2])],
+            pinned_cpus=set([]))
+
+        # instance cell requests 1024 MiB memory, no mempages -> PASS
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), pcpuset=set(), memory=1024)
         fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
         self.assertIsInstance(fitted_cell, objects.InstanceNUMACell)
         self.assertEqual(host_cell.id, fitted_cell.id)
 
-    def test_fit_instance_cell_success_w_limit(self):
+        # instance cell requests 4096 MiB memory, no mempages -> FAIL
+        instance_cell = objects.InstanceNUMACell(
+            cpuset=set([1, 2, 3]), memory=4096)
+        fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
+        self.assertIsNone(fitted_cell)
+
+        # instance cell requests 1024 MiB memory, no mempages, but has
+        # dedicated CPUs -> FAIL
+        instance_cell = objects.InstanceNUMACell(
+            cpuset=set([0, 1]), memory=1024,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)
+        fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
+        self.assertIsNone(fitted_cell)
+
+    def test_fit_instance_cell_no_guest_mempages(self):
+        """Validate fitting without guest mempages.
+
+        This tests overcommitting with host small mempages, which is allowed,
+        and self overcommit, which is not.
+        """
+        # host cell has 1024 MiB memory, all small pages
         host_cell = objects.NUMACell(
             id=4,
             cpuset=set([1, 2]),
+            pcpuset=set(),
+            memory=1024,
+            cpu_usage=0,
+            memory_usage=512,
+            mempages=[
+                # 262144 * 4 KiB (1024 MiB) 4k pages, which are all currently
+                # "used"
+                objects.NUMAPagesTopology(size_kb=4, total=262144, used=262144)
+            ],
+            siblings=[set([1]), set([2])],
+            pinned_cpus=set([]))
+
+        # instance cell requests 1024 MiB memory, no mempages -> PASS
+        instance_cell = objects.InstanceNUMACell(
+            cpuset=set([1, 2]), memory=1024)
+        fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
+        self.assertIsInstance(fitted_cell, objects.InstanceNUMACell)
+        self.assertEqual(host_cell.id, fitted_cell.id)
+
+        # instance cell requests 4096 MiB memory, no mempages -> FAIL
+        instance_cell = objects.InstanceNUMACell(
+            id=0, cpuset=set([1, 2, 3]), memory=4096)
+        fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
+        self.assertIsNone(fitted_cell)
+
+        # instance cell requests 1024 MiB memory, no mempages, but has
+        # dedicated CPUs -> FAIL
+        instance_cell = objects.InstanceNUMACell(
+            cpuset=set([0, 1]), memory=1024,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)
+        fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
+        self.assertIsNone(fitted_cell)
+
+    def test_fit_instance_cell_mempages(self):
+        """Validate fitting with guest (and host) mempages.
+
+        This also tests overcommitting with explicitly requested guest
+        mempages, which is not allowed.
+        """
+        # host cell has 1024 MiB memory, all small pages
+        host_cell = objects.NUMACell(
+            id=4,
+            cpuset=set([0, 1]),
+            pcpuset=set(),
+            memory=1024,
+            cpu_usage=0, memory_usage=0, mempages=[
+                # 262144 * 4 KiB (1024 MiB) 4k pages, none used
+                objects.NUMAPagesTopology(size_kb=4, total=262144, used=0)
+            ],
+            siblings=[set([0]), set([1])],
+            pinned_cpus=set([]))
+
+        # instance cell requests 1024 MiB memory, all small pages -> PASS
+        instance_cell = objects.InstanceNUMACell(
+            cpuset=set([0, 1]), memory=1024, pagesize=4)
+        fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
+        self.assertEqual(host_cell.id, fitted_cell.id)
+
+        # host cell now only has 1023 MiB memory, all small pages
+        host_cell.memory_usage = 1
+        host_cell.mempages[0].used = 1
+
+        # instance cell requests 1024 MiB memory again, all small pages -> FAIL
+        instance_cell = objects.InstanceNUMACell(
+            cpuset=set([0, 1]), memory=1024, pagesize=4)
+        fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
+        self.assertIsNone(fitted_cell)
+
+    def test_fit_instance_cell_with_limit(self):
+        host_cell = objects.NUMACell(
+            id=4,
+            cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=1024,
             cpu_usage=2,
             memory_usage=1024,
-            pinned_cpus=set(),
-            mempages=[objects.NUMAPagesTopology(
-                size_kb=4, total=524288, used=0)],
-            siblings=[set([1]), set([2])])
+            mempages=[
+                objects.NUMAPagesTopology(size_kb=4, total=524288, used=0)
+            ],
+            siblings=[set([1]), set([2])],
+            pinned_cpus=set([]))
         limits = objects.NUMATopologyLimits(
             cpu_allocation_ratio=2, ram_allocation_ratio=2)
+
         instance_cell = objects.InstanceNUMACell(
-            id=0, cpuset=set([1, 2]), pcpuset=set(), memory=1024)
+            cpuset=set([1, 2]), memory=1024)
         fitted_cell = hw._numa_fit_instance_cell(
             host_cell, instance_cell, limits=limits)
         self.assertIsInstance(fitted_cell, objects.InstanceNUMACell)
         self.assertEqual(host_cell.id, fitted_cell.id)
 
-    def test_fit_instance_cell_self_overcommit(self):
-        host_cell = objects.NUMACell(
-            id=4,
-            cpuset=set([1, 2]),
-            memory=1024,
-            cpu_usage=0,
-            memory_usage=0,
-            mempages=[objects.NUMAPagesTopology(
-                size_kb=4, total=524288, used=0)],
-            siblings=[set([1]), set([2])],
-            pinned_cpus=set())
-        limits = objects.NUMATopologyLimits(
-            cpu_allocation_ratio=2, ram_allocation_ratio=2)
-        instance_cell = objects.InstanceNUMACell(
-            id=0, cpuset=set([1, 2, 3]), memory=4096)
-        fitted_cell = hw._numa_fit_instance_cell(
-            host_cell, instance_cell, limits=limits)
-        self.assertIsNone(fitted_cell)
-
-    def test_fit_instance_cell_fail_w_limit(self):
-        host_cell = objects.NUMACell(
-            id=4,
-            cpuset=set([1, 2]),
-            memory=1024,
-            cpu_usage=2,
-            memory_usage=1024,
-            mempages=[objects.NUMAPagesTopology(
-                size_kb=4, total=524288, used=0)],
-            siblings=[set([1]), set([2])],
-            pinned_cpus=set())
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), pcpuset=set(), memory=4096)
         limits = objects.NUMATopologyLimits(
@@ -3158,30 +3231,6 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = objects.InstanceNUMACell(
             cpuset=set(),
             pcpuset=set([0, 1, 2, 3]),
-            memory=2048,
-            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-        )
-        limits = objects.NUMATopologyLimits(
-            cpu_allocation_ratio=2, ram_allocation_ratio=2,
-        )
-
-        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
-        self.assertIsNone(inst_pin)
-
-    def test_get_pinning_inst_too_large_mem(self):
-        host_pin = objects.NUMACell(
-            id=0,
-            cpuset=set(),
-            pcpuset=set([0, 1, 2]),
-            memory=2048,
-            memory_usage=1024,
-            pinned_cpus=set(),
-            mempages=[],
-            siblings=[set([0]), set([1]), set([2])])
-        inst_pin = objects.InstanceNUMACell(
-            cpuset=set(),
-            pcpuset=set([0, 1, 2]),
             memory=2048,
             cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
         )
