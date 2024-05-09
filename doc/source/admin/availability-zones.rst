@@ -55,6 +55,15 @@ when comparing availability zones and host aggregates:
       users to specify hosts where instances are launched in server creation.
       See `Using availability zones to select hosts`_ for more information.
 
+  .. note::
+
+      It is not allowed to move instances between Availability Zones.
+      If adding a host to an aggregate or removing a host from an aggregate
+      would cause an instance to move between Availability Zones, including
+      moving from or moving to the default AZ, then the operation will be
+      rejected. The administrator should drain the instances from the host
+      first then the host can be moved.
+
 In addition, other services, such as the :neutron-doc:`networking service <>`
 and the :cinder-doc:`block storage service <>`, also provide an availability
 zone feature. However, the implementation of these features differs vastly

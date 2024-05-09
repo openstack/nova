@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    Nova now ensures that an instance cannot move between availability zones
+    when the host of the instance is added or removed to an aggregate that is
+    part of another availability zone. Moving from or to the default
+    availability zone is also rejected.
+
+    This resolves `bug 1907775`_ where after such move the instance become
+    stuck in between availability zones.
+
+    .. _bug 1907775: https://bugs.launchpad.net/nova/+bug/1907775

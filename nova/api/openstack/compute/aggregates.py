@@ -219,9 +219,7 @@ class AggregateController(wsgi.Controller):
                 exception.ResourceProviderUpdateConflict) as e:
             LOG.error('Failed to remove host %s from aggregate %s. Error: %s',
                       host, id, str(e))
-            msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
-                        'host': host, 'id': id}
-            raise exc.HTTPConflict(explanation=msg)
+            raise exc.HTTPConflict(explanation=e.format_message())
         return self._marshall_aggregate(req, aggregate)
 
     @wsgi.expected_errors((400, 404))

@@ -6683,6 +6683,51 @@ class AggregateAPI:
             availability_zones.update_host_availability_zone_cache(context,
                                                                    host_name)
 
+    def ensure_no_instances_need_to_move_az_when_host_added(
+        self, context, aggregate, host_name
+    ):
+        instances = objects.InstanceList.get_by_host(context, host_name)
+        if not instances:
+            # if no instance then nothing moves
+            return
+
+        new_az = aggregate.metadata.get('availability_zone')
+        if not new_az:
+            # if we add a host to an aggregate without AZ that cannot change
+            # existing, effective AZ of the host. The host was either not
+            # in any AZ and will not be in an AZ. Or the host was already in
+            # an AZ but this aggregate does not challenge that as it has no AZ.
+            return
+
+        # let's gather what is the AZ of the instances on the host before the
+        # host is added to the aggregate
+        aggregates = objects.AggregateList.get_by_host(context, host_name)
+        az = {
+            agg.metadata['availability_zone']
+            for agg in aggregates
+            if 'availability_zone' in agg.metadata}
+
+        # There can only be one or zero AZ names. Two different AZ names case
+        # is already rejected by is_safe_to_update_az()
+        old_az = list(az)[0] if az else None
+
+        # So here we know that the host is being added to a new AZ if it is
+        # different from the existing, effective AZ of the host then the
+        # instances on this host would need to move between AZs, that is not
+        # supported. So reject it.
+        if old_az != new_az:
+            msg = _(
+                "The host cannot be added to the aggregate as the "
+                "availability zone of the host would change from '%s' to '%s' "
+                "but the host already has %d instance(s). Changing the AZ of "
+                "an existing instance is not supported by this action. Move "
+                "the instances away from this host then try again. If you "
+                "need to move the instances between AZs then you can use "
+                "shelve_offload and unshelve to achieve this."
+            ) % (old_az, new_az, len(instances))
+            self._raise_invalid_aggregate_exc(
+                AGGREGATE_ACTION_ADD, aggregate.id, msg)
+
     @wrap_exception()
     def add_host_to_aggregate(self, context, aggregate_id, host_name):
         """Adds the host to an aggregate."""
@@ -6711,6 +6756,8 @@ class AggregateAPI:
 
         self.is_safe_to_update_az(context, aggregate.metadata,
                                   hosts=[host_name], aggregate=aggregate)
+        self.ensure_no_instances_need_to_move_az_when_host_added(
+            context, aggregate, host_name)
 
         aggregate.add_host(host_name)
         self.query_client.update_aggregates(context, [aggregate])
@@ -6746,6 +6793,54 @@ class AggregateAPI:
 
         return aggregate
 
+    def ensure_no_instances_need_to_move_az_when_host_removed(
+        self, context, aggregate, host_name
+    ):
+        instances = objects.InstanceList.get_by_host(context, host_name)
+        if not instances:
+            # if no instance then nothing moves
+            return
+
+        current_az = aggregate.metadata.get('availability_zone')
+        if not current_az:
+            # if we remove a host from an aggregate without AZ that cannot
+            # change existing, effective AZ of the host. If the host has an AZ
+            # before the removal then that is due to a different aggregate
+            # membership so that does not change here. If the host has no AZ
+            # before the removal then it won't have either after the removal
+            # from an aggregate without az
+            return
+
+        # let's gather what would be the AZ of the instances on the host
+        # if we exclude the current aggregate.
+        aggregates = objects.AggregateList.get_by_host(context, host_name)
+        azs = {
+            agg.metadata['availability_zone']
+            for agg in aggregates
+            if agg.id != aggregate.id and 'availability_zone' in agg.metadata
+        }
+
+        # There can only be one or zero AZ names. Two different AZ names case
+        # is already rejected by is_safe_to_update_az()
+        new_az = list(azs)[0] if azs else None
+
+        # So here we know that the host is being removed from an aggregate
+        # that has an AZ. So if the new AZ without this aggregate is different
+        # then, that would mean the instances on this host need to change AZ.
+        # That is not supported.
+        if current_az != new_az:
+            msg = _(
+                "The host cannot be removed from the aggregate as the "
+                "availability zone of the host would change from '%s' to '%s' "
+                "but the host already has %d instance(s). Changing the AZ of "
+                "an existing instance is not supported by this action. Move "
+                "the instances away from this host then try again. If you "
+                "need to move the instances between AZs then you can use "
+                "shelve_offload and unshelve to achieve this."
+            ) % (current_az, new_az, len(instances))
+            self._raise_invalid_aggregate_exc(
+                AGGREGATE_ACTION_DELETE, aggregate.id, msg)
+
     @wrap_exception()
     def remove_host_from_aggregate(self, context, aggregate_id, host_name):
         """Removes host from the aggregate."""
@@ -6762,6 +6857,9 @@ class AggregateAPI:
             aggregate=aggregate,
             action=fields_obj.NotificationAction.REMOVE_HOST,
             phase=fields_obj.NotificationPhase.START)
+
+        self.ensure_no_instances_need_to_move_az_when_host_removed(
+            context, aggregate, host_name)
 
         # Remove the resource provider from the provider aggregate first before
         # we change anything on the nova side because if we did the nova stuff
