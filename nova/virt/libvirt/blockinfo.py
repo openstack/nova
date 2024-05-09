@@ -88,7 +88,8 @@ from nova.virt import osinfo
 
 CONF = cfg.CONF
 
-BOOT_DEV_FOR_TYPE = {'disk': 'hd', 'cdrom': 'cdrom', 'floppy': 'fd'}
+BOOT_DEV_FOR_TYPE = {'disk': 'hd', 'cdrom': 'cdrom', 'floppy': 'fd',
+                     'lun': 'hd'}
 # NOTE(aspiers): If you change this, don't forget to update the docs and
 # metadata for hw_*_bus in glance.
 SUPPORTED_DEVICE_BUSES = {

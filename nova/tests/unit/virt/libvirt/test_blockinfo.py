@@ -1372,6 +1372,20 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         expected_order = ['hd', 'cdrom']
         self.assertEqual(expected_order, blockinfo.get_boot_order(disk_info))
 
+    def test_get_boot_order_lun(self):
+        disk_info = {
+            'disk_bus': 'virtio',
+            'cdrom_bus': 'ide',
+            'mapping': {
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'lun', 'boot_index': '1'},
+            }
+        }
+        expected_order = ['hd']
+        self.assertEqual(expected_order, blockinfo.get_boot_order(disk_info))
+
     def _get_rescue_image_meta(self, props_dict):
         meta_dict = dict(self.test_image_meta)
         meta_dict['properties'] = props_dict
