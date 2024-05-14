@@ -25,7 +25,7 @@
           # Upload it to glance as the sole image available so tempest
           # config will find it. Wait ten seconds after doing this
           # before the restart below.
-          openstack image create --container-format bare --disk-format raw --public "cirros-raw" < "$rawimage"
+          openstack image create --container-format bare --disk-format raw --public "cirros-raw" --file $(readlink -f "$rawimage")
           sleep 10
           openstack image list
           openstack image show cirros-raw
