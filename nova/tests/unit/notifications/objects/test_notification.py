@@ -11,7 +11,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import collections
 from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -367,75 +366,75 @@ class TestNotificationBase(test.NoDBTestCase):
 
 notification_object_data = {
     'AggregateCacheNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'AggregateCachePayload': '1.0-3f4dc002bed67d06eecb577242a43572',
+    'AggregateCachePayload': '1.0-d0e40be596ea3a230af0f79c242b9d90',
     'AggregateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'AggregatePayload': '1.1-1eb9adcc4440d8627de6ec37c6398746',
-    'AuditPeriodPayload': '1.0-2b429dd307b8374636703b843fa3f9cb',
-    'BlockDevicePayload': '1.0-29751e1b6d41b1454e36768a1e764df8',
-    'CellMappingPayload': '2.0-8acd412eb4edff1cd2ecb9867feeb243',
+    'AggregatePayload': '1.1-75c586f283a7e28b9c0b44a7297304bf',
+    'AuditPeriodPayload': '1.0-b79111d626d565760b48338ec46c3d1b',
+    'BlockDevicePayload': '1.0-771249c2e54ccd127c90cf3071af6b1e',
+    'CellMappingPayload': '2.0-ce38914d7cd30cf05de94e15af978d70',
     'ComputeTaskNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ComputeTaskPayload': '1.0-e3d34762c14d131c98337b72e8c600e1',
-    'DestinationPayload': '1.0-4ccf26318dd18c4377dada2b1e74ec2e',
+    'ComputeTaskPayload': '1.0-59a9b78b6199470a83c8d07bffd13f5e',
+    'DestinationPayload': '1.0-d8faf610201bf5f460892243f6632a37',
     'EventType': '1.21-6a5f57fafe478f354f66b81b4cb537ea',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ExceptionPayload': '1.1-6c43008bd81885a63bc7f7c629f0793b',
+    'ExceptionPayload': '1.1-34f006107693b8c9eaf4b104157d21b4',
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'FlavorPayload': '1.4-2e7011b8b4e59167fe8b7a0a81f0d452',
-    'ImageMetaPayload': '1.0-0e65beeacb3393beed564a57bc2bc989',
+    'FlavorPayload': '1.4-029909d2dab5c08b5b854f2d42fe1abe',
+    'ImageMetaPayload': '1.0-17c1a13daccbac0482b7d7bdb15af150',
     # NOTE(efried): ImageMetaPropsPayload is built dynamically from
     # ImageMetaProps, so when you see a fail here for that reason, you must
     # *also* bump the version of ImageMetaPropsPayload. See its docstring for
     # more information.
-    'ImageMetaPropsPayload': '1.13-2859fbb81af5ad2f83a0e9be0b30ea60',
+    'ImageMetaPropsPayload': '1.13-682cfe847d16301734e1fba924063e6d',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionPayload': '1.8-4fa3da9cbf0761f1f700ae578f36dc2f',
+    'InstanceActionPayload': '1.8-b948818df6ec562e4eb4b23e515e451b',
     'InstanceActionRebuildNotification':
         '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionRebuildPayload': '1.9-10eebfbf6e944aaac43188173dff9e01',
+    'InstanceActionRebuildPayload': '1.9-3c1ac23f70c03665797f792ace3d9176',
     'InstanceActionRescueNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionRescuePayload': '1.3-dbf4de42bc02ebc4cdbe42f90d343bfd',
+    'InstanceActionRescuePayload': '1.3-329dda4c0a516c0fedc68aa02ccf3e88',
     'InstanceActionResizePrepNotification':
         '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionResizePrepPayload': '1.3-baca73cc450f72d4e1ce6b9aca2bbdf6',
+    'InstanceActionResizePrepPayload': '1.3-8969438a48c496569c2add19b170dca1',
     'InstanceActionVolumeNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionVolumePayload': '1.6-0a30e870677e6166c50645623e287f78',
+    'InstanceActionVolumePayload': '1.6-b5fd2b23dbafe33b72cdbbb7b937bf18',
     'InstanceActionVolumeSwapNotification':
     '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionVolumeSwapPayload': '1.8-d2255347cb2353cb12c174aad4dab93c',
+    'InstanceActionVolumeSwapPayload': '1.8-9d8edd0a3556a69f0bfe17ab2641ca19',
     'InstanceCreateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceCreatePayload': '1.12-749f2da7c2435a0e55c076d6bf0ea81d',
-    'InstancePayload': '1.8-60d62df5a6b6aa7817ec5d09f4b8a3e5',
+    'InstanceCreatePayload': '1.12-bd007423bfdb634448ec589b28f7cd39',
+    'InstancePayload': '1.8-0bfe0b258ae4cf6ff68463c9e75adb80',
     'InstanceActionSnapshotNotification':
         '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionSnapshotPayload': '1.9-c3e0bbaaefafdfa2f8e6e504c2c9b12c',
+    'InstanceActionSnapshotPayload': '1.9-75809b8ef913f7d2e262c5c804213ac8',
     'InstanceExistsNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceExistsPayload': '2.0-802d380c61cba2edb905c45052c612b0',
-    'InstanceNUMACellPayload': '1.2-a367add3378c71c21c817ab2b23db3bf',
-    'InstanceNUMATopologyPayload': '1.0-247361b152047c18ae9ad1da2544a3c9',
-    'InstancePCIRequestPayload': '1.1-bda86a95ef04bdc27789342466b81bb5',
-    'InstancePCIRequestsPayload': '1.0-6751cffe0c0fabd212aad624f672429a',
-    'InstanceStateUpdatePayload': '1.0-07e111c0fa0f6db0f79b0726d593e3da',
+    'InstanceExistsPayload': '2.0-5eb1efc3d1b03d87be82062219adaf6d',
+    'InstanceNUMACellPayload': '1.2-93c3cadf4f6ee427664c00039d0a1fed',
+    'InstanceNUMATopologyPayload': '1.0-c7885d5da4c66525f20e7d637a7267c4',
+    'InstancePCIRequestPayload': '1.1-ee482d38f6c84bb77bba3f4c8708231c',
+    'InstancePCIRequestsPayload': '1.0-29cb0fa1ba6756423a9606437c3f247f',
+    'InstanceStateUpdatePayload': '1.0-9d136730749479042d47f2a08c2c2e69',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceUpdatePayload': '2.0-6ad65963b4ef57210544651e1077ac97',
-    'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
+    'InstanceUpdatePayload': '2.0-f6edbd2b53373f120debf5570ec14676',
+    'IpPayload': '1.0-a9f0b3f1ef17ab12378096816faa4e55',
     'KeypairNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'KeypairPayload': '1.0-6daebbbde0e1bf35c1556b1ecd9385c1',
+    'KeypairPayload': '1.0-84f5e6da739af31ea10b89858c67b512',
     'LibvirtErrorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'LibvirtErrorPayload': '1.0-9e7a8f0b895dd15531d5a6f3aa95d58e',
-    'MetricPayload': '1.0-bcdbe85048f335132e4c82a1b8fa3da8',
+    'LibvirtErrorPayload': '1.0-fb5666286ebb9b1627be2290b9520f8f',
+    'MetricPayload': '1.0-6a932f141c9ae2f50fc9d79c548338aa',
     'MetricsNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'MetricsPayload': '1.0-65c69b15b4de5a8c01971cb5bb9ab650',
+    'MetricsPayload': '1.0-a087851790cd7e76883bdc64a146917a',
     'NotificationPublisher': '2.2-b6ad48126247e10b46b6b0240e52e614',
-    'RequestSpecPayload': '1.1-64d30723a2e381d0cd6a16a877002c64',
-    'SchedulerRetriesPayload': '1.0-03a07d09575ef52cced5b1b24301d0b4',
+    'RequestSpecPayload': '1.1-9530d710bf7eaa101a93f6745fbe7aea',
+    'SchedulerRetriesPayload': '1.0-6e7e6204e638c0a070412f0e765c320c',
     'SelectDestinationsNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ServerGroupNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ServerGroupPayload': '1.1-4ded2997ea1b07038f7af33ef5c45f7f',
+    'ServerGroupPayload': '1.1-f866cf95bf64bfa799193807e66a6a1e',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ServiceStatusPayload': '1.1-7b6856bd879db7f3ecbcd0ca9f35f92f',
-    'VirtCPUTopologyPayload': '1.0-1b1600fe55465209682d96bbe3209f27',
+    'ServiceStatusPayload': '1.1-64c5f80b3865832b936898f11dcddad0',
+    'VirtCPUTopologyPayload': '1.0-24fa607e20f48c829953edad6b0b5cc8',
     'VolumeUsageNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'VolumeUsagePayload': '1.0-5f99d8b978a32040eecac0975e5a53e9',
+    'VolumeUsagePayload': '1.0-a12c300f0ddbc7488685c9d9ed36d9e8',
 }
 
 
@@ -488,8 +487,7 @@ def get_extra_data(obj_class):
     # Get the SCHEMA items to add to the fingerprint
     # if we are looking at a notification
     if issubclass(obj_class, notification.NotificationPayloadBase):
-        schema_data = collections.OrderedDict(
-            sorted(obj_class.SCHEMA.items()))
+        schema_data = sorted(obj_class.SCHEMA.items())
 
         extra_data += (schema_data,)
 
