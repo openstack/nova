@@ -47,6 +47,7 @@ from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import rw_handles
+import oslo_vmware.service
 from oslo_vmware import vim_util as vutil
 
 from nova.api.metadata import base as instance_metadata
@@ -191,6 +192,7 @@ class VMwareVMOps(object):
         self._imagecache = imagecache.ImageCacheManager(self._session,
                                                         self._base_folder)
         self._network_api = neutron.API()
+        self._evc_modes = self._get_evc_modes()
 
         # set when our driver's init_host() is called
         self._compute_host = None
@@ -211,6 +213,19 @@ class VMwareVMOps(object):
             # Aging disable ensures backward compatibility
             base_folder = CONF.image_cache.subdirectory_name
         return base_folder
+
+    def _get_evc_modes(self):
+        """Return a dict from EVCMode.key: EVCMode
+
+        The key is the human-readable name like `intel-skylake'.
+        """
+        si = oslo_vmware.service.SERVICE_INSTANCE
+        service_instance_moref = vutil.get_moref(si, si)
+
+        evc_modes = vim_util.get_array_items(
+            vim_util.get_object_property(self._session, service_instance_moref,
+                                         'capability.supportedEVCMode'))
+        return {evc.key: evc for evc in evc_modes}
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
         service_content = self._session.vim.service_content

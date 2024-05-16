@@ -1026,6 +1026,12 @@ class Task(ManagedObject):
         self.set("info", info)
 
 
+class EVCMode(DataObject):
+    def __init__(self, key):
+        super(EVCMode, self).__init__("EVCMode")
+        self.key = key
+
+
 def create_host_network_system():
     host_net_system = HostNetworkSystem()
     _create_object(host_net_system)
