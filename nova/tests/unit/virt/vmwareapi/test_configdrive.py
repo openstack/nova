@@ -53,7 +53,12 @@ class ConfigDriveTestCase(test.TestCase):
         stubs.set_stubs(self)
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         virtapi = fake.FakeComputeVirtAPI(mock.MagicMock())
-        self.conn = driver.VMwareVCDriver(virtapi)
+        self._evc_modes = {
+            e.key: e for e in [vmwareapi_fake.EVCMode('intel-broadwell'),
+                               vmwareapi_fake.EVCMode('intel-skylake')]}
+        with mock.patch.object(vmops.VMwareVMOps, '_get_evc_modes',
+                               return_value=self._evc_modes):
+            self.conn = driver.VMwareVCDriver(virtapi)
         self.network_info = utils.get_test_network_info()
         self.node_name = self.conn._nodename
         image_ref = self.glance.auto_disk_config_enabled_image['id']

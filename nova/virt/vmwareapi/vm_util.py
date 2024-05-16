@@ -112,7 +112,7 @@ class ExtraSpecs(object):
                  vif_limits=None, hv_enabled=None, firmware=None,
                  hw_video_ram=None, numa_prefer_ht=None,
                  numa_vcpu_max_per_virtual_node=None,
-                 migration_data_timeout=None):
+                 migration_data_timeout=None, evc_mode_key=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         self.cpu_limits = cpu_limits or Limits()
         self.memory_limits = memory_limits or Limits()
@@ -127,6 +127,26 @@ class ExtraSpecs(object):
         self.numa_prefer_ht = numa_prefer_ht
         self.numa_vcpu_max_per_virtual_node = numa_vcpu_max_per_virtual_node
         self.migration_data_timeout = migration_data_timeout
+        self.evc_mode_key = evc_mode_key
+
+    def get_capped_evc_mode(self, evc_modes, evc_mode_sort_keys,
+                            max_evc_mode_key):
+        """Return the EVCMode for the evc_mode_key attribute
+
+        The available EVCModes are limited by what the Hypervisor supports, so
+        we check against a supported maximum and return an EVCMode up to that
+        limit.
+
+        If `evc_mode_key` is unset, we return `None`
+        """
+        if self.evc_mode_key is None:
+            return None
+
+        wanted_evc_mode_sort_key = evc_mode_sort_keys[self.evc_mode_key]
+        max_evc_mode_sort_key = evc_mode_sort_keys[max_evc_mode_key]
+        if wanted_evc_mode_sort_key > max_evc_mode_sort_key:
+            return evc_modes[max_evc_mode_key]
+        return evc_modes[self.evc_mode_key]
 
 
 class HistoryCollectorItems:
@@ -2368,3 +2388,18 @@ def get_vmx_path(session, vm_ref):
     vmx_path = session._call_method(vutil, 'get_object_property',
                                     vm_ref, 'config.files.vmPathName')
     return ds_obj.DatastorePath.parse(vmx_path)
+
+
+def apply_evc_mode(session, vm_ref, evc_mode):
+    """Applies the EVCMode identified by the given EvcMode object
+
+    Passing `None` for evc_mode will clear the current EVC mode.
+    """
+    if evc_mode is None:
+        feature_masks = []
+    else:
+        feature_masks = evc_mode.featureMask
+
+    task = session._call_method(session.vim, "ApplyEvcModeVM_Task", vm_ref,
+                                mask=feature_masks)
+    session._wait_for_task(task)

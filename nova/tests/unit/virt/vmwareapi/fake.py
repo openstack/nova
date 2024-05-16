@@ -784,6 +784,8 @@ class HostSystem(ManagedObject):
         config.product = product
         summary.config = config
 
+        summary.maxEVCModeKey = 'intel-skylake'
+
         return summary
 
     @staticmethod
@@ -877,6 +879,7 @@ class HostSystem(ManagedObject):
         self.set("summary.hardware", summary.hardware)
         self.set("summary.runtime", summary.runtime)
         self.set("summary.quickStats", summary.quickStats)
+        self.set("summary.maxEVCModeKey", summary.maxEVCModeKey)
 
         self.set("capability.maxHostSupportedVcpus", 600)
         self.set("connected", connected)
@@ -1022,6 +1025,12 @@ class Task(ManagedObject):
             info.error = error
         info.result = result
         self.set("info", info)
+
+
+class EVCMode(DataObject):
+    def __init__(self, key):
+        super(EVCMode, self).__init__("EVCMode")
+        self.key = key
 
 
 def create_host_network_system():

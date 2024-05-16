@@ -41,6 +41,19 @@ EXTRA_SPEC_VALIDATORS = [
             'type': str,
         },
     ),
+    base.ExtraSpecValidator(
+        name='vmware:evc_mode',
+        description=(
+            'Specify the per-VM EVC mode used for new instances.'
+            '\n'
+            'This should contain a string matching the `EVCMode.key` property '
+            'of an `EVCMode` known to the `vCenter` (i.e. available in '
+            '`ServiceInstance.capability.supportedEVCMode`).'
+        ),
+        value={
+            'type': str,
+        },
+    ),
 ]
 
 

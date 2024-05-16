@@ -44,6 +44,7 @@ from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import rw_handles
+import oslo_vmware.service
 from oslo_vmware import vim_util as vutil
 
 from nova.api.metadata import base as instance_metadata
@@ -187,6 +188,13 @@ class VMwareVMOps(object):
         self._imagecache = imagecache.ImageCacheManager(self._session,
                                                         self._base_folder)
         self._network_api = neutron.API()
+        self._evc_modes = self._get_evc_modes()
+        # Save an int per EVCMode key to specify an order. Higher numbers are
+        # newer EVCModes
+        # the vCenter returned the EVC modes in order oldest to newest and
+        # dicts return the keys in insert order in Python
+        self._evc_mode_sort_key = {k: i for i, k in enumerate(self._evc_modes)}
+        self._max_evc_mode_key = self._get_cluster_max_evc_mode_key()
 
         # set when our driver's init_host() is called
         self._compute_host = None
@@ -207,6 +215,46 @@ class VMwareVMOps(object):
             # Aging disable ensures backward compatibility
             base_folder = CONF.image_cache.subdirectory_name
         return base_folder
+
+    def _get_evc_modes(self):
+        """Return a dict from EVCMode.key: EVCMode
+
+        The key is the human-readable name like `intel-skylake'.
+        """
+        si = oslo_vmware.service.SERVICE_INSTANCE
+        service_instance_moref = vutil.get_moref(si, si)
+
+        evc_modes = vim_util.get_array_items(
+            vim_util.get_object_property(self._session, service_instance_moref,
+                                         'capability.supportedEVCMode'))
+        return {evc.key: evc for evc in evc_modes}
+
+    def _get_cluster_max_evc_mode_key(self):
+        """Return the highest EVCMode name supported by the cluster
+
+        If the cluster's hosts support different maxEVCModeKey, we take the
+        oldest one to be able to use all hosts in the cluster.
+
+        If the cluster doesn't have any hosts, we can return None, because the
+        value will not be used as nothing can spawn on this cluster.
+        """
+        result = self._session._call_method(
+            vim_util, 'get_inner_objects', self._cluster,
+            'host', 'HostSystem',
+            properties_to_collect=['summary.maxEVCModeKey'])
+
+        max_evc_mode_keys = set()
+        with vutil.WithRetrieval(self._session.vim, result) as objects:
+            for obj in objects:
+                if not hasattr(obj, "propSet"):
+                    continue
+                max_evc_mode_keys.add(obj.propSet[0].val)
+
+        if not max_evc_mode_keys:
+            return None
+
+        return sorted(max_evc_mode_keys,
+                      key=lambda x: self._evc_mode_sort_key[x])[0]
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
         service_content = self._session.vim.service_content
@@ -472,6 +520,12 @@ class VMwareVMOps(object):
             str(extra_specs.cores_per_socket)
             if utils.is_numa_aligned_flavor(flavor)
             else '')
+
+        evc_mode_key = flavor.extra_specs.get('vmware:evc_mode')
+        if evc_mode_key and evc_mode_key not in self._evc_modes:
+            raise error_util.EvcModeDoesNotExist(evc_mode=evc_mode_key)
+        extra_specs.evc_mode_key = evc_mode_key
+
         return extra_specs
 
     def _get_storage_policy(self, flavor):
@@ -1355,6 +1409,13 @@ class VMwareVMOps(object):
         # Big VMs should (re)start first.
         self.set_restart_priority_if_needed(instance)
 
+        # configure EVC mode if requested
+        if extra_specs.evc_mode_key:
+            evc_mode = extra_specs.get_capped_evc_mode(
+                self._evc_modes, self._evc_mode_sort_key,
+                self._max_evc_mode_key)
+            vm_util.apply_evc_mode(self._session, vm_ref, evc_mode)
+
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
         self._clean_up_after_special_spawning(context, instance.memory_mb,
@@ -2223,6 +2284,13 @@ class VMwareVMOps(object):
             except Exception:
                 LOG.warning('Could not remove DRS override.',
                             instance=instance)
+
+        # This may come back as None if the flavor doesn't require an EVCMode.
+        # Using `None` clears any currently configured EVC mode.
+        evc_mode = extra_specs.get_capped_evc_mode(
+            self._evc_modes, self._evc_mode_sort_key, self._max_evc_mode_key)
+        vm_util.apply_evc_mode(self._session, vm_ref, evc_mode)
+
         self._clean_up_after_special_spawning(context, flavor.memory_mb,
                                               flavor)
 

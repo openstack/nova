@@ -191,7 +191,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_svc.return_value = service
 
         virtapi = fake.FakeComputeVirtAPI(mock.MagicMock())
-        self.conn = driver.VMwareVCDriver(virtapi, False)
+        self._evc_modes = {
+            e.key: e for e in [vmwareapi_fake.EVCMode('intel-broadwell'),
+                               vmwareapi_fake.EVCMode('intel-skylake')]}
+        with mock.patch.object(vmops.VMwareVMOps, '_get_evc_modes',
+                               return_value=self._evc_modes):
+            self.conn = driver.VMwareVCDriver(virtapi, False)
         self.assertFalse(service.disabled)
         self._set_exception_vars()
         self.node_name = self.conn._nodename
