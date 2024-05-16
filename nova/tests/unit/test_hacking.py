@@ -517,7 +517,7 @@ class HackingTestCase(test.NoDBTestCase):
                foobar_cmd = "foobar -get -beer"
                answer = os.popen(foobar_cmd).read()
 
-               if answer == nok":
+               if answer == "nok":
                    try:
                        os.popen(os.popen('foobar -beer -please')).read()
 
