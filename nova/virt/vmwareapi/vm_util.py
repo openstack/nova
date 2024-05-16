@@ -114,7 +114,7 @@ class ExtraSpecs(object):
                  vif_limits=None, hv_enabled=None, firmware=None,
                  hw_video_ram=None, numa_prefer_ht=None,
                  numa_vcpu_max_per_virtual_node=None,
-                 migration_data_timeout=None):
+                 migration_data_timeout=None, evc_mode_key=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         self.cpu_limits = cpu_limits or Limits()
         self.memory_limits = memory_limits or Limits()
@@ -129,6 +129,7 @@ class ExtraSpecs(object):
         self.numa_prefer_ht = numa_prefer_ht
         self.numa_vcpu_max_per_virtual_node = numa_vcpu_max_per_virtual_node
         self.migration_data_timeout = migration_data_timeout
+        self.evc_mode_key = evc_mode_key
 
 
 class HistoryCollectorItems(six.Iterator):

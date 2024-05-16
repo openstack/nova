@@ -491,6 +491,12 @@ class VMwareVMOps(object):
             str(extra_specs.cores_per_socket)
             if utils.is_numa_aligned_flavor(flavor)
             else '')
+
+        evc_mode_key = flavor.extra_specs.get('vmware:evc_mode')
+        if evc_mode_key and evc_mode_key not in self._evc_modes:
+            raise error_util.EvcModeDoesNotExist(evc_mode=evc_mode_key)
+        extra_specs.evc_mode_key = evc_mode_key
+
         return extra_specs
 
     def _get_storage_policy(self, flavor):
