@@ -72,7 +72,7 @@ cpu_policy_validators = [
             'individually pinned to their own host core. '
             'If ``mixed``, the policy for each instance CPU can be specified '
             'using the ``hw:cpu_dedicated_mask`` or ``hw:cpu_realtime_mask`` '
-            'extra specs.'
+            'extra specs. '
             'Only supported by the libvirt virt driver.'
         ),
         value={
@@ -250,7 +250,7 @@ numa_validators = [
         description=(
             'The NUMA affinity policy of any PCI passthrough devices or '
             'SR-IOV network interfaces attached to the instance. '
-            'If ``required`, only PCI devices from one of the host NUMA '
+            'If ``required``, only PCI devices from one of the host NUMA '
             'nodes the instance VCPUs are allocated from can be used by said '
             'instance. '
             'If ``preferred``, any PCI device can be used, though preference '
@@ -294,7 +294,7 @@ cpu_topology_validators = [
         description=(
             'The number of virtual CPU cores to emulate per socket in the '
             'guest CPU topology. '
-            'Defaults to ``1``.'
+            'Defaults to ``1``. '
             'Only supported by the libvirt virt driver. '
         ),
         value={
@@ -307,7 +307,7 @@ cpu_topology_validators = [
         name='hw:cpu_threads',
         description=(
             'The number of virtual CPU threads to emulate per core in the '
-            'guest CPU topology.'
+            'guest CPU topology. '
             'Defaults to ``1``. '
             'Only supported by the libvirt virt driver. '
         ),

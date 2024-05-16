@@ -37,9 +37,9 @@ for key, name, unit in (
                     f'limit, even if there are available resources. '
                     f'This is typically used to ensure a consistent '
                     f'performance of instances independent of available '
-                    f'resources.'
+                    f'resources. '
                     f'The value ``0`` indicates that {name} usage is not '
-                    f'limited.'
+                    f'limited. '
                     f'Only supported by the VMWare virt driver.'
                 ),
                 value={
