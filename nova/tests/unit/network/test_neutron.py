@@ -6223,8 +6223,36 @@ class TestAPI(TestAPIBase):
 
     @mock.patch('nova.network.neutron.API.has_dns_extension',
                 new=mock.Mock(return_value=True))
+    @mock.patch('nova.network.neutron.API._reset_port_dns_name')
     @mock.patch('nova.network.neutron.API._show_port')
-    def test_unbind_ports_reset_dns_name_by_admin(self, mock_show):
+    def test_unbind_ports_keep_dns_name_no_detach(self,
+            mock_show,
+            mock_reset_dns):
+        neutron = mock.Mock()
+        neutron.show_network.return_value = {
+            'network': {
+                'id': 'net1',
+                'dns_domain': None
+            }
+        }
+        port_client = mock.Mock()
+        ports = [uuids.port_id]
+        mock_show.return_value = {'id': uuids.port}
+        self.api._reset_port_dns_name = mock.Mock()
+        self.api._unbind_ports(self.context, ports, neutron, port_client,
+                               detach=False)
+        port_req_body = {'port': {'binding:host_id': None,
+                                  'binding:profile': {}}}
+        port_client.update_port.assert_called_once_with(
+            uuids.port_id, port_req_body)
+        mock_reset_dns.assert_not_called()
+
+    @mock.patch('nova.network.neutron.API.has_dns_extension',
+                new=mock.Mock(return_value=True))
+    @mock.patch('nova.network.neutron.API._reset_port_dns_name')
+    @mock.patch('nova.network.neutron.API._show_port')
+    def test_unbind_ports_reset_dns_name_by_admin(self, mock_show,
+                                                  mock_reset_dns):
         neutron = mock.Mock()
         neutron.show_network.return_value = {
             'network': {
@@ -6244,6 +6272,9 @@ class TestAPI(TestAPIBase):
         port_client.update_port.assert_called_once_with(
             uuids.port_id, port_req_body)
         neutron.update_port.assert_not_called()
+        mock_reset_dns.assert_called_once_with(
+            neutron.show_network.return_value['network'],
+            uuids.port_id, neutron)
 
     @mock.patch('nova.network.neutron.API.has_dns_extension',
                 new=mock.Mock(return_value=True))
