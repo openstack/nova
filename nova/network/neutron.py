@@ -710,7 +710,7 @@ class API:
             # dns_domain), or if we cannot retrieve network info, we use the
             # admin client to reset dns_name.
             if (
-                self.has_dns_extension(client=port_client) and
+                detach and self.has_dns_extension(client=port_client) and
                 not network.get('dns_domain')
             ):
                 port_req_body['port']['dns_name'] = ''
@@ -726,7 +726,8 @@ class API:
             # NOTE: For external DNS integration, we use the neutron client
             # with user's context to reset the dns_name since the recordset is
             # under user's zone.
-            self._reset_port_dns_name(network, port_id, neutron)
+            if detach:
+                self._reset_port_dns_name(network, port_id, neutron)
 
     def _validate_requested_port_ids(self, context, instance, neutron,
                                      requested_networks):

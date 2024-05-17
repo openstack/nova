@@ -37,6 +37,7 @@ from nova.compute import manager as compute_manager
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import exception
+from nova.network import constants as neutron_constants
 from nova.network import neutron as neutronapi
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -6784,6 +6785,21 @@ class PortBindingShelvedServerTest(integrated_helpers._IntegratedTestBase):
         super(PortBindingShelvedServerTest, self).setUp()
         self.flavor_id = self._create_flavor(
             disk=10, ephemeral=20, swap=5 * 1024)
+        self.neutron.list_extensions = self.list_extensions
+
+    def list_extensions(self, *args, **kwargs):
+        return {
+            'extensions': [
+                {
+                    # Copied from neutron-lib dns.py
+                    "updated": "2015-08-15T18:00:00-00:00",
+                    "name": neutron_constants.DNS_INTEGRATION,
+                    "links": [],
+                    "alias": "dns-integration",
+                    "description": "Provides integration with DNS."
+                }
+            ]
+        }
 
     def test_shelve_offload_with_port(self):
         # Do not wait before offloading
@@ -6811,3 +6827,27 @@ class PortBindingShelvedServerTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual(port['device_id'], server['id'])
         self.assertIsNone(port['binding:host_id'])
         self.assertNotIn('binding:status', port)
+
+    def test_shelve_offload_with_port_preserve_dns(self):
+        # Do not wait before offloading
+        self.flags(shelved_offload_time=0)
+
+        server_name = 'dns-name-test'
+        server = self._create_server(
+            name=server_name,
+            flavor_id=self.flavor_id,
+            networks=[{'port': self.neutron.port_1['id']}])
+
+        port = self.neutron.show_port(self.neutron.port_1['id'])['port']
+
+        # Assert that the port uses a DNS name matching the server name
+        self.assertEqual(port['dns_name'], server_name)
+
+        # Do shelve
+        server = self._shelve_server(server, 'SHELVED_OFFLOADED')
+
+        # Retrieve the updated port
+        port = self.neutron.show_port(self.neutron.port_1['id'])['port']
+
+        # Assert that the port still uses the same DNS name
+        self.assertEqual(port['dns_name'], server_name)
