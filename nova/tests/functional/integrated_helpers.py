@@ -581,6 +581,17 @@ class InstanceHelperMixin:
         self.notifier.wait_for_versioned_notifications(
             'instance.share_detach.error')
 
+    def _attach_volume(self, server, volume_id):
+        """attach a cinder volume to a server."""
+        attachment = self.api.post_server_volume(
+            server['id'],
+            {'volumeAttachment': {'volumeId': volume_id}}
+        )
+        self._wait_for_volume_attach(server['id'], volume_id)
+        self.notifier.wait_for_versioned_notifications(
+            'instance.volume_attach.end')
+        return attachment
+
     def _rebuild_server(self, server, image_uuid, expected_state='ACTIVE'):
         """Rebuild a server."""
         self.api.post_server_action(
