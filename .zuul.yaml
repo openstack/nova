@@ -402,6 +402,7 @@
     irrelevant-files: *nova-base-irrelevant-files
     # Run post-tempest tests like for nova-manage commands.
     post-run: playbooks/nova-next/post.yaml
+    pre-run: playbooks/nova-next/pre.yaml
     required-projects:
         - novnc/novnc
     nodeset:

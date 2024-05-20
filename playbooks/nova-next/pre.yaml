@@ -1,0 +1,18 @@
+- hosts: controller
+  tasks:
+    - name: create local.sh
+      become: yes
+      blockinfile:
+        path: /opt/stack/devstack/local.sh
+        create: True
+        mode: 0777
+        block: |
+          #!/bin/bash
+          set -x
+          image_ids=$(openstack image list -f value -c ID)
+
+          echo "Setting required image metadata properties"
+          for image_id in $image_ids; do
+              openstack image set --property hw_scsi_model=virtio-scsi ${image_id}
+          done
+          openstack image list
