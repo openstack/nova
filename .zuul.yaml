@@ -168,7 +168,6 @@
       # test_live_migration_with_trunk in this job to keep
       tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot).*)
       devstack_localrc:
-        <<: *uec_image_vars
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
@@ -211,7 +210,6 @@
     group-vars:
       subnode:
         devstack_localrc:
-          <<: *uec_image_vars
           Q_AGENT: openvswitch
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
           Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
@@ -263,8 +261,6 @@
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
       # revert this when bug #1940425 is fixed in neutron
       tempest_exclude_regex: (test_live_migration_with_trunk)
-      devstack_localrc:
-        <<: *uec_image_vars
       devstack_services:
         openstack-cli-server: true
       devstack_local_conf:
@@ -319,7 +315,6 @@
               resize: false
               cold_migration: false
       devstack_localrc:
-        <<: *uec_image_vars
         NOVA_BACKEND: LVM
         # Do not waste time clearing volumes.
         LVM_VOLUME_CLEAR: none
@@ -583,7 +578,6 @@
       tox_envlist: all
       tempest_test_regex: api.*compute
       devstack_localrc:
-        <<: *uec_image_vars
         TEMPEST_COMPUTE_TYPE: compute_legacy
 
 - job:
@@ -609,8 +603,6 @@
       "legacy-grenade-dsvm-neutron-multinode-live-migration".
     irrelevant-files: *nova-base-irrelevant-files
     vars:
-      devstack_localrc:
-        <<: *uec_image_vars
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
@@ -658,7 +650,6 @@
         c-bak: false
         openstack-cli-server: true
       devstack_localrc:
-        <<: *uec_image_vars
         # Setup two non-cell0 cells (cell1 and cell2).
         NOVA_NUM_CELLS: 2
         # Disable resize to the same host so all resizes will move across
@@ -671,7 +662,6 @@
     group-vars:
       peers:
         devstack_localrc:
-          <<: *uec_image_vars
           NOVA_ALLOW_MOVE_TO_SAME_HOST: true
           LIVE_MIGRATION_AVAILABLE: false
       subnode:
@@ -700,8 +690,6 @@
       tox_envlist: all
       # Run compute API and only the test_server_basic_ops scenario tests.
       tempest_test_regex: ^tempest\.(scenario\.test_server_basic_ops|(api\.compute))
-      devstack_localrc:
-        <<: *uec_image_vars
 
 - job:
     name: nova-ceph-multistore
@@ -724,7 +712,6 @@
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
       devstack_localrc:
-        <<: *uec_image_vars
         GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
         DEVSTACK_PARALLEL: True
@@ -814,7 +801,6 @@
       devstack_services:
         openstack-cli-server: true
       devstack_localrc:
-        <<: *uec_image_vars
         # Enabeling the scope and new defaults for services implemented it.
         # NOTE (gmann): We need to keep keystone scope check disable as
         # services (except ironic) does not support the system scope and
@@ -835,7 +821,6 @@
       devstack_services:
         openstack-cli-server: true
       devstack_localrc:
-        <<: *uec_image_vars
         NOVA_ENFORCE_SCOPE: false
 
 - project:
@@ -856,9 +841,6 @@
         - ironic-tempest-ipa-wholedisk-bios-agent_ipmitool-tinyipa:
             voting: false
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - nova-ceph-multistore:
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-linuxbridge-tempest:
@@ -867,9 +849,6 @@
               # so that we only run it on changes to networking and libvirt/vif
               # code; we don't need to run this on all changes.
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - nova-live-migration
         - nova-live-migration-ceph
         - nova-lvm
@@ -889,42 +868,24 @@
            # common jobs will be enough along with nova functional
            # and unit tests.
            irrelevant-files: *policies-irrelevant-files
-           vars:
-             devstack_localrc:
-               <<: *uec_image_vars
         - tempest-integrated-compute-enforce-scope-new-defaults:
             irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-rbac-old-defaults:
             irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - cyborg-tempest:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
     gate:
       jobs:
         - nova-live-migration
@@ -942,105 +903,54 @@
               # so that we only run it on changes to networking and libvirt/vif
               # code; we don't need to run this on all changes.
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - tempest-integrated-compute-enforce-scope-new-defaults:
             irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-rbac-old-defaults:
             irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - nova-grenade-multinode:
            irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
     periodic-weekly:
       jobs:
         # Runs emulation feature functionality test less frequently due
         # to being the initial release and experimental in nature.
         - nova-emulation
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode-shard
-        - tempest-centos9-stream-fips:
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
+        - tempest-centos9-stream-fips
     experimental:
       jobs:
         - ironic-tempest-bfv:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode-shard:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - devstack-plugin-nfs-tempest-full:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - nova-osprofiler-redis
         - tempest-pg-full:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - nova-tempest-full-oslo.versionedobjects:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-tempest-v2-api:
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-ovs-tempest-dvr-ha-multinode-full:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - neutron-ovs-tempest-iptables_hybrid:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - os-vif-ovs:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - devstack-plugin-ceph-compute-local-ephemeral:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - devstack-tobiko-nova:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - tempest-centos9-stream-fips:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
         - nova-emulation
         - tempest-integrated-compute-centos-9-stream:
             irrelevant-files: *nova-base-irrelevant-files
-            vars:
-              devstack_localrc:
-                <<: *uec_image_vars
