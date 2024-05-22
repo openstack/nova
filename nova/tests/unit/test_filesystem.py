@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
 import os
 from unittest import mock
 
@@ -35,6 +36,29 @@ class TestFSCommon(test.NoDBTestCase):
         expected_path = os.path.join(filesystem.SYS, 'foo')
         m_open.assert_called_once_with(expected_path, mode='r')
 
+    def test_read_sys_retry(self):
+        open_mock = mock.mock_open()
+        with mock.patch('builtins.open', open_mock) as m_open:
+            m_open.side_effect = [
+                OSError(16, 'Device or resource busy'),
+                io.StringIO('bar'),
+            ]
+            self.assertEqual('bar', filesystem.read_sys('foo'))
+        expected_path = os.path.join(filesystem.SYS, 'foo')
+        m_open.assert_has_calls([
+            mock.call(expected_path, mode='r'),
+            mock.call(expected_path, mode='r'),
+        ])
+
+    def test_read_sys_retry_limit(self):
+        open_mock = mock.mock_open()
+        with mock.patch('builtins.open', open_mock) as m_open:
+            m_open.side_effect = (
+                [OSError(16, 'Device or resource busy')] *
+                (filesystem.RETRY_LIMIT + 1))
+            self.assertRaises(
+                exception.DeviceBusy, filesystem.read_sys, 'foo')
+
     def test_write_sys(self):
         open_mock = mock.mock_open()
         with mock.patch('builtins.open', open_mock) as m_open:
@@ -50,3 +74,26 @@ class TestFSCommon(test.NoDBTestCase):
                               filesystem.write_sys, 'foo', 'bar')
         expected_path = os.path.join(filesystem.SYS, 'foo')
         m_open.assert_called_once_with(expected_path, mode='w')
+
+    def test_write_sys_retry(self):
+        open_mock = mock.mock_open()
+        with mock.patch('builtins.open', open_mock) as m_open:
+            m_open.side_effect = [
+                OSError(16, 'Device or resource busy'),
+                io.StringIO(),
+            ]
+            self.assertIsNone(filesystem.write_sys('foo', 'bar'))
+        expected_path = os.path.join(filesystem.SYS, 'foo')
+        m_open.assert_has_calls([
+            mock.call(expected_path, mode='w'),
+            mock.call(expected_path, mode='w'),
+        ])
+
+    def test_write_sys_retry_limit(self):
+        open_mock = mock.mock_open()
+        with mock.patch('builtins.open', open_mock) as m_open:
+            m_open.side_effect = (
+                [OSError(16, 'Device or resource busy')] *
+                (filesystem.RETRY_LIMIT + 1))
+            self.assertRaises(
+                exception.DeviceBusy, filesystem.write_sys, 'foo', 'bar')
