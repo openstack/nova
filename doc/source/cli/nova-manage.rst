@@ -347,11 +347,11 @@ database connection information must be configured.
 
 .. option:: --before <date>
 
-    Delete data that was archived before ``<date>``. Accepts date strings
-    in the default format output by the ``date`` command, as well as
-    ``YYYY-MM-DD[HH:mm:ss]``. For example::
+    Delete archived rows that were deleted from Nova before ``<date>``.
+    Accepts date strings in the default format output by the ``date``
+    command, as well as ``YYYY-MM-DD[HH:mm:ss]``. For example::
 
-        # Purge shadow table rows older than a specific date
+        # Purge shadow table rows deleted before specified date
         nova-manage db purge --before 2015-10-21
         # or
         nova-manage db purge --before "Oct 21 2015"
