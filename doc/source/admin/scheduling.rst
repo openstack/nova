@@ -296,15 +296,6 @@ as candidates during scheduling. A server create request from another tenant
 ``Y`` will result in only ``HostA`` being a scheduling candidate since
 ``HostA`` is not part of the tenant-isolated aggregate.
 
-.. note::
-
-    There is a `known limitation
-    <https://bugs.launchpad.net/nova/+bug/1802111>`_ with the number of tenants
-    that can be isolated per aggregate using this filter. This limitation does
-    not exist, however, for the :ref:`tenant-isolation-with-placement`
-    filtering capability added in the 18.0.0 Rocky release.
-
-
 .. _AggregateNumInstancesFilter:
 
 ``AggregateNumInstancesFilter``

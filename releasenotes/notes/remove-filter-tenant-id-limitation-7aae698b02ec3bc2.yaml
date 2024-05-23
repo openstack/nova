@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    This release removes the limit of the number of tenants that can
+    be specified for an aggregate and honored by the
+    `AggregateMultitenancyIsolation` filter. It now respects multiple
+    keys prefixed by `filter_tenant_id` like the request filter
+    implementation.  You can use `filter_tenant_id` as a prefix to set
+    an infinite number of properties for tenant IDs on the aggregate.
+    This change has been implemented in a manner that preserves
+    backward compatibility. Existing configurations using
+    `filter_tenant_id` will continue to function as expected.
