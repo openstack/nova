@@ -77,6 +77,9 @@
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
+      # NOTE(elod.illes): gate job is flaky due to intermittently failing job
+      # test_live_block_migration_with_attached_volume, let's exclude it for now.
+      tempest_exclude_regex: (test_live_block_migration_with_attached_volume)
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
