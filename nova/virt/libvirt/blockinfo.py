@@ -69,6 +69,7 @@ variables / types used
 
 """
 
+import copy
 import itertools
 import operator
 
@@ -444,12 +445,13 @@ def get_root_info(instance, virt_type, image_meta, root_bdm,
                 'dev': block_device.strip_dev(root_device_name),
                 'boot_index': '1'}
 
+    root_bdm_copy = root_bdm
     if not get_device_name(root_bdm) and root_device_name:
-        root_bdm = root_bdm.copy()
-        root_bdm['device_name'] = root_device_name
+        root_bdm_copy = copy.deepcopy(root_bdm)
+        root_bdm_copy['device_name'] = root_device_name
 
     return get_info_from_bdm(
-        instance, virt_type, image_meta, root_bdm, {}, disk_bus,
+        instance, virt_type, image_meta, root_bdm_copy, {}, disk_bus,
     )
 
 
