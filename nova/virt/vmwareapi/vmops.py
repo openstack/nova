@@ -2055,9 +2055,14 @@ class VMwareVMOps(object):
 
             LOG.debug("Soft shutdown instance, timeout: %d",
                      timeout, instance=instance)
-            self._session._call_method(self._session.vim,
-                                       "ShutdownGuest",
-                                       vm_ref)
+            try:
+                self._session._call_method(self._session.vim,
+                                           "ShutdownGuest",
+                                           vm_ref)
+            except vexc.ToolsUnavailableException:
+                LOG.info("Failed to _clean_shutdown the instance",
+                         instance=instance)
+                return False
 
             while timeout > 0:
                 wait_time = min(retry_interval, timeout)
