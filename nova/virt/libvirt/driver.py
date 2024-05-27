@@ -243,6 +243,14 @@ VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 MIN_MDEV_LIVEMIG_LIBVIRT_VERSION = (8, 6, 0)
 MIN_MDEV_LIVEMIG_QEMU_VERSION = (8, 1, 0)
 
+# Minimum version supporting persistent mdevs.
+# https://libvirt.org/drvnodedev.html#mediated-devices-mdevs
+MIN_LIBVIRT_PERSISTENT_MDEV = (7, 3, 0)
+
+# Autostart appears to be available starting in 7.8.0
+# https://github.com/libvirt/libvirt/commit/c6607a25b93bd6b0188405785d6608fdf71c8e0a
+MIN_LIBVIRT_NODEDEV_AUTOSTART = (7, 8, 0)
+
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
 # Maxphysaddr minimal support version.
@@ -850,9 +858,17 @@ class LibvirtDriver(driver.ComputeDriver):
         # wrongly modified.
         self.cpu_api.power_down_all_dedicated_cpus()
 
-        # TODO(sbauza): Remove this code once mediated devices are persisted
-        # across reboots.
-        self._recreate_assigned_mediated_devices()
+        if not self._host.has_min_version(MIN_LIBVIRT_PERSISTENT_MDEV):
+            # TODO(sbauza): Remove this code once mediated devices are
+            # persisted across reboots.
+            self._recreate_assigned_mediated_devices()
+        else:
+            # NOTE(melwitt): We shouldn't need to do this with libvirt 7.8.0
+            # and newer because we're setting autostart=True on the devices --
+            # but if that fails for whatever reason and any devices become
+            # inactive, we can start them here. With libvirt version < 7.8.0,
+            # this is needed because autostart is not available.
+            self._start_inactive_mediated_devices()
 
         self._check_cpu_compatibility()
 
@@ -1100,6 +1116,25 @@ class LibvirtDriver(driver.ComputeDriver):
                 msg % CONF.libvirt.swtpm_group)
 
         LOG.debug('Enabling emulated TPM support')
+
+    def _start_inactive_mediated_devices(self):
+        # Get a list of inactive mdevs so we can start them and make them
+        # active. We need to start inactive mdevs even if they are not
+        # currently assigned to instances because attempting to use an inactive
+        # mdev when booting a new instance, for example, will raise an error:
+        # libvirt.libvirtError: device not found: mediated device '<uuid>' not
+        # found.
+        # An inactive mdev is an mdev that is defined but not created.
+        flags = (
+            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_MDEV |
+            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_INACTIVE)
+        inactive_mdevs = self._host.list_all_devices(flags)
+        if inactive_mdevs:
+            names = [mdev.name() for mdev in inactive_mdevs]
+            LOG.info(f'Found inactive mdevs: {names}')
+        for mdev in inactive_mdevs:
+            LOG.info(f'Starting inactive mdev: {mdev.name()}')
+            self._host.device_start(mdev)
 
     @staticmethod
     def _is_existing_mdev(uuid):
@@ -4061,6 +4096,19 @@ class LibvirtDriver(driver.ComputeDriver):
                                             instance,
                                             instance.image_meta,
                                             block_device_info)
+        # NOTE(melwitt): It's possible that we lost track of the allocated
+        # mdevs of an instance if, for example, a libvirt error was encountered
+        # after the domain XML was undefined in a previous hard reboot.
+        # Try to get existing mdevs that are created but not assigned so they
+        # will be added into the generated domain XML.
+        if instance.flavor.extra_specs.get('resources:VGPU') and not mdevs:
+            LOG.info(
+                'The instance flavor requests VGPU but no mdevs are assigned '
+                'to the instance. Attempting to re-assign mdevs.',
+                instance=instance)
+            allocs = self.virtapi.reportclient.get_allocations_for_consumer(
+                    context, instance.uuid)
+            mdevs = self._allocate_mdevs(allocs)
         # NOTE(vish): This could generate the wrong device_format if we are
         #             using the raw backend and the images don't exist yet.
         #             The create_images_and_backing below doesn't properly
@@ -4112,10 +4160,32 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(efried): The instance should already have a vtpm_secret_uuid
         # registered if appropriate.
-        self._create_guest_with_network(
-            context, xml, instance, network_info, block_device_info,
-            vifs_already_plugged=vifs_already_plugged,
-            external_events=external_events)
+        try:
+            self._create_guest_with_network(
+                context, xml, instance, network_info, block_device_info,
+                vifs_already_plugged=vifs_already_plugged,
+                external_events=external_events)
+        except libvirt.libvirtError as e:
+            errcode = e.get_error_code()
+            errmsg = e.get_error_message()
+            # NOTE(melwitt): If we are reassigning mdevs, we might hit the
+            # following error on the first attempt to create the guest:
+            #   error getting device from group <group>: Input/output error
+            #   Verify all devices in group <group> are bound to vfio-<bus> or
+            #   pci-stub and not already in use
+            # Retry the guest creation once in this case as it usually succeeds
+            # on the second try.
+            if (mdevs and errcode == libvirt.VIR_ERR_INTERNAL_ERROR and
+                    'error getting device from group' in errmsg):
+                LOG.info(
+                    f'Encountered error {errmsg}, reattempting creation of '
+                    'the guest.', instance=instance)
+                self._create_guest_with_network(
+                    context, xml, instance, network_info, block_device_info,
+                    vifs_already_plugged=vifs_already_plugged,
+                    external_events=external_events)
+            else:
+                raise
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -8746,6 +8816,33 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.info('Available mdevs at: %s.', available_mdevs)
         return available_mdevs
 
+    def _create_mdev(self, dev_name, mdev_type, uuid=None):
+        if uuid is None:
+            uuid = uuidutils.generate_uuid()
+        conf = vconfig.LibvirtConfigNodeDevice()
+        conf.parent = dev_name
+        conf.mdev_information = (
+            vconfig.LibvirtConfigNodeDeviceMdevInformation())
+        conf.mdev_information.type = mdev_type
+        conf.mdev_information.uuid = uuid
+        # Create the transient device.
+        self._host.device_create(conf)
+        # Define it to make it persistent.
+        mdev_dev = self._host.device_define(conf)
+        if self._host.has_min_version(MIN_LIBVIRT_NODEDEV_AUTOSTART):
+            # Set it to automatically start when the compute host boots or the
+            # parent device becomes available.
+            # NOTE(melwitt): Make this not fatal because we can try to manually
+            # start mdevs in init_host() if they didn't start automatically
+            # after a host reboot.
+            try:
+                self._host.device_set_autostart(mdev_dev, autostart=True)
+            except Exception as e:
+                LOG.info(
+                    'Failed to set autostart to True for mdev '
+                    f'{mdev_dev.name()} with UUID {uuid}: {str(e)}.')
+        return uuid
+
     def _create_new_mediated_device(self, parent, uuid=None):
         """Find a physical device that can support a new mediated device and
         create it.
@@ -8775,8 +8872,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 # We need the PCI address, not the libvirt name
                 # The libvirt name is like 'pci_0000_84_00_0'
                 pci_addr = "{}:{}:{}.{}".format(*dev_name[4:].split('_'))
-                chosen_mdev = nova.privsep.libvirt.create_mdev(
-                    pci_addr, dev_supported_type, uuid=uuid)
+                if not self._host.has_min_version(MIN_LIBVIRT_PERSISTENT_MDEV):
+                    chosen_mdev = nova.privsep.libvirt.create_mdev(
+                        pci_addr, dev_supported_type, uuid=uuid)
+                else:
+                    chosen_mdev = self._create_mdev(
+                        dev_name, dev_supported_type, uuid=uuid)
                 LOG.info('Created mdev: %s on pGPU: %s.',
                          chosen_mdev, pci_addr)
                 return chosen_mdev

@@ -11,37 +11,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from oslo_utils import uuidutils
-
-
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import test_vgpu
-from nova.virt.libvirt import utils as libvirt_utils
 
 
 class VGPUTestsLibvirt7_7(test_vgpu.VGPUTestBase):
 
-    def _create_mdev(self, physical_device, mdev_type, uuid=None):
-        # We need to fake the newly created sysfs object by adding a new
-        # FakeMdevDevice in the existing persisted Connection object so
-        # when asking to get the existing mdevs, we would see it.
-        if not uuid:
-            uuid = uuidutils.generate_uuid()
-        mdev_name = libvirt_utils.mdev_uuid2name(uuid)
-        libvirt_parent = self.pci2libvirt_address(physical_device)
-
-        # Libvirt 7.7 now creates mdevs with a parent_addr suffix.
-        new_mdev_name = '_'.join([mdev_name, libvirt_parent])
-
-        # Here, we get the right compute thanks by the self.current_host that
-        # was modified just before
-        connection = self.computes[
-            self._current_host].driver._host.get_connection()
-        connection.mdev_info.devices.update(
-            {mdev_name: fakelibvirt.FakeMdevDevice(dev_name=new_mdev_name,
-                                                   type_id=mdev_type,
-                                                   parent=libvirt_parent)})
-        return uuid
+    FAKE_LIBVIRT_VERSION = 7007000
 
     def setUp(self):
         super(VGPUTestsLibvirt7_7, self).setUp()

@@ -188,6 +188,8 @@ VIR_CONNECT_LIST_DOMAINS_INACTIVE = 2
 VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV = 2
 VIR_CONNECT_LIST_NODE_DEVICES_CAP_NET = 1 << 4
 VIR_CONNECT_LIST_NODE_DEVICES_CAP_VDPA = 1 << 17
+VIR_CONNECT_LIST_NODE_DEVICES_CAP_MDEV = 1 << 5
+VIR_CONNECT_LIST_NODE_DEVICES_INACTIVE = 1 << 8
 
 # secret type
 VIR_SECRET_USAGE_TYPE_NONE = 0
@@ -199,6 +201,12 @@ VIR_SECRET_USAGE_TYPE_ISCSI = 3
 VIR_DOMAIN_METADATA_DESCRIPTION = 0
 VIR_DOMAIN_METADATA_TITLE = 1
 VIR_DOMAIN_METADATA_ELEMENT = 2
+
+# virNodeDeviceCreateXML flags
+VIR_NODE_DEVICE_CREATE_XML_VALIDATE = 4
+
+# virNodeDeviceDefineXML flags
+VIR_NODE_DEVICE_DEFINE_XML_VALIDATE = 5
 
 # Libvirt version to match MIN_LIBVIRT_VERSION in driver.py
 FAKE_LIBVIRT_VERSION = versionutils.convert_version_to_int(
@@ -2137,6 +2145,12 @@ class Connection(object):
                     "no nodedev with matching name %s" % name,
                     error_code=VIR_ERR_NO_NODE_DEVICE,
                     error_domain=VIR_FROM_NODEDEV)
+
+    def nodeDeviceCreateXML(self, xml, flags):
+        pass
+
+    def nodeDeviceDefineXML(self, xml, flags):
+        pass
 
     def listDevices(self, cap, flags):
         if cap == 'pci':

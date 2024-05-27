@@ -1254,6 +1254,65 @@ class Host(object):
         """
         return self.get_connection().nodeDeviceLookupByName(name)
 
+    def device_create(self, conf, validate=False):
+        """Create a node device from specified device XML
+
+        This creates the device as transient.
+
+        :param conf: A LibvirtConfigObject of the device to create
+        :param validate: whether to validate the XML document against schema
+
+        :returns: a virNodeDevice instance if successful, else None
+        """
+        flag = libvirt.VIR_NODE_DEVICE_CREATE_XML_VALIDATE
+        flags = validate and flag or 0
+        device_xml = conf.to_xml()
+        return self.get_connection().nodeDeviceCreateXML(device_xml, flags)
+
+    def device_define(self, conf, validate=False):
+        """Define a node device from specified device XML
+
+        This defines the device to make it persistent.
+
+        :param conf: A LibvirtConfigObject of the device to create
+        :param validate: whether to validate the XML document against schema
+
+        :returns: a virNodeDevice instance if successful, else None
+        """
+        flag = libvirt.VIR_NODE_DEVICE_DEFINE_XML_VALIDATE
+        flags = validate and flag or 0
+        device_xml = conf.to_xml()
+        return self.get_connection().nodeDeviceDefineXML(device_xml, flags)
+
+    def device_start(self, dev):
+        """Start a defined node device
+
+        :param dev: The virNodeDevice instance to start
+        """
+        # extra flags; not used yet, so callers should always pass 0
+        #   https://libvirt.org/html/libvirt-libvirt-nodedev.html
+        flags = 0
+        result = dev.create(flags)
+        if result == -1:
+            msg = f'Failed to start node device {dev.name()}'
+            raise exception.InternalError(_(msg))
+
+    def device_set_autostart(self, dev, autostart=True):
+        """Set a node device to automatically start when the host boots
+
+        This can set whether the node device should automatically start when
+        the host machine boots or when the parent device becomes available.
+
+        :param dev: The virNodeDevice instance to set the autostart value
+        :param autostart: Whether to set the device to automatically start
+        """
+        result = dev.setAutostart(autostart=autostart)
+        if result == -1:
+            msg = (
+                f'Failed to set autostart to {autostart} for node device '
+                f'{dev.name()}')
+            raise exception.InternalError(_(msg))
+
     def _get_pcinet_info(
         self,
         dev: 'libvirt.virNodeDevice',
@@ -1611,7 +1670,7 @@ class Host(object):
         """Lookup devices.
 
         :param flags: a bitmask of flags to filter the returned devices.
-        :returns: a list of virNodeDevice xml strings.
+        :returns: a list of virNodeDevice instances.
         """
         try:
             return self.get_connection().listAllDevices(flags) or []

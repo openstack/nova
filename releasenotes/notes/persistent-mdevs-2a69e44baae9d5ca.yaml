@@ -1,0 +1,11 @@
+features:
+  - |
+    With the libvirt driver and libvirt version 7.3.0 or newer, mediated
+    devices for vGPUs are now persisted across reboots of a compute host.
+
+    .. note::
+
+       After a compute host reboots, the virtual functions for the GPU must be
+       enabled again before instances will be able to use their vGPUs.
+       Please see https://docs.openstack.org/nova/latest/admin/virtual-gpu.html
+       for more information.

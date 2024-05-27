@@ -31,6 +31,61 @@ To enable virtual GPUs, follow the steps below:
 Enable GPU types (Compute)
 --------------------------
 
+#. Enable virtual functions on NVIDIA GPUs.
+
+   .. code-block:: bash
+
+      $ /usr/lib/nvidia/sriov-manage -e slot:bus:domain.function
+
+   For example, to enable the virtual functions for the GPU with
+   slot ``0000``, bus ``41``, domain ``00``, and function ``0``:
+
+   .. code-block:: bash
+
+      $ /usr/lib/nvidia/sriov-manage -e 0000:41:00.0
+
+   You may want to automate this process as it has to be done on each boot of
+   the host.
+
+   Given an example ``systemd`` template unit file named
+   ``nvidia-sriov-manage@.service``:
+
+   .. code-block:: text
+
+      [Unit]
+      After = nvidia-vgpu-mgr.service
+      After = nvidia-vgpud.service
+      Description = Enable Nvidia GPU virtual functions
+
+      [Service]
+      Type = oneshot
+      User = root
+      Group = root
+      ExecStart = /usr/lib/nvidia/sriov-manage -e %i
+      # Give a reasonable amount of time for the server to start up/shut down
+      TimeoutSec = 120
+      # This creates a specific slice which all services will operate from
+      #  The accounting options give us the ability to see resource usage
+      #  through the `systemd-cgtop` command.
+      Slice = system.slice
+      # Set Accounting
+      CPUAccounting = True
+      BlockIOAccounting = True
+      MemoryAccounting = True
+      TasksAccounting = True
+      RemainAfterExit = True
+      ExecStartPre = /usr/bin/sleep 30
+
+      [Install]
+      WantedBy = multi-user.target
+
+   To enable the virtual functions for the GPU with slot ``0000``, bus ``41``,
+   domain ``00``, and function ``0``:
+
+   .. code-block:: bash
+
+      $ systemctl enable nvidia-sriov-manage@0000:41:00.0.service
+
 #. Specify which specific GPU type(s) the instances would get.
 
    Edit :oslo.config:option:`devices.enabled_mdev_types`:

@@ -3367,6 +3367,16 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
         self.vdpa_capability = None
         self.vpd_capability = None
 
+    def format_dom(self):
+        dev = super().format_dom()
+        if self.name:
+            dev.append(self._text_node('name', str(self.name)))
+        if self.parent:
+            dev.append(self._text_node('parent', str(self.parent)))
+        if self.mdev_information:
+            dev.append(self.mdev_information.format_dom())
+        return dev
+
     def parse_dom(self, xmldoc):
         super(LibvirtConfigNodeDevice, self).parse_dom(xmldoc)
 
@@ -3519,6 +3529,21 @@ class LibvirtConfigNodeDeviceMdevInformation(LibvirtConfigObject):
         self.type = None
         self.iommu_group = None
         self.uuid = None
+
+    def format_dom(self):
+        dev = super().format_dom()
+        dev.set('type', 'mdev')
+        if self.type:
+            mdev_type = self._new_node('type')
+            mdev_type.set('id', self.type)
+            dev.append(mdev_type)
+        if self.uuid:
+            dev.append(self._text_node('uuid', self.uuid))
+        if self.iommu_group:
+            iommu_group = self._new_node('iommuGroup')
+            iommu_group.set('number', str(self.iommu_group))
+            dev.append(iommu_group)
+        return dev
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigNodeDeviceMdevInformation,

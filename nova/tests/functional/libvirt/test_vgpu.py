@@ -19,6 +19,7 @@ import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
+from oslo_utils import versionutils
 
 from nova.compute import instance_actions
 import nova.conf
@@ -55,9 +56,16 @@ class VGPUTestBase(base.ServersTestBase):
             'used': 44,
             'free': 84,
         }
-        self.useFixture(fixtures.MockPatch(
-            'nova.privsep.libvirt.create_mdev',
-            side_effect=self._create_mdev))
+        # Persistent mdevs in libvirt >= 7.3.0
+        if self.FAKE_LIBVIRT_VERSION < versionutils.convert_version_to_int(
+                libvirt_driver.MIN_LIBVIRT_PERSISTENT_MDEV):
+            create_mdev_str = 'nova.privsep.libvirt.create_mdev'
+        else:
+            create_mdev_str = (
+                'nova.virt.libvirt.driver.LibvirtDriver._create_mdev')
+            self._create_mdev = self._create_mdev_7_3
+        self.useFixture(
+            fixtures.MockPatch(create_mdev_str, side_effect=self._create_mdev))
 
         # for the sake of resizing, we need to patch the two methods below
         self.useFixture(fixtures.MockPatch(
@@ -112,6 +120,23 @@ class VGPUTestBase(base.ServersTestBase):
             {mdev_name: fakelibvirt.FakeMdevDevice(dev_name=mdev_name,
                                                    type_id=mdev_type,
                                                    parent=libvirt_parent)})
+        return uuid
+
+    def _create_mdev_7_3(self, dev_name, mdev_type, uuid=None):
+        # We need to fake the newly created sysfs object by adding a new
+        # FakeMdevDevice in the existing persisted Connection object so
+        # when asking to get the existing mdevs, we would see it.
+        if not uuid:
+            uuid = uuidutils.generate_uuid()
+        mdev_name = libvirt_utils.mdev_uuid2name(uuid)
+        # Here, we get the right compute thanks by the self.current_host that
+        # was modified just before
+        connection = self.computes[
+            self._current_host].driver._host.get_connection()
+        connection.mdev_info.devices.update(
+            {mdev_name: fakelibvirt.FakeMdevDevice(dev_name=mdev_name,
+                                                   type_id=mdev_type,
+                                                   parent=dev_name)})
         return uuid
 
     def start_compute_with_vgpu(self, hostname, pci_info=None):
@@ -829,3 +854,10 @@ class DifferentMdevClassesTests(VGPUTestBase):
                                expected_rc='CUSTOM_NOTVGPU')
         self.assert_mdev_usage(self.compute2, expected_amount=1,
                                expected_rc='CUSTOM_NOTVGPU')
+
+
+class VGPUTestsLibvirt7_3(VGPUTests):
+
+    # Minimum version supporting persistent mdevs is 7.3.0.
+    # https://libvirt.org/drvnodedev.html#mediated-devices-mdevs
+    FAKE_LIBVIRT_VERSION = 7003000
