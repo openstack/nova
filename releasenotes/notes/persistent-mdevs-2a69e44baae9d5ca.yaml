@@ -5,7 +5,8 @@ features:
 
     .. note::
 
-       After a compute host reboots, the virtual functions for the GPU must be
-       enabled again before instances will be able to use their vGPUs.
+       After a compute host reboots, if you have a GPU that supports SR-IOV,
+       then the virtual functions for the GPU must be enabled again before
+       instances will be able to use their vGPUs.
        Please see https://docs.openstack.org/nova/latest/admin/virtual-gpu.html
        for more information.

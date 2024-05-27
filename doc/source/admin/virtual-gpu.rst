@@ -31,7 +31,7 @@ To enable virtual GPUs, follow the steps below:
 Enable GPU types (Compute)
 --------------------------
 
-#. Enable virtual functions on NVIDIA GPUs.
+#. For NVIDIA GPUs that support SR-IOV, enable the virtual functions.
 
    .. code-block:: bash
 
@@ -85,6 +85,11 @@ Enable GPU types (Compute)
    .. code-block:: bash
 
       $ systemctl enable nvidia-sriov-manage@0000:41:00.0.service
+
+   .. note::
+
+      This is only an example and it is important to consult the relevant
+      vendor documentation for the specific devices that you have.
 
 #. Specify which specific GPU type(s) the instances would get.
 
