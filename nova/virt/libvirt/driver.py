@@ -1090,10 +1090,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(stephenfin): This checks using the PATH of the user running
         # nova-compute rather than the libvirtd service, meaning it's an
         # imperfect check but the best we can do
-        if not any(shutil.which(cmd) for cmd in ('swtpm_setup', 'swtpm')):
+        if not all(shutil.which(cmd) for cmd in ('swtpm_setup', 'swtpm')):
             msg = _(
-                "vTPM support is configured but the 'swtpm' and "
-                "'swtpm_setup' binaries could not be found on PATH.")
+                "vTPM support is configured but one (or all) of the 'swtpm' "
+                "and 'swtpm_setup' binaries could not be found on PATH.")
             raise exception.InvalidConfiguration(msg)
 
         # The user and group must be valid on this host for cold migration and
