@@ -2258,6 +2258,7 @@ def _numa_cells_support_network_metadata(
         required_tunnel = network_metadata.tunneled
 
     if required_physnets:
+        removed_physnets = False
         # identify requested physnets that have an affinity to any of our
         # chosen host NUMA cells
         for host_cell in chosen_host_cells:
@@ -2268,6 +2269,12 @@ def _numa_cells_support_network_metadata(
             # drop said physnet(s) from the list we're searching for
             required_physnets -= required_physnets.intersection(
                 host_cell.network_metadata.physnets)
+            removed_physnets = True
+
+        if required_physnets and removed_physnets:
+            LOG.debug('Not all requested physnets have affinity to one '
+                      'of the chosen host NUMA cells. Remaining physnets '
+                      'are: %(physnets)s.', {'physnets': required_physnets})
 
         # however, if we still require some level of NUMA affinity, we need
         # to make sure one of the other NUMA cells isn't providing that; note
@@ -2279,8 +2286,15 @@ def _numa_cells_support_network_metadata(
 
             # if one of these cells provides affinity for one or more physnets,
             # we need to fail because we should be using that node and are not
-            if required_physnets.intersection(
-                    host_cell.network_metadata.physnets):
+            required_physnets_outside = required_physnets.intersection(
+                host_cell.network_metadata.physnets)
+
+            if required_physnets_outside:
+                LOG.debug('One or more requested physnets require affinity to '
+                          'a NUMA cell outside of the chosen host cells. This '
+                          'host cell cannot satisfy network requests for '
+                          'these physnets: %(physnets)s',
+                          {'physnets': required_physnets_outside})
                 return False
 
     if required_tunnel:
@@ -2293,6 +2307,9 @@ def _numa_cells_support_network_metadata(
             if host_cell.network_metadata.tunneled:
                 return True
 
+        LOG.debug('Tunneled networks have no affinity to any of the chosen '
+                  'host NUMA cells.')
+
         # however, if we still require some level of NUMA affinity, we need to
         # make sure one of the other NUMA cells isn't providing that; note
         # that, as with physnets, NUMA affinity might not be defined for
@@ -2302,6 +2319,12 @@ def _numa_cells_support_network_metadata(
                 continue
 
             if host_cell.network_metadata.tunneled:
+                LOG.debug('The host declares NUMA affinity for tunneled '
+                          'networks. The current instance requests a '
+                          'tunneled network but this host cell is out of '
+                          'the set declared to be local to the tunnel '
+                          'network endpoint. As such, this host cell cannot '
+                          'support the requested tunneled network.')
                 return False
 
     return True
