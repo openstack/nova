@@ -46,10 +46,10 @@ class HANABingPackWeigherTestCase(test.NoDBTestCase):
 
     def _get_all_hosts(self):
         host_values = [
-            ('host1', 'node1', {'stats': {'memory_mb_max_unit': 3072}}),
-            ('host2', 'node2', {'stats': {'memory_mb_max_unit': 8192}}),
-            ('host3', 'node3', {'stats': {'memory_mb_max_unit': 1024}}),
-            ('host4', 'node4', {'stats': {'memory_mb_max_unit': 512}})
+            ('host1', 'node1', {'stats': {'memory_mb_max_unit': '3072'}}),
+            ('host2', 'node2', {'stats': {'memory_mb_max_unit': '8192'}}),
+            ('host3', 'node3', {'stats': {'memory_mb_max_unit': '1024'}}),
+            ('host4', 'node4', {'stats': {'memory_mb_max_unit': '512'}})
         ]
         return [fakes.FakeHostState(host, node, values)
                 for host, node, values in host_values]

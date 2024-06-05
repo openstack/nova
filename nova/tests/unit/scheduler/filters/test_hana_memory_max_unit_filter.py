@@ -30,7 +30,7 @@ class TestHANAMemoryMaxUnitFilter(test.NoDBTestCase):
 
     def test_passes(self):
         host = fakes.FakeHostState('host1', 'compute', {
-            'stats': {'memory_mb_max_unit': 2048}
+            'stats': {'memory_mb_max_unit': '2048'}
         })
         extra_specs = {'trait:CUSTOM_HANA_EXCLUSIVE_HOST': 'required'}
 
@@ -45,7 +45,7 @@ class TestHANAMemoryMaxUnitFilter(test.NoDBTestCase):
 
     def test_not_pass_too_big_flavor(self):
         host = fakes.FakeHostState('host1', 'compute', {
-            'stats': {'memory_mb_max_unit': 2048}
+            'stats': {'memory_mb_max_unit': '2048'}
         })
         extra_specs = {'trait:CUSTOM_HANA_EXCLUSIVE_HOST': 'required'}
 
@@ -62,7 +62,7 @@ class TestHANAMemoryMaxUnitFilter(test.NoDBTestCase):
               {'trait:CUSTOM_HANA_EXCLUSIVE_HOST': 'forbidden'})
     def test_passes_non_hana(self, extra_specs):
         host = fakes.FakeHostState('host1', 'compute', {
-            'stats': {'memory_mb_max_unit': 2048}
+            'stats': {'memory_mb_max_unit': '2048'}
         })
 
         flavor = objects.Flavor(memory_mb=3072,

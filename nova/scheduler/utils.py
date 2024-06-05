@@ -1522,4 +1522,7 @@ def get_memory_mb_max_unit(host_state):
 
     Returns None if the stat is missing
     """
-    return host_state.stats.get("memory_mb_max_unit")
+    try:
+        return int(host_state.stats.get("memory_mb_max_unit"))
+    except (TypeError, ValueError):
+        return None
