@@ -82,11 +82,11 @@ class TestResizeVcpuMaxUnitFilter(test.NoDBTestCase):
     def test_filters_hosts(self):
         hosts = [
             fakes.FakeHostState('host1', 'compute',
-                                {'stats': {'vcpus_max_unit': 2}}),
+                                {'stats': {'vcpus_max_unit': '2'}}),
             fakes.FakeHostState('host2', 'compute',
-                                {'stats': {'vcpus_max_unit': 4}}),
+                                {'stats': {'vcpus_max_unit': '4'}}),
             fakes.FakeHostState('host3', 'compute',
-                                {'stats': {'vcpus_max_unit': 6}}),
+                                {'stats': {'vcpus_max_unit': '6'}}),
             fakes.FakeHostState('host4', 'compute',
                                 {'stats': {}})
         ]

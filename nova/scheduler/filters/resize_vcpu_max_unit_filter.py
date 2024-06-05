@@ -60,7 +60,10 @@ class ResizeVcpuMaxUnitFilter(filters.BaseHostFilter):
 
     @staticmethod
     def _host_passes(host_state, instance):
-        vcpus_max = host_state.stats.get('vcpus_max_unit')
+        try:
+            vcpus_max = int(host_state.stats.get('vcpus_max_unit'))
+        except (TypeError, ValueError):
+            return False
 
         if not vcpus_max:
             return False

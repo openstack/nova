@@ -422,7 +422,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
             vcpus = resources['vcpus']
             if vcpus_max_unit < vcpus:
-                vcpus_max_unit = vcpus_max_unit
+                vcpus_max_unit = vcpus
 
         return {
             "memory_mb_max_unit": memory_mb_max_unit,
