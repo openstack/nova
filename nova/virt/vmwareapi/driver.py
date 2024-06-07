@@ -424,8 +424,7 @@ class VMwareVCDriver(driver.ComputeDriver):
             if nodename == self._nodename:
                 continue
             memory_mb_free = (resources['memory_mb'] -
-                              resources['memory_mb_used'] -
-                              resources['memory_mb_reserved'])
+                              resources['memory_mb_used'])
             if memory_mb_max_unit < memory_mb_free:
                 memory_mb_max_unit = memory_mb_free
 

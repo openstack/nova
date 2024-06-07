@@ -4118,15 +4118,16 @@ class VMwareVMOpsTestCase(test.TestCase):
                 'name': 'host2',
                 'available': True,
                 'memory_mb': 4096,
-                'memory_mb_used': 1024,
-                'memory_mb_reserved': 512,
+                'memory_mb_used': 1536
             },
             'host-2': {
                 'name': 'host2',
                 'available': True,
                 'memory_mb': 4096,
-                'memory_mb_used': 1024,
-                'memory_mb_reserved': 1024,
+                'memory_mb_used': 2048,
+                # memory_mb_reserved should not be used
+                # when determining the memory_mb_free
+                'memory_mb_reserved': 2048,
             },
             # host-3 is the fullest one but never gets
             # elected because it has available: False
@@ -4134,8 +4135,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                 'name': 'host3',
                 'available': False,
                 'memory_mb': 4096,
-                'memory_mb_used': 1560,
-                'memory_mb_reserved': 1024,
+                'memory_mb_used': 2560
             }
         }
 
@@ -4153,15 +4153,13 @@ class VMwareVMOpsTestCase(test.TestCase):
                 'name': 'host1',
                 'available': True,
                 'memory_mb': 4096,
-                'memory_mb_used': 1024,
-                'memory_mb_reserved': 1024,
+                'memory_mb_used': 1024
             },
             'host-2': {
                 'name': 'host2',
                 'available': True,
                 'memory_mb': 4096,
-                'memory_mb_used': 1024,
-                'memory_mb_reserved': 1024,
+                'memory_mb_used': 1024
             }
         }
         # the hosts have the same fill-grade, so the order they

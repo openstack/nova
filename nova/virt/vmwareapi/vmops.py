@@ -1445,8 +1445,7 @@ class VMwareVMOps(object):
             if not info['available']:
                 continue
             memory_mb_free = (info['memory_mb'] -
-                              info['memory_mb_used'] -
-                              info['memory_mb_reserved'])
+                              info['memory_mb_used'])
             if memory_mb_free < instance.memory_mb:
                 hosts_full.append((info['name'], memory_mb_free))
             else:
