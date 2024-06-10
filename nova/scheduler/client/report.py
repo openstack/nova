@@ -497,25 +497,39 @@ class SchedulerReportClient(object):
         if not agg_uuids:
             return []
 
-        aggs = ','.join(agg_uuids)
-        url = "/resource_providers?member_of=in:%s&required=%s" % (
-            aggs, os_traits.MISC_SHARES_VIA_AGGREGATE)
-        resp = self.get(url, version='1.18',
-                        global_request_id=context.global_id)
-        if resp.status_code == 200:
-            return resp.json()['resource_providers']
+        maxuuids = CONF.compute.sharing_providers_max_uuids_per_request
 
-        msg = _("[%(placement_req_id)s] Failed to retrieve sharing resource "
-                "providers associated with the following aggregates from "
-                "placement API: %(aggs)s. Got %(status_code)d: %(err_text)s.")
-        args = {
-            'aggs': aggs,
-            'status_code': resp.status_code,
-            'err_text': resp.text,
-            'placement_req_id': get_placement_request_id(resp),
-        }
-        LOG.error(msg, args)
-        raise exception.ResourceProviderRetrievalFailed(message=msg % args)
+        agg_uuids = list(agg_uuids)
+        resource_providers = {}
+        for i in range(0, len(agg_uuids), maxuuids):
+            aggs = ','.join(agg_uuids[i:i + maxuuids])
+            url = "/resource_providers?member_of=in:%s&required=%s" % (
+                aggs, os_traits.MISC_SHARES_VIA_AGGREGATE)
+            resp = self.get(url, version='1.18',
+                            global_request_id=context.global_id)
+            if resp.status_code == 200:
+                # We want to ensure that an RP on different aggregate
+                # will not be duplicated.
+                for rp in resp.json()['resource_providers']:
+                    if not rp['uuid'] in resource_providers:
+                        resource_providers[rp['uuid']] = rp
+            else:
+                msg = _("[%(placement_req_id)s] %(iquery)s/%(isize)s Failed "
+                        "to retrieve sharing resource providers associated "
+                        "with the following aggregates from placement API: "
+                        "%(aggs)s. Got %(status_code)d: %(err_text)s.")
+                args = {
+                    'aggs': aggs,
+                    'status_code': resp.status_code,
+                    'err_text': resp.text,
+                    'placement_req_id': get_placement_request_id(resp),
+                    'iquery': i + 1,
+                    'isize': len(agg_uuids)
+                }
+                LOG.error(msg, args)
+                raise exception.ResourceProviderRetrievalFailed(
+                    message=msg % args)
+        return list(resource_providers.values())
 
     def get_providers_in_tree(self, context, uuid):
         """Queries the placement API for a list of the resource providers in
