@@ -29,6 +29,9 @@ class TestResizeVcpuMaxUnitFilter(test.NoDBTestCase):
         super(TestResizeVcpuMaxUnitFilter, self).setUp()
         self.filt_cls = (
             resize_vcpu_max_unit_filter.ResizeVcpuMaxUnitFilter())
+        self._default_hints = dict(
+            source_host=[fakes.COMPUTE_NODES[0].host]
+        )
 
     @mock.patch('nova.scheduler.utils.is_non_vmware_spec', return_value=True)
     def test_passes_non_vmware(self, non_vmware_spec):
@@ -56,6 +59,7 @@ class TestResizeVcpuMaxUnitFilter(test.NoDBTestCase):
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
             instance_uuid=uuids.instance,
+            scheduler_hints=self._default_hints,
             flavor=objects.Flavor(vcpus=vcpus))
 
         flavor = objects.Flavor(vcpus=4)
@@ -70,11 +74,21 @@ class TestResizeVcpuMaxUnitFilter(test.NoDBTestCase):
                            return_value=False),
                 mock.patch('nova.scheduler.utils.request_is_resize',
                            return_value=True),
+                mock.patch(
+                    'nova.objects.InstanceMapping.get_by_instance_uuid'),
+                mock.patch('nova.context.target_cell'),
                 mock.patch('nova.context.get_admin_context',
                            return_value=admin_ctx),
-        ) as (get_by_uuid, non_vmware_spec, is_resize, get_context):
+        ) as (get_by_uuid, non_vmware_spec, is_resize, inst_mapping,
+              target_cell, get_context):
+            inst_mapping.get_by_host.return_value.cell_mapping = \
+                mock.sentinel.cell_mapping
+
+            cell_ctxt = mock.sentinel.cell_ctxt
+            target_cell.return_value.__enter__.return_value = cell_ctxt
+
             self.assertEqual(hosts, self.filt_cls.filter_all(hosts, spec_obj))
-            get_by_uuid.assert_called_once_with(admin_ctx, uuids.instance,
+            get_by_uuid.assert_called_once_with(cell_ctxt, uuids.instance,
                                                 expected_attrs=['flavor'])
             is_resize.assert_called_once_with(spec_obj)
             non_vmware_spec.assert_called_once_with(spec_obj)
@@ -107,14 +121,24 @@ class TestResizeVcpuMaxUnitFilter(test.NoDBTestCase):
                            return_value=False),
                 mock.patch('nova.scheduler.utils.request_is_resize',
                            return_value=True),
+                mock.patch(
+                    'nova.objects.InstanceMapping.get_by_instance_uuid'),
+                mock.patch('nova.context.target_cell'),
                 mock.patch('nova.context.get_admin_context',
                            return_value=admin_ctx),
-        ) as (get_by_uuid, non_vmware_spec, is_resize, get_context):
+        ) as (get_by_uuid, non_vmware_spec, is_resize, inst_mapping,
+              target_cell, get_context):
+            inst_mapping.get_by_instance_uuid.return_value.cell_mapping = \
+                mock.sentinel.cell_mapping
+
+            cell_ctxt = mock.sentinel.cell_ctxt
+            target_cell.return_value.__enter__.return_value = cell_ctxt
+
             results = [h.host for h in
                        self.filt_cls.filter_all(hosts, spec_obj)]
             self.assertEqual(['host2', 'host3'], results)
 
-            get_by_uuid.assert_called_once_with(admin_ctx, uuids.instance,
+            get_by_uuid.assert_called_once_with(cell_ctxt, uuids.instance,
                                                 expected_attrs=['flavor'])
             is_resize.assert_called_once_with(spec_obj)
             non_vmware_spec.assert_called_once_with(spec_obj)

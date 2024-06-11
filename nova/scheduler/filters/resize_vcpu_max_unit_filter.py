@@ -17,6 +17,7 @@ from oslo_log import log as logging
 
 import nova.conf
 from nova import context as nova_context
+from nova import exception
 from nova import objects
 from nova.scheduler import filters
 from nova.scheduler import utils
@@ -47,9 +48,24 @@ class ResizeVcpuMaxUnitFilter(filters.BaseHostFilter):
             return filter_obj_list
 
         context = nova_context.get_admin_context()
-        instance = objects.Instance.get_by_uuid(
-            context, spec_obj.instance_uuid,
-            expected_attrs=['flavor'])
+        try:
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+                context, spec_obj.instance_uuid)
+            cell_mapping = inst_mapping.cell_mapping
+        except exception.InstanceMappingNotFound:
+            LOG.warning("Cannot find cell mapping for instance %s",
+                        spec_obj.instance_uuid)
+            return []
+
+        try:
+            with nova_context.target_cell(context, cell_mapping) as cctxt:
+                instance = objects.Instance.get_by_uuid(
+                    cctxt, spec_obj.instance_uuid,
+                    expected_attrs=['flavor'])
+        except exception.InstanceNotFound:
+            LOG.warning("Cannot find instance %s",
+                        spec_obj.instance_uuid)
+            return []
 
         # Only account for resizing to smaller flavors
         if instance.flavor.vcpus <= spec_obj.vcpus:
