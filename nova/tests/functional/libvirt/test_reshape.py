@@ -11,11 +11,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import io
 from unittest import mock
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils.fixture import uuidsentinel
 
 from nova import context
 from nova import objects
@@ -236,3 +238,100 @@ class VGPUReshapeTests(base.ServersTestBase):
         self.assertEqual(
             {'VGPU': 1},
             allocations[gpu_rp_uuid]['resources'])
+
+
+class SevResphapeTests(base.ServersTestBase):
+
+    def setUp(self):
+        super().setUp()
+        admin_context = context.get_admin_context()
+        hw_mem_enc_image = copy.deepcopy(self.glance.image1)
+        hw_mem_enc_image['id'] = uuidsentinel.mem_enc_image_id
+        hw_mem_enc_image['properties']['hw_machine_type'] = 'q35'
+        hw_mem_enc_image['properties']['hw_firmware_type'] = 'uefi'
+        hw_mem_enc_image['properties']['hw_mem_encryption'] = True
+        self.glance.create(admin_context, hw_mem_enc_image)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._guest_configure_sev')
+    def test_create_servers_with_amd_sev(self, mock_configure_sev):
+        self.hostname = self.start_compute(
+            hostname='compute1',
+        )
+        self.compute = self.computes[self.hostname]
+        self.flags(num_memory_encrypted_guests=16, group='libvirt')
+
+        # create the MEM_ENCRYPTION_CONTEXT resource in placement manually,
+        # to simulate the old layout.
+        compute_rp_uuid = self.placement.get(
+            '/resource_providers?name=compute1').body[
+            'resource_providers'][0]['uuid']
+        inventories = self.placement.get(
+            '/resource_providers/%s/inventories' % compute_rp_uuid).body
+        inventories['inventories']['MEM_ENCRYPTION_CONTEXT'] = {
+            'allocation_ratio': 1.0,
+            'max_unit': 1,
+            'min_unit': 1,
+            'reserved': 0,
+            'step_size': 1,
+            'total': 16}
+        self.placement.put(
+            '/resource_providers/%s/inventories' % compute_rp_uuid,
+            inventories)
+
+        # create a server before reshape
+        with mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                        'update_provider_tree'):
+            pre_server = self._create_server(
+                image_uuid=uuidsentinel.mem_enc_image_id)
+            self.addCleanup(self._delete_server, pre_server)
+
+        # verify that the inventory, usages and allocation are correct before
+        # the reshape
+        compute_inventory = self.placement.get(
+            '/resource_providers/%s/inventories' % compute_rp_uuid).body[
+            'inventories']
+        self.assertEqual(
+            16, compute_inventory['MEM_ENCRYPTION_CONTEXT']['total'])
+        compute_usages = self.placement.get(
+            '/resource_providers/%s/usages' % compute_rp_uuid).body[
+            'usages']
+        self.assertEqual(1, compute_usages['MEM_ENCRYPTION_CONTEXT'])
+
+        # restart the compute service to trigger reshape
+        with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
+                        return_value=True):
+            self.compute = self.restart_compute_service(self.hostname)
+
+        # verify that the inventory, usages and allocation are correct after
+        # the reshape
+        compute_inventory = self.placement.get(
+            '/resource_providers/%s/inventories' % compute_rp_uuid).body[
+            'inventories']
+        self.assertNotIn('MEM_ENCRYPTION_CONTEXT', compute_inventory)
+        compute_usages = self.placement.get(
+            '/resource_providers/%s/usages' % compute_rp_uuid).body[
+            'usages']
+        self.assertNotIn('MEM_ENCRYPTION_CONTEXT', compute_usages)
+
+        sev_rp_uuid = self.placement.get(
+            '/resource_providers?name=compute1_amd_sev').body[
+            'resource_providers'][0]['uuid']
+        sev_inventory = self.placement.get(
+            '/resource_providers/%s/inventories' % sev_rp_uuid).body[
+            'inventories']
+        self.assertEqual(
+            16, sev_inventory['MEM_ENCRYPTION_CONTEXT']['total'])
+        sev_usages = self.placement.get(
+            '/resource_providers/%s/usages' % sev_rp_uuid).body[
+            'usages']
+        self.assertEqual(1, sev_usages['MEM_ENCRYPTION_CONTEXT'])
+
+        # create a new server after reshape
+        post_server = self._create_server(
+            image_uuid=uuidsentinel.mem_enc_image_id)
+        self.addCleanup(self._delete_server, post_server)
+
+        compute_usages = self.placement.get(
+            '/resource_providers/%s/usages' % sev_rp_uuid).body[
+            'usages']
+        self.assertEqual(2, compute_usages['MEM_ENCRYPTION_CONTEXT'])

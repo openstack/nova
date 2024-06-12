@@ -30,15 +30,13 @@ CONF = conf.CONF
 
 class LibvirtReportTraitsTestBase(
         integrated_helpers.LibvirtProviderUsageBaseTestCase):
-    pass
 
-    def assertMemEncryptionSlotsEqual(self, slots):
-        inventory = self._get_provider_inventory(self.host_uuid)
+    def assertMemEncryptionSlotsEqual(self, rp_uuid, slots):
+        inventory = self._get_provider_inventory(rp_uuid)
         if slots == 0:
             self.assertNotIn(orc.MEM_ENCRYPTION_CONTEXT, inventory)
         else:
             self.assertEqual(
-                inventory[orc.MEM_ENCRYPTION_CONTEXT],
                 {
                     'total': slots,
                     'min_unit': 1,
@@ -46,8 +44,15 @@ class LibvirtReportTraitsTestBase(
                     'step_size': 1,
                     'allocation_ratio': 1.0,
                     'reserved': 0,
-                }
+                },
+                inventory[orc.MEM_ENCRYPTION_CONTEXT]
             )
+
+    def _get_amd_sev_rps(self):
+        root_rp = self._get_resource_provider_by_uuid(self.host_uuid)
+        rps = self._get_all_rps_in_a_tree(self.host_uuid)
+        return [rp for rp in rps
+                if rp['name'] == '%s_amd_sev' % root_rp['name']]
 
 
 class LibvirtReportTraitsTests(LibvirtReportTraitsTestBase):
@@ -143,8 +148,10 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
 
         traits = self._get_provider_traits(self.host_uuid)
         self.assertNotIn(sev_trait, traits)
+        self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
 
-        self.assertMemEncryptionSlotsEqual(0)
+        sev_rps = self._get_amd_sev_rps()
+        self.assertEqual(0, len(sev_rps))
 
         # Now simulate the host gaining SEV functionality.  Here we
         # simulate a kernel update or reconfiguration which causes the
@@ -178,13 +185,21 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             self.compute.driver._static_traits = None
             self._run_periodics()
 
-            traits = self._get_provider_traits(self.host_uuid)
-            self.assertIn(sev_trait, traits)
-
             # Sanity check that we've still got the trait globally.
             self.assertIn(sev_trait, self._get_all_traits())
 
-            self.assertMemEncryptionSlotsEqual(db_const.MAX_INT)
+            # sev capabilities are managed by sub rp and are not present in
+            # root rp
+            traits = self._get_provider_traits(self.host_uuid)
+            self.assertNotIn(sev_trait, traits)
+            self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
+
+            sev_rps = self._get_amd_sev_rps()
+            self.assertEqual(1, len(sev_rps))
+            sev_rp_uuid = sev_rps[0]['uuid']
+            sev_rp_traits = self._get_provider_traits(sev_rp_uuid)
+            self.assertIn(sev_trait, sev_rp_traits)
+            self.assertMemEncryptionSlotsEqual(sev_rp_uuid, db_const.MAX_INT)
 
 
 class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
@@ -221,10 +236,17 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         global_traits = self._get_all_traits()
         self.assertIn(sev_trait, global_traits)
 
+        # sev capabilities are managed by sub rp and are not present in root rp
         traits = self._get_provider_traits(self.host_uuid)
-        self.assertIn(sev_trait, traits)
+        self.assertNotIn(sev_trait, traits)
+        self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
 
-        self.assertMemEncryptionSlotsEqual(16)
+        sev_rps = self._get_amd_sev_rps()
+        self.assertEqual(1, len(sev_rps))
+        sev_rp_uuid = sev_rps[0]['uuid']
+        sev_rp_traits = self._get_provider_traits(sev_rp_uuid)
+        self.assertIn(sev_trait, sev_rp_traits)
+        self.assertMemEncryptionSlotsEqual(sev_rp_uuid, 16)
 
         # Now simulate the host losing SEV functionality.  Here we
         # simulate a kernel downgrade or reconfiguration which causes
@@ -247,10 +269,14 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             self.compute.driver._static_traits = None
             self._run_periodics()
 
-            traits = self._get_provider_traits(self.host_uuid)
-            self.assertNotIn(sev_trait, traits)
-
             # Sanity check that we've still got the trait globally.
             self.assertIn(sev_trait, self._get_all_traits())
 
-            self.assertMemEncryptionSlotsEqual(0)
+            traits = self._get_provider_traits(self.host_uuid)
+            self.assertNotIn(sev_trait, traits)
+
+            # NOTE(tkajinam): Currently the sev rp is not deleted after sev
+            # support is turned off. This follows the existing behavior for
+            # other resources such as vGPU.
+            # sev_rps = self._get_amd_sev_rps()
+            # self.assertEqual(0, len(sev_rps))

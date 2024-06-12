@@ -23063,6 +23063,9 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         mock_gpu_invs.return_value = gpu_inventory_dicts
         # Use an empty list for vpmems.
         self.driver._vpmems_by_rc = {'CUSTOM_PMEM_NAMESPACE_4GB': []}
+        # Use total=0 for MEM_ENCRYPTION_CONTEXT
+        self.driver._host._supports_amd_sev = True
+        self.driver._host._max_sev_guests = 0
         # Before we update_provider_tree, we have 2 providers from setUp():
         # self.cn_rp and self.shared_rp and they are both empty {}.
         self.assertEqual(2, len(self.pt.get_provider_uuids()))
@@ -23183,6 +23186,35 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                          self.pt.data(self.cn_rp['uuid']).inventory)
         self.assertEqual(expected_resources,
                          self.pt.data(self.cn_rp['uuid']).resources)
+
+    def test_update_provider_tree_with_memory_encryption(self):
+        self.driver._host._supports_amd_sev = True
+        self.driver._host._max_sev_guests = 16
+        self._test_update_provider_tree()
+        inventory = self._get_inventory()
+        # root compute node provider inventory is unchanged
+        self.assertEqual(inventory,
+                         (self.pt.data(self.cn_rp['uuid'])).inventory)
+        # We should have new sev child providers in the tree under the
+        # compute node root provider.
+        compute_node_tree_uuids = self.pt.get_provider_uuids(
+            self.cn_rp['name'])
+        self.assertEqual(2, len(compute_node_tree_uuids))
+        sev_rp_uuid = compute_node_tree_uuids[1]
+        sev_provider_data = self.pt.data(sev_rp_uuid)
+        self.assertEqual('%s_amd_sev' % self.cn_rp['name'],
+                         sev_provider_data.name)
+        self.assertEqual({
+            orc.MEM_ENCRYPTION_CONTEXT: {
+                'total': 16,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0
+            }
+        }, sev_provider_data.inventory)
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
                 new=mock.Mock(return_value={'total': disk_gb}))
@@ -23483,6 +23515,170 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                                allocations=allocations)
         self.assertIn('Unexpected VGPU resource allocation on provider %s'
                       % uuids.other_rp, str(ex))
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_get_cpu_feature_traits',
+                new=mock.Mock(return_value=cpu_traits))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
+                new=mock.Mock(return_value={'total': disk_gb}))
+    @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
+                new=mock.Mock(return_value=memory_mb))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_available',
+                new=mock.Mock(return_value=range(pcpus)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
+                new=mock.Mock(return_value=range(vcpus)))
+    def test_update_provider_tree_for_memory_encryption_reshape(self):
+        self.driver._host._supports_amd_sev = True
+        self.driver._host._max_sev_guests = 16
+        # First create a provider tree with MEM_ENCRYPTION_CONTEXT inventory on
+        # the root node provider.
+        inventory = self._get_inventory()
+        sev_inventory = {
+            orc.MEM_ENCRYPTION_CONTEXT: {
+                'total': 16,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0
+            }
+        }
+        inventory.update(sev_inventory)
+        self.pt.update_inventory(self.cn_rp['uuid'], inventory)
+        # Call update_provider_tree which will raise ReshapeNeeded because
+        # there is MEM_ENCRYPTION_CONTEXT on the root node provider
+        self.assertRaises(exception.ReshapeNeeded,
+                          self.driver.update_provider_tree,
+                          self.pt, self.cn_rp['name'])
+        # Now make up some fake allocations to pass back to the upt method
+        # for the reshape
+        allocations = {
+            uuids.consumer1: {
+                'allocations': {
+                    # This consumer has MEM_ENCRYPTION_CONTEXT allocations on
+                    # the root node provider and *should* be changed.
+                    self.cn_rp['uuid']: {
+                        'resources': {
+                            orc.MEMORY_MB: 512,
+                            orc.VCPU: 2,
+                            orc.MEM_ENCRYPTION_CONTEXT: 1
+                        }
+                    }
+                }
+            },
+            uuids.consumer2: {
+                'allocations': {
+                    # This consumer has no MEM_ENCRYPTION_CONTEXT allocations
+                    # on the root provider *should not* be changed.
+                    self.cn_rp['uuid']: {
+                        'resources': {
+                            orc.MEMORY_MB: 512,
+                            orc.VCPU: 2
+                        }
+                    }
+                }
+            }
+        }
+        original_allocations = copy.deepcopy(allocations)
+        # Initiate the reshape
+        self.driver.update_provider_tree(
+            self.pt, self.cn_rp['name'], allocations=allocations)
+        # We should have one SEV child provider in the tree under the compute
+        # node root provider.
+        compute_node_tree_uuids = self.pt.get_provider_uuids(
+            self.cn_rp['name'])
+        self.assertEqual(2, len(compute_node_tree_uuids))
+        # The SEV provider should be the 2nd UUID in the list
+        sev_rp_uuid = compute_node_tree_uuids[1]
+        # The MEM_ENCRYPTION_CONTEXT inventory should be on the SEV child
+        # provider
+        sev_provider_data = self.pt.data(sev_rp_uuid)
+        self.assertEqual('%s_amd_sev' % self.cn_rp['name'],
+                         sev_provider_data.name)
+        self.assertEqual({
+            orc.MEM_ENCRYPTION_CONTEXT: {
+                'total': 16,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0
+            }
+        }, sev_provider_data.inventory)
+        # Make sure the child provider has the SEV trait
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
+
+        # The compute node root provider should not have MEM_ENCRYPTION_CONTEXT
+        # inventory.
+        del inventory[orc.MEM_ENCRYPTION_CONTEXT]
+        self.assertEqual(inventory, self.pt.data(self.cn_rp['uuid']).inventory)
+        # consumer1 should now have allocations against two providers,
+        # MEMORY_MB on the root compute node provider and
+        # MEM_ENCRYPTION_CONTEXT on the child provider.
+        consumer1_allocs = allocations[uuids.consumer1]['allocations']
+        self.assertEqual(2, len(consumer1_allocs))
+        self.assertEqual({orc.MEMORY_MB: 512, orc.VCPU: 2},
+                         consumer1_allocs[self.cn_rp['uuid']]['resources'])
+        # Make sure the MEM_ENCRYPTION_CONTEXT allocation moved to
+        # the corresponding child RP
+        self.assertEqual({orc.MEM_ENCRYPTION_CONTEXT: 1},
+                         consumer1_allocs[sev_rp_uuid]['resources'])
+        # The allocations on consumer2 should be unchanged.
+        self.assertEqual(original_allocations[uuids.consumer2],
+                         allocations[uuids.consumer2])
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_get_cpu_feature_traits',
+                new=mock.Mock(return_value=cpu_traits))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
+                new=mock.Mock(return_value={'total': disk_gb}))
+    @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
+                new=mock.Mock(return_value=memory_mb))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_available',
+                new=mock.Mock(return_value=range(pcpus)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
+                new=mock.Mock(return_value=range(vcpus)))
+    def test_update_provider_tree_for_memory_encryption_reshape_fails(self):
+        self.driver._host._supports_amd_sev = True
+        self.driver._host._max_sev_guests = 16
+        # First create a provider tree with MEM_ENCRYPTION_CONTEXT inventory on
+        # the root node provider.
+        inventory = self._get_inventory()
+        sev_inventory = {
+            orc.MEM_ENCRYPTION_CONTEXT: {
+                'total': 16,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0
+            }
+        }
+        inventory.update(sev_inventory)
+        self.pt.update_inventory(self.cn_rp['uuid'], inventory)
+        # Now make up some fake allocations to pass back to the upt method
+        # for the reshape
+        allocations = {
+            uuids.consumer1: {
+                'allocations': {
+                    # This consumer has invalid MEM_ENCRYPTION_CONTEXT on
+                    # a non-root compute node provider.
+                    uuids.other_rp: {
+                        'resources': {
+                            orc.MEMORY_MB: 512,
+                            orc.MEM_ENCRYPTION_CONTEXT: 1
+                        }
+                    }
+                }
+            }
+        }
+        # Initiate the reshape.
+        ex = self.assertRaises(exception.ReshapeFailed,
+                               self.driver.update_provider_tree,
+                               self.pt, self.cn_rp['name'],
+                               allocations=allocations)
+        self.assertIn('Unexpected MEM_ENCRYPTION_CONTEXT resource allocation '
+                      'on provider %s' % uuids.other_rp, str(ex))
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.migration.MigrationList'
@@ -28735,15 +28931,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_feature_traits',
                        new=mock.Mock(return_value={}))
-    def test_cpu_traits__sev_support(self):
-        for support in (False, True):
-            self.drvr._host._supports_amd_sev = support
-            traits = self.drvr._get_cpu_traits()
-            self.assertIn(ot.HW_CPU_X86_AMD_SEV, traits)
-            self.assertEqual(support, traits[ot.HW_CPU_X86_AMD_SEV])
-
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_feature_traits',
-                       new=mock.Mock(return_value={}))
     def test_cpu_traits__hyperthreading_support(self):
         for support in (False, True):
             self.drvr._host._has_hyperthreading = support
@@ -30916,25 +31103,25 @@ class TestLibvirtSEV(test.NoDBTestCase):
 
 @mock.patch.object(os.path, 'exists', new=mock.Mock(return_value=False))
 class TestLibvirtSEVUnsupported(TestLibvirtSEV):
-    def test_get_mem_encrypted_slots_no_config(self):
-        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+    def test_get_memory_encryption_inventories_no_config(self):
+        self.assertEqual({}, self.driver._get_memory_encryption_inventories())
 
-    def test_get_mem_encrypted_slots_config_zero(self):
+    def test_get_memory_encryption_inventories_config_zero(self):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
-        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+        self.assertEqual({}, self.driver._get_memory_encryption_inventories())
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_get_mem_encrypted_slots_config_non_zero_unsupported(
+    def test_get_memory_encryption_inventories_config_non_zero_unsupported(
             self, mock_log):
         self.flags(num_memory_encrypted_guests=16, group='libvirt')
         # Still zero without mocked SEV support
-        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+        self.assertEqual({}, self.driver._get_memory_encryption_inventories())
         mock_log.assert_called_with(
             'Host is configured with libvirt.num_memory_encrypted_guests '
             'set to %d, but is not SEV-capable.', 16)
 
-    def test_get_mem_encrypted_slots_unsupported(self):
-        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+    def test_get_memory_encryption_inventories_unsupported(self):
+        self.assertEqual({}, self.driver._get_memory_encryption_inventories())
 
 
 @mock.patch.object(vc, '_domain_capability_features',
@@ -30943,21 +31130,50 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
     """Libvirt driver tests for when AMD SEV support is present."""
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
-    def test_get_mem_encrypted_slots_unlimited(self):
-        self.assertEqual(db_const.MAX_INT,
-                         self.driver._get_memory_encrypted_slots())
+    def test_get_memory_encryption_inventories_unlimited(self):
+        self.assertEqual({
+            'amd_sev': {
+                'total': db_const.MAX_INT,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0,
+                'traits': [ot.HW_CPU_X86_AMD_SEV]
+            }
+        }, self.driver._get_memory_encryption_inventories())
 
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
-    def test_get_mem_encrypted_slots_config_non_zero_supported(self):
+    def test_get_memory_encryption_inventories_config_non_zero_supported(self):
         self.flags(num_memory_encrypted_guests=16, group='libvirt')
-        self.assertEqual(16, self.driver._get_memory_encrypted_slots())
+        self.assertEqual({
+            'amd_sev': {
+                'total': 16,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0,
+                'traits': [ot.HW_CPU_X86_AMD_SEV]
+            }
+        }, self.driver._get_memory_encryption_inventories())
 
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
-    def test_get_mem_encrypted_slots_config_zero_supported(self):
+    def test_get_memory_encryption_inventories_config_zero_supported(self):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
-        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+        self.assertEqual({
+            'amd_sev': {
+                'total': 0,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0,
+                'traits': [ot.HW_CPU_X86_AMD_SEV]
+            },
+        }, self.driver._get_memory_encryption_inventories())
 
 
 @mock.patch.object(vc, '_domain_capability_features',
@@ -30967,16 +31183,36 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_get_mem_encrypted_slots_no_override(self, mock_log):
-        self.assertEqual(100, self.driver._get_memory_encrypted_slots())
+    def test_get_memory_encryption_inventories_no_override(self, mock_log):
+        self.assertEqual({
+            'amd_sev': {
+                'total': 100,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0,
+                'traits': [ot.HW_CPU_X86_AMD_SEV]
+            },
+        }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_not_called()
 
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_get_mem_encrypted_slots_overlide_more(self, mock_log):
+    def test_get_memory_encryption_inventories_override_more(self, mock_log):
         self.flags(num_memory_encrypted_guests=120, group='libvirt')
-        self.assertEqual(100, self.driver._get_memory_encrypted_slots())
+        self.assertEqual({
+            'amd_sev': {
+                'total': 100,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0,
+                'traits': [ot.HW_CPU_X86_AMD_SEV]
+            }
+        }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_called_with(
             'Host is configured with libvirt.num_memory_encrypted_guests '
             'set to %d, but supports only %d.', 120, 100)
@@ -30984,9 +31220,19 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_get_mem_encrypted_slots_override_less(self, mock_log):
+    def test_get_memory_encryption_inventories_override_less(self, mock_log):
         self.flags(num_memory_encrypted_guests=80, group='libvirt')
-        self.assertEqual(80, self.driver._get_memory_encrypted_slots())
+        self.assertEqual({
+            'amd_sev': {
+                'total': 80,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0,
+                'traits': [ot.HW_CPU_X86_AMD_SEV]
+            }
+        }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_not_called()
 
 
