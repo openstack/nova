@@ -2198,11 +2198,27 @@ class VMwareVMOps(object):
         """
         if timeout and self._clean_shutdown(instance,
                                             timeout,
-                                            retry_interval):
+                                            retry_interval)[1]:
             return
 
         vm_util.power_off_instance(self._session, instance)
         self.update_cached_instances()
+
+    def _soft_shutdown(self, instance):
+        """Attempt graceful shutdown on the VM, falling back to a
+        power-off after the configured timeout and retry_interval.
+
+        :returns: True if the VM was poweredOn before running the
+                  operation, False otherwise.
+        """
+        vm_was_on, was_shutdown = self._clean_shutdown(
+            instance, CONF.shutdown_timeout,
+            CONF.compute.shutdown_retry_interval)
+
+        if was_shutdown or not vm_was_on:
+            return vm_was_on
+
+        return vm_util.power_off_instance(self._session, instance)
 
     def _clean_shutdown(self, instance, timeout, retry_interval):
         """Perform a soft shutdown on the VM.
@@ -2211,8 +2227,10 @@ class VMwareVMOps(object):
                         shutdown
         :param retry_interval: Interval to check if instance is already
                                shutdown in seconds.
-           :return: True if the instance was shutdown within time limit,
-                    False otherwise.
+        :return: a Tuple(value1, value2) where value1 is True if the VM
+                 was powered on before trying the shutdown, False otherwise,
+                 and value2 is True if the instance was shutdown within
+                 time limit, False otherwise.
         """
         LOG.debug("Performing Soft shutdown on instance", instance=instance)
         vm_ref = vm_util.get_vm_ref(self._session, instance)
@@ -2222,7 +2240,7 @@ class VMwareVMOps(object):
         if props.get("runtime.powerState") != "poweredOn":
             LOG.debug("Instance not in poweredOn state.",
                       instance=instance)
-            return False
+            return False, False
 
         if ((props.get("summary.guest.toolsStatus") == "toolsOk") and
             (props.get("summary.guest.toolsRunningStatus") ==
@@ -2237,7 +2255,7 @@ class VMwareVMOps(object):
             except vexc.ToolsUnavailableException:
                 LOG.info("Failed to _clean_shutdown the instance",
                          instance=instance)
-                return False
+                return True, False
 
             while timeout > 0:
                 wait_time = min(retry_interval, timeout)
@@ -2247,7 +2265,7 @@ class VMwareVMOps(object):
                 if pwr_state == "poweredOff":
                     LOG.info("Soft shutdown succeeded.",
                              instance=instance)
-                    return True
+                    return True, True
 
                 time.sleep(wait_time)
                 timeout -= retry_interval
@@ -2257,7 +2275,7 @@ class VMwareVMOps(object):
         else:
             LOG.debug("VMware Tools not running", instance=instance)
 
-        return False
+        return True, False
 
     def is_instance_in_resource_pool(self, instance):
         try:
@@ -2509,8 +2527,7 @@ class VMwareVMOps(object):
         vm_util.rename_vm(self._session, vm_ref, instance)
 
         # 1. Power off the instance
-        vm_was_on = vm_util.power_off_instance(self._session, instance,
-                                               vm_ref)
+        vm_was_on = self._soft_shutdown(instance)
 
         self._update_instance_progress(context, instance,
                                        step=1,
@@ -2725,7 +2742,7 @@ class VMwareVMOps(object):
                                              block_device_info, network_info):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Ensure that the VM is off
-        vm_util.power_off_instance(self._session, instance, vm_ref)
+        self._soft_shutdown(instance)
         client_factory = self._session.vim.client.factory
         # Reconfigure the VM properties
         extra_specs = self._get_extra_specs(instance.flavor,
