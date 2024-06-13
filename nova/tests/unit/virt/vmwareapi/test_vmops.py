@@ -556,6 +556,38 @@ class VMwareVMOpsTestCase(test.TestCase):
             _reconfigure_vm.assert_called_once_with(self._session, vm_ref,
                 expected)
 
+    @ddt.data(
+        # powered-on vm was _clean_shutdown
+        ((True, True), None, True),
+        # vm was already powered off
+        ((False, False), None, False),
+        # couldn't _clean_shutdown the powered-on VM
+        # falling back to hard power-off
+        ((True, False), True, True)
+    )
+    @ddt.unpack
+    def test_soft_shutdown(self, clean_shutdown_ret, power_off_ret,
+                           expected_result):
+        with test.nested(
+            mock.patch.object(vmops.VMwareVMOps, '_clean_shutdown',
+                              return_value=clean_shutdown_ret),
+            mock.patch.object(vm_util, 'power_off_instance',
+                              return_value=power_off_ret)
+        ) as (mock_clean_shutdown, mock_power_off):
+
+            result = self._vmops._soft_shutdown(self._instance)
+
+            mock_clean_shutdown.assert_called_once_with(
+                self._instance,
+                CONF.shutdown_timeout,
+                CONF.compute.shutdown_retry_interval)
+
+            if power_off_ret is not None:
+                mock_power_off.assert_called_once_with(
+                    self._session, self._instance)
+
+            self.assertEqual(expected_result, result)
+
     @mock.patch.object(time, 'sleep')
     def _test_clean_shutdown(self, mock_sleep,
                              timeout, retry_interval,
@@ -608,7 +640,8 @@ class VMwareVMOpsTestCase(test.TestCase):
             result = self._vmops._clean_shutdown(instance, timeout,
                                                  retry_interval)
 
-        self.assertEqual(succeeds, result)
+        self.assertEqual(returns_on > 0, result[0])
+        self.assertEqual(succeeds, result[1])
         mock_get_vm_ref.assert_called_with(self._session, self._instance)
 
     def test_clean_shutdown_first_time(self):
@@ -954,7 +987,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
-    @mock.patch.object(vm_util, 'power_off_instance')
+    @mock.patch.object(vmops.VMwareVMOps, '_soft_shutdown')
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
     @mock.patch.object(vm_util, 'power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, '_detach_volumes')
@@ -964,7 +997,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     def _test_finish_revert_in_place_migration(
             self, fake_list_instances, fake_relocate_vm, fake_attach_volumes,
             fake_detach_volumes, fake_power_on, fake_get_vm_ref,
-            fake_power_off, fake_resize_spec, fake_reconfigure_vm,
+            fake_soft_shutdown, fake_resize_spec, fake_reconfigure_vm,
             fake_get_browser, fake_original_exists, fake_disk_move,
             fake_disk_delete, fake_remove_ephemerals_and_swap,
             fake_resize_create_ephemerals_and_swap, fake_get_extra_specs,
@@ -1020,9 +1053,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                 pass
 
             vm_ref_calls = [mock.call(self._session, self._instance)]
-            fake_power_off.assert_called_once_with(self._session,
-                                                   self._instance,
-                                                   'fake-ref')
+            fake_soft_shutdown.assert_called_once_with(self._instance)
             # Validate VM reconfiguration
             metadata = ('name:fake_display_name\n'
                         'userid:fake_user\n'
@@ -1549,7 +1580,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'rename_vm')
     @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vm_util, 'power_on_instance')
-    @mock.patch.object(vm_util, 'power_off_instance')
+    @mock.patch.object(vmops.VMwareVMOps, '_soft_shutdown')
     @mock.patch.object(vm_util, 'get_hardware_devices_by_type',
                        return_value={})
     @mock.patch.object(vim_util, 'get_object_property')
@@ -1565,7 +1596,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                          fake_get_vm_ref,
                                          fake_get_object_property,
                                          fake_get_hardware_devices_by_type,
-                                         fake_power_off,
+                                         fake_soft_shutdown,
                                          fake_power_on, fake_get_vmdk_info,
                                          fake_rename_vm, fake_vm_device_change,
                                          fake_image_meta, fake_finish_revert,
@@ -1620,8 +1651,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                 self._session, 'source-ref', 'config.firmware')
         fake_rename_vm.assert_called_once_with(self._session, 'source-ref',
                                                self._instance)
-        fake_power_off.assert_called_once_with(self._session, self._instance,
-                                               'source-ref')
+        fake_soft_shutdown.assert_called_once_with(self._instance)
         fake_detach_volumes.assert_called_once_with(
             self._instance, block_device_info)
         fake_get_remove_network_device_change.assert_called_once_with(
