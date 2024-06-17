@@ -13,6 +13,10 @@ if [[ $1 == "stack" ]]; then
     case $2 in
     install)
         if [[ "$NOVA_COMPILE_MDEV_SAMPLES" == True ]]; then
+            # NOTE (jgilaber): install mdevctl before calling the
+            # compile_mdev_samples function as if calling it after in some CI
+            # runs devstack fails due to lock contentions for dpkg
+            install_package mdevctl
             async_runfunc compile_mdev_samples
         fi
     ;;
