@@ -648,13 +648,21 @@ class IronicDriver(virt_driver.ComputeDriver):
         :raises: VirtDriverNotReady
 
         """
-        # NOTE(dustinc): The SDK returns an object with instance_id,
-        #  but the Ironic API expects instance_uuid in query.
+        # NOTE(JayF): As of this writing, November 2023, this is only called
+        #             one place; in compute/manager.py, and only if
+        #             list_instance_uuids is not implemented. This means that
+        #             this is effectively dead code in the Ironic driver.
+        if not self.node_cache:
+            # Empty cache, try to populate it. If we cannot populate it, this
+            # is OK. This information is only used to cleanup deleted nodes;
+            # if Ironic has no deleted nodes; we're good.
+            self._refresh_cache()
+
         context = nova_context.get_admin_context()
-        return [objects.Instance.get_by_uuid(context, i.instance_id).name
-                for i in self._get_node_list(return_generator=True,
-                                             associated=True,
-                                             fields=['instance_uuid'])]
+
+        return [objects.Instance.get_by_uuid(context, node.instance_id).name
+                for node in self.node_cache.values()
+                if node.instance_id is not None]
 
     def list_instance_uuids(self):
         """Return the IDs of all the instances provisioned.
@@ -663,10 +671,15 @@ class IronicDriver(virt_driver.ComputeDriver):
         :raises: VirtDriverNotReady
 
         """
-        # NOTE(dustinc): The SDK returns an object with instance_id,
-        #  but the Ironic API expects instance_uuid in query.
-        return [node.instance_id for node in self._get_node_list(
-            return_generator=True, associated=True, fields=['instance_uuid'])]
+        if not self.node_cache:
+            # Empty cache, try to populate it. If we cannot populate it, this
+            # is OK. This information is only used to cleanup deleted nodes;
+            # if Ironic has no deleted nodes; we're good.
+            self._refresh_cache()
+
+        return [node.instance_id
+                for node in self.node_cache.values()
+                if node.instance_id is not None]
 
     def node_is_available(self, nodename):
         """Confirms a Nova hypervisor node exists in the Ironic inventory.
