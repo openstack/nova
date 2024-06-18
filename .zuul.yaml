@@ -2,37 +2,6 @@
 # for job naming conventions.
 
 - job:
-    name: nova-tox-functional-centos8-py36
-    parent: openstack-tox-functional-py36
-    nodeset: devstack-single-node-centos-8-stream
-    description: |
-      Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.6 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py36`` environment.
-
-      This job also provides a parent for other projects to run the nova
-      functional tests on their own changes.
-    required-projects:
-      # including nova here makes this job reusable by other projects
-      - openstack/nova
-      - openstack/placement
-    irrelevant-files: &functional-irrelevant-files
-      - ^.*\.rst$
-      - ^api-.*$
-      - ^doc/(source|test)/.*$
-      - ^nova/locale/.*$
-      - ^releasenotes/.*$
-    vars:
-      # explicitly stating the work dir makes this job reusable by other
-      # projects
-      zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py36
-    timeout: 3600
-    # NOTE(elod.illes): this job started to fail in stable/xena so let's
-    # set it non-voting to unblock the gate.
-    voting: false
-
-- job:
     name: nova-tox-functional-py38
     parent: openstack-tox-functional-py38
     description: |
@@ -46,7 +15,12 @@
       # including nova here makes this job reusable by other projects
       - openstack/nova
       - openstack/placement
-    irrelevant-files: *functional-irrelevant-files
+    irrelevant-files: &functional-irrelevant-files
+      - ^.*\.rst$
+      - ^api-.*$
+      - ^doc/(source|test)/.*$
+      - ^nova/locale/.*$
+      - ^releasenotes/.*$
     vars:
       # explicitly stating the work dir makes this job reusable by other
       # projects
@@ -229,24 +203,11 @@
     parent: devstack-tempest
     description: |
       Run tempest compute API tests using LVM image backend. This only runs
-      against nova/virt/libvirt/* changes.
-    # Copy irrelevant-files from nova-dsvm-multinode-base and then exclude
-    # anything that is not in nova/virt/libvirt/* or nova/privsep/*.
-    irrelevant-files:
-      - ^(?!.zuul.yaml)(?!nova/virt/libvirt/)(?!nova/privsep/).*$
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/tests/.*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tools/.*$
-      - ^tox.ini$
+      against nova/virt/libvirt/*, nova/privsep/* and .zuul.yaml changes.
+    files:
+      - ^nova/virt/libvirt/.*$
+      - ^nova/privsep/.*$
+      - .zuul.yaml
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_exclude_regex.
@@ -547,9 +508,14 @@
     irrelevant-files: *nova-base-irrelevant-files
     required-projects:
       - openstack/nova
+      - name: openstack/cinder-tempest-plugin
+        override-checkout: xena-last
     pre-run:
       - playbooks/ceph/glance-copy-policy.yaml
     vars:
+      # NOTE(elod.illes): this job is breaking with the following test case on
+      # unmaintained/xena, so let's just exclude it to unblock the gate
+      tempest_exclude_regex: test_nova_image_snapshot_dependency
       # NOTE(danms): These tests create an empty non-raw image, which nova
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
@@ -609,11 +575,12 @@
         - nova-ceph-multistore:
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-linuxbridge-tempest:
-            irrelevant-files:
+            files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
               # code; we don't need to run this on all changes.
-              - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
+              - ^nova/network/.*$
+              - nova/virt/libvirt/vif.py
         - nova-live-migration
         - nova-live-migration-ceph
         - nova-lvm
@@ -622,7 +589,6 @@
         - nova-ovs-hybrid-plug
         - nova-tox-validate-backport:
             voting: false
-        - nova-tox-functional-centos8-py36
         - nova-tox-functional-py38
         - nova-tox-functional-py39:
             voting: false
@@ -661,7 +627,6 @@
       jobs:
         - nova-live-migration
         - nova-live-migration-ceph
-        - nova-tox-functional-centos8-py36
         - nova-tox-functional-py38
         - nova-multi-cell
         - nova-next
@@ -669,11 +634,12 @@
         - nova-ceph-multistore:
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-linuxbridge-tempest:
-            irrelevant-files:
+            files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
               # code; we don't need to run this on all changes.
-              - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
+              - ^nova/network/.*$
+              - nova/virt/libvirt/vif.py
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
