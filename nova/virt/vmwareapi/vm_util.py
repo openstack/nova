@@ -2391,3 +2391,18 @@ def detach_fcd(session, vm_ref, fcd_id):
     task = session._call_method(
         session.vim, "DetachDisk_Task", vm_ref, diskId=disk_id)
     session._wait_for_task(task)
+
+
+def apply_evc_mode(session, vm_ref, evc_mode):
+    """Applies the EVCMode identified by the given EvcMode object
+
+    Passing `None` for evc_mode will clear the current EVC mode.
+    """
+    if evc_mode is None:
+        feature_masks = []
+    else:
+        feature_masks = evc_mode.featureMask
+
+    task = session._call_method(session.vim, "ApplyEvcModeVM_Task", vm_ref,
+                                mask=feature_masks)
+    session._wait_for_task(task)
