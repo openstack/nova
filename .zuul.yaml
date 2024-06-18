@@ -2,34 +2,6 @@
 # for job naming conventions.
 
 - job:
-    name: nova-dsvm-multinode-base
-    parent: legacy-dsvm-base-multinode
-    description: |
-      Base job for multinode nova devstack/tempest jobs.
-      Will setup firewall rules on all the nodes allowing them to talk to
-      each other.
-    timeout: 10800
-    required-projects:
-      - openstack/devstack-gate
-      - openstack/nova
-      - openstack/tempest
-    irrelevant-files: &dsvm-irrelevant-files
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/policies/.*$
-      - ^nova/tests/.*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tools/.*$
-      - ^tox.ini$
-
-- job:
     name: nova-tox-functional-py38
     parent: openstack-tox-functional-py38
     description: |
@@ -95,7 +67,21 @@
     description: |
       Run tempest live migration tests against local qcow2 ephemeral storage
       and shared LVM/iSCSI cinder volumes.
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: &dsvm-irrelevant-files
+      - ^api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/policies/.*$
+      - ^nova/tests/.*$
+      - ^nova/test.py$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tools/.*$
+      - ^tox.ini$
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
@@ -189,24 +175,11 @@
     parent: devstack-tempest
     description: |
       Run tempest compute API tests using LVM image backend. This only runs
-      against nova/virt/libvirt/* changes.
-    # Copy irrelevant-files from nova-dsvm-multinode-base and then exclude
-    # anything that is not in nova/virt/libvirt/* or nova/privsep/*.
-    irrelevant-files:
-      - ^(?!.zuul.yaml)(?!nova/virt/libvirt/)(?!nova/privsep/).*$
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/tests/.*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tools/.*$
-      - ^tox.ini$
+      against nova/virt/libvirt/*, nova/privsep/* and .zuul.yaml changes.
+    files:
+      - ^nova/virt/libvirt/.*$
+      - ^nova/privsep/.*$
+      - .zuul.yaml
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_black_regex.
@@ -528,11 +501,12 @@
         - nova-ceph-multistore:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
-            irrelevant-files:
+            files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
               # code; we don't need to run this on all changes.
-              - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
+              - ^nova/network/.*$
+              - nova/virt/libvirt/vif.py
         - nova-live-migration
         - nova-lvm
         - nova-multi-cell
@@ -582,11 +556,12 @@
         - nova-ceph-multistore:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
-            irrelevant-files:
+            files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
               # code; we don't need to run this on all changes.
-              - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
+              - ^nova/network/.*$
+              - nova/virt/libvirt/vif.py
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
