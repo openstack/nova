@@ -252,24 +252,11 @@
     parent: devstack-tempest
     description: |
       Run tempest compute API tests using LVM image backend. This only runs
-      against nova/virt/libvirt/* changes.
-    # Copy irrelevant-files from nova-dsvm-multinode-base and then exclude
-    # anything that is not in nova/virt/libvirt/* or nova/privsep/*.
-    irrelevant-files:
-      - ^(?!.zuul.yaml)(?!nova/virt/libvirt/)(?!nova/privsep/).*$
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/tests/.*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tools/.*$
-      - ^tox.ini$
+      against nova/virt/libvirt/*, nova/privsep/* and .zuul.yaml changes.
+    files:
+      - ^nova/virt/libvirt/.*$
+      - ^nova/privsep/.*$
+      - .zuul.yaml
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_exclude_regex.
@@ -309,22 +296,11 @@
     # NOTE(chateaulav): due to constraints with no IDE support for aarch64,
     # tests have been limited to eliminate any items that are incompatible.
     # This is to be re-evaluated as greater support is added and defined.
-    irrelevant-files:
-      - ^(?!.zuul.yaml)(?!nova/virt/libvirt/)(?!nova/objects/)(?!nova/scheduler/).*$
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/policies/.*$
-      - ^nova/tests/.*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tools/.*$
-      - ^tox.ini$
+    files:
+      - ^nova/virt/libvirt/.*$
+      - ^nova/objects/.*$
+      - ^nova/scheduler/.*$
+      - .zuul.yaml
     vars:
       tox_envlist: all
       tempest_test_regex: ^tempest\.(api\.compute\.servers|scenario\.test_network_basic_ops)
@@ -750,11 +726,12 @@
         - nova-ceph-multistore:
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-linuxbridge-tempest:
-            irrelevant-files:
+            files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
               # code; we don't need to run this on all changes.
-              - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
+              - ^nova/network/.*$
+              - nova/virt/libvirt/vif.py
         - nova-live-migration
         - nova-live-migration-ceph
         - nova-lvm
@@ -815,11 +792,12 @@
         - nova-ceph-multistore:
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-linuxbridge-tempest:
-            irrelevant-files:
+            files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
               # code; we don't need to run this on all changes.
-              - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
+              - ^nova/network/.*$
+              - nova/virt/libvirt/vif.py
         - tempest-integrated-compute:
            irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-enforce-scope-new-defaults:
