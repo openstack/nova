@@ -131,6 +131,25 @@ class ExtraSpecs(object):
         self.migration_data_timeout = migration_data_timeout
         self.evc_mode_key = evc_mode_key
 
+    def get_capped_evc_mode(self, evc_modes, evc_mode_sort_keys,
+                            max_evc_mode_key):
+        """Return the EVCMode for the evc_mode_key attribute
+
+        The available EVCModes are limited by what the Hypervisor supports, so
+        we check against a supported maximum and return an EVCMode up to that
+        limit.
+
+        If `evc_mode_key` is unset, we return `None`
+        """
+        if self.evc_mode_key is None:
+            return None
+
+        wanted_evc_mode_sort_key = evc_mode_sort_keys[self.evc_mode_key]
+        max_evc_mode_sort_key = evc_mode_sort_keys[max_evc_mode_key]
+        if wanted_evc_mode_sort_key > max_evc_mode_sort_key:
+            return evc_modes[max_evc_mode_key]
+        return evc_modes[self.evc_mode_key]
+
 
 class HistoryCollectorItems(six.Iterator):
 

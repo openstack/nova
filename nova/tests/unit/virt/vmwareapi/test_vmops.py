@@ -1284,12 +1284,13 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vm_util, 'apply_evc_mode')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value=mock.Mock(version=None))
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='vm-ref')
     def test_resize_vm(self, fake_get_vm_ref,
-                       fake_resize_spec, fake_reconfigure,
+                       fake_resize_spec, fake_reconfigure, fake_apply_evc_mode,
                        fake_get_extra_specs, fake_get_metadata):
         vm_ref = mock.sentinel.vm_ref
         extra_specs = vm_util.ExtraSpecs()
@@ -1315,6 +1316,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
+    @mock.patch.object(vm_util, 'apply_evc_mode')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value=mock.MagicMock(version=None))
@@ -1323,6 +1325,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
     def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_get_vm_ref,
                                     fake_resize_spec, fake_reconfigure,
+                                    fake_apply_evc_mode,
                                     fake_cleanup_after_special_spawning,
                                     fake_get_extra_specs, fake_get_metadata):
         vm_ref = fake_get_vm_ref.return_value
@@ -1348,6 +1351,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
+    @mock.patch.object(vm_util, 'apply_evc_mode')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value=mock.MagicMock(version=None))
@@ -1356,6 +1360,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
     def test_resize_vm_bigvm_downsize(self, fake_drs_override, fake_get_vm_ref,
                                       fake_resize_spec, fake_reconfigure,
+                                      fake_apply_evc_mode,
                                       fake_cleanup_after_special_spawning,
                                       fake_get_extra_specs, fake_get_metadata):
         vm_ref = fake_get_vm_ref.return_value
@@ -2294,6 +2299,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                          rename_vm):
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
+        extra_specs.evc_mode_key = None
         connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
         connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
         bdm = [{'connection_info': connection_info1,
@@ -2357,6 +2363,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         self._instance.image_ref = None
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
+        extra_specs.evc_mode_key = None
 
         connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
         connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
@@ -2963,6 +2970,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                ephemeral_gb=1, swap=512,
                                                extra_specs={})
         extra_specs = self._vmops._get_extra_specs(self._instance.flavor)
+        extra_specs.evc_mode_key = None
         ephemerals = [{'device_type': 'disk',
                        'disk_bus': None,
                        'device_name': '/dev/vdb',
@@ -4219,3 +4227,127 @@ class VMwareVMOpsTestCase(test.TestCase):
         # were returned into is not changed
         self._test_stack_vm_to_host_if_needed(
             requested_mb, hosts, expected)
+
+    @mock.patch.object(vm_util, 'apply_evc_mode')
+    def test_spawn_with_evc_mode(self, mock_apply_evc_mode):
+        """Check that we call the function for ApplyEvcModeVM_Task"""
+        extra_specs = vm_util.ExtraSpecs(evc_mode_key='intel-skylake')
+        self._test_spawn(extra_specs=extra_specs)
+        mock_apply_evc_mode.assert_called_once_with(
+            self._session, 'fake_vm_ref', self._evc_modes['intel-skylake'])
+
+    @mock.patch.object(vm_util, 'apply_evc_mode')
+    def test_spawn_with_evc_mode_not_supported_on_host(self,
+                                                       mock_apply_evc_mode):
+        """Check that we call the function for ApplyEvcModeVM_Task with the
+        lower evc_mode_key supported by our cluster
+        """
+        extra_specs = vm_util.ExtraSpecs(evc_mode_key='intel-skylake')
+        self._vmops._max_evc_mode_key = 'intel-broadwell'
+        self._test_spawn(extra_specs=extra_specs)
+        mock_apply_evc_mode.assert_called_once_with(
+            self._session, 'fake_vm_ref', self._evc_modes['intel-broadwell'])
+
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
+    @mock.patch.object(vm_util, 'apply_evc_mode')
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    @mock.patch.object(vm_util, 'get_vm_resize_spec',
+                       return_value=mock.MagicMock(version=None))
+    @mock.patch.object(vm_util, 'get_vm_ref',
+                       return_value=mock.sentinel.vm_ref)
+    @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
+    def test_resize_with_other_evc_mode(self, fake_drs_override,
+                                        fake_get_vm_ref, fake_resize_spec,
+                                        fake_reconfigure, fake_apply_evc_mode,
+                                        fake_cleanup_after_special_spawning,
+                                        fake_get_extra_specs,
+                                        fake_get_metadata):
+        """Check that we ApplyEvcModeVM_Task on resize with the
+        flavor-requested evc_mode
+        """
+        vm_ref = fake_get_vm_ref.return_value
+        extra_specs = vm_util.ExtraSpecs(evc_mode_key='intel-skylake')
+        fake_get_extra_specs.return_value = extra_specs
+        fake_get_metadata.return_value = self._metadata
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=CONF.bigvm_mb,
+                                vcpus=2,
+                                extra_specs=
+                                    {'vmware:evc_mode': 'intel-skylake'})
+        instance = self._instance.obj_clone()
+        instance.old_flavor = instance.flavor.obj_clone()
+        self._vmops._resize_vm(self._context, instance, vm_ref, flavor, None)
+        fake_apply_evc_mode.assert_called_once_with(
+            self._session, mock.sentinel.vm_ref,
+            self._evc_modes['intel-skylake'])
+
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
+    @mock.patch.object(vm_util, 'apply_evc_mode')
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    @mock.patch.object(vm_util, 'get_vm_resize_spec',
+                       return_value=mock.MagicMock(version=None))
+    @mock.patch.object(vm_util, 'get_vm_ref',
+                       return_value=mock.sentinel.vm_ref)
+    @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
+    def test_resize_with_other_evc_mode_not_host_supported(self,
+            fake_drs_override, fake_get_vm_ref, fake_resize_spec,
+            fake_reconfigure, fake_apply_evc_mode,
+            fake_cleanup_after_special_spawning, fake_get_extra_specs,
+            fake_get_metadata):
+        """Check that we ApplyEvcModeVM_Task on resize with the
+        _max_evc_mode_key of the cluster if the cluster has an
+        older-than-the-requested evc_mode
+        """
+        self._vmops._max_evc_mode_key = 'intel-broadwell'
+        vm_ref = fake_get_vm_ref.return_value
+        extra_specs = vm_util.ExtraSpecs(evc_mode_key='intel-skylake')
+        fake_get_extra_specs.return_value = extra_specs
+        fake_get_metadata.return_value = self._metadata
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=CONF.bigvm_mb,
+                                vcpus=2,
+                                extra_specs=
+                                    {'vmware:evc_mode': 'intel-skylake'})
+        instance = self._instance.obj_clone()
+        instance.old_flavor = instance.flavor.obj_clone()
+        self._vmops._resize_vm(self._context, instance, vm_ref, flavor, None)
+        fake_apply_evc_mode.assert_called_once_with(
+            self._session, mock.sentinel.vm_ref,
+            self._evc_modes['intel-broadwell'])
+
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
+    @mock.patch.object(vm_util, 'apply_evc_mode')
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    @mock.patch.object(vm_util, 'get_vm_resize_spec',
+                       return_value=mock.MagicMock(version=None))
+    @mock.patch.object(vm_util, 'get_vm_ref',
+                       return_value=mock.sentinel.vm_ref)
+    @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
+    def test_resize_with_no_evc_mode(self, fake_drs_override,
+                                     fake_get_vm_ref, fake_resize_spec,
+                                     fake_reconfigure, fake_apply_evc_mode,
+                                     fake_cleanup_after_special_spawning,
+                                     fake_get_extra_specs,
+                                     fake_get_metadata):
+        """Check that we ApplyEvcModeVM_Task on resize to reset the EVCMode of
+        the VM if the flavor doesn't request an evc_mode
+        """
+        vm_ref = fake_get_vm_ref.return_value
+        extra_specs = vm_util.ExtraSpecs()
+        fake_get_extra_specs.return_value = extra_specs
+        fake_get_metadata.return_value = self._metadata
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=CONF.bigvm_mb,
+                                vcpus=2,
+                                extra_specs={})
+        instance = self._instance.obj_clone()
+        instance.old_flavor = instance.flavor.obj_clone()
+        self._vmops._resize_vm(self._context, instance, vm_ref, flavor, None)
+        fake_apply_evc_mode.assert_called_once_with(
+            self._session, mock.sentinel.vm_ref, None)

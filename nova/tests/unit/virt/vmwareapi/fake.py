@@ -785,6 +785,8 @@ class HostSystem(ManagedObject):
         config.product = product
         summary.config = config
 
+        summary.maxEVCModeKey = 'intel-skylake'
+
         return summary
 
     @staticmethod
@@ -879,6 +881,7 @@ class HostSystem(ManagedObject):
         self.set("summary.hardware", summary.hardware)
         self.set("summary.runtime", summary.runtime)
         self.set("summary.quickStats", summary.quickStats)
+        self.set("summary.maxEVCModeKey", summary.maxEVCModeKey)
 
         self.set("capability.maxHostSupportedVcpus", 600)
         self.set("connected", connected)
