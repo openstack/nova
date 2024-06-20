@@ -20,8 +20,9 @@ Allows overriding of flags for use of fakes, and some black magic for
 inline callbacks.
 
 """
-
-import nova.monkey_patch  # noqa
+# autopep8: off
+from nova import monkey_patch ; monkey_patch.patch()  # noqa
+# autopep8: on
 
 import abc
 import builtins

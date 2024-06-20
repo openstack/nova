@@ -12,5 +12,5 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-
-import nova.monkey_patch  # noqa
+from nova import monkey_patch
+monkey_patch.patch()

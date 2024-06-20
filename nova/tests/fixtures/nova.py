@@ -58,6 +58,7 @@ from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api
 from nova.db import migration
 from nova import exception
+from nova import monkey_patch
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
@@ -1919,7 +1920,7 @@ class ReaderWriterLock(lockutils.ReaderWriterLock):
     """
 
     def __init__(self, *a, **kw):
-        eventlet_patched = eventlet.patcher.is_monkey_patched('thread')
+        eventlet_patched = monkey_patch.is_patched()
         mpatch = fixtures.MonkeyPatch(
             'threading.current_thread', eventlet.getcurrent)
         with mpatch if eventlet_patched else contextlib.ExitStack():
