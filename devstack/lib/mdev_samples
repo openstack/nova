@@ -18,9 +18,9 @@ function compile_mdev_samples {
     else
         sudo tee -a /etc/apt/sources.list <<EOF
 # Added by devstack
-deb-src http://archive.ubuntu.com/ubuntu jammy main restricted
-deb-src http://archive.ubuntu.com/ubuntu jammy-updates main restricted
-deb-src http://archive.ubuntu.com/ubuntu jammy-security main restricted
+deb-src http://archive.ubuntu.com/ubuntu $DISTRO main restricted
+deb-src http://archive.ubuntu.com/ubuntu $DISTRO-updates main restricted
+deb-src http://archive.ubuntu.com/ubuntu $DISTRO-security main restricted
 EOF
     fi
 

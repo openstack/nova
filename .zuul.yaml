@@ -386,34 +386,7 @@
     pre-run: playbooks/nova-next/pre.yaml
     required-projects:
         - novnc/novnc
-    nodeset:
-      nodes:
-        - name: controller
-          label: nested-virt-ubuntu-jammy
-        - name: compute1
-          label: nested-virt-ubuntu-jammy
-      groups:
-        # Node where tests are executed and test results collected
-        - name: tempest
-          nodes:
-            - controller
-        # Nodes running the compute service
-        - name: compute
-          nodes:
-            - controller
-            - compute1
-        # Nodes that are not the controller
-        - name: subnode
-          nodes:
-            - compute1
-        # Switch node for multinode networking setup
-        - name: switch
-          nodes:
-            - controller
-        # Peer nodes for multinode networking setup
-        - name: peers
-          nodes:
-            - compute1
+    nodeset: openstack-two-node-noble
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_exclude_regex.
@@ -482,8 +455,7 @@
             neutron_plugin_options:
               available_type_drivers: flat,geneve,vlan,gre,local,vxlan
       devstack_localrc:
-        # For nested virt
-        LIBVIRT_TYPE: kvm
+        LIBVIRT_TYPE: qemu
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
@@ -527,8 +499,7 @@
     group-vars:
       subnode:
         devstack_localrc:
-          # For nested virt
-          LIBVIRT_TYPE: kvm
+          LIBVIRT_TYPE: qemu
           Q_AGENT: openvswitch
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
           Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
