@@ -22,13 +22,11 @@ import sys
 
 from nova.cmd import baseproxy
 import nova.conf
-from nova.conf import remote_debug
 from nova.conf import spice
 from nova import config
 
 
 CONF = nova.conf.CONF
-remote_debug.register_cli_opts(CONF)
 spice.register_cli_opts(CONF)
 
 

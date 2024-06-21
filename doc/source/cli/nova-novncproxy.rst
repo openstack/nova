@@ -72,10 +72,6 @@ Options
     path to a PEM file containing the private key which the VNC proxy server
     presents to the compute node during VNC authentication.
 
-.. rubric:: Debugger options
-
-.. include:: opts/debugger.rst
-
 Files
 =====
 

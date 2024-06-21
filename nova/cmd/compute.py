@@ -29,7 +29,6 @@ from oslo_reports import opts as gmr_opts
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
-from nova.conf import remote_debug
 from nova import config
 import nova.db.main.api
 from nova import objects
@@ -39,7 +38,6 @@ from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
-remote_debug.register_cli_opts(CONF)
 
 
 def main():

@@ -26,10 +26,6 @@ Options
 
 .. include:: opts/common.rst
 
-.. rubric:: Debugger options
-
-.. include:: opts/debugger.rst
-
 Files
 =====
 

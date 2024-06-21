@@ -21,13 +21,11 @@ import sys
 
 from nova.cmd import baseproxy
 import nova.conf
-from nova.conf import remote_debug
 from nova.conf import serial_console as serial
 from nova import config
 
 
 CONF = nova.conf.CONF
-remote_debug.register_cli_opts(CONF)
 serial.register_cli_opts(CONF)
 
 

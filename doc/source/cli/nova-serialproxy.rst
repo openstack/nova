@@ -45,10 +45,6 @@ Options
     this port number for incoming connection requests to instances which expose
     serial console.
 
-.. rubric:: Debugger options
-
-.. include:: opts/debugger.rst
-
 Files
 =====
 

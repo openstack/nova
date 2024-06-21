@@ -46,10 +46,6 @@ Options
     in ``nova.conf``.  The ``nova-spicehtml5proxy`` service must be listening
     on a port that is accessible from the HTML5 client.
 
-.. rubric:: Debugger options
-
-.. include:: opts/debugger.rst
-
 Files
 =====
 
