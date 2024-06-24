@@ -34,6 +34,7 @@ from oslo_utils import units
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.image import format_inspector
 from nova.image import glance
 import nova.privsep.libvirt
 import nova.privsep.path
@@ -660,6 +661,20 @@ class Qcow2(Image):
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
             prepare_template(target=base, *args, **kwargs)
+
+        # NOTE(danms): We need to perform safety checks on the base image
+        # before we inspect it for other attributes. We do this each time
+        # because additional safety checks could have been added since we
+        # downloaded the image.
+        if not CONF.workarounds.disable_deep_image_inspection:
+            inspector = format_inspector.detect_file_format(base)
+            if not inspector.safety_check():
+                LOG.warning('Base image %s failed safety check', base)
+                # NOTE(danms): This is the same exception as would be raised
+                # by qemu_img_info() if the disk format was unreadable or
+                # otherwise unsuitable.
+                raise exception.InvalidDiskInfo(
+                    reason=_('Base image failed safety check'))
 
         # NOTE(ankit): Update the mtime of the base file so the image
         # cache manager knows it is in use.

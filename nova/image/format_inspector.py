@@ -368,6 +368,23 @@ class QcowInspector(FileInspector):
                 not self.has_unknown_features)
 
 
+class QEDInspector(FileInspector):
+    def __init__(self, tracing=False):
+        super().__init__(tracing)
+        self.new_region('header', CaptureRegion(0, 512))
+
+    @property
+    def format_match(self):
+        if not self.region('header').complete:
+            return False
+        return self.region('header').data.startswith(b'QED\x00')
+
+    def safety_check(self):
+        # QED format is not supported by anyone, but we want to detect it
+        # and mark it as just always unsafe.
+        return False
+
+
 # The VHD (or VPC as QEMU calls it) format consists of a big-endian
 # 512-byte "footer" at the beginning of the file with various
 # information, most of which does not matter to us:
@@ -871,19 +888,52 @@ class InfoWrapper(object):
             self._source.close()
 
 
+ALL_FORMATS = {
+    'raw': FileInspector,
+    'qcow2': QcowInspector,
+    'vhd': VHDInspector,
+    'vhdx': VHDXInspector,
+    'vmdk': VMDKInspector,
+    'vdi': VDIInspector,
+    'qed': QEDInspector,
+}
+
+
 def get_inspector(format_name):
     """Returns a FormatInspector class based on the given name.
 
     :param format_name: The name of the disk_format (raw, qcow2, etc).
     :returns: A FormatInspector or None if unsupported.
     """
-    formats = {
-        'raw': FileInspector,
-        'qcow2': QcowInspector,
-        'vhd': VHDInspector,
-        'vhdx': VHDXInspector,
-        'vmdk': VMDKInspector,
-        'vdi': VDIInspector,
-    }
 
-    return formats.get(format_name)
+    return ALL_FORMATS.get(format_name)
+
+
+def detect_file_format(filename):
+    """Attempts to detect the format of a file.
+
+    This runs through a file one time, running all the known inspectors in
+    parallel. It stops reading the file once one of them matches or all of
+    them are sure they don't match.
+
+    Returns the FileInspector that matched, if any. None if 'raw'.
+    """
+    inspectors = {k: v() for k, v in ALL_FORMATS.items()}
+    with open(filename, 'rb') as f:
+        for chunk in chunked_reader(f):
+            for format, inspector in list(inspectors.items()):
+                try:
+                    inspector.eat_chunk(chunk)
+                except ImageFormatError:
+                    # No match, so stop considering this format
+                    inspectors.pop(format)
+                    continue
+                if (inspector.format_match and inspector.complete and
+                        format != 'raw'):
+                    # First complete match (other than raw) wins
+                    return inspector
+            if all(i.complete for i in inspectors.values()):
+                # If all the inspectors are sure they are not a match, avoid
+                # reading to the end of the file to settle on 'raw'.
+                break
+    return inspectors['raw']

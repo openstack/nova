@@ -35,6 +35,7 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova.image import format_inspector
 from nova import objects
 from nova.objects import fields as obj_fields
 import nova.privsep.fs
@@ -147,7 +148,34 @@ def create_image(
     ]
 
     if backing_file:
+        # NOTE(danms): We need to perform safety checks on the base image
+        # before we inspect it for other attributes. We do this each time
+        # because additional safety checks could have been added since we
+        # downloaded the image.
+        if not CONF.workarounds.disable_deep_image_inspection:
+            inspector = format_inspector.detect_file_format(backing_file)
+            if not inspector.safety_check():
+                LOG.warning('Base image %s failed safety check', backing_file)
+                # NOTE(danms): This is the same exception as would be raised
+                # by qemu_img_info() if the disk format was unreadable or
+                # otherwise unsuitable.
+                raise exception.InvalidDiskInfo(
+                    reason=_('Base image failed safety check'))
+
         base_details = images.qemu_img_info(backing_file)
+        if base_details.backing_file is not None:
+            LOG.warning('Base image %s failed safety check', backing_file)
+            raise exception.InvalidDiskInfo(
+                reason=_('Base image failed safety check'))
+        try:
+            data_file = base_details.format_specific['data']['data-file']
+        except (KeyError, TypeError, AttributeError):
+            data_file = None
+        if data_file is not None:
+            LOG.warning('Base image %s failed safety check', backing_file)
+            raise exception.InvalidDiskInfo(
+                reason=_('Base image failed safety check'))
+
         cow_opts = [
             f'backing_file={backing_file}',
             f'backing_fmt={base_details.file_format}'
