@@ -107,15 +107,28 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
     @mock.patch('tempfile.NamedTemporaryFile')
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.virt.images.qemu_img_info')
+    @mock.patch('nova.image.format_inspector.detect_file_format')
     def _test_create_image(
-        self, path, disk_format, disk_size, mock_info, mock_execute,
-        mock_ntf, backing_file=None, encryption=None
+        self, path, disk_format, disk_size, mock_detect, mock_info,
+        mock_execute, mock_ntf, backing_file=None, encryption=None,
+        safety_check=True
     ):
+        if isinstance(backing_file, dict):
+            backing_info = backing_file
+            backing_file = backing_info.pop('file', None)
+        else:
+            backing_info = {}
+        backing_backing_file = backing_info.pop('backing_file', None)
+
         mock_info.return_value = mock.Mock(
             file_format=mock.sentinel.backing_fmt,
             cluster_size=mock.sentinel.cluster_size,
+            backing_file=backing_backing_file,
+            format_specific=backing_info,
         )
         fh = mock_ntf.return_value.__enter__.return_value
+
+        mock_detect.return_value.safety_check.return_value = safety_check
 
         libvirt_utils.create_image(
             path, disk_format, disk_size, backing_file=backing_file,
@@ -130,7 +143,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             mock_info.assert_called_once_with(backing_file)
             cow_opts = [
                 '-o',
-                f'backing_file={mock.sentinel.backing_file},'
+                f'backing_file={backing_file},'
                 f'backing_fmt={mock.sentinel.backing_fmt},'
                 f'cluster_size={mock.sentinel.cluster_size}',
             ]
@@ -166,6 +179,8 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             expected_args += (disk_size,)
 
         self.assertEqual([(expected_args,)], mock_execute.call_args_list)
+        if backing_file:
+            mock_detect.return_value.safety_check.assert_called_once_with()
 
     def test_create_image_raw(self):
         self._test_create_image('/some/path', 'raw', '10G')
@@ -179,6 +194,25 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self._test_create_image(
             '/some/stuff', 'qcow2', '1234567891234',
             backing_file=mock.sentinel.backing_file,
+        )
+
+    def test_create_image_base_has_backing_file(self):
+        self.assertRaises(
+            exception.InvalidDiskInfo,
+            self._test_create_image,
+            '/some/stuff', 'qcow2', '1234567891234',
+            backing_file={'file': mock.sentinel.backing_file,
+                          'backing_file': mock.sentinel.backing_backing_file},
+        )
+
+    def test_create_image_base_has_data_file(self):
+        self.assertRaises(
+            exception.InvalidDiskInfo,
+            self._test_create_image,
+            '/some/stuff', 'qcow2', '1234567891234',
+            backing_file={'file': mock.sentinel.backing_file,
+                          'backing_file': mock.sentinel.backing_backing_file,
+                          'data': {'data-file': mock.sentinel.data_file}},
         )
 
     def test_create_image_size_none(self):

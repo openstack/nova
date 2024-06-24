@@ -524,13 +524,15 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         mock_exists.assert_has_calls(exist_calls)
 
+    @mock.patch('nova.image.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
     @mock.patch('nova.privsep.path.utime')
     def test_create_image(
-        self, mock_utime, mock_verify, mock_exist, mock_create, mock_sync
+        self, mock_utime, mock_verify, mock_exist, mock_create, mock_sync,
+        mock_detect_format
     ):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         fn = mock.MagicMock()
@@ -551,7 +553,10 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_exist.assert_has_calls(exist_calls)
         self.assertTrue(mock_sync.called)
         mock_utime.assert_called()
+        mock_detect_format.assert_called_once()
+        mock_detect_format.return_value.safety_check.assert_called_once_with()
 
+    @mock.patch('nova.image.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(imagebackend.disk, 'extend')
@@ -559,7 +564,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch.object(imagebackend.Qcow2, 'get_disk_size')
     @mock.patch('nova.privsep.path.utime')
     def test_create_image_too_small(self, mock_utime, mock_get, mock_exist,
-                                    mock_extend, mock_create, mock_sync):
+                                    mock_extend, mock_create, mock_sync,
+                                    mock_detect_format):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         mock_get.return_value = self.SIZE
         fn = mock.MagicMock()
@@ -576,7 +582,9 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertTrue(mock_sync.called)
         self.assertFalse(mock_create.called)
         self.assertFalse(mock_extend.called)
+        mock_detect_format.assert_called_once()
 
+    @mock.patch('nova.image.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
@@ -588,7 +596,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     def test_generate_resized_backing_files(self, mock_utime, mock_copy,
                                             mock_verify, mock_exist,
                                             mock_extend, mock_get,
-                                            mock_create, mock_sync):
+                                            mock_create, mock_sync,
+                                            mock_detect_format):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         mock_get.return_value = self.QCOW2_BASE
         fn = mock.MagicMock()
@@ -615,7 +624,9 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertTrue(mock_sync.called)
         self.assertFalse(mock_create.called)
         mock_utime.assert_called()
+        mock_detect_format.assert_called_once()
 
+    @mock.patch('nova.image.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
@@ -626,7 +637,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     def test_qcow2_exists_and_has_no_backing_file(self, mock_utime,
                                                   mock_verify, mock_exist,
                                                   mock_extend, mock_get,
-                                                  mock_create, mock_sync):
+                                                  mock_create, mock_sync,
+                                                  mock_detect_format):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         mock_get.return_value = None
         fn = mock.MagicMock()
@@ -647,6 +659,31 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertTrue(mock_sync.called)
         self.assertFalse(mock_create.called)
         self.assertFalse(mock_extend.called)
+        mock_detect_format.assert_called_once()
+
+    @mock.patch('nova.image.format_inspector.detect_file_format')
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
+    @mock.patch.object(imagebackend.disk, 'extend')
+    @mock.patch.object(os.path, 'exists', side_effect=[])
+    @mock.patch.object(imagebackend.Image, 'verify_base_size')
+    def test_qcow2_exists_and_fails_safety_check(self,
+                                                 mock_verify, mock_exist,
+                                                 mock_extend, mock_get,
+                                                 mock_create, mock_sync,
+                                                 mock_detect_format):
+        mock_detect_format.return_value.safety_check.return_value = False
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        mock_get.return_value = None
+        fn = mock.MagicMock()
+        mock_exist.side_effect = [False, True, False, True, True]
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        self.assertRaises(exception.InvalidDiskInfo,
+                          image.create_image, fn, self.TEMPLATE_PATH,
+                          self.SIZE)
+        mock_verify.assert_not_called()
 
     def test_resolve_driver_format(self):
         image = self.image_class(self.INSTANCE, self.NAME)
