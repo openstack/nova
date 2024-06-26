@@ -233,4 +233,4 @@ an existing instance or migration UUID:
 
 .. code-block:: console
 
-  $ nova-manage placement audit --verbose --delete --resource-provider <uuid>
+  $ nova-manage placement audit --verbose --delete --resource_provider <uuid>
