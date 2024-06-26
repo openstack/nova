@@ -1,0 +1,12 @@
+---
+other:
+  - |
+    Optimized the discovery of PCI passthrough devices and added caching.
+    Previously libvirt was called 3 times per device, this has been
+    reduced to a single call.
+
+    .. note::
+      Separately, please be aware of an upstream bug in libvirt (< 10.5)
+      that caused an leak of GSource objects, which slowed down
+      queries over time.
+      https://gitlab.com/libvirt/libvirt/-/commit/98f1cf88fa7e0f992d93f376418fbfb3996a9690

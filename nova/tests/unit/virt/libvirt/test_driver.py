@@ -30676,6 +30676,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # it at all. See bug 2009280.
         self.assertFalse(hv.evmcs)
 
+    def test_get_pci_passthrough_devices_lru_cache_called_once(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        with mock.patch.object(drvr._host, 'list_all_devices',
+                               return_value=[]) as mock_list:
+            # Call _get_pci_passthrough_devices and
+            # check if the result got cached
+            drvr._get_pci_passthrough_devices()
+            drvr._get_pci_passthrough_devices()
+            assert mock_list.call_count == 1
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""

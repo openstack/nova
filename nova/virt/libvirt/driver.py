@@ -8887,6 +8887,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return cpu_info
 
     # TODO(stephenfin): Move this to 'host.py'
+    @functools.cache
     def _get_pci_passthrough_devices(self):
         """Get host PCI devices information.
 
@@ -8924,15 +8925,19 @@ class LibvirtDriver(driver.ComputeDriver):
             except libvirt.libvirtError:
                 return []
 
-        net_devs = [
-            dev for dev in devices.values() if "net" in _safe_list_caps(dev)
-        ]
-        vdpa_devs = [
-            dev for dev in devices.values() if "vdpa" in _safe_list_caps(dev)
-        ]
-        pci_devs = {
-            name: dev for name, dev in devices.items()
-                    if "pci" in _safe_list_caps(dev)}
+        net_devs = []
+        vdpa_devs = []
+        pci_devs = {}
+
+        for dev in devices.values():
+            dev_caps = _safe_list_caps(dev)
+            if "net" in dev_caps:
+                net_devs.append(dev)
+            if "vdpa" in dev_caps:
+                vdpa_devs.append(dev)
+            if "pci" in dev_caps:
+                pci_devs[dev.name] = dev
+
         pci_info = [
             self._host._get_pcidev_info(
                 name, dev, net_devs,
