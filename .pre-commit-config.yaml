@@ -31,8 +31,8 @@ repos:
       - id: hacking
         additional_dependencies: []
         exclude: '^(doc|releasenotes|tools)/.*$'
-  - repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v2.0.4
+  - repo: https://github.com/hhatto/autopep8
+    rev: v2.1.0
     hooks:
       - id: autopep8
         files: '^.*\.py$'
