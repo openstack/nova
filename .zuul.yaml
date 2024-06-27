@@ -355,6 +355,7 @@
       - ^tox.ini$
     vars:
       tox_envlist: all
+      tempest_concurrency: 4
       tempest_test_regex: ^tempest\.(api\.compute\.servers|scenario\.test_network_basic_ops)
       tempest_exclude_regex: (^tempest\.(api\.compute\.servers\.(test_attach_interfaces.AttachInterfacesTestJSON.test_create_list_show_delete_interfaces_by_network_port|test_delete_server.DeleteServersTestJSON.test_delete_server_while_in_attached_volume.*|test_list_.*|test_disk_config|test_server_rescue.*|test_server_actions\.ServerActionsTestJSON\.test_resize.*|test_device_tag.*))|.*\[.*\bslow\b.*\])
       devstack_localrc:
@@ -366,10 +367,19 @@
         SERVICE_PASSWORD: $ADMIN_PASSWORD
         SWIFT_HASH: 1234abcd
         DOWNLOAD_DEFAULT_IMAGES: False
-        IMAGE_URLS: "http://download.cirros-cloud.net/0.5.2/cirros-0.5.2-aarch64-disk.img"
+        IMAGE_URLS: "http://download.cirros-cloud.net/0.5.3/cirros-0.5.3-aarch64-disk.img"
         DEFAULT_INSTANCE_TYPE: m1.micro
       devstack_services:
         openstack-cli-server: true
+      # Increase the swap size to avoid OOM errors when running the tests.
+      configure_swap_size: 8192
+      devstack_local_conf:
+        post-config:
+          $NOVA_CPU_CONF:
+            libvirt:
+              # Use lower TB cache than default(1GiB), only applicable with
+              # libvirt>=8.0.0
+              tb_cache_size: 128
     pre-run:
       - playbooks/nova-emulation/pre.yaml
 
