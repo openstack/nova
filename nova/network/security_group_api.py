@@ -34,7 +34,6 @@ from nova import exception
 from nova.i18n import _
 from nova.network import neutron as neutronapi
 from nova.objects import security_group as security_group_obj
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -202,18 +201,6 @@ def _rule_exists(security_group, new_rule):
         else:
             return rule.get('id') or True
     return False
-
-
-def validate_property(value, property, allowed):
-    """Validate given security group property.
-
-    :param value:    the value to validate, as a string or unicode
-    :param property: the property, either 'name' or 'description'
-    :param allowed:  the range of characters allowed, but not used because
-                     Neutron is allowing any characters.
-    """
-    utils.check_string_length(value, name=property, min_length=0,
-                              max_length=255)
 
 
 def populate_security_groups(security_groups):

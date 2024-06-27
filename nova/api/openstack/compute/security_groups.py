@@ -21,8 +21,7 @@ from webob import exc
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import security_groups as \
-                                                  schema_security_groups
+from nova.api.openstack.compute.schemas import security_groups as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -131,16 +130,6 @@ class SecurityGroupControllerBase(object):
                             SG_NOT_FOUND)
         return group_rule_data_by_rule_group_id
 
-    def _from_body(self, body, key):
-        if not body:
-            raise exc.HTTPBadRequest(
-                explanation=_("The request body can't be empty"))
-        value = body.get(key, None)
-        if value is None:
-            raise exc.HTTPBadRequest(
-                explanation=_("Missing parameter %s") % key)
-        return value
-
 
 class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     """The Security group API controller for the OpenStack API."""
@@ -183,7 +172,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=exp.format_message())
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @validation.query_schema(schema_security_groups.index_query)
+    @validation.query_schema(schema.index_query)
     @wsgi.expected_errors(404)
     def index(self, req):
         """Returns a list of security groups."""
@@ -208,21 +197,17 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403))
+    @validation.schema(schema.create)
     def create(self, req, body):
         """Creates a new security group."""
         context = req.environ['nova.context']
         context.can(sg_policies.POLICY_NAME % 'create',
                     target={'project_id': context.project_id})
 
-        security_group = self._from_body(body, 'security_group')
-
-        group_name = security_group.get('name', None)
-        group_description = security_group.get('description', None)
+        group_name = body['security_group']['name']
+        group_description = body['security_group']['description']
 
         try:
-            security_group_api.validate_property(group_name, 'name', None)
-            security_group_api.validate_property(group_description,
-                                                 'description', None)
             group_ref = security_group_api.create_security_group(
                 context, group_name, group_description)
         except exception.Invalid as exp:
@@ -235,6 +220,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
+    @validation.schema(schema.update)
     def update(self, req, id, body):
         """Update a security group."""
         context = req.environ['nova.context']
@@ -249,14 +235,10 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
         except exception.Invalid as exp:
             raise exc.HTTPBadRequest(explanation=exp.format_message())
 
-        security_group_data = self._from_body(body, 'security_group')
-        group_name = security_group_data.get('name', None)
-        group_description = security_group_data.get('description', None)
+        group_name = body['security_group']['name']
+        group_description = body['security_group']['description']
 
         try:
-            security_group_api.validate_property(group_name, 'name', None)
-            security_group_api.validate_property(
-                group_description, 'description', None)
             group_ref = security_group_api.update_security_group(
                 context, security_group, group_name, group_description)
         except exception.SecurityGroupNotFound as exp:
@@ -273,22 +255,20 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
+    @validation.schema(schema.create_rules)
     def create(self, req, body):
         context = req.environ['nova.context']
         context.can(sg_policies.POLICY_NAME % 'rule:create',
                     target={'project_id': context.project_id})
-        sg_rule = self._from_body(body, 'security_group_rule')
+        sg_rule = body['security_group_rule']
         group_id = sg_rule.get('group_id')
+        parent_group_id = sg_rule['parent_group_id']
         source_group = {}
 
         try:
-            parent_group_id = security_group_api.validate_id(
-                sg_rule.get('parent_group_id'))
             security_group = security_group_api.get(
                 context, parent_group_id)
             if group_id is not None:
-                group_id = security_group_api.validate_id(group_id)
-
                 source_group = security_group_api.get(
                     context, id=group_id)
             new_rule = self._rule_args_to_dict(context,

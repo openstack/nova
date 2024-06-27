@@ -14,13 +14,16 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import security_group_default_rules as schema  # noqa: E501
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class SecurityGroupDefaultRulesController(wsgi.Controller):
     """(Removed) Controller for default project security groups."""
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.create)
     def create(self, req, body):
         raise exc.HTTPGone()
 
