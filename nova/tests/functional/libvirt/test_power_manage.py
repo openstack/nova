@@ -19,7 +19,6 @@ from nova import exception
 from nova import objects
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
-from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.virt import hardware
 from nova.virt.libvirt.cpu import api as cpu_api
@@ -276,23 +275,24 @@ class PowerManagementTests(PowerManagementTestsBase):
         self._assert_cpu_set_state(cpu_dedicated_set, expected='offline')
 
     def test_delete_server_device_busy(self):
+        # This test verifies bug 2065927 is resolved.
         server = self.test_create_server()
-
         inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
         instance_pcpus = inst.numa_topology.cpu_pinning
         self._assert_cpu_set_state(instance_pcpus, expected='online')
         with mock.patch(
-            'nova.filesystem.write_sys',
-            side_effect=exception.FileNotFound(file_path='fake')):
-            # This is bug 2065927
-            self.assertRaises(
-                client.OpenStackApiException, self._delete_server, server)
+            'nova.filesystem.write_sys.__wrapped__',
+            side_effect=[
+                exception.DeviceBusy(file_path='fake'),
+                None]):
+
+            self._delete_server(server)
         cpu_dedicated_set = hardware.get_cpu_dedicated_set()
         # Verify that the unused CPUs are still offline
         unused_cpus = cpu_dedicated_set - instance_pcpus
         self._assert_cpu_set_state(unused_cpus, expected='offline')
-        # but the instance cpus are still online
-        self._assert_cpu_set_state(instance_pcpus, expected='online')
+        # and the pinned CPUs are offline
+        self._assert_cpu_set_state(instance_pcpus, expected='offline')
 
     def test_create_server_with_emulator_threads_isolate(self):
         server = self._create_server(
