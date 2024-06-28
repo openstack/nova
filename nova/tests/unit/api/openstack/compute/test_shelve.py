@@ -56,7 +56,7 @@ class ShelveControllerTest(test.NoDBTestCase):
 
         self.assertRaises(
             webob.exc.HTTPConflict, self.controller._shelve,
-            self.req, uuids.fake, {})
+            self.req, uuids.fake, body={'shelve': None})
 
     @ddt.data(
         exception.ForbiddenWithAccelerators(),
@@ -75,7 +75,7 @@ class ShelveControllerTest(test.NoDBTestCase):
         mock_shelve.side_effect = exc
         self.assertRaises(
             webob.exc.HTTPBadRequest, self.controller._shelve,
-            self.req, uuids.fake, {})
+            self.req, uuids.fake, body={'shelve': None})
 
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_unshelve_locked_server(self, get_instance_mock):
@@ -84,7 +84,7 @@ class ShelveControllerTest(test.NoDBTestCase):
         self.stub_out('nova.compute.api.API.unshelve',
                       fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
-                          self.req, uuids.fake, body={'unshelve': {}})
+                          self.req, uuids.fake, body={'unshelve': None})
 
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_shelve_offload_locked_server(self, get_instance_mock):
@@ -94,7 +94,7 @@ class ShelveControllerTest(test.NoDBTestCase):
                       fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._shelve_offload,
-                          self.req, uuids.fake, {})
+                          self.req, uuids.fake, body={'shelveOffload': None})
 
 
 class UnshelveServerControllerTestV277(test.NoDBTestCase):

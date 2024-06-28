@@ -41,4 +41,6 @@ class CertificatesTestV21(test.NoDBTestCase):
                           self.req, 'root')
 
     def test_certificates_create_certificate(self):
-        self.assertRaises(webob.exc.HTTPGone, self.controller.create, self.req)
+        self.assertRaises(
+            webob.exc.HTTPGone, self.controller.create, self.req,
+            body={})

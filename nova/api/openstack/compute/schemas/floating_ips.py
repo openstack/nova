@@ -15,6 +15,14 @@
 
 from nova.api.validation import parameter_types
 
+create = {
+    'type': ['object', 'null'],
+    'properties': {
+        'pool': {
+            'type': ['string', 'null'],
+        },
+    },
+}
 
 add_floating_ip = {
     'type': 'object',

@@ -15,7 +15,9 @@
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import suspend_server as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova import exception
 from nova.policies import suspend_server as ss_policies
@@ -29,6 +31,7 @@ class SuspendServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((403, 404, 409, 400))
     @wsgi.action('suspend')
+    @validation.schema(schema.suspend)
     def _suspend(self, req, id, body):
         """Permit admins to suspend the server."""
         context = req.environ['nova.context']
@@ -49,6 +52,7 @@ class SuspendServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))
     @wsgi.action('resume')
+    @validation.schema(schema.resume)
     def _resume(self, req, id, body):
         """Permit admins to resume the server from suspend."""
         context = req.environ['nova.context']

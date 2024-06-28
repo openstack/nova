@@ -2924,8 +2924,8 @@ class ServersControllerStartStopTest(ControllerTest):
     @mock.patch.object(compute_api.API, 'start')
     def test_start(self, mock_start):
         req = fakes.HTTPRequestV21.blank(self.path_action % FAKE_UUID)
-        body = dict(start="")
-        self.controller._start_server(req, FAKE_UUID, body)
+        body = {'os-start': None}
+        self.controller._start_server(req, FAKE_UUID, body=body)
         mock_start.assert_called_once_with(mock.ANY, mock.ANY)
 
     @mock.patch.object(compute_api.API, 'start')
@@ -2934,17 +2934,17 @@ class ServersControllerStartStopTest(ControllerTest):
             instance_id=FAKE_UUID)
 
         req = fakes.HTTPRequestV21.blank(self.path_action % FAKE_UUID)
-        body = dict(start="")
+        body = {'os-start': None}
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._start_server, req, FAKE_UUID, body)
+            self.controller._start_server, req, FAKE_UUID, body=body)
 
     @mock.patch.object(
         compute_api.API, 'start', fakes.fake_actions_to_locked_server)
     def test_start_locked_server(self):
         req = fakes.HTTPRequestV21.blank(self.path_action % FAKE_UUID)
-        body = dict(start="")
+        body = {'os-start': None}
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._start_server, req, FAKE_UUID, body)
+            self.controller._start_server, req, FAKE_UUID, body=body)
 
     @mock.patch.object(compute_api.API, 'start')
     def test_start_invalid(self, mock_start):
@@ -2953,15 +2953,15 @@ class ServersControllerStartStopTest(ControllerTest):
             method='fake_method', state='fake_state')
 
         req = fakes.HTTPRequestV21.blank(self.path_action % FAKE_UUID)
-        body = {'start': ''}
+        body = {'os-start': None}
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._start_server, req, FAKE_UUID, body)
+            self.controller._start_server, req, FAKE_UUID, body=body)
 
     @mock.patch.object(compute_api.API, 'stop')
     def test_stop(self, mock_stop):
         req = fakes.HTTPRequestV21.blank(self.path_action % FAKE_UUID)
-        body = dict(stop="")
-        self.controller._stop_server(req, FAKE_UUID, body)
+        body = {'os-stop': None}
+        self.controller._stop_server(req, FAKE_UUID, body=body)
         mock_stop.assert_called_once_with(mock.ANY, mock.ANY)
 
     @mock.patch.object(compute_api.API, 'stop')
@@ -2970,17 +2970,17 @@ class ServersControllerStartStopTest(ControllerTest):
             instance_id=FAKE_UUID)
 
         req = fakes.HTTPRequestV21.blank(self.path_action % FAKE_UUID)
-        body = dict(stop="")
+        body = {'os-stop': None}
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._stop_server, req, FAKE_UUID, body)
+            self.controller._stop_server, req, FAKE_UUID, body=body)
 
     @mock.patch.object(
         compute_api.API, 'stop', fakes.fake_actions_to_locked_server)
     def test_stop_locked_server(self):
         req = fakes.HTTPRequestV21.blank(self.path_action % FAKE_UUID)
-        body = dict(stop="")
+        body = {'os-stop': None}
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._stop_server, req, FAKE_UUID, body)
+            self.controller._stop_server, req, FAKE_UUID, body=body)
 
     @mock.patch.object(compute_api.API, 'stop')
     def test_stop_invalid_state(self, mock_stop):
@@ -2989,27 +2989,27 @@ class ServersControllerStartStopTest(ControllerTest):
             method='fake_method', state='fake_state')
 
         req = fakes.HTTPRequestV21.blank(self.path_action % FAKE_UUID)
-        body = dict(start="")
+        body = {'os-stop': None}
         self.assertRaises(webob.exc.HTTPConflict,
-            self.controller._stop_server, req, FAKE_UUID, body)
+            self.controller._stop_server, req, FAKE_UUID, body=body)
 
     @mock.patch('nova.db.main.api.instance_get_by_uuid')
     def test_start_with_bogus_id(self, mock_get):
         mock_get.side_effect = exception.InstanceNotFound(instance_id='fake')
 
         req = fakes.HTTPRequestV21.blank(self.path_action % 'test_inst')
-        body = dict(start="")
+        body = {'os-start': None}
         self.assertRaises(webob.exc.HTTPNotFound,
-            self.controller._start_server, req, 'test_inst', body)
+            self.controller._start_server, req, 'test_inst', body=body)
 
     @mock.patch('nova.db.main.api.instance_get_by_uuid')
     def test_stop_with_bogus_id(self, mock_get):
         mock_get.side_effect = exception.InstanceNotFound(instance_id='fake')
 
         req = fakes.HTTPRequestV21.blank(self.path_action % 'test_inst')
-        body = dict(stop="")
+        body = {'os-stop': None}
         self.assertRaises(webob.exc.HTTPNotFound,
-            self.controller._stop_server, req, 'test_inst', body)
+            self.controller._stop_server, req, 'test_inst', body=body)
 
 
 class _ServersControllerRebuildTest(ControllerTest):

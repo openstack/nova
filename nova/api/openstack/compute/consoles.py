@@ -15,7 +15,9 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import consoles as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class ConsolesController(wsgi.Controller):
@@ -30,6 +32,7 @@ class ConsolesController(wsgi.Controller):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.create)
     def create(self, req, server_id, body):
         raise exc.HTTPGone()
 

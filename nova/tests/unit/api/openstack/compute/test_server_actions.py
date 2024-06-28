@@ -162,7 +162,9 @@ class ServerActionsControllerTestV21(test.TestCase):
                     '_action_reboot': {'reboot': {'type': 'HARD'}},
                     '_action_rebuild': {'rebuild': {
                                 'imageRef': self.image_uuid,
-                                'adminPass': 'TNc53Dr8s7vw'}}}
+                                'adminPass': 'TNc53Dr8s7vw'}},
+                    '_action_revert_resize': {'revertResize': None},
+                    '_action_confirm_resize': {'confirmResize': None}}
 
         args_map = {'_action_resize': (('2'), {'auto_disk_config': None}),
                     '_action_confirm_resize': ((), {}),

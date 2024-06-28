@@ -18,7 +18,9 @@ from webob import exc
 
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
+from nova.api.openstack.compute.schemas import networks as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova.network import neutron
@@ -92,6 +94,7 @@ class NetworkController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.action("disassociate")
+    @validation.schema(schema.disassociate)
     def _disassociate_host_and_project(self, req, id, body):
         raise exc.HTTPGone()
 
@@ -100,9 +103,11 @@ class NetworkController(wsgi.Controller):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.create)
     def create(self, req, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.add)
     def add(self, req, body):
         raise exc.HTTPGone()

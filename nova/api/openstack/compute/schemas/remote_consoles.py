@@ -50,6 +50,10 @@ get_spice_console = {
     'additionalProperties': False,
 }
 
+# NOTE(stephenfin): This schema is intentionally empty since the action has
+# been removed
+get_rdp_console = {}
+
 get_serial_console = {
     'type': 'object',
     'properties': {

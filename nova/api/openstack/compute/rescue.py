@@ -85,6 +85,7 @@ class RescueController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('unrescue')
+    @validation.schema(rescue.unrescue)
     def _unrescue(self, req, id, body):
         """Unrescue an instance."""
         context = req.environ["nova.context"]

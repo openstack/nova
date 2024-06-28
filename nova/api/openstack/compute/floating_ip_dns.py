@@ -14,7 +14,9 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import floating_ip_dns as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class FloatingIPDNSDomainController(wsgi.Controller):
@@ -25,6 +27,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.update)
     def update(self, req, id, body):
         raise exc.HTTPGone()
 
@@ -41,6 +44,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.update)
     def update(self, req, domain_id, id, body):
         raise exc.HTTPGone()
 

@@ -14,7 +14,9 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import floating_ips_bulk as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class FloatingIPBulkController(wsgi.Controller):
@@ -28,9 +30,11 @@ class FloatingIPBulkController(wsgi.Controller):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.create)
     def create(self, req, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.update)
     def update(self, req, id, body):
         raise exc.HTTPGone()

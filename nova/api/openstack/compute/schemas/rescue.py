@@ -30,3 +30,13 @@ rescue = {
     'required': ['rescue'],
     'additionalProperties': False,
 }
+
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+unrescue = {
+    'type': 'object',
+    'properties': {
+        'unrescue': {},
+    },
+    'required': ['unrescue'],
+    'additionalProperties': False,
+}

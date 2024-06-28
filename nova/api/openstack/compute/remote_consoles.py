@@ -94,6 +94,7 @@ class RemoteConsolesController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getRDPConsole')
+    @validation.schema(remote_consoles.get_rdp_console)
     def get_rdp_console(self, req, id, body):
         """RDP console was available only for HyperV driver which has been
         removed from Nova in 29.0.0 (Caracal) release.

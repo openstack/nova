@@ -39,7 +39,12 @@ class SuspendServerTestsV21(admin_only_action_common.CommonTests):
                       lambda *a, **kw: self.controller)
 
     def test_suspend_resume(self):
-        self._test_actions(['_suspend', '_resume'])
+        self._test_actions(
+            ['_suspend', '_resume'],
+            body_map={
+                '_suspend': {'suspend': None}, '_resume': {'resume': None}
+            }
+        )
 
     @ddt.data(
         exception.OperationNotSupportedForVDPAInterface(
@@ -55,15 +60,29 @@ class SuspendServerTestsV21(admin_only_action_common.CommonTests):
         self.assertRaises(
             webob.exc.HTTPBadRequest,
             self.controller._suspend,
-            self.req, uuids.instance, body={})
+            self.req, uuids.instance, body={'suspend': None})
         self.assertTrue(mock_suspend.called)
 
     def test_suspend_resume_with_non_existed_instance(self):
-        self._test_actions_with_non_existed_instance(['_suspend', '_resume'])
+        self._test_actions_with_non_existed_instance(
+            ['_suspend', '_resume'],
+            body_map={
+                '_suspend': {'suspend': None}, '_resume': {'resume': None}
+            }
+        )
 
     def test_suspend_resume_raise_conflict_on_invalid_state(self):
-        self._test_actions_raise_conflict_on_invalid_state(['_suspend',
-                                                            '_resume'])
+        self._test_actions_raise_conflict_on_invalid_state(
+            ['_suspend', '_resume'],
+            body_map={
+                '_suspend': {'suspend': None}, '_resume': {'resume': None}
+            }
+        )
 
     def test_actions_with_locked_instance(self):
-        self._test_actions_with_locked_instance(['_suspend', '_resume'])
+        self._test_actions_with_locked_instance(
+            ['_suspend', '_resume'],
+            body_map={
+                '_suspend': {'suspend': None}, '_resume': {'resume': None}
+            }
+        )

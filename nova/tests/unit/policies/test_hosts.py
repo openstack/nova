@@ -57,11 +57,13 @@ class HostsPolicyTest(base.BasePolicyTest):
                                 rule_name, self.controller.show,
                                 self.req, 11111)
 
-    def test_update_host_policy(self):
+    @mock.patch('nova.compute.api.HostAPI.set_host_enabled')
+    def test_update_host_policy(self, mock_set_host_enabled):
+        mock_set_host_enabled.return_value = 'enabled'
         rule_name = policies.POLICY_NAME % 'update'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.update,
-                                self.req, 11111, body={})
+                                self.req, 11111, body={'status': 'enable'})
 
     @mock.patch('nova.compute.api.HostAPI.host_power_action')
     def test_reboot_host_policy(self, mock_action):

@@ -590,7 +590,7 @@ class ServersPolicyTest(base.BasePolicyTest):
                                 rule_name,
                                 self.controller._action_confirm_resize,
                                 self.req, self.instance.uuid,
-                                body={'confirmResize': 'null'})
+                                body={'confirmResize': None})
 
     @mock.patch('nova.compute.api.API.revert_resize')
     def test_revert_resize_server_policy(self, mock_revert_resize):
@@ -600,7 +600,7 @@ class ServersPolicyTest(base.BasePolicyTest):
                                 rule_name,
                                 self.controller._action_revert_resize,
                                 self.req, self.instance.uuid,
-                                body={'revertResize': 'null'})
+                                body={'revertResize': None})
 
     @mock.patch('nova.compute.api.API.reboot')
     def test_reboot_server_policy(self, mock_reboot):
@@ -654,7 +654,7 @@ class ServersPolicyTest(base.BasePolicyTest):
                                 rule_name,
                                 self.controller._start_server,
                                 self.req, self.instance.uuid,
-                                body={'os-start': 'null'})
+                                body={'os-start': None})
 
     @mock.patch('nova.compute.api.API.stop')
     def test_stop_server_policy(self, mock_stop):
@@ -664,14 +664,14 @@ class ServersPolicyTest(base.BasePolicyTest):
                                 rule_name,
                                 self.controller._stop_server,
                                 self.req, self.instance.uuid,
-                                body={'os-stop': 'null'})
+                                body={'os-stop': None})
 
     def test_stop_server_policy_failed_with_other_user(self):
         # Change the user_id in request context.
         req = fakes.HTTPRequest.blank('')
         req.environ['nova.context'].user_id = 'other-user'
         rule_name = policies.SERVERS % 'stop'
-        body = {'os-stop': 'null'}
+        body = {'os-stop': None}
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"},
             overwrite=False)
         exc = self.assertRaises(
@@ -687,7 +687,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         rule_name = policies.SERVERS % 'stop'
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"},
             overwrite=False)
-        body = {'os-stop': 'null'}
+        body = {'os-stop': None}
         self.controller._stop_server(self.req,
                                      self.instance.uuid, body=body)
 

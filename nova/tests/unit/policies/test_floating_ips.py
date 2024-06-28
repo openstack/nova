@@ -102,7 +102,7 @@ class FloatingIPPolicyTest(base.BasePolicyTest):
         rule_name = "os_compute_api:os-floating-ips:create"
         self.common_policy_auth(self.member_authorized_contexts,
                                 rule_name, self.controller.create,
-                                self.req, uuids.fake_id)
+                                self.req, body=None)
 
     @mock.patch('nova.network.neutron.API.get_instance_id_by_floating_address')
     @mock.patch('nova.network.neutron.API.get_floating_ip')

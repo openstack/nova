@@ -92,3 +92,28 @@ index_query = {
     # do not to update the additionalProperties to False.
     'additionalProperties': True
 }
+
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+add_security_group = {
+    'type': 'object',
+    'properties': {
+        'name': {
+            'type': 'string',
+            'minLength': 1,
+        },
+    },
+    'additionalProperties': True,
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+remove_security_group = {
+    'type': 'object',
+    'properties': {
+        'name': {
+            'type': 'string',
+            'minLength': 1,
+        },
+    },
+    'additionalProperties': True,
+}

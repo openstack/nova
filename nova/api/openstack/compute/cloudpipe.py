@@ -16,18 +16,18 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import cloudpipe as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 
 class CloudpipeController(wsgi.Controller):
     """Handle creating and listing cloudpipe instances."""
 
     @wsgi.expected_errors((410))
+    @validation.schema(schema.create)
     def create(self, req, body):
-        """Create a new cloudpipe instance, if none exists.
-
-        Parameters: {cloudpipe: {'project_id': ''}}
-        """
+        """Create a new cloudpipe instance, if none exists."""
         raise exc.HTTPGone()
 
     @wsgi.expected_errors((410))
@@ -36,6 +36,7 @@ class CloudpipeController(wsgi.Controller):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @validation.schema(schema.update)
     def update(self, req, id, body):
         """Configure cloudpipe parameters for the project."""
         raise exc.HTTPGone()

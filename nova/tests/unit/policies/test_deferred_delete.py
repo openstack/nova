@@ -63,14 +63,14 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
         self.common_policy_auth(self.project_member_authorized_contexts,
                                 rule_name, self.controller._restore,
                                 self.req, self.instance.uuid,
-                                body={'restore': {}})
+                                body={'restore': None})
 
     def test_force_delete_server_policy(self):
         rule_name = dd_policies.BASE_POLICY_NAME % 'force'
         self.common_policy_auth(self.project_member_authorized_contexts,
                                 rule_name, self.controller._force_delete,
                                 self.req, self.instance.uuid,
-                                body={'forceDelete': {}})
+                                body={'forceDelete': None})
 
     def test_force_delete_server_policy_failed_with_other_user(self):
         rule_name = dd_policies.BASE_POLICY_NAME % 'force'
@@ -80,7 +80,7 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized, self.controller._force_delete,
-            req, self.instance.uuid, body={'forceDelete': {}})
+            req, self.instance.uuid, body={'forceDelete': None})
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
@@ -91,7 +91,7 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
         rule_name = dd_policies.BASE_POLICY_NAME % 'force'
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
         self.controller._force_delete(self.req, self.instance.uuid,
-                                      body={'forceDelete': {}})
+                                      body={'forceDelete': None})
         force_delete_mock.assert_called_once_with(
             self.req.environ['nova.context'], self.instance)
 

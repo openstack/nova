@@ -18,7 +18,9 @@
 import webob
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import deferred_delete as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova import exception
 from nova.policies import deferred_delete as dd_policies
@@ -32,6 +34,7 @@ class DeferredDeleteController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((403, 404, 409))
     @wsgi.action('restore')
+    @validation.schema(schema.restore)
     def _restore(self, req, id, body):
         """Restore a previously deleted instance."""
         context = req.environ["nova.context"]
@@ -49,6 +52,7 @@ class DeferredDeleteController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))
     @wsgi.action('forceDelete')
+    @validation.schema(schema.force_delete)
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
         context = req.environ["nova.context"]

@@ -21,7 +21,10 @@ import webob
 
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
+from nova.api.openstack.compute.schemas \
+    import baremetal_nodes as schema_baremetal_nodes
 from nova.api.openstack import wsgi
+from nova.api import validation
 import nova.conf
 from nova.i18n import _
 from nova.policies import baremetal_nodes as bn_policies
@@ -32,7 +35,7 @@ CONF = nova.conf.CONF
 
 def _no_ironic_proxy(cmd):
     msg = _(
-        "Command Not supported. Please use Ironic "
+        "Command not supported. Please use Ironic "
         "command %(cmd)s to perform this action."
     )
     raise webob.exc.HTTPBadRequest(explanation=msg % {'cmd': cmd})
@@ -112,6 +115,7 @@ class BareMetalNodeController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
+    @validation.schema(schema_baremetal_nodes.create)
     def create(self, req, body):
         _no_ironic_proxy("node-create")
 
@@ -123,11 +127,13 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action('add_interface')
     @wsgi.expected_errors(400)
+    @validation.schema(schema_baremetal_nodes.add_interface)
     def _add_interface(self, req, id, body):
         _no_ironic_proxy("port-create")
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action('remove_interface')
     @wsgi.expected_errors(400)
+    @validation.schema(schema_baremetal_nodes.remove_interface)
     def _remove_interface(self, req, id, body):
         _no_ironic_proxy("port-delete")

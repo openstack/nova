@@ -15,7 +15,7 @@
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import lock_server
+from nova.api.openstack.compute.schemas import lock_server as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -30,7 +30,8 @@ class LockServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors(404)
     @wsgi.action('lock')
-    @validation.schema(lock_server.lock_v2_73, "2.73")
+    @validation.schema(schema.lock, "2.1", "2.72")
+    @validation.schema(schema.lock_v273, "2.73")
     def _lock(self, req, id, body):
         """Lock a server instance."""
         context = req.environ['nova.context']
@@ -47,6 +48,7 @@ class LockServerController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors(404)
     @wsgi.action('unlock')
+    @validation.schema(schema.unlock, "2.1", "2.72")
     def _unlock(self, req, id, body):
         """Unlock a server instance."""
         context = req.environ['nova.context']

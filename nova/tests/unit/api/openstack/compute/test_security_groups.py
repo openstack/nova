@@ -720,26 +720,30 @@ class TestSecurityGroupsV21(test.TestCase):
     def test_associate_by_non_existing_security_group_name(self):
         body = dict(addSecurityGroup=dict(name='non-existing'))
 
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.manager._addSecurityGroup, self.req, '1', body)
+        self.assertRaises(
+            webob.exc.HTTPNotFound,
+            self.manager._addSecurityGroup, self.req, '1', body=body)
 
     def test_associate_without_body(self):
         body = dict(addSecurityGroup=None)
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, self.req, '1', body)
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.manager._addSecurityGroup, self.req, '1', body=body)
 
     def test_associate_no_security_group_name(self):
         body = dict(addSecurityGroup=dict())
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, self.req, '1', body)
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.manager._addSecurityGroup, self.req, '1', body=body)
 
     def test_associate_security_group_name_with_whitespaces(self):
         body = dict(addSecurityGroup=dict(name="   "))
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, self.req, '1', body)
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.manager._addSecurityGroup, self.req, '1', body=body)
 
     def test_associate_non_existing_instance(self):
         body = dict(addSecurityGroup=dict(name="test"))
@@ -748,7 +752,7 @@ class TestSecurityGroupsV21(test.TestCase):
                             instance_id='1')):
             self.assertRaises(webob.exc.HTTPNotFound,
                               self.manager._addSecurityGroup,
-                              self.req, '1', body)
+                              self.req, '1', body=body)
 
     def test_associate_duplicate_names(self):
         sg1 = self._create_security_group(name='sg1',
@@ -767,7 +771,7 @@ class TestSecurityGroupsV21(test.TestCase):
                 (fakes.FAKE_PROJECT_ID, UUID_SERVER))
         self.assertRaises(webob.exc.HTTPConflict,
                           self.manager._addSecurityGroup,
-                          req, UUID_SERVER, body)
+                          req, UUID_SERVER, body=body)
 
     def test_associate_port_security_enabled_true(self):
         sg = self._create_sg_template().get('security_group')
@@ -782,7 +786,7 @@ class TestSecurityGroupsV21(test.TestCase):
         req = fakes.HTTPRequest.blank(
                 '/v2/%s/servers/%s/action' %
                 (fakes.FAKE_PROJECT_ID, UUID_SERVER))
-        self.manager._addSecurityGroup(req, UUID_SERVER, body)
+        self.manager._addSecurityGroup(req, UUID_SERVER, body=body)
 
     def test_associate_port_security_enabled_false(self):
         self._create_sg_template().get('security_group')
@@ -798,7 +802,7 @@ class TestSecurityGroupsV21(test.TestCase):
                 (fakes.FAKE_PROJECT_ID, UUID_SERVER))
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup,
-                          req, UUID_SERVER, body)
+                          req, UUID_SERVER, body=body)
 
     def test_associate_deferred_ip_port(self):
         sg = self._create_sg_template().get('security_group')
@@ -813,7 +817,7 @@ class TestSecurityGroupsV21(test.TestCase):
         req = fakes.HTTPRequest.blank(
                 '/v2/%s/servers/%s/action' %
                 (fakes.FAKE_PROJECT_ID, UUID_SERVER))
-        self.manager._addSecurityGroup(req, UUID_SERVER, body)
+        self.manager._addSecurityGroup(req, UUID_SERVER, body=body)
 
     def test_associate(self):
         sg = self._create_sg_template().get('security_group')
@@ -827,7 +831,7 @@ class TestSecurityGroupsV21(test.TestCase):
         req = fakes.HTTPRequest.blank(
                 '/v2/%s/servers/%s/action' %
                 (fakes.FAKE_PROJECT_ID, UUID_SERVER))
-        self.manager._addSecurityGroup(req, UUID_SERVER, body)
+        self.manager._addSecurityGroup(req, UUID_SERVER, body=body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
         body = dict(removeSecurityGroup=dict(name='non-existing'))
@@ -837,28 +841,28 @@ class TestSecurityGroupsV21(test.TestCase):
                 (fakes.FAKE_PROJECT_ID, UUID_SERVER))
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._removeSecurityGroup,
-                          req, UUID_SERVER, body)
+                          req, UUID_SERVER, body=body)
 
     def test_disassociate_without_body(self):
         body = dict(removeSecurityGroup=None)
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, self.req,
-                          '1', body)
+                          '1', body=body)
 
     def test_disassociate_no_security_group_name(self):
         body = dict(removeSecurityGroup=dict())
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, self.req,
-                          '1', body)
+                          '1', body=body)
 
     def test_disassociate_security_group_name_with_whitespaces(self):
         body = dict(removeSecurityGroup=dict(name="   "))
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._removeSecurityGroup, self.req,
-                          '1', body)
+                          '1', body=body)
 
     def test_disassociate_non_existing_instance(self):
         body = dict(removeSecurityGroup=dict(name="test"))
@@ -867,7 +871,7 @@ class TestSecurityGroupsV21(test.TestCase):
                             instance_id='1')):
             self.assertRaises(webob.exc.HTTPNotFound,
                               self.manager._removeSecurityGroup,
-                              self.req, '1', body)
+                              self.req, '1', body=body)
 
     def test_disassociate(self):
         sg = self._create_sg_template().get('security_group')
@@ -881,7 +885,7 @@ class TestSecurityGroupsV21(test.TestCase):
         req = fakes.HTTPRequest.blank(
                 '/v2/%s/servers/%s/action' %
                 (fakes.FAKE_PROJECT_ID, UUID_SERVER))
-        self.manager._removeSecurityGroup(req, UUID_SERVER, body)
+        self.manager._removeSecurityGroup(req, UUID_SERVER, body=body)
 
     def test_get_instances_security_groups_bindings(self):
         servers = [{'id': FAKE_UUID1}, {'id': FAKE_UUID2}]

@@ -18,7 +18,7 @@ from nova.api.validation import parameter_types
 from nova.api.validation.parameter_types import multi_params
 from nova.objects import instance
 
-legacy_block_device_mapping = {
+_legacy_block_device_mapping = {
     'type': 'object',
     'properties': {
         'virtual_name': {
@@ -45,7 +45,7 @@ legacy_block_device_mapping = {
     'additionalProperties': False
 }
 
-block_device_mapping_v2_new_item = {
+_block_device_mapping_v2_new_item = {
     # defined in nova/block_device.py:from_api()
     # NOTE: Client can specify the Id with the combination of
     # source_type and uuid, or a single attribute like volume_id/
@@ -87,8 +87,10 @@ block_device_mapping_v2_new_item = {
     },
 }
 
-block_device_mapping_v2 = copy.deepcopy(legacy_block_device_mapping)
-block_device_mapping_v2['properties'].update(block_device_mapping_v2_new_item)
+_block_device_mapping_v2 = copy.deepcopy(_legacy_block_device_mapping)
+_block_device_mapping_v2['properties'].update(
+    _block_device_mapping_v2_new_item
+)
 
 _hints = {
     'type': 'object',
@@ -184,11 +186,11 @@ create = {
                 'availability_zone': parameter_types.name,
                 'block_device_mapping': {
                     'type': 'array',
-                    'items': legacy_block_device_mapping
+                    'items': _legacy_block_device_mapping
                 },
                 'block_device_mapping_v2': {
                     'type': 'array',
-                    'items': block_device_mapping_v2
+                    'items': _block_device_mapping_v2
                 },
                 'config_drive': parameter_types.boolean,
                 'key_name': parameter_types.name,
@@ -502,6 +504,25 @@ create_image_v20 = copy.deepcopy(create_image)
 create_image_v20['properties']['createImage'][
     'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
 
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+confirm_resize = {
+    'type': 'object',
+    'properties': {
+        'confirmResize': {}
+    },
+    'required': ['confirmResize'],
+    'additionalProperties': False
+}
+
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+revert_resize = {
+    'type': 'object',
+    'properties': {
+        'revertResize': {},
+    },
+    'required': ['revertResize'],
+    'additionalProperties': False,
+}
 
 reboot = {
     'type': 'object',
@@ -520,6 +541,26 @@ reboot = {
     },
     'required': ['reboot'],
     'additionalProperties': False
+}
+
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+start_server = {
+    'type': 'object',
+    'properties': {
+        'os-start': {},
+    },
+    'required': ['os-start'],
+    'additionalProperties': False,
+}
+
+# TODO(stephenfin): Restrict the value to 'null' in a future API version
+stop_server = {
+    'type': 'object',
+    'properties': {
+        'os-stop': {},
+    },
+    'required': ['os-stop'],
+    'additionalProperties': False,
 }
 
 trigger_crash_dump = {
