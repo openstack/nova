@@ -50,7 +50,10 @@ create = {
                 'rxtx_factor': {
                     'type': ['number', 'string'],
                     'pattern': r'^[0-9]+(\.[0-9]+)?$',
-                    'minimum': 1,
+                    # this is a float, so we want to allow everything close to
+                    # 0 (e.g. 0.1) but not 0 itself, hence exclusiveMinimum
+                    # rather than the usual minimum
+                    'exclusiveMinimum': 0,
                     # maximum's value is limited to db constant's
                     # SQL_SP_FLOAT_MAX (in nova/db/constants.py)
                     'maximum': 3.40282e+38
