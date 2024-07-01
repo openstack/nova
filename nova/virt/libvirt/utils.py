@@ -163,6 +163,8 @@ def create_image(
                     reason=_('Base image failed safety check'))
 
         base_details = images.qemu_img_info(backing_file)
+        if base_details.file_format == 'vmdk':
+            images.check_vmdk_image('base', base_details)
         if base_details.backing_file is not None:
             LOG.warning('Base image %s failed safety check', backing_file)
             raise exception.InvalidDiskInfo(
