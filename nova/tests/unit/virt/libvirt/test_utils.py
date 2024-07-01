@@ -128,10 +128,12 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         else:
             backing_info = {}
         backing_backing_file = backing_info.pop('backing_file', None)
+        backing_fmt = backing_info.pop('backing_fmt',
+                                       mock.sentinel.backing_fmt)
 
         mock_execute.return_value = ('stdout', None)
         mock_info.return_value = mock.Mock(
-            file_format=mock.sentinel.backing_fmt,
+            file_format=backing_fmt,
             cluster_size=mock.sentinel.cluster_size,
             backing_file=backing_backing_file,
             format_specific=backing_info)
@@ -144,7 +146,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         mock_execute.assert_has_calls([mock.call(
             'qemu-img', 'create', '-f', 'qcow2', '-o',
             'backing_file=%s,backing_fmt=%s,cluster_size=%s' % (
-                mock.sentinel.backing_path, mock.sentinel.backing_fmt,
+                mock.sentinel.backing_path, backing_fmt,
                 mock.sentinel.cluster_size),
              mock.sentinel.new_path)])
         if backing_file:
@@ -173,6 +175,28 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             backing_file={'file': mock.sentinel.backing_file,
                           'backing_file': mock.sentinel.backing_backing_file,
                           'data': {'data-file': mock.sentinel.data_file}},
+        )
+
+    def test_create_image_size_none(self):
+        self._test_create_cow_image(
+            backing_file=mock.sentinel.backing_file,
+        )
+
+    def test_create_image_vmdk(self):
+        self._test_create_cow_image(
+            backing_file={'file': mock.sentinel.backing_file,
+                          'backing_fmt': 'vmdk',
+                          'backing_file': None,
+                          'data': {'create-type': 'monolithicSparse'}}
+        )
+
+    def test_create_image_vmdk_invalid_type(self):
+        self.assertRaises(exception.ImageUnacceptable,
+            self._test_create_cow_image,
+            backing_file={'file': mock.sentinel.backing_file,
+                          'backing_fmt': 'vmdk',
+                          'backing_file': None,
+                          'data': {'create-type': 'monolithicFlat'}}
         )
 
     @ddt.unpack
