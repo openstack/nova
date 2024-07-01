@@ -109,6 +109,8 @@ def schema(request_body_schema, min_version=None, max_version=None):
                                       args, kwargs)
             return func(*args, **kwargs)
 
+        wrapper._request_schema = request_body_schema
+
         return wrapper
 
     return add_validator
