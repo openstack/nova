@@ -119,9 +119,11 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         else:
             backing_info = {}
         backing_backing_file = backing_info.pop('backing_file', None)
+        backing_fmt = backing_info.pop('backing_fmt',
+                                       mock.sentinel.backing_fmt)
 
         mock_info.return_value = mock.Mock(
-            file_format=mock.sentinel.backing_fmt,
+            file_format=backing_fmt,
             cluster_size=mock.sentinel.cluster_size,
             backing_file=backing_backing_file,
             format_specific=backing_info,
@@ -144,7 +146,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             cow_opts = [
                 '-o',
                 f'backing_file={backing_file},'
-                f'backing_fmt={mock.sentinel.backing_fmt},'
+                f'backing_fmt={backing_fmt},'
                 f'cluster_size={mock.sentinel.cluster_size}',
             ]
 
@@ -219,6 +221,25 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self._test_create_image(
             '/some/stuff', 'qcow2', None,
             backing_file=mock.sentinel.backing_file,
+        )
+
+    def test_create_image_vmdk(self):
+        self._test_create_image(
+            '/some/vmdk', 'vmdk', '1234567891234',
+            backing_file={'file': mock.sentinel.backing_file,
+                          'backing_fmt': 'vmdk',
+                          'backing_file': None,
+                          'data': {'create-type': 'monolithicSparse'}}
+        )
+
+    def test_create_image_vmdk_invalid_type(self):
+        self.assertRaises(exception.ImageUnacceptable,
+            self._test_create_image,
+            '/some/vmdk', 'vmdk', '1234567891234',
+            backing_file={'file': mock.sentinel.backing_file,
+                          'backing_fmt': 'vmdk',
+                          'backing_file': None,
+                          'data': {'create-type': 'monolithicFlat'}}
         )
 
     def test_create_image_encryption(self):
