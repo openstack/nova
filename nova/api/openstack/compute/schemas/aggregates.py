@@ -26,7 +26,6 @@ availability_zone_with_leading_trailing_spaces = {
 create = {
     'type': 'object',
     'properties': {
-        'type': 'object',
         'aggregate': {
             'type': 'object',
             'properties': {
@@ -52,7 +51,6 @@ create_v20['properties']['aggregate']['properties']['availability_zone'] = (
 update = {
     'type': 'object',
     'properties': {
-        'type': 'object',
         'aggregate': {
             'type': 'object',
             'properties': {
@@ -81,7 +79,6 @@ update_v20['properties']['aggregate']['properties']['availability_zone'] = (
 add_host = {
     'type': 'object',
     'properties': {
-        'type': 'object',
         'add_host': {
             'type': 'object',
             'properties': {
@@ -98,7 +95,6 @@ add_host = {
 remove_host = {
     'type': 'object',
     'properties': {
-        'type': 'object',
         'remove_host': {
             'type': 'object',
             'properties': {
@@ -116,7 +112,6 @@ remove_host = {
 set_metadata = {
     'type': 'object',
     'properties': {
-        'type': 'object',
         'set_metadata': {
             'type': 'object',
             'properties': {
