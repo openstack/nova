@@ -656,6 +656,8 @@
               manage_locations: true
             volume:
               volume_size: 1
+            image:
+              disk_formats: qcow2,ari,aki,vhd,vmdk,raw,ami,vdi,iso,vhdx
         post-config:
           $NOVA_CONF:
             libvirt:
