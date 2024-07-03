@@ -419,6 +419,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             FakeImgInfo.file_format = file_format
             FakeImgInfo.backing_file = backing_file
             FakeImgInfo.virtual_size = 1
+            FakeImgInfo.format_specific = None if file_format == 'raw' else {}
 
             return FakeImgInfo()
 
