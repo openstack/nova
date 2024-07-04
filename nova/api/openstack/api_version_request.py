@@ -389,10 +389,10 @@ class APIVersionRequest(object):
         If self is null then raise ValueError
         """
 
-        if self.is_null():
-            raise ValueError
         if max_version.is_null() and min_version.is_null():
             return True
+        elif self.is_null():
+            raise ValueError
         elif max_version.is_null():
             return min_version <= self
         elif min_version.is_null():
