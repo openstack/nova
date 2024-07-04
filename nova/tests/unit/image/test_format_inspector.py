@@ -27,6 +27,9 @@ from nova.image import format_inspector
 from nova import test
 
 
+TEST_IMAGE_PREFIX = 'nova-unittest-formatinspector-'
+
+
 def get_size_from_qemu_img(filename):
     output = subprocess.check_output('qemu-img info "%s"' % filename,
                                      shell=True)
@@ -41,13 +44,6 @@ def get_size_from_qemu_img(filename):
 class TestFormatInspectors(test.NoDBTestCase):
     def setUp(self):
         super(TestFormatInspectors, self).setUp()
-        # these tests depend on qemu-img being installed
-        # and in the path, if it is not installed, skip
-        try:
-            subprocess.check_output('qemu-img --version', shell=True)
-        except Exception:
-            self.skipTest('qemu-img not installed')
-
         self._created_files = []
 
     def tearDown(self):
@@ -58,8 +54,55 @@ class TestFormatInspectors(test.NoDBTestCase):
             except Exception:
                 pass
 
+    def _create_iso(self, image_size, subformat='iso-9660'):
+        # these tests depend on mkisofs
+        # being installed and in the path,
+        # if it is not installed, skip
+        try:
+            subprocess.check_output('mkisofs --version', shell=True)
+        except Exception:
+            self.skipTest('mkisofs not installed')
+
+        size = image_size // units.Mi
+        base_cmd = "mkisofs"
+        if subformat == 'udf':
+            # depending on the distribution mkisofs may not support udf
+            # and may be provided by genisoimage instead. As a result we
+            # need to check if the command supports udf via help
+            # instead of checking the installed version.
+            # mkisofs --help outputs to stderr so we need to
+            # redirect it to stdout to use grep.
+            try:
+                subprocess.check_output(
+                    'mkisofs --help 2>&1 | grep udf', shell=True)
+            except Exception:
+                self.skipTest('mkisofs does not support udf format')
+            base_cmd += " -udf"
+        prefix = TEST_IMAGE_PREFIX
+        prefix += '-%s-' % subformat
+        fn = tempfile.mktemp(prefix=prefix, suffix='.iso')
+        self._created_files.append(fn)
+        subprocess.check_output(
+            'dd if=/dev/zero of=%s bs=1M count=%i' % (fn, size),
+            shell=True)
+        subprocess.check_output(
+            '%s -o %s -V "TEST" -J -r %s' % (base_cmd, fn, fn),
+            shell=True)
+        return fn
+
     def _create_img(self, fmt, size, subformat=None, options=None,
                     backing_file=None):
+        if fmt == 'iso':
+            return self._create_iso(size, subformat)
+
+        # these tests depend on qemu-img
+        # being installed and in the path,
+        # if it is not installed, skip
+        try:
+            subprocess.check_output('qemu-img --version', shell=True)
+        except Exception:
+            self.skipTest('qemu-img not installed')
+
         if fmt == 'vhd':
             # QEMU calls the vhd format vpc
             fmt = 'vpc'
@@ -67,7 +110,7 @@ class TestFormatInspectors(test.NoDBTestCase):
         if options is None:
             options = {}
         opt = ''
-        prefix = 'nova-unittest-formatinspector-'
+        prefix = TEST_IMAGE_PREFIX
 
         if subformat:
             options['subformat'] = subformat
@@ -97,7 +140,8 @@ class TestFormatInspectors(test.NoDBTestCase):
             # Matches qemu-img default, see `qemu-img convert -O vmdk -o help`
             subformat = 'monolithicSparse'
 
-        prefix = 'nova-unittest-formatinspector-%s-' % subformat
+        prefix = TEST_IMAGE_PREFIX
+        prefix += '-%s-' % subformat
         fn = tempfile.mktemp(prefix=prefix, suffix='.vmdk')
         self._created_files.append(fn)
         raw = tempfile.mktemp(prefix=prefix, suffix='.raw')
@@ -164,6 +208,16 @@ class TestFormatInspectors(test.NoDBTestCase):
 
     def test_qcow2(self):
         self._test_format('qcow2')
+
+    def test_iso_9660(self):
+        # reproduce iso-9660 format regression
+        self.assertRaises(
+            TypeError, self._test_format, 'iso', subformat='iso-9660')
+
+    def test_udf(self):
+        # reproduce udf format regression
+        self.assertRaises(
+            TypeError, self._test_format, 'iso', subformat='udf')
 
     def test_vhd(self):
         self._test_format('vhd')
