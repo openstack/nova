@@ -18,36 +18,49 @@ from nova.api.openstack.compute.schemas import floating_ip_dns as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 
+_removal_reason = """\
+This API only works with *nova-network*, which was deprecated in the
+14.0.0 (Newton) release.
+It fails with HTTP 404 starting from microversion 2.36.
+It was removed in the 18.0.0 (Rocky) release.
+"""
+
 
 class FloatingIPDNSDomainController(wsgi.Controller):
-    """DNS domain controller for OpenStack API."""
+    """(Removed) DNS domain controller for OpenStack API."""
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     def index(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.update)
     def update(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     def delete(self, req, id):
         raise exc.HTTPGone()
 
 
 class FloatingIPDNSEntryController(wsgi.Controller):
-    """DNS Entry controller for OpenStack API."""
+    """(Removed) DNS Entry controller for OpenStack API."""
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     def show(self, req, domain_id, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.update)
     def update(self, req, domain_id, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('18.0.0', _removal_reason)
     def delete(self, req, domain_id, id):
         raise exc.HTTPGone()

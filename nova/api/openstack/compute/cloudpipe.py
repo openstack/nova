@@ -20,22 +20,31 @@ from nova.api.openstack.compute.schemas import cloudpipe as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 
+_removal_reason = """\
+This API only works with *nova-network*, which was deprecated in the
+14.0.0 (Newton) release.
+It was removed in the 16.0.0 (Pike) release.
+"""
+
 
 class CloudpipeController(wsgi.Controller):
     """Handle creating and listing cloudpipe instances."""
 
     @wsgi.expected_errors((410))
+    @wsgi.removed('16.0.0', _removal_reason)
     @validation.schema(schema.create)
     def create(self, req, body):
         """Create a new cloudpipe instance, if none exists."""
         raise exc.HTTPGone()
 
     @wsgi.expected_errors((410))
+    @wsgi.removed('16.0.0', _removal_reason)
     def index(self, req):
         """List running cloudpipe instances."""
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('16.0.0', _removal_reason)
     @validation.schema(schema.update)
     def update(self, req, id, body):
         """Configure cloudpipe parameters for the project."""

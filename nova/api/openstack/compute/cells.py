@@ -20,6 +20,13 @@ from nova.api.openstack.compute.schemas import cells as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 
+_removal_reason = """\
+This API only works in a Cells v1 deployment, which was deprecated in the
+16.0.0 (Pike) release. It is not used with Cells v2, which is required
+beginning in the 15.0.0 (Ocata) release.
+It was removed in the 20.0.0 (Train) release.
+"""
+
 
 class CellsController(wsgi.Controller):
     """(Removed) Controller for Cell resources.
@@ -28,40 +35,49 @@ class CellsController(wsgi.Controller):
     """
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     def index(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     def detail(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     def info(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     def capacities(self, req, id=None):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     def show(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     def delete(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     @validation.schema(schema.create)
     def create(self, req, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     @validation.schema(schema.update)
     def update(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
+    @wsgi.removed('20.0.0', _removal_reason)
     @validation.schema(schema.sync_instances)
     def sync_instances(self, req, body):
         raise exc.HTTPGone()

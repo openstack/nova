@@ -651,6 +651,19 @@ def action(name):
     return decorator
 
 
+def removed(version: str, reason: str):
+    """Mark a function as removed.
+
+    The given reason will be stored as an attribute of the function.
+    """
+    def decorator(func):
+        func.removed = True
+        func.removed_version = reason
+        func.removed_reason = reason
+        return func
+    return decorator
+
+
 def expected_errors(errors):
     """Decorator for v2.1 API methods which specifies expected exceptions.
 

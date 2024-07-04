@@ -18,21 +18,31 @@ from nova.api.openstack.compute.schemas import fixed_ips as schema_fixed_ips
 from nova.api.openstack import wsgi
 from nova.api import validation
 
+_removal_reason = """\
+This API only works with *nova-network*, which was deprecated in the
+14.0.0 (Newton) release.
+It fails with HTTP 404 starting from microversion 2.36.
+It was removed in the 18.0.0 (Rocky) release.
+"""
+
 
 class FixedIPController(wsgi.Controller):
 
     @wsgi.expected_errors((410))
+    @wsgi.removed('18.0.0', _removal_reason)
     def show(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors((410))
     @wsgi.action('reserve')
+    @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema_fixed_ips.reserve)
     def reserve(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors((410))
     @wsgi.action('unreserve')
+    @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema_fixed_ips.unreserve)
     def unreserve(self, req, id, body):
         raise exc.HTTPGone()

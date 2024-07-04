@@ -19,9 +19,17 @@ from webob import exc
 
 from nova.api.openstack import wsgi
 
+_removal_reason = """\
+This API only works with *nova-network*, which was deprecated in the
+14.0.0 (Newton) release.
+It fails with HTTP 404 starting from microversion 2.44.
+It was removed in the 18.0.0 (Rocky) release.
+"""
+
 
 class ServerVirtualInterfaceController(wsgi.Controller):
 
     @wsgi.expected_errors((410))
+    @wsgi.removed('18.0.0', _removal_reason)
     def index(self, req, server_id):
         raise exc.HTTPGone()

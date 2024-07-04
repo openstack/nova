@@ -30,6 +30,12 @@ from nova.policies import admin_actions as aa_policies
 # schemas/reset_server_state.py, when updating this state_map.
 state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)
 
+_removal_reason = """\
+This action only works with the Xen virt driver, which was deprecated in the
+20.0.0 (Train) release.
+It was removed in the 23.0.0 (Wallaby) release.
+"""
+
 
 class AdminActionsController(wsgi.Controller):
     def __init__(self):
@@ -38,6 +44,7 @@ class AdminActionsController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.action('resetNetwork')
+    @wsgi.removed('23.0.0', _removal_reason)
     @validation.schema(schema.reset_network)
     def _reset_network(self, req, id, body):
         """(Removed) Permit admins to reset networking on a server."""
