@@ -1050,10 +1050,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
         """
         base_metadata = netutils.get_network_metadata(network_info)
-        ports = self.ironic_connection.ports(node=node.id, details=True)
-        port_groups = self.ironic_connection.port_groups(
+        ports = list(self.ironic_connection.ports(node=node.id, details=True))
+        port_groups = list(self.ironic_connection.port_groups(
             node=node.id, details=True,
-        )
+        ))
         vif_id_to_objects = {'ports': {}, 'portgroups': {}}
         for collection, name in ((ports, 'ports'),
                                  (port_groups, 'portgroups')):
