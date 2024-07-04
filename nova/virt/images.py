@@ -171,6 +171,11 @@ def do_image_deep_inspection(img, image_href, path):
             raise exception.ImageUnacceptable(
                 image_id=image_href,
                 reason=_('Image not in a supported format'))
+
+    if disk_format == 'iso':
+        # ISO image passed safety check; qemu will treat this as raw from here
+        disk_format = 'raw'
+
     return disk_format
 
 
