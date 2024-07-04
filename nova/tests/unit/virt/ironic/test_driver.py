@@ -2785,8 +2785,8 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
                                            node_id=self.node.id,
                                            address='00:00:00:00:00:02',
                                            port_group_id=portgroup.id)
-        self.mock_conn.ports.return_value = [port1, port2]
-        self.mock_conn.port_groups.return_value = [portgroup]
+        self.mock_conn.ports.return_value = iter([port1, port2])
+        self.mock_conn.port_groups.return_value = iter([portgroup])
 
         metadata = self.driver._get_network_metadata(self.node,
                                                      self.network_info)
