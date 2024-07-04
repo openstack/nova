@@ -235,6 +235,34 @@ class QemuTestCase(test.NoDBTestCase):
                                   images.fetch_to_raw, None, 'foo', 'anypath')
             self.assertIn('Invalid VMDK create-type specified', str(e))
 
+    @mock.patch('os.rename')
+    @mock.patch.object(images, 'IMAGE_API')
+    @mock.patch('nova.image.format_inspector.get_inspector')
+    @mock.patch.object(images, 'fetch')
+    @mock.patch('nova.privsep.qemu.unprivileged_qemu_img_info')
+    def test_fetch_iso_is_raw(self, mock_info, mock_fetch, mock_gi,
+                              mock_glance, mock_rename):
+        mock_glance.get.return_value = {'disk_format': 'iso'}
+        inspector = mock_gi.return_value.from_file.return_value
+        inspector.safety_check.return_value = True
+        # qemu-img does not have a parser for iso so it is treated as raw
+        info = {
+            "virtual-size": 356352,
+            "filename": "foo.iso",
+            "format": "raw",
+            "actual-size": 356352,
+            "dirty-flag": False
+        }
+        mock_info.return_value = jsonutils.dumps(info)
+        with mock.patch('os.path.exists', return_value=True):
+            images.fetch_to_raw(None, 'foo', 'anypath')
+        # Make sure we called info with -f raw for an iso, since qemu-img does
+        # not support iso
+        mock_info.assert_called_once_with('anypath.part', format='raw')
+        # Make sure that since we considered this to be a raw file, we did the
+        # just-rename-don't-convert path
+        mock_rename.assert_called_once_with('anypath.part', 'anypath')
+
     @mock.patch.object(images, 'IMAGE_API')
     @mock.patch('nova.image.format_inspector.get_inspector')
     @mock.patch.object(images, 'qemu_img_info')

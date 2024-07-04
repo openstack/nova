@@ -24,6 +24,7 @@ complex-format images.
 import struct
 
 from oslo_log import log as logging
+from oslo_utils import units
 
 LOG = logging.getLogger(__name__)
 
@@ -843,6 +844,93 @@ class VDIInspector(FileInspector):
         return 'vdi'
 
 
+class ISOInspector(FileInspector):
+    """ISO 9660 and UDF format
+
+    we need to check the first 32KB + descriptor size
+    to look for the ISO 9660 or UDF signature.
+
+    http://wiki.osdev.org/ISO_9660
+    http://wiki.osdev.org/UDF
+    mkisofs --help  | grep udf
+
+    The Universal Disc Format or UDF is the filesystem used on DVDs and
+    Blu-Ray discs.UDF is an extension of ISO 9660 and shares the same
+    header structure and initial layout.
+
+    Like the CDFS(ISO 9660) file system,
+    the UDF file system uses a 2048 byte sector size,
+    and it designates that the first 16 sectors can be used by the OS
+    to store proprietary data or boot logic.
+
+    That means we need to check the first 32KB + descriptor size
+    to look for the ISO 9660 or UDF signature.
+    both formats have an extent based layout, so we can't determine
+    ahead of time where the descriptor will be located.
+
+    fortunately, the ISO 9660 and UDF formats have a Primary Volume Descriptor
+    located at the beginning of the image, which contains the volume size.
+
+    """
+
+    def __init__(self, *a, **k):
+        super(ISOInspector, self).__init__(*a, **k)
+        self.new_region('system_area', CaptureRegion(0, 32 * units.Ki))
+        self.new_region('header', CaptureRegion(32 * units.Ki, 2 * units.Ki))
+
+    @property
+    def format_match(self):
+        if not self.complete:
+            return False
+        signature = self.region('header').data[1:6]
+        assert len(signature) == 5
+        return signature in (b'CD001', b'NSR02', b'NSR03')
+
+    @property
+    def virtual_size(self):
+        if not self.complete:
+            return 0
+        if not self.format_match:
+            return 0
+
+        # the header size is 2KB or 1 sector
+        # the first header field is the descriptor type which is 1 byte
+        # the second field is the standard identifier which is 5 bytes
+        # the third field is the version which is 1 byte
+        # the rest of the header contains type specific data is 2041 bytes
+        # see http://wiki.osdev.org/ISO_9660#The_Primary_Volume_Descriptor
+
+        # we need to check that the descriptor type is 1
+        # to ensure that this is a primary volume descriptor
+        descriptor_type = self.region('header').data[0]
+        if descriptor_type != 1:
+            return 0
+        # The size in bytes of a logical block is stored at offset 128
+        # and is 2 bytes long encoded in both little and big endian
+        # int16_LSB-MSB so the field is 4 bytes long
+        logical_block_size_data = self.region('header').data[128:132]
+        assert len(logical_block_size_data) == 4
+        # given the encoding we only need to read half the field so we
+        # can use the first 2 bytes which are the little endian part
+        # this is normally 2048 or 2KB but we need to check as it can be
+        # different according to the ISO 9660 standard.
+        logical_block_size, = struct.unpack('<H', logical_block_size_data[:2])
+        # The volume space size is the total number of logical blocks
+        # and is stored at offset 80 and is 8 bytes long
+        # as with the logical block size the field is encoded in both
+        # little and big endian as an int32_LSB-MSB
+        volume_space_size_data = self.region('header').data[80:88]
+        assert len(volume_space_size_data) == 8
+        # given the encoding we only need to read half the field so we
+        # can use the first 4 bytes which are the little endian part
+        volume_space_size, = struct.unpack('<L', volume_space_size_data[:4])
+        # the virtual size is the volume space size * logical block size
+        return volume_space_size * logical_block_size
+
+    def __str__(self):
+        return 'iso'
+
+
 class InfoWrapper(object):
     """A file-like object that wraps another and updates a format inspector.
 
@@ -896,6 +984,7 @@ ALL_FORMATS = {
     'vmdk': VMDKInspector,
     'vdi': VDIInspector,
     'qed': QEDInspector,
+    'iso': ISOInspector,
 }
 
 
@@ -913,12 +1002,15 @@ def detect_file_format(filename):
     """Attempts to detect the format of a file.
 
     This runs through a file one time, running all the known inspectors in
-    parallel. It stops reading the file once one of them matches or all of
+    parallel. It stops reading the file once all of them matches or all of
     them are sure they don't match.
 
-    Returns the FileInspector that matched, if any. None if 'raw'.
+    :param filename: The path to the file to inspect.
+    :returns: A FormatInspector instance matching the file.
+    :raises: ImageFormatError if multiple formats are detected.
     """
     inspectors = {k: v() for k, v in ALL_FORMATS.items()}
+    detections = []
     with open(filename, 'rb') as f:
         for chunk in chunked_reader(f):
             for format, inspector in list(inspectors.items()):
@@ -930,10 +1022,17 @@ def detect_file_format(filename):
                     continue
                 if (inspector.format_match and inspector.complete and
                         format != 'raw'):
-                    # First complete match (other than raw) wins
-                    return inspector
+                    # record all match (other than raw)
+                    detections.append(inspector)
+                    inspectors.pop(format)
             if all(i.complete for i in inspectors.values()):
                 # If all the inspectors are sure they are not a match, avoid
                 # reading to the end of the file to settle on 'raw'.
                 break
-    return inspectors['raw']
+
+    if len(detections) > 1:
+        all_formats = [str(inspector) for inspector in detections]
+        raise ImageFormatError(
+            'Multiple formats detected: %s' % ', '.join(all_formats))
+
+    return inspectors['raw'] if not detections else detections[0]
