@@ -4457,18 +4457,23 @@ class LibvirtDriver(driver.ComputeDriver):
             # new rescue_image_meta and block_device_info when calling
             # get_disk_info.
             rescue_image_meta = image_meta
-            if instance.image_ref:
-                image_meta = objects.ImageMeta.from_image_ref(
-                    context, self._image_api, instance.image_ref)
-            else:
-                # NOTE(lyarwood): If instance.image_ref isn't set attempt to
-                # lookup the original image_meta from the bdms. This will
-                # return an empty dict if no valid image_meta is found.
-                image_meta_dict = block_device.get_bdm_image_metadata(
-                    context, self._image_api, self._volume_api,
-                    block_device_info['block_device_mapping'],
-                    legacy_bdm=False)
-                image_meta = objects.ImageMeta.from_dict(image_meta_dict)
+
+            try:
+                if instance.image_ref:
+                    image_meta = objects.ImageMeta.from_image_ref(
+                        context, self._image_api, instance.image_ref)
+                else:
+                    # NOTE(lyarwood): If instance.image_ref isn't set attempt
+                    # to lookup the original image_meta from the bdms. This
+                    # will return an empty dict if no valid image_meta is
+                    # found.
+                    image_meta_dict = block_device.get_bdm_image_metadata(
+                        context, self._image_api, self._volume_api,
+                        block_device_info['block_device_mapping'],
+                        legacy_bdm=False)
+                    image_meta = objects.ImageMeta.from_dict(image_meta_dict)
+            except exception.ImageNotFound:
+                image_meta = instance.image_meta
 
         else:
             LOG.info("Attempting rescue", instance=instance)
