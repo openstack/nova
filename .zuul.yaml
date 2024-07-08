@@ -598,16 +598,9 @@
     pre-run:
       - playbooks/ceph/glance-copy-policy.yaml
     vars:
-      # NOTE(elod.illes): this job started to break with the following five
-      # test cases, somewhere around merging cinder-tempest-plugin patch
-      # I281f881ad565e565839522ddf02057f7545c7146 so let's just exclude
-      # them to unblock the gate.
-      tempest_exclude_regex: "\
-          (test_delete_dep_chain)|\
-          (test_delete_dep_chain_2)|\
-          (test_delete_source_snapshot)|\
-          (test_delete_source_volume)|\
-          (test_nova_image_snapshot_dependency)"
+      # NOTE(elod.illes): this job is breaking with the following test case on
+      # unmaintained/yoga, so let's just exclude it to unblock the gate
+      tempest_exclude_regex: test_nova_image_snapshot_dependency
       # NOTE(danms): These tests create an empty non-raw image, which nova
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
@@ -615,6 +608,7 @@
         GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
         DEVSTACK_PARALLEL: True
+        CEPH_MIN_CLIENT_VERSION: "mimic"
       # NOTE(danms): This job is pretty heavy as it is, so we disable some
       # services that are not relevant to the nova-glance-ceph scenario
       # that this job is intended to validate.
