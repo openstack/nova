@@ -1,10 +1,7 @@
 ---
-default_language_version:
-  # force all unspecified python hooks to run python3
-  python: python3
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: mixed-line-ending
@@ -21,28 +18,28 @@ repos:
       - id: check-yaml
         files: .*\.(yaml|yml)$
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.5.4
+    rev: v1.5.5
     hooks:
       - id: remove-tabs
         exclude: '.*\.(svg)$'
   - repo: https://opendev.org/openstack/hacking
-    rev: 6.1.0
+    rev: 7.0.0
     hooks:
       - id: hacking
         additional_dependencies: []
         exclude: '^(doc|releasenotes|tools)/.*$'
   - repo: https://github.com/hhatto/autopep8
-    rev: v2.1.0
+    rev: v2.3.1
     hooks:
       - id: autopep8
         files: '^.*\.py$'
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: v2.3.0
     hooks:
-    - id: codespell
-      args: ['--ignore-words=doc/dictionary.txt']
+      - id: codespell
+        args: ['--ignore-words=doc/dictionary.txt']
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.1
+    rev: v1.12.0
     hooks:
       - id: mypy
         additional_dependencies:
@@ -76,7 +73,7 @@ repos:
             | nova/virt/libvirt/utils.py
           )
   - repo: https://github.com/sphinx-contrib/sphinx-lint
-    rev: v0.6.8
+    rev: v1.0.0
     hooks:
       - id: sphinx-lint
         args: [--enable=default-role]
