@@ -1093,7 +1093,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         fake_resource = 'fake-resource'
         self.mock_conn.get_node.return_value = node
         # ensure cache gets populated without the node we want
-        self.mock_conn.nodes.return_value = [node_2]
+        self.mock_conn.nodes.return_value = iter([node_2])
         mock_nr.return_value = fake_resource
 
         result = self.driver.get_available_resource(node.id)
