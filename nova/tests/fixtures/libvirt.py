@@ -1361,7 +1361,7 @@ class Domain(object):
         else:
             # FIXME(sean-k-mooney): We don't currently handle attaching
             # or detaching hostdevs but we have tests that assume we do so
-            # this is an error not an exception. This affects PCI passthough,
+            # this is an error not an exception. This affects PCI passthrough,
             # vGPUs and PF neutron ports.
             LOG.error(
                 "Trying to attach an unsupported device type."
@@ -1412,7 +1412,7 @@ class Domain(object):
 
         # FIXME(sean-k-mooney): We don't currently handle attaching or
         # detaching hostdevs but we have tests that assume we do so this is
-        # an error not an exception. This affects PCI passthough, vGPUs and
+        # an error not an exception. This affects PCI passthrough, vGPUs and
         # PF neutron ports
         LOG.error(
             "Trying to detach an unsupported device type."

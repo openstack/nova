@@ -11132,7 +11132,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             None,
             destroy_secrets=False
         )
-        # Assert that no attempt is made to delete the volume secert
+        # Assert that no attempt is made to delete the volume secret
         mock_delete_secret.assert_not_called()
 
         drvr._detach_encryptor(
@@ -11145,7 +11145,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             None,
             destroy_secrets=True
         )
-        # Assert that volume secert is deleted
+        # Assert that volume secret is deleted
         mock_delete_secret.assert_called_once_with('volume', uuids.volume_id)
 
     def test_allow_native_luksv1(self):

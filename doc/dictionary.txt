@@ -11,3 +11,5 @@ dettach
 excpt
 imigration
 childs
+assertin
+notin

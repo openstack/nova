@@ -171,12 +171,12 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
             query = query.filter(api_models.HostMapping.cell_id == cell_id)
         return query.all()
 
-    @ base.remotable_classmethod
+    @base.remotable_classmethod
     def get_by_cell_id(cls, context, cell_id):
         db_mappings = cls._get_from_db(context, cell_id)
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)
 
-    @ base.remotable_classmethod
+    @base.remotable_classmethod
     def get_all(cls, context):
         db_mappings = cls._get_from_db(context)
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)

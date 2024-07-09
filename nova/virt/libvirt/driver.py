@@ -2212,7 +2212,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
         # NOTE(lyarwood): Skip any attempt to fetch encryption metadata or the
-        # actual passphrase from the key manager if a libvirt secert already
+        # actual passphrase from the key manager if a libvirt secret already
         # exists locally for the volume. This suggests that the instance was
         # only powered off or the underlying host rebooted.
         volume_id = driver_block_device.get_volume_id(connection_info)

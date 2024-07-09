@@ -1227,7 +1227,7 @@ def _server_group_count_members_by_user_legacy(context, group, user_id):
         found = greenthread.wait()
         instances = instances + found
     # Count build requests using the same filters to catch group members
-    # that are not yet creatd in a cell.
+    # that are not yet created in a cell.
     # NOTE(mriedem): BuildRequestList.get_by_filters is not very efficient for
     # what we need and we can optimize this with a new query method.
     build_requests = objects.BuildRequestList.get_by_filters(context, filters)

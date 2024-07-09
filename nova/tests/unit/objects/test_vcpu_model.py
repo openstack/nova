@@ -75,20 +75,20 @@ class _TestVirtCPUModel(object):
         self.assertRaises(ValueError, setattr, model, 'arch', 'foo')
 
     def test_serialize(self):
-        modelin = objects.VirtCPUModel(**fake_vcpumodel_dict)
-        modelout = objects.VirtCPUModel.from_json(modelin.to_json())
+        model_in = objects.VirtCPUModel(**fake_vcpumodel_dict)
+        model_out = objects.VirtCPUModel.from_json(model_in.to_json())
 
-        self.assertEqual(modelin.mode, modelout.mode)
-        self.assertEqual(modelin.model, modelout.model)
-        self.assertEqual(modelin.vendor, modelout.vendor)
-        self.assertEqual(modelin.arch, modelout.arch)
-        self.assertEqual(modelin.match, modelout.match)
-        self.assertEqual(modelin.features[0].policy,
-                         modelout.features[0].policy)
-        self.assertEqual(modelin.features[0].name, modelout.features[0].name)
-        self.assertEqual(modelin.topology.sockets, modelout.topology.sockets)
-        self.assertEqual(modelin.topology.cores, modelout.topology.cores)
-        self.assertEqual(modelin.topology.threads, modelout.topology.threads)
+        self.assertEqual(model_in.mode, model_out.mode)
+        self.assertEqual(model_in.model, model_out.model)
+        self.assertEqual(model_in.vendor, model_out.vendor)
+        self.assertEqual(model_in.arch, model_out.arch)
+        self.assertEqual(model_in.match, model_out.match)
+        self.assertEqual(model_in.features[0].policy,
+                         model_out.features[0].policy)
+        self.assertEqual(model_in.features[0].name, model_out.features[0].name)
+        self.assertEqual(model_in.topology.sockets, model_out.topology.sockets)
+        self.assertEqual(model_in.topology.cores, model_out.topology.cores)
+        self.assertEqual(model_in.topology.threads, model_out.topology.threads)
 
 
 class TestVirtCPUModel(test_objects._LocalTest,
