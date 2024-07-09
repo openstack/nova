@@ -111,17 +111,21 @@ class TestFormatInspectors(test.NoDBTestCase):
         if fmt == 'iso':
             return self._create_iso(size, subformat)
 
-        # these tests depend on qemu-img
-        # being installed and in the path,
-        # if it is not installed, skip
-        try:
-            subprocess.check_output('qemu-img --version', shell=True)
-        except Exception:
-            self.skipTest('qemu-img not installed')
-
         if fmt == 'vhd':
             # QEMU calls the vhd format vpc
             fmt = 'vpc'
+
+        # these tests depend on qemu-img being installed and in the path,
+        # if it is not installed, skip. we also need to ensure that the
+        # format is supported by qemu-img, this can vary depending on the
+        # distribution so we need to check if the format is supported via
+        # the help output.
+        try:
+            subprocess.check_output(
+                'qemu-img --help | grep %s' % fmt, shell=True)
+        except Exception:
+            self.skipTest(
+                'qemu-img not installed or does not support %s format' % fmt)
 
         if options is None:
             options = {}
