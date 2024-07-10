@@ -443,12 +443,12 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             _context, image_id, target, trusted_certs)
 
     @mock.patch.object(images, 'IMAGE_API')
-    @mock.patch.object(format_inspector, 'get_inspector')
+    @mock.patch.object(format_inspector, 'detect_file_format')
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('nova.privsep.qemu.unprivileged_convert_image')
     def test_fetch_raw_image(self, mock_convert_image, mock_direct_io,
-                             mock_disk_op_sema, mock_gi, mock_glance):
+                             mock_disk_op_sema, mock_detect, mock_glance):
 
         def fake_rename(old, new):
             self.executes.append(('mv', old, new))
@@ -488,7 +488,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self.stub_out('oslo_utils.fileutils.delete_if_exists',
                       fake_rm_on_error)
 
-        mock_inspector = mock_gi.return_value.from_file.return_value
+        mock_inspector = mock_detect.return_value
 
         # Since the remove param of fileutils.remove_path_on_error()
         # is initialized at load time, we must provide a wrapper
@@ -502,6 +502,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
 
         # Make sure qcow2 gets converted to raw
         mock_inspector.safety_check.return_value = True
+        mock_inspector.__str__.return_value = 'qcow2'
         mock_glance.get.return_value = {'disk_format': 'qcow2'}
         target = 't.qcow2'
         self.executes = []
@@ -515,12 +516,13 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             CONF.instances_path, False)
         mock_convert_image.reset_mock()
         mock_inspector.safety_check.assert_called_once_with()
-        mock_gi.assert_called_once_with('qcow2')
+        mock_detect.assert_called_once_with('t.qcow2.part')
 
         # Make sure raw does not get converted
-        mock_gi.reset_mock()
+        mock_detect.reset_mock()
         mock_inspector.safety_check.reset_mock()
         mock_inspector.safety_check.return_value = True
+        mock_inspector.__str__.return_value = 'raw'
         mock_glance.get.return_value = {'disk_format': 'raw'}
         target = 't.raw'
         self.executes = []
@@ -529,12 +531,13 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(self.executes, expected_commands)
         mock_convert_image.assert_not_called()
         mock_inspector.safety_check.assert_called_once_with()
-        mock_gi.assert_called_once_with('raw')
+        mock_detect.assert_called_once_with('t.raw.part')
 
         # Make sure safety check failure prevents us from proceeding
-        mock_gi.reset_mock()
+        mock_detect.reset_mock()
         mock_inspector.safety_check.reset_mock()
         mock_inspector.safety_check.return_value = False
+        mock_inspector.__str__.return_value = 'qcow2'
         mock_glance.get.return_value = {'disk_format': 'qcow2'}
         target = 'backing.qcow2'
         self.executes = []
@@ -544,10 +547,10 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(self.executes, expected_commands)
         mock_convert_image.assert_not_called()
         mock_inspector.safety_check.assert_called_once_with()
-        mock_gi.assert_called_once_with('qcow2')
+        mock_detect.assert_called_once_with('backing.qcow2.part')
 
         # Make sure a format mismatch prevents us from proceeding
-        mock_gi.reset_mock()
+        mock_detect.reset_mock()
         mock_inspector.safety_check.reset_mock()
         mock_inspector.safety_check.side_effect = (
             format_inspector.ImageFormatError)
@@ -560,7 +563,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(self.executes, expected_commands)
         mock_convert_image.assert_not_called()
         mock_inspector.safety_check.assert_called_once_with()
-        mock_gi.assert_called_once_with('qcow2')
+        mock_detect.assert_called_once_with('backing.qcow2.part')
 
         del self.executes
 
