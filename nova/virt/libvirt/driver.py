@@ -3052,7 +3052,8 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             guest.set_metadata(
                 self._get_guest_config_meta(
-                    instance, instance.get_network_info()))
+                    self.get_instance_driver_metadata(
+                        instance, instance.get_network_info())))
         except libvirt.libvirtError:
             LOG.warning('updating libvirt metadata failed.', instance=instance)
 
@@ -3091,7 +3092,9 @@ class LibvirtDriver(driver.ComputeDriver):
             network_info = list(filter(lambda info: info['id'] != vif['id'],
                                        instance.get_network_info()))
             guest.set_metadata(
-                self._get_guest_config_meta(instance, network_info))
+                self._get_guest_config_meta(
+                    self.get_instance_driver_metadata(
+                        instance, network_info)))
         except libvirt.libvirtError:
             LOG.warning('updating libvirt metadata failed.', instance=instance)
 
@@ -6073,39 +6076,35 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return dev
 
-    def _get_guest_config_meta(self, instance, network_info):
+    def _get_guest_config_meta(self, dmeta: driver.InstanceDriverMetadata):
         """Get metadata config for guest."""
 
         meta = vconfig.LibvirtConfigGuestMetaNovaInstance()
-        meta.package = version.version_string_with_package()
-        meta.name = instance.display_name
-        meta.creationTime = time.time()
+        meta.package = dmeta.nova_package
+        meta.name = dmeta.instance_meta.name
+        meta.creationTime = dmeta.creation_time
+        meta.roottype = dmeta.root_type
+        meta.rootid = dmeta.root_id
 
-        if instance.image_ref not in ("", None):
-            meta.roottype = "image"
-            meta.rootid = instance.image_ref
-
-        system_meta = instance.system_metadata
         ometa = vconfig.LibvirtConfigGuestMetaNovaOwner()
-        ometa.userid = instance.user_id
-        ometa.username = system_meta.get('owner_user_name', 'N/A')
-        ometa.projectid = instance.project_id
-        ometa.projectname = system_meta.get('owner_project_name', 'N/A')
+        ometa.userid = dmeta.owner.userid
+        ometa.username = dmeta.owner.username
+        ometa.projectid = dmeta.owner.projectid
+        ometa.projectname = dmeta.owner.projectname
         meta.owner = ometa
 
         fmeta = vconfig.LibvirtConfigGuestMetaNovaFlavor()
-        flavor = instance.flavor
-        fmeta.name = flavor.name
-        fmeta.memory = flavor.memory_mb
-        fmeta.vcpus = flavor.vcpus
-        fmeta.ephemeral = flavor.ephemeral_gb
-        fmeta.disk = flavor.root_gb
-        fmeta.swap = flavor.swap
+        fmeta.name = dmeta.flavor.name
+        fmeta.memory = dmeta.flavor.memory_mb
+        fmeta.vcpus = dmeta.flavor.vcpus
+        fmeta.ephemeral = dmeta.flavor.ephemeral_gb
+        fmeta.disk = dmeta.flavor.root_gb
+        fmeta.swap = dmeta.flavor.swap
 
         meta.flavor = fmeta
 
         ports = []
-        for vif in network_info:
+        for vif in dmeta.network_info:
             ips = []
             for subnet in vif.get('network', {}).get('subnets', []):
                 for ip in subnet.get('ips', []):
@@ -7353,8 +7352,10 @@ class LibvirtDriver(driver.ComputeDriver):
             guest_numa_config.numatune,
             flavor, image_meta)
 
-        guest.metadata.append(self._get_guest_config_meta(
-            instance, network_info))
+        guest.metadata.append(
+            self._get_guest_config_meta(
+                    self.get_instance_driver_metadata(
+                        instance, network_info)))
         guest.idmaps = self._get_guest_idmaps()
 
         for event in self._supported_perf_events:

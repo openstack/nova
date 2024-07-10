@@ -19,8 +19,26 @@ from openstack.baremetal.v1 import port_group as _port_group
 from openstack.baremetal.v1 import volume_connector as _volume_connector
 from openstack.baremetal.v1 import volume_target as _volume_target
 
+from nova.network import model as network_model
 from nova import objects
+from nova.virt import driver
 from nova.virt.ironic import ironic_states
+
+# NOTE(JayF): These exist to make it trivial to unify test data
+# between both the driver_metadata generators and the generated
+# objects.
+TEST_IMAGE_UUID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+TEST_IMAGE_NAME = "test-image"
+TEST_FLAVOR_ID = "1"
+TEST_FLAVOR_NAME = "fake.flavor"
+TEST_FLAVOR_EXTRA_SPECS = {
+    'baremetal:deploy_kernel_id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'baremetal:deploy_ramdisk_id': 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'}
+TEST_FLAVOR_SWAP = 1
+TEST_FLAVOR_ROOTGB = 1
+TEST_FLAVOR_MEMORYMB = 1
+TEST_FLAVOR_VCPUS = 1
+TEST_FLAVOR_EPHEMERALGB = 0
 
 
 def get_test_validation(**kw):
@@ -174,18 +192,15 @@ def get_test_volume_target(**kw):
 
 
 def get_test_flavor(**kw):
-    default_extra_specs = {
-        'baremetal:deploy_kernel_id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        'baremetal:deploy_ramdisk_id': 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    }
     flavor = {
-        'name': kw.get('name', 'fake.flavor'),
-        'extra_specs': kw.get('extra_specs', default_extra_specs),
-        'swap': kw.get('swap', 0),
-        'root_gb': 1,
-        'memory_mb': 1,
-        'vcpus': 1,
-        'ephemeral_gb': kw.get('ephemeral_gb', 0),
+        'id': kw.get('id', TEST_FLAVOR_ID),
+        'name': kw.get('name', TEST_FLAVOR_NAME),
+        'extra_specs': kw.get('extra_specs', TEST_FLAVOR_EXTRA_SPECS),
+        'swap': kw.get('swap', TEST_FLAVOR_SWAP),
+        'root_gb': TEST_FLAVOR_ROOTGB,
+        'memory_mb': TEST_FLAVOR_MEMORYMB,
+        'vcpus': TEST_FLAVOR_VCPUS,
+        'ephemeral_gb': kw.get('ephemeral_gb', TEST_FLAVOR_EPHEMERALGB),
     }
 
     return objects.Flavor(**flavor)
@@ -193,5 +208,41 @@ def get_test_flavor(**kw):
 
 def get_test_image_meta(**kw):
     return objects.ImageMeta.from_dict(
-        {'id': kw.get('id', 'cccccccc-cccc-cccc-cccc-cccccccccccc')},
+        {'id': kw.get('id', TEST_IMAGE_UUID)},
+    )
+
+
+def get_test_instance_driver_metadata(**kw):
+    default_instance_meta = driver.NovaInstanceMeta(
+        name=kw.get('instance_name', 'testinstance'),
+        uuid=kw.get('instance_uuid', 'iiiiiii-iiii-iiii-iiii-iiiiiiiiiiii'))
+    default_owner_meta = driver.OwnerMeta(
+        userid='uuuuuuu-uuuu-uuuu-uuuu-uuuuuuuuuuuu',
+        username='testuser',
+        projectid='ppppppp-pppp-pppp-pppp-pppppppppppp',
+        projectname='testproject')
+    default_image_meta = driver.ImageMeta(id=TEST_IMAGE_UUID,
+                                          name=TEST_IMAGE_NAME,
+                                          properties={})
+    default_flavor_meta = driver.FlavorMeta(
+                             name=kw.get('flavor_name', TEST_FLAVOR_NAME),
+                             memory_mb=kw.get('flavor_memorymb',
+                                              TEST_FLAVOR_MEMORYMB),
+                             vcpus=kw.get('flavor_vcpus', TEST_FLAVOR_VCPUS),
+                             root_gb=kw.get('flavor_rootgb',
+                                            TEST_FLAVOR_ROOTGB),
+                             ephemeral_gb=kw.get('flavor_ephemeralgb',
+                                                 TEST_FLAVOR_EPHEMERALGB),
+                             extra_specs=kw.get('flavor_extra_specs',
+                                                TEST_FLAVOR_EXTRA_SPECS),
+                             swap=kw.get('flavor_swap', TEST_FLAVOR_SWAP))
+
+    return driver.InstanceDriverMetadata(
+        root_type=kw.get('root_type', 'roottype'),
+        root_id=kw.get('root_id', 'rootid'),
+        instance_meta=kw.get('instance_meta', default_instance_meta),
+        owner=kw.get('owner_meta', default_owner_meta),
+        image=kw.get('image_meta', default_image_meta),
+        flavor=kw.get('flavor_meta', default_flavor_meta),
+        network_info=kw.get('network_info', network_model.NetworkInfo())
     )

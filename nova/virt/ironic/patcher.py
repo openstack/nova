@@ -40,13 +40,14 @@ class GenericDriverFields(object):
     def __init__(self, node):
         self.node = node
 
-    def get_deploy_patch(self, instance, image_meta, flavor,
+    def get_deploy_patch(self, instance, image_meta, flavor, metadata,
                          preserve_ephemeral=None, boot_from_volume=False):
         """Build a patch to add the required fields to deploy a node.
 
         :param instance: the instance object.
         :param image_meta: the nova.objects.ImageMeta object instance
         :param flavor: the flavor object.
+        :param metadata: nova.virt.driver.InstanceDriverMetadata dataclass
         :param preserve_ephemeral: preserve_ephemeral status (bool) to be
                                    specified during rebuild.
         :param boot_from_volume: True if node boots from volume. Then,
@@ -72,6 +73,21 @@ class GenericDriverFields(object):
                       'value': str(instance.flavor.memory_mb)})
         patch.append({'path': '/instance_info/local_gb', 'op': 'add',
                       'value': str(self.node.properties.get('local_gb', 0))})
+
+        patch.append({'path': '/instance_info/project_id', 'op': 'add',
+                      'value': str(metadata.owner.projectid)})
+        patch.append({'path': '/instance_info/project_name', 'op': 'add',
+                      'value': str(metadata.owner.projectname)})
+        patch.append({'path': '/instance_info/user_id', 'op': 'add',
+                      'value': str(metadata.owner.userid)})
+        patch.append({'path': '/instance_info/user_name', 'op': 'add',
+                      'value': str(metadata.owner.username)})
+        patch.append({'path': '/instance_info/flavor_name', 'op': 'add',
+                      'value': str(metadata.flavor.name)})
+        patch.append({'path': '/instance_info/fixed_ips', 'op': 'add',
+                      'value': str(metadata.network_info.fixed_ips())})
+        patch.append({'path': '/instance_info/floating_ips', 'op': 'add',
+                      'value': str(metadata.network_info.floating_ips())})
 
         if instance.flavor.ephemeral_gb:
             patch.append({'path': '/instance_info/ephemeral_gb',
