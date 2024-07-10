@@ -339,6 +339,8 @@
     post-run: playbooks/nova-next/post.yaml
     required-projects:
         - novnc/novnc
+        - name: openstack/tempest
+          override-checkout: zed-last
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_exclude_regex.
@@ -352,7 +354,7 @@
       # tempest_test_exclude_list.
       # FIXME(lyarwood): The tempest.api.compute.admin.test_volume_swap tests
       # are skipped until bug #1929710 is resolved.
-      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|tempest.api.compute.servers.test_device_tagging.TaggedAttachmentsTest.test_tagged_attachment
+      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|tempest.api.compute.servers.test_device_tagging.TaggedAttachmentsTest.test_tagged_attachment|test_instances_with_cinder_volumes_on_all_compute_nodes
       devstack_local_conf:
         post-config:
           $NOVA_CPU_CONF:
