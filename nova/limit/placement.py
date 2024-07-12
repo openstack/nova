@@ -177,18 +177,19 @@ def enforce_num_instances_and_flavor(
     try:
         enforcer.enforce(project_id, deltas)
     except limit_exceptions.ProjectOverLimit as e:
-        # NOTE(johngarbutt) we can do better, but this is very simple
-        LOG.debug("Limit check failed with count %s retrying with count %s",
-                  max_count, max_count - 1)
-        try:
-            return enforce_num_instances_and_flavor(context, project_id,
-                                                    flavor, is_bfvm, min_count,
-                                                    max_count - 1,
-                                                    enforcer=enforcer)
-        except ValueError:
-            # Copy the *original* exception message to a OverQuota to
-            # propagate to the API layer
-            raise exception.TooManyInstances(str(e))
+        if limit_utils.should_enforce(e):
+            # NOTE(johngarbutt) we can do better, but this is very simple
+            LOG.debug(
+                "Limit check failed with count %s retrying with count %s",
+                max_count, max_count - 1)
+            try:
+                return enforce_num_instances_and_flavor(
+                    context, project_id, flavor, is_bfvm, min_count,
+                    max_count - 1, enforcer=enforcer)
+            except ValueError:
+                # Copy the *original* exception message to a OverQuota to
+                # propagate to the API layer
+                raise exception.TooManyInstances(str(e))
 
     # no problems with max_count, so we return max count
     return max_count

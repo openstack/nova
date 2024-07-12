@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 from oslo_limit import fixture as limit_fixture
 from oslo_serialization import base64
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -18,6 +20,7 @@ from nova import context as nova_context
 from nova.limit import local as local_limit
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance_group as group_obj
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
@@ -220,3 +223,212 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
         self.assertIn('server_group_members', e.response.text)
 
         self.admin_api.delete_server(server['id'])
+
+
+class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):
+
+    def setUp(self):
+        super().setUp()
+        # Use different project_ids for non-admin and admin.
+        self.api.project_id = 'fake'
+        self.admin_api.project_id = 'admin'
+
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group='quota')
+        self.ctx = nova_context.get_admin_context()
+        self.ul_api = self.useFixture(nova_fixtures.UnifiedLimitsFixture())
+
+    def test_invalid_value_in_resource_list(self):
+        # First two have casing issues, next doesn't have the "class:" prefix,
+        # last is a typo.
+        invalid_names = (
+            'class:vcpu', 'class:CUSTOM_thing', 'VGPU', 'class:MEMRY_MB')
+        for name in invalid_names:
+            e = self.assertRaises(
+                ValueError, self.flags, unified_limits_resource_list=[name],
+                group='quota')
+            self.assertIsInstance(e, ValueError)
+            self.assertIn('not a valid resource class name', str(e))
+
+    def test_valid_custom_resource_classes(self):
+        valid_names = ('class:CUSTOM_GOLD', 'class:CUSTOM_A5_1')
+        for name in valid_names:
+            self.flags(unified_limits_resource_list=[name], group='quota')
+
+    @mock.patch('nova.limit.utils.LOG.error')
+    def test_invalid_strategy_configuration(self, mock_log_error):
+        # Quota should be enforced and fail the check if there is somehow an
+        # invalid strategy value.
+        self.stub_out(
+            'nova.limit.utils.CONF.quota.unified_limits_resource_strategy',
+            'bogus')
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server)
+        self.assertEqual(403, e.response.status_code)
+        expected = (
+            'Invalid strategy value: bogus is specified in the '
+            '[quota]unified_limits_resource_strategy config option, so '
+            'enforcing for resources')
+        mock_log_error.assert_called()
+        self.assertIn(expected, mock_log_error.call_args.args[0])
+
+    @mock.patch('nova.limit.utils.LOG.debug')
+    def test_required_limits_set(self, mock_log_debug):
+        # Required resources configured are: 'servers', MEMORY_MB, and VCPU
+        self.flags(unified_limits_resource_strategy='require', group='quota')
+        require = ['servers', 'class:MEMORY_MB', 'class:VCPU']
+        self.flags(unified_limits_resource_list=require, group='quota')
+        # Purposely not setting any quota for DISK_GB.
+        self.ul_api.create_registered_limit(
+            resource_name='servers', default_limit=4)
+        self.ul_api.create_registered_limit(
+            resource_name='class:VCPU', default_limit=8)
+        self.ul_api.create_registered_limit(
+            resource_name='class:MEMORY_MB', default_limit=32768)
+        # Server create should succeed because required resources VCPU,
+        # MEMORY_MB, and 'servers' have registered limits.
+        self._create_server()
+        unset_limits = set(['class:DISK_GB'])
+        call = mock.call(
+            f'Resources {unset_limits} have no registered limits set in '
+            f'Keystone. [quota]unified_limits_resource_strategy is require '
+            f'and [quota]unified_limits_resource_list is {require}, so not '
+            'enforcing')
+        # The message will be logged twice -- once in nova-api and once in
+        # nova-conductor because of the quota recheck after resource creation.
+        self.assertEqual([call, call], mock_log_debug.mock_calls)
+
+    def test_some_required_limits_not_set(self):
+        # Now add DISK_GB as a required resource.
+        self.flags(unified_limits_resource_strategy='require', group='quota')
+        self.flags(unified_limits_resource_list=[
+            'servers', 'class:MEMORY_MB', 'class:VCPU', 'class:DISK_GB'],
+            group='quota')
+        # Purposely not setting any quota for DISK_GB.
+        self.ul_api.create_registered_limit(
+            resource_name='servers', default_limit=-1)
+        self.ul_api.create_registered_limit(
+            resource_name='class:VCPU', default_limit=8)
+        self.ul_api.create_registered_limit(
+            resource_name='class:MEMORY_MB', default_limit=32768)
+        # Server create should fail because required resource DISK_GB does not
+        # have a registered limit set.
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server, api=self.api)
+        self.assertEqual(403, e.response.status_code)
+
+    @mock.patch('nova.limit.utils.LOG.debug')
+    def test_no_required_limits(self, mock_log_debug):
+        # Configured to not require any resource limits.
+        self.flags(unified_limits_resource_strategy='require', group='quota')
+        self.flags(unified_limits_resource_list=[], group='quota')
+        # Server create should succeed because no resource registered limits
+        # are required to be set.
+        self._create_server()
+        # The message will be logged twice -- once in nova-api and once in
+        # nova-conductor because of the quota recheck after resource creation.
+        self.assertEqual(2, mock_log_debug.call_count)
+
+    @mock.patch('nova.limit.utils.LOG.debug')
+    def test_ignored_limits_set(self, mock_log_debug):
+        # Ignored unset limit resources configured is DISK_GB.
+        self.flags(unified_limits_resource_strategy='ignore', group='quota')
+        ignore = ['class:DISK_GB']
+        self.flags(unified_limits_resource_list=ignore, group='quota')
+        # Purposely not setting any quota for DISK_GB.
+        self.ul_api.create_registered_limit(
+            resource_name='servers', default_limit=4)
+        self.ul_api.create_registered_limit(
+            resource_name='class:VCPU', default_limit=8)
+        self.ul_api.create_registered_limit(
+            resource_name='class:MEMORY_MB', default_limit=32768)
+        # Server create should succeed because class:DISK_GB is specified in
+        # the ignore unset limit list.
+        self._create_server()
+        unset_limits = set(['class:DISK_GB'])
+        call = mock.call(
+            f'Resources {unset_limits} have no registered limits set in '
+            f'Keystone. [quota]unified_limits_resource_strategy is ignore and '
+            f'[quota]unified_limits_resource_list is {ignore}, so not '
+            'enforcing')
+        # The message will be logged twice -- once in nova-api and once in
+        # nova-conductor because of the quota recheck after resource creation.
+        self.assertEqual([call, call], mock_log_debug.mock_calls)
+
+    def test_some_ignored_limits_not_set(self):
+        # Configured to ignore only one unset resource limit.
+        self.flags(unified_limits_resource_strategy='ignore', group='quota')
+        self.flags(unified_limits_resource_list=[
+            'class:DISK_GB'], group='quota')
+        # Purposely not setting any quota for servers.
+        self.ul_api.create_registered_limit(
+            resource_name='class:VCPU', default_limit=8)
+        self.ul_api.create_registered_limit(
+            resource_name='class:MEMORY_MB', default_limit=32768)
+        # Server create should fail because although resource DISK_GB does not
+        # have a registered limit set and it is in the ignore list, resource
+        # 'servers' does not have a limit set and it is not in the ignore list.
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server, api=self.api)
+        self.assertEqual(403, e.response.status_code)
+
+    def test_no_ignored_limits(self):
+        # Configured to not ignore any unset resource limits.
+        self.flags(unified_limits_resource_strategy='ignore', group='quota')
+        self.flags(unified_limits_resource_list=[], group='quota')
+        # Server create should fail because resource DISK_GB does not have a
+        # registered limit set and it is not in the ignore list.
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server, api=self.api)
+        self.assertEqual(403, e.response.status_code)
+
+    def test_all_unlimited(self):
+        # -1 is documented in Keystone as meaning unlimited:
+        #
+        # https://docs.openstack.org/keystone/latest/admin/unified-limits.html#what-is-a-limit
+        #
+        # but oslo.limit enforce does not treat -1 as unlimited at this time
+        # and instead uses its literal integer value.
+        #
+        # Test that we consider -1 to be unlimited in Nova and the server
+        # create should succeed.
+        for resource in (
+                'servers', 'class:VCPU', 'class:MEMORY_MB', 'class:DISK_GB'):
+            self.ul_api.create_registered_limit(
+                resource_name=resource, default_limit=-1)
+        self._create_server()
+
+    def test_default_unlimited_but_project_limited(self):
+        # If the default limit is set to -1 unlimited but the project has a
+        # limit, quota should be enforced at the project level.
+        # Note that it is not valid to set a project limit without first
+        # setting a registered limit -- Keystone will not allow it.
+        self.ul_api.create_registered_limit(
+            resource_name='servers', default_limit=-1)
+        self.ul_api.create_limit(
+            project_id='fake', resource_name='servers', resource_limit=1)
+        # First server should succeed because we have a project limit of 1.
+        self._create_server()
+        # Second server should fail because it would exceed the project limit
+        # of 1.
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server, api=self.api)
+        self.assertEqual(403, e.response.status_code)
+
+    def test_default_limited_but_project_unlimited(self):
+        # If the default limit is set to a value but the project has a limit
+        # set to -1 unlimited, quota should be enforced at the project level.
+        # Note that it is not valid to set a project limit without first
+        # setting a registered limit -- Keystone will not allow it.
+        self.ul_api.create_registered_limit(
+            resource_name='servers', default_limit=0)
+        self.ul_api.create_limit(
+            project_id='fake', resource_name='servers', resource_limit=-1)
+        # First server should succeed because we have a default limit of 0 and
+        # a project limit of -1 unlimited.
+        self._create_server()
+        # Try to create a server in a different project (admin project) -- this
+        # should fail because the default limit has been explicitly set to 0.
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server,
+            api=self.admin_api)
+        self.assertEqual(403, e.response.status_code)

@@ -395,3 +395,40 @@ corresponding unified limits.
    quotas are not supported in unified limits.
 
 .. _nova-manage: https://docs.openstack.org/nova/latest/cli/nova-manage.html#limits-migrate-to-unified-limits
+
+
+Require or ignore resources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :oslo.config:option:`quota.unified_limits_resource_strategy` and
+:oslo.config:option:`quota.unified_limits_resource_list` configuration options
+are available for operators to specify which cloud resources they will require
+to have registered limits set in Keystone. The default strategy is ``require``
+and the default resource list contains the ``servers`` resource.
+
+When ``unified_limits_resource_strategy = require``, if a resource in
+``unified_limits_resource_list`` is requested and has no registered limit set,
+the quota limit for that resource will be considered to be 0 and all requests
+to allocate that resource will be rejected for being over quota. Any resource
+not in the list will be considered to have unlimited quota.
+
+When ``unified_limits_resource_strategy = ignore``, if a resource in
+``unified_limits_resource_list`` is requested and has no registered limit set,
+the quota limit for that resource will be considered to be unlimited and all
+requests to allocate that resource will be accepted. Any resource not in the
+list will be considered to have 0 quota.
+
+The options should be configured for the :program:`nova-api` and
+:program:`nova-conductor` services. The :program:`nova-conductor` service
+performs quota enforcement when :oslo.config:option:`quota.recheck_quota` is
+``True`` (the default).
+
+The ``unified_limits_resource_list`` list can also be set to an empty list.
+
+Example configuration values:
+
+.. code-block:: ini
+
+   [quota]
+   unified_limits_resource_strategy = require
+   unified_limits_resource_list = servers,class:VCPU,class:MEMORY_MB,class:DISK_GB
