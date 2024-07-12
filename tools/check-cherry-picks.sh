@@ -1,7 +1,8 @@
 #!/bin/sh
 #
 # A tool to check the cherry-pick hashes from the current git commit message
-# to verify that they're all on either master or stable/ branches
+# to verify that they're all on either master, stable/ or unmaintained/
+# branches
 #
 
 commit_hash=""
@@ -23,9 +24,9 @@ hashes=$(git show --format='%b' --quiet $commit_hash | sed -nr 's/^.cherry picke
 checked=0
 branches+=""
 for hash in $hashes; do
-    branch=$(git branch -a --contains "$hash" 2>/dev/null| grep -oE '(master|stable/[a-z0-9.]+)')
+    branch=$(git branch -a --contains "$hash" 2>/dev/null| grep -oE '(master|stable/[a-z0-9.]+|unmaintained/[a-z0-9.]+)')
     if [ $? -ne 0 ]; then
-        echo "Cherry pick hash $hash not on any master or stable branches"
+        echo "Cherry pick hash $hash not on any master, stable or unmaintained branches"
         exit 1
     fi
     branches+=" $branch"
@@ -33,7 +34,7 @@ for hash in $hashes; do
 done
 
 if [ $checked -eq 0 ]; then
-    if ! grep -q '^defaultbranch=stable/' .gitreview; then
+    if ! grep -qE '^defaultbranch=(stable|unmaintained)/' .gitreview; then
         echo "Checked $checked cherry-pick hashes: OK"
         exit 0
     else
