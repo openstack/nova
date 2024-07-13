@@ -19,6 +19,7 @@
 import collections
 import contextlib
 from contextlib import contextmanager
+import copy
 import functools
 from importlib.abc import MetaPathFinder
 import logging as std_logging
@@ -1020,6 +1021,7 @@ class OSAPIFixture(fixtures.Fixture):
         self.other_api = client.TestOpenStackClient(
             'other', base_url, project_id=self.project_id,
             roles=['other'])
+        self.base_url = base_url
         # Provide a way to access the wsgi application to tests using
         # the fixture.
         self.app = app
@@ -2035,6 +2037,14 @@ class GreenThreadPoolShutdownWait(fixtures.Fixture):
 
 
 class UnifiedLimitsFixture(fixtures.Fixture):
+    """A fixture that models Keystone unified limits for testing.
+
+    Although there exists a LimitFixture in oslo.limit, we need a fixture that
+    both oslo.limit and bare OpenStack SDK calls could hook into for unified
+    limits testing. We do some of our own logic outside of oslo.limit and call
+    the OpenStack SDK directly and we need them both to see the same limits.
+    """
+
     def setUp(self):
         super().setUp()
         self.mock_sdk_adapter = mock.Mock()
@@ -2047,7 +2057,17 @@ class UnifiedLimitsFixture(fixtures.Fixture):
 
         self.useFixture(fixtures.MockPatch(
             'nova.utils.get_sdk_adapter', fake_get_sdk_adapter))
+        self.useFixture(fixtures.MockPatch(
+            'oslo_limit.limit._get_keystone_connection',
+            return_value=self.mock_sdk_adapter))
 
+        # These are needed by oslo.limit.
+        self.mock_sdk_adapter.get.return_value.json.return_value = {
+            'model': {'name': 'flat'}}
+        self.mock_sdk_adapter.get_endpoint.return_value.service_id = None
+        self.mock_sdk_adapter.get_endpoint.return_value.region_id = None
+
+        # These are Keystone API calls that oslo.limit will also use.
         self.mock_sdk_adapter.registered_limits.side_effect = (
             self.registered_limits)
         self.mock_sdk_adapter.limits.side_effect = self.limits
@@ -2058,21 +2078,33 @@ class UnifiedLimitsFixture(fixtures.Fixture):
         self.registered_limits_list = []
         self.limits_list = []
 
-    def registered_limits(self, region_id=None):
+    def registered_limits(
+            self, region_id=None, resource_name=None, service_id=None):
+        registered_limits_list = copy.deepcopy(self.registered_limits_list)
         if region_id:
-            return [rl for rl in self.registered_limits_list
-                    if rl.region_id == region_id]
-        return self.registered_limits_list
+            registered_limits_list = [rl for rl in registered_limits_list
+                                      if rl.region_id == region_id]
+        if resource_name:
+            registered_limits_list = [rl for rl in registered_limits_list
+                                      if rl.resource_name == resource_name]
+        for registered_limit in registered_limits_list:
+            yield registered_limit
 
-    def limits(self, project_id=None, region_id=None):
-        limits_list = self.limits_list
+    def limits(
+            self, project_id=None, region_id=None, resource_name=None,
+            service_id=None):
+        limits_list = copy.deepcopy(self.limits_list)
         if project_id:
             limits_list = [pl for pl in limits_list
                            if pl.project_id == project_id]
         if region_id:
             limits_list = [pl for pl in limits_list
                            if pl.region_id == region_id]
-        return limits_list
+        if resource_name:
+            limits_list = [pl for pl in limits_list
+                           if pl.resource_name == resource_name]
+        for limit in limits_list:
+            yield limit
 
     def create_registered_limit(self, **attrs):
         rl = collections.namedtuple(

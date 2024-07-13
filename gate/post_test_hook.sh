@@ -273,3 +273,102 @@ openstack --os-compute-api-version 2.37 \
 
 # Delete the servers.
 openstack server delete metadata-items-test1 metadata-items-test2
+
+
+# Test 'nova-manage limits migrate_to_unified_limits' by creating a test region
+# with no registered limits in it, run the nova-manage command, and verify the
+# expected limits were created and warned about.
+echo "Testing nova-manage limits migrate_to_unified_limits"
+
+ul_test_region=RegionTestNovaUnifiedLimits
+
+openstack --os-cloud devstack-admin region create $ul_test_region
+
+# Verify there are no registered limits in the test region.
+registered_limits=$(openstack --os-cloud devstack registered limit list \
+    --region $ul_test_region -f value)
+
+if [[ "$registered_limits" != "" ]]; then
+    echo "There should be no registered limits in the test region; failing"
+    exit 2
+fi
+
+# Get existing legacy quota limits to use for verification.
+legacy_limits=$(openstack --os-cloud devstack quota show --compute -f value -c "Resource" -c "Limit")
+# Requires Bash 4.
+declare -A legacy_name_limit_map
+while read name limit
+    do legacy_name_limit_map["$name"]="$limit"
+done <<< "$legacy_limits"
+
+set +e
+set -o pipefail
+$MANAGE limits migrate_to_unified_limits --region-id $ul_test_region --verbose | tee /tmp/output
+rc=$?
+set +o pipefail
+set -e
+
+if [[ ${rc} -eq 0 ]]; then
+    echo "nova-manage should have warned about unset registered limits; failing"
+    exit 2
+fi
+
+# Verify there are now registered limits in the test region.
+registered_limits=$(openstack --os-cloud devstack registered limit list \
+    --region $ul_test_region -f value -c "Resource Name" -c "Default Limit")
+
+if [[ "$registered_limits" == "" ]]; then
+    echo "There should be registered limits in the test region now; failing"
+    exit 2
+fi
+
+# Get the new unified limits to use for verification.
+declare -A unified_name_limit_map
+while read name limit
+    do unified_name_limit_map["$name"]="$limit"
+done <<< "$registered_limits"
+
+declare -A old_to_new_name_map
+old_to_new_name_map["instances"]="servers"
+old_to_new_name_map["cores"]="class:VCPU"
+old_to_new_name_map["ram"]="class:MEMORY_MB"
+old_to_new_name_map["properties"]="server_metadata_items"
+old_to_new_name_map["injected-files"]="server_injected_files"
+old_to_new_name_map["injected-file-size"]="server_injected_file_content_bytes"
+old_to_new_name_map["injected-path-size"]="server_injected_file_path_bytes"
+old_to_new_name_map["key-pairs"]="server_key_pairs"
+old_to_new_name_map["server-groups"]="server_groups"
+old_to_new_name_map["server-group-members"]="server_group_members"
+
+for old_name in "${!old_to_new_name_map[@]}"; do
+    new_name="${old_to_new_name_map[$old_name]}"
+    if [[ "${legacy_name_limit_map[$old_name]}" != "${unified_name_limit_map[$new_name]}" ]]; then
+        echo "Legacy limit value does not match unified limit value; failing"
+        exit 2
+    fi
+done
+
+# Create the missing registered limits that were warned about earlier.
+missing_limits=$(grep missing /tmp/output | awk '{print $2}')
+while read limit
+    do openstack --os-cloud devstack-system-admin registered limit create \
+        --region $ul_test_region --service nova --default-limit 5 $limit
+done <<< "$missing_limits"
+
+# Run migrate_to_unified_limits again. There should be a success message in the
+# output because there should be no resources found that are missing registered
+# limits.
+$MANAGE limits migrate_to_unified_limits --region-id $ul_test_region --verbose
+rc=$?
+
+if [[ ${rc} -ne 0 ]]; then
+    echo "nova-manage should have output a success message; failing"
+    exit 2
+fi
+
+registered_limit_ids=$(openstack --os-cloud devstack registered limit list \
+    --region $ul_test_region -f value -c "ID")
+
+openstack --os-cloud devstack-system-admin registered limit delete $registered_limit_ids
+
+openstack --os-cloud devstack-admin region delete $ul_test_region

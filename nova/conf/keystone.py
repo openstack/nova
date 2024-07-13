@@ -28,7 +28,7 @@ keystone_group = cfg.OptGroup(
 def register_opts(conf):
     conf.register_group(keystone_group)
     confutils.register_ksa_opts(conf, keystone_group.name,
-                                DEFAULT_SERVICE_TYPE, include_auth=True)
+                                DEFAULT_SERVICE_TYPE, include_auth=False)
 
 
 def list_opts():

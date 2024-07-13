@@ -1813,7 +1813,8 @@ limits migrate_to_unified_limits
 .. code-block:: shell
 
    nova-manage limits migrate_to_unified_limits [--project-id <project-id>]
-   [--region-id <region-id>] [--verbose] [--dry-run]
+   [--region-id <region-id>] [--verbose] [--dry-run] [--quiet]
+   [--no-embedded-flavor-scan]
 
 Migrate quota limits from the Nova database to unified limits in Keystone.
 
@@ -1821,26 +1822,25 @@ This command is useful for operators to migrate from legacy quotas to unified
 limits. Limits are migrated by copying them from the Nova database to Keystone
 by creating them using the Keystone API.
 
-The Nova configuration file used by ``nova-manage`` must have a ``[keystone]``
-section that contains authentication settings in order for the Keystone API
-calls to succeed. As an example:
+The Nova configuration file used by ``nova-manage`` must have a
+:oslo.config:group:`keystone_authtoken` section that contains authentication
+settings in order for the Keystone API calls to succeed. As an example:
 
 .. code-block:: ini
 
-   [keystone]
-   region_name = RegionOne
+   [keystone_authtoken]
+   project_domain_name = Default
+   project_name = service
    user_domain_name = Default
+   username = nova
    auth_url = http://127.0.0.1/identity
    auth_type = password
-   username = admin
    password = <password>
-   system_scope = all
 
 By default `Keystone policy configuration`_, access to create, update, and
-delete in the `unified limits API`_ is restricted to callers with
-`system-scoped authorization tokens`_. The ``system_scope = all`` setting
-indicates the scope for system operations. You will need to ensure that the
-user configured under ``[keystone]`` has the necessary role and scope.
+delete in the `unified limits API`_ is restricted to callers with the ``admin``
+role. You will need to ensure that the user configured under
+:oslo.config:group:`keystone_authtoken` has the necessary role and scope.
 
 .. warning::
 
@@ -1859,9 +1859,13 @@ user configured under ``[keystone]`` has the necessary role and scope.
 
 .. _Keystone policy configuration: https://docs.openstack.org/keystone/latest/configuration/policy.html
 .. _unified limits API: https://docs.openstack.org/api-ref/identity/v3/index.html#unified-limits
-.. _system-scoped authorization tokens: https://docs.openstack.org/keystone/latest/admin/tokens-overview.html#system-scoped-tokens
 
 .. versionadded:: 28.0.0 (2023.2 Bobcat)
+
+.. versionchanged:: 31.0.0 (2025.1 Epoxy)
+
+   Added flavor scanning for resource classes missing limits along with the
+   --quiet and --no-embedded-flavor-scan options.
 
 .. rubric:: Options
 
@@ -1879,7 +1883,16 @@ user configured under ``[keystone]`` has the necessary role and scope.
 
 .. option:: --dry-run
 
-   Show what limits would be created without actually creating them.
+   Show what limits would be created without actually creating them. Flavors
+   will still be scanned for resource classes missing limits.
+
+.. option:: --quiet
+
+   Do not output anything during execution.
+
+.. option:: --no-embedded-flavor-scan
+
+   Do not scan instances embedded flavors for resource classes missing limits.
 
 .. rubric:: Return codes
 
@@ -1895,6 +1908,8 @@ user configured under ``[keystone]`` has the necessary role and scope.
      - An unexpected error occurred
    * - 2
      - Failed to connect to the database
+   * - 3
+     - Missing registered limits were identified
 
 
 See Also

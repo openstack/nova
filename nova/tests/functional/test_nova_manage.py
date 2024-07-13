@@ -26,6 +26,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.cmd import manage
+from nova.compute import instance_list as list_instances
 from nova import config
 from nova import context
 from nova import exception
@@ -33,6 +34,7 @@ from nova.network import constants
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional import test_servers_resource_request as test_res_req
@@ -2472,7 +2474,11 @@ class TestDBArchiveDeletedRowsMultiCellTaskLog(
                 self.output.getvalue(), r'\| %s.task_log\s+\| 2' % cell_name)
 
 
-class TestNovaManageLimits(test.TestCase):
+class TestNovaManageLimits(integrated_helpers.ProviderUsageBaseTestCase):
+
+    # This is required by the parent class.
+    compute_driver = 'fake.MediumFakeDriver'
+    NUMBER_OF_CELLS = 2
 
     def setUp(self):
         super().setUp()
@@ -2481,6 +2487,11 @@ class TestNovaManageLimits(test.TestCase):
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.ul_api = self.useFixture(nova_fixtures.UnifiedLimitsFixture())
+        # Start two compute services, one per cell
+        self.compute1 = self.start_service('compute', host='host1',
+                                           cell_name='cell1')
+        self.compute2 = self.start_service('compute', host='host2',
+                                           cell_name='cell2')
 
     @mock.patch('nova.quota.QUOTAS.get_defaults')
     def test_migrate_to_unified_limits_no_db_access(self, mock_get_defaults):
@@ -2579,18 +2590,18 @@ class TestNovaManageLimits(test.TestCase):
         objects.Quotas.create_limit(self.ctxt, uuids.project, 'instances', 25)
 
         # Verify there are no unified limits yet.
-        registered_limits = self.ul_api.registered_limits()
+        registered_limits = list(self.ul_api.registered_limits())
         self.assertEqual(0, len(registered_limits))
-        limits = self.ul_api.limits(project_id=uuids.project)
+        limits = list(self.ul_api.limits(project_id=uuids.project))
         self.assertEqual(0, len(limits))
 
         # Verify that --dry-run works to not actually create limits.
         self.cli.migrate_to_unified_limits(dry_run=True)
 
         # There should still be no unified limits yet.
-        registered_limits = self.ul_api.registered_limits()
+        registered_limits = list(self.ul_api.registered_limits())
         self.assertEqual(0, len(registered_limits))
-        limits = self.ul_api.limits(project_id=uuids.project)
+        limits = list(self.ul_api.limits(project_id=uuids.project))
         self.assertEqual(0, len(limits))
 
         # Migrate the limits.
@@ -2615,7 +2626,7 @@ class TestNovaManageLimits(test.TestCase):
             'server_group_members': 12,
         }
 
-        registered_limits = self.ul_api.registered_limits()
+        registered_limits = list(self.ul_api.registered_limits())
         self.assertEqual(11, len(registered_limits))
         for rl in registered_limits:
             self.assertEqual(
@@ -2627,42 +2638,49 @@ class TestNovaManageLimits(test.TestCase):
             'servers': 25,
         }
 
-        limits = self.ul_api.limits(project_id=uuids.project)
+        limits = list(self.ul_api.limits(project_id=uuids.project))
         self.assertEqual(2, len(limits))
         for pl in limits:
             self.assertEqual(
                 expected_limits[pl.resource_name], pl.resource_limit)
 
         # Verify there are no project limits for a different project.
-        other_project_limits = self.ul_api.limits(
-            project_id=uuids.otherproject)
+        other_project_limits = list(self.ul_api.limits(
+            project_id=uuids.otherproject))
         self.assertEqual(0, len(other_project_limits))
 
         # Try migrating limits for a specific region.
-        region_registered_limits = self.ul_api.registered_limits(
-            region_id=uuids.region)
+        region_registered_limits = list(self.ul_api.registered_limits(
+            region_id=uuids.region))
         self.assertEqual(0, len(region_registered_limits))
 
-        self.cli.migrate_to_unified_limits(
+        result = self.cli.migrate_to_unified_limits(
             region_id=uuids.region, verbose=True)
 
-        region_registered_limits = self.ul_api.registered_limits(
-            region_id=uuids.region)
+        # There is a missing registered limit for class:DISK_GB.
+        self.assertEqual(3, result)
+
+        region_registered_limits = list(self.ul_api.registered_limits(
+            region_id=uuids.region))
         self.assertEqual(11, len(region_registered_limits))
         for rl in region_registered_limits:
             self.assertEqual(
                 expected_registered_limits[rl.resource_name], rl.default_limit)
 
+        # Create a registered limit for class:DISK_GB.
+        self.ul_api.create_registered_limit(
+            resource_name='class:DISK_GB', default_limit=10)
+
         # Try migrating project limits for that region.
-        region_limits = self.ul_api.limits(
-            project_id=uuids.project, region_id=uuids.region)
+        region_limits = list(self.ul_api.limits(
+            project_id=uuids.project, region_id=uuids.region))
         self.assertEqual(0, len(region_limits))
 
         self.cli.migrate_to_unified_limits(
             project_id=uuids.project, region_id=uuids.region, verbose=True)
 
-        region_limits = self.ul_api.limits(
-            project_id=uuids.project, region_id=uuids.region)
+        region_limits = list(self.ul_api.limits(
+            project_id=uuids.project, region_id=uuids.region))
         self.assertEqual(2, len(region_limits))
         for pl in region_limits:
             self.assertEqual(
@@ -2671,16 +2689,243 @@ class TestNovaManageLimits(test.TestCase):
         # Verify no --verbose outputs nothing, migrate limits for a different
         # project after clearing stdout.
         self.output = StringIO()
-        self.assertEqual('', self.output.getvalue())
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
 
         # Create a limit for the other project.
         objects.Quotas.create_limit(self.ctxt, uuids.otherproject, 'ram', 2048)
 
-        self.cli.migrate_to_unified_limits(project_id=uuids.otherproject)
-
-        other_project_limits = self.ul_api.limits(
+        result = self.cli.migrate_to_unified_limits(
             project_id=uuids.otherproject)
+
+        other_project_limits = list(self.ul_api.limits(
+            project_id=uuids.otherproject))
         self.assertEqual(1, len(other_project_limits))
 
-        # Output should still be empty after migrating.
-        self.assertEqual('', self.output.getvalue())
+        # Output should show success after migrating.
+        self.assertIn('SUCCESS', self.output.getvalue())
+        self.assertEqual(0, result)
+
+    def _add_to_inventory(self, resource):
+        # Add resource to inventory for both computes.
+        for rp in self._get_all_providers():
+            inv = self._get_provider_inventory(rp['uuid'])
+            inv[resource] = {'total': 10}
+            self._update_inventory(
+                rp['uuid'], {'inventories': inv,
+                'resource_provider_generation': rp['generation']})
+
+    def _create_flavor_and_add_to_inventory(self, resource):
+        # Create a flavor for the resource.
+        flavor_id = self._create_flavor(
+            vcpu=1, memory_mb=512, disk=1, ephemeral=0,
+            extra_spec={f'resources:{resource}': 1})
+        self._add_to_inventory(resource)
+        return flavor_id
+
+    def test_migrate_to_unified_limits_flavor_scanning(self):
+        # Create a few flavors in the API database.
+        for resource in ('NUMA_CORE', 'PCPU', 'NUMA_SOCKET'):
+            self._create_flavor(
+                vcpu=1, memory_mb=512, disk=1, ephemeral=0,
+                extra_spec={f'resources:{resource}': 1})
+
+        # Create a few instances with embedded flavors that are *not* in the
+        # API database.
+        self._create_resource_class('CUSTOM_BAREMETAL_SMALL')
+
+        # Create servers on both computes (and cells).
+        hosts = ('host1', 'host2')
+
+        for i, resource in enumerate(
+                ('VGPU', 'CUSTOM_BAREMETAL_SMALL', 'PGPU')):
+            flavor_id = self._create_flavor_and_add_to_inventory(resource)
+
+            # Create servers on both computes (and thus cells) and two
+            # projects: nova.tests.fixtures.nova.PROJECT_ID and 'other'.
+            server = self._create_server(
+                flavor_id=flavor_id, host=hosts[i % 2], networks='none')
+
+            # Delete the flavor so it can only be detected by scanning
+            # embedded flavors.
+            self._delete_flavor(flavor_id)
+
+        # Delete the last instance which has resources:PGPU. It should not be
+        # included because the instance is deleted.
+        self._delete_server(server)
+
+        result = self.cli.migrate_to_unified_limits()
+
+        # PCPU will have had a registered limit created for it based on VCPU,
+        # so it should also not be included in the list.
+        self.assertIn('WARNING', self.output.getvalue())
+        self.assertIn('class:CUSTOM_BAREMETAL_SMALL', self.output.getvalue())
+        self.assertIn('class:DISK_GB', self.output.getvalue())
+        self.assertIn('class:NUMA_CORE', self.output.getvalue())
+        self.assertIn('class:NUMA_SOCKET', self.output.getvalue())
+        self.assertIn('class:VGPU', self.output.getvalue())
+        self.assertEqual(5, self.output.getvalue().count('class:'))
+        self.assertEqual(3, result)
+
+        # Now create registered limits for all of the resources in the list.
+        resources = (
+            'CUSTOM_BAREMETAL_SMALL', 'DISK_GB', 'NUMA_CORE', 'NUMA_SOCKET',
+            'VGPU')
+        for resource in resources:
+            self.ul_api.create_registered_limit(
+                resource_name='class:' + resource, default_limit=10)
+
+        # Reset the output and run the migrate command again.
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+
+        result = self.cli.migrate_to_unified_limits()
+
+        # The output should be the success message because there are no longer
+        # any resources missing registered limits.
+        self.assertIn('SUCCESS', self.output.getvalue())
+        # Return code should be 0 for success.
+        self.assertEqual(0, result)
+
+    def test_migrate_to_unified_limits_flavor_scanning_resource_request(self):
+        # Create one server that has extra specs that will get translated into
+        # resource classes.
+        extra_spec = {
+            'hw:mem_encryption': 'true',
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(
+            name='fakeflavor', vcpu=1, memory_mb=512, disk=1, ephemeral=0,
+            extra_spec=extra_spec)
+        self._add_to_inventory('MEM_ENCRYPTION_CONTEXT')
+        image_id = self._create_image(
+            metadata={'hw_firmware_type': 'uefi'})['id']
+        self._create_server(
+            flavor_id=flavor_id, networks='none', image_uuid=image_id)
+
+        result = self.cli.migrate_to_unified_limits()
+
+        # FIXME(melwitt): Update this to remove the exception messages and add
+        # class:MEM_ENCRYPTION_CONTEXT to the table when
+        # https://bugs.launchpad.net/nova/+bug/2088831 is fixed.
+        # Message is output two times: one for API database scan and one for
+        # embedded flavor scan.
+        self.assertEqual(2, self.output.getvalue().count('exception'))
+        self.assertIn('WARNING', self.output.getvalue())
+        self.assertIn('class:DISK_GB', self.output.getvalue())
+        self.assertEqual(1, self.output.getvalue().count('class:'))
+        self.assertEqual(3, result)
+
+    def test_migrate_to_unified_limits_flavor_scanning_project(self):
+        # Create a client that uses a different project.
+        other_api = api_client.TestOpenStackClient(
+            'other', self.api.base_url, project_id='other',
+            roles=['reader', 'member'])
+        other_api.microversion = '2.74'
+
+        self._create_resource_class('CUSTOM_GOLD')
+        apis = (self.api, other_api)
+
+        for i, resource in enumerate(('VGPU', 'CUSTOM_GOLD')):
+            flavor_id = self._create_flavor_and_add_to_inventory(resource)
+
+            # Create servers for two projects:
+            # nova.tests.fixtures.nova.PROJECT_ID and 'other'.
+            self._create_server(
+                flavor_id=flavor_id, api=apis[i % 2], networks='none')
+
+            # Delete the flavor so it can only be detected by scanning embedded
+            # flavors.
+            self._delete_flavor(flavor_id)
+
+        # Scope the command to project 'other'. This should cause
+        # VGPU to not be detected in the embedded flavors.
+        result = self.cli.migrate_to_unified_limits(project_id='other')
+
+        # DISK_GB will also be found because it's a known standard resource
+        # class that we know will be allocated.
+        self.assertIn('WARNING', self.output.getvalue())
+        self.assertIn('class:CUSTOM_GOLD', self.output.getvalue())
+        self.assertIn('class:DISK_GB', self.output.getvalue())
+        self.assertEqual(2, self.output.getvalue().count('class:'))
+        self.assertEqual(3, result)
+
+    @mock.patch.object(
+        manage.LimitsCommands, '_get_resources_from_embedded_flavors',
+        new=mock.NonCallableMock())
+    def test_migrate_to_unified_limits_no_embedded_flavor_scan(self):
+        # Create a few flavors in the API database.
+        for resource in ('NUMA_CORE', 'PCPU', 'NUMA_SOCKET'):
+            self._create_flavor(
+                vcpu=1, memory_mb=512, disk=1, ephemeral=0,
+                extra_spec={f'resources:{resource}': 1})
+
+        # Create a few instances with embedded flavors that are *not* in the
+        # API database.
+        self._create_resource_class('CUSTOM_BAREMETAL_SMALL')
+
+        # Create servers on both computes (and cells).
+        hosts = ('host1', 'host2')
+
+        for i, resource in enumerate(
+                ('VGPU', 'CUSTOM_BAREMETAL_SMALL', 'PGPU')):
+            flavor_id = self._create_flavor_and_add_to_inventory(resource)
+
+            # Create servers on both computes (and thus cells) and two
+            # projects: nova.tests.fixtures.nova.PROJECT_ID and 'other'.
+            self._create_server(
+                flavor_id=flavor_id, host=hosts[i % 2], networks='none')
+
+            # Delete the flavor so it can only be detected by scanning embedded
+            # flavors.
+            self._delete_flavor(flavor_id)
+
+        result = self.cli.migrate_to_unified_limits(
+            no_embedded_flavor_scan=True)
+
+        # VGPU, CUSTOM_BAREMETAL_SMALL, and PGPU should not be included in the
+        # output because the embedded flavor scan should have been skipped.
+        self.assertIn('WARNING', self.output.getvalue())
+        self.assertIn('class:DISK_GB', self.output.getvalue())
+        self.assertIn('class:NUMA_CORE', self.output.getvalue())
+        self.assertIn('class:NUMA_SOCKET', self.output.getvalue())
+        self.assertEqual(3, self.output.getvalue().count('class:'))
+        self.assertEqual(3, result)
+
+    def test_migrate_to_unified_limits_flavor_scanning_down_cell(self):
+        # Fake a down cell returned from the instance list.
+        real_get_instance_objects_sorted = (
+            list_instances.get_instance_objects_sorted)
+
+        def fake_get_instance_objects_sorted(*args, **kwargs):
+            instances, down_cells = real_get_instance_objects_sorted(
+                *args, **kwargs)
+            return instances, [uuids.down_cell]
+
+        self.useFixture(fixtures.MockPatchObject(
+            list_instances, 'get_instance_objects_sorted',
+            fake_get_instance_objects_sorted))
+
+        self._create_resource_class('CUSTOM_GOLD')
+
+        for i, resource in enumerate(('VGPU', 'CUSTOM_GOLD')):
+            flavor_id = self._create_flavor_and_add_to_inventory(resource)
+
+            # Create servers for two projects:
+            # nova.tests.fixtures.nova.PROJECT_ID and 'other'.
+            self._create_server(flavor_id=flavor_id, networks='none')
+
+            # Delete the flavor so it can only be detected by scanning embedded
+            # flavors.
+            self._delete_flavor(flavor_id)
+
+        result = self.cli.migrate_to_unified_limits()
+
+        # DISK_GB will also be found because it's a known standard resource
+        # class that we know will be allocated.
+        self.assertIn('WARNING', self.output.getvalue())
+        self.assertIn("Cells {'%s'}" % uuids.down_cell, self.output.getvalue())
+        self.assertIn('class:CUSTOM_GOLD', self.output.getvalue())
+        self.assertIn('class:DISK_GB', self.output.getvalue())
+        self.assertIn('class:VGPU', self.output.getvalue())
+        self.assertEqual(3, self.output.getvalue().count('class:'))
+        self.assertEqual(3, result)

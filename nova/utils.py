@@ -965,7 +965,7 @@ def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
         min_version=min_version, max_version=max_version, raise_exc=False)
 
 
-def get_sdk_adapter(service_type, check_service=False):
+def get_sdk_adapter(service_type, check_service=False, conf_group=None):
     """Construct an openstacksdk-brokered Adapter for a given service type.
 
     We expect to find a conf group whose name corresponds to the service_type's
@@ -976,12 +976,14 @@ def get_sdk_adapter(service_type, check_service=False):
                          is to be constructed.
     :param check_service: If True, we will query the endpoint to make sure the
             service is alive, raising ServiceUnavailable if it is not.
+    :param conf_group: String name of the conf group to use, otherwise the name
+            of the service_type will be used.
     :return: An openstack.proxy.Proxy object for the specified service_type.
     :raise: ConfGroupForServiceTypeNotFound If no conf group name could be
             found for the specified service_type.
     :raise: ServiceUnavailable if check_service is True and the service is down
     """
-    confgrp = _get_conf_group(service_type)
+    confgrp = conf_group or _get_conf_group(service_type)
     sess = _get_auth_and_session(confgrp)[1]
     try:
         conn = connection.Connection(
