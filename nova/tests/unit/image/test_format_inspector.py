@@ -179,10 +179,16 @@ class TestFormatInspectors(test.NoDBTestCase):
             shell=True)
 
         # Convert it to VMDK
-        subprocess.check_output(
-            'qemu-img convert -f raw -O vmdk -o subformat=%s -S 0 %s %s' % (
-                subformat, raw, fn),
-            shell=True)
+        # these tests depend on qemu-img
+        # being installed and in the path,
+        # if it is not installed, skip
+        try:
+            subprocess.check_output(
+                'qemu-img convert -f raw -O vmdk -o subformat=%s -S 0 %s %s'
+                % (subformat, raw, fn),
+                shell=True)
+        except Exception:
+            self.skipTest("qemu-img not installed")
         return fn
 
     def _test_format_at_block_size(self, format_name, img, block_size):
