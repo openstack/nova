@@ -4100,6 +4100,8 @@ class ImagePropertyCommandsTestCase(test.NoDBTestCase):
             image_property='hw_disk_bus')
         self.assertEqual(1, ret, 'return code')
 
+    @mock.patch('nova.objects.RequestSpec.save')
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.objects.Instance.save')
@@ -4108,7 +4110,8 @@ class ImagePropertyCommandsTestCase(test.NoDBTestCase):
     @mock.patch('nova.context.get_admin_context',
                 new=mock.Mock(return_value=mock.sentinel.ctxt))
     def test_set_image_properties(
-        self, mock_instance_save, mock_target_cell, mock_get_instance
+        self, mock_instance_save, mock_target_cell, mock_get_instance,
+            mock_get_request_spec, mock_request_spec_save
     ):
         mock_target_cell.return_value.__enter__.return_value = \
             mock.sentinel.cctxt
@@ -4117,9 +4120,11 @@ class ImagePropertyCommandsTestCase(test.NoDBTestCase):
             vm_state=obj_fields.InstanceState.STOPPED,
             system_metadata={
                 'image_hw_disk_bus': 'virtio',
-            }
+            },
+            image_ref=''
         )
         mock_get_instance.return_value = instance
+        mock_get_request_spec.return_value = objects.RequestSpec()
         ret = self.commands.set(
             instance_uuid=uuidsentinel.instance,
             image_properties=['hw_cdrom_bus=sata']
@@ -4136,7 +4141,12 @@ class ImagePropertyCommandsTestCase(test.NoDBTestCase):
             instance.system_metadata.get('image_hw_disk_bus'),
             'image_hw_disk_bus'
         )
+        image_props = mock_get_request_spec.return_value.image.properties
+        self.assertEqual('sata', image_props.get('hw_cdrom_bus'))
+        self.assertEqual('virtio', image_props.get('hw_disk_bus'))
+
         mock_instance_save.assert_called_once()
+        mock_request_spec_save.assert_called_once()
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
