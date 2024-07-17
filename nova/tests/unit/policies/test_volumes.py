@@ -28,6 +28,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
+from nova.volume import cinder
 
 # This is the server ID.
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -35,6 +36,8 @@ FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_UUID_A = '00000000-aaaa-aaaa-aaaa-000000000000'
 # This is the new volume ID (to swap to).
 FAKE_UUID_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+# This is the volume type ID
+FAKE_UUID_C = 'cccccccc-baac-acac-bcbc-bbbbbbbbbbbb'
 
 
 def fake_bdm_get_by_volume_and_instance(cls, ctxt, volume_id, instance_uuid):
@@ -140,8 +143,33 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
                                 rule_name, self.controller.create,
                                 self.req, FAKE_UUID, body=body)
 
+    @mock.patch.object(cinder.API, 'attachment_get')
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
-    def test_update_volume_attach_policy(self, mock_bdm_save):
+    def test_update_volume_attach_policy(self, mock_bdm_save,
+                                         mock_attachment_get):
+        conn_info = {
+            'driver_volume_type': 'vmdk',
+            'volume_id': FAKE_UUID_A,
+            'attachment_id': uuids.attachment_id,
+            'data': {
+                'volume_id': FAKE_UUID_A,
+                'name': FAKE_UUID_A,
+                'profile_id': FAKE_UUID_C,
+                'datastore': 'datastore-1839585',
+                'qos_specs': None,
+                'access_mode': 'rw',
+                'encrypted': False,
+                'cacheable': False
+            }
+        }
+        fake_cinder_attachment = {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+            'delete_on_termination': True,
+            'device': '/dev/fake0',
+            'connection_info': conn_info
+        }
+        mock_attachment_get.return_value = fake_cinder_attachment
         rule_name = self.policy_root % "update"
         req = fakes.HTTPRequest.blank('', version='2.85')
         body = {'volumeAttachment': {
@@ -189,11 +217,36 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         mock_swap_volume.assert_not_called()
         mock_bdm_save.assert_not_called()
 
+    @mock.patch.object(cinder.API, 'attachment_get')
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
     @mock.patch('nova.compute.api.API.swap_volume')
     def test_pass_swap_and_update_volume_attach_policy(self,
                                                        mock_swap_volume,
-                                                       mock_bdm_save):
+                                                       mock_bdm_save,
+                                                       mock_attachment_get):
+        conn_info = {
+            'driver_volume_type': 'vmdk',
+            'volume_id': FAKE_UUID_A,
+            'attachment_id': uuids.attachment_id,
+            'data': {
+                'volume_id': FAKE_UUID_A,
+                'name': FAKE_UUID_A,
+                'profile_id': FAKE_UUID_C,
+                'datastore': 'datastore-1839585',
+                'qos_specs': None,
+                'access_mode': 'rw',
+                'encrypted': False,
+                'cacheable': False
+            }
+        }
+        fake_cinder_attachment = {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+            'delete_on_termination': True,
+            'device': '/dev/fake0',
+            'connection_info': conn_info
+        }
+        mock_attachment_get.return_value = fake_cinder_attachment
         rule_name = self.policy_root % "swap"
         req = fakes.HTTPRequest.blank('', version='2.85')
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,

@@ -15,6 +15,7 @@
 
 """The volumes extension."""
 
+from oslo_serialization import jsonutils
 from oslo_utils import strutils
 from webob import exc
 
@@ -486,6 +487,12 @@ class VolumeAttachmentController(wsgi.Controller):
             if 'delete_on_termination' in att:
                 bdm.delete_on_termination = strutils.bool_from_string(
                         att['delete_on_termination'], strict=True)
+            attachment_ref = self.volume_api.attachment_get(context,
+                                                            bdm.attachment_id)
+            new_connection_info = attachment_ref.get('connection_info', {})
+            if 'serial' not in new_connection_info:
+                new_connection_info['serial'] = volume_id
+            bdm.connection_info = jsonutils.dumps(new_connection_info)
             bdm.save()
         except exception.VolumeBDMNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())

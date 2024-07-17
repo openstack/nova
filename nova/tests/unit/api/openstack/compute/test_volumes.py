@@ -759,11 +759,35 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
              'status': 'available',
              'id': FAKE_UUID_B})
 
+    @mock.patch.object(cinder.API, 'attachment_get')
     @mock.patch.object(compute_api.API, 'swap_volume')
-    def test_swap_volume(self, mock_swap_volume):
+    def test_swap_volume(self, mock_swap_volume, mock_attachment_get):
         result = self._test_swap(self.attachments)
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
+        conn_info = {
+            'driver_volume_type': 'vmdk',
+            'volume_id': FAKE_UUID_A,
+            'attachment_id': uuids.attachment_id,
+            'data': {
+                'volume_id': FAKE_UUID_A,
+                'name': FAKE_UUID_A,
+                'profile_id': FAKE_UUID_C,
+                'datastore': 'datastore-1839585',
+                'qos_specs': None,
+                'access_mode': 'rw',
+                'encrypted': False,
+                'cacheable': False
+            }
+        }
+        fake_cinder_attachment = {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+            'delete_on_termination': True,
+            'device': '/dev/fake0',
+            'connection_info': conn_info
+        }
+        mock_attachment_get.return_value = fake_cinder_attachment
         if isinstance(self.attachments,
                       volumes_v21.VolumeAttachmentController):
             status_int = self.attachments.update.wsgi_code
@@ -1216,12 +1240,14 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
                           self.attachments,
                           body=body)
 
+    @mock.patch.object(cinder.API, 'attachment_get')
     @mock.patch.object(compute_api.API, 'swap_volume')
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
     def test_update_volume(self, mock_bdm_save,
-                           mock_get_vol_and_inst, mock_swap):
+                           mock_get_vol_and_inst, mock_swap,
+                           mock_attachment_get):
         vol_bdm = objects.BlockDeviceMapping(
             self.context,
             id=1,
@@ -1235,25 +1261,50 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
             device_name='/dev/fake0',
             attachment_id=uuids.attachment_id)
         mock_get_vol_and_inst.return_value = vol_bdm
-
         body = {'volumeAttachment': {
             'volumeId': FAKE_UUID_A,
             'tag': 'fake-tag',
             'delete_on_termination': True,
             'device': '/dev/fake0',
         }}
+        conn_info = {
+            'driver_volume_type': 'vmdk',
+            'volume_id': FAKE_UUID_A,
+            'attachment_id': uuids.attachment_id,
+            'data': {
+                'volume_id': FAKE_UUID_A,
+                'name': FAKE_UUID_A,
+                'profile_id': FAKE_UUID_C,
+                'datastore': 'datastore-1839585',
+                'qos_specs': None,
+                'access_mode': 'rw',
+                'encrypted': False,
+                'cacheable': False
+            }
+        }
+        fake_cinder_attachment = {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+            'delete_on_termination': True,
+            'device': '/dev/fake0',
+            'connection_info': conn_info
+        }
+        mock_attachment_get.return_value = fake_cinder_attachment
+
         self.attachments.update(self.req, FAKE_UUID,
                                 FAKE_UUID_A, body=body)
         mock_swap.assert_not_called()
         mock_bdm_save.assert_called_once()
         self.assertTrue(vol_bdm['delete_on_termination'])
 
+    @mock.patch.object(cinder.API, 'attachment_get')
     @mock.patch.object(compute_api.API, 'swap_volume')
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
     def test_update_volume_with_bool_from_string(
-            self, mock_bdm_save, mock_get_vol_and_inst, mock_swap):
+            self, mock_bdm_save, mock_get_vol_and_inst, mock_swap,
+            mock_attachment_get):
         vol_bdm = objects.BlockDeviceMapping(
             self.context,
             id=1,
@@ -1274,6 +1325,29 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
             'delete_on_termination': 'False',
             'device': '/dev/fake0',
         }}
+        conn_info = {
+            'driver_volume_type': 'vmdk',
+            'volume_id': FAKE_UUID_A,
+            'attachment_id': uuids.attachment_id,
+            'data': {
+                'volume_id': FAKE_UUID_A,
+                'name': FAKE_UUID_A,
+                'profile_id': FAKE_UUID_C,
+                'datastore': 'datastore-1839585',
+                'qos_specs': None,
+                'access_mode': 'rw',
+                'encrypted': False,
+                'cacheable': False
+            }
+        }
+        fake_cinder_attachment = {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+            'delete_on_termination': True,
+            'device': '/dev/fake0',
+            'connection_info': conn_info
+        }
+        mock_attachment_get.return_value = fake_cinder_attachment
         self.attachments.update(self.req, FAKE_UUID,
                                 FAKE_UUID_A, body=body)
         mock_swap.assert_not_called()
@@ -1296,12 +1370,14 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
         mock_bdm_save.assert_called()
         self.assertTrue(vol_bdm['delete_on_termination'])
 
+    @mock.patch.object(cinder.API, 'attachment_get')
     @mock.patch.object(compute_api.API, 'swap_volume')
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
     def test_update_volume_swap(self, mock_bdm_save,
-                                mock_get_vol_and_inst, mock_swap):
+                                mock_get_vol_and_inst, mock_swap,
+                                mock_attachment_get):
         vol_bdm = objects.BlockDeviceMapping(
             self.context,
             id=1,
@@ -1321,6 +1397,29 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
             'tag': 'fake-tag',
             'delete_on_termination': True,
         }}
+        conn_info = {
+            'driver_volume_type': 'vmdk',
+            'volume_id': FAKE_UUID_A,
+            'attachment_id': uuids.attachment_id,
+            'data': {
+                'volume_id': FAKE_UUID_A,
+                'name': FAKE_UUID_A,
+                'profile_id': FAKE_UUID_C,
+                'datastore': 'datastore-1839585',
+                'qos_specs': None,
+                'access_mode': 'rw',
+                'encrypted': False,
+                'cacheable': False
+            }
+        }
+        fake_cinder_attachment = {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+            'delete_on_termination': True,
+            'device': '/dev/fake0',
+            'connection_info': conn_info
+        }
+        mock_attachment_get.return_value = fake_cinder_attachment
         self.attachments.update(self.req, FAKE_UUID,
                                 FAKE_UUID_A, body=body)
         mock_bdm_save.assert_called_once()
