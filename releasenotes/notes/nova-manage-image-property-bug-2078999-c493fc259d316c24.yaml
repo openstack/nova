@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Before the `Bug 2078999 <https://bugs.launchpad.net/nova/+bug/2078999>`_ was fixed,
+    the ``nova-manage image_property set`` command would update the image properties
+    embedded in the instance but would not update the ones in the request specs. This
+    led to an unexpected rollback of the image properties that were updated by the
+    command after an instance migration.
