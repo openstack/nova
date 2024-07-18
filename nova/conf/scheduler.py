@@ -786,6 +786,41 @@ Related options:
 
 * ``[filter_scheduler] weight_classes``
 """),
+    cfg.FloatOpt(
+        "aggregate_multi_tenancy_isolation_weight_multiplier",
+        default=1.0,
+        help="""
+Multiplier used for weighing hosts part of a filter_tenant_id aggregate
+
+This option determines how much weight is placed on a host which is part of an
+aggregate containing a ``filter_tenant_id`` property with the
+``filter_tenant_id`` containing the project of the current scheduling request.
+
+Setting ``filter_tenant_id`` on an aggregate and adding hosts to the aggregate
+dedicates these hosts to these projects. No other customers can spawn instances
+there. Since hosts not being in such an aggregate can be used by anyone, users
+should use their dedicated resources first instead of consuming the generally
+available resources. This weigher can ensure that by having the appropriate
+multiplier set.
+
+Note that this setting only affects scheduling if the
+``AggregateMultiTenancyIsolation`` weigher is enabled.
+
+The value of this configuration option can be overridden per host aggregate
+by setting the aggregate metadata key with the same name
+(``aggregate_multi_tenancy_isolation_weight_multiplier``).
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multiplier
+  ratio for this weigher. Positive values mean the weigher will prefer
+  dedicated hosts.
+  Negative values mean the weigher will prefer generally available hosts
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
+"""),
     cfg.BoolOpt(
         "shuffle_best_same_weighed_hosts",
         default=False,
