@@ -172,8 +172,7 @@ class API(object):
         if not CONF.libvirt.cpu_power_management:
             return
         cpu_dedicated_set = hardware.get_cpu_dedicated_set() or set()
-        governors = set()
-        cpu_states = set()
+        pcpus = []
         for pcpu in cpu_dedicated_set:
             if (pcpu == 0 and
                     CONF.libvirt.cpu_power_management_strategy == 'cpu_state'):
@@ -181,11 +180,13 @@ class API(object):
                             'but it is not eligible for state management '
                             'and will be ignored')
                 continue
-            pcpu = self.core(pcpu)
             # we need to collect the governors strategy and the CPU states
-            governors.add(pcpu.governor)
-            cpu_states.add(pcpu.online)
+            pcpus.append(self.core(pcpu))
         if CONF.libvirt.cpu_power_management_strategy == 'cpu_state':
+            # NOTE(sbauza): offline cores can't have a governor, it returns a
+            # DeviceBusy exception.
+            governors = set([pcpu.governor for pcpu in pcpus
+                             if pcpu.online])
             # all the cores need to have the same governor strategy
             if len(governors) > 1:
                 msg = _("All the cores need to have the same governor strategy"
@@ -193,6 +194,7 @@ class API(object):
                         "compute node if you prefer.")
                 raise exception.InvalidConfiguration(msg)
         elif CONF.libvirt.cpu_power_management_strategy == 'governor':
+            cpu_states = set([pcpu.online for pcpu in pcpus])
             # all the cores need to be online
             if False in cpu_states:
                 msg = _("All the cores need to be online before modifying the "

@@ -244,3 +244,21 @@ class TestAPI(test.NoDBTestCase):
         self.api.validate_all_dedicated_cpus()
         # no assert we want to make sure the validation won't raise if
         # no dedicated cpus are configured
+
+    @mock.patch.object(core, 'get_governor')
+    @mock.patch.object(core, 'get_online')
+    def test_validate_all_dedicated_cpus_for_cpu_state_with_off_cores(
+            self, mock_get_online, mock_get_governor):
+        self.flags(cpu_power_management=True, group='libvirt')
+        self.flags(cpu_dedicated_set='1-3', group='compute')
+        self.flags(cpu_power_management_strategy='cpu_state', group='libvirt')
+        # CPU1 and CPU3 are online while CPU2 is offline
+        mock_get_online.side_effect = (True, False, True)
+        mock_get_governor.return_value = 'performance'
+        self.api.validate_all_dedicated_cpus()
+
+        mock_get_online.assert_has_calls([mock.call(1), mock.call(2),
+                                          mock.call(3)])
+        # we only have two calls as CPU2 was skipped
+        mock_get_governor.assert_has_calls([mock.call(1),
+                                            mock.call(3)])
