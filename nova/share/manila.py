@@ -30,7 +30,7 @@ LOG = logging.getLogger(__name__)
 MIN_SHARE_FILE_SYSTEM_MICROVERSION = "2.82"
 
 
-def manilaclient(context):
+def _manilaclient(context, admin=False):
     """Constructs a manila client object for making API requests.
 
     :return: An openstack.proxy.Proxy object for the specified service_type.
@@ -41,7 +41,9 @@ def manilaclient(context):
 
     return utils.get_sdk_adapter(
         "shared-file-system",
+        admin=admin,
         check_service=True,
+        context=context,
         shared_file_system_api_version=MIN_SHARE_FILE_SYSTEM_MICROVERSION,
         global_request_id=context.global_id
     )
@@ -208,7 +210,7 @@ class API(object):
                     paths.append(export_location.path)
             return paths[0]
 
-        client = manilaclient(context)
+        client = _manilaclient(context, admin=False)
         LOG.debug("Get share id:'%s' data from manila", share_id)
         share = client.get_share(share_id)
         export_locations = client.export_locations(share.id)
@@ -236,7 +238,8 @@ class API(object):
 
         LOG.debug("Get share access id for share id:'%s'",
                   share_id)
-        access_list = manilaclient(context).access_rules(share_id)
+        access_list = _manilaclient(
+            context, admin=True).access_rules(share_id)
 
         for access in access_list:
             if (
@@ -279,7 +282,7 @@ class API(object):
         LOG.debug("Allow host access to share id:'%s'",
                   share_id)
 
-        access = manilaclient(context).create_access_rule(
+        access = _manilaclient(context, admin=True).create_access_rule(
             share_id,
             access_type=access_type,
             access_to=access_to,
@@ -311,8 +314,6 @@ class API(object):
             respond with a status code 202.
         """
 
-        client = manilaclient(context)
-
         access = self.get_access(
             context,
             share_id,
@@ -321,6 +322,7 @@ class API(object):
             )
 
         if access:
+            client = _manilaclient(context, admin=True)
             LOG.debug("Deny host access to share id:'%s'", share_id)
             resp = client.delete_access_rule(access.id, share_id)
             if resp.status_code != 202:

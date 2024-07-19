@@ -13,6 +13,8 @@
 from requests import Response
 
 import fixtures
+from keystoneauth1 import loading as ks_loading
+
 import nova.conf
 from nova import context as nova_context
 from nova import exception
@@ -156,9 +158,9 @@ class BaseManilaTestCase(object):
         self.mock_get_confgrp = self.useFixture(fixtures.MockPatch(
             'nova.utils._get_conf_group')).mock
 
-        self.mock_get_auth_sess = self.useFixture(fixtures.MockPatch(
-            'nova.utils._get_auth_and_session')).mock
-        self.mock_get_auth_sess.return_value = (None, mock.sentinel.session)
+        self.mock_ks_loading = self.useFixture(
+            fixtures.MockPatchObject(ks_loading, 'load_auth_from_conf_options')
+        ).mock
 
         self.service_type = 'shared-file-system'
         self.mock_connection = self.useFixture(
@@ -223,16 +225,39 @@ class BaseManilaTestCase(object):
 
         return FakeConnection()
 
-    def create_client(self, context):
-        return manila.manilaclient(context)
-
-    def test_client(self):
-        client = self.create_client(self.context)
+    @mock.patch('nova.utils.get_sdk_adapter')
+    def test_client(self, mock_get_sdk_adapter):
+        client = manila._manilaclient(self.context)
         self.assertTrue(hasattr(client, 'get_share'))
         self.assertTrue(hasattr(client, 'export_locations'))
         self.assertTrue(hasattr(client, 'access_rules'))
         self.assertTrue(hasattr(client, 'create_access_rule'))
         self.assertTrue(hasattr(client, 'delete_access_rule'))
+        mock_get_sdk_adapter.assert_called_once_with(
+            "shared-file-system",
+            admin=False,
+            check_service=True,
+            context=self.context,
+            shared_file_system_api_version="2.82",
+            global_request_id=self.context.global_id,
+        )
+
+    @mock.patch('nova.utils.get_sdk_adapter')
+    def test_client_admin(self, mock_get_sdk_adapter):
+        client = manila._manilaclient(self.context, admin=True)
+        self.assertTrue(hasattr(client, 'get_share'))
+        self.assertTrue(hasattr(client, 'export_locations'))
+        self.assertTrue(hasattr(client, 'access_rules'))
+        self.assertTrue(hasattr(client, 'create_access_rule'))
+        self.assertTrue(hasattr(client, 'delete_access_rule'))
+        mock_get_sdk_adapter.assert_called_once_with(
+            "shared-file-system",
+            admin=True,
+            check_service=True,
+            context=self.context,
+            shared_file_system_api_version="2.82",
+            global_request_id=self.context.global_id,
+        )
 
 
 class ManilaTestCase(BaseManilaTestCase, test.NoDBTestCase):
@@ -246,10 +271,20 @@ class ManilaTestCase(BaseManilaTestCase, test.NoDBTestCase):
 
         self.assertIn("Share nonexisting could not be found.", exc.message)
 
-    def test_get_share(self):
+    @mock.patch(
+        'nova.utils.get_sdk_adapter', side_effect=nova.utils.get_sdk_adapter)
+    def test_get_share(self, mock_get_sdk_adapter):
         """Tests that we manage to get a share.
         """
         share = self.api.get(self.context, '1234')
+        mock_get_sdk_adapter.assert_called_once_with(
+            "shared-file-system",
+            admin=False,
+            check_service=True,
+            context=self.context,
+            shared_file_system_api_version="2.82",
+            global_request_id=self.context.global_id,
+        )
         self.assertIsInstance(share, manila.Share)
         self.assertEqual('1234', share.id)
         self.assertEqual(1, share.size)
@@ -304,12 +339,21 @@ class ManilaTestCase(BaseManilaTestCase, test.NoDBTestCase):
 
         self.assertIn("Share nonexisting2 could not be found.", exc.message)
 
-    def test_get_access(self):
+    @mock.patch(
+        'nova.utils.get_sdk_adapter', side_effect=nova.utils.get_sdk_adapter)
+    def test_get_access(self, mock_get_sdk_adapter):
         """Tests that we manage to get an access id based on access_type and
         access_to parameters.
         """
         access = self.api.get_access(self.context, '1234', 'ip', '0.0.0.0/0')
-
+        mock_get_sdk_adapter.assert_called_once_with(
+            "shared-file-system",
+            admin=True,
+            check_service=True,
+            context=self.context,
+            shared_file_system_api_version="2.82",
+            global_request_id=self.context.global_id,
+        )
         self.assertEqual('a25b2df3-90bd-4add-afa6-5f0dbbd50452', access.id)
         self.assertEqual('rw', access.access_level)
         self.assertEqual('active', access.state)
@@ -342,10 +386,20 @@ class ManilaTestCase(BaseManilaTestCase, test.NoDBTestCase):
 
         self.assertIn("Share nonexisting could not be found.", exc.message)
 
-    def test_allow_access(self):
+    @mock.patch(
+        'nova.utils.get_sdk_adapter', side_effect=nova.utils.get_sdk_adapter)
+    def test_allow_access(self, mock_get_sdk_adapter):
         """Tests that we manage to allow access to a share.
         """
         access = self.api.allow(self.context, '1234', 'ip', '0.0.0.0/0', 'rw')
+        mock_get_sdk_adapter.assert_called_once_with(
+            "shared-file-system",
+            admin=True,
+            check_service=True,
+            context=self.context,
+            shared_file_system_api_version="2.82",
+            global_request_id=self.context.global_id,
+        )
         self.assertEqual('a25b2df3-90bd-4add-afa6-5f0dbbd50452', access.id)
         self.assertEqual('rw', access.access_level)
         self.assertEqual('active', access.state)
@@ -385,7 +439,9 @@ class ManilaTestCase(BaseManilaTestCase, test.NoDBTestCase):
 
         self.assertIn("Share nonexisting could not be found.", exc.message)
 
-    def test_deny_access(self):
+    @mock.patch(
+        'nova.utils.get_sdk_adapter', side_effect=nova.utils.get_sdk_adapter)
+    def test_deny_access(self, mock_get_sdk_adapter):
         """Tests that we manage to deny access to a share.
         """
         self.api.deny(
@@ -393,6 +449,41 @@ class ManilaTestCase(BaseManilaTestCase, test.NoDBTestCase):
             '1234',
             'ip',
             '0.0.0.0/0'
+        )
+        self.assertEqual(2, mock_get_sdk_adapter.call_count)
+
+        self.assertEqual(
+            mock_get_sdk_adapter.call_args_list[0].args,
+            (
+                "shared-file-system",
+            ),
+        )
+        self.assertEqual(
+            mock_get_sdk_adapter.call_args_list[0].kwargs,
+            {
+                "admin": True,
+                "check_service": True,
+                "context": self.context,
+                "shared_file_system_api_version": "2.82",
+                "global_request_id": self.context.global_id,
+            },
+        )
+
+        self.assertEqual(
+            mock_get_sdk_adapter.call_args_list[1].args,
+            (
+                "shared-file-system",
+            ),
+        )
+        self.assertEqual(
+            mock_get_sdk_adapter.call_args_list[1].kwargs,
+            {
+                "admin": True,
+                "check_service": True,
+                "context": self.context,
+                "shared_file_system_api_version": "2.82",
+                "global_request_id": self.context.global_id,
+            },
         )
 
     def test_deny_access_fails_id_missing(self):

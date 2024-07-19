@@ -1176,8 +1176,10 @@ class TestGetSDKAdapter(test.NoDBTestCase):
         self.mock_conf = self.useFixture(fixtures.MockPatch(
             'nova.utils.CONF')).mock
 
-    def _test_get_sdk_adapter(self, strict=False):
-        actual = utils.get_sdk_adapter(self.service_type, check_service=strict)
+    def _test_get_sdk_adapter(self, admin, strict=False):
+        actual = utils.get_sdk_adapter(
+            self.service_type, admin, check_service=strict
+        )
 
         self.mock_get_confgrp.assert_called_once_with(self.service_type)
         self.mock_get_auth_sess.assert_called_once_with(
@@ -1189,24 +1191,26 @@ class TestGetSDKAdapter(test.NoDBTestCase):
         return actual
 
     def test_get_sdk_adapter(self):
-        self.assertEqual(self._test_get_sdk_adapter(), mock.sentinel.proxy)
+        self.assertEqual(
+            self._test_get_sdk_adapter(admin=True), mock.sentinel.proxy
+        )
 
     def test_get_sdk_adapter_strict(self):
         self.assertEqual(
-            self._test_get_sdk_adapter(strict=True), mock.sentinel.proxy)
+            self._test_get_sdk_adapter(True, strict=True), mock.sentinel.proxy)
 
     def test_get_sdk_adapter_strict_fail(self):
         self.mock_connection.side_effect = sdk_exc.ServiceDiscoveryException()
         self.assertRaises(
             exception.ServiceUnavailable,
-            self._test_get_sdk_adapter, strict=True)
+            self._test_get_sdk_adapter, True, strict=True)
 
     def test_get_sdk_adapter_conf_group_fail(self):
         self.mock_get_confgrp.side_effect = (
             exception.ConfGroupForServiceTypeNotFound(stype=self.service_type))
 
         self.assertRaises(exception.ConfGroupForServiceTypeNotFound,
-                          utils.get_sdk_adapter, self.service_type)
+                          utils.get_sdk_adapter, self.service_type, True)
         self.mock_get_confgrp.assert_called_once_with(self.service_type)
         self.mock_connection.assert_not_called()
         self.mock_get_auth_sess.assert_not_called()

@@ -3753,7 +3753,7 @@ class LimitsCommands():
             conf_utils.register_ksa_opts(
                 CONF, 'keystone_authtoken', 'identity')
         keystone_api = utils.get_sdk_adapter(
-            'identity', conf_group='keystone_authtoken')
+            'identity', admin=True, conf_group='keystone_authtoken')
         # Service ID is required in unified limits APIs.
         service_id = keystone_api.find_service('nova').id
 

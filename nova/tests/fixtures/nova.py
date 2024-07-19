@@ -2044,10 +2044,10 @@ class UnifiedLimitsFixture(fixtures.Fixture):
         self.mock_sdk_adapter = mock.Mock()
         real_get_sdk_adapter = utils.get_sdk_adapter
 
-        def fake_get_sdk_adapter(service_type, **kwargs):
+        def fake_get_sdk_adapter(service_type, admin, **kwargs):
             if service_type == 'identity':
                 return self.mock_sdk_adapter
-            return real_get_sdk_adapter(service_type, **kwargs)
+            return real_get_sdk_adapter(service_type, admin, **kwargs)
 
         self.useFixture(fixtures.MockPatch(
             'nova.utils.get_sdk_adapter', fake_get_sdk_adapter))

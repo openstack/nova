@@ -198,7 +198,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             # service isn't ready yet. Consumers of ironic_connection are set
             # up to handle this and raise VirtDriverNotReady as appropriate.
             self._ironic_connection = utils.get_sdk_adapter(
-                'baremetal', check_service=True)
+                'baremetal', admin=True, check_service=True)
         return self._ironic_connection
 
     def _get_node(self, node_id):

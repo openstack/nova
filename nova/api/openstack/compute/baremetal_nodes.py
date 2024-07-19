@@ -56,6 +56,7 @@ class BareMetalNodeController(wsgi.Controller):
             # up to handle this and raise VirtDriverNotReady as appropriate.
             self._ironic_connection = utils.get_sdk_adapter(
                 'baremetal',
+                admin=True,
                 check_service=True,
             )
         return self._ironic_connection
