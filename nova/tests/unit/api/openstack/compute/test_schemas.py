@@ -25,17 +25,27 @@ class SchemaTest(test.NoDBTestCase):
         self.meta_schema = validators._SchemaValidator.validator_org
 
     def test_schemas(self):
-        missing_schemas = set()
+        missing_request_schemas = set()
+        missing_query_schemas = set()
         invalid_schemas = set()
 
         def _validate_func(func, method):
             if method in ("POST", "PUT", "PATCH"):
                 # request body validation
                 if not hasattr(func, '_request_schema'):
-                    missing_schemas.add(func.__qualname__)
+                    missing_request_schemas.add(func.__qualname__)
                 else:
                     try:
                         self.meta_schema.check_schema(func._request_schema)
+                    except jsonschema.exceptions.SchemaError:
+                        invalid_schemas.add(func.__qualname__)
+            elif method in ("GET",):
+                # request query string validation
+                if not hasattr(func, '_query_schema'):
+                    missing_query_schemas.add(func.__qualname__)
+                else:
+                    try:
+                        self.meta_schema.check_schema(func._query_schema)
                     except jsonschema.exceptions.SchemaError:
                         invalid_schemas.add(func.__qualname__)
 
@@ -109,10 +119,16 @@ class SchemaTest(test.NoDBTestCase):
                     func = getattr(controller.controller, action)
                     _validate_func(func, method)
 
-        if missing_schemas:
+        if missing_request_schemas:
             raise test.TestingException(
                 f"Found API resources without schemas: "
-                f"{sorted(missing_schemas)}"
+                f"{sorted(missing_request_schemas)}"
+            )
+
+        if missing_query_schemas:
+            raise test.TestingException(
+                f"Found API resources without query schemas: "
+                f"{sorted(missing_query_schemas)}"
             )
 
         if invalid_schemas:
