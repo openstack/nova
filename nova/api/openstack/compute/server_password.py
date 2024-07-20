@@ -17,7 +17,9 @@
 
 from nova.api.metadata import password
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import server_password as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova.policies import server_password as sp_policies
 
@@ -30,6 +32,7 @@ class ServerPasswordController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)

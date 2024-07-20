@@ -14,7 +14,9 @@
 
 import webob.exc
 
+from nova.api.openstack.compute.schemas import extension_info as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.policies import extensions as ext_policies
 
 
@@ -127,7 +129,7 @@ EXTENSION_LIST = [
         "alias": "os-admin-actions",
         "description": "Enable admin-only server actions\n\n    "
                        "Actions include: resetNetwork, injectNetworkInfo, "
-                        "os-resetState\n    ",
+                       "os-resetState\n    ",
         "links": [],
         "name": "AdminActions",
         "namespace": "http://docs.openstack.org/compute/ext/fake_xml",
@@ -853,6 +855,7 @@ EXTENSION_LIST_LEGACY_V2_COMPATIBLE = sorted(
 class ExtensionInfoController(wsgi.Controller):
 
     @wsgi.expected_errors(())
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         context = req.environ['nova.context']
         context.can(ext_policies.BASE_POLICY_NAME, target={})
@@ -865,6 +868,7 @@ class ExtensionInfoController(wsgi.Controller):
         return dict(extensions=EXTENSION_LIST)
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(ext_policies.BASE_POLICY_NAME, target={})

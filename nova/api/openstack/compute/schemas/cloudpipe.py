@@ -15,3 +15,5 @@
 
 create = {}
 update = {}
+
+index_query = {}

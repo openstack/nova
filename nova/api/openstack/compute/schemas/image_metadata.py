@@ -42,3 +42,9 @@ update = {
 }
 
 update_all = create
+
+# NOTE(stephenfin): These schemas are intentionally empty since these APIs have
+# been removed
+
+index_query = {}
+show_query = {}

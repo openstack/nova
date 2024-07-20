@@ -48,6 +48,7 @@ class ServerMetadataController(wsgi.Controller):
         return meta_dict
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(server_metadata.index_query)
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
@@ -123,6 +124,7 @@ class ServerMetadataController(wsgi.Controller):
                     'update metadata', server.uuid)
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(server_metadata.show_query)
     def show(self, req, server_id, id):
         """Return a single metadata item."""
         context = req.environ['nova.context']

@@ -140,9 +140,6 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         self.stub_out('nova.api.openstack.identity.verify_project_id',
                       lambda ctx, project_id: True)
 
-        self.req = FakeRequest()
-        self.req.environ = {"nova.context": context.RequestContext(
-            'fake_user', fakes.FAKE_PROJECT_ID)}
         self.stub_out('nova.objects.Flavor._flavor_get_by_flavor_id_from_db',
                       fake_get_flavor_by_flavor_id)
         self.stub_out('nova.objects.flavor._flavor_get_all_from_db',
@@ -163,16 +160,24 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     @mock.patch('nova.objects.Flavor._flavor_get_by_flavor_id_from_db',
                 side_effect=exception.FlavorNotFound(flavor_id='foo'))
     def test_list_flavor_access_public(self, mock_api_get):
+        req = fakes.HTTPRequest.blank(
+            self._prefix + '/flavors/1/os-flavor-access')
+        req.environ = {"nova.context": context.RequestContext(
+            'fake_user', fakes.FAKE_PROJECT_ID)}
         # query os-flavor-access on public flavor should return 404
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_access_controller.index,
-                          self.req, '1')
+                          req, '1')
 
     def test_list_flavor_access_private(self):
+        req = fakes.HTTPRequest.blank(
+            self._prefix + '/flavors/2/os-flavor-access')
+        req.environ = {"nova.context": context.RequestContext(
+            'fake_user', fakes.FAKE_PROJECT_ID)}
         expected = {'flavor_access': [
             {'flavor_id': '2', 'tenant_id': 'proj2'},
             {'flavor_id': '2', 'tenant_id': 'proj3'}]}
-        result = self.flavor_access_controller.index(self.req, '2')
+        result = self.flavor_access_controller.index(req, '2')
         self.assertEqual(result, expected)
 
     def test_list_flavor_with_admin_default_proj1(self):
@@ -300,10 +305,14 @@ class FlavorAccessTestV21(test.NoDBTestCase):
                                                project_id=projectid)
         self.stub_out('nova.objects.Flavor._flavor_add_project',
                       stub_add_flavor_access)
+        req = fakes.HTTPRequest.blank(
+            self._prefix + '/flavors/3/os-flavor-access')
+        req.environ = {"nova.context": context.RequestContext(
+            'fake_user', fakes.FAKE_PROJECT_ID)}
         body = {'addTenantAccess': {'tenant': 'proj2'}}
         self.assertRaises(exc.HTTPConflict,
                           self.flavor_action_controller._add_tenant_access,
-                          self.req, '3', body=body)
+                          req, '3', body=body)
 
     def test_remove_tenant_access_with_bad_access(self):
         def stub_remove_flavor_access(context, flavorid, projectid):
@@ -312,9 +321,13 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         self.stub_out('nova.objects.Flavor._flavor_del_project',
                       stub_remove_flavor_access)
         body = {'removeTenantAccess': {'tenant': 'proj2'}}
+        req = fakes.HTTPRequest.blank(
+            self._prefix + '/flavors/3/os-flavor-access')
+        req.environ = {"nova.context": context.RequestContext(
+            'fake_user', fakes.FAKE_PROJECT_ID)}
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_action_controller._remove_tenant_access,
-                          self.req, '3', body=body)
+                          req, '3', body=body)
 
     def test_add_tenant_access_is_public(self):
         body = {'addTenantAccess': {'tenant': 'proj2'}}

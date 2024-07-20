@@ -18,8 +18,10 @@ import webob.exc
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import images as schema
 from nova.api.openstack.compute.views import images as views_images
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova.image import glance
@@ -74,6 +76,7 @@ class ImagesController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         """Return detailed information about a specific image.
 
@@ -113,6 +116,7 @@ class ImagesController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         """Return an index listing of images available to the request.
 
@@ -132,6 +136,7 @@ class ImagesController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
+    @validation.query_schema(schema.detail_query)
     def detail(self, req):
         """Return a detailed index listing of images available to the request.
 

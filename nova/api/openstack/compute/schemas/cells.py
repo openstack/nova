@@ -16,3 +16,9 @@
 create = {}
 update = {}
 sync_instances = {}
+
+index_query = {}
+detail_query = {}
+info_query = {}
+capacities_query = {}
+show_query = {}

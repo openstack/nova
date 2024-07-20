@@ -39,6 +39,7 @@ class CloudpipeController(wsgi.Controller):
 
     @wsgi.expected_errors((410))
     @wsgi.removed('16.0.0', _removal_reason)
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         """List running cloudpipe instances."""
         raise exc.HTTPGone()

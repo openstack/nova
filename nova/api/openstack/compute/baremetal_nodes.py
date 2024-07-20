@@ -21,8 +21,7 @@ import webob
 
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
-from nova.api.openstack.compute.schemas \
-    import baremetal_nodes as schema_baremetal_nodes
+from nova.api.openstack.compute.schemas import baremetal_nodes as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 import nova.conf
@@ -63,6 +62,7 @@ class BareMetalNodeController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((404, 501))
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         context = req.environ['nova.context']
         context.can(bn_policies.BASE_POLICY_NAME % 'list', target={})
@@ -86,6 +86,7 @@ class BareMetalNodeController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((404, 501))
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(bn_policies.BASE_POLICY_NAME % 'show', target={})
@@ -115,7 +116,7 @@ class BareMetalNodeController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
-    @validation.schema(schema_baremetal_nodes.create)
+    @validation.schema(schema.create)
     def create(self, req, body):
         _no_ironic_proxy("node-create")
 
@@ -127,13 +128,13 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action('add_interface')
     @wsgi.expected_errors(400)
-    @validation.schema(schema_baremetal_nodes.add_interface)
+    @validation.schema(schema.add_interface)
     def _add_interface(self, req, id, body):
         _no_ironic_proxy("port-create")
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action('remove_interface')
     @wsgi.expected_errors(400)
-    @validation.schema(schema_baremetal_nodes.remove_interface)
+    @validation.schema(schema.remove_interface)
     def _remove_interface(self, req, id, body):
         _no_ironic_proxy("port-delete")

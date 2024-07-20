@@ -119,6 +119,7 @@ class ServerGroupController(wsgi.Controller):
         return server_group
 
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         """Return data about the given server group."""
         context = req.environ['nova.context']
@@ -147,8 +148,8 @@ class ServerGroupController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.expected_errors(())
-    @validation.query_schema(schema.server_groups_query_param_275, '2.75')
-    @validation.query_schema(schema.server_groups_query_param, '2.0', '2.74')
+    @validation.query_schema(schema.index_query, '2.0', '2.74')
+    @validation.query_schema(schema.index_query_v275, '2.75')
     def index(self, req):
         """Returns a list of server groups."""
         context = req.environ['nova.context']

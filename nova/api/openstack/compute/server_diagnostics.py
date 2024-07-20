@@ -17,8 +17,10 @@ import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import server_diagnostics as schema
 from nova.api.openstack.compute.views import server_diagnostics
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova import exception
 from nova.policies import server_diagnostics as sd_policies
@@ -32,6 +34,7 @@ class ServerDiagnosticsController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.expected_errors((400, 404, 409, 501))
+    @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         instance = common.get_instance(self.compute_api, context, server_id)

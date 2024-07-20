@@ -50,3 +50,10 @@ remove_tenant_access = {
     'required': ['removeTenantAccess'],
     'additionalProperties': False,
 }
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

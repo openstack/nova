@@ -36,3 +36,17 @@ update.update({
      'minProperties': 1,
      'maxProperties': 1
 })
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

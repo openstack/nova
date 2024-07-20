@@ -16,7 +16,13 @@ import copy
 
 from nova.api.validation import parameter_types
 
-list_query_params_v258 = {
+list_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+list_query_v258 = {
     'type': 'object',
     'properties': {
         # The 2.58 microversion added support for paging by limit and marker
@@ -30,8 +36,14 @@ list_query_params_v258 = {
     'additionalProperties': False
 }
 
-list_query_params_v266 = copy.deepcopy(list_query_params_v258)
-list_query_params_v266['properties'].update({
+list_query_v266 = copy.deepcopy(list_query_v258)
+list_query_v266['properties'].update({
     'changes-before': parameter_types.single_param(
             {'type': 'string', 'format': 'date-time'}),
 })
+
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

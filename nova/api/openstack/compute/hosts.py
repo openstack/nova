@@ -182,6 +182,7 @@ class HostController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
+    @validation.query_schema(hosts.startup_query)
     def startup(self, req, id):
         context = req.environ['nova.context']
         context.can(hosts_policies.POLICY_NAME % 'start',
@@ -190,6 +191,7 @@ class HostController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
+    @validation.query_schema(hosts.shutdown_query)
     def shutdown(self, req, id):
         context = req.environ['nova.context']
         context.can(hosts_policies.POLICY_NAME % 'shutdown',
@@ -198,6 +200,7 @@ class HostController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
+    @validation.query_schema(hosts.reboot_query)
     def reboot(self, req, id):
         context = req.environ['nova.context']
         context.can(hosts_policies.POLICY_NAME % 'reboot',
@@ -255,6 +258,7 @@ class HostController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.42")
     @wsgi.expected_errors(404)
+    @validation.query_schema(hosts.show_query)
     def show(self, req, id):
         """Shows the physical/usage resource given by hosts.
 

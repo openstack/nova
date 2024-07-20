@@ -16,7 +16,9 @@
 
 from webob import exc
 
+from nova.api.openstack.compute.schemas import fping as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 
 _removal_reason = """\
 This API only works with *nova-network*, which was deprecated in the
@@ -30,10 +32,12 @@ class FpingController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         raise exc.HTTPGone()

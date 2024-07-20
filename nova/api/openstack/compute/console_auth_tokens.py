@@ -15,7 +15,9 @@
 
 import webob
 
+from nova.api.openstack.compute.schemas import console_auth_tokens as schema
 from nova.api.openstack import wsgi
+from nova.api import validation
 import nova.conf
 from nova import context as nova_context
 from nova.i18n import _
@@ -64,6 +66,7 @@ class ConsoleAuthTokensController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.30")
     @wsgi.expected_errors((400, 401, 404))
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         """Until microversion 2.30, this API was available only for the
         rdp-html5 console type which has been removed along with the HyperV
@@ -77,5 +80,6 @@ class ConsoleAuthTokensController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.31")  # noqa
     @wsgi.expected_errors((400, 404))
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):  # noqa
         return self._show(req, id)

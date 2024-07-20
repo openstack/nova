@@ -50,3 +50,17 @@ create = {
 create_v249 = copy.deepcopy(create)
 create_v249['properties']['interfaceAttachment'][
             'properties']['tag'] = parameter_types.tag
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}

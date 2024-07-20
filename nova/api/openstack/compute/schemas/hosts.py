@@ -48,3 +48,10 @@ index_query = {
     # do not to update the additionalProperties to False.
     'additionalProperties': True
 }
+
+# NOTE(stephenfin): These schemas are intentionally empty since these APIs are
+# deprecated proxy APIs
+startup_query = {}
+shutdown_query = {}
+reboot_query = {}
+show_query = {}

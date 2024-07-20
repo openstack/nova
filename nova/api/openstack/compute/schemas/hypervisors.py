@@ -14,7 +14,13 @@
 
 from nova.api.validation import parameter_types
 
-list_query_schema_v233 = {
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+index_query_v233 = {
     'type': 'object',
     'properties': parameter_types.pagination_parameters,
     # NOTE(gmann): This is kept True to keep backward compatibility.
@@ -24,7 +30,7 @@ list_query_schema_v233 = {
     'additionalProperties': True
 }
 
-list_query_schema_v253 = {
+index_query_v253 = {
     'type': 'object',
     'properties': {
         # The 2.33 microversion added support for paging by limit and marker.
@@ -42,7 +48,13 @@ list_query_schema_v253 = {
     'additionalProperties': False
 }
 
-show_query_schema_v253 = {
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+show_query_v253 = {
     'type': 'object',
     'properties': {
         'with_servers': parameter_types.single_param(
@@ -50,3 +62,10 @@ show_query_schema_v253 = {
     },
     'additionalProperties': False
 }
+
+# NOTE(stephenfin): These schemas are intentionally empty since these APIs are
+# deprecated
+statistics_query = {}
+search_query = {}
+servers_query = {}
+uptime_query = {}

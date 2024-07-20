@@ -63,6 +63,7 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.show_query)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         im = _get_instance_mapping(context, server_id)
@@ -82,6 +83,7 @@ class ServerTagsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.expected_errors(404)
+    @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         im = _get_instance_mapping(context, server_id)
