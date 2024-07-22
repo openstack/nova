@@ -19,3 +19,8 @@ disassociate = {}
 
 index_query = {}
 show_query = {}
+
+disassociate_response = {}
+delete_response = {}
+create_response = {}
+add_response = {}

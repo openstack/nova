@@ -107,22 +107,26 @@ class NetworkController(wsgi.Controller):
     @wsgi.action("disassociate")
     @wsgi.removed('21.0.0', _removal_reason_action)
     @validation.schema(schema.disassociate)
+    @validation.response_body_schema(schema.disassociate_response)
     def _disassociate_host_and_project(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason_api)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason_api)
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason_api)
     @validation.schema(schema.add)
+    @validation.response_body_schema(schema.add_response)
     def add(self, req, body):
         raise exc.HTTPGone()

@@ -27,12 +27,14 @@ It was removed in the 16.0.0 (Pike) release.
 """
 
 
+@validation.validated
 class CloudpipeController(wsgi.Controller):
     """Handle creating and listing cloudpipe instances."""
 
     @wsgi.expected_errors((410))
     @wsgi.removed('16.0.0', _removal_reason)
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         """Create a new cloudpipe instance, if none exists."""
         raise exc.HTTPGone()
@@ -40,6 +42,7 @@ class CloudpipeController(wsgi.Controller):
     @wsgi.expected_errors((410))
     @wsgi.removed('16.0.0', _removal_reason)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """List running cloudpipe instances."""
         raise exc.HTTPGone()
@@ -47,6 +50,7 @@ class CloudpipeController(wsgi.Controller):
     @wsgi.expected_errors(410)
     @wsgi.removed('16.0.0', _removal_reason)
     @validation.schema(schema.update)
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, id, body):
         """Configure cloudpipe parameters for the project."""
         raise exc.HTTPGone()

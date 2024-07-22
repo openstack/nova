@@ -22,3 +22,13 @@ detail_query = {}
 info_query = {}
 capacities_query = {}
 show_query = {}
+
+index_response = {}
+detail_response = {}
+info_response = {}
+capacities_response = {}
+show_response = {}
+delete_response = {}
+create_response = {}
+update_response = {}
+sync_instances_response = {}

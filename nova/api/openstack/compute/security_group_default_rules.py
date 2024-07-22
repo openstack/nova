@@ -26,28 +26,33 @@ It was removed in the 21.0.0 (Ussuri) release.
 """
 
 
+@validation.validated
 class SecurityGroupDefaultRulesController(wsgi.Controller):
     """(Removed) Controller for default project security groups."""
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         raise exc.HTTPGone()

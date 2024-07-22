@@ -26,43 +26,51 @@ It was removed in the 18.0.0 (Rocky) release.
 """
 
 
+@validation.validated
 class FloatingIPDNSDomainController(wsgi.Controller):
     """(Removed) DNS domain controller for OpenStack API."""
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.update)
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         raise exc.HTTPGone()
 
 
+@validation.validated
 class FloatingIPDNSEntryController(wsgi.Controller):
     """(Removed) DNS Entry controller for OpenStack API."""
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, domain_id, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.update)
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, domain_id, id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, domain_id, id):
         raise exc.HTTPGone()

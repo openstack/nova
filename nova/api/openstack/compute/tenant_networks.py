@@ -103,11 +103,13 @@ class TenantNetworkController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         raise exc.HTTPGone()

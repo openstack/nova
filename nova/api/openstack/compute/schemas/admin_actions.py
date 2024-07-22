@@ -45,6 +45,10 @@ reset_state = {
     'additionalProperties': False,
 }
 
+# NOTE(stephenfin): This schema is intentionally empty since the action has
+# been removed
+reset_network_response = {}
+
 inject_network_info_response = {
     'type': 'null',
 }

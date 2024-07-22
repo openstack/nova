@@ -14,3 +14,5 @@
 # been removed
 
 index_query = {}
+
+index_response = {}

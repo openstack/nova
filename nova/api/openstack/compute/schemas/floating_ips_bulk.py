@@ -18,3 +18,8 @@ update = {}
 
 index_query = {}
 show_query = {}
+
+index_response = {}
+show_response = {}
+create_response = {}
+update_response = {}

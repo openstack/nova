@@ -26,6 +26,7 @@ It was removed in the 21.0.0 (Ussuri) release.
 """
 
 
+@validation.validated
 class ConsolesController(wsgi.Controller):
     """(Removed) The Consoles controller for the OpenStack API.
 
@@ -36,22 +37,26 @@ class ConsolesController(wsgi.Controller):
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, server_id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, server_id, body):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, server_id, id):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('21.0.0', _removal_reason)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, server_id, id):
         raise exc.HTTPGone()
