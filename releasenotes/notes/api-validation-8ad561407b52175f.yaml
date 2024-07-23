@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    A new configuration option, ``[api] response_validation``, has been added.
+    This allows operators to configure the behavior of ``nova-api`` when a
+    response fails schema validation.
