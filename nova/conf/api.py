@@ -403,15 +403,16 @@ validation_opts = [
             (
                 "error",
                 "Raise a HTTP 500 (Server Error) for responses that fail "
-                "schema validation",
+                "response body schema validation",
             ),
             (
                 "warn",
-                "Log a warning for responses that fail schema validation",
+                "Log a warning for responses that fail response body schema "
+                "validation",
             ),
             (
                 "ignore",
-                "Ignore schema validation failures",
+                "Ignore response body schema validation failures",
             ),
         ),
         default="warn",
