@@ -2993,11 +2993,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if instance.os_type:
             metadata['properties']['os_type'] = instance.os_type
 
-        # NOTE(vish): glance forces ami disk format to be ami
-        if image_meta.disk_format == 'ami':
-            metadata['disk_format'] = 'ami'
-        else:
-            metadata['disk_format'] = img_fmt
+        metadata['disk_format'] = img_fmt
 
         if image_meta.obj_attr_is_set("container_format"):
             metadata['container_format'] = image_meta.container_format

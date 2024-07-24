@@ -838,6 +838,11 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # since we don't care about it.
         self.stub_out('os_vif.unplug', lambda a, kw: None)
         self.stub_out('nova.compute.utils.get_machine_ips', lambda: [])
+        self.stub_out('nova.virt.libvirt.utils.get_disk_size',
+                      lambda *a, **k: 123456)
+        self.stub_out('nova.virt.libvirt.utils.get_disk_backing_file',
+                      lambda *a, **k: None)
+        self.stub_out('nova.privsep.path.chown', lambda *a, **k: None)
 
     def test_init_host_image_type_rbd_force_raw_images_true(self):
         CONF.set_override('images_type', 'rbd', group='libvirt')

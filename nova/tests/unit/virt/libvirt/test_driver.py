@@ -9467,7 +9467,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_create_snapshot_metadata(self):
         base = objects.ImageMeta.from_dict(
-            {'disk_format': 'raw'})
+            {'disk_format': 'qcow2'})
         instance_data = {'kernel_id': 'kernel',
                     'project_id': 'prj_id',
                     'ramdisk_id': 'ram_id',
@@ -9499,10 +9499,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             {'disk_format': 'ami',
              'container_format': 'test_container'})
         expected['properties']['os_type'] = instance['os_type']
-        expected['disk_format'] = base.disk_format
+        # The disk_format of the snapshot should be the *actual* format of the
+        # thing we upload, regardless of what type of image we booted from.
+        expected['disk_format'] = img_fmt
         expected['container_format'] = base.container_format
         ret = drvr._create_snapshot_metadata(base, instance, img_fmt, snp_name)
-        self.assertEqual(ret, expected)
+        self.assertEqual(expected, ret)
 
     def test_get_volume_driver(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -29185,7 +29187,8 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
           utils.get_system_metadata_from_image(
             {'disk_format': 'ami'})
 
-        self._test_snapshot(disk_format='ami')
+        # If we're uploading a qcow2, we must set the disk_format as such
+        self._test_snapshot(disk_format='qcow2')
 
     @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
                 new=mock.Mock(return_value=None))
