@@ -25,12 +25,12 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
 from oslo_utils import imageutils
+from oslo_utils.imageutils import format_inspector
 
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.image import format_inspector
 from nova.image import glance
 import nova.privsep.qemu
 
@@ -159,20 +159,29 @@ def do_image_deep_inspection(img, image_href, path):
                 reason=_('Image not in a supported format'))
 
         inspector = format_inspector.detect_file_format(path)
-        if not inspector.safety_check():
-            raise exception.ImageUnacceptable(
-                image_id=image_href,
-                reason=(_('Image does not pass safety check')))
+        inspector.safety_check()
 
+        # Images detected as gpt but registered as raw are legacy "whole disk"
+        # formats, which we continue to allow for now.
         # AMI formats can be other things, so don't obsess over this
         # requirement for them. Otherwise, make sure our detection agrees
         # with glance.
-        if disk_format not in ami_formats and str(inspector) != disk_format:
+        if disk_format == 'raw' and str(inspector) == 'gpt':
+            LOG.debug('Image %s registered as raw, but detected as gpt',
+                      image_href)
+        elif disk_format not in ami_formats and str(inspector) != disk_format:
             # If we detected the image as something other than glance claimed,
             # we abort.
+            LOG.warning('Image %s expected to be %s but detected as %s',
+                        image_href, disk_format, str(inspector))
             raise exception.ImageUnacceptable(
                 image_id=image_href,
                 reason=_('Image content does not match disk_format'))
+    except format_inspector.SafetyCheckFailed as e:
+        LOG.error('Image %s failed safety check: %s', image_href, e)
+        raise exception.ImageUnacceptable(
+            image_id=image_href,
+            reason=(_('Image does not pass safety check')))
     except format_inspector.ImageFormatError:
         # If the inspector we chose based on the image's metadata does not
         # think the image is the proper format, we refuse to use it.

@@ -28,13 +28,13 @@ from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import fileutils
+from oslo_utils.imageutils import format_inspector
 from oslo_utils import strutils
 from oslo_utils import units
 
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.image import format_inspector
 from nova.image import glance
 import nova.privsep.libvirt
 import nova.privsep.path
@@ -681,8 +681,10 @@ class Qcow2(Image):
         # downloaded the image.
         if not CONF.workarounds.disable_deep_image_inspection:
             inspector = format_inspector.detect_file_format(base)
-            if not inspector.safety_check():
-                LOG.warning('Base image %s failed safety check', base)
+            try:
+                inspector.safety_check()
+            except format_inspector.SafetyCheckFailed as e:
+                LOG.warning('Base image %s failed safety check: %s', base, e)
                 # NOTE(danms): This is the same exception as would be raised
                 # by qemu_img_info() if the disk format was unreadable or
                 # otherwise unsuitable.

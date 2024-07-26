@@ -30,12 +30,12 @@ import os_traits
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
+from oslo_utils.imageutils import format_inspector
 
 import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.image import format_inspector
 from nova import objects
 from nova.objects import fields as obj_fields
 import nova.privsep.fs
@@ -159,8 +159,11 @@ def create_image(
         # downloaded the image.
         if not CONF.workarounds.disable_deep_image_inspection:
             inspector = format_inspector.detect_file_format(backing_file)
-            if not inspector.safety_check():
-                LOG.warning('Base image %s failed safety check', backing_file)
+            try:
+                inspector.safety_check()
+            except format_inspector.SafetyCheckFailed as e:
+                LOG.warning('Base image %s failed safety check: %s',
+                            backing_file, e)
                 # NOTE(danms): This is the same exception as would be raised
                 # by qemu_img_info() if the disk format was unreadable or
                 # otherwise unsuitable.
