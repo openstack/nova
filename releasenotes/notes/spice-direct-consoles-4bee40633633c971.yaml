@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    This release adds a new config option require_secure to the spice
+    configuration group. Defaulting to false to match the previous
+    behavior, if set to true the SPICE consoles will require TLS
+    protected connections. Unencrypted connections will be gracefully
+    redirected to the TLS port via the SPICE protocol.

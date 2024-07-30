@@ -1715,11 +1715,23 @@ class LibvirtConfigGuestGraphicsTest(LibvirtConfigBaseTest):
         obj.listen = "127.0.0.1"
 
         xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
+        self.assertXmlEqual("""
   <graphics type="vnc" autoport="yes" keymap="en_US" listen="127.0.0.1"/>
-                            """)
+                            """, xml)
 
     def test_config_graphics_spice(self):
+        obj = config.LibvirtConfigGuestGraphics()
+        obj.type = "spice"
+        obj.autoport = False
+        obj.keymap = "en_US"
+        obj.listen = "127.0.0.1"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+  <graphics type="spice" autoport="no" keymap="en_US" listen="127.0.0.1"/>
+                            """, xml)
+
+    def test_config_graphics_spice_compression(self):
         obj = config.LibvirtConfigGuestGraphics()
         obj.type = "spice"
         obj.autoport = False
@@ -1733,7 +1745,7 @@ class LibvirtConfigGuestGraphicsTest(LibvirtConfigBaseTest):
         obj.streaming_mode = "filter"
 
         xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
+        self.assertXmlEqual("""
   <graphics type="spice" autoport="no" keymap="en_US" listen="127.0.0.1">
     <image compression="auto_glz"/>
     <jpeg compression="auto"/>
@@ -1741,7 +1753,64 @@ class LibvirtConfigGuestGraphicsTest(LibvirtConfigBaseTest):
     <playback compression="on"/>
     <streaming mode="filter"/>
   </graphics>
-                            """)
+                            """, xml)
+
+    def test_config_graphics_spice_secure(self):
+        obj = config.LibvirtConfigGuestGraphics()
+        obj.type = "spice"
+        obj.autoport = False
+        obj.keymap = "en_US"
+        obj.listen = "127.0.0.1"
+
+        obj.secure = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+  <graphics type="spice" autoport="no" keymap="en_US" listen="127.0.0.1">
+    <channel name="main" mode="secure"/>
+    <channel name="display" mode="secure"/>
+    <channel name="inputs" mode="secure"/>
+    <channel name="cursor" mode="secure"/>
+    <channel name="playback" mode="secure"/>
+    <channel name="record" mode="secure"/>
+    <channel name="smartcard" mode="secure"/>
+    <channel name="usbredir" mode="secure"/>
+  </graphics>
+                            """, xml)
+
+    def test_config_graphics_spice_secure_compression(self):
+        obj = config.LibvirtConfigGuestGraphics()
+        obj.type = "spice"
+        obj.autoport = False
+        obj.keymap = "en_US"
+        obj.listen = "127.0.0.1"
+
+        obj.secure = True
+
+        obj.image_compression = "auto_glz"
+        obj.jpeg_compression = "auto"
+        obj.zlib_compression = "always"
+        obj.playback_compression = True
+        obj.streaming_mode = "filter"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+  <graphics type="spice" autoport="no" keymap="en_US" listen="127.0.0.1">
+    <image compression="auto_glz"/>
+    <jpeg compression="auto"/>
+    <zlib compression="always"/>
+    <playback compression="on"/>
+    <streaming mode="filter"/>
+    <channel name="main" mode="secure"/>
+    <channel name="display" mode="secure"/>
+    <channel name="inputs" mode="secure"/>
+    <channel name="cursor" mode="secure"/>
+    <channel name="playback" mode="secure"/>
+    <channel name="record" mode="secure"/>
+    <channel name="smartcard" mode="secure"/>
+    <channel name="usbredir" mode="secure"/>
+  </graphics>
+                            """, xml)
 
 
 class LibvirtConfigGuestHostdev(LibvirtConfigBaseTest):

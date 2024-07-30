@@ -5897,6 +5897,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.devices[3].zlib_compression)
         self.assertIsNone(cfg.devices[3].playback_compression)
         self.assertIsNone(cfg.devices[3].streaming_mode)
+        self.assertFalse(cfg.devices[3].secure)
 
     def test_get_guest_config_with_vnc_and_tablet(self):
         self.flags(enabled=True, group='vnc')
@@ -5932,6 +5933,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.devices[3].zlib_compression)
         self.assertIsNone(cfg.devices[3].playback_compression)
         self.assertIsNone(cfg.devices[3].streaming_mode)
+        self.assertFalse(cfg.devices[3].secure)
         self.assertEqual(cfg.devices[5].type, 'tablet')
 
     def test_get_guest_config_with_spice_and_tablet(self):
@@ -5973,6 +5975,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.devices[3].zlib_compression)
         self.assertIsNone(cfg.devices[3].playback_compression)
         self.assertIsNone(cfg.devices[3].streaming_mode)
+        self.assertFalse(cfg.devices[3].secure)
         self.assertEqual(cfg.devices[5].type, 'tablet')
 
     @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
@@ -6037,6 +6040,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertIsNone(cfg.devices[4].zlib_compression)
             self.assertIsNone(cfg.devices[4].playback_compression)
             self.assertIsNone(cfg.devices[4].streaming_mode)
+            self.assertFalse(cfg.devices[4].secure)
             self.assertEqual(cfg.devices[5].type, video_type)
 
     def test_get_guest_config_with_spice_compression(self):
@@ -6082,6 +6086,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[3].zlib_compression, 'always')
         self.assertFalse(cfg.devices[3].playback_compression)
         self.assertEqual(cfg.devices[3].streaming_mode, 'all')
+        self.assertFalse(cfg.devices[3].secure)
+
+    def test_get_guest_config_with_spice_secure(self):
+        self.flags(enabled=False, group='vnc')
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(enabled=True,
+                   agent_enabled=False,
+                   require_secure=True,
+                   server_listen='10.0.0.1',
+                   group='spice')
+        self.flags(pointer_model='usbtablet')
+
+        cfg = self._get_guest_config_with_graphics()
+
+        self.assertEqual(len(cfg.devices), 9)
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[3],
+                              vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(cfg.devices[4],
+                              vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
+        self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestUSBHostController)
+        self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigMemoryBalloon)
+
+        self.assertEqual(cfg.devices[3].type, 'spice')
+        self.assertEqual(cfg.devices[3].listen, '10.0.0.1')
+        self.assertTrue(cfg.devices[3].secure)
 
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(libvirt_driver.LibvirtDriver,

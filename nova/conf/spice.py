@@ -195,6 +195,23 @@ Related options:
   The proxy client must be able to access the address specified in
   ``server_listen`` using the value of this option.
 """),
+    cfg.BoolOpt('require_secure',
+        default=False,
+        help="""
+Whether to require secure TLS connections to SPICE consoles.
+
+If you're providing direct access to SPICE consoles instead of using the HTML5
+proxy, you may wish those connections to be encrypted. If so, set this value to
+True.
+
+Note that use of secure consoles requires that you setup TLS certificates on
+each hypervisor.
+
+Possible values:
+
+* False: console traffic is not encrypted.
+* True: console traffic is required to be protected by TLS.
+"""),
 ]
 
 ALL_OPTS.extend(CLI_OPTS)
