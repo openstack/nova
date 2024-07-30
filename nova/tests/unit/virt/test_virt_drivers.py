@@ -21,6 +21,7 @@ import fixtures
 import netaddr
 import os_resource_classes as orc
 import os_vif
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
@@ -239,8 +240,16 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_snapshot_running(self):
         img_ref = self.image_service.create(self.ctxt, {'name': 'snap-1'})
         instance_ref, network_info = self._get_running_instance()
-        self.connection.snapshot(self.ctxt, instance_ref, img_ref['id'],
-                                 lambda *args, **kwargs: None)
+        # this test depends on qemu-img
+        # being installed and in the path,
+        # if it is not installed, skip
+        try:
+            self.connection.snapshot(self.ctxt, instance_ref, img_ref['id'],
+                                     lambda *args, **kwargs: None)
+        except processutils.ProcessExecutionError as e:
+            if 'qemu-img' in e.stderr and 'No such file' in e.stderr:
+                self.skipTest("qemu-img not installed")
+            raise e
 
     @catch_notimplementederror
     def test_reboot(self):
