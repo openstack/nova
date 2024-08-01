@@ -14,7 +14,7 @@ if [ $parent_number -eq 2 ]; then
     commit_hash=$(git show --format='%P' --quiet | awk '{print $NF}')
 fi
 
-if git show --format='%aE' HEAD~ --quiet | grep -qi 'infra-root@openstack.org'; then
+if git show --format='%aE' --quiet $commit_hash | grep -qi 'infra-root@openstack.org'; then
     echo 'Bot generated change; ignoring'
     exit 0
 fi
