@@ -1117,9 +1117,16 @@ class SAPQuotaEngine(QuotaEngine):
 
     def __init__(self, quota_driver=None, resources=None):
         self._original_resources = {}
-        expiration_time = CONF.quota.sap_resources_cache_time
-        self._cache = cache.get_client(expiration_time=expiration_time)
+        self.__cache = None
         super().__init__(resources=resources, quota_driver=quota_driver)
+
+    @property
+    def _cache(self):
+        if not self.__cache:
+            expiration_time = CONF.quota.sap_resources_cache_time
+            self.__cache = cache.get_client(
+                                    expiration_time=expiration_time)
+        return self.__cache
 
     @property
     def _resources(self):
