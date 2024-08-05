@@ -2333,13 +2333,17 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
             'MEMORY_MB': 1024,
             'DISK_GB': 15,
         }
+        required_traits = []
         if mem_encryption_context:
             expected_resources[orc.MEM_ENCRYPTION_CONTEXT] = 1
+            required_traits = ['HW_CPU_X86_AMD_SEV']
 
         expected = FakeResourceRequest()
         expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
-            resources=expected_resources)
+            resources=expected_resources,
+            required_traits=set(required_traits)
+        )
         return expected
 
     def _test_encrypted_memory_support_not_required(self, extra_specs,

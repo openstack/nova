@@ -15,10 +15,8 @@ from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova import test
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base
-from nova.virt.libvirt.host import SEV_KERNEL_PARAM_FILE
 
 
 class TestSEVInstanceReboot(base.ServersTestBase):
@@ -30,16 +28,16 @@ class TestSEVInstanceReboot(base.ServersTestBase):
     """
     microversion = 'latest'
 
-    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
         new=fakelibvirt.virConnect._domain_capability_features_with_SEV)
     def setUp(self):
         super().setUp()
 
-        # Configure the compute to allow SEV based instances and then start
-        self.flags(num_memory_encrypted_guests=16, group='libvirt')
-        with test.patch_exists(SEV_KERNEL_PARAM_FILE, True):
+        with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
+                        return_value=True), \
+                mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
+                           return_value=False):
             self.start_compute()
 
         # Create a SEV enabled image for the test

@@ -1,0 +1,9 @@
+---
+deprecations:
+  - |
+    The ``[libvirt] num_memory_encrypted_guests`` option has been deprecated
+    and will be removed in a future release. The option will be completely
+    replaced by the number of SEV-encrypted guests presented by domain
+    capabilities API in libvirt, which is available since version 8.0.0 .
+    The libvirt's API is more feature complete and supports detecting the limit
+    for SEV-ES-encrypted guests.

@@ -15,6 +15,7 @@ import copy
 import io
 from unittest import mock
 
+import os_traits
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel
@@ -262,9 +263,7 @@ class SevResphapeTests(base.ServersTestBase):
 
         # create the MEM_ENCRYPTION_CONTEXT resource in placement manually,
         # to simulate the old layout.
-        compute_rp_uuid = self.placement.get(
-            '/resource_providers?name=compute1').body[
-            'resource_providers'][0]['uuid']
+        compute_rp_uuid = self._get_provider_uuid_by_name('compute1')
         inventories = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body
         inventories['inventories']['MEM_ENCRYPTION_CONTEXT'] = {
@@ -277,6 +276,9 @@ class SevResphapeTests(base.ServersTestBase):
         self.placement.put(
             '/resource_providers/%s/inventories' % compute_rp_uuid,
             inventories)
+        traits = self._get_provider_traits(compute_rp_uuid)
+        traits.append(os_traits.HW_CPU_X86_AMD_SEV)
+        self._set_provider_traits(compute_rp_uuid, traits)
 
         # create a server before reshape
         with mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
@@ -287,51 +289,39 @@ class SevResphapeTests(base.ServersTestBase):
 
         # verify that the inventory, usages and allocation are correct before
         # the reshape
-        compute_inventory = self.placement.get(
-            '/resource_providers/%s/inventories' % compute_rp_uuid).body[
-            'inventories']
+        compute_inventories = self._get_provider_inventory(compute_rp_uuid)
         self.assertEqual(
-            16, compute_inventory['MEM_ENCRYPTION_CONTEXT']['total'])
-        compute_usages = self.placement.get(
-            '/resource_providers/%s/usages' % compute_rp_uuid).body[
-            'usages']
+            16, compute_inventories['MEM_ENCRYPTION_CONTEXT']['total'])
+        compute_usages = self._get_provider_usages(compute_rp_uuid)
         self.assertEqual(1, compute_usages['MEM_ENCRYPTION_CONTEXT'])
 
         # restart the compute service to trigger reshape
         with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
-                        return_value=True):
+                        return_value=True), \
+                mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
+                           return_value=False):
             self.compute = self.restart_compute_service(self.hostname)
 
         # verify that the inventory, usages and allocation are correct after
         # the reshape
-        compute_inventory = self.placement.get(
-            '/resource_providers/%s/inventories' % compute_rp_uuid).body[
-            'inventories']
-        self.assertNotIn('MEM_ENCRYPTION_CONTEXT', compute_inventory)
-        compute_usages = self.placement.get(
-            '/resource_providers/%s/usages' % compute_rp_uuid).body[
-            'usages']
+        compute_inventories = self._get_provider_inventory(compute_rp_uuid)
+        self.assertNotIn('MEM_ENCRYPTION_CONTEXT', compute_inventories)
+        compute_usages = self._get_provider_usages(compute_rp_uuid)
         self.assertNotIn('MEM_ENCRYPTION_CONTEXT', compute_usages)
 
-        sev_rp_uuid = self.placement.get(
-            '/resource_providers?name=compute1_amd_sev').body[
-            'resource_providers'][0]['uuid']
-        sev_inventory = self.placement.get(
-            '/resource_providers/%s/inventories' % sev_rp_uuid).body[
-            'inventories']
+        sev_rp_uuid = self._get_provider_uuid_by_name('compute1_amd_sev')
+        sev_inventories = self._get_provider_inventory(sev_rp_uuid)
         self.assertEqual(
-            16, sev_inventory['MEM_ENCRYPTION_CONTEXT']['total'])
-        sev_usages = self.placement.get(
-            '/resource_providers/%s/usages' % sev_rp_uuid).body[
-            'usages']
+            16, sev_inventories['MEM_ENCRYPTION_CONTEXT']['total'])
+        sev_usages = self._get_provider_usages(sev_rp_uuid)
         self.assertEqual(1, sev_usages['MEM_ENCRYPTION_CONTEXT'])
+        sev_traits = self._get_provider_traits(sev_rp_uuid)
+        self.assertIn(os_traits.HW_CPU_X86_AMD_SEV, sev_traits)
 
         # create a new server after reshape
         post_server = self._create_server(
             image_uuid=uuidsentinel.mem_enc_image_id)
         self.addCleanup(self._delete_server, post_server)
 
-        compute_usages = self.placement.get(
-            '/resource_providers/%s/usages' % sev_rp_uuid).body[
-            'usages']
-        self.assertEqual(2, compute_usages['MEM_ENCRYPTION_CONTEXT'])
+        sev_usages = self._get_provider_usages(sev_rp_uuid)
+        self.assertEqual(2, sev_usages['MEM_ENCRYPTION_CONTEXT'])

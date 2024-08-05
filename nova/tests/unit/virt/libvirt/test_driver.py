@@ -7693,7 +7693,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[5].rate_bytes, 1024)
         self.assertEqual(cfg.devices[5].rate_period, 2)
 
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, result=False, other=True)
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE % 'sev', result=False, other=True)
     def test_get_guest_config_with_rng_backend(self):
         self.flags(virt_type='kvm',
                    rng_dev_path='/dev/hw_rng',
@@ -8341,7 +8341,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, result=False, other=True)
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE % 'sev', result=False, other=True)
     def test_get_guest_config_aarch64(self, mock_numa, mock_storage):
         TEST_AMOUNT_OF_PCIE_SLOTS = 8
         CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
@@ -8378,7 +8378,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, result=False, other=True)
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE % 'sev', result=False, other=True)
     def test_get_guest_config_aarch64_with_graphics(
         self, mock_numa, mock_storage,
     ):
@@ -23066,6 +23066,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         # Use total=0 for MEM_ENCRYPTION_CONTEXT
         self.driver._host._supports_amd_sev = True
         self.driver._host._max_sev_guests = 0
+        self.driver._host._supports_amd_sev_es = False
         # Before we update_provider_tree, we have 2 providers from setUp():
         # self.cn_rp and self.shared_rp and they are both empty {}.
         self.assertEqual(2, len(self.pt.get_provider_uuids()))
@@ -23190,6 +23191,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     def test_update_provider_tree_with_memory_encryption(self):
         self.driver._host._supports_amd_sev = True
         self.driver._host._max_sev_guests = 16
+        self.driver._host._supports_amd_sev_es = False
         self._test_update_provider_tree()
         inventory = self._get_inventory()
         # root compute node provider inventory is unchanged
@@ -23530,6 +23532,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     def test_update_provider_tree_for_memory_encryption_reshape(self):
         self.driver._host._supports_amd_sev = True
         self.driver._host._max_sev_guests = 16
+        self.driver._host._supports_amd_sev_es = False
         # First create a provider tree with MEM_ENCRYPTION_CONTEXT inventory on
         # the root node provider.
         inventory = self._get_inventory()
@@ -23641,6 +23644,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     def test_update_provider_tree_for_memory_encryption_reshape_fails(self):
         self.driver._host._supports_amd_sev = True
         self.driver._host._max_sev_guests = 16
+        self.driver._host._supports_amd_sev_es = False
         # First create a provider tree with MEM_ENCRYPTION_CONTEXT inventory on
         # the root node provider.
         inventory = self._get_inventory()
@@ -31100,6 +31104,13 @@ class TestLibvirtSEV(test.NoDBTestCase):
         self.useFixture(nova_fixtures.LibvirtFixture())
         self.driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
+        def fake_exists(path):
+            if path == '/sys/module/kvm_amd/parameters/sev':
+                return True
+            return False
+
+        self.stub_out('os.path.exists', fake_exists)
+
 
 @mock.patch.object(os.path, 'exists', new=mock.Mock(return_value=False))
 class TestLibvirtSEVUnsupported(TestLibvirtSEV):
@@ -31127,9 +31138,18 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
 @mock.patch.object(vc, '_domain_capability_features',
                    new=vc._domain_capability_features_with_SEV)
 class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
+    def setUp(self):
+        super(TestLibvirtSEVSupportedNoMaxGuests, self).setUp()
+
+        def fake_exists(path):
+            if path == '/sys/module/kvm_amd/parameters/sev':
+                return True
+            return False
+
+        self.stub_out('os.path.exists', fake_exists)
+
     """Libvirt driver tests for when AMD SEV support is present."""
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
-    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
     def test_get_memory_encryption_inventories_unlimited(self):
         self.assertEqual({
             'amd_sev': {
@@ -31143,8 +31163,7 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
             }
         }, self.driver._get_memory_encryption_inventories())
 
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
-    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
     def test_get_memory_encryption_inventories_config_non_zero_supported(self):
         self.flags(num_memory_encrypted_guests=16, group='libvirt')
         self.assertEqual({
@@ -31159,8 +31178,7 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
             }
         }, self.driver._get_memory_encryption_inventories())
 
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
-    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
     def test_get_memory_encryption_inventories_config_zero_supported(self):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
         self.assertEqual({
@@ -31179,9 +31197,18 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
 @mock.patch.object(vc, '_domain_capability_features',
                    new=vc._domain_capability_features_with_SEV_max_guests)
 class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
+    def setUp(self):
+        super(TestLibvirtSEVSupportedMaxGuests, self).setUp()
+
+        def fake_exists(path):
+            if path == '/sys/module/kvm_amd/parameters/sev':
+                return True
+            return False
+
+        self.stub_out('os.path.exists', fake_exists)
+
     """Libvirt driver tests for when AMD SEV support is present."""
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
-    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_memory_encryption_inventories_no_override(self, mock_log):
         self.assertEqual({
@@ -31197,8 +31224,7 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
         }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_not_called()
 
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
-    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_memory_encryption_inventories_override_more(self, mock_log):
         self.flags(num_memory_encrypted_guests=120, group='libvirt')
@@ -31217,8 +31243,7 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
             'Host is configured with libvirt.num_memory_encrypted_guests '
             'set to %d, but supports only %d.', 120, 100)
 
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
-    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_memory_encryption_inventories_override_less(self, mock_log):
         self.flags(num_memory_encrypted_guests=80, group='libvirt')

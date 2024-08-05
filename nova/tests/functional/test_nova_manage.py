@@ -2705,7 +2705,7 @@ class TestNovaManageLimits(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertIn('SUCCESS', self.output.getvalue())
         self.assertEqual(0, result)
 
-    def _add_to_inventory(self, resource):
+    def _add_to_inventory(self, resource, trait=None):
         # Add resource to inventory for both computes.
         for rp in self._get_all_providers():
             inv = self._get_provider_inventory(rp['uuid'])
@@ -2713,6 +2713,10 @@ class TestNovaManageLimits(integrated_helpers.ProviderUsageBaseTestCase):
             self._update_inventory(
                 rp['uuid'], {'inventories': inv,
                 'resource_provider_generation': rp['generation']})
+            if trait is not None:
+                traits = self._get_provider_traits(rp['uuid'])
+                traits.append(trait)
+                self._set_provider_traits(rp['uuid'], traits)
 
     def _create_flavor_and_add_to_inventory(self, resource):
         # Create a flavor for the resource.
@@ -2796,7 +2800,8 @@ class TestNovaManageLimits(integrated_helpers.ProviderUsageBaseTestCase):
         flavor_id = self._create_flavor(
             name='fakeflavor', vcpu=1, memory_mb=512, disk=1, ephemeral=0,
             extra_spec=extra_spec)
-        self._add_to_inventory('MEM_ENCRYPTION_CONTEXT')
+        self._add_to_inventory(
+            'MEM_ENCRYPTION_CONTEXT', 'HW_CPU_X86_AMD_SEV')
         image_id = self._create_image(
             metadata={'hw_firmware_type': 'uefi'})['id']
         self._create_server(

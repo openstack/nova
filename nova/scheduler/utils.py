@@ -331,6 +331,7 @@ class ResourceRequest(object):
             return
 
         self._add_resource(orc.MEM_ENCRYPTION_CONTEXT, 1)
+        self._add_trait(os_traits.HW_CPU_X86_AMD_SEV, 'required')
         LOG.debug("Added %s=1 to requested resources",
                   orc.MEM_ENCRYPTION_CONTEXT)
 

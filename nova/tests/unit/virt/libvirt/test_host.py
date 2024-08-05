@@ -24,6 +24,7 @@ from eventlet import tpool
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
+from oslo_utils import versionutils
 import testtools
 
 from nova.compute import vm_states
@@ -2192,6 +2193,86 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
                        new=vc._domain_capability_features_with_SEV)
     def test_supported_with_feature(self, fake_exists):
         self.assertTrue(self.host.supports_amd_sev)
+
+
+@ddt.ddt
+class TestLibvirtSEVESUnsupported(TestLibvirtSEV):
+    @mock.patch.object(os.path, 'exists', return_value=False)
+    def test_kernel_parameter_missing(self, fake_exists):
+        self.assertFalse(self.host._kernel_supports_amd_sev(model='sev-es'))
+        fake_exists.assert_called_once_with(
+            '/sys/module/kvm_amd/parameters/sev_es')
+
+    @ddt.data(
+        ('0\n', False),
+        ('N\n', False),
+        ('1\n', True),
+        ('Y\n', True),
+    )
+    @ddt.unpack
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    def test_kernel_parameter(
+        self, sev_param_value, expected_support, mock_exists
+    ):
+        with mock.patch(
+            'builtins.open', mock.mock_open(read_data=sev_param_value)
+        ):
+            self.assertIs(
+                expected_support,
+                self.host._kernel_supports_amd_sev(model='sev-es')
+            )
+            mock_exists.assert_called_once_with(
+                '/sys/module/kvm_amd/parameters/sev_es')
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
+    def test_unsupported_without_feature(self, fake_exists):
+        self.assertFalse(self.host.supports_amd_sev_es)
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
+    @mock.patch.object(vc, '_domain_capability_features',
+        new=vc._domain_capability_features_with_SEV_unsupported)
+    def test_unsupported_with_feature(self, fake_exists):
+        self.assertFalse(self.host.supports_amd_sev_es)
+
+    def test_non_x86_architecture(self):
+        fake_caps_xml = '''
+<capabilities>
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>aarch64</arch>
+    </cpu>
+  </host>
+</capabilities>'''
+        with mock.patch.object(fakelibvirt.virConnect, 'getCapabilities',
+                               return_value=fake_caps_xml):
+            self.assertFalse(self.host.supports_amd_sev_es)
+
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            host.MIN_QEMU_SEV_ES_VERSION) - 1)
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_SEV)
+    def test_unsupported_with_qemu_too_old(self, fake_exists, get_version):
+        self.assertFalse(self.host.supports_amd_sev_es)
+
+
+class TestLibvirtSEVESSupported(TestLibvirtSEV):
+    """Libvirt driver tests for when AMD SEV support is present."""
+
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            host.MIN_QEMU_SEV_ES_VERSION))
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_SEV)
+    def test_supported_with_feature(self, fake_exists, get_version):
+        self.assertTrue(self.host.supports_amd_sev_es)
 
 
 class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
