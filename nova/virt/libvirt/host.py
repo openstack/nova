@@ -1254,35 +1254,29 @@ class Host(object):
         """
         return self.get_connection().nodeDeviceLookupByName(name)
 
-    def device_create(self, conf, validate=False):
+    def device_create(self, conf):
         """Create a node device from specified device XML
 
         This creates the device as transient.
 
         :param conf: A LibvirtConfigObject of the device to create
-        :param validate: whether to validate the XML document against schema
 
         :returns: a virNodeDevice instance if successful, else None
         """
-        flag = libvirt.VIR_NODE_DEVICE_CREATE_XML_VALIDATE
-        flags = validate and flag or 0
         device_xml = conf.to_xml()
-        return self.get_connection().nodeDeviceCreateXML(device_xml, flags)
+        return self.get_connection().nodeDeviceCreateXML(device_xml, flags=0)
 
-    def device_define(self, conf, validate=False):
+    def device_define(self, conf):
         """Define a node device from specified device XML
 
         This defines the device to make it persistent.
 
         :param conf: A LibvirtConfigObject of the device to create
-        :param validate: whether to validate the XML document against schema
 
         :returns: a virNodeDevice instance if successful, else None
         """
-        flag = libvirt.VIR_NODE_DEVICE_DEFINE_XML_VALIDATE
-        flags = validate and flag or 0
         device_xml = conf.to_xml()
-        return self.get_connection().nodeDeviceDefineXML(device_xml, flags)
+        return self.get_connection().nodeDeviceDefineXML(device_xml, flags=0)
 
     def device_start(self, dev):
         """Start a defined node device

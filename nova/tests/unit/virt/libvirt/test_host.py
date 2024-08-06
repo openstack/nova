@@ -1168,6 +1168,18 @@ Active:          8381604 kB
         self.host.device_lookup_by_name("foo")
         mock_nodeDeviceLookupByName.assert_called_once_with("foo")
 
+    @mock.patch.object(fakelibvirt.virConnect, 'nodeDeviceCreateXML')
+    def test_device_create(self, mock_create):
+        node_dev = vconfig.LibvirtConfigNodeDevice()
+        self.host.device_create(node_dev)
+        mock_create.assert_called_once_with(node_dev.to_xml(), flags=0)
+
+    @mock.patch.object(fakelibvirt.virConnect, 'nodeDeviceDefineXML')
+    def test_device_define(self, mock_define):
+        node_dev = vconfig.LibvirtConfigNodeDevice()
+        self.host.device_define(node_dev)
+        mock_define.assert_called_once_with(node_dev.to_xml(), flags=0)
+
     def test_get_pcinet_info(self):
         dev_name = "net_enp2s2_02_9a_a1_37_be_54"
         parent_address = "pci_0000_04_11_7"

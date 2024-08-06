@@ -202,12 +202,6 @@ VIR_DOMAIN_METADATA_DESCRIPTION = 0
 VIR_DOMAIN_METADATA_TITLE = 1
 VIR_DOMAIN_METADATA_ELEMENT = 2
 
-# virNodeDeviceCreateXML flags
-VIR_NODE_DEVICE_CREATE_XML_VALIDATE = 4
-
-# virNodeDeviceDefineXML flags
-VIR_NODE_DEVICE_DEFINE_XML_VALIDATE = 5
-
 # Libvirt version to match MIN_LIBVIRT_VERSION in driver.py
 FAKE_LIBVIRT_VERSION = versionutils.convert_version_to_int(
     libvirt_driver.MIN_LIBVIRT_VERSION)
