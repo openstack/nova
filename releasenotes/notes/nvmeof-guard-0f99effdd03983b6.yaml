@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    `Bug #2035375 <https://bugs.launchpad.net/nova/+bug/2035375>`_: Fixed
+    leftover NVMe-oF subsystems when disconnecting multiple NVMe-oF volumes on
+    the same host from storage sharing the subsystem for different volumes.

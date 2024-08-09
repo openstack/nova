@@ -433,13 +433,14 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
 
     @staticmethod
     def _get_volume(context, volume_api, volume_id):
-        # First try to get the volume at microversion 3.48 so we can get the
-        # shared_targets parameter exposed in that version. If that API version
-        # is not available, we just fallback.
-        try:
-            return volume_api.get(context, volume_id, microversion='3.48')
-        except exception.CinderAPIVersionNotAvailable:
-            return volume_api.get(context, volume_id)
+        # First try microversion for tri-state shared_targets, then older
+        # shared_targets, finally fallback to standard v3.
+        versions = ('3.69', '3.48', None)
+        for mv in versions:
+            try:
+                return volume_api.get(context, volume_id, microversion=mv)
+            except exception.CinderAPIVersionNotAvailable:
+                pass
 
     def _create_volume(self, context, instance, volume_api, size,
                        wait_func=None, **create_kwargs):

@@ -15,6 +15,7 @@
 from os_brick import encryptors
 from unittest import mock
 
+import ddt
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
@@ -35,6 +36,7 @@ from nova.volume import cinder
 ATTACHMENT_ID = uuids.attachment_id
 
 
+@ddt.ddt
 class TestDriverBlockDevice(test.NoDBTestCase):
     # os-brick>=5.1 now uses external file system locks instead of internal
     # locks so we need to set up locking
@@ -641,6 +643,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             # First call to get() fails because the API isn't new enough.
             # So we fallback to the old call.
             self.volume_api.get.side_effect = [
+                exception.CinderAPIVersionNotAvailable(version='3.69'),
                 exception.CinderAPIVersionNotAvailable(version='3.48'),
                 fake_volume]
 
@@ -716,14 +719,17 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         if include_shared_targets:
             self.volume_api.get.assert_called_once_with(
-                self.context, fake_volume['id'], microversion='3.48')
+                self.context, fake_volume['id'], microversion='3.69')
         else:
             # First call to get() fails because the API isn't new enough.
             # So we fallback to the old call.
             self.volume_api.get.assert_has_calls([
                 mock.call(self.context, fake_volume['id'],
+                          microversion='3.69'),
+                mock.call(self.context, fake_volume['id'],
                           microversion='3.48'),
-                mock.call(self.context, fake_volume['id'])])
+                mock.call(self.context, fake_volume['id'],
+                          microversion=None)])
 
         try:
             self.volume_api.check_availability_zone.assert_called_once_with(
@@ -1584,6 +1590,24 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             self.context, no_volume_snapshot)
         self._test_boot_from_volume_source_snapshot_volume_type(
             bdm, 'fake-lvm-1')
+
+    @ddt.data(['3.69'], ['3.69', '3.48'], ['3.69', '3.48', None])
+    def test__get_volume(self, microversions):
+        volume_api = mock.Mock()
+        exp = mock.Mock()
+        exc = exception.CinderAPIVersionNotAvailable
+        side_effect = [exc(version=mv) for mv in microversions[:-1]] + [exp]
+        volume_api.get.side_effect = side_effect
+
+        res = self.driver_classes['volume']._get_volume(
+            self.context, volume_api, mock.sentinel.volume_id)
+
+        self.assertEqual(exp, res)
+
+        self.assertEqual(len(microversions), volume_api.get.call_count)
+        volume_api.get.assert_has_calls(
+            [mock.call(self.context, mock.sentinel.volume_id, microversion=mv)
+             for mv in microversions])
 
 
 class TestDriverBlockDeviceNewFlow(TestDriverBlockDevice):
