@@ -1457,6 +1457,52 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIn("vTPM support requires '[libvirt] virt_type' of 'qemu' "
                       "or 'kvm'; found 'lxc'.", str(exc))
 
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_devices', new=
+        fakelibvirt.virConnect._domain_capability_devices_with_tpm_unsupported
+    )
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch('shutil.which')
+    def test__check_vtpm_support_unsupported(
+        self, mock_which, mock_version):
+        """Test checking for vTPM support when the swtpm binaries are
+        missing.
+        """
+        self.flags(swtpm_enabled=True, virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        exc = self.assertRaises(exception.InvalidConfiguration,
+                                drvr.init_host, "dummyhost")
+        self.assertIn(
+            "vTPM support is configured but it's not supported by "
+            "libvirt.",
+            str(exc),
+        )
+        mock_which.assert_not_called()
+
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_devices', new=
+        fakelibvirt.virConnect._domain_capability_devices_with_no_emulator
+    )
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch('shutil.which')
+    def test__check_vtpm_support_unsupported_no_emulator(
+        self, mock_which, mock_version):
+        """Test checking for vTPM support when the swtpm binaries are
+        missing.
+        """
+        self.flags(swtpm_enabled=True, virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        exc = self.assertRaises(exception.InvalidConfiguration,
+                                drvr.init_host, "dummyhost")
+        self.assertIn(
+            "vTPM support is configured but it's not supported by "
+            "libvirt.",
+            str(exc),
+        )
+        mock_which.assert_not_called()
+
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch('shutil.which')
     def test__check_vtpm_support_missing_exe(self, mock_which, mock_version):
@@ -1470,9 +1516,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         exc = self.assertRaises(exception.InvalidConfiguration,
                                 drvr.init_host, "dummyhost")
         self.assertIn(
-            "vTPM support is configured but some (or all) of the 'swtpm', "
-            "'swtpm_setup' and 'swtpm_ioctl' binaries could not be found "
-            "on PATH.",
+            "vTPM support is configured but some (or all) of "
+            "the 'swtpm', 'swtpm_setup' and 'swtpm_ioctl' binaries "
+            "could not be found on PATH.",
             str(exc),
         )
 
@@ -1558,6 +1604,29 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.call('swtpm_setup'),
             mock.call('swtpm')
         ])
+
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_devices', new=
+        fakelibvirt.virConnect._domain_capability_devices_with_tpm_supported
+    )
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_all_undefined_instance_details',
+                       new=mock.Mock())
+    @mock.patch('shutil.which')
+    @mock.patch('pwd.getpwnam')
+    @mock.patch('grp.getgrnam')
+    def test__check_vtpm_support_supported(
+        self, mock_getgrnam, mock_getpwnam, mock_which
+    ):
+        """Test checking for vTPM support when everything is configured
+        correctly.
+        """
+        self.flags(swtpm_enabled=True, virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host('dummyhost')
+
+        mock_which.assert_not_called()
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__no_configuration(self, mock_log):
@@ -22439,6 +22508,29 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self._test_update_provider_tree()
         for trait in ('COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
             self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
+
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_devices', new=
+        fakelibvirt.virConnect._domain_capability_devices_with_tpm_supported
+    )
+    def test_update_provider_tree_with_tpm_traits_supported(self):
+        self.flags(swtpm_enabled=True, group='libvirt')
+        self._test_update_provider_tree()
+        for trait in ('COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
+            self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
+
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_devices', new=
+        fakelibvirt.virConnect.
+            _domain_capability_devices_with_tpm_versions
+    )
+    def test_update_provider_tree_with_tpm_traits_versions(self):
+        self.flags(swtpm_enabled=True, group='libvirt')
+        self._test_update_provider_tree()
+        for trait in ('COMPUTE_SECURITY_TPM_2_0',):
+            self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
+        for trait in ('COMPUTE_SECURITY_TPM_1_2',):
+            self.assertNotIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_get_mediated_device_information')

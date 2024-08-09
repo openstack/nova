@@ -1688,59 +1688,7 @@ DOMCAPABILITIES_X86_64_TEMPLATE = """
     </mode>
   </cpu>
   <devices>
-    <disk supported='yes'>
-      <enum name='diskDevice'>
-        <value>disk</value>
-        <value>cdrom</value>
-        <value>floppy</value>
-        <value>lun</value>
-      </enum>
-      <enum name='bus'>
-        <value>ide</value>
-        <value>fdc</value>
-        <value>scsi</value>
-        <value>virtio</value>
-        <value>usb</value>
-        <value>sata</value>
-      </enum>
-    </disk>
-    <graphics supported='yes'>
-      <enum name='type'>
-        <value>sdl</value>
-        <value>vnc</value>
-        <value>spice</value>
-      </enum>
-    </graphics>
-    <video supported='yes'>
-      <enum name='modelType'>
-        <value>vga</value>
-        <value>cirrus</value>
-        <value>vmvga</value>
-        <value>qxl</value>
-        <value>virtio</value>
-      </enum>
-    </video>
-    <hostdev supported='yes'>
-      <enum name='mode'>
-        <value>subsystem</value>
-      </enum>
-      <enum name='startupPolicy'>
-        <value>default</value>
-        <value>mandatory</value>
-        <value>requisite</value>
-        <value>optional</value>
-      </enum>
-      <enum name='subsysType'>
-        <value>usb</value>
-        <value>pci</value>
-        <value>scsi</value>
-      </enum>
-      <enum name='capsType'/>
-      <enum name='pciBackend'>
-        <value>default</value>
-        <value>vfio</value>
-      </enum>
-    </hostdev>
+%(devices)s
   </devices>
 %(features)s
 </domainCapabilities>

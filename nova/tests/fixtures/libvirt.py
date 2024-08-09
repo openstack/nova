@@ -1951,7 +1951,8 @@ class Connection(object):
         if arch == 'x86_64':
             aliases = {'pc': 'pc-i440fx-2.11', 'q35': 'pc-q35-2.11'}
             return fake_libvirt_data.DOMCAPABILITIES_X86_64_TEMPLATE % \
-                {'features': self._domain_capability_features,
+                {'devices': self._domain_capability_devices,
+                 'features': self._domain_capability_features,
                  'mtype': aliases.get(machine_type, machine_type)}
 
         raise Exception("fakelibvirt doesn't support getDomainCapabilities "
@@ -2017,6 +2018,120 @@ class Connection(object):
                 'POWERPC_e6500']
         }
         return mapping.get(arch, [])
+
+    _domain_capability_devices_default = '''    <disk supported='yes'>
+      <enum name='diskDevice'>
+        <value>disk</value>
+        <value>cdrom</value>
+        <value>floppy</value>
+        <value>lun</value>
+      </enum>
+      <enum name='bus'>
+        <value>ide</value>
+        <value>fdc</value>
+        <value>scsi</value>
+        <value>virtio</value>
+        <value>usb</value>
+        <value>sata</value>
+      </enum>
+    </disk>
+    <graphics supported='yes'>
+      <enum name='type'>
+        <value>sdl</value>
+        <value>vnc</value>
+        <value>spice</value>
+      </enum>
+    </graphics>
+    <video supported='yes'>
+      <enum name='modelType'>
+        <value>vga</value>
+        <value>cirrus</value>
+        <value>vmvga</value>
+        <value>qxl</value>
+        <value>virtio</value>
+      </enum>
+    </video>
+    <hostdev supported='yes'>
+      <enum name='mode'>
+        <value>subsystem</value>
+      </enum>
+      <enum name='startupPolicy'>
+        <value>default</value>
+        <value>mandatory</value>
+        <value>requisite</value>
+        <value>optional</value>
+      </enum>
+      <enum name='subsysType'>
+        <value>usb</value>
+        <value>pci</value>
+        <value>scsi</value>
+      </enum>
+      <enum name='capsType'/>
+      <enum name='pciBackend'>
+        <value>default</value>
+        <value>vfio</value>
+      </enum>
+    </hostdev>'''
+
+    _domain_capability_devices_with_tpm_supported = \
+        _domain_capability_devices_default + '''
+    <tpm supported='yes'>
+      <enum name='model'>
+        <value>tpm-tis</value>
+        <value>tpm-crb</value>
+      </enum>
+      <enum name='backendModel'>
+        <value>passthrough</value>
+        <value>emulator</value>
+        <value>external</value>
+      </enum>
+    </tpm>
+'''
+
+    # TODO(tkajinam): Merge this to the default value once libvirt >= 8.0.0 is
+    # required
+    _domain_capability_devices_with_tpm_unsupported = \
+        _domain_capability_devices_default + '''
+    <tpm supported='no'/>
+'''
+
+    _domain_capability_devices_with_no_emulator = \
+        _domain_capability_devices_default + '''
+    <tpm supported='yes'>
+      <enum name='model'>
+        <value>tpm-tis</value>
+        <value>tpm-crb</value>
+      </enum>
+      <enum name='backendModel'>
+        <value>passthrough</value>
+        <value>external</value>
+      </enum>
+    </tpm>
+'''
+
+    # TODO(tkajinam): Merge this to _supported value once libvirt >= 8.6.0 is
+    # required
+    _domain_capability_devices_with_tpm_versions = \
+        _domain_capability_devices_default + '''
+    <tpm supported='yes'>
+      <enum name='model'>
+        <value>tpm-tis</value>
+        <value>tpm-crb</value>
+      </enum>
+      <enum name='backendModel'>
+        <value>passthrough</value>
+        <value>emulator</value>
+        <value>external</value>
+      </enum>
+      <enum name='backendVersion'>
+        <value>2.0</value>
+      </enum>
+    </tpm>
+'''
+
+    # Devices are kept separately so that the tests can patch this
+    # class variable with alternate values.
+    _domain_capability_devices = _domain_capability_devices_default
 
     # Features are kept separately so that the tests can patch this
     # class variable with alternate values.
