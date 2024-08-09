@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    The libvirt driver now ensures the ``swtpm_ioctl`` binary, which is used
+    to terminate swtpm processes, is present when ``[libvirt] swtpm_enabled``
+    is set to ``True``.

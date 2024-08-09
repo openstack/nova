@@ -1470,13 +1470,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         exc = self.assertRaises(exception.InvalidConfiguration,
                                 drvr.init_host, "dummyhost")
         self.assertIn(
-            "vTPM support is configured but one (or all) of the 'swtpm' "
-            "and 'swtpm_setup' binaries could not be found on PATH.",
+            "vTPM support is configured but some (or all) of the 'swtpm', "
+            "'swtpm_setup' and 'swtpm_ioctl' binaries could not be found "
+            "on PATH.",
             str(exc),
         )
 
         mock_which.assert_has_calls(
-            [mock.call('swtpm_setup')],
+            [mock.call('swtpm_ioctl')],
         )
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
@@ -1552,9 +1553,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host('dummyhost')
 
-        mock_which.assert_has_calls(
-            [mock.call('swtpm_setup'), mock.call('swtpm')],
-        )
+        mock_which.assert_has_calls([
+            mock.call('swtpm_ioctl'),
+            mock.call('swtpm_setup'),
+            mock.call('swtpm')
+        ])
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__no_configuration(self, mock_log):
