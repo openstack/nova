@@ -93,15 +93,14 @@ steps:
 
   Since version 8.0.0, libvirt exposes maximum number of SEV guests
   which can run concurrently in its host, so the limit is automatically
-  detected using this feature.
+  detected using this feature. So it is not necessary to configure this option.
 
   However in case an older version of libvirt is used, it is not possible for
   Nova to programmatically detect the correct value and Nova imposes no limit.
   So this configuration option serves as a stop-gap, allowing the cloud
   operator the option of providing this value manually.
 
-  This option also allows the cloud operator to set the limit lower than
-  the actual hard limit.
+  This option has been deprecated and will be removed in a future release.
 
   .. note::
 
@@ -175,14 +174,11 @@ enable SEV for a flavor:
    $ openstack flavor set FLAVOR-NAME \
        --property hw:mem_encryption=true
 
-These do not inherently cause a preference for SEV-capable hardware,
-but for now SEV is the only way of fulfilling the requirement for
-memory encryption.  However in the future, support for other
-hardware-level guest memory encryption technology such as Intel MKTME
-may be added.  If a guest specifically needs to be booted using SEV
-rather than any other memory encryption technology, it is possible to
-ensure this by setting the :nova:extra-spec:`trait{group}:HW_CPU_X86_AMD_SEV`
-extra spec or equivalent image metadata property to ``required``.
+It is also possible to use SEV-ES, instead of SEV, by setting
+the :nova:extra-spec:`hw:mem_encryption_model` extra spec to ``amd-sev-es``, or
+by using an image with the ``hw_mem_encryption_model`` property set to
+``amd-sev-es``. In case the extra spec and the property are unset or set to
+``amd-sev`` then SEV is used.
 
 In all cases, SEV instances can only be booted from images which have
 the ``hw_firmware_type`` property set to ``uefi``, and only when the

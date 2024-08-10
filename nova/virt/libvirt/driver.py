@@ -2198,7 +2198,8 @@ class LibvirtDriver(driver.ComputeDriver):
         vol_driver = self._get_volume_driver(connection_info)
         conf = vol_driver.get_config(connection_info, disk_info)
 
-        if self._sev_enabled(instance.flavor, instance.image_meta):
+        if self._get_mem_encryption_config(
+                instance.flavor, instance.image_meta):
             designer.set_driver_iommu_for_device(conf)
 
         self._set_cache_mode(conf)
@@ -3072,7 +3073,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                          instance.flavor,
                                          CONF.libvirt.virt_type)
 
-        if self._sev_enabled(instance.flavor, image_meta):
+        if self._get_mem_encryption_config(instance.flavor, image_meta):
             designer.set_driver_iommu_for_device(cfg)
 
         try:
@@ -6923,7 +6924,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # of AMD SEV, any virtio device should use iommu driver, and
             # libvirt does not know about it. That is why the controller
             # should be created manually.
-            if self._sev_enabled(flavor, image_meta):
+            if self._get_mem_encryption_config(flavor, image_meta):
                 self._add_virtio_serial_controller(guest, instance)
 
             LOG.debug("Qemu guest agent is enabled through image "
@@ -6986,7 +6987,7 @@ class LibvirtDriver(driver.ComputeDriver):
             membacking.sharedaccess = True
             membacking.allocateimmediate = True
             membacking.discard = True
-        if self._sev_enabled(flavor, image_meta):
+        if self._get_mem_encryption_config(flavor, image_meta):
             if not membacking:
                 membacking = vconfig.LibvirtConfigGuestMemoryBacking()
             membacking.locked = True
@@ -7577,7 +7578,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._get_guest_os_type()
         )
 
-        sev_enabled = self._sev_enabled(flavor, image_meta)
+        me_config = self._get_mem_encryption_config(flavor, image_meta)
 
         self._configure_guest_by_virt_type(guest, instance, image_meta, flavor)
         if CONF.libvirt.virt_type != 'lxc':
@@ -7655,10 +7656,11 @@ class LibvirtDriver(driver.ComputeDriver):
         if mdevs:
             self._guest_add_mdevs(guest, mdevs)
 
-        if sev_enabled:
+        if me_config:
             caps = self._host.get_capabilities()
-            self._guest_configure_sev(guest, caps.host.cpu.arch,
-                                      guest.os_mach_type)
+            self._guest_configure_mem_encryption(guest, caps.host.cpu.arch,
+                                                 guest.os_mach_type,
+                                                 me_config.model)
 
         if vpmems:
             self._guest_add_vpmems(guest, vpmems)
@@ -7700,7 +7702,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.max_memory_slots += 1
             guest.add_device(vpmem_config)
 
-    def _sev_enabled(self, flavor, image_meta):
+    def _get_mem_encryption_config(self, flavor, image_meta):
         """To enable AMD SEV, the following should be true:
 
         a) the supports_amd_sev instance variable in the host is
@@ -7722,13 +7724,13 @@ class LibvirtDriver(driver.ComputeDriver):
         are run while determining whether SEV is selected.
         """
         if not self._host.supports_amd_sev:
-            return False
+            return None
 
         mach_type = libvirt_utils.get_machine_type(image_meta)
         return hardware.get_mem_encryption_constraint(flavor, image_meta,
                                                       mach_type)
 
-    def _guest_configure_sev(self, guest, arch, mach_type):
+    def _guest_configure_mem_encryption(self, guest, arch, mach_type, model):
         sev = self._find_sev_feature(arch, mach_type)
         if sev is None:
             # In theory this should never happen because it should
@@ -7745,12 +7747,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 feature='sev')
 
         designer.set_driver_iommu_for_all_devices(guest)
-        self._guest_add_launch_security(guest, sev)
+        self._guest_add_sev_launch_security(guest, sev, model)
 
-    def _guest_add_launch_security(self, guest, sev):
+    def _guest_add_sev_launch_security(self, guest, sev, model):
         launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
         launch_security.cbitpos = sev.cbitpos
         launch_security.reduced_phys_bits = sev.reduced_phys_bits
+        if model == fields.MemEncryptionModel.AMD_SEV_ES:
+            launch_security.policy = 0x0035
         guest.launch_security = launch_security
 
     def _find_sev_feature(self, arch, mach_type):

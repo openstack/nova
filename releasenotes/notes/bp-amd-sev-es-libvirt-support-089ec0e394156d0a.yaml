@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    The libvirt driver can now support requests for guest RAM to be encrypted
+    using the AMD SEV-ES(Secure Encrypted Virtualization-Encrypted State),
+    instead of AMD SEV.
+
+    Usage of AMD SEV-ES for memory encryption can be required either via
+    a flavor which has the ``hw:mem_encryption_model`` extra spec set to
+    ``amd-sev-es``, or via an image which has the ``hw_mem_encryption_model``
+    property set to ``amd-sev-es``. In case the extra spec and the property are
+    unset or set to ``amd-sev``, then AMD SEV is used for memory encryption.
