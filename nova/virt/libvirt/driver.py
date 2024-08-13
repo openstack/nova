@@ -732,12 +732,31 @@ class LibvirtDriver(driver.ComputeDriver):
                  {'enabled': enabled, 'reason': reason})
         self._set_host_enabled(enabled, reason)
 
+    def _init_host_topology(self):
+        """To work around a bug in libvirt that reports offline CPUs as always
+        being on socket 0 regardless of their real socket, power up all
+        dedicated CPUs (the only ones whose socket we actually care about),
+        then call get_capabilities() to initialize the topology with the
+        correct socket values. get_capabilities()'s implementation will reuse
+        these initial socket value, and avoid clobbering them with 0 for
+        offline CPUs.
+        """
+        cpus = hardware.get_cpu_dedicated_set()
+        if cpus:
+            self.cpu_api.power_up(cpus)
+            self._host.get_capabilities()
+
     def init_host(self, host):
         self._host.initialize()
 
-        self._update_host_specific_capabilities()
-
+        # NOTE(artom) Do this first to make sure our first call to
+        # get_capabilities() happens with all dedicated CPUs online and caches
+        # their correct socket ID. Unused dedicated CPUs will be powered down
+        # further down in this method.
         self._check_cpu_set_configuration()
+        self._init_host_topology()
+
+        self._update_host_specific_capabilities()
 
         self._do_quality_warnings()
 

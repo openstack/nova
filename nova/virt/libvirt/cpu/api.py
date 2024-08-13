@@ -91,7 +91,7 @@ class API(object):
         """
         return Core(i)
 
-    def _power_up(self, cpus: ty.Set[int]) -> None:
+    def power_up(self, cpus: ty.Set[int]) -> None:
         if not CONF.libvirt.cpu_power_management:
             return
         cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
@@ -111,7 +111,7 @@ class API(object):
             return
         pcpus = instance.numa_topology.cpu_pinning.union(
             instance.numa_topology.cpuset_reserved)
-        self._power_up(pcpus)
+        self.power_up(pcpus)
 
     def power_up_for_migration(
         self, dst_numa_info: objects.LibvirtLiveMigrateNUMAInfo
@@ -121,7 +121,7 @@ class API(object):
             pcpus = dst_numa_info.emulator_pins
         for pins in dst_numa_info.cpu_pins.values():
             pcpus = pcpus.union(pins)
-        self._power_up(pcpus)
+        self.power_up(pcpus)
 
     def _power_down(self, cpus: ty.Set[int]) -> None:
         if not CONF.libvirt.cpu_power_management:
