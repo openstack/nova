@@ -943,7 +943,9 @@ def _numa_fit_instance_cell(
         if not pagesize:
             LOG.debug('Host does not support requested memory pagesize, '
                       'or not enough free pages of the requested size. '
-                      'Requested: %d kB', instance_cell.pagesize)
+                      'Requested memory pagesize: %d '
+                      '(small = -1, large = -2, any = -3)',
+                      instance_cell.pagesize)
             return None
         LOG.debug('Selected memory pagesize: %(selected_mem_pagesize)d kB. '
                   'Requested memory pagesize: %(requested_mem_pagesize)d '
