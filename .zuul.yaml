@@ -690,7 +690,9 @@
       - playbooks/ceph/glance-setup.yaml
     vars:
       # revert this when bug #1940425 is fixed in neutron
-      tempest_exclude_regex: (test_live_migration_with_trunk)
+      # FIXME(sean-k-mooney) skip the test_image_formats for now
+      # as we have not configured this job correctly to run them
+      tempest_exclude_regex: (test_live_migration_with_trunk|tempest.api.image.v2.test_images_formats)
       # NOTE(danms): Increase our swap size since we're dealing with
       # larger images and trigger OOMs.
       configure_swap_size: 8192
