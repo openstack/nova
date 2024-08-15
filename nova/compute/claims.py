@@ -64,6 +64,7 @@ class Claim(NopClaim):
         super().__init__(migration=migration)
         # Stash a copy of the instance at the current point of time
         self.instance = instance.obj_clone()
+        self.instance_ref = instance
         self.nodename = nodename
         self.tracker = tracker
         self._pci_requests = pci_requests
@@ -82,7 +83,7 @@ class Claim(NopClaim):
         been aborted.
         """
         LOG.debug("Aborting claim: %s", self, instance=self.instance)
-        self.tracker.abort_instance_claim(self.context, self.instance,
+        self.tracker.abort_instance_claim(self.context, self.instance_ref,
                                           self.nodename)
 
     def _claim_test(self, compute_node, limits=None):
