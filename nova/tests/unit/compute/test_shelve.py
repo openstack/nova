@@ -596,14 +596,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 # This is before we've failed.
                 self.assertEqual(task_states.SPAWNING, instance.task_state)
                 tracking['last_state'] = instance.task_state
-            elif tracking['last_state'] == task_states.SPAWNING:
-                # This is after we've failed.
-                self.assertIsNone(instance.host)
-                self.assertIsNone(instance.node)
-                self.assertIsNone(instance.task_state)
-                tracking['last_state'] = instance.task_state
-            else:
-                self.fail('Unexpected save!')
 
         with mock.patch.object(instance, 'save') as mock_save:
             mock_save.side_effect = check_save
@@ -613,6 +605,10 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                               filter_properties=filter_properties, node=node,
                               request_spec=objects.RequestSpec(),
                               accel_uuids=[])
+
+        self.assertIsNone(instance.host)
+        self.assertIsNone(instance.node)
+        self.assertIsNone(instance.task_state)
 
         mock_notify_instance_action.assert_called_once_with(
             self.context, instance, 'fake-mini', action='unshelve',

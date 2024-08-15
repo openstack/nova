@@ -3042,11 +3042,8 @@ class PCIResourceRequestReschedulingTest(_PCIServersTestBase):
 
         def validate_group_policy(manager, instance, *args, **kwargs):
             nonlocal validate_group_policy_called
-            if validate_group_policy_called:
-                # FIXME(johngarbutt): This is bug 1860555, it should be 1.
-                self.assertEqual(2, len(instance.pci_devices))
-            else:
-                self.assertEqual(1, len(instance.pci_devices))
+            self.assertEqual(1, len(instance.pci_devices))
+            if not validate_group_policy_called:
                 validate_group_policy_called = True
                 raise exception.RescheduledException(
                     instance_uuid='fake-uuid',

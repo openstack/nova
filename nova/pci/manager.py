@@ -407,7 +407,7 @@ class PciDevTracker(object):
         for dev in self.pci_devs:
             if (dev.status == fields.PciDeviceStatus.ALLOCATED and
                     dev.instance_uuid == instance['uuid']):
-                self._free_device(dev)
+                self._free_device(dev, instance)
 
     def free_instance_claims(
         self, context: ctx.RequestContext, instance: 'objects.Instance',
@@ -423,7 +423,7 @@ class PciDevTracker(object):
         for dev in self.pci_devs:
             if (dev.status == fields.PciDeviceStatus.CLAIMED and
                     dev.instance_uuid == instance['uuid']):
-                self._free_device(dev)
+                self._free_device(dev, instance)
 
     def free_instance(
         self, context: ctx.RequestContext, instance: 'objects.Instance',
