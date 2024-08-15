@@ -528,7 +528,9 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         # Ensure that the claim actually fixes the inconsistency so when the
         # parent if freed the children become available too.
         self.tracker.free_instance(
-            mock.sentinel.context, {'uuid': uuidsentinel.instance1})
+            mock.sentinel.context,
+            {'uuid': uuidsentinel.instance1,
+             'pci_devices': [objects.PciDevice(id=pf['id'])]})
 
         pf_dev = self._get_device_by_address(pf['address'])
         self.assertEqual('available', pf_dev.status)
@@ -586,7 +588,9 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         # Ensure that the claim actually fixes the inconsistency so when the
         # parent if freed the children become available too.
         self.tracker.free_instance(
-            mock.sentinel.context, {'uuid': uuidsentinel.instance1})
+            mock.sentinel.context,
+            {'uuid': uuidsentinel.instance1,
+             'pci_devices': [objects.PciDevice(id=pf['id'])]})
 
         pf_dev = self._get_device_by_address(pf['address'])
         self.assertEqual('available', pf_dev.status)
