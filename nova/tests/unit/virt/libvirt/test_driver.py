@@ -3609,6 +3609,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_designer.assert_called_once_with(cfg)
 
+    @mock.patch.object(host.Host, 'get_domain_capabilities')
+    def test__get_cpu_emulation_arch_traits(self, fake_domain_caps):
+        self._setup_fake_domain_caps(fake_domain_caps)
+        # as in mock setup we have set {'x86_64': {'q35': domain_caps}}
+        expected = {'COMPUTE_ARCH_X86_64': True}
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        traits = drvr._get_cpu_emulation_arch_traits()
+        # traits must be a dict object
+        self.assertDictEqual(traits, expected)
+
     def test_get_guest_memory_backing_config_file_backed(self):
         self.flags(file_backed_memory=1024, group="libvirt")
 
@@ -28583,6 +28593,21 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
   <topology sockets="1" cores="5" threads="1"/>
 </cpu>
 '''], 1)
+
+    def _fake_get_host_capabilities(self, **args):
+        cpu = vconfig.LibvirtConfigGuestCPU()
+        cpu.arch = fields.Architecture.X86_64
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = cpu
+        return caps
+
+    def test__get_cpu_arch_traits(self):
+        with mock.patch.object(host.Host, "get_capabilities",
+                               side_effect=self._fake_get_host_capabilities):
+            traits = self.drvr._get_cpu_arch_traits()
+            self.assertTrue(traits.get('HW_ARCH_X86_64'))
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('os.path.isdir')
