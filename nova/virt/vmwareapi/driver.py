@@ -23,6 +23,7 @@ import os
 import re
 
 import os_resource_classes as orc
+import os_traits as ot
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
@@ -527,6 +528,11 @@ class VMwareVCDriver(driver.ComputeDriver):
         # In the libvirt driver this is where nested GPUs are reported and
         # where cpu traits are added. In the vmware world, this is where we
         # would add nested providers representing tenant VDC and similar.
+
+        # nova with vmware only supports HW_ARCH_X86_64
+        cpu_arch_trait = 'HW_ARCH_X86_64'
+        if cpu_arch_trait in ot.get_traits('HW_ARCH_'):
+            provider_tree.add_traits(nodename, cpu_arch_trait)
 
     def prepare_for_spawn(self, instance):
         """Perform pre-checks for spawn."""

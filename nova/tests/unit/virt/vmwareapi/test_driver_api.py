@@ -2144,6 +2144,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         }
         inventory = self.pt.data(self.node_name).inventory
         self.assertEqual(expected, inventory)
+        traits = self.pt.data(self.node_name).traits
+        # nova with vmware only supports HW_ARCH_X86_64
+        self.assertEqual(traits, {'HW_ARCH_X86_64'})
 
     def test_invalid_datastore_regex(self):
 
