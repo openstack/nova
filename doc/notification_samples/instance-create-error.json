@@ -18,7 +18,9 @@
             "ip_addresses": [],
             "launched_at": null,
             "power_state": "pending",
-            "state": "building"
+            "state": "building",
+            "host": null,
+            "node": null
         }
     },
     "priority":"ERROR",
