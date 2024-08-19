@@ -12485,6 +12485,8 @@ class LibvirtDriver(driver.ComputeDriver):
         traits = self._get_cpu_feature_traits()
         traits[ot.HW_CPU_X86_AMD_SEV] = self._host.supports_amd_sev
         traits[ot.HW_CPU_HYPERTHREADING] = self._host.has_hyperthreading
+        traits.update(self._get_cpu_arch_traits())
+        traits.update(self._get_cpu_emulation_arch_traits())
 
         return traits
 
@@ -12552,6 +12554,28 @@ class LibvirtDriver(driver.ComputeDriver):
             features = features.union([f.name for f in cpu.features])
 
         return libvirt_utils.cpu_features_to_traits(features)
+
+    def _get_cpu_arch_traits(self):
+        """Get CPU arch trait based on the host arch.
+        """
+        arch = self._host.get_capabilities().host.cpu.arch.upper()
+        # we only set for valid arch, rest will be assumed invalid
+        trait = 'HW_ARCH_' + arch
+        return {trait: trait in ot.get_traits(prefix='HW_ARCH_')}
+
+    def _get_cpu_emulation_arch_traits(self):
+        """Get CPU arch emulation traits
+        """
+        # get list of architecture supported by host for
+        # hw emulation
+        caps = self._host.get_domain_capabilities().keys()
+        traits = {}
+        for arch in caps:
+            trait = 'COMPUTE_ARCH_' + arch.upper()
+            if trait in ot.get_traits(prefix='COMPUTE_ARCH_'):
+                traits[trait] = True
+
+        return traits
 
     def _get_guest_baseline_cpu_features(self, xml_str):
         """Calls libvirt's baselineCPU API to compute the biggest set of
