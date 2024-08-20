@@ -13,6 +13,8 @@
 #    under the License.
 
 import ddt
+from unittest import mock
+
 from lxml import etree
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
@@ -79,6 +81,17 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         inxml = "<demo><foo/></demo>"
         obj = config.LibvirtConfigObject(root_name="demo")
         obj.parse_str(inxml)
+
+    @mock.patch.object(config.LOG, 'debug')
+    def test_config_parse_error_xml_logged(self, mock_debug):
+        inxml = "<demo><vendor_field index='Z'>6<1</vendor_field></demo>"
+        obj = config.LibvirtConfigObject(root_name="demo")
+
+        self.assertRaises(etree.XMLSyntaxError, obj.parse_str, inxml)
+
+        mock_debug.assert_called_once_with(
+            'Failed to parse the libvirt XML: %s',
+            "<demo><vendor_field index='Z'>6<1</vendor_field></demo>")
 
     def test_parse_on_off_str(self):
         obj = config.LibvirtConfigObject(root_name="demo")
