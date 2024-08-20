@@ -131,7 +131,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.11: Added 'hw_locked_memory' field
     # Version 1.12: Added 'hw_viommu_model' field
     # Version 1.13: Added 'hw_virtio_packed_ring' field
-    VERSION = '1.13'
+    # Version 1.14: Added 'hw_firmware_stateless' field
+    VERSION = '1.14'
 
     # NOTE(efried): This logic currently relies on all of the fields of
     # ImageMetaProps being initialized with no arguments. See the docstring.
