@@ -257,6 +257,9 @@ LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 MIN_LIBVIRT_MAXPHYSADDR = (8, 7, 0)
 MIN_QEMU_MAXPHYSADDR = (2, 7, 0)
 
+# stateless firmware support
+MIN_LIBVIRT_STATELESS_FIRMWARE = (8, 6, 0)
+
 REGISTER_IMAGE_PROPERTY_DEFAULTS = [
     'hw_machine_type',
     'hw_cdrom_bus',
@@ -899,6 +902,13 @@ class LibvirtDriver(driver.ComputeDriver):
         self.capabilities.update({
             'supports_address_space_passthrough': supports_maxphysaddr,
             'supports_address_space_emulated': supports_maxphysaddr,
+        })
+
+        supports_stateless_firmware = self._host.has_min_version(
+            lv_ver=MIN_LIBVIRT_STATELESS_FIRMWARE,
+        )
+        self.capabilities.update({
+            'supports_stateless_firmware': supports_stateless_firmware,
         })
 
     def _register_all_undefined_instance_details(self) -> None:
@@ -6929,6 +6939,8 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.os_mach_type = mach_type
 
             hw_firmware_type = image_meta.properties.get('hw_firmware_type')
+            hw_firmware_stateless = hardware.get_stateless_firmware_constraint(
+                image_meta)
 
             if arch == fields.Architecture.AARCH64:
                 if not hw_firmware_type:
@@ -6986,7 +6998,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 guest.os_loader = loader
                 guest.os_loader_type = 'pflash'
-                guest.os_nvram_template = nvram_template
+                if hw_firmware_stateless:
+                    guest.os_loader_stateless = True
+                else:
+                    guest.os_nvram_template = nvram_template
 
                 # if the feature set says we need SMM then enable it
                 if requires_smm:

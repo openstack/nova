@@ -2717,8 +2717,8 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
         self.assertXmlEqual(fake_libvirt_data.FAKE_KVM_GUEST, xml)
 
-    def test_config_uefi(self):
-        obj = config.LibvirtConfigGuest()
+    def _test_config_uefi(self):
+        obj = config.libvirtconfigguest()
         obj.virt_type = "kvm"
         obj.memory = 100 * units.Mi
         obj.vcpus = 1
@@ -2729,9 +2729,10 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_loader = '/tmp/OVMF_CODE.secboot.fd'
         obj.os_loader_type = 'pflash'
         obj.os_loader_secure = True
+        obj.os_loader_stateless = True
         xml = obj.to_xml()
 
-        self.assertXmlEqual(
+        self.assertxmlequal(
             """
             <domain type="kvm">
               <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
@@ -2740,13 +2741,13 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <vcpu>1</vcpu>
               <os>
                 <type machine="pc-q35-5.1">hvm</type>
-                <loader secure='yes' readonly='yes' type='pflash'>/tmp/OVMF_CODE.secboot.fd</loader>
+                <loader stateless='yes' secure='yes' readonly='yes' type='pflash'>/tmp/OVMF_CODE.secboot.fd</loader>
               </os>
             </domain>""",  # noqa: E501
             xml,
         )
 
-    def _test_config_uefi_autoconfigure(self, secure):
+    def _test_config_uefi_autoconfigure(self, secure=False, stateless=None):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "kvm"
         obj.memory = 100 * units.Mi
@@ -2757,10 +2758,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_firmware = "efi"
         obj.os_mach_type = "pc-q35-5.1"
         obj.os_loader_secure = secure
+        obj.os_loader_stateless = stateless
         return obj.to_xml()
 
     def test_config_uefi_autoconfigure(self):
-        xml = self._test_config_uefi_autoconfigure(secure=False)
+        xml = self._test_config_uefi_autoconfigure()
 
         self.assertXmlEqual(
             xml,
@@ -2791,6 +2793,24 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <os firmware="efi">
                 <type machine="pc-q35-5.1">hvm</type>
                 <loader secure="yes"/>
+              </os>
+            </domain>""",
+        )
+
+    def test_config_uefi_autoconfigure_stateless(self):
+        xml = self._test_config_uefi_autoconfigure(stateless=True)
+
+        self.assertXmlEqual(
+            xml,
+            """
+            <domain type="kvm">
+              <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
+              <name>uefi</name>
+              <memory>104857600</memory>
+              <vcpu>1</vcpu>
+              <os firmware="efi">
+                <type machine="pc-q35-5.1">hvm</type>
+                <loader stateless="yes" secure="no"/>
               </os>
             </domain>""",
         )

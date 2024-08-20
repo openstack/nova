@@ -5294,6 +5294,27 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual('/usr/share/OVMF/OVMF_CODE.fd', cfg.os_loader)
         self.assertEqual('/usr/share/OVMF/OVMF_VARS.fd', cfg.os_nvram_template)
 
+    def test_get_guest_config_with_uefi_and_stateless_firmware(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {
+                "hw_firmware_type": "uefi",
+                "hw_firmware_stateless": True
+            }
+        })
+        instance_ref = objects.Instance(**self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance_ref, image_meta)
+        cfg = drvr._get_guest_config(
+            instance_ref, [], image_meta, disk_info)
+        # these paths are derived from the FakeLibvirtFixture
+        self.assertEqual('/usr/share/OVMF/OVMF_CODE.fd', cfg.os_loader)
+        self.assertTrue(cfg.os_loader_stateless)
+        self.assertIsNone(cfg.os_nvram_template)
+
     def test_get_guest_config_with_secure_boot_and_smm_required(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         # uefi only used with secure boot
@@ -21829,11 +21850,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(
             driver.capabilities.get('supports_address_space_emulated'))
 
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_STATELESS_FIRMWARE) - 1)
     def test_update_host_specific_capabilities_without_stateless_firmware(
-            self):
+            self, mock_get_version):
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         driver._update_host_specific_capabilities()
         self.assertFalse(
+            driver.capabilities.get('supports_stateless_firmware'))
+
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_STATELESS_FIRMWARE))
+    def test_update_host_specific_capabilities_with_stateless_firmware(
+            self, mock_get_version):
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        driver._update_host_specific_capabilities()
+        self.assertTrue(
             driver.capabilities.get('supports_stateless_firmware'))
 
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',

@@ -1124,6 +1124,10 @@ class Domain(object):
             os['type'] = os_type.text
             os['arch'] = os_type.get('arch', self._connection.host_info.arch)
 
+        os_loader = tree.find('./os/loader')
+        if os_loader is not None:
+            os['loader_stateless'] = os_loader.get('stateless')
+
         os_kernel = tree.find('./os/kernel')
         if os_kernel is not None:
             os['kernel'] = os_kernel.text
@@ -1431,6 +1435,11 @@ class Domain(object):
         pass
 
     def XMLDesc(self, flags):
+        loader = '<loader/>'
+        if self._def['os'].get('loader_stateless'):
+            loader = ('<loader stateless="%s"/>' %
+                self._def['os'].get('loader_stateless'))
+
         disks = ''
         for disk in self._def['devices']['disks']:
             if disk['type'] == 'file':
@@ -1570,6 +1579,7 @@ class Domain(object):
   <vcpu%(vcpuset)s>%(vcpu)s</vcpu>
   <os>
     <type arch='%(arch)s' machine='pc-0.12'>hvm</type>
+    %(loader)s
     <boot dev='hd'/>
   </os>
   <features>
@@ -1618,6 +1628,7 @@ class Domain(object):
                 'vcpuset': vcpuset,
                 'vcpu': self._def['vcpu']['number'],
                 'arch': self._def['os']['arch'],
+                'loader': loader,
                 'disks': disks,
                 'nics': nics,
                 'hostdevs': hostdevs,
