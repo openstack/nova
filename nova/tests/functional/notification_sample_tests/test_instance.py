@@ -2058,7 +2058,7 @@ class TestInstanceNotificationSample(
         # 0: instance-share_detach-start
         # 1: instance-share_detach-error
         # 2: compute.exception
-        self.assertEqual(3, len(self.notifier.versioned_notifications),
+        self.assertEqual(2, len(self.notifier.versioned_notifications),
                             self.notifier.versioned_notifications)
         expected_shares[0]["nova_object.data"]["status"] = "detaching"
         self._verify_notification(

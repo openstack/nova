@@ -8683,8 +8683,9 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         share_mapping.share_proto = 'NFS'
         return share_mapping
 
+    @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch('oslo_messaging.rpc.client._BaseCallContext.cast')
-    def test_allow_share(self, mock_cast):
+    def test_allow_share(self, mock_cast, mock_rec_action):
         instance = self._create_instance_obj(
                 params=dict(vm_state=vm_states.STOPPED))
         self.assertEqual(instance.vm_state, vm_states.STOPPED)
@@ -8702,8 +8703,12 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             instance=instance,
             share_mapping=share_mapping)
 
+        mock_rec_action.assert_called_once_with(
+            self.context, instance, instance_actions.ATTACH_SHARE)
+
+    @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch('oslo_messaging.rpc.client._BaseCallContext.cast')
-    def test_deny_share(self, mock_cast):
+    def test_deny_share(self, mock_cast, mock_rec_action):
         instance = self._create_instance_obj(
                 params=dict(vm_state=vm_states.STOPPED))
         self.assertEqual(instance.vm_state, vm_states.STOPPED)
@@ -8720,3 +8725,6 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             'deny_share',
             instance=instance,
             share_mapping=share_mapping)
+
+        mock_rec_action.assert_called_once_with(
+            self.context, instance, instance_actions.DETACH_SHARE)

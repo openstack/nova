@@ -6066,10 +6066,14 @@ class API:
         return host_statuses
 
     def allow_share(self, context, instance, share_mapping):
+        self._record_action_start(
+            context, instance, instance_actions.ATTACH_SHARE)
         self.compute_rpcapi.allow_share(
             context, instance, share_mapping)
 
     def deny_share(self, context, instance, share_mapping):
+        self._record_action_start(
+            context, instance, instance_actions.DETACH_SHARE)
         self.compute_rpcapi.deny_share(
             context, instance, share_mapping)
 
