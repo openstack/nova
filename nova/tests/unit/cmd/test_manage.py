@@ -3650,6 +3650,50 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         objects.BlockDeviceMapping, 'get_by_volume_and_instance')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.InstanceAction, 'action_start')
+    def test_refresh_invalid_connector_host(
+        self, mock_action_start, mock_get_instance,
+        mock_get_bdm, mock_save_bdm, mock_compute_api, mock_volume_api,
+        mock_compute_rpcapi
+    ):
+        """Test refresh with a old host not disconnected properly
+        and connector host info is not correct, a fake-host is
+        passed.
+        """
+
+        fake_volume_api = mock_volume_api.return_value
+        device_name = '/dev/vda'
+
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            host='old-host', locked=False)
+        mock_get_bdm.return_value = objects.BlockDeviceMapping(
+            uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.instance,
+            device_name=device_name)
+        mock_action = mock.Mock(spec=objects.InstanceAction)
+        mock_action_start.return_value = mock_action
+
+        fake_volume_api.attachment_create.return_value = {
+            'id': uuidsentinel.new_attachment,
+        }
+        # in instance we have host as 'old-host'
+        # but here 'fake-host' is passed in connector info.
+        fake_volume_api.attachment_update.return_value = {
+            'connection_info': self._get_fake_connector_info(),
+        }
+
+        ret = self._test_refresh()
+        self.assertEqual(7, ret)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI', autospec=True)
+    @mock.patch('nova.volume.cinder.API', autospec=True)
+    @mock.patch('nova.compute.api.API', autospec=True)
+    @mock.patch.object(objects.BlockDeviceMapping, 'save')
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_refresh(
         self, mock_action_start, mock_get_instance,
         mock_get_bdm, mock_save_bdm, mock_compute_api, mock_volume_api,
@@ -3664,7 +3708,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         mock_get_instance.return_value = objects.Instance(
             uuid=uuidsentinel.instance,
             vm_state=obj_fields.InstanceState.STOPPED,
-            host='foo', locked=False)
+            host='fake-host', locked=False)
         mock_get_bdm.return_value = objects.BlockDeviceMapping(
             uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
             attachment_id=uuidsentinel.instance,
