@@ -1,0 +1,8 @@
+---
+deprecations:
+  - |
+    AMI, AKI, and ARI image formats are now deprecated in Nova. The special-
+    case handling for them will be removed in a future release, and Nova will
+    stop being able to boot from them at that time. The kernel-id and
+    ramdisk-id linkages will continue to be honored from base images and are
+    unaffecfted by this deprecation.
