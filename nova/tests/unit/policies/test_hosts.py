@@ -13,6 +13,7 @@
 from unittest import mock
 
 from nova.api.openstack.compute import hosts
+from nova import objects
 from nova.policies import base as base_policy
 from nova.policies import hosts as policies
 from nova.tests.unit.api.openstack import fakes
@@ -48,14 +49,18 @@ class HostsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.context.set_target_cell')
     @mock.patch('nova.objects.HostMapping.get_by_host')
-    @mock.patch('nova.objects.ComputeNode.'
-        'get_first_node_by_host_for_old_compat')
+    @mock.patch('nova.objects.ComputeNode.get_first_node_by_host_for_old_compat')  # noqa: E501
     @mock.patch('nova.compute.api.HostAPI.instance_get_all_by_host')
     def test_show_host_policy(self, mock_get, mock_node, mock_map, mock_set):
+        mock_get.return_value = []
+        mock_node.return_value = objects.ComputeNode(
+            vcpus=16, memory_mb=8192, local_gb=1000,
+            vcpus_used=4, memory_mb_used=1024, local_gb_used=10,
+        )
         rule_name = policies.POLICY_NAME % 'show'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.show,
-                                self.req, 11111)
+                                self.req, 'hostname')
 
     @mock.patch('nova.compute.api.HostAPI.set_host_enabled')
     def test_update_host_policy(self, mock_set_host_enabled):
@@ -63,28 +68,29 @@ class HostsPolicyTest(base.BasePolicyTest):
         rule_name = policies.POLICY_NAME % 'update'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.update,
-                                self.req, 11111, body={'status': 'enable'})
+                                self.req, 'hostname',
+                                body={'status': 'enable'})
 
     @mock.patch('nova.compute.api.HostAPI.host_power_action')
     def test_reboot_host_policy(self, mock_action):
         rule_name = policies.POLICY_NAME % 'reboot'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.reboot,
-                                self.req, 11111)
+                                self.req, 'hostname')
 
     @mock.patch('nova.compute.api.HostAPI.host_power_action')
     def test_shutdown_host_policy(self, mock_action):
         rule_name = policies.POLICY_NAME % 'shutdown'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.shutdown,
-                                self.req, 11111)
+                                self.req, 'hostname')
 
     @mock.patch('nova.compute.api.HostAPI.host_power_action')
     def test_startup_host_policy(self, mock_action):
         rule_name = policies.POLICY_NAME % 'start'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.startup,
-                                self.req, 11111)
+                                self.req, 'hostname')
 
 
 class HostsNoLegacyNoScopePolicyTest(HostsPolicyTest):
