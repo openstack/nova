@@ -29,6 +29,7 @@ from oslo_config import fixture as config_fixture
 from oslo_service import loopingcall
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import imageutils
+from oslo_utils.imageutils import format_inspector
 from oslo_utils import units
 from oslo_utils import uuidutils
 
@@ -562,7 +563,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         mock_exists.assert_has_calls(exist_calls)
 
-    @mock.patch('nova.image.format_inspector.detect_file_format')
+    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(os.path, 'exists', side_effect=[])
@@ -594,7 +595,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_detect_format.assert_called_once()
         mock_detect_format.return_value.safety_check.assert_called_once_with()
 
-    @mock.patch('nova.image.format_inspector.detect_file_format')
+    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(imagebackend.disk, 'extend')
@@ -622,7 +623,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertFalse(mock_extend.called)
         mock_detect_format.assert_called_once()
 
-    @mock.patch('nova.image.format_inspector.detect_file_format')
+    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
@@ -664,7 +665,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_utime.assert_called()
         mock_detect_format.assert_called_once()
 
-    @mock.patch('nova.image.format_inspector.detect_file_format')
+    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
@@ -699,7 +700,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertFalse(mock_extend.called)
         mock_detect_format.assert_called_once()
 
-    @mock.patch('nova.image.format_inspector.detect_file_format')
+    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
@@ -711,7 +712,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
                                                  mock_extend, mock_get,
                                                  mock_create, mock_sync,
                                                  mock_detect_format):
-        mock_detect_format.return_value.safety_check.return_value = False
+        mock_detect_format.return_value.safety_check.side_effect = (
+            format_inspector.SafetyCheckFailed({}))
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         mock_get.return_value = None
         fn = mock.MagicMock()

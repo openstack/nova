@@ -25,11 +25,11 @@ import os_traits
 from oslo_config import cfg
 from oslo_utils import fileutils
 from oslo_utils.fixture import uuidsentinel as uuids
+from oslo_utils.imageutils import format_inspector
 
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import exception
-from nova.image import format_inspector
 from nova import objects
 from nova.objects import fields as obj_fields
 import nova.privsep.fs
@@ -107,7 +107,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
     @mock.patch('tempfile.NamedTemporaryFile')
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.virt.images.qemu_img_info')
-    @mock.patch('nova.image.format_inspector.detect_file_format')
+    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
     def _test_create_image(
         self, path, disk_format, disk_size, mock_detect, mock_info,
         mock_execute, mock_ntf, backing_file=None, encryption=None,
