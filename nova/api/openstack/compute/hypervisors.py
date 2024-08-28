@@ -36,8 +36,6 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-UUID_FOR_ID_MIN_VERSION = '2.53'
-
 
 class HypervisorsController(wsgi.Controller):
     """The Hypervisors API controller for the OpenStack API."""
@@ -56,7 +54,7 @@ class HypervisorsController(wsgi.Controller):
         alive = self.servicegroup_api.service_is_up(service)
         # The 2.53 microversion returns the compute node uuid rather than id.
         uuid_for_id = api_version_request.is_supported(
-            req, min_version=UUID_FOR_ID_MIN_VERSION)
+            req, min_version="2.53")
 
         hyp_dict = {
             'id': hypervisor.uuid if uuid_for_id else hypervisor.id,
@@ -154,8 +152,7 @@ class HypervisorsController(wsgi.Controller):
         # The 2.53 microversion moves the search and servers routes into
         # GET /os-hypervisors and GET /os-hypervisors/detail with query
         # parameters.
-        if api_version_request.is_supported(
-                req, min_version=UUID_FOR_ID_MIN_VERSION):
+        if api_version_request.is_supported(req, min_version="2.53"):
             hypervisor_match = req.GET.get('hypervisor_hostname_pattern')
             with_servers = strutils.bool_from_string(
                 req.GET.get('with_servers', False), strict=True)
@@ -226,10 +223,9 @@ class HypervisorsController(wsgi.Controller):
                 hypervisors_dict['hypervisors_links'] = hypervisors_links
         return hypervisors_dict
 
-    @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
+    @wsgi.Controller.api_version("2.53")
     @wsgi.expected_errors((400, 404))
-    @validation.query_schema(hyper_schema.index_query_v253,
-                             UUID_FOR_ID_MIN_VERSION)
+    @validation.query_schema(hyper_schema.index_query_v253, "2.53")
     def index(self, req):
         """Starting with the 2.53 microversion, the id field in the response
         is the compute_nodes.uuid value. Also, the search and servers routes
@@ -259,10 +255,9 @@ class HypervisorsController(wsgi.Controller):
         return self._get_hypervisors(req, detail=False, limit=limit,
                                      marker=marker, links=links)
 
-    @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
+    @wsgi.Controller.api_version("2.53")
     @wsgi.expected_errors((400, 404))
-    @validation.query_schema(hyper_schema.index_query_v253,
-                             UUID_FOR_ID_MIN_VERSION)
+    @validation.query_schema(hyper_schema.index_query_v253, "2.53")
     def detail(self, req):
         """Starting with the 2.53 microversion, the id field in the response
         is the compute_nodes.uuid value. Also, the search and servers routes
@@ -304,9 +299,7 @@ class HypervisorsController(wsgi.Controller):
         :raises: webob.exc.HTTPNotFound if the requested microversion is
             less than 2.53 and the id is not an integer.
         """
-        expect_uuid = api_version_request.is_supported(
-            req, min_version=UUID_FOR_ID_MIN_VERSION)
-        if expect_uuid:
+        if api_version_request.is_supported(req, min_version="2.53"):
             if not uuidutils.is_uuid_like(hypervisor_id):
                 msg = _('Invalid uuid %s') % hypervisor_id
                 raise webob.exc.HTTPBadRequest(explanation=msg)
@@ -318,10 +311,9 @@ class HypervisorsController(wsgi.Controller):
                        hypervisor_id)
                 raise webob.exc.HTTPNotFound(explanation=msg)
 
-    @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
+    @wsgi.Controller.api_version("2.53")
     @wsgi.expected_errors((400, 404))
-    @validation.query_schema(hyper_schema.show_query_v253,
-                             UUID_FOR_ID_MIN_VERSION)
+    @validation.query_schema(hyper_schema.show_query_v253, "2.53")
     def show(self, req, id):
         """The 2.53 microversion requires that the id is a uuid and as a result
         it can also return a 400 response if an invalid uuid is passed.

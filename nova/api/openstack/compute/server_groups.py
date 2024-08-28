@@ -40,9 +40,6 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 
-GROUP_POLICY_OBJ_MICROVERSION = "2.64"
-
-
 def _get_not_deleted(context, uuids):
     mappings = objects.InstanceMappingList.get_by_instance_uuids(
         context, uuids)
@@ -97,8 +94,7 @@ class ServerGroupController(wsgi.Controller):
         server_group = {}
         server_group['id'] = group.uuid
         server_group['name'] = group.name
-        if api_version_request.is_supported(
-                req, min_version=GROUP_POLICY_OBJ_MICROVERSION):
+        if api_version_request.is_supported(req, min_version='2.64'):
             server_group['policy'] = group.policy
             server_group['rules'] = group.rules
         else:
@@ -183,7 +179,7 @@ class ServerGroupController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 409))
     @validation.schema(schema.create, "2.0", "2.14")
     @validation.schema(schema.create_v215, "2.15", "2.63")
-    @validation.schema(schema.create_v264, GROUP_POLICY_OBJ_MICROVERSION)
+    @validation.schema(schema.create_v264, "2.64")
     def create(self, req, body):
         """Creates a new server group."""
         context = req.environ['nova.context']
@@ -203,8 +199,7 @@ class ServerGroupController(wsgi.Controller):
 
         vals = body['server_group']
 
-        if api_version_request.is_supported(
-                req, GROUP_POLICY_OBJ_MICROVERSION):
+        if api_version_request.is_supported(req, "2.64"):
             policy = vals['policy']
             rules = vals.get('rules', {})
             if policy != 'anti-affinity' and rules:

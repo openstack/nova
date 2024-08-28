@@ -45,7 +45,6 @@ from nova.policies import servers as server_policies
 from nova import utils
 
 TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
-PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION = '2.69'
 PAGING_SORTING_PARAMS = ('sort_key', 'sort_dir', 'limit', 'marker')
 
 CONF = nova.conf.CONF
@@ -148,7 +147,7 @@ class ServersController(wsgi.Controller):
     @staticmethod
     def _is_cell_down_supported(req, search_opts):
         cell_down_support = api_version_request.is_supported(
-            req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
+            req, min_version='2.69')
 
         if cell_down_support:
             # NOTE(tssurya): Minimal constructs would be returned from the down
@@ -464,7 +463,7 @@ class ServersController(wsgi.Controller):
         """Returns server details by server id."""
         context = req.environ['nova.context']
         cell_down_support = api_version_request.is_supported(
-            req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
+            req, min_version='2.69')
         show_server_groups = api_version_request.is_supported(
             req, min_version='2.71')
 
