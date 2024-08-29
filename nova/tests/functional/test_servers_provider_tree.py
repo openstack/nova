@@ -47,6 +47,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
             os_traits.COMPUTE_TRUSTED_CERTS,
             os_traits.COMPUTE_ADDRESS_SPACE_EMULATED,
             os_traits.COMPUTE_ADDRESS_SPACE_PASSTHROUGH,
+            os_traits.COMPUTE_SECURITY_STATELESS_FIRMWARE,
         ]
     ])
 

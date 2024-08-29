@@ -167,6 +167,8 @@ CAPABILITY_TRAITS_MAP = {
         os_traits.COMPUTE_ADDRESS_SPACE_PASSTHROUGH,
     "supports_address_space_emulated":
         os_traits.COMPUTE_ADDRESS_SPACE_EMULATED,
+    "supports_stateless_firmware":
+        os_traits.COMPUTE_SECURITY_STATELESS_FIRMWARE,
 }
 
 
