@@ -194,7 +194,7 @@ def response_body_schema(
                     kwargs
                 )
             except exception.ValidationError:
-                if CONF.api.response_validation == 'warning':
+                if CONF.api.response_validation == 'warn':
                     LOG.exception('Schema failed to validate')
                 else:
                     raise
