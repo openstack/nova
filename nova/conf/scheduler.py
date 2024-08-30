@@ -114,9 +114,15 @@ request, and request results from placement be limited to that aggregate.
 Multiple tenants may be added to a single aggregate by appending a serial
 number to the key, such as ``filter_tenant_id:123``.
 
-The matching aggregate UUID must be mirrored in placement for proper
-operation. If no host aggregate with the tenant id is found, or that
-aggregate does not match one in placement, the result will be the same
+The matching aggregate UUID must be mirrored in placement for proper operation.
+If the aggregate does not match one in placement, the result will be the same
+as not finding any suitable hosts for the request.
+
+If no host aggregate with the tenant id is found and ``[scheduler]
+placement_aggregate_required_for_tenants = False``, the request will not be
+restricted to only aggregates matching the tenant. If no host aggregate with
+the tenant id is found and ``[scheduler]
+placement_aggregate_required_for_tenants = True``, the result will be the same
 as not finding any suitable hosts for the request.
 
 Possible values:
