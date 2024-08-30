@@ -1308,6 +1308,33 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest.from_request_spec(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
+    def test_resource_request_from_request_spec_with_vtpm_version_only(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={'hw:tpm_version': '1.2'},
+        )
+        image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                hw_tpm_version='1.2',
+            )
+        )
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            required_traits={
+                'COMPUTE_SECURITY_TPM_1_2',
+                'COMPUTE_SECURITY_TPM_TIS',
+            },
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        rs = objects.RequestSpec(flavor=flavor, image=image, is_bfv=False)
+        rr = utils.ResourceRequest.from_request_spec(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+
     def test_resource_request_from_request_spec_with_vtpm_1_2(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
@@ -1322,7 +1349,10 @@ class TestUtils(TestUtilsBase):
         expected = FakeResourceRequest()
         expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
-            required_traits={'COMPUTE_SECURITY_TPM_1_2'},
+            required_traits={
+                'COMPUTE_SECURITY_TPM_1_2',
+                'COMPUTE_SECURITY_TPM_TIS',
+            },
             resources={
                 'VCPU': 1,
                 'MEMORY_MB': 1024,
@@ -1347,7 +1377,10 @@ class TestUtils(TestUtilsBase):
         expected = FakeResourceRequest()
         expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
-            required_traits={'COMPUTE_SECURITY_TPM_2_0'},
+            required_traits={
+                'COMPUTE_SECURITY_TPM_2_0',
+                'COMPUTE_SECURITY_TPM_CRB',
+            },
             resources={
                 'VCPU': 1,
                 'MEMORY_MB': 1024,
