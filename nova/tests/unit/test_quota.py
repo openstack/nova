@@ -107,7 +107,10 @@ class QuotaIntegrationTestCase(test.TestCase):
         inst_map.create()
         return inst
 
-    def test_too_many_instances(self):
+    @mock.patch.object(objects.FlavorList, "get_by_id")
+    def test_too_many_instances(self, mock_flavors):
+        mock_flavors.return_value = {self.flavor.id: {'name': self.flavor.name,
+                                                      'separate': False}}
         for i in range(CONF.quota.instances):
             self._create_instance()
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
@@ -125,7 +128,10 @@ class QuotaIntegrationTestCase(test.TestCase):
         else:
             self.fail('Expected OverQuota exception')
 
-    def test_too_many_cores(self):
+    @mock.patch.object(objects.FlavorList, "get_by_id")
+    def test_too_many_cores(self, mock_flavors):
+        mock_flavors.return_value = {self.flavor.id: {'name': self.flavor.name,
+                                                      'separate': False}}
         self._create_instance()
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         try:
@@ -648,13 +654,20 @@ class DbQuotaDriverTestCase(test.TestCase):
     def _stub_quota_class_get_all_by_name(self):
         # Stub out quota_class_get_all_by_name
         def fake_qcgabn(cls, context, quota_class):
-            self.calls.append('quota_class_get_all_by_name')
-            self.assertEqual(quota_class, 'test_class')
+            # we have an automatic call to retrieve "flavors" quota to fill the
+            # QUOTAS._resources dict when someone accesses QUOTAS.resources"
+            # for the first time. We don't want that call recorded, because any
+            # test could be the first one and this would make random tests
+            # fail.
+            if quota_class != 'flavors':
+                self.calls.append('quota_class_get_all_by_name')
+                self.assertEqual(quota_class, 'test_class')
             return dict(
                 instances=5,
                 ram=25 * 1024,
                 metadata_items=64,
                 injected_file_content_bytes=5 * 1024,
+                class_name=quota_class
                 )
         self.stub_out('nova.objects.Quotas.get_all_class_by_name', fake_qcgabn)
 
@@ -775,6 +788,9 @@ class DbQuotaDriverTestCase(test.TestCase):
                 side_effect=_get_fake_get_usages())
     def test_get_user_quotas(self, mock_get_usages):
         self.maxDiff = None
+        # we don't support context-based quota_classes, so we won't get the
+        # get_all_class_by_name() stub called, so we get the default resources
+        # and not the "test_class" ones.
         self._stub_get_by_project_and_user()
         ctxt = FakeContext('test_project', 'test_class')
         result = self.driver.get_user_quotas(
@@ -783,14 +799,13 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
                 'quota_get_all_by_project',
-                'quota_class_get_all_by_name',
                 ])
         mock_get_usages.assert_called_once_with(ctxt, quota.QUOTAS._resources,
                                                 'test_project',
                                                 user_id='fake_user')
         self.assertEqual(result, dict(
                 instances=dict(
-                    limit=5,
+                    limit=10,
                     in_use=2,
                     ),
                 cores=dict(
@@ -798,7 +813,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=4,
                     ),
                 ram=dict(
-                    limit=25 * 1024,
+                    limit=50 * 1024,
                     in_use=10 * 1024,
                     ),
                floating_ips=dict(
@@ -810,7 +825,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=0,
                     ),
                 metadata_items=dict(
-                    limit=64,
+                    limit=128,
                     in_use=0,
                     ),
                 injected_files=dict(
@@ -818,7 +833,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=0,
                     ),
                 injected_file_content_bytes=dict(
-                    limit=5 * 1024,
+                    limit=10 * 1024,
                     in_use=0,
                     ),
                 injected_file_path_bytes=dict(
@@ -893,7 +908,6 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project',
-                'quota_class_get_all_by_name',
                 'quota_class_get_default',
                 ])
         mock_get_usages.assert_called_once_with(ctxt, quota.QUOTAS._resources,
@@ -968,7 +982,6 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project',
-                'quota_class_get_all_by_name',
                 'quota_class_get_default',
                 'quota_get_all',
                 ])
@@ -1350,6 +1363,9 @@ class DbQuotaDriverTestCase(test.TestCase):
                 ))
 
     def test_get_user_quotas_no_usages(self):
+        # we don't support context-based quota_classes, so we won't get the
+        # get_all_class_by_name() stub called, so we get the default resources
+        # and not the "test_class" ones.
         self._stub_get_by_project_and_user()
         result = self.driver.get_user_quotas(
             FakeContext('test_project', 'test_class'),
@@ -1358,17 +1374,16 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
                 'quota_get_all_by_project',
-                'quota_class_get_all_by_name',
                 ])
         self.assertEqual(result, dict(
                 instances=dict(
-                    limit=5,
+                    limit=10,
                     ),
                 cores=dict(
                     limit=10,
                     ),
                 ram=dict(
-                    limit=25 * 1024,
+                    limit=50 * 1024,
                     ),
                 floating_ips=dict(
                     limit=-1,
@@ -1377,13 +1392,13 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=-1,
                     ),
                 metadata_items=dict(
-                    limit=64,
+                    limit=128,
                     ),
                 injected_files=dict(
                     limit=2,
                     ),
                 injected_file_content_bytes=dict(
-                    limit=5 * 1024,
+                    limit=10 * 1024,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
@@ -1413,7 +1428,6 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project',
-                'quota_class_get_all_by_name',
                 'quota_class_get_default',
                 ])
         self.assertEqual(result, dict(

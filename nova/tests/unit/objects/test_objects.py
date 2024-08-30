@@ -1096,7 +1096,7 @@ object_data = {
     'EC2Ids': '1.0-474ee1094c7ec16f8ce657595d8c49d9',
     'EC2InstanceMapping': '1.0-a4556eb5c5e94c045fe84f49cf71644f',
     'Flavor': '1.2-4ce99b41327bb230262e5a8f45ff0ce3',
-    'FlavorList': '1.1-52b5928600e7ca973aa4fc1e46f3934c',
+    'FlavorList': '1.1-912b5ce24d48bc60cc9db96104f95581',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HostMappingList': '1.1-18ac2bfb8c1eb5545bed856da58a79bc',
     'HVSpec': '1.2-de06bcec472a2f04966b855a49c46b41',

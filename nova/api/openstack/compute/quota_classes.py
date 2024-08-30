@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 import webob
 
 from nova.api.openstack.compute.schemas import quota_classes
@@ -46,11 +45,8 @@ FILTERED_QUOTAS_2_57.extend(['injected_files', 'injected_file_content_bytes',
 
 class QuotaClassSetsController(wsgi.Controller):
 
-    supported_quotas = []
-
     def __init__(self):
         super(QuotaClassSetsController, self).__init__()
-        self.supported_quotas = QUOTAS.resources
 
     def _format_quota_set(self, quota_class, quota_set, filtered_quotas=None,
                           exclude_server_groups=False):
@@ -60,7 +56,7 @@ class QuotaClassSetsController(wsgi.Controller):
             result = dict(id=str(quota_class))
         else:
             result = {}
-        original_quotas = copy.deepcopy(self.supported_quotas)
+        original_quotas = QUOTAS.resources
         if filtered_quotas:
             original_quotas = [resource for resource in original_quotas
                                if resource not in filtered_quotas]
@@ -148,3 +144,36 @@ class QuotaClassSetsController(wsgi.Controller):
         values = QUOTAS.get_class_quotas(context, quota_class)
         return self._format_quota_set(None, values, filtered_quotas,
                                       exclude_server_groups)
+
+    @wsgi.Controller.api_version('2.1')
+    @wsgi.response(201)
+    @wsgi.expected_errors((400))
+    @validation.schema(quota_classes.create)
+    def create(self, req, id, body):
+        """Create a quota class resource if it does not exist
+
+        This method is similar to update(), but only creates a quota class
+        resource and never updates the value of an existing quota class. It is
+        thus safe to call this endpoint to ensure a quota class resource exists
+        without touching possibly changed values.
+        """
+        context = req.environ['nova.context']
+        context.can(qcs_policies.POLICY_ROOT % 'create', target={})
+
+        try:
+            utils.check_string_length(id, 'quota_class_name',
+                                      min_length=1, max_length=255)
+        except exception.InvalidInput as e:
+            raise webob.exc.HTTPBadRequest(
+                explanation=e.format_message())
+
+        quota_class = id
+
+        for key, value in body['quota_class_set'].items():
+            try:
+                objects.Quotas.create_class(context, quota_class, key, value)
+            except exception.QuotaClassExists:
+                pass
+
+        values = QUOTAS.get_class_quotas(context, id)
+        return self._format_quota_set(None, values, None)

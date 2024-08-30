@@ -41,6 +41,7 @@ class ViewBuilder(object):
         absolute_limits = self._build_absolute_limits(
             quotas, filtered_limits,
             max_image_meta=max_image_meta)
+        per_flavor_limits = self._build_per_flavor_limits(quotas)
 
         used_limits = self._build_used_limits(
             request, quotas, filtered_limits)
@@ -50,6 +51,7 @@ class ViewBuilder(object):
             "limits": {
                 "rate": [],
                 "absolute": absolute_limits,
+                "absolutePerFlavor": per_flavor_limits,
             },
         }
 
@@ -91,3 +93,15 @@ class ViewBuilder(object):
                 used_limits[display_name] = quotas[key]['in_use']
 
         return used_limits
+
+    def _build_per_flavor_limits(self, quotas):
+        limits = {}
+        for name, value in quotas.items():
+            if name.startswith('instances_'):
+                flavorname = name[10:]  # remove instances_ prefix
+                limits[flavorname] = {
+                    'maxTotalInstances': value['limit'],
+                    'totalInstancesUsed': value['in_use'],
+                }
+
+        return limits

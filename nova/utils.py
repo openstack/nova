@@ -78,6 +78,9 @@ SM_SKIP_KEYS = (
     'img_mappings', 'img_block_device_mapping',
 )
 
+QUOTA_SEPARATE_KEY = 'quota:separate'
+QUOTA_INSTANCE_ONLY_KEY = 'quota:instance_only'
+
 _FILE_CACHE = {}
 
 _SERVICE_TYPES = service_types.ServiceTypes()

@@ -270,6 +270,15 @@ Operators who want to avoid the performance hit from the EXISTS queries should
 wait to set this configuration option to True until after they have completed
 their online data migrations via ``nova-manage db online_data_migrations``.
 """),
+    cfg.IntOpt('sap_resources_cache_time',
+        min=0,
+        default=600,
+        help="""
+Time in seconds to cache the resources dict
+
+This option configures how often we re-read the flavors from DB to update our
+quota resources based on their `extra_specs` properties.
+"""),
 ]
 
 

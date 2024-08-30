@@ -30,6 +30,7 @@ from nova.notifications.objects import flavor as flavor_notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
+from nova import utils
 
 
 OPTIONAL_FIELDS = ['extra_specs', 'projects']
@@ -656,3 +657,23 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.Flavor,
                                   api_db_flavors,
                                   expected_attrs=['extra_specs'])
+
+    @base.remotable_classmethod
+    def get_by_id(cls, context, ids):
+
+        def is_separate(extra_specs):
+            for spec in extra_specs:
+                if spec.key == utils.QUOTA_SEPARATE_KEY \
+                        and spec.value == 'true':
+                    return True
+            return False
+
+        query = Flavor._flavor_get_query_from_db(context).\
+            filter_by(disabled=False).\
+            filter(api_models.Flavors.id.in_(ids))
+
+        res = {}
+        for x in query:
+            res.update({x.id: {'name': x.name,
+                               'separate': is_separate(x.extra_specs)}})
+        return res

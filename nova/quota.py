@@ -22,6 +22,7 @@ from oslo_log import log as logging
 from oslo_utils import importutils
 from sqlalchemy import sql
 
+from nova import cache_utils as cache
 import nova.conf
 from nova import context as nova_context
 from nova.db.api import api as api_db_api
@@ -88,10 +89,25 @@ class DbQuotaDriver(object):
         :param quota_class: The name of the quota class to return
                             quotas for.
         """
+        # NOTE(jkulik): Our way of doing this is, that we merge all resources
+        # from our supported custom quota classes (currently only "flavors")
+        # into the default resources. Therefore, requesting the class quotas
+        # for the "default" quota class needs to fetch the "flavors" quotas,
+        # too.
 
         quotas = {}
-        class_quotas = objects.Quotas.get_all_class_by_name(context,
-                                                            quota_class)
+        class_quotas = {}
+        if quota_class == 'default':
+            class_quotas.update(objects.Quotas.get_all_class_by_name(context,
+                                                                    'flavors'))
+
+        # `class_quotas` contains the key "class_name". If we got "flavor"
+        # quotas above its value will be "flavor", but we want to make sure
+        # that key gets updated to the requested quota_class "default".
+        # So the order is important here.
+        class_quotas.update(objects.Quotas.get_all_class_by_name(context,
+                                                                 quota_class))
+
         for resource in resources.values():
             quotas[resource.name] = class_quotas.get(resource.name,
                                                      resource.default)
@@ -106,8 +122,11 @@ class DbQuotaDriver(object):
         # matches the one in the context, we use the quota_class from
         # the context, otherwise, we use the provided quota_class (if
         # any)
-        if project_id == context.project_id:
-            quota_class = context.quota_class
+        # NOTE(jkulik): The original code supported context.quota_class here,
+        # but we cannot support context.quota_class, because we want to
+        # piggy-back on the quota-classes API to dynamically define more
+        # default quotas - but keep them stowed away in a class for easier
+        # management.
         if quota_class:
             class_quotas = objects.Quotas.get_all_class_by_name(context,
                                                                 quota_class)
@@ -171,12 +190,19 @@ class DbQuotaDriver(object):
             # such as AbsoluteResources.
             if not isinstance(resource, CountableResource):
                 continue
-            if resource.name in usages:
+            if resource.name in usages or \
+                    isinstance(resource, SAPCustomResource) and \
+                    resource.usage_check_key in usages:
                 # This is needed because for any of the resources:
                 # ('instances', 'cores', 'ram'), they are counted at the same
                 # time for efficiency (query the instances table once instead
                 # of multiple times). So, a count of any one of them contains
                 # counts for the others and we can avoid re-counting things.
+                # NOTE(jkulik): SAP custom resources do not necessarily add
+                # their key to the usages if the user/project does not use any
+                # of them. Therefore, we check for the pre-defined key that
+                # should always be there if our usage-reporting function was
+                # called already.
                 continue
             if resource.name in ('key_pairs', 'server_group_members'):
                 # These per user resources are special cases whose usages
@@ -385,17 +411,22 @@ class DbQuotaDriver(object):
                       {'user_id': user_id, 'project_id': project_id,
                        'keys': keys})
             # Grab and return the quotas (without usages)
+            # NOTE(jkulik): The original code would pass context.quota_class
+            # here, but our usage for quota-classes as extension for the
+            # default quotas does not allow this.
             quotas = self.get_user_quotas(context, sub_resources,
                                           project_id, user_id,
-                                          context.quota_class, usages=False,
+                                          usages=False,
                                           project_quotas=project_quotas)
         else:
             LOG.debug('Getting quotas for project %(project_id)s. Resources: '
                       '%(keys)s', {'project_id': project_id, 'keys': keys})
             # Grab and return the quotas (without usages)
+            # NOTE(jkulik): The original code would pass context.quota_class
+            # here, but our usage for quota-classes as extension for the
+            # default quotas does not allow this.
             quotas = self.get_project_quotas(context, sub_resources,
                                              project_id,
-                                             context.quota_class,
                                              usages=False,
                                              project_quotas=project_quotas)
 
@@ -873,22 +904,29 @@ class UnifiedLimitsDriver(NoopQuotaDriver):
 class BaseResource(object):
     """Describe a single resource for quota checking."""
 
-    def __init__(self, name, flag=None):
+    def __init__(self, name, flag=None, default=None):
         """Initializes a Resource.
 
         :param name: The name of the resource, i.e., "instances".
         :param flag: The name of the flag or configuration option
                      which specifies the default value of the quota
                      for this resource.
+        :param default: Explicitly overwrite the default value. Used for
+                        handling dynamic resources e.g. via QUOTA_SEPARATE_KEY.
         """
 
         self.name = name
         self.flag = flag
+        self.default_value = default
 
     @property
     def default(self):
         """Return the default value of the quota."""
-        return CONF.quota[self.flag] if self.flag else -1
+        if self.flag:
+            return CONF.quota[self.flag]
+        if self.default_value is not None:
+            return self.default_value
+        return -1
 
 
 class AbsoluteResource(BaseResource):
@@ -901,7 +939,7 @@ class CountableResource(AbsoluteResource):
     project ID.
     """
 
-    def __init__(self, name, count_as_dict, flag=None):
+    def __init__(self, name, count_as_dict, flag=None, default=None):
         """Initializes a CountableResource.
 
         Countable resources are those resources which directly
@@ -948,10 +986,26 @@ class CountableResource(AbsoluteResource):
         :param flag: The name of the flag or configuration option
                      which specifies the default value of the quota
                      for this resource.
+        :param default: Explicitly overwrite the default value. Used for
+                        handling dynamic resources e.g. via QUOTA_SEPARATE_KEY
         """
 
-        super(CountableResource, self).__init__(name, flag=flag)
+        super(CountableResource, self).__init__(name, flag=flag,
+                                                default=default)
         self.count_as_dict = count_as_dict
+
+
+class SAPCustomResource(CountableResource):
+    """Extend CountableResource to check already included usages
+
+    We can use `usage_check_key` to see if we have to run the associated
+    function to update the usage report, because some of our custom resources
+    only add a key if the project/user uses any of these resources.
+    """
+
+    def __init__(self, *args, usage_check_key='instances', **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usage_check_key = usage_check_key
 
 
 class QuotaEngine(object):
@@ -1042,10 +1096,9 @@ class QuotaEngine(object):
         """
 
         return self._driver.get_project_quotas(context, self._resources,
-                                              project_id,
-                                              quota_class=quota_class,
-                                              usages=usages,
-                                              remains=remains)
+                                               project_id,
+                                               quota_class=quota_class,
+                                               usages=usages)
 
     def get_settable_quotas(self, context, project_id, user_id=None):
         """Given a list of resources, retrieve the range of settable quotas for
@@ -1055,7 +1108,6 @@ class QuotaEngine(object):
         :param project_id: The ID of the project to return quotas for.
         :param user_id: The ID of the user to return quotas for.
         """
-
         return self._driver.get_settable_quotas(context, self._resources,
                                                 project_id,
                                                 user_id=user_id)
@@ -1157,6 +1209,67 @@ class QuotaEngine(object):
 
     def get_reserved(self):
         return self._driver.get_reserved()
+
+
+class SAPQuotaEngine(QuotaEngine):
+    """SAP specific quota engine
+
+    We extend the resources dynamically on startup based on information in
+    flavors' extra_specs. Through that, we create instance-type quota of the
+    form "instances_<flavor name>".
+
+    Since an update to the DB should update our view, we have to re-build the
+    resources regularly. Therefore, we use a cache. Depending on the cache
+    backend, the resources can be different in different processes until their
+    individual caches expire.
+    """
+    _CACHE_KEY = 'quota:resources'
+
+    def __init__(self, quota_driver=None, resources=None):
+        self._original_resources = {}
+        self.__cache = None
+        super().__init__(resources=resources, quota_driver=quota_driver)
+
+    @property
+    def _cache(self):
+        if not self.__cache:
+            expiration_time = CONF.quota.sap_resources_cache_time
+            self.__cache = cache.get_client(
+                                    expiration_time=expiration_time)
+        return self.__cache
+
+    @property
+    def _resources(self):
+        resources = self._cache.get(self._CACHE_KEY)
+        if resources is None:
+            resources = {}
+            self.update_resources_from_flavors(resources)
+            resources.update(self._original_resources)
+            self._cache.set(self._CACHE_KEY, resources)
+        return resources
+
+    @_resources.setter
+    def _resources(self, resources):
+        self._original_resources = resources
+        self._cache.delete(self._CACHE_KEY)
+
+    def update_resources_from_flavors(self, resources):
+        """Update the resources dict to contain flavor based resources
+
+        Flavors can contain properties in their extra_specs which define that
+        we need custom quota resources for them e.g. separate instances quota.
+        """
+        additional_resources = set()
+        ctx = nova_context.get_admin_context()
+        for flavor in objects.FlavorList.get_all(ctx):
+            extra_specs = flavor['extra_specs']
+
+            if extra_specs.get(utils.QUOTA_SEPARATE_KEY) == 'true':
+                additional_resources.add(f"instances_{flavor.name}")
+
+        for resource_name in additional_resources:
+            resources[resource_name] = SAPCustomResource(resource_name,
+                _instances_cores_ram_count, default=0)
 
 
 @api_db_api.context_manager.reader
@@ -1340,10 +1453,12 @@ def _instances_cores_ram_count_legacy(context, project_id, user_id=None):
     for result in results.values():
         if not nova_context.is_cell_failure_sentinel(result):
             for resource, count in result['project'].items():
-                total_counts['project'][resource] += count
+                total_counts['project'][resource] = \
+                    total_counts['project'].get(resource, 0) + count
             if user_id:
                 for resource, count in result['user'].items():
-                    total_counts['user'][resource] += count
+                    total_counts['user'][resource] = \
+                        total_counts['user'].get(resource, 0) + count
     return total_counts
 
 
@@ -1424,7 +1539,7 @@ def _server_group_count(context, project_id, user_id=None):
                                                 user_id=user_id)
 
 
-QUOTAS = QuotaEngine(
+QUOTAS = SAPQuotaEngine(
     resources=[
         CountableResource(
             'instances', _instances_cores_ram_count, 'instances'),

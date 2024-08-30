@@ -66,6 +66,10 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
                     'instances': 50,
                     'cores': 50}
                }
+        mock_update.return_value = {
+            'instances': {'minimum': 0, 'maximum': 100},
+            'cores': {'minimum': 0, 'maximum': 100}
+        }
         for cxtx in self.project_admin_authorized_contexts:
             req = fakes.HTTPRequest.blank('')
             req.environ['nova.context'] = cxtx

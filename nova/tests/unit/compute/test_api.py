@@ -232,7 +232,7 @@ class _ComputeAPIUnitTestMixIn(object):
         get_image.return_value = (None, {})
         check_requested_networks.return_value = 1
 
-        flavor = self._create_flavor()
+        flavor = self._create_flavor(extra_specs={})
 
         port = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
@@ -258,7 +258,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                             mock_limit_check, mock_count):
         image_href = "image_href"
         image_id = 0
-        flavor = self._create_flavor()
+        flavor = self._create_flavor(extra_specs={})
 
         quotas = {'instances': 1, 'cores': 1, 'ram': 1}
         quota_exception = exception.OverQuota(quotas=quotas,
@@ -4594,7 +4594,8 @@ class _ComputeAPIUnitTestMixIn(object):
         proj_count = {'instances': 1, 'cores': 1, 'ram': 512}
         user_count = proj_count.copy()
         quota_count.return_value = {'project': proj_count, 'user': user_count}
-        instance = self._create_instance_obj()
+        fake_flavor = self._create_flavor(extra_specs={})
+        instance = self._create_instance_obj(flavor=fake_flavor)
         instance.vm_state = vm_states.SOFT_DELETED
         instance.task_state = None
         instance.save()
@@ -4636,7 +4637,8 @@ class _ComputeAPIUnitTestMixIn(object):
         proj_count = {'instances': 1, 'cores': 1, 'ram': 512}
         user_count = proj_count.copy()
         quota_count.return_value = {'project': proj_count, 'user': user_count}
-        instance = self._create_instance_obj()
+        fake_flavor = self._create_flavor(extra_specs={})
+        instance = self._create_instance_obj(flavor=fake_flavor)
         instance.vm_state = vm_states.SOFT_DELETED
         instance.task_state = None
         instance.save()

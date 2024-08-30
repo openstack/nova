@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import datetime
 
 from unittest import mock
 
@@ -155,12 +156,39 @@ class QuotaTestCase(test.NoDBTestCase):
         mapping1.create()
         mapping2.create()
 
+        def _create_flavor(name, flavorid):
+            updates = {'flavorid': flavorid,
+                      'name': name,
+                      'memory_mb': 512,
+                      'vcpus': 1,
+                      'vcpu_weight': None,
+                      'root_gb': 1,
+                      'ephemeral_gb': 0,
+                      'rxtx_factor': 1,
+                      'swap': 0,
+                      'deleted': 0,
+                      'disabled': False,
+                      'is_public': True,
+                      'deleted_at': None,
+                      'created_at': datetime.datetime(2012, 1, 19, 18,
+                                                      49, 30, 877329),
+                      'updated_at': None,
+                      'description': None,
+                      'extra_specs': {}
+                     }
+            flavor = objects.Flavor(context=ctxt, **updates)
+            flavor.create()
+            return flavor
+
         # Create an instance in cell1
         with context.target_cell(ctxt, mapping1) as cctxt:
+            flavor = _create_flavor('123', 'm1.tiny')
             instance = objects.Instance(context=cctxt,
                                         project_id='fake-project',
                                         user_id='fake-user',
-                                        vcpus=2, memory_mb=512)
+                                        vcpus=2, memory_mb=512,
+                                        flavor=flavor,
+                                        instance_type_id=flavor.id)
             instance.create()
             # create mapping for the instance since we query only those cells
             # in which the project has instances based on the instance_mappings
@@ -172,10 +200,13 @@ class QuotaTestCase(test.NoDBTestCase):
 
         # Create an instance in cell2
         with context.target_cell(ctxt, mapping2) as cctxt:
+            flavor = _create_flavor(17, 'm1.big')
             instance = objects.Instance(context=cctxt,
                                         project_id='fake-project',
                                         user_id='fake-user',
-                                        vcpus=4, memory_mb=1024)
+                                        vcpus=4, memory_mb=1024,
+                                        flavor=flavor,
+                                        instance_type_id=flavor.id)
             instance.create()
             # create mapping for the instance since we query only those cells
             # in which the project has instances based on the instance_mappings
@@ -187,10 +218,13 @@ class QuotaTestCase(test.NoDBTestCase):
 
         # Create an instance in cell2 for a different user
         with context.target_cell(ctxt, mapping2) as cctxt:
+            flavor = _create_flavor('this-is-a-uuid', 'm1.extrabig')
             instance = objects.Instance(context=cctxt,
                                         project_id='fake-project',
                                         user_id='other-fake-user',
-                                        vcpus=4, memory_mb=1024)
+                                        vcpus=4, memory_mb=1024,
+                                        flavor=flavor,
+                                        instance_type_id=flavor.id)
             instance.create()
             # create mapping for the instance since we query only those cells
             # in which the project has instances based on the instance_mappings
@@ -199,6 +233,8 @@ class QuotaTestCase(test.NoDBTestCase):
                                          cell_mapping=mapping2,
                                          project_id='fake-project')
             im.create()
+            # simulate an instance with a deleted flavor
+            flavor.destroy()
 
         # Count instances, cores, and ram across cells (all cells)
         count = quota._instances_cores_ram_count(ctxt, 'fake-project',

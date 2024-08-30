@@ -222,6 +222,13 @@ class QuotaSetsController(wsgi.Controller):
             # quota, this check will be ignored if admin want to force
             # update
             value = int(value)
+
+            if key not in settable_quotas:
+                raise webob.exc.HTTPBadRequest(
+                    explanation=_('The quota {} is not available, please '
+                        'restart nova-api if recently seeded '
+                        'flavor').format(key))
+
             if not force_update:
                 minimum = settable_quotas[key]['minimum']
                 maximum = settable_quotas[key]['maximum']

@@ -44,6 +44,17 @@ quota_class_sets_policies = [
             }
         ],
         scope_types=['project']),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'create',
+        check_str=base.ADMIN,
+        description='Ensure quotas exist for a quota class',
+        operations=[
+            {
+                'method': 'POST',
+                'path': '/os-quota-class-sets/{quota_class}'
+            }
+        ],
+        scope_types=['project']),
 ]
 
 

@@ -165,7 +165,7 @@ class QuotaClassSetsTestV257(QuotaClassSetsTestV250):
         self.filtered_quotas.extend(quota_classes_v21.FILTERED_QUOTAS_2_57)
 
 
-class NoopQuotaClassesTest(test.NoDBTestCase):
+class NoopQuotaClassesTest(test.TestCase):
     quota_driver = "nova.quota.NoopQuotaDriver"
 
     def setUp(self):
