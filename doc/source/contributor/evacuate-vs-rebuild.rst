@@ -25,12 +25,11 @@ evacuate process.
 of the server (the user) performed on the **same** compute host to change
 certain aspects of the server, most notably using a **different** image. Note
 that the image does not *have* to change and in the case of volume-backed
-servers the image `currently cannot change`_. Other attributes of the server
-can be changed as well such as ``key_name`` and ``user_data``. See the
-`rebuild API`_ reference for full usage details. When a user rebuilds a server
-they want to change it which requires re-spawning the guest in the hypervisor
-but retain the UUID, volumes and ports attached to the server. For a
-non-volume-backed server the root disk image is rebuilt.
+servers the image `can be changed`_ with microversion `2.93`_. Other attributes
+of the server can be changed as well such as ``key_name`` and ``user_data``.
+See the `rebuild API`_ reference for full usage details. When a user rebuilds
+a server they want to change it which requires re-spawning the guest in the
+hypervisor but retain the UUID, volumes and ports attached to the server.
 
 Scheduling
 ~~~~~~~~~~
@@ -47,7 +46,7 @@ Image
 
 As noted above, the image that the server uses during an evacuate operation
 does not change. The image used to rebuild a server *may* change but does not
-have to and in the case of volume-backed servers *cannot* change.
+have to.
 
 Resource claims
 ~~~~~~~~~~~~~~~
@@ -92,7 +91,8 @@ server allocations remain intact.
 .. _rebuild API: https://docs.openstack.org/api-ref/compute/#rebuild-server-rebuild-action
 .. _conductor code: https://opendev.org/openstack/nova/src/tag/19.0.0/nova/conductor/manager.py#L944
 .. _compute code: https://opendev.org/openstack/nova/src/tag/19.0.0/nova/compute/manager.py#L3052
-.. _currently cannot change: https://specs.openstack.org/openstack/nova-specs/specs/train/approved/volume-backed-server-rebuild.html
+.. _can be changed: https://specs.openstack.org/openstack/nova-specs/specs/zed/implemented/volume-backed-server-rebuild.html
+.. _2.93: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-zed
 .. _rebuilding with a different image: https://opendev.org/openstack/nova/src/tag/19.0.0/nova/compute/api.py#L3414
 .. _claims: https://opendev.org/openstack/nova/src/tag/19.0.0/nova/compute/claims.py
 .. _rebuild claim: https://opendev.org/openstack/nova/src/tag/19.0.0/nova/compute/manager.py#L3104
