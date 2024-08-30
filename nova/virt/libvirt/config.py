@@ -2188,6 +2188,7 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
         self.autoport = True
         self.keymap = None
         self.listen = None
+        self.secure = None
 
         self.image_compression = None
         self.jpeg_compression = None
@@ -2222,6 +2223,11 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
             if self.streaming_mode is not None:
                 dev.append(etree.Element(
                     'streaming', mode=self.streaming_mode))
+            if self.secure:
+                for channel in ['main', 'display', 'inputs', 'cursor',
+                                'playback', 'record', 'smartcard', 'usbredir']:
+                    dev.append(etree.Element('channel', name=channel,
+                                             mode='secure'))
 
         return dev
 

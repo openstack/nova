@@ -7711,6 +7711,7 @@ class LibvirtDriver(driver.ComputeDriver):
             graphics.zlib_compression = CONF.spice.zlib_compression
             graphics.playback_compression = CONF.spice.playback_compression
             graphics.streaming_mode = CONF.spice.streaming_mode
+            graphics.secure = CONF.spice.require_secure
             guest.add_device(graphics)
             add_video_driver = True
 

@@ -318,7 +318,6 @@ be told where to find them. This requires editing :file:`nova.conf` to set.
    vencrypt_client_cert=/etc/pki/nova-novncproxy/client-cert.pem
    vencrypt_ca_certs=/etc/pki/nova-novncproxy/ca-cert.pem
 
-
 .. _spice-console:
 
 SPICE console
@@ -402,6 +401,10 @@ for SPICE consoles.
 - :oslo.config:option:`spice.zlib_compression`
 - :oslo.config:option:`spice.playback_compression`
 - :oslo.config:option:`spice.streaming_mode`
+
+As well as the following option to require that connections be protected by TLS:
+
+- :oslo.config:option:`spice.require_secure`
 
 .. _serial-console:
 
