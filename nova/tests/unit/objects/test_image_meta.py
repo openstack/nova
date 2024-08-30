@@ -591,3 +591,20 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertNotIn(
             'hw_ephemeral_encryption_secret_uuid',
             primitive['nova_object.data'])
+
+    def test_obj_make_compatible_stateless_firmware(self):
+        """Check 'hw_firmware_stateless' compatibility."""
+        obj = objects.ImageMetaProps(
+            hw_firmware_stateless=True)
+
+        primitive = obj.obj_to_primitive('1.38')
+        self.assertIn(
+            'hw_firmware_stateless',
+            primitive['nova_object.data'])
+        self.assertTrue(
+            primitive['nova_object.data']['hw_firmware_stateless'])
+
+        primitive = obj.obj_to_primitive('1.37')
+        self.assertNotIn(
+            'hw_firmware_stateless',
+            primitive['nova_object.data'])
