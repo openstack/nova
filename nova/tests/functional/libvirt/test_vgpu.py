@@ -338,6 +338,21 @@ class VGPUTests(VGPUTestBase):
         # that via policy in setUp so assert something was recorded.
         self.assertIn('select_destinations', event['traceback'])
 
+    def test_create_server_with_two_vgpus_isolated(self):
+        # Let's try to ask for two vGPUs with each of them be in a different
+        # physical GPU.
+        extra_spec = {"resources1:VGPU": "1", "resources2:VGPU": "1",
+                      "group_policy": "isolate"}
+        flavor = self._create_flavor(extra_spec=extra_spec)
+        self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=flavor, networks='auto', host=self.compute1.host)
+
+        # FIXME(sbauza): Unfortunately, we only accept one allocation per
+        # instance by the libvirt driver as you can see in _allocate_mdevs().
+        # So, eventually, we only have one vGPU for this instance.
+        self.assert_mdev_usage(self.compute1, expected_amount=1)
+
 
 class VGPUMultipleTypesTests(VGPUTestBase):
 
