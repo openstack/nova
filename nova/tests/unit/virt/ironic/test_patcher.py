@@ -37,6 +37,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         self.instance = fake_instance.fake_instance_obj(self.ctx)
         self.instance.flavor = self.flavor
         self.node = ironic_utils.get_test_node(driver='fake')
+        self.metadata = ironic_utils.get_test_instance_driver_metadata()
         # Generic expected patches
         self._expected_deploy_patch = [
             {'path': '/instance_info/image_source',
@@ -60,9 +61,24 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
             {'path': '/instance_info/local_gb',
              'value': str(self.node.properties.get('local_gb', 0)),
              'op': 'add'},
-            {'path': '/instance_info/nova_host_id',
-             'value': u'fake-host',
-             'op': 'add'},
+            {'op': 'add', 'path': '/instance_info/fixed_ips',
+             'value': '[]'},
+            {'op': 'add', 'path': '/instance_info/floating_ips',
+             'value': '[]'},
+            {'op': 'add', 'path': '/instance_info/flavor_name',
+             'value': str(self.flavor.name)},
+            {'op': 'add', 'path': '/instance_info/nova_host_id',
+             'value': 'fake-host'},
+            {'op': 'add',
+             'path': '/instance_info/project_id',
+             'value': 'ppppppp-pppp-pppp-pppp-pppppppppppp'},
+            {'op': 'add', 'path': '/instance_info/project_name',
+             'value': 'testproject'},
+            {'op': 'add', 'path': '/instance_info/user_name',
+             'value': 'testuser'},
+            {'op': 'add',
+             'path': '/instance_info/user_id',
+             'value': 'uuuuuuu-uuuu-uuuu-uuuu-uuuuuuuuuuuu'},
         ]
 
     def assertPatchEqual(self, expected, observed):
@@ -79,7 +95,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
     def test_generic_get_deploy_patch(self):
         node = ironic_utils.get_test_node(driver='fake')
         patch = patcher.create(node).get_deploy_patch(
-                self.instance, self.image_meta, self.flavor)
+                self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(self._expected_deploy_patch, patch)
 
     def test_generic_get_deploy_patch_capabilities(self):
@@ -90,7 +106,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-                self.instance, self.image_meta, self.flavor)
+                self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_capabilities_op(self):
@@ -101,7 +117,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-                self.instance, self.image_meta, self.flavor)
+                self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_capabilities_nested_key(self):
@@ -112,7 +128,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-                self.instance, self.image_meta, self.flavor)
+                self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_traits(self):
@@ -123,7 +139,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-                self.instance, self.image_meta, self.flavor)
+                self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_traits_granular(self):
@@ -134,7 +150,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-                self.instance, self.image_meta, self.flavor)
+                self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_traits_ignores_not_required(self):
@@ -142,7 +158,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         self.flavor['extra_specs']['trait:CUSTOM_FOO'] = 'invalid'
         expected = self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-                self.instance, self.image_meta, self.flavor)
+                self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_image_traits_required(self):
@@ -154,7 +170,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-            self.instance, self.image_meta, self.flavor)
+            self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_image_flavor_traits_required(self):
@@ -167,7 +183,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-            self.instance, self.image_meta, self.flavor)
+            self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_image_flavor_traits_none(self):
@@ -175,7 +191,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         self.image_meta.properties = objects.ImageMetaProps()
         expected = self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
-            self.instance, self.image_meta, self.flavor)
+            self.instance, self.image_meta, self.flavor, self.metadata)
         self.assertPatchEqual(expected, patch)
 
     def test_generic_get_deploy_patch_boot_from_volume_image_traits_required(
@@ -192,7 +208,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                      'op': 'add'}]
         expected += expected_deploy_patch_volume
         patch = patcher.create(node).get_deploy_patch(
-            self.instance, self.image_meta, self.flavor,
+            self.instance, self.image_meta, self.flavor, self.metadata,
             boot_from_volume=True)
         self.assertPatchEqual(expected, patch)
 
@@ -204,7 +220,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
             flavor=objects.Flavor(root_gb=1, vcpus=1,
                                   memory_mb=1, ephemeral_gb=10))
         patch = patcher.create(node).get_deploy_patch(
-                instance, self.image_meta, self.flavor)
+                instance, self.image_meta, self.flavor, self.metadata)
         expected = [{'path': '/instance_info/ephemeral_gb',
                      'value': str(instance.flavor.ephemeral_gb),
                      'op': 'add'},
@@ -218,7 +234,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(driver='fake')
         for preserve in [True, False]:
             patch = patcher.create(node).get_deploy_patch(
-                    self.instance, self.image_meta, self.flavor,
+                    self.instance, self.image_meta, self.flavor, self.metadata,
                     preserve_ephemeral=preserve)
             expected = [{'path': '/instance_info/preserve_ephemeral',
                          'value': str(preserve), 'op': 'add', }]
@@ -230,6 +246,6 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         expected = [patch for patch in self._expected_deploy_patch
                     if patch['path'] != '/instance_info/image_source']
         patch = patcher.create(node).get_deploy_patch(
-                self.instance, self.image_meta, self.flavor,
+                self.instance, self.image_meta, self.flavor, self.metadata,
                 boot_from_volume=True)
         self.assertPatchEqual(expected, patch)

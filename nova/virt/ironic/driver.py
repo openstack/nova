@@ -405,7 +405,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         self._cleanup_deploy(node, instance)
 
     def _add_instance_info_to_node(self, node, instance, image_meta, flavor,
-                                   preserve_ephemeral=None,
+                                   metadata, preserve_ephemeral=None,
                                    block_device_info=None):
 
         root_bdm = block_device.get_root_bdm(
@@ -414,6 +414,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         patch = patcher.create(node).get_deploy_patch(instance,
                                                       image_meta,
                                                       flavor,
+                                                      metadata,
                                                       preserve_ephemeral,
                                                       boot_from_volume)
 
@@ -1158,7 +1159,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
         :param block_device_info: Instance block device
             information.
-        :param arqs: Accelerator requests for this instance.
+        :param accel_info: Accelerator requests for this instance.
         :param power_on: True if the instance should be powered on, False
                          otherwise
         """
@@ -1176,7 +1177,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         node = self._get_node(node_id)
         flavor = instance.flavor
 
+        metadata = self.get_instance_driver_metadata(instance, network_info)
         self._add_instance_info_to_node(node, instance, image_meta, flavor,
+                                        metadata,
                                         block_device_info=block_device_info)
 
         try:
@@ -1740,7 +1743,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         node_id = instance.node
         node = self._get_node(node_id)
 
-        self._add_instance_info_to_node(node, instance, image_meta,
+        metadata = self.get_instance_driver_metadata(instance, network_info)
+        self._add_instance_info_to_node(node, instance, image_meta, metadata,
                                         instance.flavor, preserve_ephemeral)
 
         # Config drive

@@ -20,24 +20,76 @@ Driver base-classes:
     types that support that contract
 """
 
+import dataclasses
 import itertools
 import sys
+import time
 import typing as ty
 
 import os_resource_classes as orc
 import os_traits
+
 from oslo_log import log as logging
 from oslo_utils import importutils
 
 import nova.conf
+import nova.virt.node
+
 from nova import context as nova_context
 from nova.i18n import _
+from nova.network import model as network_model
 from nova import objects
+from nova import version
 from nova.virt import event as virtevent
-import nova.virt.node
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass
+class FlavorMeta:
+    name: str
+    memory_mb: int
+    vcpus: int
+    root_gb: int
+    ephemeral_gb: int
+    extra_specs: dict
+    swap: int
+
+
+@dataclasses.dataclass
+class ImageMeta:
+    id: str
+    name: str
+    properties: dict
+
+
+@dataclasses.dataclass
+class NovaInstanceMeta:
+    name: str
+    uuid: str
+
+
+@dataclasses.dataclass
+class OwnerMeta:
+    userid: str
+    username: str
+    projectid: str
+    projectname: str
+
+
+@dataclasses.dataclass
+class InstanceDriverMetadata:
+    root_type: str
+    root_id: str
+    instance_meta: NovaInstanceMeta
+    owner: OwnerMeta
+    image: ImageMeta
+    flavor: FlavorMeta
+    network_info: network_model.NetworkInfo
+    nova_package: str = dataclasses.field(
+        default_factory=version.version_string_with_package)
+    creation_time: float = dataclasses.field(default_factory=time.time)
 
 
 def get_block_device_info(instance, block_device_mapping):
@@ -295,6 +347,55 @@ class ComputeDriver(object):
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
+
+    @classmethod
+    def get_instance_driver_metadata(
+        cls, instance: 'nova.objects.instance.Instance',
+        network_info: network_model.NetworkInfo
+    ) -> InstanceDriverMetadata:
+        """Get driver metadata from instance and network info
+
+        :param instance: nova.objects.instance.Instance
+        :param network_info: instance network information
+        :returns: InstanceDriverMetadata
+        """
+
+        instance_name = instance.display_name or instance.uuid
+        system_meta = instance.system_metadata
+        instance_meta = NovaInstanceMeta(
+            str(instance_name), str(instance.uuid))
+        owner = OwnerMeta(
+            userid=instance.user_id,
+            username=system_meta.get('owner_user_name', 'N/A'),
+            projectid=instance.project_id,
+            projectname=system_meta.get('owner_project_name', 'N/A')
+        )
+        flavor = FlavorMeta(
+            name=instance.flavor.name,
+            memory_mb=instance.flavor.memory_mb,
+            vcpus=instance.flavor.vcpus,
+            ephemeral_gb=instance.flavor.ephemeral_gb,
+            root_gb=instance.flavor.root_gb,
+            swap=instance.flavor.swap,
+            extra_specs=instance.flavor.extra_specs,
+        )
+        image = ImageMeta(
+            id=instance.image_ref,
+            name=system_meta.get('image_name'),
+            properties=instance.image_meta.properties
+        )
+        meta = InstanceDriverMetadata(
+            instance_meta=instance_meta,
+            owner=owner,
+            flavor=flavor,
+            image=image,
+            root_type = 'image' if instance.image_ref else 'volume',
+            root_id = instance.image_ref,
+            creation_time = time.time(),
+            network_info=network_info
+        )
+        LOG.debug('InstanceDriverMetadata: %s', meta)
+        return meta
 
     def get_num_instances(self):
         """Return the total number of virtual machines.
