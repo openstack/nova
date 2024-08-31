@@ -2098,22 +2098,13 @@ class TestGlanceApiServers(test.NoDBTestCase):
         """Test get_api_servers via nova.utils.get_ksa_adapter()."""
         self.flags(api_servers=None, group='glance')
         with mock.patch('keystoneauth1.adapter.Adapter.'
-                        'get_endpoint_data') as mock_epd:
-            mock_epd.return_value.catalog_url = catalog_url
+                        'get_endpoint') as mock_epd:
+            mock_epd.return_value = catalog_url
             api_servers = glance.get_api_servers(mock.Mock())
             self.assertEqual(stripped, next(api_servers))
             # Still get itertools.cycle behavior
             self.assertEqual(stripped, next(api_servers))
             mock_epd.assert_called_once_with()
-
-    @mock.patch('keystoneauth1.adapter.Adapter.get_endpoint_data')
-    def test_get_api_servers_get_ksa_adapter_endpoint_override(self,
-                                                               mock_epd):
-        self.flags(endpoint_override='foo', group='glance')
-        api_servers = glance.get_api_servers(mock.Mock())
-        self.assertEqual('foo', next(api_servers))
-        self.assertEqual('foo', next(api_servers))
-        mock_epd.assert_not_called()
 
 
 class TestUpdateGlanceImage(test.NoDBTestCase):

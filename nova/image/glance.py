@@ -121,7 +121,7 @@ def get_api_servers(context):
             nova.conf.glance.DEFAULT_SERVICE_TYPE,
             ksa_auth=auth, ksa_session=sess,
             min_version='2.0', max_version='2.latest')
-        endpoint = utils.get_endpoint(ksa_adap)
+        endpoint = ksa_adap.get_endpoint()
         if endpoint:
             # NOTE(mriedem): Due to python-glanceclient bug 1707995 we have
             # to massage the endpoint URL otherwise it won't work properly.

@@ -1035,36 +1035,6 @@ def get_sdk_adapter(
     return getattr(conn, service_type.replace('-', '_'))
 
 
-def get_endpoint(ksa_adapter):
-    """Get the endpoint URL represented by a keystoneauth1 Adapter.
-
-    This method is equivalent to what
-
-        ksa_adapter.get_endpoint()
-
-    should do, if it weren't for a panoply of bugs.
-
-    :param ksa_adapter: keystoneauth1.adapter.Adapter, appropriately set up
-                        with an endpoint_override; or service_type, interface
-                        (list) and auth/service_catalog.
-    :return: String endpoint URL.
-    :raise EndpointNotFound: If endpoint discovery fails.
-    """
-    # TODO(efried): This will be unnecessary once bug #1707993 is fixed.
-    # (At least for the non-image case, until 1707995 is fixed.)
-    if ksa_adapter.endpoint_override:
-        return ksa_adapter.endpoint_override
-    # TODO(efried): Remove this once bug #1707995 is fixed.
-    if ksa_adapter.service_type == 'image':
-        try:
-            return ksa_adapter.get_endpoint_data().catalog_url
-        except AttributeError:
-            # ksa_adapter.auth is a _ContextAuthPlugin, which doesn't have
-            # get_endpoint_data.  Fall through to using get_endpoint().
-            pass
-    return ksa_adapter.get_endpoint()
-
-
 def generate_hostid(host, project_id):
     """Generate an obfuscated host id representing the host.
 
