@@ -3188,11 +3188,14 @@ class VolumeAttachmentCommands(object):
         ) as e:
             print(str(e))
             return 4
-        except (ValueError, OSError):
+        except ValueError as e:
             print(
                 f'Failed to open {connector_path}. Does it contain valid '
-                f'connector_info data?'
+                f'connector_info data?\nError: {str(e)}'
             )
+            return 3
+        except OSError as e:
+            print(str(e))
             return 3
         except exception.InvalidInput as e:
             print(str(e))
