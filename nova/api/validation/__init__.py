@@ -215,7 +215,7 @@ def _strip_additional_query_parameters(schema, req):
     the JSON-Schema validation. It also means this method only can be called
     after _schema_validation_helper return `True`.
     """
-    additional_properties = schema.get('addtionalProperties', True)
+    additional_properties = schema.get('additionalProperties', True)
     pattern_regexes = []
 
     patterns = schema.get('patternProperties', None)
