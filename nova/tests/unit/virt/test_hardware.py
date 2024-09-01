@@ -6019,6 +6019,40 @@ class MaxphysaddrModeTest(test.NoDBTestCase):
 
 
 @ddt.ddt
+class StatelessFirmwareConstraintTest(test.NoDBTestCase):
+    @ddt.unpack
+    @ddt.data(
+        # pass: no configuration
+        (None, None, False),
+        # pass: uefi with stateless firmware
+        (True, 'uefi', True),
+        # pass: non-uefi with non-stateless firmware
+        (False, None, False),
+        # fail: non-uefi with stateless fiemware
+        (True, None, exception.Invalid),
+    )
+    def test_get_stateless_firmware_constraint(
+        self, firmware_stateless, firmware_type, expected,
+    ):
+        image_meta_props = {}
+        if firmware_stateless is not None:
+            image_meta_props['hw_firmware_stateless'] = firmware_stateless
+        if firmware_type is not None:
+            image_meta_props['hw_firmware_type'] = firmware_type
+        image_meta = objects.ImageMeta.from_dict(
+            {'name': 'bar', 'properties': image_meta_props})
+
+        if isinstance(expected, type) and issubclass(expected, Exception):
+            self.assertRaises(
+                expected, hw.get_stateless_firmware_constraint, image_meta,
+            )
+        else:
+            self.assertEqual(
+                expected, hw.get_stateless_firmware_constraint(image_meta),
+            )
+
+
+@ddt.ddt
 class RescuePropertyTestCase(test.NoDBTestCase):
 
     @ddt.unpack

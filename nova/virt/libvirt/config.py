@@ -3075,6 +3075,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_firmware = None
         self.os_loader_type = None
         self.os_loader_secure = None
+        self.os_loader_stateless = None
         self.os_nvram = None
         self.os_nvram_template = None
         self.os_kernel = None
@@ -3140,7 +3141,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         if (
             self.os_loader is not None or
             self.os_loader_type is not None or
-            self.os_loader_secure is not None
+            self.os_loader_secure is not None or
+            self.os_loader_stateless is not None
         ):
             loader = self._text_node("loader", self.os_loader)
             if self.os_loader_type is not None:
@@ -3149,6 +3151,9 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             if self.os_loader_secure is not None:
                 loader.set(
                     "secure", self.get_yes_no_str(self.os_loader_secure))
+            if self.os_loader_stateless is not None:
+                loader.set(
+                    "stateless", self.get_yes_no_str(self.os_loader_stateless))
             os.append(loader)
 
         if (

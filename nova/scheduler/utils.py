@@ -196,6 +196,8 @@ class ResourceRequest(object):
 
         res_req._translate_maxphysaddr_request(request_spec.flavor, image)
 
+        res_req._translate_stateless_firmware_request(image)
+
         res_req.strip_zeros()
 
         return res_req
@@ -289,6 +291,11 @@ class ResourceRequest(object):
         if trait:
             self._add_trait(trait, 'required')
             LOG.debug("Requiring maxphysaddr support via trait %s.", trait)
+
+    def _translate_stateless_firmware_request(self, image):
+        if hardware.get_stateless_firmware_constraint(image):
+            self._add_trait(os_traits.COMPUTE_SECURITY_STATELESS_FIRMWARE,
+                            'required')
 
     def _translate_vtpm_request(self, flavor, image):
         vtpm_config = hardware.get_vtpm_constraint(flavor, image)

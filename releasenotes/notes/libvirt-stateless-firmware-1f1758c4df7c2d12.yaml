@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Libvirt virt driver now supports launching instances with stateless
+    firmware. The new ``hw_firmware_stateless`` image property can be used to
+    enable this feature. Note that the feature can be used only for
+    the instances with UEFI firmware. This feature requires libvirt v8.6.0 or
+    later.

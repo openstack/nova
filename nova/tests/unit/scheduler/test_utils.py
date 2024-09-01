@@ -1289,6 +1289,30 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest.from_request_spec(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
+    def test_resource_request_from_request_spec_with_stateless_firmware(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+        )
+        image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                hw_firmware_type = 'uefi',
+                hw_firmware_stateless = True
+            )
+        )
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            required_traits={'COMPUTE_SECURITY_STATELESS_FIRMWARE'},
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        rs = objects.RequestSpec(flavor=flavor, image=image, is_bfv=False)
+        rr = utils.ResourceRequest.from_request_spec(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+
     def test_resource_request_from_request_spec_with_secure_boot(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
