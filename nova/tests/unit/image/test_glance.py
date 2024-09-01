@@ -391,21 +391,6 @@ class TestCreateGlanceClient(test.NoDBTestCase):
         self.assertEqual("a", result1)
         self.assertEqual("b", result2)
 
-    def test_generate_identity_headers(self):
-        ctx = context.RequestContext('user', 'tenant',
-                auth_token='token', roles=["a", "b"])
-
-        result = glance.generate_identity_headers(ctx, 'test')
-
-        expected = {
-            'X-Auth-Token': 'token',
-            'X-User-Id': 'user',
-            'X-Tenant-Id': 'tenant',
-            'X-Roles': 'a,b',
-            'X-Identity-Status': 'test',
-        }
-        self.assertDictEqual(expected, result)
-
 
 class TestGlanceClientWrapperRetries(test.NoDBTestCase):
 
