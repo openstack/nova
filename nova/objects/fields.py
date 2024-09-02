@@ -562,6 +562,13 @@ class TPMVersion(BaseNovaEnum):
     ALL = (v1_2, v2_0)
 
 
+class MemEncryptionModel(BaseNovaEnum):
+    AMD_SEV = "amd-sev"
+    AMD_SEV_ES = "amd-sev-es"
+
+    ALL = (AMD_SEV, AMD_SEV_ES)
+
+
 class MaxPhyAddrMode(BaseNovaEnum):
     PASSTHROUGH = "passthrough"
     EMULATE = "emulate"
@@ -1364,6 +1371,10 @@ class TPMModelField(BaseEnumField):
 
 class TPMVersionField(BaseEnumField):
     AUTO_TYPE = TPMVersion()
+
+
+class MemEncryptionModelField(BaseEnumField):
+    AUTO_TYPE = MemEncryptionModel()
 
 
 class SCSIModelField(BaseEnumField):

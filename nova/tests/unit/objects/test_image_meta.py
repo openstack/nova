@@ -657,3 +657,21 @@ class TestImageMetaProps(test.NoDBTestCase):
             exception.ObjectActionError, obj.obj_to_primitive, '1.38')
         self.assertIn(
             'hw_vif_model=igb not supported in version (1, 38)', str(ex))
+
+    def test_obj_make_compatible_mem_encryption_model(self):
+        """Check 'hw_mem_encryption_model' compatibility."""
+        obj = objects.ImageMetaProps(
+            hw_mem_encryption_model=fields.MemEncryptionModel.AMD_SEV)
+
+        primitive = obj.obj_to_primitive('1.42')
+        self.assertIn(
+            'hw_mem_encryption_model',
+            primitive['nova_object.data'])
+        self.assertEqual(
+            fields.MemEncryptionModel.AMD_SEV,
+            primitive['nova_object.data']['hw_mem_encryption_model'])
+
+        primitive = obj.obj_to_primitive('1.41')
+        self.assertNotIn(
+            'hw_mem_encryption_model',
+            primitive['nova_object.data'])
