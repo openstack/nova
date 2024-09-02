@@ -26,15 +26,11 @@ see the following distribution-specific documentation:
 * `Ubuntu: KVM/Installation`__
 * `Debian: KVM Guide`__
 * `Red Hat Enterprise Linux (RHEL): Getting started with virtualization`__
-* `openSUSE: Setting Up a KVM VM Host Server`__
-* `SLES: Virtualization with KVM`__.
 
 .. __: https://docs.fedoraproject.org/en-US/quick-docs/getting-started-with-virtualization/
 .. __: https://help.ubuntu.com/community/KVM/Installation
 .. __: https://wiki.debian.org/KVM
 .. __: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_virtualization/getting-started-with-virtualization-in-rhel-8_configuring-and-managing-virtualization
-.. __: https://doc.opensuse.org/documentation/leap/virtualization/html/book-virt/cha-qemu-host.html
-.. __: https://documentation.suse.com/sles/11-SP4/html/SLES-all/book-kvm.html
 
 
 Configuration
