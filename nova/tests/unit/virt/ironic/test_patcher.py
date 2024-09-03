@@ -47,7 +47,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
              'value': str(self.instance.flavor.root_gb),
              'op': 'add'},
             {'path': '/instance_info/swap_mb',
-             'value': str(self.flavor['swap']),
+             'value': str(self.flavor.swap),
              'op': 'add'},
             {'path': '/instance_info/display_name',
              'value': self.instance['display_name'],

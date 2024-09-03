@@ -29,7 +29,7 @@ from nova.virt.ironic import ironic_states
 # objects.
 TEST_IMAGE_UUID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 TEST_IMAGE_NAME = "test-image"
-TEST_FLAVOR_ID = "1"
+TEST_FLAVOR_ID = 1
 TEST_FLAVOR_NAME = "fake.flavor"
 TEST_FLAVOR_EXTRA_SPECS = {
     'baremetal:deploy_kernel_id': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
