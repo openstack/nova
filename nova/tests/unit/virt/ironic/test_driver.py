@@ -2215,14 +2215,13 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.mock_conn.get_node.return_value = node
 
         image_meta = ironic_utils.get_test_image_meta()
-        flavor = objects.Flavor(flavor_id=5, name='baremetal')
+        flavor = objects.Flavor(name='baremetal')
 
         instance = fake_instance.fake_instance_obj(
             self.ctx, uuid=self.instance_uuid, node=node_uuid, flavor=flavor)
 
         mock_metadata.return_value = (
             ironic_utils.get_test_instance_driver_metadata(
-                flavor_id=5,
                 flavor_name='baremetal',
                 instance_uuid=self.instance_uuid,
         ))
@@ -2297,11 +2296,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_configdrive.side_effect = exception.NovaException()
         mock_metadata.return_value = (
             ironic_utils.get_test_instance_driver_metadata(
-                flavor_id=5, flavor_name='baremetal')
+                flavor_name='baremetal')
         )
 
         image_meta = ironic_utils.get_test_image_meta()
-        flavor = objects.Flavor(flavor_id=5, name='baremetal')
+        flavor = objects.Flavor(name='baremetal')
 
         instance = fake_instance.fake_instance_obj(
             self.ctx, uuid=self.instance_uuid, node=node_uuid, flavor=flavor)
@@ -2331,10 +2330,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_required_by.return_value = False
 
         image_meta = ironic_utils.get_test_image_meta()
-        flavor = objects.Flavor(flavor_id=5, name='baremetal')
+        flavor = objects.Flavor(name='baremetal')
         mock_metadata.return_value = (
             ironic_utils.get_test_instance_driver_metadata(
-                flavor_id=5,
                 flavor_name='baremetal',
                 instance_uuid=self.instance_uuid,
         ))
