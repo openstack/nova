@@ -38,7 +38,7 @@ stable identity. Using the :oslo.config:option:`state_path`
 (which is ``/var/lib/nova`` on most systems), a ``compute_id`` file will be
 created with a generated UUID.
 
-Since this file (and it's parent directory) is writable by nova, it may be
+Since this file (and its parent directory) is writable by nova, it may be
 desirable to move this to one of the other locations that nova looks for the
 identification file.
 
