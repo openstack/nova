@@ -894,6 +894,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         )
         mock_supports.assert_called_once_with()
 
+    @mock.patch.object(hardware, 'get_cpu_dedicated_set',
+                       return_value=set([0, 42, 1337]))
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_all_undefined_instance_details')
+    def test_init_host_topology(self, mock_get_cpu_dedicated_set, _):
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with mock.patch.object(driver.cpu_api, 'power_up') as mock_power_up:
+            driver.init_host('goat')
+            mock_power_up.assert_called_with(set([0, 42, 1337]))
+
     @mock.patch.object(
         libvirt_driver.LibvirtDriver,
         '_register_all_undefined_instance_details',
