@@ -165,4 +165,5 @@ You can launch an instance from various sources.
    launch-instance-from-image
    launch-instance-from-volume
    launch-instance-using-ISO-image
+   boot-instance-using-PXE
 
