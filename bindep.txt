@@ -2,6 +2,8 @@
 # see https://docs.openstack.org/infra/bindep/ for additional information.
 
 build-essential [platform:dpkg test]
+# required for mkfs.vfat
+dosfstools [platform:dpkg test]
 # fonts-freefont-otf is needed for pdf docs builds with the 'xelatex' engine
 fonts-freefont-otf [pdf-docs]
 gcc [platform:rpm test]
