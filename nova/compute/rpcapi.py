@@ -429,6 +429,7 @@ class ComputeAPI(object):
         'antelope': '6.2',
         'bobcat': '6.2',
         'caracal': '6.3',
+        'dalmatian': '6.3',
     }
 
     @property
