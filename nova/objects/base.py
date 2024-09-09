@@ -26,6 +26,7 @@ from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovoo_base
 from oslo_versionedobjects import exception as ovoo_exc
 
+from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import utils
@@ -56,6 +57,15 @@ def get_attrname(name):
     # FIXME(danms): This is just until we use o.vo's class properties
     # and object base.
     return '_obj_' + name
+
+
+def raise_on_too_new_values(version, primitive, field, new_values):
+    value = primitive.get(field, None)
+    if value in new_values:
+        raise exception.ObjectActionError(
+            action='obj_make_compatible',
+            reason='%s=%s not supported in version %s' %
+                   (field, value, version))
 
 
 class NovaObjectRegistry(ovoo_base.VersionedObjectRegistry):
