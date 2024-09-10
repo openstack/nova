@@ -75,9 +75,13 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
                 # top-level 'token' query parameter was removed. The 'path'
                 # parameter is supported in older noVNC versions, so it is
                 # backward compatible.
-                qparams = {'path': '?token=%s' % self.token}
-                return '%s?%s' % (self.access_url_base,
-                                  urlparse.urlencode(qparams))
+                parsed_base_url = urlparse.urlparse(self.access_url_base)
+                qparams = urlparse.parse_qs(parsed_base_url.query)
+                qpath = '%s?token=%s' % (qparams.get('path', [''])[0],
+                                         self.token)
+                qparams.update({'path': qpath})
+                return parsed_base_url._replace(
+                    query=urlparse.urlencode(qparams, doseq=True)).geturl()
             else:
                 return '%s?token=%s' % (self.access_url_base, self.token)
 

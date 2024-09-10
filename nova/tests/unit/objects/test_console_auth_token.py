@@ -100,6 +100,41 @@ class _TestConsoleAuthToken(object):
         self._test_authorize('novnc')
 
     @mock.patch('nova.db.main.api.console_auth_token_create')
+    def _test_access_novnc_custom_request(
+            self, url_base, url_expected, mock_create):
+        ttl = 10
+        expires = timeutils.utcnow_ts() + ttl
+        db_dict = copy.deepcopy(fakes.fake_token_dict)
+        db_dict['access_url_base'] = url_base
+        db_dict['expires'] = expires
+        db_dict['console_type'] = 'novnc'
+        mock_create.return_value = db_dict
+
+        obj = token_obj.ConsoleAuthToken(
+            context=self.context,
+            console_type=db_dict['console_type'],
+            host=fakes.fake_token_dict['host'],
+            port=fakes.fake_token_dict['port'],
+            instance_uuid=fakes.fake_token_dict['instance_uuid'],
+            access_url_base=url_base,
+        )
+
+        with mock.patch('uuid.uuid4', return_value=fakes.fake_token):
+            obj.authorize(ttl)
+        token_req = urlparse.quote_plus('token=%s' % fakes.fake_token)
+        expected_url = '%3F'.join([url_expected, token_req])
+        self.assertEqual(expected_url, obj.access_url)
+
+    def test_access_novnc_custom_path(self):
+        base_url = 'http://fake.url.fake/novnc/root.html?path=novnc'
+        self._test_access_novnc_custom_request(base_url, base_url)
+
+    def test_access_novnc_random_req(self):
+        base_url = 'http://fake.url.fake/novnc/root.html?noop=true'
+        expected_url = 'http://fake.url.fake/novnc/root.html?noop=true&path='
+        self._test_access_novnc_custom_request(base_url, expected_url)
+
+    @mock.patch('nova.db.main.api.console_auth_token_create')
     def test_authorize_duplicate_token(self, mock_create):
         mock_create.side_effect = DBDuplicateEntry()
 

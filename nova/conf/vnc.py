@@ -75,6 +75,10 @@ instance and, by extension, the VNC sessions.
 If using noVNC >= 1.0.0, you should use ``vnc_lite.html`` instead of
 ``vnc_auto.html``.
 
+You can also supply extra request arguments which will be passed to
+the backend. This might be useful to move console URL to subpath, for example:
+``http://127.0.0.1/novnc/vnc_auto.html?path=novnc``
+
 Related options:
 
 * novncproxy_host

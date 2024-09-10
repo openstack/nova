@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Option ``novncproxy_base_url`` does now respect supplied custom query
+    which might be used to move NoVNC to a subdirectory or pass an extra
+    argument to NoVNC.
