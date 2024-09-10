@@ -4926,7 +4926,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                  '%dG' % ephemeral_size,
                                                  specified_fs)
                 return
-            libvirt_utils.create_image(target, 'raw', f'{ephemeral_size}G')
+            libvirt_utils.create_image(
+                target, 'raw', f'{ephemeral_size}G', safe=True)
 
         # Run as root only for block devices.
         disk_api.mkfs(os_type, fs_label, target, run_as_root=is_block_dev,
@@ -5169,11 +5170,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                    vm_mode=vm_mode)
             fname = "ephemeral_%s_%s" % (ephemeral_gb, file_extension)
             size = ephemeral_gb * units.Gi
-            disk_image.cache(fetch_func=fn,
-                             context=context,
-                             filename=fname,
-                             size=size,
-                             ephemeral_size=ephemeral_gb)
+            disk_image.cache(
+                fetch_func=fn, context=context, filename=fname, size=size,
+                ephemeral_size=ephemeral_gb, safe=True)
 
         for idx, eph in enumerate(driver.block_device_info_get_ephemerals(
                 block_device_info)):
@@ -5195,12 +5194,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                    vm_mode=vm_mode)
             size = eph['size'] * units.Gi
             fname = "ephemeral_%s_%s" % (eph['size'], file_extension)
-            disk_image.cache(fetch_func=fn,
-                             context=context,
-                             filename=fname,
-                             size=size,
-                             ephemeral_size=eph['size'],
-                             specified_fs=specified_fs)
+            disk_image.cache(
+                fetch_func=fn, context=context, filename=fname, size=size,
+                ephemeral_size=eph['size'], specified_fs=specified_fs,
+                safe=True)
 
         if swap_mb > 0:
             size = swap_mb * units.Mi
@@ -5208,9 +5205,10 @@ class LibvirtDriver(driver.ComputeDriver):
             swap = image('disk.swap', disk_info_mapping=disk_info_mapping)
             # Short circuit the exists() tests if we already created a disk
             created_disks = created_disks or not swap.exists()
-            swap.cache(fetch_func=self._create_swap, context=context,
-                       filename="swap_%s" % swap_mb,
-                       size=size, swap_mb=swap_mb)
+            swap.cache(
+                fetch_func=self._create_swap, context=context,
+                filename="swap_%s" % swap_mb, size=size, swap_mb=swap_mb,
+                safe=True)
 
         if created_disks:
             LOG.debug('Created local disks', instance=instance)
@@ -11650,14 +11648,16 @@ class LibvirtDriver(driver.ComputeDriver):
                         os_type=instance.os_type,
                         filename=cache_name,
                         size=info['virt_disk_size'],
-                        ephemeral_size=info['virt_disk_size'] / units.Gi)
+                        ephemeral_size=info['virt_disk_size'] / units.Gi,
+                        safe=True)
                 elif cache_name.startswith('swap'):
                     flavor = instance.get_flavor()
                     swap_mb = flavor.swap
                     disk.cache(fetch_func=self._create_swap,
                                 filename="swap_%s" % swap_mb,
                                 size=swap_mb * units.Mi,
-                                swap_mb=swap_mb)
+                                swap_mb=swap_mb,
+                                safe=True)
                 else:
                     self._try_fetch_image_cache(disk,
                                                 libvirt_utils.fetch_image,

@@ -514,7 +514,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         image.cache(fn, self.TEMPLATE)
 
-        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH, safe=False)
         mock_exists.assert_has_calls(exist_calls)
 
     @mock.patch.object(os.path, 'exists')
@@ -545,7 +545,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         image.cache(fn, self.TEMPLATE)
 
-        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH, safe=False)
         mock_exists.assert_has_calls(exist_calls)
 
     @mock.patch.object(os.path, 'exists')
@@ -587,7 +587,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         mock_verify.assert_called_once_with(self.TEMPLATE_PATH, self.SIZE)
         mock_create.assert_called_once_with(
-             self.PATH, 'qcow2', self.SIZE, backing_file=self.TEMPLATE_PATH)
+             self.PATH, 'qcow2', self.SIZE, backing_file=self.TEMPLATE_PATH,
+             safe=False)
         fn.assert_called_once_with(target=self.TEMPLATE_PATH)
         mock_exist.assert_has_calls(exist_calls)
         self.assertTrue(mock_sync.called)
@@ -828,7 +829,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
         image.cache(fn, self.TEMPLATE)
 
-        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH, safe=False)
         mock_ensure.assert_called_once_with(self.TEMPLATE_DIR)
         mock_exists.assert_has_calls(exist_calls)
 
@@ -1369,7 +1370,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         image.cache(fn, self.TEMPLATE)
 
         mock_ensure.assert_called_once_with(self.TEMPLATE_DIR)
-        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH, safe=False)
         mock_img_exist.assert_called_with()
         mock_os_exist.assert_has_calls([
             mock.call(self.TEMPLATE_DIR), mock.call(self.TEMPLATE_PATH)
@@ -1392,7 +1393,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         mock_os_exist.assert_has_calls([
             mock.call(self.TEMPLATE_DIR), mock.call(self.TEMPLATE_PATH)
         ])
-        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH, safe=False)
 
     @mock.patch.object(os.path, 'exists', return_value=True)
     @mock.patch.object(imagebackend.Rbd, 'exists', return_value=True)
@@ -2078,7 +2079,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
 
         mock_ensure.assert_called_once_with(self.TEMPLATE_DIR)
         mock_exists.assert_has_calls(exist_calls)
-        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH, safe=False)
 
     @mock.patch.object(imagebackend.Ploop, 'get_disk_size',
                        return_value=2048)

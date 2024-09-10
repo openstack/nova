@@ -133,7 +133,8 @@ def create_image(
     disk_format: str,
     disk_size: ty.Optional[ty.Union[str, int]],
     backing_file: ty.Optional[str] = None,
-    encryption: ty.Optional[EncryptionOptions] = None
+    encryption: ty.Optional[EncryptionOptions] = None,
+    safe: bool = False,
 ) -> None:
     """Disk image creation with qemu-img
     :param path: Desired location of the disk image
@@ -147,6 +148,7 @@ def create_image(
     :param backing_file: (Optional) Backing file to use.
     :param encryption: (Optional) Dict detailing various encryption attributes
         such as the format and passphrase.
+    :param safe: If True, the image is know to be safe.
     """
     cmd = [
         'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'create', '-f', disk_format
@@ -157,7 +159,10 @@ def create_image(
         # before we inspect it for other attributes. We do this each time
         # because additional safety checks could have been added since we
         # downloaded the image.
-        if not CONF.workarounds.disable_deep_image_inspection:
+        # Note(sean-k-mooney): We only need to perform the safety check for
+        # the backing file if the image is not created by nova for swap or
+        # ephemeral disks.
+        if not CONF.workarounds.disable_deep_image_inspection and not safe:
             inspector = format_inspector.detect_file_format(backing_file)
             try:
                 inspector.safety_check()
