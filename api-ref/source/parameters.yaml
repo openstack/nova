@@ -3016,14 +3016,14 @@ flavor_description:
   required: false
   min_version: 2.55
   description: |
-    A free form description of the flavor. Limited to 65535 characters
+    A free-form description of the flavor. Limited to 65535 characters
     in length. Only printable characters are allowed.
 flavor_description_required:
   type: string
   in: body
   required: true
   description: |
-    A free form description of the flavor. Limited to 65535 characters
+    A free-form description of the flavor. Limited to 65535 characters
     in length. Only printable characters are allowed.
 flavor_description_resp:
   description: |
@@ -6304,8 +6304,8 @@ server_description:
   required: false
   min_version: 2.19
   description: |
-    A free form description of the server. Limited to 255 characters
-    in length. Before microversion 2.19 this was set to the server
+    A free-form description of the server. Limited to 255 characters
+    in length and new lines is not allowed. Before microversion 2.19 this was set to the server
     name.
 server_description_resp:
   description: |
