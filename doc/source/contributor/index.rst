@@ -116,6 +116,8 @@ be Python code. All new code needs to be validated somehow.
 
   * :doc:`/contributor/testing/down-cell`
 
+  * :doc:`/contributor/testing/pci-passthrough-sriov`
+
 * **Profiling Guides**: These are guides to profiling nova.
 
   * :doc:`/contributor/testing/eventlet-profiling`
@@ -131,6 +133,7 @@ be Python code. All new code needs to be validated somehow.
    testing/zero-downtime-upgrade
    testing/down-cell
    testing/eventlet-profiling
+   testing/pci-passthrough-sriov
 
 The Nova API
 ============
