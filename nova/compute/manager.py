@@ -9253,7 +9253,9 @@ class ComputeManager(manager.Manager):
             # vpmem must be cleaned
             do_cleanup = (not migrate_data.is_shared_instance_path or
                           has_vpmem or power_management_possible)
-            destroy_disks = not migrate_data.is_shared_block_storage
+            destroy_disks = not (
+                    migrate_data.is_shared_block_storage or
+                    migrate_data.is_shared_instance_path)
         elif isinstance(migrate_data, migrate_data_obj.HyperVLiveMigrateData):
             # NOTE(claudiub): We need to cleanup any zombie Planned VM.
             do_cleanup = True

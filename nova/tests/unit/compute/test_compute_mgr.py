@@ -11272,7 +11272,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
                 migrate_data, migr_ctxt)
         self.assertTrue(do_cleanup)
-        self.assertTrue(destroy_disks)
+        self.assertFalse(destroy_disks)
 
     def test_live_migration_cleanup_flags_block_migrate_libvirt(self):
         migrate_data = objects.LibvirtLiveMigrateData(
@@ -11299,7 +11299,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
             migrate_data)
         self.assertFalse(do_cleanup)
-        self.assertTrue(destroy_disks)
+        self.assertFalse(destroy_disks)
 
     def test_live_migration_cleanup_flags_shared_libvirt(self):
         migrate_data = objects.LibvirtLiveMigrateData(
