@@ -20859,7 +20859,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # is_shared_block_storage=True and destroy_disks=False.
         instance = objects.Instance(self.context, **self.test_instance)
         migrate_data = objects.LibvirtLiveMigrateData(
-                is_shared_block_storage=True)
+                is_shared_block_storage=True,
+                is_shared_instance_path=False)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         drvr.cleanup(
             self.context, instance, network_info={}, destroy_disks=False,
@@ -20868,6 +20869,25 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(1, int(instance.system_metadata['clean_attempts']))
         self.assertTrue(instance.cleaned)
         save.assert_called_once_with()
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
+                       return_value=True)
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
+    def test_cleanup_migrate_data_block_storage_and_share_instance_dir(
+        self, _undefine_domain, save, delete_instance_files
+    ):
+        # Test the case when the instance directory is on shared storage
+        # (e.g. NFS) and the instance is booted form volume.
+        instance = objects.Instance(self.context, **self.test_instance)
+        migrate_data = objects.LibvirtLiveMigrateData(
+                is_shared_block_storage=True,
+                is_shared_instance_path=True)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        drvr.cleanup(
+            self.context, instance, network_info={}, destroy_disks=False,
+            migrate_data=migrate_data, destroy_vifs=False)
+        delete_instance_files.assert_not_called()
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
                        return_value=True)
