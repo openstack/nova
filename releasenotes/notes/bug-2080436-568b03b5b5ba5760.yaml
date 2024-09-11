@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fixes a regression for live migration on shared storage that
+    was removing the backing disk and instance folder during the
+    cleanup of a virtual machine post live migration.
+    `bug 2080436
+    <https://bugs.launchpad.net/nova/+bug/2080436>`__ for details.
