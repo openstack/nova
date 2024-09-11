@@ -1642,12 +1642,12 @@ class LibvirtDriver(driver.ComputeDriver):
             cleanup_instance_dir = True
             cleanup_instance_disks = True
         else:
-            # NOTE(mdbooth): I think the theory here was that if this is a
-            # migration with shared block storage then we need to delete the
-            # instance directory because that's not shared. I'm pretty sure
-            # this is wrong.
+            # NOTE(mheler): For shared block storage we only need to clean up
+            # the instance directory when it's not on a shared path.
             if migrate_data and 'is_shared_block_storage' in migrate_data:
-                cleanup_instance_dir = migrate_data.is_shared_block_storage
+                cleanup_instance_dir = (
+                        migrate_data.is_shared_block_storage and
+                        not migrate_data.is_shared_instance_path)
 
             # NOTE(lyarwood): The following workaround allows operators to
             # ensure that non-shared instance directories are removed after an
