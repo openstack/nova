@@ -409,13 +409,7 @@ class _TestInstanceNUMATopology(object):
                 numa_topology.cells,
                 fake_topo_obj_w_cell_v1_4['cells']):
             self.assertEqual(topo_cell.cpuset, obj_cell.cpuset)
-            # 'pcpuset' should be an empty set however
-            # obj_from_db_obj() or more specifically
-            # _migrate_legacy_dedicated_instance_cpuset() does not set
-            # 'pcpuset' to an empty set when it is not in the json data.
-            # self.assertEqual(set(), obj_cell.pcpuset)
-            self.assertRaises(
-                NotImplementedError, getattr, obj_cell, 'pcpuset')
+            self.assertEqual(set(), obj_cell.pcpuset)
 
 
 class TestInstanceNUMATopology(
