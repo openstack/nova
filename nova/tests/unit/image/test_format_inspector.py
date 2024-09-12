@@ -54,7 +54,13 @@ class TestFormatInspectors(test.NoDBTestCase):
             except Exception:
                 pass
 
-    def _create_iso(self, image_size, subformat='iso-9660'):
+    def _create_iso(self, image_size, subformat='9660'):
+        """Create an ISO file of the given size.
+
+        :param image_size: The size of the image to create in bytes
+        :param subformat: The subformat to use, if any
+        """
+
         # these tests depend on mkisofs
         # being installed and in the path,
         # if it is not installed, skip
@@ -86,12 +92,22 @@ class TestFormatInspectors(test.NoDBTestCase):
             'dd if=/dev/zero of=%s bs=1M count=%i' % (fn, size),
             shell=True)
         subprocess.check_output(
-            '%s -o %s -V "TEST" -J -r %s' % (base_cmd, fn, fn),
+            '%s -V "TEST" -o %s  %s' % (base_cmd, fn, fn),
             shell=True)
         return fn
 
-    def _create_img(self, fmt, size, subformat=None, options=None,
-                    backing_file=None):
+    def _create_img(
+            self, fmt, size, subformat=None, options=None,
+            backing_file=None):
+        """Create an image file of the given format and size.
+
+        :param fmt: The format to create
+        :param size: The size of the image to create in bytes
+        :param subformat: The subformat to use, if any
+        :param options: A dictionary of options to pass to the format
+        :param backing_file: The backing file to use, if any
+        """
+
         if fmt == 'iso':
             return self._create_iso(size, subformat)
 
@@ -177,6 +193,13 @@ class TestFormatInspectors(test.NoDBTestCase):
 
     def _test_format_at_image_size(self, format_name, image_size,
                                    subformat=None):
+        """Test the format inspector for the given format at the
+        given image size.
+
+        :param format_name: The format to test
+        :param image_size: The size of the image to create in bytes
+        :param subformat: The subformat to use, if any
+        """
         img = self._create_img(format_name, image_size, subformat=subformat)
 
         # Some formats have internal alignment restrictions making this not
@@ -185,7 +208,15 @@ class TestFormatInspectors(test.NoDBTestCase):
 
         # Read the format in various sizes, some of which will read whole
         # sections in a single read, others will be completely unaligned, etc.
-        for block_size in (64 * units.Ki, 512, 17, 1 * units.Mi):
+        block_sizes = [64 * units.Ki, 1 * units.Mi]
+        # ISO images have a 32KB system area at the beginning of the image
+        # as a result reading that in 17 or 512 byte blocks takes too long,
+        # causing the test to fail. The 64KiB block size is enough to read
+        # the system area and header in a single read. the 1MiB block size
+        # adds very little time to the test so we include it.
+        if format_name != 'iso':
+            block_sizes.extend([17, 512])
+        for block_size in block_sizes:
             fmt = self._test_format_at_block_size(format_name, img, block_size)
             self.assertTrue(fmt.format_match,
                             'Failed to match %s at size %i block %i' % (
@@ -210,14 +241,63 @@ class TestFormatInspectors(test.NoDBTestCase):
         self._test_format('qcow2')
 
     def test_iso_9660(self):
-        # reproduce iso-9660 format regression
-        self.assertRaises(
-            TypeError, self._test_format, 'iso', subformat='iso-9660')
+        self._test_format('iso', subformat='9660')
 
-    def test_udf(self):
-        # reproduce udf format regression
-        self.assertRaises(
-            TypeError, self._test_format, 'iso', subformat='udf')
+    def test_iso_udf(self):
+        self._test_format('iso', subformat='udf')
+
+    def _generate_bad_iso(self):
+        # we want to emulate a malicious user who uploads a an
+        # ISO file has a qcow2 header in the system area
+        # of the ISO file
+        # we will create a qcow2 image and an ISO file
+        # and then copy the qcow2 header to the ISO file
+        # e.g.
+        #   mkisofs -o orig.iso /etc/resolv.conf
+        #   qemu-img create orig.qcow2 -f qcow2 64M
+        #   dd if=orig.qcow2 of=outcome bs=32K count=1
+        #   dd if=orig.iso of=outcome bs=32K skip=1 seek=1
+
+        qcow = self._create_img('qcow2', 10 * units.Mi)
+        iso = self._create_iso(64 * units.Mi, subformat='9660')
+        # first ensure the files are valid
+        iso_fmt = self._test_format_at_block_size('iso', iso, 4 * units.Ki)
+        self.assertTrue(iso_fmt.format_match)
+        qcow_fmt = self._test_format_at_block_size('qcow2', qcow, 4 * units.Ki)
+        self.assertTrue(qcow_fmt.format_match)
+        # now copy the qcow2 header to an ISO file
+        prefix = TEST_IMAGE_PREFIX
+        prefix += '-bad-'
+        fn = tempfile.mktemp(prefix=prefix, suffix='.iso')
+        self._created_files.append(fn)
+        subprocess.check_output(
+            'dd if=%s of=%s bs=32K count=1' % (qcow, fn),
+            shell=True)
+        subprocess.check_output(
+            'dd if=%s of=%s bs=32K skip=1 seek=1' % (iso, fn),
+            shell=True)
+        return qcow, iso, fn
+
+    def test_bad_iso_qcow2(self):
+
+        _, _, fn = self._generate_bad_iso()
+
+        iso_check = self._test_format_at_block_size('iso', fn, 4 * units.Ki)
+        qcow_check = self._test_format_at_block_size('qcow2', fn, 4 * units.Ki)
+        # this system area of the ISO file is not considered part of the format
+        # the qcow2 header is in the system area of the ISO file
+        # so the ISO file is still valid
+        self.assertTrue(iso_check.format_match)
+        # the qcow2 header is in the system area of the ISO file
+        # but that will be parsed by the qcow2 format inspector
+        # and it will match
+        self.assertTrue(qcow_check.format_match)
+        # if we call format_inspector.detect_file_format it should detect
+        # and raise an exception because both match internally.
+        e = self.assertRaises(
+            format_inspector.ImageFormatError,
+            format_inspector.detect_file_format, fn)
+        self.assertIn('Multiple formats detected', str(e))
 
     def test_vhd(self):
         self._test_format('vhd')
