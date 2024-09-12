@@ -372,6 +372,51 @@ class _TestInstanceNUMATopology(object):
             self.assertEqual(set(), obj_cell.cpuset)
             self.assertEqual(topo_cell.cpuset, obj_cell.pcpuset)
 
+    def test_obj_from_db_obj_no_pinning(self):
+        """Test of creating 'InstanceNUMATopology' OVO object from the
+        database primitives, which has an old version 'InstanceNUMACell'
+        primitives.
+
+        Prior to version 1.5, 'InstanceNUMACell' saves the instance CPUs in
+        the 'cpuset' field, for both the pinned CPUs of a dedicated and the
+        un-pinned CPUs of a shared instances, after version 1.5, any pinned
+        CPUs of dedicated instance are moved to 'pcpuset'. this test verifies
+        the CPU movement for instance with a 'dedicated' allocation policy.
+
+        This test is for the case where the instance has no pinned CPUs but
+        the instance has a numa topology such as when hugepages are used.
+        See bug: https://bugs.launchpad.net/nova/+bug/2080556 for more details.
+        """
+        fake_topo_obj_w_cell_v1_4 = objects.InstanceNUMATopology(
+            instance_uuid=fake_instance_uuid,
+            cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset=set([1, 2]), memory=512,
+                    pagesize=2048),
+                objects.InstanceNUMACell(
+                    id=1, cpuset=set([3, 4]), memory=512,
+                    pagesize=2048),
+            ])
+
+        fake_topo_obj = copy.deepcopy(fake_topo_obj_w_cell_v1_4)
+        for cell in fake_topo_obj.cells:
+            cell.cpu_policy = objects.fields.CPUAllocationPolicy.SHARED
+
+        numa_topology = objects.InstanceNUMATopology.obj_from_db_obj(
+            self.context, fake_instance_uuid, fake_topo_obj._to_json())
+
+        for obj_cell, topo_cell in zip(
+                numa_topology.cells,
+                fake_topo_obj_w_cell_v1_4['cells']):
+            self.assertEqual(topo_cell.cpuset, obj_cell.cpuset)
+            # 'pcpuset' should be an empty set however
+            # obj_from_db_obj() or more specifically
+            # _migrate_legacy_dedicated_instance_cpuset() does not set
+            # 'pcpuset' to an empty set when it is not in the json data.
+            # self.assertEqual(set(), obj_cell.pcpuset)
+            self.assertRaises(
+                NotImplementedError, getattr, obj_cell, 'pcpuset')
+
 
 class TestInstanceNUMATopology(
     test_objects._LocalTest, _TestInstanceNUMATopology,
