@@ -194,6 +194,11 @@ class InstanceNUMATopology(base.NovaObject,
                 continue
 
             if cell.cpu_policy != obj_fields.CPUAllocationPolicy.DEDICATED:
+                # FIXME(sean-k-mooney): we should be setting the pcpuset
+                # to an empty set here
+                # if not 'pcpuset' in cell:
+                #     cell.pcpuset = set()
+                #     update_db = True
                 continue
 
             cell.pcpuset = cell.cpuset
