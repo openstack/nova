@@ -22,7 +22,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import versionutils
 import sqlalchemy as sa
-from sqlalchemy.orm import joinedload
 from sqlalchemy import sql
 from sqlalchemy.sql import func
 
@@ -1586,26 +1585,6 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             }
 
     @staticmethod
-    def _recover_flavor_from_cell_instance_types(context, instance_types,
-                                                  missing_itypes):
-        # Not found in flavor db of upstream api, searching locally
-        # This is probably not necessary anymore, because every
-        # instance we have should have saved flavor information.
-        msg = 'flavor(s) with ref id %s not found in flavor db'
-        LOG.warning(msg, ', '.join(str(x) for x in missing_itypes))
-
-        flavor_query = context.session.query(
-            models.InstanceTypes). \
-            filter(models.InstanceTypes.id.in_(missing_itypes)). \
-            options(joinedload('extra_specs'))
-        for old_flavor in flavor_query:
-            # Bad hack, but works
-            instance_types[old_flavor.id] = {
-                'name': old_flavor.name,
-                'separate': len(old_flavor.extra_specs) > 0
-            }
-
-    @staticmethod
     @db.pick_context_manager_reader
     def _get_instance_types(context, wanted_itypes):
         # TODO(xxx): cache flavor_ids
@@ -1628,9 +1607,6 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         if not missing_itypes:
             return instance_types
 
-        InstanceList._recover_flavor_from_cell_instance_types(context,
-                                                              instance_types,
-                                                              missing_itypes)
         return instance_types
 
     @staticmethod
