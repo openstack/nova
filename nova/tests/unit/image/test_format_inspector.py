@@ -91,10 +91,15 @@ class TestFormatInspectors(test.NoDBTestCase):
         subprocess.check_output(
             'dd if=/dev/zero of=%s bs=1M count=%i' % (fn, size),
             shell=True)
+        # We need to use different file as input and output as the behavior
+        # of mkisofs is version dependent if both the input and the output
+        # are the same and can cause test failures
+        out_fn = "%s.iso" % fn
         subprocess.check_output(
-            '%s -V "TEST" -o %s  %s' % (base_cmd, fn, fn),
+            '%s -V "TEST" -o %s  %s' % (base_cmd, out_fn, fn),
             shell=True)
-        return fn
+        self._created_files.append(out_fn)
+        return out_fn
 
     def _create_img(
             self, fmt, size, subformat=None, options=None,
