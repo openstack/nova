@@ -1,0 +1,16 @@
+---
+upgrade:
+  - |
+    In the victoria release, the instance_numa_topology object
+    was extended to enabled mix cpus (pinned and unpinned cpus)
+    in the same instance. This change added a new field pcpuset
+    to the instance_numa_topology object. While the change included
+    object conversion code to handle the upgrade, it did not account
+    for instances that have a numa_topology but were not pinned.
+    i.e. a flavor with hw:mem_page_size or hw:numa_nodes set but
+    without hw:cpu_policy set to dedicated. As a result, instances
+    created between liberty and victoria releases with such a flavor
+    cannot be started  after upgrade to victoria. This has now
+    been fixed. instances created post victoria are not affected by
+    this issue. see: https://bugs.launchpad.net/nova/+bug/2080556
+    for more details.
