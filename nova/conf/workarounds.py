@@ -413,7 +413,12 @@ compatibility on the destination host during live migration.
 This will skip the CPU comparison call at the startup of Compute
 service and lets libvirt handle it.
 """),
-
+    cfg.BoolOpt('libvirt_use_host_maxphysaddr',
+               default=False,
+               help="""
+This is a hack: Pass simply the maxphysaddr from the host to the VM.
+This is to be replaced by the proper libvirt-maxphysaddr-support
+"""),
 ]
 
 

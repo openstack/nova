@@ -755,6 +755,36 @@ class LibvirtConfigCPUFeature(LibvirtConfigObject):
         return hash(self.name)
 
 
+class LibvirtConfigCPUMaxPhysAddr(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCPUMaxPhysAddr, self).__init__(
+            root_name='maxphysaddr', **kwargs)
+
+        self.mode = None
+        self.bits = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCPUMaxPhysAddr, self).parse_dom(xmldoc)
+
+        self.mode = xmldoc.get("mode")
+        self.bits = int(xmldoc.get("bits"))
+
+    def format_dom(self):
+        m = super(LibvirtConfigCPUMaxPhysAddr, self).format_dom()
+
+        m.set("mode", self.mode)
+
+        if self.bits:
+            m.set("bits", str(self.bits))
+
+        return m
+
+
+class LibvirtConfigGuestCPUMaxPhysAddr(LibvirtConfigCPUMaxPhysAddr):
+    pass
+
+
 class LibvirtConfigCPU(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -768,6 +798,8 @@ class LibvirtConfigCPU(LibvirtConfigObject):
         self.sockets = None
         self.cores = None
         self.threads = None
+
+        self.maxphysaddr = None
 
         self.features = set()
 
@@ -785,6 +817,9 @@ class LibvirtConfigCPU(LibvirtConfigObject):
                 self.sockets = int(c.get("sockets"))
                 self.cores = int(c.get("cores"))
                 self.threads = int(c.get("threads"))
+            elif c.tag == "maxphysaddr":
+                self.maxphysaddr = LibvirtConfigCPUMaxPhysAddr()
+                self.maxphysaddr.parse_dom(c)
             elif c.tag == "feature":
                 f = LibvirtConfigCPUFeature()
                 f.parse_dom(c)
@@ -809,6 +844,9 @@ class LibvirtConfigCPU(LibvirtConfigObject):
             top.set("cores", str(self.cores))
             top.set("threads", str(self.threads))
             cpu.append(top)
+
+        if self.maxphysaddr is not None:
+            cpu.append(self.maxphysaddr.format_dom())
 
         # sorting the features to allow more predictable tests
         for f in sorted(self.features, key=lambda x: x.name):
@@ -904,6 +942,7 @@ class LibvirtConfigGuestCPU(LibvirtConfigCPU):
         self.mode = None
         self.match = "exact"
         self.numa = None
+        self.maxphysaddr = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigGuestCPU, self).parse_dom(xmldoc)
@@ -914,6 +953,10 @@ class LibvirtConfigGuestCPU(LibvirtConfigCPU):
                 numa = LibvirtConfigGuestCPUNUMA()
                 numa.parse_dom(child)
                 self.numa = numa
+            elif child.tag == "maxphysaddr":
+                m = LibvirtConfigGuestCPUMaxPhysAddr()
+                m.parse_dom(child)
+                self.maxphysaddr = m
 
     def format_dom(self):
         cpu = super(LibvirtConfigGuestCPU, self).format_dom()

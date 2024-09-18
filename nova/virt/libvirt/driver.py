@@ -5263,6 +5263,17 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu.threads = topology.threads
         cpu.numa = guest_cpu_numa_config
 
+        if not CONF.workarounds.libvirt_use_host_maxphysaddr:
+            return cpu
+
+        caps = self._host.get_capabilities()
+        if not caps.host.cpu.maxphysaddr:
+            return cpu
+
+        cpu.maxphysaddr = vconfig.LibvirtConfigGuestCPUMaxPhysAddr()
+        cpu.maxphysaddr.mode = caps.host.cpu.maxphysaddr.mode
+        cpu.maxphysaddr.bits = caps.host.cpu.maxphysaddr.bits
+
         return cpu
 
     def _get_guest_disk_config(
@@ -7827,6 +7838,12 @@ class LibvirtDriver(driver.ComputeDriver):
         topology['cores'] = caps.host.cpu.cores
         topology['threads'] = caps.host.cpu.threads
         cpu_info['topology'] = topology
+
+        if caps.host.cpu.maxphysaddr:
+            maxphysaddr = dict()
+            maxphysaddr["mode"] = caps.host.cpu.maxphysaddr.mode
+            maxphysaddr["bits"] = caps.host.cpu.maxphysaddr.bits
+            cpu_info["maxphysaddr"] = maxphysaddr
 
         features = set()
         for f in caps.host.cpu.features:
