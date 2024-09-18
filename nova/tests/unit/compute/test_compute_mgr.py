@@ -13164,3 +13164,120 @@ class ComputeManagerSetHostEnabledTestCase(test.NoDBTestCase):
         self.assertIn('An error occurred while updating '
                       'COMPUTE_STATUS_DISABLED trait',
                       m_exc.call_args_list[0][0][0])
+
+
+class ComputeManagerBDMUpdateTestCase(test.TestCase):
+
+    def setUp(self):
+        super(ComputeManagerBDMUpdateTestCase, self).setUp()
+        self.compute = manager.ComputeManager()
+        self.context = context.RequestContext(fakes.FAKE_USER_ID,
+                                              fakes.FAKE_PROJECT_ID)
+        self.instance = mock.Mock()
+
+    @mock.patch('nova.block_device.create_blank_bdm')
+    @mock.patch('nova.objects.BlockDeviceMapping')
+    def test_no_flavor_change(self, mock_bdm_obj, mock_create_bdm):
+        self.instance.get_bdms.return_value = []
+        self.instance.old_flavor = None
+        self.instance.new_flavor = None
+
+        bdms = self.compute._update_bdm_for_swap_to_finish_resize(
+            self.context, self.instance)
+
+        self.assertEqual(bdms, [])
+        self.instance.get_bdms.assert_called_once()
+
+    @mock.patch('nova.block_device.create_blank_bdm')
+    @mock.patch('nova.objects.BlockDeviceMapping.create')
+    def test_no_swap_change(self, mock_bdm_obj, mock_create_bdm):
+        self.instance.old_flavor = mock.Mock(swap=1024)
+        self.instance.new_flavor = mock.Mock(swap=1024)
+
+        existing_swap_bdm = objects.BlockDeviceMapping(
+            guest_format='swap',
+            device_type='disk',
+            volume_size=1024)
+
+        bdms = objects.BlockDeviceMappingList(objects=[existing_swap_bdm])
+
+        self.instance.get_bdms.return_value = bdms
+
+        new_bdms = self.compute._update_bdm_for_swap_to_finish_resize(
+            self.context, self.instance)
+
+        self.assertEqual(new_bdms, bdms)
+        self.instance.get_bdms.assert_called_once()
+
+    @mock.patch('nova.block_device.create_blank_bdm')
+    @mock.patch('nova.objects.BlockDeviceMapping')
+    def test_add_new_swap_bdm(self, mock_bdm_obj, mock_create_bdm):
+        self.instance.old_flavor = mock.Mock(swap=0)
+        self.instance.new_flavor = mock.Mock(swap=1024)
+
+        self.instance.get_bdms.return_value = []
+
+        new_swap_bdm = {
+            'guest_format': 'swap',
+            'device_type': 'disk',
+            'volume_size': 1024}
+        mock_create_bdm.return_value = new_swap_bdm
+        mock_bdm_instance = mock_bdm_obj.return_value
+
+        self.compute._update_bdm_for_swap_to_finish_resize(
+            self.context, self.instance)
+
+        mock_bdm_obj.assert_called_once_with(
+            self.context, instance_uuid=self.instance.uuid, **new_swap_bdm
+        )
+        mock_bdm_instance.update_or_create.assert_called_once()
+        # called twice
+        self.assertEqual(self.instance.get_bdms.call_count, 2)
+
+    @mock.patch('nova.block_device.create_blank_bdm')
+    @mock.patch('nova.objects.BlockDeviceMapping.create')
+    @mock.patch('nova.objects.BlockDeviceMapping.save')
+    def test_update_swap_bdm(
+            self, mock_bdm_save, mock_bdm_create,
+            mock_create_blank_bdm):
+        self.instance.old_flavor = mock.Mock(swap=1024)  # Existing swap size
+        self.instance.new_flavor = mock.Mock(swap=2048)  # New swap size
+
+        existing_swap_bdm = objects.BlockDeviceMapping(
+            guest_format='swap',
+            device_type='disk',
+            volume_size=1024)
+
+        bdms = objects.BlockDeviceMappingList(objects=[existing_swap_bdm])
+
+        self.instance.get_bdms.return_value = bdms
+
+        self.compute._update_bdm_for_swap_to_finish_resize(
+            self.context, self.instance)
+
+        # assert bdm get saved in DB
+        existing_swap_bdm.save.assert_called_once()
+        # here we are returning same bdms object, not freh from DB
+        self.assertEqual(existing_swap_bdm.volume_size, 2048)
+        # get_bdms is called only once
+        self.assertEqual(self.instance.get_bdms.call_count, 1)
+
+    @mock.patch('nova.block_device.create_blank_bdm')
+    @mock.patch('nova.objects.BlockDeviceMapping.destroy')
+    def test_delete_swap_bdm(self, mock_bdm_destroy, mock_create_bdm):
+        self.instance.old_flavor = mock.Mock(swap=1024)
+        self.instance.new_flavor = mock.Mock(swap=0)
+
+        existing_swap_bdm = objects.BlockDeviceMapping(
+            guest_format='swap',
+            device_type='disk',
+            volume_size=1024)
+
+        self.instance.get_bdms.return_value = objects.BlockDeviceMappingList(
+            objects=[existing_swap_bdm])
+
+        self.compute._update_bdm_for_swap_to_finish_resize(
+            self.context, self.instance)
+
+        mock_bdm_destroy.assert_called_once()
+        self.instance.get_bdms.assert_called_once()

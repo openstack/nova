@@ -1,0 +1,10 @@
+---
+
+fixes:
+  - |
+    With this change, operators can now resize the instance flavor swap to
+    a smaller swap size, it can be expand and shrunk down to 0 using the same
+    resize API.
+    For more details see: `bug 1552777`_
+
+    .. _`bug 1552777`: https://bugs.launchpad.net/nova/+bug/1552777

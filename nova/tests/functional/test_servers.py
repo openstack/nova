@@ -3207,6 +3207,73 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._test_resize_to_same_host_instance_fails(
             '_finish_resize', 'compute_finish_resize')
 
+    def _verify_swap_resize_in_bdm(self, server_id, swap_size):
+        """Verify swap dev in BDM"""
+        ctxt = context.get_admin_context()
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            ctxt, server_id)
+        if swap_size != 0:
+            self.assertIn('swap', [bdm.guest_format for bdm in bdms])
+            swaps = [
+                bdm.volume_size for bdm in bdms if bdm.guest_format == 'swap']
+            self.assertEqual(len(swaps), 1)
+            self.assertIn(swap_size, swaps)
+        else:
+            self.assertNotIn('swap', [bdm.guest_format for bdm in bdms])
+
+    def _test_swap_resize(self, swap1, swap2, confirm=True):
+        fl_1 = self._create_flavor(swap=swap1)
+        fl_2 = self._create_flavor(swap=swap2)
+        server = self._create_server(flavor_id=fl_1, networks=[])
+        # before resize
+        self.assertEqual(server['flavor']['swap'], swap1)
+        server = self._resize_server(server, fl_2)
+        self.assertEqual(server['flavor']['swap'], swap2)
+        self._verify_swap_resize_in_bdm(server['id'], swap2)
+
+        if confirm:
+            server = self._confirm_resize(server)
+            # after resize
+            self.assertEqual(server['flavor']['swap'], swap2)
+            # verify block device mapping
+            self._verify_swap_resize_in_bdm(server['id'], swap2)
+        else:
+            server = self._revert_resize(server)
+            # after revert
+            self.assertEqual(server['flavor']['swap'], swap1)
+            # verify block device mapping
+            self._verify_swap_resize_in_bdm(server['id'], swap1)
+
+    def test_swap_expand_0_to_0_confirm(self):
+        self._test_swap_resize(0, 0)
+
+    def test_swap_expand_0_to_1024_confirm(self):
+        self._test_swap_resize(0, 1024)
+
+    def test_swap_expand_0_to_1024_revert(self):
+        self._test_swap_resize(0, 1024, confirm=False)
+
+    def test_swap_expand_1024_to_2048_confirm(self):
+        self._test_swap_resize(1024, 2048)
+
+    def test_swap_expand_1024_to_2048_revert(self):
+        self._test_swap_resize(1024, 2048, confirm=False)
+
+    def test_swap_expand_2048_to_2048_confirm(self):
+        self._test_swap_resize(2048, 2048)
+
+    def test_swap_shrink_1024_to_0_confirm(self):
+        self._test_swap_resize(1024, 0)
+
+    def test_swap_shrink_1024_to_0_revert(self):
+        self._test_swap_resize(1024, 0, confirm=False)
+
+    def test_swap_shrink_2048_to_1024_confirm(self):
+        self._test_swap_resize(2048, 1024)
+
+    def test_swap_shrink_2048_to_1024_revert(self):
+        self._test_swap_resize(2048, 1024, confirm=False)
+
     def _server_created_with_host(self):
         hostname = self.compute1.host
         server_req = self._build_server(
