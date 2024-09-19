@@ -215,7 +215,9 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
 
         return image_init
 
-    def _fake_cache(self, fetch_func, filename, size=None, *args, **kwargs):
+    def _fake_cache(
+            self, fetch_func, filename, size=None, safe=False, *args,
+            **kwargs):
         # Execute the template function so we can test the arguments it was
         # called with.
         fetch_func(target=filename, *args, **kwargs)

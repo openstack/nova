@@ -14903,6 +14903,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'qcow2',
             virt_disk_size,
             backing_file=backfile_path,
+            safe=False
         )
 
     @mock.patch('nova.virt.libvirt.imagebackend.Image.exists',
@@ -15054,12 +15055,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     'qcow2',
                     disk_info_byname['disk']['virt_disk_size'],
                     backing_file=root_backing,
+                    safe=False
                 ),
                 mock.call(
                     CONF.instances_path + '/disk.local',
                     'qcow2',
                     disk_info_byname['disk.local']['virt_disk_size'],
                     backing_file=ephemeral_backing,
+                    safe=True
                 ),
             ])
 
@@ -16626,7 +16629,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             context=self.context)
         backend.disks['disk.swap'].cache.assert_called_once_with(
             fetch_func=mock.ANY, filename='swap_%i' % expected,
-            size=expected * units.Mi, context=self.context, swap_mb=expected)
+            size=expected * units.Mi, context=self.context, swap_mb=expected,
+            safe=True)
 
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
     def test_create_vz_container_with_swap(self, mock_cache):
@@ -16711,7 +16715,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         backend.disks['disk.eph0'].cache.assert_called_once_with(
             fetch_func=mock.ANY, context=self.context,
             filename=filename, size=100 * units.Gi, ephemeral_size=mock.ANY,
-            specified_fs=None)
+            specified_fs=None, safe=True)
 
     def test_create_image_resize_snap_backend(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

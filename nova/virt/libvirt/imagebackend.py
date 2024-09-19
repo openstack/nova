@@ -135,7 +135,8 @@ class Image(metaclass=abc.ABCMeta):
         return False
 
     @abc.abstractmethod
-    def create_image(self, prepare_template, base, size, *args, **kwargs):
+    def create_image(
+        self, prepare_template, base, size, safe=False, *args, **kwargs):
         """Create image from template.
 
         Contains specific behavior for each image type.
@@ -144,6 +145,7 @@ class Image(metaclass=abc.ABCMeta):
                            Should accept `target` argument.
         :base: Template name
         :size: Size of created image in bytes
+        :safe: True if image contains a safe filesystem
 
         """
         pass
@@ -263,7 +265,8 @@ class Image(metaclass=abc.ABCMeta):
     def exists(self):
         return os.path.exists(self.path)
 
-    def cache(self, fetch_func, filename, size=None, *args, **kwargs):
+    def cache(self, fetch_func, filename, size=None, safe=False, *args,
+              **kwargs):
         """Creates image from template.
 
         Ensures that template and image not already exists.
@@ -298,8 +301,9 @@ class Image(metaclass=abc.ABCMeta):
                 fetch_func(target=target, *args, **kwargs)
 
         if not self.exists() or not os.path.exists(base):
-            self.create_image(fetch_func_sync, base, size,
-                              *args, **kwargs)
+            self.create_image(
+                fetch_func_sync, base, size, safe=safe, *args,
+                **kwargs)
 
         if size:
             # create_image() only creates the base image if needed, so
@@ -593,7 +597,8 @@ class Flat(Image):
         if os.path.exists(self.path):
             self.driver_format = self.resolve_driver_format()
 
-    def create_image(self, prepare_template, base, size, *args, **kwargs):
+    def create_image(
+        self, prepare_template, base, size, safe=False, *args, **kwargs):
         filename = self._get_lock_name(base)
 
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
@@ -663,13 +668,14 @@ class Qcow2(Image):
         self.disk_info_path = os.path.join(os.path.dirname(path), 'disk.info')
         self.resolve_driver_format()
 
-    def create_image(self, prepare_template, base, size, *args, **kwargs):
+    def create_image(
+        self, prepare_template, base, size, safe=False, *args, **kwargs):
         filename = self._get_lock_name(base)
 
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
-        def create_qcow2_image(base, target, size):
+        def create_qcow2_image(base, target, size, safe=False):
             libvirt_utils.create_image(
-                target, 'qcow2', size, backing_file=base)
+                target, 'qcow2', size, backing_file=base, safe=safe)
 
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
@@ -679,7 +685,9 @@ class Qcow2(Image):
         # before we inspect it for other attributes. We do this each time
         # because additional safety checks could have been added since we
         # downloaded the image.
-        if not CONF.workarounds.disable_deep_image_inspection:
+        # NOTE(sean-k-mooney) If the image was created by nova as a swap
+        # or ephemeral disk it is safe to skip the deep inspection.
+        if not CONF.workarounds.disable_deep_image_inspection and not safe:
             inspector = format_inspector.detect_file_format(base)
             try:
                 inspector.safety_check()
@@ -724,7 +732,7 @@ class Qcow2(Image):
 
         if not os.path.exists(self.path):
             with fileutils.remove_path_on_error(self.path):
-                create_qcow2_image(base, self.path, size)
+                create_qcow2_image(base, self.path, size, safe=safe)
 
     def resize_image(self, size):
         image = imgmodel.LocalFileImage(self.path, imgmodel.FORMAT_QCOW2)
@@ -800,7 +808,8 @@ class Lvm(Image):
     def _can_fallocate(self):
         return False
 
-    def create_image(self, prepare_template, base, size, *args, **kwargs):
+    def create_image(
+        self, prepare_template, base, size, safe=False, *args, **kwargs):
         def encrypt_lvm_image():
             dmcrypt.create_volume(self.path.rpartition('/')[2],
                                   self.lv_path,
@@ -997,7 +1006,8 @@ class Rbd(Image):
                 LOG.warning("Ignoring failure to remove %(path)s: "
                             "%(error)s", {'path': base, 'error': e})
 
-    def create_image(self, prepare_template, base, size, *args, **kwargs):
+    def create_image(
+        self, prepare_template, base, size, safe=False, *args, **kwargs):
 
         if not self.exists():
             self._remove_non_raw_cache_image(base)
@@ -1272,7 +1282,8 @@ class Ploop(Image):
 
     # Create new ploop disk (in case of epehemeral) or
     # copy ploop disk from glance image
-    def create_image(self, prepare_template, base, size, *args, **kwargs):
+    def create_image(
+        self, prepare_template, base, size, safe=False, *args, **kwargs):
         filename = os.path.basename(base)
 
         # Copy main file of ploop disk, restore DiskDescriptor.xml for it

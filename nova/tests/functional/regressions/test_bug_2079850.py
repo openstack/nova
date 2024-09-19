@@ -3,6 +3,8 @@ import functools
 import os
 import shutil
 
+from unittest import mock
+
 import fixtures
 
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -11,7 +13,6 @@ from oslo_utils import units
 
 import nova.conf
 
-from nova import exception
 from nova import objects
 from nova import test
 from nova.virt.libvirt import driver
@@ -53,16 +54,15 @@ class TestBugBackingFilePartitionTables(test.NoDBTestCase):
         file_path = os.path.join(self.base_dir.path, 'test_file')
         libvirt_utils.create_image(file_path, 'raw', '64M')
         self.assertTrue(os.path.exists(file_path))
-        # nova should ensure that any file we create has a partition table
-        # inspector = format_inspector.GPTInspector.from_file(file_path)
-        # self.assertIsNotNone(inspector)
-        # inspector.safety_check()
-
-        # however the libvirt_utils.create_image method does not create a
-        # partition table so we should expect this to fail
+        # FIXME(sean-k-mooney): oslo currently detect vfat as an mbr partition
         self.assertRaises(
             format_inspector.ImageFormatError,
             format_inspector.GPTInspector.from_file, file_path)
+
+        # nova files should pass the RawFileInspector safety check
+        inspector = format_inspector.RawFileInspector.from_file(file_path)
+        self.assertIsNotNone(inspector)
+        inspector.safety_check()
 
     def test_cache_file(self):
         """Test the qcow2 cache interaction for ephemeral disks
@@ -85,8 +85,11 @@ class TestBugBackingFilePartitionTables(test.NoDBTestCase):
             os_type=None, is_block_dev=False)
         # this need to be multiples of 1G
         size = 1 * units.Gi
-        fname = "ephemeral_%s_%s" % (size, ".qcow")
-        e = self.assertRaises(exception.InvalidDiskInfo,
-            image.cache, fetch_func=fn, context=None, filename=fname,
-            size=size, ephemeral_size=1)
-        self.assertIn("Base image failed safety check", str(e))
+        fname = "ephemeral_%s_%s" % (size, ".img")
+        with mock.patch.object(
+            imagebackend, '_update_utime_ignore_eacces') as m:
+
+            image.cache(
+                fetch_func=fn, context=None, filename=fname,
+                size=size, ephemeral_size=1, safe=True)
+            m.assert_called_once()
