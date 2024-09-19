@@ -36,8 +36,8 @@ If you are new to Nova, please read this first: :ref:`getting_involved`.
 Dates overview
 ==============
 
-For 2024.2 Dalmatian, please see:
-https://wiki.openstack.org/wiki/Nova/2024.2_Release_Schedule
+For 2025.1 Epoxy, please see:
+https://wiki.openstack.org/wiki/Nova/2025.1_Release_Schedule
 
 .. note:: Throughout this document any link which references the name of a
           release cycle in the link can usually be changed to the name of the
@@ -102,9 +102,9 @@ Why we have a Spec Freeze:
 
 By the freeze date, we expect all blueprints that will be approved for the
 cycle to be listed on launchpad and all relevant specs to be merged.
-For 2024.2 Dalmatian, blueprints can be found at
-https://blueprints.launchpad.net/nova/2024.2 and specs at
-https://specs.openstack.org/openstack/nova-specs/specs/2024.2/index.html
+For 2025.1 Epoxy, blueprints can be found at
+https://blueprints.launchpad.net/nova/2025.1 and specs at
+https://specs.openstack.org/openstack/nova-specs/specs/2025.1/index.html
 
 Starting with Liberty, we are keeping a backlog open for submission at all
 times.
