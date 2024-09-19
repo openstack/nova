@@ -199,6 +199,18 @@ support the decided libvirt version.
       - 8.0.0
       - 5.2.0
       - 6.2.0
+    * - 2024.1 Caracal
+      - 29.0.0
+      - 7.0.0
+      - 8.0.0
+      - 5.2.0
+      - 6.2.0
+    * - 2024.2 Dalmatian
+      - 30.0.0
+      - 7.0.0
+      - 8.0.0
+      - 5.2.0
+      - 6.2.0
 
 
 OS distribution versions
