@@ -267,6 +267,7 @@ SERVICE_VERSION_ALIASES = {
     'Antelope': 66,
     'Bobcat': 66,
     'Caracal': 66,
+    'Dalmatian': 67,
 }
 
 
