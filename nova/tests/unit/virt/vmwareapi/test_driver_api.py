@@ -2488,13 +2488,16 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def test_resize_to_smaller_disk(self):
         self._create_vm(flavor='m1.large')
         flavor = self._get_flavor_by_name('m1.small')
-        fake_dest = '1.0|vcenter-uuid'
+        migration = objects.Migration(
+            dest_host='1.0|vcenter-uuid'
+        )
+
         with test.nested(
             mock.patch('nova.compute.utils.is_volume_backed_instance',
                        return_value=False)):
             self.assertRaises(exception.InstanceFaultRollback,
                               self.conn.migrate_disk_and_power_off,
-                              self.context, self.instance, fake_dest, flavor,
+                              self.context, self.instance, migration, flavor,
                               None)
 
     def test_spawn_attach_volume_vmdk(self):

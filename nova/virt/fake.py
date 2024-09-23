@@ -255,7 +255,7 @@ class FakeDriver(driver.ComputeDriver):
     def poll_rebooting_instances(self, timeout, instances):
         pass
 
-    def migrate_disk_and_power_off(self, context, instance, dest,
+    def migrate_disk_and_power_off(self, context, instance, migration,
                                    flavor, network_info,
                                    block_device_info=None,
                                    timeout=0, retry_interval=0):
@@ -683,6 +683,9 @@ class FakeVirtAPI(virtapi.VirtAPI):
         pass
 
     def update_compute_provider_status(self, context, rp_uuid, enabled):
+        pass
+
+    def is_instance_storage_shared(self, context, instance, host=None):
         pass
 
 

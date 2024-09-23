@@ -24,6 +24,7 @@ from unittest import mock
 from os_win import exceptions as os_win_exc
 
 from nova import exception
+from nova import objects
 from nova import safe_utils
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
@@ -387,15 +388,17 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.instance, mock.sentinel.network_info)
 
     def test_migrate_disk_and_power_off(self):
+        migration = objects.Migration(dest_host='10.0.0.1',
+                                      dest_compute='mock-compute')
         self.driver.migrate_disk_and_power_off(
-            mock.sentinel.context, mock.sentinel.instance, mock.sentinel.dest,
+            mock.sentinel.context, mock.sentinel.instance, migration,
             mock.sentinel.flavor, mock.sentinel.network_info,
             mock.sentinel.block_device_info, mock.sentinel.timeout,
             mock.sentinel.retry_interval)
 
         migr_power_off = self.driver._migrationops.migrate_disk_and_power_off
         migr_power_off.assert_called_once_with(
-            mock.sentinel.context, mock.sentinel.instance, mock.sentinel.dest,
+            mock.sentinel.context, mock.sentinel.instance, migration.dest_host,
             mock.sentinel.flavor, mock.sentinel.network_info,
             mock.sentinel.block_device_info, mock.sentinel.timeout,
             mock.sentinel.retry_interval)

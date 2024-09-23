@@ -310,12 +310,14 @@ class HyperVDriver(driver.ComputeDriver):
         """Unplug VIFs from networks."""
         self._vmops.unplug_vifs(instance, network_info)
 
-    def migrate_disk_and_power_off(self, context, instance, dest,
+    def migrate_disk_and_power_off(self, context, instance, migration,
                                    flavor, network_info,
                                    block_device_info=None,
                                    timeout=0, retry_interval=0):
+        dest_host = migration.dest_host
         return self._migrationops.migrate_disk_and_power_off(context,
-                                                             instance, dest,
+                                                             instance,
+                                                             dest_host,
                                                              flavor,
                                                              network_info,
                                                              block_device_info,

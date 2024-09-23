@@ -19402,28 +19402,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._set_cache_mode(fake_conf)
         self.assertEqual(fake_conf.driver_cache, 'fake')
 
-    @mock.patch('os.unlink')
-    @mock.patch.object(os.path, 'exists')
+    @mock.patch.object(fake.FakeVirtAPI, 'is_instance_storage_shared')
     def _test_shared_storage_detection(self, is_same,
-                                       mock_exists, mock_unlink):
+                                       mock_is_instance_storage_shared):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.get_host_ip_addr = mock.MagicMock(return_value='bar')
-        mock_exists.return_value = is_same
-        with test.nested(
-            mock.patch.object(drvr._remotefs, 'create_file'),
-            mock.patch.object(drvr._remotefs, 'remove_file')
-        ) as (mock_rem_fs_create, mock_rem_fs_remove):
-            result = drvr._is_path_shared_with('host', '/path')
-        mock_rem_fs_create.assert_any_call('host', mock.ANY)
-        create_args, create_kwargs = mock_rem_fs_create.call_args
-        self.assertTrue(create_args[1].startswith('/path'))
-        if is_same:
-            mock_unlink.assert_called_once_with(mock.ANY)
-        else:
-            mock_rem_fs_remove.assert_called_with('host', mock.ANY)
-            remove_args, remove_kwargs = mock_rem_fs_remove.call_args
-            self.assertTrue(remove_args[1].startswith('/path'))
-        return result
+        mock_is_instance_storage_shared.return_value = is_same
+        return drvr._is_instance_storage_shared(None,
+                                                mock.sentinel.instance,
+                                                'host',
+                                                mock.sentinel.dest_host)
 
     def test_shared_storage_detection_same_host(self):
         self.assertTrue(self._test_shared_storage_detection(True))
@@ -19431,19 +19419,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_shared_storage_detection_different_host(self):
         self.assertFalse(self._test_shared_storage_detection(False))
 
-    @mock.patch.object(os, 'unlink')
-    @mock.patch.object(os.path, 'exists')
-    @mock.patch('oslo_concurrency.processutils.execute')
+    @mock.patch.object(fake.FakeVirtAPI, 'is_instance_storage_shared')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_host_ip_addr',
                        return_value='foo')
-    def test_shared_storage_detection_easy(self, mock_get, mock_exec,
-                                           mock_exists, mock_unlink):
+    def test_shared_storage_detection_easy(self, mock_get,
+                                           mock_is_instance_storage_shared):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertTrue(drvr._is_path_shared_with('foo', '/path'))
+        self.assertTrue(drvr._is_instance_storage_shared(
+            None, mock.sentinel.instance, 'foo', mock.sentinel.dest_host))
         mock_get.assert_called_once_with()
-        mock_exec.assert_not_called()
-        mock_exists.assert_not_called()
-        mock_unlink.assert_not_called()
+        mock_is_instance_storage_shared.assert_not_called()
 
     def test_store_pid_remove_pid(self):
         instance = objects.Instance(**self.test_instance)
@@ -22650,13 +22635,20 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         return instance
 
+    def _create_migration(self, dest_host=None, dest_compute=None):
+        if not dest_compute:
+            dest_compute = 'mock-compute'
+        return objects.Migration(
+            dest_host=dest_host,
+            dest_compute=dest_compute)
+
     @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
                  '_get_instance_disk_info'), return_value=[])
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr',
                 return_value='10.0.0.1')
     @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
-                 '_is_path_shared_with'), return_value=False)
+                 '_is_instance_storage_shared'), return_value=False)
     @mock.patch('os.rename')
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute',
@@ -22671,10 +22663,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         ins_ref = self._create_instance()
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
         flavor_obj = objects.Flavor(**flavor)
+        migration = self._create_migration('10.0.0.2')
 
         self.assertRaises(test.TestingException,
                           self.drvr.migrate_disk_and_power_off,
-                          context.get_admin_context(), ins_ref, '10.0.0.2',
+                          context.get_admin_context(), ins_ref, migration,
                           flavor_obj, None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
@@ -22687,7 +22680,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr',
                 return_value='10.0.0.1')
     @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
-                 '_is_path_shared_with'), return_value=False)
+                 '_is_instance_storage_shared'), return_value=False)
     @mock.patch('os.rename')
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
@@ -22701,13 +22694,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         """
 
         instance = self._create_instance(params=params_for_instance)
+        diff_host_migration = objects.Migration(
+            dest_host='10.0.0.2',
+            dest_compute='mock-compute')
         disk_info = list(fake_disk_info_byname(instance).values())
         disk_info_text = jsonutils.dumps(disk_info)
         mock_get_disk_info.return_value = disk_info
 
         # dest is different host case
         out = self.drvr.migrate_disk_and_power_off(
-               ctxt, instance, '10.0.0.2', flavor_obj, None,
+               ctxt, instance, diff_host_migration, flavor_obj, None,
                block_device_info=block_device_info)
 
         mock_cleanup.assert_called_once()
@@ -22717,9 +22713,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             instance.uuid, mock.ANY, mock.ANY, '10.0.0.2', mock.ANY, mock.ANY)
         mock_unplug_vifs.assert_called_once()
         mock_unplug_vifs.reset_mock()
+
         # dest is same host case
+        same_host_migration = objects.Migration(
+            dest_host='10.0.0.1',
+            dest_compute='mock-compute')
         out = self.drvr.migrate_disk_and_power_off(
-               ctxt, instance, '10.0.0.1', flavor_obj, None,
+               ctxt, instance, same_host_migration, flavor_obj, None,
                block_device_info=block_device_info)
 
         mock_cleanup.assert_called_once()
@@ -22727,6 +22727,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_vtpm.assert_called_with(
             instance.uuid, mock.ANY, mock.ANY, '10.0.0.1', mock.ANY, mock.ANY)
         mock_unplug_vifs.assert_called_once()
+        return instance
 
     def test_migrate_disk_and_power_off(self):
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
@@ -22803,6 +22804,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Original instance config
         instance = self._create_instance({'flavor': {'root_gb': 10,
                                                      'ephemeral_gb': 0}})
+        migration = self._create_migration('10.0.0.1')
 
         disk_info = list(fake_disk_info_byname(instance).values())
         mock_get_disk_info.return_value = disk_info
@@ -22816,7 +22818,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         # Destination is same host
         out = drvr.migrate_disk_and_power_off(context.get_admin_context(),
-                                              instance, '10.0.0.1',
+                                              instance, migration,
                                               flavor_obj, None)
 
         mock_get_disk_info.assert_called_once_with(instance, None)
@@ -22839,14 +22841,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         """Test for nova.virt.libvirt.libvirt_driver.LibvirtConnection
         .migrate_disk_and_power_off.
         """
-        instance = self._create_instance()
+        self.instance = self._create_instance()
+        self.migration = self._create_migration('10.0.0.1')
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
         flavor_obj = objects.Flavor(**flavor)
 
         # Migration is not implemented for LVM backed instances
         self.assertRaises(expected_exc,
               self.drvr.migrate_disk_and_power_off,
-              None, instance, '10.0.0.1', flavor_obj, None)
+              None, self.instance, self.migration, flavor_obj, None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs',
                 new=mock.Mock())
@@ -22857,7 +22860,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '._is_path_shared_with')
+                '._is_instance_storage_shared')
     def _test_migrate_disk_and_power_off_backing_file(self,
                                                       shared_storage,
                                                       mock_is_shared_storage,
@@ -22882,9 +22885,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_execute.side_effect = fake_execute
 
         instance = self._create_instance()
+        migration = self._create_migration('10.0.0.2')
 
         out = self.drvr.migrate_disk_and_power_off(
-               context.get_admin_context(), instance, '10.0.0.2',
+               context.get_admin_context(), instance, migration,
                flavor_obj, None)
 
         dest = '10.0.0.2' if not shared_storage else None
@@ -22910,7 +22914,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self._test_migrate_disk_and_power_off_resize_check(expected_exc)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       '_is_path_shared_with', return_value=False)
+                       '_is_instance_storage_shared', return_value=False)
     def test_migrate_disk_and_power_off_resize_cannot_ssh(self,
                                                           mock_is_shared):
         def fake_execute(*args, **kwargs):
@@ -22919,12 +22923,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         expected_exc = exception.InstanceFaultRollback
         self._test_migrate_disk_and_power_off_resize_check(expected_exc)
-        mock_is_shared.assert_called_once_with('10.0.0.1', test.MatchType(str))
+        mock_is_shared.assert_called_once_with(None, self.instance,
+                                               self.migration.dest_host,
+                                               self.migration.dest_compute)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
     def test_migrate_disk_and_power_off_resize_error(self, mock_get_disk_info):
         instance = self._create_instance()
+        migration = self._create_migration('10.0.0.1')
         flavor = {'root_gb': 5, 'ephemeral_gb': 10}
         flavor_obj = objects.Flavor(**flavor)
         mock_get_disk_info.return_value = fake_disk_info_json(instance)
@@ -22932,7 +22939,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertRaises(
             exception.InstanceFaultRollback,
             self.drvr.migrate_disk_and_power_off,
-            'ctx', instance, '10.0.0.1', flavor_obj, None)
+            'ctx', instance, migration, flavor_obj, None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
@@ -22945,6 +22952,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # will raise the same error).
         self.flags(images_type='rbd', group='libvirt')
         instance = self._create_instance()
+        migration = self._create_migration('10.0.0.1')
         flavor = {'root_gb': 5, 'ephemeral_gb': 20}
         flavor_obj = objects.Flavor(**flavor)
         mock_get_disk_info.return_value = []
@@ -22952,7 +22960,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertRaises(
             exception.InstanceFaultRollback,
             self.drvr.migrate_disk_and_power_off,
-            'ctx', instance, '10.0.0.1', flavor_obj, None)
+            'ctx', instance, migration, flavor_obj, None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
@@ -22960,13 +22968,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self, mock_get_disk_info):
         # Note(Mike_D): The size of this instance's ephemeral_gb is 20 gb.
         instance = self._create_instance()
+        migration = self._create_migration('10.0.0.1')
         flavor = {'root_gb': 10, 'ephemeral_gb': 0}
         flavor_obj = objects.Flavor(**flavor)
         mock_get_disk_info.return_value = fake_disk_info_json(instance)
 
         self.assertRaises(exception.InstanceFaultRollback,
                           self.drvr.migrate_disk_and_power_off,
-                          'ctx', instance, '10.0.0.1', flavor_obj, None)
+                          'ctx', instance, migration, flavor_obj, None)
 
     @mock.patch('nova.virt.driver.block_device_info_get_ephemerals')
     def test_migrate_disk_and_power_off_resize_error_eph(self, mock_get):
@@ -23012,6 +23021,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         ]
         mock_get.return_value = mappings
         instance = self._create_instance()
+        migration = self._create_migration('10.0.0.1')
 
         # Old flavor, eph is 20, real disk is 3, target is 2, fail
         flavor = {'root_gb': 10, 'ephemeral_gb': 2}
@@ -23020,7 +23030,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertRaises(
             exception.InstanceFaultRollback,
             self.drvr.migrate_disk_and_power_off,
-            'ctx', instance, '10.0.0.1', flavor_obj, None)
+            'ctx', instance, migration, flavor_obj, None)
 
         # Old flavor, eph is 20, real disk is 3, target is 4
         flavor = {'root_gb': 10, 'ephemeral_gb': 4}
@@ -23035,7 +23045,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '._is_path_shared_with')
+                '._is_instance_storage_shared')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
     def test_migrate_disk_and_power_off_resize_copy_disk_info(
@@ -23043,6 +23053,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_copy, mock_execute, mock_rename):
 
         instance = self._create_instance()
+        migration = self._create_migration()
         disk_info = list(fake_disk_info_byname(instance).values())
         instance_base = os.path.dirname(disk_info[0]['path'])
         flavor = {'root_gb': 10, 'ephemeral_gb': 25}
@@ -23061,14 +23072,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_exists.side_effect = \
                 lambda path: path == src_disk_info_path
             self.drvr.migrate_disk_and_power_off(context.get_admin_context(),
-                                                 instance, mock.sentinel,
+                                                 instance, migration,
                                                  flavor_obj, None)
             self.assertTrue(mock_exists.called)
 
         dst_disk_info_path = os.path.join(instance_base, 'disk.info')
         mock_copy.assert_any_call(src_disk_info_path, dst_disk_info_path,
-                                  host=mock.sentinel, on_execute=mock.ANY,
-                                  on_completion=mock.ANY)
+                                  host=migration.dest_host,
+                                  on_execute=mock.ANY, on_completion=mock.ANY)
 
     def test_wait_for_running(self):
         def fake_get_info(self, instance):

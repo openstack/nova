@@ -324,7 +324,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         """List VM instances from the single compute node."""
         return self._vmops.list_instances()
 
-    def migrate_disk_and_power_off(self, context, instance, dest,
+    def migrate_disk_and_power_off(self, context, instance, migration,
                                    flavor, network_info,
                                    block_device_info=None,
                                    timeout=0, retry_interval=0):
@@ -332,6 +332,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         off the instance before the end.
         """
         # TODO(PhilDay): Add support for timeout (clean shutdown)
+        dest = migration.dest_host
         return self._vmops.migrate_disk_and_power_off(
             context, instance, dest, flavor, network_info, block_device_info)
 

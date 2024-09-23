@@ -615,6 +615,10 @@ class ComputeVirtAPI(virtapi.VirtAPI):
             self.reportclient.set_traits_for_provider(
                 context, rp_uuid, new_traits, generation=trait_info.generation)
 
+    def is_instance_storage_shared(self, context, instance, host=None):
+        return self._compute._is_instance_storage_shared(context, instance,
+                                                         host=host)
+
 
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
@@ -6105,7 +6109,7 @@ class ComputeManager(manager.Manager):
             timeout, retry_interval = self._get_power_off_values(
                 instance, clean_shutdown)
             disk_info = self.driver.migrate_disk_and_power_off(
-                context, instance, migration.dest_host,
+                context, instance, migration,
                 flavor, network_info,
                 block_device_info,
                 timeout, retry_interval)

@@ -34,3 +34,6 @@ class VirtAPI(object):
             the trait would be added.
         """
         raise NotImplementedError()
+
+    def is_instance_storage_shared(self, context, instance, host=None):
+        raise NotImplementedError()

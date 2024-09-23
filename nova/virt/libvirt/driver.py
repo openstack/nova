@@ -11522,28 +11522,20 @@ class LibvirtDriver(driver.ComputeDriver):
         return compute_utils.convert_mb_to_ceil_gb(
             self.image_cache_manager.get_disk_usage() / 1024.0 / 1024.0)
 
-    def _is_path_shared_with(self, dest, path):
+    def _is_instance_storage_shared(self, context, instance, dest,
+                                    dest_compute):
         # NOTE (rmk): There are two methods of determining whether we are
         #             on the same filesystem: the source and dest IP are the
-        #             same, or we create a file on the dest system via SSH
-        #             and check whether the source system can also see it.
-        shared_path = (dest == self.get_host_ip_addr())
-        if not shared_path:
-            tmp_file = uuidutils.generate_uuid(dashed=False) + '.tmp'
-            tmp_path = os.path.join(path, tmp_file)
+        #             same...
+        if dest == self.get_host_ip_addr():
+            return True
 
-            try:
-                self._remotefs.create_file(dest, tmp_path)
-                if os.path.exists(tmp_path):
-                    shared_path = True
-                    os.unlink(tmp_path)
-                else:
-                    self._remotefs.remove_file(dest, tmp_path)
-            except Exception:
-                pass
-        return shared_path
+        # NOTE (fwiesel): Or we rely on the drivers api pair
+        # check_instance_shared_storage_local / check_instance_shared_storage
+        return self.virtapi.is_instance_storage_shared(context, instance,
+                                                       dest_compute)
 
-    def migrate_disk_and_power_off(self, context, instance, dest,
+    def migrate_disk_and_power_off(self, context, instance, migration,
                                    flavor, network_info,
                                    block_device_info=None,
                                    timeout=0, retry_interval=0):
@@ -11581,7 +11573,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # shared storage for instance dir (eg. NFS).
         inst_base = libvirt_utils.get_instance_path(instance)
         inst_base_resize = inst_base + "_resize"
-        shared_instance_path = self._is_path_shared_with(dest, inst_base)
+        dest = migration.dest_host
+        dest_compute = migration.dest_compute
+        shared_instance_path = self._is_instance_storage_shared(context,
+                                                                instance,
+                                                                dest,
+                                                                dest_compute)
 
         # try to create the directory on the remote compute node
         # if this fails we pass the exception up the stack so we can catch
