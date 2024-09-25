@@ -260,21 +260,16 @@ important OS distros.
       -
       -
       -
-    * - 11.x (Bullseye) ("stable")
-      - 2021-10-09
-      - 7.0.0
-      - 5.2
-      - 1.42.0
-    * - 12.x (Bookworm)
+    * - 12.x (Bookworm) ("oldstable")
       - 2023-06-10
       - 9.0.0
-      - 7.2.0
-      - 1.48.6
-    * - 13.x (Trixie) ("testing")
-      - No GA date as of 2025-02-27
-      - 11.0.0
-      - 9.2.1
-      - 1.54.0
+      - 7.2
+      - 1.48.
+    * - 13.x (Trixie) ("stable")
+      - 2025-08-09
+      - 10.7.0
+      - 9.1.0
+      - 1.52.2
     * - **RHEL**
       -
       -
