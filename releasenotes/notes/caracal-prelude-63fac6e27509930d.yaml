@@ -62,7 +62,7 @@ prelude: |
       <https://specs.openstack.org/openstack/nova-specs/specs/2024.1/implemented/libvirt-maxphysaddr-support.html#flavor-extra-specs>`_
       to be created by specifying either ``hw:maxphysaddr_mode=emulate`` and
       ``hw:maxphysaddr_bits`` flavor extra specs or  ``hw_maxphysaddr_mode``
-      and ``hw_maxphysaddr_bits``image properties. The
+      and ``hw_maxphysaddr_bits`` image properties. The
       ``ImagePropertiesFilter`` and ``ComputeCapabilitiesFilter`` filters are
       required to support this functionality.
 
