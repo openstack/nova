@@ -26,7 +26,6 @@ from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import units
 from oslo_vmware import exceptions as vexc
-from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
 from oslo_vmware import vim_util as vutil
 
@@ -675,46 +674,57 @@ def get_hardware_devices(session, vm_ref):
     return vim_util.get_array_items(hardware_devices)
 
 
-def get_vmdk_info(session, vm_ref, uuid=None):
-    """Returns information for the primary VMDK attached to the given VM."""
+def _is_before_in_boot_order(disk1, disk2):
+    return (disk1.controllerKey < disk2.controllerKey or
+            disk1.controllerKey == disk2.controllerKey and
+                disk1.unitNumber < disk2.unitNumber)
+
+
+def get_vmdk_info(session, vm_ref):
+    """Returns information for the first VMDK attached to the given VM.
+
+    The order follows the boot order of the hypervisor and is determined as
+    follows:
+    - if disks are attached at multiple controllers, disks at a controller with
+      a lower device number take precedence.
+    - if more than one disk is attached at the same controller disks with a
+      lower unit number will take precedence
+    """
     hardware_devices = get_hardware_devices(session, vm_ref)
     vmdk_file_path = None
     vmdk_controller_key = None
     disk_type = None
     capacity_in_bytes = 0
 
-    # Determine if we need to get the details of the root disk
-    root_disk = None
-    root_device = None
-    if uuid:
-        root_disk = '%s.vmdk' % uuid
-    vmdk_device = None
-
+    # Find the lowest_disk_device and fill the dict adapter_type_dict.
+    lowest_disk_device = None
     adapter_type_dict = {}
     for device in hardware_devices:
+        # For the disk-devices: Check if the current disk-device is before the
+        #    lowest_disk_device in the boot order
         if device.__class__.__name__ == "VirtualDisk":
-            if device.backing.__class__.__name__ == \
-                    "VirtualDiskFlatVer2BackingInfo":
-                path = ds_obj.DatastorePath.parse(device.backing.fileName)
-                if root_disk and path.basename == root_disk:
-                    root_device = device
-                vmdk_device = device
+            if (device.backing.__class__.__name__ ==
+                    "VirtualDiskFlatVer2BackingInfo"):
+                if (lowest_disk_device is None or
+                        _is_before_in_boot_order(device, lowest_disk_device)):
+                    lowest_disk_device = device
+        # For the controller devices: Memorize for controller-type as
+        # defined by the class name for the device.key. So, we can look it up
+        # easily, when we know which is actually the first.
         elif device.__class__.__name__ in CONTROLLER_TO_ADAPTER_TYPE:
             adapter_type_dict[device.key] = CONTROLLER_TO_ADAPTER_TYPE[
                 device.__class__.__name__]
 
-    if root_disk:
-        vmdk_device = root_device
+    if lowest_disk_device:
+        vmdk_file_path = lowest_disk_device.backing.fileName
+        capacity_in_bytes = _get_device_capacity(lowest_disk_device)
+        vmdk_controller_key = lowest_disk_device.controllerKey
+        disk_type = _get_device_disk_type(lowest_disk_device)
 
-    if vmdk_device:
-        vmdk_file_path = vmdk_device.backing.fileName
-        capacity_in_bytes = _get_device_capacity(vmdk_device)
-        vmdk_controller_key = vmdk_device.controllerKey
-        disk_type = _get_device_disk_type(vmdk_device)
-
+    # Get the adapter type for the disk-device (if found).
     adapter_type = adapter_type_dict.get(vmdk_controller_key)
     return VmdkInfo(vmdk_file_path, adapter_type, disk_type,
-                    capacity_in_bytes, vmdk_device)
+                    capacity_in_bytes, lowest_disk_device)
 
 
 scsi_controller_classes = {
