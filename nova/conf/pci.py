@@ -175,8 +175,9 @@ Possible values:
       its corresponding PF), otherwise they will be ignored and not
       available for allocation.
     - ``resource_class`` - optional Placement resource class name to be used
-      to track the matching PCI devices in Placement when [pci]device_spec is
-      True. It can be a standard resource class from the
+      to track the matching PCI devices in Placement when
+      [pci]report_in_placement is True.
+      It can be a standard resource class from the
       ``os-resource-classes`` lib. Or can be any string. In that case Nova will
       normalize it to a proper Placement resource class by making it upper
       case, replacing any consecutive character outside of ``[A-Z0-9_]`` with a
