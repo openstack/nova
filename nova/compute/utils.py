@@ -19,12 +19,13 @@ import functools
 import inspect
 import itertools
 import math
+import socket
 import traceback
 
-import netifaces
 from oslo_log import log
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+import psutil
 
 from nova.accelerator import cyborg
 from nova import block_device
@@ -1071,22 +1072,20 @@ def get_machine_ips():
     :returns: list of Strings of ip addresses
     """
     addresses = []
-    for interface in netifaces.interfaces():
-        try:
-            iface_data = netifaces.ifaddresses(interface)
-            for family in iface_data:
-                if family not in (netifaces.AF_INET, netifaces.AF_INET6):
-                    continue
-                for address in iface_data[family]:
-                    addr = address['addr']
+    for interface, ifaddresses in psutil.net_if_addrs().items():
+        for ifaddress in ifaddresses:
+            if ifaddress.family not in (socket.AF_INET, socket.AF_INET6):
+                continue
 
-                    # If we have an ipv6 address remove the
-                    # %ether_interface at the end
-                    if family == netifaces.AF_INET6:
-                        addr = addr.split('%')[0]
-                    addresses.append(addr)
-        except ValueError:
-            pass
+            addr = ifaddress.address
+
+            # If we have an ipv6 address remove the
+            # %ether_interface at the end
+            if ifaddress.family == socket.AF_INET6:
+                addr = addr.split('%')[0]
+
+            addresses.append(addr)
+
     return addresses
 
 

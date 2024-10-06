@@ -1155,18 +1155,6 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         self.assertRaises(test.TestingException,
                           self._test_event_reporter_graceful_exit, error)
 
-    @mock.patch('netifaces.interfaces')
-    def test_get_machine_ips_value_error(self, mock_interfaces):
-        # Tests that the utility method does not explode if netifaces raises
-        # a ValueError.
-        iface = mock.sentinel
-        mock_interfaces.return_value = [iface]
-        with mock.patch('netifaces.ifaddresses',
-                        side_effect=ValueError) as mock_ifaddresses:
-            addresses = compute_utils.get_machine_ips()
-            self.assertEqual([], addresses)
-        mock_ifaddresses.assert_called_once_with(iface)
-
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.objects.Instance.destroy')

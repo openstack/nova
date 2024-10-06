@@ -18,7 +18,6 @@ Paste>=2.0.2 # MIT
 PrettyTable>=0.7.1 # BSD
 alembic>=1.5.0 # MIT
 netaddr>=0.7.18 # BSD
-netifaces>=0.10.4 # MIT
 paramiko>=2.7.1 # LGPLv2.1+
 iso8601>=0.1.11 # MIT
 jsonschema>=4.0.0 # MIT
