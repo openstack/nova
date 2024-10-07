@@ -219,10 +219,10 @@ available images on your system, run:
 The displayed image attributes are:
 
 ``ID``
-  Automatically generated UUID of the image
+  Automatically generated UUID of the image.
 
 ``Name``
-  Free form, human-readable name for image
+  Free form, human-readable name for image.
 
 ``Status``
   The status of the image. Images marked ``ACTIVE`` are available for use.
@@ -314,8 +314,8 @@ The Network Controller manages the networking resources on host machines. The
 API server dispatches commands through the message queue, which are
 subsequently processed by Network Controllers. Specific operations include:
 
--  Allocating fixed IP addresses
+-  Allocating fixed IP addresses.
 
--  Configuring VLANs for projects
+-  Configuring VLANs for projects.
 
--  Configuring networks for compute nodes
+-  Configuring networks for compute nodes.
