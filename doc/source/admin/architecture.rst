@@ -54,7 +54,7 @@ of a typical Nova deployment.
 * **Conductor**: Handles requests that need coordination (build/resize), acts
   as a database proxy, or handles object conversions.
 
-* **:placement-doc:`Placement <>`**: Tracks resource provider inventories and
+* **Placement**: Tracks resource provider inventories and
   usages.
 
 While all services are designed to be horizontally scalable, you should have
