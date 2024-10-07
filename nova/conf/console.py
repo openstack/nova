@@ -51,7 +51,7 @@ connections from clients.  For example::
 See the man page for the OpenSSL `ciphers` command for details of the cipher
 preference string format and allowed values::
 
-    https://www.openssl.org/docs/man1.1.0/man1/ciphers.html
+    https://docs.openssl.org/master/man1/openssl-ciphers/#cipher-list-format
 
 Related options:
 
