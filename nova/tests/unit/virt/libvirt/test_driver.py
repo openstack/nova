@@ -15006,7 +15006,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             '/fake/instance/dir', disk_info)
         self.assertFalse(mock_fetch_image.called)
 
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch('nova.privsep.path.utime')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     def test_create_images_and_backing_ephemeral_gets_created(
@@ -16753,7 +16753,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_mkfs.assert_has_calls([mock.call('ext4', '/dev/something',
                                               'myVol')])
 
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch('nova.privsep.path.utime')
     @mock.patch('nova.virt.libvirt.utils.fetch_image')
     @mock.patch('nova.virt.libvirt.utils.create_image')

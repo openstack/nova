@@ -563,7 +563,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         mock_exists.assert_has_calls(exist_calls)
 
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(os.path, 'exists', side_effect=[])
@@ -596,7 +596,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_detect_format.assert_called_once()
         mock_detect_format.return_value.safety_check.assert_called_once_with()
 
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(imagebackend.disk, 'extend')
@@ -624,7 +624,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertFalse(mock_extend.called)
         mock_detect_format.assert_called_once()
 
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
@@ -666,7 +666,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_utime.assert_called()
         mock_detect_format.assert_called_once()
 
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
@@ -701,7 +701,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertFalse(mock_extend.called)
         mock_detect_format.assert_called_once()
 
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')

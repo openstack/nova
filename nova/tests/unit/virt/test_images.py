@@ -101,7 +101,7 @@ class QemuTestCase(test.NoDBTestCase):
         mocked_execute.assert_called_once()
 
     @mock.patch.object(images, 'IMAGE_API')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(images, 'convert_image',
                        side_effect=exception.ImageUnacceptable)
     @mock.patch.object(images, 'qemu_img_info')
@@ -121,7 +121,7 @@ class QemuTestCase(test.NoDBTestCase):
                                None, 'href123', '/no/path')
 
     @mock.patch.object(images, 'IMAGE_API')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(images, 'convert_image',
                        side_effect=exception.ImageUnacceptable)
     @mock.patch.object(images, 'qemu_img_info')
@@ -144,7 +144,7 @@ class QemuTestCase(test.NoDBTestCase):
                                images.fetch_to_raw,
                                None, 'href123', '/no/path')
 
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(images, 'IMAGE_API')
     @mock.patch('os.rename')
     @mock.patch.object(images, 'qemu_img_info')
@@ -218,7 +218,7 @@ class QemuTestCase(test.NoDBTestCase):
                                                  format='json'))
 
     @mock.patch.object(images, 'IMAGE_API')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(images, 'fetch')
     @mock.patch('nova.privsep.qemu.unprivileged_qemu_img_info')
     def test_fetch_checks_vmdk_rules(self, mock_info, mock_fetch, mock_detect,
@@ -242,7 +242,7 @@ class QemuTestCase(test.NoDBTestCase):
     @mock.patch('os.rename')
     @mock.patch.object(images, 'IMAGE_API')
     @mock.patch('oslo_utils.imageutils.format_inspector.get_inspector')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(images, 'fetch')
     @mock.patch('nova.privsep.qemu.unprivileged_qemu_img_info')
     def test_fetch_iso_is_raw(
@@ -272,7 +272,7 @@ class QemuTestCase(test.NoDBTestCase):
         mock_rename.assert_called_once_with('anypath.part', 'anypath')
 
     @mock.patch.object(images, 'IMAGE_API')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(images, 'qemu_img_info')
     @mock.patch.object(images, 'fetch')
     def test_fetch_to_raw_inspector(self, fetch, qemu_img_info, mock_detect,
@@ -311,7 +311,7 @@ class QemuTestCase(test.NoDBTestCase):
         qemu_img_info.assert_not_called()
 
     @mock.patch.object(images, 'IMAGE_API')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(images, 'qemu_img_info')
     @mock.patch.object(images, 'fetch')
     def test_fetch_to_raw_inspector_disabled(self, fetch, qemu_img_info,
@@ -329,7 +329,7 @@ class QemuTestCase(test.NoDBTestCase):
 
     @mock.patch.object(images, 'IMAGE_API')
     @mock.patch.object(images, 'qemu_img_info')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     def test_fetch_inspect_ami(self, detect, imginfo, glance):
         glance.get.return_value = {'disk_format': 'ami'}
         detect.return_value.__str__.return_value = 'raw'
@@ -340,7 +340,7 @@ class QemuTestCase(test.NoDBTestCase):
 
     @mock.patch.object(images, 'IMAGE_API')
     @mock.patch.object(images, 'qemu_img_info')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     def test_fetch_inspect_aki(self, detect, imginfo, glance):
         glance.get.return_value = {'disk_format': 'aki'}
         detect.return_value.__str__.return_value = 'raw'
@@ -351,7 +351,7 @@ class QemuTestCase(test.NoDBTestCase):
 
     @mock.patch.object(images, 'IMAGE_API')
     @mock.patch.object(images, 'qemu_img_info')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     def test_fetch_inspect_ari(self, detect, imginfo, glance):
         glance.get.return_value = {'disk_format': 'ari'}
         detect.return_value.__str__.return_value = 'raw'
@@ -371,7 +371,7 @@ class QemuTestCase(test.NoDBTestCase):
 
     @mock.patch.object(images, 'IMAGE_API')
     @mock.patch.object(images, 'qemu_img_info')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     def test_fetch_inspect_disagrees_qemu(self, mock_detect, imginfo, glance):
         glance.get.return_value = {'disk_format': 'qcow2'}
         mock_detect.return_value.__str__.return_value = 'qcow2'
