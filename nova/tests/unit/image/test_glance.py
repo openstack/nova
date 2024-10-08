@@ -1721,17 +1721,26 @@ class TestCreate(test.NoDBTestCase):
         client.call.return_value = {'id': '123'}
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageServiceV2(client)
-        with mock.patch.object(service,
-                               '_get_image_create_disk_format_default',
-                               return_value='vdi'):
-            image_meta = service.create(ctx, image_mock)
+        image_meta = service.create(ctx, image_mock)
         trans_to_mock.assert_called_once_with(image_mock)
         # Verify that the disk_format and container_format kwargs are passed.
         create_call_kwargs = client.call.call_args_list[0][1]['kwargs']
-        self.assertEqual('vdi', create_call_kwargs['disk_format'])
+        self.assertEqual('raw', create_call_kwargs['disk_format'])
         self.assertEqual('bare', create_call_kwargs['container_format'])
         trans_from_mock.assert_called_once_with({'id': '123'})
         self.assertEqual(mock.sentinel.trans_from, image_meta)
+
+    def test_create_v2_rejects_incompatible_disk_format(self):
+        client = mock.MagicMock()
+        client.call.return_value = {'id': '123'}
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        self.assertRaisesRegex(exception.ImageBadRequest,
+                               'Unable to force activate',
+                               service._create_v2,
+                               ctx,
+                               {'disk_format': 'qcow2'},
+                               force_activate=True)
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')

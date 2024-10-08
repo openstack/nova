@@ -645,10 +645,17 @@ class GlanceImageServiceV2(object):
         # where we have to hardcode this parameters.
         if force_activate:
             data = ''
+            # NOTE(danms): If we are using this terrible hack to upload
+            # zero-length data to activate the image, we cannot claim it
+            # is some format other than 'raw'. If the caller asked for
+            # something specific, that's a bug. Otherwise, we must force
+            # disk_format=raw.
             if 'disk_format' not in sent_service_image_meta:
-                sent_service_image_meta['disk_format'] = (
-                    self._get_image_create_disk_format_default(context)
-                )
+                sent_service_image_meta['disk_format'] = 'raw'
+            elif sent_service_image_meta['disk_format'] != 'raw':
+                raise exception.ImageBadRequest(
+                    'Unable to force activate with disk_format=%s' % (
+                        sent_service_image_meta['disk_format']))
             if 'container_format' not in sent_service_image_meta:
                 sent_service_image_meta['container_format'] = 'bare'
 
