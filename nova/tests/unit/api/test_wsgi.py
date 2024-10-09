@@ -19,7 +19,9 @@
 Test WSGI basics and provide some helper functions for other WSGI tests.
 """
 
+import collections
 import tempfile
+from unittest import mock
 
 import routes
 import webob
@@ -27,6 +29,11 @@ import webob
 from nova.api import wsgi
 import nova.exception
 from nova import test
+
+
+os_uname = collections.namedtuple(
+    'uname_result', ['sysname', 'nodename', 'release', 'version', 'machine'],
+)
 
 
 class TestRouter(test.NoDBTestCase):
@@ -104,7 +111,10 @@ document_root = /tmp
         )
 
     def test_app_found(self):
-        url_parser = self.loader.load_app("test_app")
+        with mock.patch('os.uname') as mock_uname:
+            mock_uname.return_value = os_uname(
+                'Linux', '', '5.10.13-200-generic', '', 'x86_64')
+            url_parser = self.loader.load_app("test_app")
         self.assertEqual("/tmp", url_parser.directory)
 
     def tearDown(self):
