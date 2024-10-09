@@ -36,6 +36,7 @@ PORT_BINDING_EXTENDED = 'binding-extended'
 SUBSTR_PORT_FILTERING = 'ip-substring-filtering'
 SEGMENT = 'segment'
 RESOURCE_REQUEST_GROUPS = 'port-resource-request-groups'
+SG_SHARED_FILTER = "security-groups-shared-filtering"
 
 # Third-party extensions
 
