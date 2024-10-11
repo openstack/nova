@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2023-12-18 23:50+0000\n"
+"POT-Creation-Date: 2024-10-09 20:12+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -313,18 +313,6 @@ msgstr ""
 "Nelze '%(action)s' v instanci %(server_id)s zatímco je v %(attr)s %(state)s"
 
 #, python-format
-msgid ""
-"Cannot access \"%(instances_path)s\", make sure the path exists and that you "
-"have the proper permissions. In particular Nova-Compute must not be executed "
-"with the builtin SYSTEM account or other accounts unable to authenticate on "
-"a remote host."
-msgstr ""
-"\"%(instances_path)s\" se zdá být nedostupná,  ujistěte se, že cesta "
-"existuje a že máte patřičná oprávnění. Zejména Nova-Compute nesmí být "
-"spouštěna zabudovaným účtem SYSTEM, nebo jinými účty, které se nemohou "
-"přihlásit na vzdálených hostitelích."
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
 "Nelze přidat hostitele do agregátu %(aggregate_id)s. Důvod: %(reason)s."
@@ -350,14 +338,6 @@ msgstr ""
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "Nelze zachránit instanci zálohovanou na svazku"
-
-#, python-format
-msgid ""
-"Cannot resize the root disk to a smaller size. Current size: "
-"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
-msgstr ""
-"Nelze zmenšit velikost kořenového disku. Současná velikost: %(curr_root_gb)s "
-"GB. Požadovaná velikost: %(new_root_gb)s GB."
 
 msgid "Cannot set realtime policy in a non dedicated cpu pinning policy"
 msgstr ""
@@ -388,14 +368,6 @@ msgstr ""
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "Třída %(class_name)s nemohla být nalezena: %(exception)s"
-
-#, python-format
-msgid ""
-"Command Not supported. Please use Ironic command %(cmd)s to perform this "
-"action."
-msgstr ""
-"Příkaz není podporován. Pro provedení této činnosti prosím použijte příkaz "
-"Ironic %(cmd)s."
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -866,9 +838,6 @@ msgstr "Hostitel %(host)s nemohl být nalezen."
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
 msgstr "Hostitel '%(name)s' není namapován k žádné buňce"
-
-msgid "Host PowerOn is not supported by the Hyper-V driver"
-msgstr "Zapnutí hostitele není podporováno ovladačem Hyper-V"
 
 msgid "Host aggregate is not empty"
 msgstr "Agregát hostitele není prázdný"
@@ -1412,10 +1381,6 @@ msgstr "Chybí vlastnost imageRef"
 #, python-format
 msgid "Missing keys: %s"
 msgstr "Chybí klíče: %s"
-
-#, python-format
-msgid "Missing parameter %s"
-msgstr "Chybí parametr %s"
 
 msgid "Missing parameter dict"
 msgstr "Chybí parametr dict"
@@ -2081,9 +2046,6 @@ msgstr "Počet zadaných portů: %(ports)d přesahuje limit: %(quota)d"
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "Zadaná cesta zařízení RNG: (%(path)s) se nevyskytuje na hostiteli."
 
-msgid "The request body can't be empty"
-msgstr "Tělo žádosti nemůže být prázdné"
-
 msgid "The request is invalid."
 msgstr "Požadavek je neplatný."
 
@@ -2097,9 +2059,6 @@ msgstr ""
 
 msgid "The requested availability zone is not available"
 msgstr "Požadovaná zóna dostupnosti není dostupná"
-
-msgid "The requested console type details are not accessible"
-msgstr "Požadované podrobnosti typu konzole nejsou přístupné"
 
 msgid "The requested functionality is not supported."
 msgstr "Požadovaná funkce není podporována."

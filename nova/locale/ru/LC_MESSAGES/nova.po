@@ -12,16 +12,17 @@
 # Stanislav Hanzhin <hanzhin.stas@gmail.com>, 2013
 # dvy <vasily.dubinin@gmail.com>, 2014
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
+# Dmitriy Rabotyagov <noonedeadpunk@ya.ru>, 2024. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2023-12-18 23:50+0000\n"
+"POT-Creation-Date: 2024-10-09 20:12+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-04-12 06:06+0000\n"
-"Last-Translator: Copied by Zanata <copied-by-zanata@zanata.org>\n"
+"PO-Revision-Date: 2024-09-17 06:43+0000\n"
+"Last-Translator: Dmitriy Rabotyagov <noonedeadpunk@ya.ru>\n"
 "Language: ru\n"
 "Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n"
@@ -202,6 +203,12 @@ msgstr "Попытка заменить существующее значени�
 msgid "Attribute not supported: %(attr)s"
 msgstr "Атрибут не поддерживается: %(attr)s"
 
+msgid "Bad Request - Feature is not supported in Nova"
+msgstr "Неверный запрос - Данный функционал не поддерживается Nova"
+
+msgid "Bad Request - Invalid Parameters"
+msgstr "Неверный запрос - Недопустимые параметры"
+
 #, python-format
 msgid "Bad network format: missing %s"
 msgstr "Недопустимый сетевой формат: отсутствует %s"
@@ -362,18 +369,6 @@ msgstr ""
 "состоянии %(attr)s %(state)s"
 
 #, python-format
-msgid ""
-"Cannot access \"%(instances_path)s\", make sure the path exists and that you "
-"have the proper permissions. In particular Nova-Compute must not be executed "
-"with the builtin SYSTEM account or other accounts unable to authenticate on "
-"a remote host."
-msgstr ""
-"Нет доступа к \"%(instances_path)s\", убедитесь в существовании пути и "
-"наличии требуемых прав доступа. В частности, Nova-Compute не должен "
-"выполняться со встроенной учетной записью SYSTEM или другими учетными "
-"записями, которые невозможно идентифицировать на удаленном хосте."
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
 "Не удается добавить хост в составной объект %(aggregate_id)s. Причина: "
@@ -410,14 +405,6 @@ msgstr ""
 msgid "Cannot rescue a volume-backed instance"
 msgstr "Невозможно аварийно восстановить сохраненный в томе экземпляр"
 
-#, python-format
-msgid ""
-"Cannot resize the root disk to a smaller size. Current size: "
-"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
-msgstr ""
-"Невозможно изменить размер корневого диска в меньшую сторону. Текущий "
-"размер: %(curr_root_gb)s ГБ. Запрошенный размер: %(new_root_gb)s ГБ."
-
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
 msgstr ""
@@ -452,16 +439,12 @@ msgstr ""
 "Изменение будет использовать менее 0 для следующих ресурсов: %(unders)s"
 
 #, python-format
-msgid "Class %(class_name)s could not be found: %(exception)s"
-msgstr "Класс %(class_name)s не найден: %(exception)s"
+msgid "Cinder API version %(version)s is not available."
+msgstr "Версия API Cinder %(version)s недоступна"
 
 #, python-format
-msgid ""
-"Command Not supported. Please use Ironic command %(cmd)s to perform this "
-"action."
-msgstr ""
-"Команда не поддерживается. Используйте команду Ironic %(cmd)s для выполнения "
-"этого действия."
+msgid "Class %(class_name)s could not be found: %(exception)s"
+msgstr "Класс %(class_name)s не найден: %(exception)s"
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -515,6 +498,10 @@ msgstr "Не удалось подключиться к хосту cinder: %(rea
 msgid "Connection to glance host %(server)s failed: %(reason)s"
 msgstr ""
 "Не удалось установить соединение с хостом glance %(server)s: %(reason)s"
+
+#, python-format
+msgid "Connection to keystone host failed: %(reason)s"
+msgstr "Не удалось подключиться к хосту Keystone: %(reason)s"
 
 #, python-format
 msgid "Connection to libvirt lost: %s"
@@ -946,6 +933,9 @@ msgstr "Нефиксированный IP не найден для адреса 
 msgid "Floating IP pool not found."
 msgstr "Пул нефиксированных IP не найден."
 
+msgid "Forbidden"
+msgstr "Запрещено"
+
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
 "meta."
@@ -970,9 +960,6 @@ msgstr "Хост %(host)s уже связан с ячейкой %(uuid)s"
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
 msgstr "Хост '%(name)s' не привязан ни к одной ячейке"
-
-msgid "Host PowerOn is not supported by the Hyper-V driver"
-msgstr "Драйвер Hyper-V не поддерживает включение питания хоста"
 
 msgid "Host aggregate is not empty"
 msgstr "Множество хостов не пустое"
@@ -1571,10 +1558,6 @@ msgstr "Отсутствует атрибут imageRef"
 msgid "Missing keys: %s"
 msgstr "Отсутствуют ключи: %s"
 
-#, python-format
-msgid "Missing parameter %s"
-msgstr "Не указан параметр %s"
-
 msgid "Missing parameter dict"
 msgstr "Отсутствует параметр dict"
 
@@ -1822,6 +1805,10 @@ msgstr "Не сохранено в rbd"
 
 msgid "Nothing was archived."
 msgstr "Ничего не архивировано."
+
+#, python-format
+msgid "Nova does not support Cinder API version %(version)s"
+msgstr "Nova не поддерживает версию API Cinder %(version)s"
 
 #, python-format
 msgid "Nova requires libvirt version %s or greater."
@@ -2301,9 +2288,6 @@ msgstr ""
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "Указанный путь к устройству RNG: (%(path)s) не существует на хосте."
 
-msgid "The request body can't be empty"
-msgstr "Тело запроса не может быть пустым"
-
 msgid "The request is invalid."
 msgstr "Недопустимый запрос."
 
@@ -2317,9 +2301,6 @@ msgstr ""
 
 msgid "The requested availability zone is not available"
 msgstr "Запрашиваемая зона готовности недоступна"
-
-msgid "The requested console type details are not accessible"
-msgstr "Запрашиваемые сведения о типе консоли недоступны"
 
 msgid "The requested functionality is not supported."
 msgstr "Запрошенная функциональность не поддерживается."
