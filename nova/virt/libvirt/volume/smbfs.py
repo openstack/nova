@@ -11,6 +11,7 @@
 #    under the License.
 
 import re
+import warnings
 
 import nova.conf
 from nova.virt.libvirt import utils as libvirt_utils
@@ -24,6 +25,11 @@ USERNAME_REGEX = re.compile(r"(user(?:name)?)=(?:[^ ,]+\\)?([^ ,]+)")
 
 class LibvirtSMBFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     """Class implements libvirt part of volume driver for SMBFS."""
+
+    def __init__(self, host):
+        super(LibvirtSMBFSVolumeDriver, self).__init__(host)
+        warnings.warn('SMBFS volume support is deprecated',
+                      category=DeprecationWarning, stacklevel=2)
 
     def _get_mount_point_base(self):
         return CONF.libvirt.smbfs_mount_point_base

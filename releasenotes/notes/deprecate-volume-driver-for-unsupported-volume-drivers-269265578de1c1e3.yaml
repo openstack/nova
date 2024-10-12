@@ -1,0 +1,10 @@
+---
+deprecations:
+  - |
+    The following volume drivers of the libvirt virt driver have been
+    deprecated and will be removed in a future release. The corresponding
+    volume drivers in cinder were all marked unsupported and will be removed.
+
+    - Quobyte
+    - SMBFS
+    - Virtuozzo Storage
