@@ -130,35 +130,12 @@
         neutron-trunk: true
         openstack-cli-server: true
       devstack_local_conf:
-        post-config:
-          $NOVA_CPU_CONF:
-            compute:
-              # we want to test live migration of floating instances between hosts with different
-              # cpu_shared_set to ensure the xml is updated properly. This is important when migrating
-              # between hosts with different number of cpu cores even when cpu_shared_set is not defined.
-              # In the ci, we have 8 cpu cores, so we set the cpu_shared_set to 0-5 for the first compute
-              # node and 2-7 for the second compute node.
-              cpu_shared_set: "0-5"
-              cpu_dedicated_set: "6-7"
         test-config:
           $TEMPEST_CONFIG:
             compute-feature-enabled:
               volume_backed_live_migration: true
               block_migration_for_live_migration: true
               block_migrate_cinder_iscsi: true
-    group-vars:
-      subnode:
-        devstack_local_conf:
-          post-config:
-            $NOVA_CPU_CONF:
-              compute:
-                # we want to test live migration of floating instances between hosts with different
-                # cpu_shared_set to ensure the xml is updated properly. This is important when migrating
-                # between hosts with different number of cpu cores even when cpu_shared_set is not defined.
-                # In the ci, we have 8 cpu cores, so we set the cpu_shared_set to 0-5 for the first compute
-                # node and 2-7 for the second compute node.
-                cpu_shared_set: "2-7"
-                cpu_dedicated_set: "0-1"
     post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
