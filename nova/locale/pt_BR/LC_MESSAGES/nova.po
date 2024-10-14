@@ -19,7 +19,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2023-12-18 23:50+0000\n"
+"POT-Creation-Date: 2024-10-09 20:12+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -361,18 +361,6 @@ msgstr ""
 "%(attr)s %(state)s"
 
 #, python-format
-msgid ""
-"Cannot access \"%(instances_path)s\", make sure the path exists and that you "
-"have the proper permissions. In particular Nova-Compute must not be executed "
-"with the builtin SYSTEM account or other accounts unable to authenticate on "
-"a remote host."
-msgstr ""
-"Não é possível acessar \"%(instances_path)s\", certifique-se de que o "
-"caminho exista e que você tenha as permissões apropriadas. Em particular "
-"Nova-Compute não deve ser executado com a conta do SYSTEM integrado ou "
-"outras contas que não conseguem autenticar em um host remoto."
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
 "Não é possível adicionar o host para o agregado %(aggregate_id)s. Motivo: "
@@ -409,14 +397,6 @@ msgstr ""
 msgid "Cannot rescue a volume-backed instance"
 msgstr "Não é possível resgatar uma instância suportada por volume"
 
-#, python-format
-msgid ""
-"Cannot resize the root disk to a smaller size. Current size: "
-"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
-msgstr ""
-"Não é possível redimensionar o disco raiz para um tamanho menor. Tamanho "
-"atual: %(curr_root_gb)s GB. Tamanho solicitado: %(new_root_gb)s GB."
-
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
 msgstr ""
@@ -452,14 +432,6 @@ msgstr "A mudança faria uso de menos de 0 dos recursos a seguir: %(unders)s"
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "A classe %(class_name)s não pôde ser localizada: %(exception)s"
-
-#, python-format
-msgid ""
-"Command Not supported. Please use Ironic command %(cmd)s to perform this "
-"action."
-msgstr ""
-"Comando não suportado. Utilize o comando Ironic %(cmd)s para realizar essa "
-"ação."
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -965,9 +937,6 @@ msgstr "O host %(host)s já está mapeado para a célula %(uuid)s"
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
 msgstr "Host '%(name)s' não mapeado para qualquer célula"
-
-msgid "Host PowerOn is not supported by the Hyper-V driver"
-msgstr "O host PowerOn não é suportado pelo driver Hyper-V"
 
 msgid "Host aggregate is not empty"
 msgstr "Agregado do host não está vazio"
@@ -1572,10 +1541,6 @@ msgstr "Atributo imageRef ausente"
 #, python-format
 msgid "Missing keys: %s"
 msgstr "Chaves ausentes: %s"
-
-#, python-format
-msgid "Missing parameter %s"
-msgstr "Parâmetro ausente %s"
 
 msgid "Missing parameter dict"
 msgstr "Dicionário de parâmetros ausente"
@@ -2321,9 +2286,6 @@ msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr ""
 "O caminho de dispositivo RNG fornecido: (%(path)s) não está presente no host."
 
-msgid "The request body can't be empty"
-msgstr "O corpo da solicitação não pode estar vazio"
-
 msgid "The request is invalid."
 msgstr "A requisição é inválida."
 
@@ -2337,9 +2299,6 @@ msgstr ""
 
 msgid "The requested availability zone is not available"
 msgstr "A zona de disponibilidade solicitada não está disponível"
-
-msgid "The requested console type details are not accessible"
-msgstr "Os detalhes do tipo de console solicitado não estão acessíveis"
 
 msgid "The requested functionality is not supported."
 msgstr "A funcionalidade solicitada não é suportada."

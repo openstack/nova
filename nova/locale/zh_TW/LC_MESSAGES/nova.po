@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2023-12-18 23:50+0000\n"
+"POT-Creation-Date: 2024-10-09 20:12+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -317,17 +317,6 @@ msgid ""
 msgstr "無法%(action)s實例 %(server_id)s，因為該實例處於 %(attr)s %(state)s"
 
 #, python-format
-msgid ""
-"Cannot access \"%(instances_path)s\", make sure the path exists and that you "
-"have the proper permissions. In particular Nova-Compute must not be executed "
-"with the builtin SYSTEM account or other accounts unable to authenticate on "
-"a remote host."
-msgstr ""
-"無法存取 \"%(instances_path)s\"，請確保路徑存在，以及您具有適當的權限。特別"
-"是，不得使用內建系統帳戶或其他無法在遠端主機上進行鑑別的帳戶來執行 Nova-"
-"Compute。"
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "無法將主機新增至聚集 %(aggregate_id)s。原因：%(reason)s。"
 
@@ -358,14 +347,6 @@ msgstr "無法從聚集 %(aggregate_id)s 移除主機。原因：%(reason)s。"
 msgid "Cannot rescue a volume-backed instance"
 msgstr "無法救援以磁區為基礎的實例"
 
-#, python-format
-msgid ""
-"Cannot resize the root disk to a smaller size. Current size: "
-"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
-msgstr ""
-"無法將根磁碟調小。現行大小：%(curr_root_gb)s GB。所要求的大小："
-"%(new_root_gb)s GB。"
-
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
 msgstr "無法在非專用 CPU 固定原則中設定 CPU 執行緒固定原則"
@@ -394,12 +375,6 @@ msgstr "變更會使下列資源的用量小於 0：%(unders)s"
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "找不到類別 %(class_name)s：%(exception)s"
-
-#, python-format
-msgid ""
-"Command Not supported. Please use Ironic command %(cmd)s to perform this "
-"action."
-msgstr "指令不受支援。請使用 Ironic 指令 %(cmd)s 來執行此動作。"
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -867,9 +842,6 @@ msgstr "主機 %(host)s 已經對映至 Cell %(uuid)s"
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
 msgstr "主機 '%(name)s' 未對映至任何 Cell"
-
-msgid "Host PowerOn is not supported by the Hyper-V driver"
-msgstr "Hyper-V 驅動程式不支援主機 PowerOn"
 
 msgid "Host aggregate is not empty"
 msgstr "主機聚集不為空"
@@ -1438,10 +1410,6 @@ msgstr "遺漏了 imageRef 屬性"
 #, python-format
 msgid "Missing keys: %s"
 msgstr "遺漏了索引鍵：%s"
-
-#, python-format
-msgid "Missing parameter %s"
-msgstr "遺漏參數 %s"
 
 msgid "Missing parameter dict"
 msgstr "遺漏了參數字典"
@@ -2136,9 +2104,6 @@ msgstr "所定義的埠數目 %(ports)d 超出限制：%(quota)d"
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "主機上不存在所提供的 RNG 裝置路徑：(%(path)s)。"
 
-msgid "The request body can't be empty"
-msgstr "要求內文不能是空的"
-
 msgid "The request is invalid."
 msgstr "要求無效。"
 
@@ -2151,9 +2116,6 @@ msgstr ""
 
 msgid "The requested availability zone is not available"
 msgstr "所要求的可用性區域無法使用"
-
-msgid "The requested console type details are not accessible"
-msgstr "無法存取所要求的主控台類型詳細資料"
 
 msgid "The requested functionality is not supported."
 msgstr "所要求的功能不受支援。"

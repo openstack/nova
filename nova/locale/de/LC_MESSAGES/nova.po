@@ -17,7 +17,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2023-12-18 23:50+0000\n"
+"POT-Creation-Date: 2024-10-09 20:12+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -367,19 +367,6 @@ msgstr ""
 "%(attr)s %(state)s befindet"
 
 #, python-format
-msgid ""
-"Cannot access \"%(instances_path)s\", make sure the path exists and that you "
-"have the proper permissions. In particular Nova-Compute must not be executed "
-"with the builtin SYSTEM account or other accounts unable to authenticate on "
-"a remote host."
-msgstr ""
-"Zugriff auf \"%(instances_path)s\" nicht möglich. Stellen Sie sicher, dass "
-"der Pfad vorhanden ist und dass Sie über die erforderlichen Berechtigungen "
-"verfügen. Insbesondere Nova-Compute darf nicht mit dem integrierten SYSTEM-"
-"Konto oder anderen Konten ausgeführt werden, für die keine Authentifizierung "
-"auf einem fernen Host möglich ist."
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
 "Host kann nicht zu Aggregat %(aggregate_id)s hinzugefügt werden. Ursache: "
@@ -418,14 +405,6 @@ msgstr ""
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "Eine Instanz vom Typ 'volume-backed' kann nicht gesichert werden"
-
-#, python-format
-msgid ""
-"Cannot resize the root disk to a smaller size. Current size: "
-"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
-msgstr ""
-"Root-Festplatte kann nicht verkleinert werden. Aktuelle Größe: "
-"%(curr_root_gb)s GB. Angeforderte Größe: %(new_root_gb)s GB."
 
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
@@ -469,14 +448,6 @@ msgstr "Die Cinder API-Version %(version)s ist nicht verfügbar."
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "Klasse %(class_name)s konnte nicht gefunden werden: %(exception)s"
-
-#, python-format
-msgid ""
-"Command Not supported. Please use Ironic command %(cmd)s to perform this "
-"action."
-msgstr ""
-"Befehl wird nicht unterstützt. Verwenden Sie den Ironic-Befehl %(cmd)s, um "
-"diese Aktion durchzuführen. "
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
@@ -1000,9 +971,6 @@ msgstr "Der Host %(host)s ist bereits der Zelle %(uuid)s zugeorndet."
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
 msgstr "Host '%(name)s' wird nicht abgebildet in irgendeiner Zelle"
-
-msgid "Host PowerOn is not supported by the Hyper-V driver"
-msgstr "Host-PowerOn wird vom Hyper-V-Treiber nicht unterstützt"
 
 msgid "Host aggregate is not empty"
 msgstr "Hostaggregat ist nicht leer"
@@ -1613,10 +1581,6 @@ msgstr "Attribut 'imageRef' fehlt"
 #, python-format
 msgid "Missing keys: %s"
 msgstr "Fehlende Schlüssel: %s"
-
-#, python-format
-msgid "Missing parameter %s"
-msgstr "Fehlender Parameter %s"
 
 msgid "Missing parameter dict"
 msgstr "Parameter 'dict' fehlt"
@@ -2388,9 +2352,6 @@ msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr ""
 "Der angegebene RNG Gerätepfad: (%(path)s) existiert nicht auf dem Host."
 
-msgid "The request body can't be empty"
-msgstr "Der Anforderungshauptteil darf nicht leer sein"
-
 msgid "The request is invalid."
 msgstr "Die Anfrage ist ungültig."
 
@@ -2404,9 +2365,6 @@ msgstr ""
 
 msgid "The requested availability zone is not available"
 msgstr "Die angeforderte Verfügbarkeitszone ist nicht verfügbar"
-
-msgid "The requested console type details are not accessible"
-msgstr "Auf die angeforderten Konsolentypdetails kann nicht zugegriffen werden"
 
 msgid "The requested functionality is not supported."
 msgstr "Die angeforderte Funktionalität wird nicht unterstützt."

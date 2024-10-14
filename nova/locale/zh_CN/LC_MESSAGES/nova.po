@@ -37,7 +37,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2023-12-18 23:50+0000\n"
+"POT-Creation-Date: 2024-10-09 20:12+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -352,16 +352,6 @@ msgstr ""
 "行“%(action)s”"
 
 #, python-format
-msgid ""
-"Cannot access \"%(instances_path)s\", make sure the path exists and that you "
-"have the proper permissions. In particular Nova-Compute must not be executed "
-"with the builtin SYSTEM account or other accounts unable to authenticate on "
-"a remote host."
-msgstr ""
-"不能访问\"%(instances_path)s\"，确保路径存在并且您有恰当的权限。实际系统内建"
-"账号在一个远程机无法认证的账号不能执行命令Nova-Compute。"
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "不能添加主机到聚合%(aggregate_id)s。原因是：%(reason)s。"
 
@@ -391,14 +381,6 @@ msgstr "不能从聚合%(aggregate_id)s移除主机。原因是：%(reason)s。"
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "无法急救卷支持的实例"
-
-#, python-format
-msgid ""
-"Cannot resize the root disk to a smaller size. Current size: "
-"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
-msgstr ""
-"无法缩小根磁盘大小。当前大小：%(curr_root_gb)s GB。所请求大小："
-"%(new_root_gb)s GB。"
 
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
@@ -432,12 +414,6 @@ msgstr "Cinder API 版本 %(version)s 不可用."
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "找不到类 %(class_name)s ：异常 %(exception)s"
-
-#, python-format
-msgid ""
-"Command Not supported. Please use Ironic command %(cmd)s to perform this "
-"action."
-msgstr "命令不支持。请使用Ironic命令%(cmd)s执行这个操作。"
 
 msgid "Completed"
 msgstr "完成"
@@ -528,10 +504,6 @@ msgstr "没有找到二进制 %(binary)s 在主机 %(host)s 上。"
 #, python-format
 msgid "Could not find config at %(path)s"
 msgstr "在 %(path)s 找不到配置文件。"
-
-#, python-format
-msgid "Could not find disk path. Volume id: %s"
-msgstr "磁盘路径未找到. 卷 id: %s"
 
 msgid "Could not find the datastore reference(s) which the VM uses."
 msgstr "无法找到虚拟机使用的数据存储引用。"
@@ -931,9 +903,6 @@ msgstr "主机 %(host)s 已映射至单元 %(uuid)s"
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
 msgstr "主机 '%(name)s'没有映射到任何单元"
-
-msgid "Host PowerOn is not supported by the Hyper-V driver"
-msgstr "Hyper-V驱动不支持主机开机"
 
 msgid "Host aggregate is not empty"
 msgstr "主机聚合不为空"
@@ -1515,10 +1484,6 @@ msgstr "缺少属性imageRef"
 #, python-format
 msgid "Missing keys: %s"
 msgstr "缺少键：%s"
-
-#, python-format
-msgid "Missing parameter %s"
-msgstr "缺少参数%s"
 
 msgid "Missing parameter dict"
 msgstr "缺少参数 dict"
@@ -2247,9 +2212,6 @@ msgstr "标签数量超过了保护限制，上限数量为%d"
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "主机上不存在提供的RNG设备路径：(%(path)s)。"
 
-msgid "The request body can't be empty"
-msgstr "请求题不能为空"
-
 msgid "The request is invalid."
 msgstr "请求无效。"
 
@@ -2261,9 +2223,6 @@ msgstr "申请的显存数 %(req_vram)d 超过了云主机类型允许的最大�
 
 msgid "The requested availability zone is not available"
 msgstr "请求的可用域是不可用的！"
-
-msgid "The requested console type details are not accessible"
-msgstr "不能访问请求的控制台类型详情"
 
 msgid "The requested functionality is not supported."
 msgstr "不支持请求的功能"
