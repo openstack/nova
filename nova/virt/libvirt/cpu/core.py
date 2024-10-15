@@ -56,13 +56,23 @@ def get_online(core: int) -> bool:
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def set_online(core: int) -> bool:
+    # failure to online a core should be considered a failure
+    # so we don't catch any exception here.
     filesystem.write_sys(os.path.join(gen_cpu_path(core), 'online'), data='1')
     return get_online(core)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def set_offline(core: int) -> bool:
-    filesystem.write_sys(os.path.join(gen_cpu_path(core), 'online'), data='0')
+    try:
+        filesystem.write_sys(os.path.join(
+            gen_cpu_path(core), 'online'), data='0')
+    except exception.DeviceBusy:
+        # if nova is not able to offline a core it should not break anything
+        # so we just log a warning and return False to indicate that the core
+        # is not offline.
+        LOG.warning('Unable to offline CPU: %s', core)
+        return False
     return not get_online(core)
 
 

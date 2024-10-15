@@ -1131,6 +1131,10 @@ class FileNotFound(NotFound):
     msg_fmt = _("File %(file_path)s could not be found.")
 
 
+class DeviceBusy(NovaException):
+    msg_fmt = _("device %(file_path)s is busy.")
+
+
 class ClassNotFound(NotFound):
     msg_fmt = _("Class %(class_name)s could not be found: %(exception)s")
 
