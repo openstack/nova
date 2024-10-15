@@ -502,6 +502,26 @@ Archiving....stopped
         self.assertEqual(0, result)
 
     @mock.patch.object(db, 'archive_deleted_rows')
+    @mock.patch.object(objects.CellMappingList, 'get_all')
+    def test_archive_deleted_rows_deleted_instances_no_rows(self, mock_get_all,
+                                                            mock_db_archive):
+        # Simulate a scenario where we didn't archive any rows (example:
+        # DBReferenceError was raised while processing the instances table) but
+        # the separate query for deleted_instance_uuids found rows.
+        mock_db_archive.return_value = (
+            {}, [uuidsentinel.instance1, uuidsentinel.instance2], 0)
+
+        result = self.commands.archive_deleted_rows(20, verbose=True)
+
+        mock_db_archive.assert_called_once_with(
+            test.MatchType(context.RequestContext), 20, before=None,
+            task_log=False)
+        output = self.output.getvalue()
+        # If nothing was archived, there should be no purge messages
+        self.assertIn('Nothing was archived.', output)
+        self.assertEqual(0, result)
+
+    @mock.patch.object(db, 'archive_deleted_rows')
     @mock.patch.object(objects.RequestSpec, 'destroy_bulk')
     @mock.patch.object(objects.InstanceGroup, 'destroy_members_bulk')
     def test_archive_deleted_rows_and_api_db_records(

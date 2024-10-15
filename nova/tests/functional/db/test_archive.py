@@ -174,6 +174,50 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
                 break
         self.assertFalse(exceptions)
 
+    def test_archive_deleted_rows_parent_child_trees_one_at_time(self):
+        """Test that we are archiving parent + child rows "trees" one at a time
+
+        Previously, we archived deleted rows in batches of max_rows parents +
+        their child rows in a single database transaction. Doing it that way
+        limited how high a value of max_rows could be specified by the caller
+        because of the size of the database transaction it could generate.
+
+        For example, in a large scale deployment with hundreds of thousands of
+        deleted rows and constant server creation and deletion activity, a
+        value of max_rows=1000 might exceed the database's configured maximum
+        packet size or timeout due to a database deadlock, forcing the operator
+        to use a much lower max_rows value like 100 or 50.
+
+        And when the operator has e.g. 500,000 deleted instances rows (and
+        millions of deleted rows total) they are trying to archive, being
+        forced to use a max_rows value serveral orders of magnitude lower than
+        the number of rows they need to archive was a poor user experience.
+
+        This tests that we are archiving each parent plus their child rows one
+        at a time while limiting the total number of rows per table in a batch
+        as soon as the total number of archived rows is >= max_rows.
+        """
+        # Boot two servers and delete them, then try to archive rows.
+        for i in range(2):
+            server = self._create_server()
+            self._delete_server(server)
+
+        # Use max_rows=5 to limit the archive to one complete parent +
+        # child rows tree.
+        table_to_rows, _, _ = db.archive_deleted_rows(max_rows=5)
+
+        # We should have archived only one instance because the parent +
+        # child tree will have >= max_rows of 5.
+        self.assertEqual(1, table_to_rows['instances'])
+
+        # Archive once more to archive the other instance (and its child rows).
+        table_to_rows, _, _ = db.archive_deleted_rows(max_rows=5)
+        self.assertEqual(1, table_to_rows['instances'])
+
+        # There should be nothing else to archive.
+        _, _, total_rows_archived = db.archive_deleted_rows(max_rows=100)
+        self.assertEqual(0, total_rows_archived)
+
     def _get_table_counts(self):
         engine = db.get_engine()
         conn = engine.connect()

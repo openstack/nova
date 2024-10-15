@@ -257,10 +257,10 @@ class DbCommands(object):
         print(migration.db_version())
 
     @args('--max_rows', type=int, metavar='<number>', dest='max_rows',
-          help='Maximum number of deleted rows to archive. Defaults to 1000. '
-               'Note that this number does not include the corresponding '
-               'rows, if any, that are removed from the API database for '
-               'deleted instances.')
+          help='Maximum number of deleted rows to archive per table. Defaults '
+               'to 1000. Note that this number is a soft limit and does not '
+               'include the corresponding rows, if any, that are removed '
+               'from the API database for deleted instances.')
     @args('--before', metavar='<date>',
           help=('Archive rows that have been deleted before this date. '
                 'Accepts date strings in the default format output by the '
@@ -432,7 +432,10 @@ class DbCommands(object):
              'cell1.instances': 5}
         :param cctxt: Cell-targeted nova.context.RequestContext if archiving
             across all cells
-        :param max_rows: Maximum number of deleted rows to archive
+        :param max_rows: Maximum number of deleted rows to archive per table.
+            Note that this number is a soft limit and does not include the
+            corresponding rows, if any, that are removed from the API database
+            for deleted instances.
         :param until_complete: Whether to run continuously until all deleted
             rows are archived
         :param verbose: Whether to print how many rows were archived per table
@@ -445,15 +448,26 @@ class DbCommands(object):
         """
         ctxt = context.get_admin_context()
         while True:
-            run, deleted_instance_uuids, total_rows_archived = \
+            # table_to_rows = {table_name: number_of_rows_archived}
+            # deleted_instance_uuids = ['uuid1', 'uuid2', ...]
+            table_to_rows, deleted_instance_uuids, total_rows_archived = \
                 db.archive_deleted_rows(
                     cctxt, max_rows, before=before_date, task_log=task_log)
-            for table_name, rows_archived in run.items():
+
+            for table_name, rows_archived in table_to_rows.items():
                 if cell_name:
                     table_name = cell_name + '.' + table_name
                 table_to_rows_archived.setdefault(table_name, 0)
                 table_to_rows_archived[table_name] += rows_archived
-            if deleted_instance_uuids:
+
+            # deleted_instance_uuids does not necessarily mean that any
+            # instances rows were archived because it is obtained by a query
+            # separate from the archive queries. For example, if a
+            # DBReferenceError was raised while processing the instances table,
+            # we would have skipped the table and had 0 rows archived even
+            # though deleted instances rows were found.
+            instances_archived = table_to_rows.get('instances', 0)
+            if deleted_instance_uuids and instances_archived:
                 table_to_rows_archived.setdefault(
                     'API_DB.instance_mappings', 0)
                 table_to_rows_archived.setdefault(
@@ -476,8 +490,9 @@ class DbCommands(object):
 
             # If we're not archiving until there is nothing more to archive, we
             # have reached max_rows in this cell DB or there was nothing to
-            # archive.
-            if not until_complete or not run:
+            # archive. We check the values() in case we get something like
+            # table_to_rows = {'instances': 0} back somehow.
+            if not until_complete or not any(table_to_rows.values()):
                 break
             if verbose:
                 sys.stdout.write('.')
