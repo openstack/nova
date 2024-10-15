@@ -44,10 +44,6 @@ def _monkey_patch():
     if debugger.enabled():
         # turn off thread patching to enable the remote debugger
         eventlet.monkey_patch(thread=False)
-    elif os.name == 'nt':
-        # for nova-compute running on Windows(Hyper-v)
-        # pipes don't support non-blocking I/O
-        eventlet.monkey_patch(os=False)
     else:
         eventlet.monkey_patch()
 

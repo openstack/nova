@@ -13,11 +13,9 @@
 #    under the License.
 
 from collections import OrderedDict
-import os
 
 import fixtures
 
-from nova import exception
 from nova import test
 from nova.tests.unit.virt.disk.vfs import fakeguestfs
 from nova.virt.disk import api as diskapi
@@ -46,19 +44,6 @@ class VirtDiskTest(test.NoDBTestCase):
             imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_RAW),
             key="mysshkey",
             mandatory=('key',)))
-
-        os_name = os.name
-        os.name = 'nt'  # Cause password injection to fail
-        self.assertRaises(exception.NovaException,
-                          diskapi.inject_data,
-                          imgmodel.LocalFileImage("/some/file",
-                                                  imgmodel.FORMAT_RAW),
-                          admin_password="p",
-                          mandatory=('admin_password',))
-        self.assertFalse(diskapi.inject_data(
-            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_RAW),
-            admin_password="p"))
-        os.name = os_name
 
         self.assertFalse(diskapi.inject_data(
             imgmodel.LocalFileImage("/some/fail/file", imgmodel.FORMAT_RAW),
