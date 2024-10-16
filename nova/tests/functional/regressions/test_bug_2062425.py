@@ -25,6 +25,7 @@ class TestSchedulingForImageCPUProperty(base.ServersTestBase):
 
     reference arch list
     https://docs.openstack.org/glance/latest/admin/useful-image-properties.html#image-property-keys-and-values
+    https://github.com/openstack/nova/blob/df5454021543e8aa3c73289224158c9090f0da6a/nova/scheduler/request_filter.py#L208-L216
     """
     microversion = 'latest'
 
@@ -41,12 +42,21 @@ class TestSchedulingForImageCPUProperty(base.ServersTestBase):
         cpu_arch_image['id'] = uuids.cpu_arch_image
         self.glance.create(None, cpu_arch_image)
 
-        server = self._create_server(
+        self._create_server(
             image_uuid=uuids.cpu_arch_image,
             networks='none',
-            # FIXME(auniyal): Server failed to spawn
-            expected_state='ERROR'
+            expected_state='ACTIVE'
         )
-        # this is a bug, with valid hw_arch,
-        # scheduler should be able to find host
-        self.assertIn("No valid host was found", server['fault']['message'])
+
+    def test_server_create_with_valid_emul_arch(self):
+        emul_arch = "x86_64"
+        emul_image = copy.deepcopy(self.glance.image1)
+        emul_image['properties']['hw_emulation_architecture'] = emul_arch
+        emul_image['id'] = uuids.emul_image
+        self.glance.create(None, emul_image)
+
+        self._create_server(
+            image_uuid=uuids.emul_image,
+            networks='none',
+            expected_state='ACTIVE'
+        )
