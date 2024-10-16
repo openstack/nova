@@ -13,6 +13,7 @@
 #    under the License.
 
 import datetime
+import hashlib
 import os
 import os.path
 import tempfile
@@ -29,7 +30,6 @@ from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
 from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
-from oslo_utils.secretutils import md5
 
 from nova import context
 from nova import exception
@@ -203,7 +203,7 @@ class GenericUtilsTestCase(test.NoDBTestCase):
     def test_get_hash_str(self):
         base_str = b"foo"
         base_unicode = u"foo"
-        value = md5(base_str, usedforsecurity=False).hexdigest()
+        value = hashlib.md5(base_str, usedforsecurity=False).hexdigest()
         self.assertEqual(
             value, utils.get_hash_str(base_str))
         self.assertEqual(

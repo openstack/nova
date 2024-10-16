@@ -17,9 +17,10 @@
 Helpers for filesystem related routines.
 """
 
+import hashlib
+
 from oslo_concurrency import processutils
 from oslo_log import log as logging
-from oslo_utils.secretutils import md5
 
 import nova.privsep
 
@@ -283,7 +284,7 @@ def _get_hash_str(base_str):
     """
     if isinstance(base_str, str):
         base_str = base_str.encode('utf-8')
-    return md5(base_str, usedforsecurity=False).hexdigest()
+    return hashlib.md5(base_str, usedforsecurity=False).hexdigest()
 
 
 def get_file_extension_for_os_type(os_type, default_ephemeral_format,

@@ -21,6 +21,7 @@ Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
 
 import base64
 import binascii
+import hashlib
 import io
 import os
 import typing as ty
@@ -36,7 +37,6 @@ from cryptography import x509
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import base64 as oslo_base64
-from oslo_utils.secretutils import md5
 import paramiko
 
 import nova.conf
@@ -75,7 +75,7 @@ def generate_fingerprint(public_key: str) -> str:
         serialization.load_ssh_public_key(
             pub_bytes, backends.default_backend())
         pub_data = base64.b64decode(public_key.split(' ')[1])
-        raw_fp = md5(pub_data, usedforsecurity=False).hexdigest()
+        raw_fp = hashlib.md5(pub_data, usedforsecurity=False).hexdigest()
         return ':'.join(a + b for a, b in zip(raw_fp[::2], raw_fp[1::2]))
     except Exception:
         raise exception.InvalidKeypair(
