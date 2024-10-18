@@ -2152,6 +2152,48 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
             self.assertIsInstance(domain, tpool.Proxy)
             self.assertIn(domain.UUIDString(), (uuids.vm1, uuids.vm2))
 
+    def _add_fake_host_devices(self):
+        self.conn._obj.pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=2, num_vfs=2, num_mdevcap=3)
+        mdevs = {
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01':
+                fakelibvirt.FakeMdevDevice(
+                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c01',
+                    type_id=fakelibvirt.NVIDIA_11_VGPU_TYPE,
+                    parent=fakelibvirt.MDEVCAP_DEV1_PCI_ADDR),
+        }
+        self.conn._obj.mdev_info = fakelibvirt.HostMdevDevicesInfo(
+            devices=mdevs)
+
+    def test_tpool_list_all_devices(self):
+        self._add_fake_host_devices()
+        devs = self.host.list_all_devices(
+            fakelibvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV)
+        self.assertEqual(8, len(devs))
+        for dev in devs:
+            self.assertIsInstance(dev, tpool.Proxy)
+
+    def test_tpool_list_pci_devices(self):
+        self._add_fake_host_devices()
+        devs = self.host.list_pci_devices()
+        self.assertEqual(8, len(devs))
+        for dev in devs:
+            self.assertIsInstance(dev, tpool.Proxy)
+
+    def test_tpool_list_mdev_capable_devices(self):
+        self._add_fake_host_devices()
+        devs = self.host.list_mdev_capable_devices()
+        self.assertEqual(3, len(devs))
+        for dev in devs:
+            self.assertIsInstance(dev, tpool.Proxy)
+
+    def test_tpool_list_mediated_devices(self):
+        self._add_fake_host_devices()
+        devs = self.host.list_mediated_devices()
+        self.assertEqual(1, len(devs))
+        for dev in devs:
+            self.assertIsInstance(dev, tpool.Proxy)
+
 
 class LoadersTestCase(test.NoDBTestCase):
 
