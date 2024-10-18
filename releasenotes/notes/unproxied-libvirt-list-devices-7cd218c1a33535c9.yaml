@@ -1,0 +1,11 @@
+fixes:
+  - |
+    `Bug #2091033`_: Fixed calls to libvirt ``listDevices()`` and
+    ``listAllDevices()`` from potentially blocking all other greenthreads
+    in ``nova-compute``. Under certain circumstances, it was possible for
+    the ``nova-compute`` service to freeze with all other greenthreads
+    blocked and unable to perform any other activities including logging.
+    This issue has been fixed by wrapping the libvirt ``listDevices()``
+    and ``listAllDevices()`` calls with ``eventlet.tpool.Proxy``.
+
+    .. _Bug #2091033: https://bugs.launchpad.net/nova/+bug/2091033
