@@ -416,7 +416,7 @@ class Guest(object):
     def get_device_by_alias(self, devalias, devtype=None,
                             from_persistent_config=False):
         for dev in self.get_all_devices(devtype):
-            if dev.alias == devalias:
+            if hasattr(dev, 'alias') and dev.alias == devalias:
                 return dev
 
     def get_all_devices(

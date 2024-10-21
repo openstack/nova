@@ -12,7 +12,6 @@
 # under the License.
 
 from nova.tests.fixtures import libvirt as fakelibvirt
-from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import test_vgpu
 
 
@@ -61,13 +60,7 @@ class VGPUTestVolumeOPs(test_vgpu.VGPUTestBase):
         # Detach the volume from the instance
         # DELETE /servers/{server_id}/os-volume_attachments/{volume_id} is
         # async but as we are using CastAsCall it's sync in our func tests
-        # FIXME(sean-k-mooney): This test is currently broken because of
-        # bug 2074219
-        # self.api.delete_server_volume(
-        #     server_id, self.cinder.IMAGE_BACKED_VOL)
-        # self._wait_for_volume_detach(
-        #     server_id, self.cinder.IMAGE_BACKED_VOL)
-        error = self.assertRaises(
-            client.OpenStackApiException, self.api.delete_server_volume,
+        self.api.delete_server_volume(
             server_id, self.cinder.IMAGE_BACKED_VOL)
-        self.assertEqual(500, error.response.status_code)
+        self._wait_for_volume_detach(
+            server_id, self.cinder.IMAGE_BACKED_VOL)
