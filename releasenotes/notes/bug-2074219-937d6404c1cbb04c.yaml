@@ -1,0 +1,17 @@
+---
+fixes:
+  - |
+    During the Caracal cycle the libvirt driver was enhanced to support using
+    device aliases to detach devices from a domain.
+    I1dfe4ad3df81bc810835af9b09cfc6c06e9a5388
+    This introduced a regression for instance with vgpus.
+    A prior bugfix https://bugs.launchpad.net/nova/+bug/1942345
+    addressed the symptom without correcting the underlying problem.
+    A related bug for mdev devices was later reported.
+    https://bugs.launchpad.net/nova/+bug/2074219
+    When this feature was added nova introduced a helper method
+    to get device via the alias because the libvirt api does not provide one
+    natively. That helper function assumed all devices would have an alias
+    attribute. That assumption was not valid and had now been corrected.
+    As a result detaching a volume from an instance with vgpus should now
+    be possible and this class of bug should no longer happen.

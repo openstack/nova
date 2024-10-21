@@ -308,6 +308,11 @@ class GuestTestCase(test.NoDBTestCase):
         <address domain='0x0000' bus='0x06' slot='0x12' function='0x6'/>
       </source>
     </hostdev>
+    <hostdev mode='subsystem' type='mdev' model='vfio-pci'>
+      <source>
+        <address uuid='c2177883-f1bb-47f0-914d-32a22e3a8804'/>
+      </source>
+    </hostdev>
     <interface type="bridge">
       <mac address="fa:16:3e:f9:af:ae"/>
       <model type="virtio"/>
