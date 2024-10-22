@@ -69,7 +69,7 @@ class HostMappingDiscoveryTestFail(test.TestCase):
         self.assertEqual(node['uuid'], node_uuid)
 
         # Bug #2085135: node should be unmapped and be discoverable
-        self.assertEqual(node['mapped'], 1)
+        self.assertEqual(node['mapped'], 0)
         mappings = host_mapping.discover_hosts(
             self.ctxt, status_fn=lambda m: None)
-        self.assertEqual(0, len(mappings))
+        self.assertEqual(1, len(mappings))
