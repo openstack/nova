@@ -5836,6 +5836,7 @@ class VIFVirtioEnabledTest(test.NoDBTestCase):
         ('yes', True, True),
         # fail: mismatched image and flavor configuration
         ('no', True, exception.FlavorImageConflict),
+        ('yes', 'true', True),
     )
     def test_get_vif_virtio_constraint(
         self, flavor_policy, image_policy, expected,
