@@ -1982,14 +1982,18 @@ def get_packed_virtqueue_constraint(
         flavor_key = ':'.join(['hw', key_value])
         image_key = '_'.join(['hw', key_value])
         flavor_value_str = flavor.get('extra_specs', {}).get(flavor_key, None)
-        image_value = image_meta.get('properties', {}).get(image_key, None)
+        image_value_str = image_meta.get('properties', {}).get(image_key, None)
     else:
-        flavor_value_str, image_value = _get_flavor_image_meta(
+        flavor_value_str, image_value_str = _get_flavor_image_meta(
             key_value, flavor, image_meta)
 
     flavor_value = None
     if flavor_value_str is not None:
         flavor_value = strutils.bool_from_string(flavor_value_str)
+
+    image_value = None
+    if image_value_str is not None:
+        image_value = strutils.bool_from_string(image_value_str)
 
     if (
         image_value is not None and
