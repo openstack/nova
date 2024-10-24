@@ -20,6 +20,7 @@
       - ^api-.*$
       - ^doc/(source|test)/.*$
       - ^nova/locale/.*$
+      - ^\.pre-commit-config\.yaml$
       - ^releasenotes/.*$
     vars:
       # explicitly stating the work dir makes this job reusable by other
@@ -101,6 +102,7 @@
       - ^nova/tests/.*$
       - ^nova/test.py$
       - ^nova/virt/ironic/.*$
+      - ^\.pre-commit-config\.yaml$
       - ^releasenotes/.*$
       - ^setup.cfg$
       - ^tools/.*$
@@ -158,6 +160,7 @@
       - ^nova/policies/.*$
       - ^nova/tests/.*$
       - ^nova/test.py$
+      - ^\.pre-commit-config\.yaml$
       - ^releasenotes/.*$
       - ^setup.cfg$
       - ^tools/.*$
@@ -747,6 +750,7 @@
       - ^nova/locale/.*$
       - ^nova/tests/.*$
       - ^nova/test.py$
+      - ^\.pre-commit-config\.yaml$
       - ^releasenotes/.*$
       - ^setup.cfg$
       - ^tools/.*$
