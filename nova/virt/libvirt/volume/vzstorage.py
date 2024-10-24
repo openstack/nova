@@ -12,6 +12,7 @@
 
 import collections
 import re
+import warnings
 
 from os_brick import initiator
 from os_brick.initiator import connector
@@ -38,6 +39,9 @@ class LibvirtVZStorageVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
 
     def __init__(self, connection):
         super(LibvirtVZStorageVolumeDriver, self).__init__(connection)
+
+        warnings.warn('VZStorage volume support is deprecated',
+                      category=DeprecationWarning, stacklevel=2)
 
         # Check for duplicate options:
         # -c - cluster name

@@ -1243,6 +1243,12 @@ Possible values:
 libvirt_volume_quobyte_opts = [
     cfg.StrOpt('quobyte_mount_point_base',
                default=paths.state_path_def('mnt'),
+               deprecated_for_removal=True,
+               deprecated_since="31.0.0",
+               deprecated_reason="""
+Quobyte volume driver in cinder was marked unsupported. Quobyte volume support
+will be removed from nova when the volume driver is removed from cinder.
+""",
                help="""
 Directory where the Quobyte volume is mounted on the compute node.
 
@@ -1255,17 +1261,37 @@ Possible values:
 * A string representing absolute path of mount point.
 """),
     cfg.StrOpt('quobyte_client_cfg',
+               deprecated_for_removal=True,
+               deprecated_since="31.0.0",
+               deprecated_reason="""
+Quobyte volume driver in cinder was marked unsupported. Quobyte volume support
+will be removed from nova when the volume driver is removed from cinder.
+""",
                help='Path to a Quobyte Client configuration file.'),
 ]
 
 libvirt_volume_smbfs_opts = [
     cfg.StrOpt('smbfs_mount_point_base',
                default=paths.state_path_def('mnt'),
+               deprecated_for_removal=True,
+               deprecated_since="31.0.0",
+               deprecated_reason="""
+Windows SMB volume driver in cinder was marked unsupported. SMBFS volume
+support will be removed from nova when the volume driver is removed from
+cinder.
+""",
                help="""
 Directory where the SMBFS shares are mounted on the compute node.
 """),
     cfg.StrOpt('smbfs_mount_options',
                default='',
+               deprecated_for_removal=True,
+               deprecated_since="31.0.0",
+               deprecated_reason="""
+Windows SMB volume driver in cinder was marked unsupported. SMBFS volume
+support will be removed from nova when the volume driver is removed from
+cinder.
+""",
                help="""
 Mount options passed to the SMBFS client.
 
@@ -1295,6 +1321,13 @@ compute nodes, other method must be used for:
 libvirt_volume_vzstorage_opts = [
     cfg.StrOpt('vzstorage_mount_point_base',
                default=paths.state_path_def('mnt'),
+               deprecated_for_removal=True,
+               deprecated_since="31.0.0",
+               deprecated_reason="""
+Virtuozzo Storage volume driver in cinder was marked unsupported. Virtuozzo
+Storage volume support will be removed from nova when the volume driver is
+removed from cinder.
+""",
                help="""
 Directory where the Virtuozzo Storage clusters are mounted on the compute
 node.
@@ -1308,6 +1341,13 @@ Related options:
               ),
     cfg.StrOpt('vzstorage_mount_user',
                default='stack',
+               deprecated_for_removal=True,
+               deprecated_since="31.0.0",
+               deprecated_reason="""
+Virtuozzo Storage volume driver in cinder was marked unsupported. Virtuozzo
+Storage volume support will be removed from nova when the volume driver is
+removed from cinder.
+""",
                help="""
 Mount owner user name.
 

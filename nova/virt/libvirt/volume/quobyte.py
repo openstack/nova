@@ -14,6 +14,7 @@
 #    under the License.
 
 import os
+import warnings
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
@@ -136,6 +137,11 @@ def validate_volume(mount_path):
 
 class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     """Class implements libvirt part of volume driver for Quobyte."""
+
+    def __init__(self, host):
+        super(LibvirtQuobyteVolumeDriver, self).__init__(host)
+        warnings.warn('Quobyte volume support is deprecated',
+                      category=DeprecationWarning, stacklevel=2)
 
     def _get_mount_point_base(self):
         return CONF.libvirt.quobyte_mount_point_base
