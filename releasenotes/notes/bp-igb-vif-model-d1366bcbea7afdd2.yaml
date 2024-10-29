@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The libvirt driver now supports hw_vif_model=igb image property
+    if the hypervisor has libvirt version 9.3.0 and qemu version 8.0.0
+    or higher.

@@ -61,6 +61,7 @@ SUPPORTED_VIF_MODELS = {
         network_model.VIF_MODEL_LAN9118,
         network_model.VIF_MODEL_SPAPR_VLAN,
         network_model.VIF_MODEL_VMXNET3,
+        network_model.VIF_MODEL_IGB,
     ],
     'kvm': [
         network_model.VIF_MODEL_VIRTIO,
@@ -71,6 +72,7 @@ SUPPORTED_VIF_MODELS = {
         network_model.VIF_MODEL_E1000E,
         network_model.VIF_MODEL_SPAPR_VLAN,
         network_model.VIF_MODEL_VMXNET3,
+        network_model.VIF_MODEL_IGB,
     ],
     'lxc': [],
     'parallels': [

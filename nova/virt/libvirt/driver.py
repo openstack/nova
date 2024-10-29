@@ -260,6 +260,10 @@ MIN_QEMU_MAXPHYSADDR = (2, 7, 0)
 # stateless firmware support
 MIN_LIBVIRT_STATELESS_FIRMWARE = (8, 6, 0)
 
+# Minimum versions supporting igb hw_vif_model
+MIN_IGB_LIBVIRT_VERSION = (9, 3, 0)
+MIN_IGB_QEMU_VERSION = (8, 0, 0)
+
 REGISTER_IMAGE_PROPERTY_DEFAULTS = [
     'hw_machine_type',
     'hw_cdrom_bus',
@@ -12990,6 +12994,15 @@ class LibvirtDriver(driver.ComputeDriver):
         supported_models = libvirt_vif.SUPPORTED_VIF_MODELS.get(
             CONF.libvirt.virt_type, []
         )
+
+        # remove version dependent vif models if we are on older libvirt/qemu
+        igb_supported = self._host.has_min_version(
+            MIN_IGB_LIBVIRT_VERSION, MIN_IGB_QEMU_VERSION)
+        if not igb_supported:
+            supported_models = [
+                model for model in supported_models
+                if model != network_model.VIF_MODEL_IGB]
+
         # construct the corresponding standard trait from the VIF model name
         return {
             f'COMPUTE_NET_VIF_MODEL_{model.replace("-", "_").upper()}': model

@@ -28186,7 +28186,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 bus_from_trait = trait.rsplit('_', 1)[1].lower()
                 self.assertEqual(bus_from_trait in buses, bus_traits[trait])
 
-    def test_vif_model_traits(self):
+    @mock.patch.object(
+        host.Host, 'has_min_version', return_value=True)
+    def test_vif_model_traits(self, mock_has_min_version):
         """Test getting vif model traits per virt type."""
         for virt_type, models in libvirt_vif.SUPPORTED_VIF_MODELS.items():
             self.flags(virt_type=virt_type, group='libvirt')
@@ -28199,6 +28201,24 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 self.assertTrue(vif_models[trait])
                 vif_models.pop(trait)
             self.assertTrue(all(not model for model in vif_models.values()))
+
+        mock_has_min_version.assert_called_with((9, 3, 0), (8, 0, 0))
+
+    @mock.patch.object(
+        host.Host, 'has_min_version', return_value=False)
+    def test_vif_model_traits_old_version_no_igb_support(
+        self, mock_has_min_version
+    ):
+        """Test getting vif model traits per virt type from old system not
+        supporting igb.
+        """
+        for virt_type in ('qemu', 'kvm'):
+            models = libvirt_vif.SUPPORTED_VIF_MODELS[virt_type]
+            self.assertIn(network_model.VIF_MODEL_IGB, models)
+            vif_models = self.drvr._get_vif_model_traits()
+            self.assertFalse(vif_models['COMPUTE_NET_VIF_MODEL_IGB'])
+
+        mock_has_min_version.assert_called_with((9, 3, 0), (8, 0, 0))
 
     def test_video_model_traits(self):
         """Test getting video model traits per virt type."""
