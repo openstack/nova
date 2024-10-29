@@ -65,7 +65,7 @@ Possible Values:
 
   ``numa_policy``
     Required NUMA affinity of device. Valid values are: ``legacy``,
-    ``preferred`` and ``required``.
+    ``preferred``, ``required``, and ``socket``.
 
   ``resource_class``
     The optional Placement resource class name that is used
