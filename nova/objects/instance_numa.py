@@ -20,7 +20,6 @@ from oslo_utils import versionutils
 
 from nova.db.main import api as db
 from nova import exception
-from nova.i18n import _
 from nova.objects import base
 from nova.objects import fields as obj_fields
 from nova.virt import hardware
@@ -48,15 +47,9 @@ class InstanceNUMACell(base.NovaEphemeralObject,
         # Instance with a 'mixed' CPU policy could not provide a backward
         # compatibility.
         if target_version < (1, 6):
-            if primitive['cpu_policy'] == obj_fields.CPUAllocationPolicy.MIXED:
-                raise exception.ObjectActionError(
-                    action='obj_make_compatible',
-                    reason=_(
-                        '{policy} policy is not supported in '
-                        'version {version}'
-                    ).format(policy=primitive['cpu_policy'],
-                             version=target_version))
-
+            base.raise_on_too_new_values(
+                target_version, primitive,
+                'cpu_policy', (obj_fields.CPUAllocationPolicy.MIXED,))
         # NOTE(huaqiang): Since version 1.5, 'cpuset' is modified to track the
         # unpinned CPUs only, with pinned CPUs tracked via 'pcpuset' instead.
         # For a backward compatibility, move the 'dedicated' instance CPU list
