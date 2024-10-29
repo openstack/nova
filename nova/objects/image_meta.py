@@ -16,6 +16,7 @@ import copy
 
 from oslo_utils import versionutils
 
+from nova.network import model as network_model
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -196,14 +197,19 @@ class ImageMetaProps(base.NovaObject):
     #                     'hw_maxphysaddr_bits' field
     # Version 1.37: Added 'hw_ephemeral_encryption_secret_uuid' field
     # Version 1.38: Added 'hw_firmware_stateless' field
+    # Version 1.39: Added igb value to 'hw_vif_model' enum
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.38'
+    VERSION = '1.39'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 39):
+            base.raise_on_too_new_values(
+                target_version, primitive,
+                'hw_vif_model', (network_model.VIF_MODEL_IGB,))
         if target_version < (1, 38):
             primitive.pop('hw_firmware_stateless', None)
         if target_version < (1, 37):

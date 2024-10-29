@@ -17,6 +17,7 @@ import datetime
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
+from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields
 from nova import test
@@ -608,3 +609,19 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertNotIn(
             'hw_firmware_stateless',
             primitive['nova_object.data'])
+
+    def test_obj_make_compatible_vif_model_igb(self):
+        obj = objects.ImageMetaProps(hw_vif_model=network_model.VIF_MODEL_IGB)
+
+        primitive = obj.obj_to_primitive('1.39')
+        self.assertIn(
+            'hw_vif_model',
+            primitive['nova_object.data'])
+        self.assertEqual(
+            network_model.VIF_MODEL_IGB,
+            primitive['nova_object.data']['hw_vif_model'])
+
+        ex = self.assertRaises(
+            exception.ObjectActionError, obj.obj_to_primitive, '1.38')
+        self.assertIn(
+            'hw_vif_model=igb not supported in version (1, 38)', str(ex))

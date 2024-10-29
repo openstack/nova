@@ -148,6 +148,7 @@ VIF_MODEL_E1000E = 'e1000e'
 VIF_MODEL_NETFRONT = 'netfront'
 VIF_MODEL_SPAPR_VLAN = 'spapr-vlan'
 VIF_MODEL_LAN9118 = 'lan9118'
+VIF_MODEL_IGB = 'igb'
 
 VIF_MODEL_SRIOV = 'sriov'
 VIF_MODEL_VMXNET = 'vmxnet'
@@ -166,6 +167,7 @@ VIF_MODEL_ALL = (
     VIF_MODEL_SRIOV,
     VIF_MODEL_VMXNET,
     VIF_MODEL_VMXNET3,
+    VIF_MODEL_IGB,
 )
 
 # these types have been leaked to guests in network_data.json
