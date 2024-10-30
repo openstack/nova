@@ -4967,6 +4967,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         # Consider the migration successful
         migration.status = 'done'
         migration.source_node = 'fake-node'
+        migration.dest_compute = 'dest-host'
 
         node_cache = {
             uuids.our_node_uuid:
@@ -5032,11 +5033,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         # compute was down
         migration_1.status = 'done'
         migration_1.source_node = 'deleted-node'
+        migration_1.dest_compute = 'dest-host'
 
         migration_2 = objects.Migration(instance_uuid=instance_2.uuid)
         # Consider the migration successful
         migration_2.status = 'done'
         migration_2.source_node = 'fake-node'
+        migration_2.dest_compute = 'dest-host'
 
         node_cache = {
             uuids.our_node_uuid:
