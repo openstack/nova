@@ -826,8 +826,9 @@ class ComputeManager(manager.Manager):
                     context, instance)
                 bdi = self._get_instance_block_device_info(context,
                                                            instance)
+                evac = evacuations[instance.uuid]
                 destroy_disks = not (self._is_instance_storage_shared(
-                    context, instance))
+                    context, instance, host=evac.dest_compute))
             except exception.InstanceNotFound:
                 network_info = network_model.NetworkInfo()
                 bdi = {}
