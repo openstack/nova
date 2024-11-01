@@ -244,6 +244,9 @@ def fetch_to_raw(context, image_href, path, trusted_certs=None):
             raise exception.ImageUnacceptable(
                 reason=_("'qemu-img info' parsing failed."),
                 image_id=image_href)
+        if force_format == 'gpt' and fmt == 'raw':
+            # If the image is 'gpt' and qemu detects as 'raw', that's a match
+            pass
         elif force_format is not None and fmt != force_format:
             # Format inspector and qemu-img must agree on the format, else
             # we reject. This will catch VMDK some variants that we don't
