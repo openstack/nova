@@ -72,8 +72,7 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
         self.assertIn(self.header_name, res.headers.getall('Vary'))
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
-    def test_microversions_return_header_non_default(self,
-                                                     mock_maxver):
+    def test_microversions_return_header_non_default(self, mock_maxver):
         mock_maxver.return_value = api_version.APIVersionRequest("2.3")
 
         req = fakes.HTTPRequest.blank(
@@ -254,31 +253,6 @@ class LegacyMicroversionsTest(test.NoDBTestCase):
             self.assertEqual("2.10", res.headers[self.header_name])
         else:
             self.assertEqual("compute 2.10", res.headers[self.header_name])
-
-    @mock.patch("nova.api.openstack.api_version_request.max_api_version")
-    def _test_microversions_inner_function(self, version, expected_resp,
-                                           mock_maxver):
-        mock_maxver.return_value = api_version.APIVersionRequest("2.2")
-        req = fakes.HTTPRequest.blank(
-                '/v2/%s/microversions4' % fakes.FAKE_PROJECT_ID)
-        req.headers = self._make_header(version)
-        req.environ['CONTENT_TYPE'] = "application/json"
-        req.method = 'POST'
-        req.body = b''
-
-        res = req.get_response(self.app)
-        self.assertEqual(200, res.status_int)
-        resp_json = jsonutils.loads(res.body)
-        self.assertEqual(expected_resp, resp_json['param'])
-        if 'nova' not in self.header_name.lower():
-            version = 'compute %s' % version
-        self.assertEqual(version, res.headers[self.header_name])
-
-    def test_microversions_inner_function_v22(self):
-        self._test_microversions_inner_function('2.2', 'controller4_val2')
-
-    def test_microversions_inner_function_v21(self):
-        self._test_microversions_inner_function('2.1', 'controller4_val1')
 
     @mock.patch("nova.api.openstack.api_version_request.max_api_version")
     def _test_microversions_actions(self, ret_code, ret_header, req_header,

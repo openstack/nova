@@ -116,37 +116,12 @@ class SchemaTest(test.NoDBTestCase):
                     wsgi_action, wsgi_method, action_controller
                 ) in wsgi_actions:
                     func = controller.wsgi_actions[wsgi_action]
-
-                    if hasattr(action_controller, 'versioned_methods'):
-                        if wsgi_method in action_controller.versioned_methods:
-                            # currently all our actions are unversioned and if
-                            # this changes then we need to fix this
-                            funcs = action_controller.versioned_methods[
-                                wsgi_method
-                            ]
-                            assert len(funcs) == 1
-                            func = funcs[0].func
-
                     # method will always be POST for actions
                     _validate_func(func, method)
             else:
                 # body validation
-                versioned_methods = getattr(
-                    controller.controller, 'versioned_methods', {}
-                )
-                if action in versioned_methods:
-                    # versioned method
-                    for versioned_method in sorted(
-                        versioned_methods[action],
-                        key=lambda v: v.start_version
-                    ):
-                        func = versioned_method.func
-
-                        _validate_func(func, method)
-                else:
-                    # unversioned method
-                    func = getattr(controller.controller, action)
-                    _validate_func(func, method)
+                func = getattr(controller.controller, action)
+                _validate_func(func, method)
 
         if missing_request_schemas:
             raise test.TestingException(

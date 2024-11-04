@@ -17,7 +17,6 @@ import testscenarios
 import webob
 
 from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack import versioned_method
 from nova.api.openstack import wsgi
 from nova import exception
 from nova import test
@@ -854,77 +853,42 @@ class ValidBodyTest(test.NoDBTestCase):
         self.assertFalse(self.controller.is_valid_body(body, 'foo'))
 
 
-class TestController(test.NoDBTestCase):
-    def test_check_for_versions_intersection_negative(self):
-        func_list = \
-            [versioned_method.VersionedMethod('foo',
-                                              api_version.APIVersionRequest(
-                                                  '2.1'),
-                                              api_version.APIVersionRequest(
-                                                  '2.4'),
-                                              None),
-             versioned_method.VersionedMethod('foo',
-                                              api_version.APIVersionRequest(
-                                                  '2.11'),
-                                              api_version.APIVersionRequest(
-                                                  '3.1'),
-                                              None),
-             versioned_method.VersionedMethod('foo',
-                                              api_version.APIVersionRequest(
-                                                  '2.8'),
-                                              api_version.APIVersionRequest(
-                                                  '2.9'),
-                                              None),
-             ]
+class APIVersionTestCase(test.NoDBTestCase):
 
-        result = wsgi.Controller.check_for_versions_intersection(func_list=
-                                                                 func_list)
-        self.assertFalse(result)
+    def test_api_version(self):
+        class FakeController(wsgi.Controller):
+            @wsgi.api_version('2.10', '2.19')
+            def fake_func(self, req):
+                return {'resources': []}
 
-        func_list = \
-            [versioned_method.VersionedMethod('foo',
-                                              api_version.APIVersionRequest(
-                                                  '2.12'),
-                                              api_version.APIVersionRequest(
-                                                  '2.14'),
-                                              None),
-             versioned_method.VersionedMethod('foo',
-                                              api_version.APIVersionRequest(
-                                                  '3.0'),
-                                              api_version.APIVersionRequest(
-                                                  '3.4'),
-                                              None)
-             ]
+        controller = FakeController()
 
-        result = wsgi.Controller.check_for_versions_intersection(func_list=
-                                                                 func_list)
-        self.assertFalse(result)
+        req = fakes.HTTPRequest.blank('', version='2.10')
+        self.assertEqual({'resources': []}, controller.fake_func(req))
 
-    def test_check_for_versions_intersection_positive(self):
-        func_list = \
-            [versioned_method.VersionedMethod('foo',
-                                              api_version.APIVersionRequest(
-                                                  '2.1'),
-                                              api_version.APIVersionRequest(
-                                                  '2.4'),
-                                              None),
-             versioned_method.VersionedMethod('foo',
-                                              api_version.APIVersionRequest(
-                                                  '2.3'),
-                                              api_version.APIVersionRequest(
-                                                  '3.0'),
-                                              None),
-             versioned_method.VersionedMethod('foo',
-                                              api_version.APIVersionRequest(
-                                                  '2.8'),
-                                              api_version.APIVersionRequest(
-                                                  '2.9'),
-                                              None),
-             ]
+        req = fakes.HTTPRequest.blank('', version='2.19')
+        self.assertEqual({'resources': []}, controller.fake_func(req))
 
-        result = wsgi.Controller.check_for_versions_intersection(func_list=
-                                                                 func_list)
-        self.assertTrue(result)
+        req = fakes.HTTPRequest.blank('', version='2.9')
+        self.assertRaises(
+            exception.VersionNotFoundForAPIMethod, controller.fake_func, req
+        )
+
+        req = fakes.HTTPRequest.blank('', version='2.20')
+        self.assertRaises(
+            exception.VersionNotFoundForAPIMethod, controller.fake_func, req
+        )
+
+    def test_api_version_legacy(self):
+        class FakeController(wsgi.Controller):
+            @wsgi.api_version('2.0', '2.10')
+            def fake_func(self, req):
+                return {'resources': []}
+
+        controller = FakeController()
+        req = fakes.HTTPRequest.blank('')
+        req.set_legacy_v2()
+        self.assertEqual({'resources': []}, controller.fake_func(req))
 
 
 class ExpectedErrorTestCase(test.NoDBTestCase):

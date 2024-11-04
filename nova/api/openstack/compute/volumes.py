@@ -109,7 +109,7 @@ class VolumeController(wsgi.Controller):
         super(VolumeController, self).__init__()
         self.volume_api = cinder.API()
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     @validation.query_schema(volumes_schema.show_query)
     def show(self, req, id):
@@ -125,7 +125,7 @@ class VolumeController(wsgi.Controller):
 
         return {'volume': _translate_volume_detail_view(context, vol)}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404))
     def delete(self, req, id):
@@ -141,7 +141,7 @@ class VolumeController(wsgi.Controller):
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(volumes_schema.index_query)
     def index(self, req):
@@ -151,7 +151,7 @@ class VolumeController(wsgi.Controller):
                     target={'project_id': context.project_id})
         return self._items(req, entity_maker=_translate_volume_summary_view)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(volumes_schema.detail_query)
     def detail(self, req):
@@ -170,7 +170,7 @@ class VolumeController(wsgi.Controller):
         res = [entity_maker(context, vol) for vol in limited_list]
         return {'volumes': res}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(volumes_schema.create)
     def create(self, req, body):
@@ -607,7 +607,7 @@ class SnapshotController(wsgi.Controller):
         self.volume_api = cinder.API()
         super(SnapshotController, self).__init__()
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     @validation.query_schema(volumes_schema.snapshot_show_query)
     def show(self, req, id):
@@ -623,7 +623,7 @@ class SnapshotController(wsgi.Controller):
 
         return {'snapshot': _translate_snapshot_detail_view(context, vol)}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @wsgi.expected_errors(404)
     def delete(self, req, id):
@@ -637,7 +637,7 @@ class SnapshotController(wsgi.Controller):
         except exception.SnapshotNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(volumes_schema.index_query)
     def index(self, req):
@@ -647,7 +647,7 @@ class SnapshotController(wsgi.Controller):
                     target={'project_id': context.project_id})
         return self._items(req, entity_maker=_translate_snapshot_summary_view)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(volumes_schema.detail_query)
     def detail(self, req):
@@ -666,7 +666,7 @@ class SnapshotController(wsgi.Controller):
         res = [entity_maker(context, snapshot) for snapshot in limited_list]
         return {'snapshots': res}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403))
     @validation.schema(volumes_schema.snapshot_create)
     def create(self, req, body):

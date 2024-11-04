@@ -82,7 +82,7 @@ class FloatingIPController(wsgi.Controller):
         self.compute_api = compute.API()
         self.network_api = neutron.API()
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
     def show(self, req, id):
@@ -101,7 +101,7 @@ class FloatingIPController(wsgi.Controller):
 
         return _translate_floating_ip_view(floating_ip)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
     def index(self, req):
@@ -115,7 +115,7 @@ class FloatingIPController(wsgi.Controller):
         return {'floating_ips': [_translate_floating_ip_view(ip)['floating_ip']
                                  for ip in floating_ips]}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(schema.create)
     def create(self, req, body=None):
@@ -148,7 +148,7 @@ class FloatingIPController(wsgi.Controller):
 
         return _translate_floating_ip_view(ip)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     def delete(self, req, id):
@@ -186,7 +186,7 @@ class FloatingIPActionController(wsgi.Controller):
         self.compute_api = compute.API()
         self.network_api = neutron.API()
 
-    @wsgi.Controller.api_version("2.1", "2.43")
+    @wsgi.api_version("2.1", "2.43")
     @wsgi.expected_errors((400, 403, 404))
     @wsgi.action('addFloatingIp')
     @validation.schema(schema.add_floating_ip)
@@ -267,7 +267,7 @@ class FloatingIPActionController(wsgi.Controller):
 
         return webob.Response(status_int=202)
 
-    @wsgi.Controller.api_version("2.1", "2.43")
+    @wsgi.api_version("2.1", "2.43")
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('removeFloatingIp')
     @validation.schema(schema.remove_floating_ip)

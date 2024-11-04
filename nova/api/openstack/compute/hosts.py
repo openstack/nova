@@ -38,7 +38,7 @@ class HostController(wsgi.Controller):
         super(HostController, self).__init__()
         self.api = compute.HostAPI()
 
-    @wsgi.Controller.api_version("2.1", "2.42")
+    @wsgi.api_version("2.1", "2.42")
     @validation.query_schema(hosts.index_query)
     @wsgi.expected_errors(())
     def index(self, req):
@@ -88,7 +88,7 @@ class HostController(wsgi.Controller):
                               'zone': service['availability_zone']})
         return {'hosts': hosts}
 
-    @wsgi.Controller.api_version("2.1", "2.42")
+    @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
     @validation.schema(hosts.update)
     def update(self, req, id, body):
@@ -180,7 +180,7 @@ class HostController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return {"host": host_name, "power_action": result}
 
-    @wsgi.Controller.api_version("2.1", "2.42")
+    @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
     @validation.query_schema(hosts.startup_query)
     def startup(self, req, id):
@@ -189,7 +189,7 @@ class HostController(wsgi.Controller):
                     target={})
         return self._host_power_action(req, host_name=id, action="startup")
 
-    @wsgi.Controller.api_version("2.1", "2.42")
+    @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
     @validation.query_schema(hosts.shutdown_query)
     def shutdown(self, req, id):
@@ -198,7 +198,7 @@ class HostController(wsgi.Controller):
                     target={})
         return self._host_power_action(req, host_name=id, action="shutdown")
 
-    @wsgi.Controller.api_version("2.1", "2.42")
+    @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
     @validation.query_schema(hosts.reboot_query)
     def reboot(self, req, id):
@@ -256,7 +256,7 @@ class HostController(wsgi.Controller):
                                     instance['ephemeral_gb'])
         return project_map
 
-    @wsgi.Controller.api_version("2.1", "2.42")
+    @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors(404)
     @validation.query_schema(hosts.show_query)
     def show(self, req, id):

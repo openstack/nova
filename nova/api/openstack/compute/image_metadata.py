@@ -43,7 +43,7 @@ class ImageMetadataController(wsgi.Controller):
             msg = _("Image not found.")
             raise exc.HTTPNotFound(explanation=msg)
 
-    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @wsgi.expected_errors((403, 404))
     @validation.query_schema(image_metadata.index_query)
     def index(self, req, image_id):
@@ -52,7 +52,7 @@ class ImageMetadataController(wsgi.Controller):
         metadata = self._get_image(context, image_id)['properties']
         return dict(metadata=metadata)
 
-    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @wsgi.expected_errors((403, 404))
     @validation.query_schema(image_metadata.show_query)
     def show(self, req, image_id, id):
@@ -63,7 +63,7 @@ class ImageMetadataController(wsgi.Controller):
         else:
             raise exc.HTTPNotFound()
 
-    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.create)
     def create(self, req, image_id, body):
@@ -80,7 +80,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=image['properties'])
 
-    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.update)
     def update(self, req, image_id, id, body):
@@ -103,7 +103,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(meta=meta)
 
-    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.update_all)
     def update_all(self, req, image_id, body):
@@ -119,7 +119,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=metadata)
 
-    @wsgi.Controller.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
     @wsgi.expected_errors((403, 404))
     @wsgi.response(204)
     def delete(self, req, image_id, id):

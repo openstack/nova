@@ -77,7 +77,7 @@ class NetworkController(wsgi.Controller):
         # TODO(stephenfin): 'network_api' is only being passed for use by tests
         self.network_api = network_api or neutron.API()
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
     def index(self, req):
@@ -88,7 +88,7 @@ class NetworkController(wsgi.Controller):
         result = [network_dict(context, net_ref) for net_ref in networks]
         return {'networks': result}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
     def show(self, req, id):

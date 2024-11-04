@@ -108,7 +108,7 @@ class FlavorsController(wsgi.Controller):
         return self._view_builder.show(req, flavor, include_description,
                                        include_extra_specs=include_extra_specs)
 
-    @wsgi.Controller.api_version('2.55')
+    @wsgi.api_version('2.55')
     @wsgi.expected_errors((400, 404))
     @validation.schema(schema.update, '2.55')
     @validation.response_body_schema(schema.update_response, '2.55', '2.60')

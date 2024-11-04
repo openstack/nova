@@ -134,7 +134,7 @@ class SecurityGroupControllerBase(object):
 class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     """The Security group API controller for the OpenStack API."""
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
     def show(self, req, id):
@@ -154,7 +154,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
         return {'security_group': self._format_security_group(context,
                                                               security_group)}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
     @wsgi.response(202)
     def delete(self, req, id):
@@ -172,7 +172,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
         except exception.Invalid as exp:
             raise exc.HTTPBadRequest(explanation=exp.format_message())
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @validation.query_schema(schema.index_query)
     @wsgi.expected_errors(404)
     def index(self, req):
@@ -196,7 +196,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
                 list(sorted(result,
                             key=lambda k: (k['tenant_id'], k['name'])))}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403))
     @validation.schema(schema.create)
     def create(self, req, body):
@@ -219,7 +219,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
         return {'security_group': self._format_security_group(context,
                                                               group_ref)}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
     @validation.schema(schema.update)
     def update(self, req, id, body):
@@ -254,7 +254,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
 class SecurityGroupRulesController(SecurityGroupControllerBase,
                                    wsgi.Controller):
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(schema.create_rules)
     def create(self, req, body):
@@ -327,7 +327,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
             return security_group_api.new_cidr_ingress_rule(
                 cidr, ip_protocol, from_port, to_port)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.response(202)
     def delete(self, req, id):

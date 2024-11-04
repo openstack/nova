@@ -70,7 +70,7 @@ class ServerSharesController(wsgi.Controller):
             )
         return instance
 
-    @wsgi.Controller.api_version("2.97")
+    @wsgi.api_version("2.97")
     @wsgi.response(200)
     @wsgi.expected_errors((400, 403, 404))
     @validation.query_schema(schema.index_query)
@@ -91,7 +91,7 @@ class ServerSharesController(wsgi.Controller):
 
         return self._view_builder._list_view(db_shares)
 
-    @wsgi.Controller.api_version("2.97")
+    @wsgi.api_version("2.97")
     @wsgi.response(201)
     @wsgi.expected_errors((400, 403, 404, 409))
     @validation.schema(schema.create, '2.97')
@@ -104,7 +104,8 @@ class ServerSharesController(wsgi.Controller):
             Prevent user from using the same tag twice on the same instance.
             """
             try:
-                objects.ShareMapping.get_by_instance_uuid_and_share_id(context,
+                objects.ShareMapping.get_by_instance_uuid_and_share_id(
+                    context,
                     share_mapping.instance_uuid, share_mapping.share_id
                 )
                 raise exception.ShareMappingAlreadyExists(
@@ -196,7 +197,7 @@ class ServerSharesController(wsgi.Controller):
 
         return view
 
-    @wsgi.Controller.api_version("2.97")
+    @wsgi.api_version("2.97")
     @wsgi.response(200)
     @wsgi.expected_errors((400, 403, 404))
     @validation.query_schema(schema.show_query)
@@ -227,7 +228,7 @@ class ServerSharesController(wsgi.Controller):
 
         return view
 
-    @wsgi.Controller.api_version("2.97")
+    @wsgi.api_version("2.97")
     @wsgi.response(200)
     @wsgi.expected_errors((400, 403, 404, 409))
     def delete(self, req, server_id, id):
