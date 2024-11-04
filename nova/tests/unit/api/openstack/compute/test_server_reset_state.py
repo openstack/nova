@@ -107,11 +107,11 @@ class ResetStateTestsV21(test.NoDBTestCase):
         body = {"os-resetState": {"state": "active"}}
         result = self.admin_api._reset_state(self.request, self.uuid,
                                              body=body)
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.admin_api,
                       admin_actions_v21.AdminActionsController):
-            status_int = self.admin_api._reset_state.wsgi_code
+            status_int = self.admin_api._reset_state.wsgi_codes(self.request)
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)
@@ -137,11 +137,11 @@ class ResetStateTestsV21(test.NoDBTestCase):
         body = {"os-resetState": {"state": "error"}}
         result = self.admin_api._reset_state(self.request, self.uuid,
                                              body=body)
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.admin_api,
                       admin_actions_v21.AdminActionsController):
-            status_int = self.admin_api._reset_state.wsgi_code
+            status_int = self.admin_api._reset_state.wsgi_codes(self.request)
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)

@@ -54,11 +54,6 @@ class BaseQuotaSetsTest(test.TestCase):
         self.stub_out('nova.api.openstack.identity.verify_project_id',
                       lambda ctx, project_id: True)
 
-    def get_delete_status_int(self, res):
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
-        # method instead of status_int in a response object.
-        return self.controller.delete.wsgi_code
-
 
 class QuotaSetsTestV21(BaseQuotaSetsTest):
     plugin = quotas_v21
@@ -284,8 +279,8 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
     @mock.patch('nova.objects.Quotas.destroy_all_by_project')
     def test_quotas_delete(self, mock_destroy_all_by_project):
         req = self._get_http_request()
-        res = self.controller.delete(req, 1234)
-        self.assertEqual(202, self.get_delete_status_int(res))
+        self.controller.delete(req, 1234)
+        self.assertEqual(202, self.controller.delete.wsgi_codes(req))
         mock_destroy_all_by_project.assert_called_once_with(
             req.environ['nova.context'], 1234)
 
@@ -476,8 +471,8 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
         url = '/v2/%s/os-quota-sets/%s?user_id=1' % (fakes.FAKE_PROJECT_ID,
                                                      fakes.FAKE_PROJECT_ID)
         req = self._get_http_request(url)
-        res = self.controller.delete(req, fakes.FAKE_PROJECT_ID)
-        self.assertEqual(202, self.get_delete_status_int(res))
+        self.controller.delete(req, fakes.FAKE_PROJECT_ID)
+        self.assertEqual(202, self.controller.delete.wsgi_codes(req))
         mock_destroy_all_by_project_and_user.assert_called_once_with(
             req.environ['nova.context'], fakes.FAKE_PROJECT_ID, '1'
         )

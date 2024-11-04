@@ -89,10 +89,10 @@ class CommonMixin(object):
         with mock.patch.object(self.compute_api, method) as mock_method:
             controller_function = getattr(self.controller, action)
             res = controller_function(self.req, instance.uuid, body=body)
-            # NOTE: on v2.1, http status code is set as wsgi_code of API
+            # NOTE: on v2.1, http status code is set as wsgi_codes of API
             # method instead of status_int in a response object.
             if self._api_version == '2.1':
-                status_int = controller_function.wsgi_code
+                status_int = controller_function.wsgi_codes(self.req)
             else:
                 status_int = res.status_int
             self.assertEqual(202, status_int)

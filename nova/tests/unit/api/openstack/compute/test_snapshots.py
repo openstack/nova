@@ -78,10 +78,10 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         delete = self.controller.delete
         result = delete(self.req, snapshot_id)
 
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.controller, volumes_v21.SnapshotController):
-            status_int = delete.wsgi_code
+            status_int = delete.wsgi_codes(self.req)
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)

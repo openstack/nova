@@ -94,9 +94,6 @@ class NetworksTestV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('',
                                            project_id=fakes.FAKE_PROJECT_ID)
 
-    def _check_status(self, res, method, code):
-        self.assertEqual(method.wsgi_code, code)
-
     def test_network_list_all_as_user(self):
         res_dict = self.controller.index(self.non_admin_req)
 

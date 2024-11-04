@@ -695,7 +695,7 @@ class ServicesTestV21(test.TestCase):
         with mock.patch('nova.objects.Service.destroy') as service_delete:
             self.controller.delete(self.req, compute.id)
             service_delete.assert_called_once_with()
-            self.assertEqual(self.controller.delete.wsgi_code, 204)
+            self.assertEqual(204, self.controller.delete.wsgi_codes(self.req))
         mock_get_compute_nodes.assert_called_once_with(
             self.req.environ['nova.context'], compute.host)
 
@@ -1190,7 +1190,7 @@ class ServicesTestV253(test.TestCase):
         with mock.patch('nova.objects.Service.destroy') as service_delete:
             self.controller.delete(self.req, service.uuid)
             service_delete.assert_called_once_with()
-            self.assertEqual(204, self.controller.delete.wsgi_code)
+            self.assertEqual(204, self.controller.delete.wsgi_codes(self.req))
 
     def test_delete_uuid_not_found(self):
         """Tests that we get a 404 response when attempting to delete a service

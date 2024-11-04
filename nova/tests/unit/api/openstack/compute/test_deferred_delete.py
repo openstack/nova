@@ -44,10 +44,10 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         res = self.extension._force_delete(
             self.fake_req, self.fake_uuid,
             body={'forceDelete': None})
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.extension, dd_v21.DeferredDeleteController):
-            status_int = self.extension._force_delete.wsgi_code
+            status_int = self.extension._force_delete.wsgi_codes(self.fake_req)
         else:
             status_int = res.status_int
         self.assertEqual(202, status_int)
@@ -117,10 +117,10 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         res = self.extension._restore(
             self.fake_req, self.fake_uuid,
             body={'restore': None})
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.extension, dd_v21.DeferredDeleteController):
-            status_int = self.extension._restore.wsgi_code
+            status_int = self.extension._restore.wsgi_codes(self.fake_req)
         else:
             status_int = res.status_int
         self.assertEqual(202, status_int)

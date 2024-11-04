@@ -224,7 +224,40 @@ class JSONDictSerializer(ActionDispatcher):
         return str(jsonutils.dumps(data))
 
 
-def response(code):
+class WSGICodes:
+    """A microversion-aware WSGI code decorator.
+
+    Allow definition and retrieval of WSGI return codes on a microversion-aware
+    basis.
+    """
+
+    def __init__(self) -> None:
+        self._codes: list[tuple[int, ty.Optional[str], ty.Optional[str]]] = []
+
+    def add_code(
+        self, code: tuple[int, ty.Optional[str], ty.Optional[str]]
+    ) -> None:
+        self._codes.append(code)
+
+    def __call__(self, req: Request) -> int:
+        ver = req.api_version_request
+
+        for code, min_version, max_version in self._codes:
+            min_ver = api_version.APIVersionRequest(min_version)
+            max_ver = api_version.APIVersionRequest(max_version)
+            if ver.matches(min_ver, max_ver):
+                return code
+
+        LOG.error("Unknown return code in API method")
+        msg = _("Unknown return code in API method")
+        raise webob.exc.HTTPInternalServerError(explanation=msg)
+
+
+def response(
+    code: int,
+    min_version: ty.Optional[str] = None,
+    max_version: ty.Optional[str] = None,
+):
     """Attaches response code to a method.
 
     This decorator associates a response code with a method.  Note
@@ -233,7 +266,9 @@ def response(code):
     """
 
     def decorator(func):
-        func.wsgi_code = code
+        if not hasattr(func, 'wsgi_codes'):
+            func.wsgi_codes = WSGICodes()
+        func.wsgi_codes.add_code((code, min_version, max_version))
         return func
     return decorator
 
@@ -562,8 +597,8 @@ class Resource(wsgi.Application):
             # Run post-processing extensions
             if resp_obj:
                 # Do a preserialize to set up the response object
-                if hasattr(meth, 'wsgi_code'):
-                    resp_obj._default_code = meth.wsgi_code
+                if hasattr(meth, 'wsgi_codes'):
+                    resp_obj._default_code = meth.wsgi_codes(request)
 
             if resp_obj and not response:
                 response = resp_obj.serialize(request, accept)
