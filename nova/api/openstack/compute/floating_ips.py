@@ -178,6 +178,7 @@ class FloatingIPController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
 
 
+@validation.validated
 class FloatingIPActionController(wsgi.Controller):
     """This API is deprecated from the Microversion '2.44'."""
 

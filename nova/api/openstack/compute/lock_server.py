@@ -22,6 +22,7 @@ from nova.compute import api as compute
 from nova.policies import lock_server as ls_policies
 
 
+@validation.validated
 class LockServerController(wsgi.Controller):
     def __init__(self):
         super(LockServerController, self).__init__()

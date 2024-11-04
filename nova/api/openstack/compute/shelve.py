@@ -29,6 +29,7 @@ from nova.policies import shelve as shelve_policies
 LOG = logging.getLogger(__name__)
 
 
+@validation.validated
 class ShelveController(wsgi.Controller):
     def __init__(self):
         super(ShelveController, self).__init__()

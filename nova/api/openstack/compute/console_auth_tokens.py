@@ -28,6 +28,7 @@ from nova.policies import console_auth_tokens as cat_policies
 CONF = nova.conf.CONF
 
 
+@validation.validated
 class ConsoleAuthTokensController(wsgi.Controller):
 
     @wsgi.expected_errors((400, 401, 404), '2.1', '2.30')

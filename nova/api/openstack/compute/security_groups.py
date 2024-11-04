@@ -385,6 +385,7 @@ class ServerSecurityGroupController(
                             key=lambda k: (k['tenant_id'], k['name'])))}
 
 
+@validation.validated
 class SecurityGroupActionController(wsgi.Controller):
     def __init__(self):
         super(SecurityGroupActionController, self).__init__()

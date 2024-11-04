@@ -40,6 +40,7 @@ def _get_context(req):
     return req.environ['nova.context']
 
 
+@validation.validated
 class AggregateController(wsgi.Controller):
     """The Host Aggregates API controller for the OpenStack API."""
 

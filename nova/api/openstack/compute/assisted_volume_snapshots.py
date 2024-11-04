@@ -27,6 +27,7 @@ from nova import exception
 from nova.policies import assisted_volume_snapshots as avs_policies
 
 
+@validation.validated
 class AssistedVolumeSnapshotsController(wsgi.Controller):
     """The Assisted volume snapshots API controller for the OpenStack API."""
 

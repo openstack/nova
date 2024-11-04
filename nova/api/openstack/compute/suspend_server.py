@@ -23,6 +23,7 @@ from nova import exception
 from nova.policies import suspend_server as ss_policies
 
 
+@validation.validated
 class SuspendServerController(wsgi.Controller):
     def __init__(self):
         super(SuspendServerController, self).__init__()

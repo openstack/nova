@@ -38,6 +38,7 @@ LOG = logging.getLogger(__name__)
 MIN_VER_NOVA_COMPUTE_EVACUATE_STOPPED = 62
 
 
+@validation.validated
 class EvacuateController(wsgi.Controller):
     def __init__(self):
         super(EvacuateController, self).__init__()

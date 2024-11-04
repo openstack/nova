@@ -35,6 +35,11 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
+def validated(cls):
+    cls._validated = True
+    return cls
+
+
 class Schemas:
     """A microversion-aware schema container.
 

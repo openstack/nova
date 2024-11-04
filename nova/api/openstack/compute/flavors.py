@@ -31,6 +31,7 @@ from nova.policies import flavor_manage as fm_policies
 from nova import utils
 
 
+@validation.validated
 class FlavorsController(wsgi.Controller):
     """Flavor controller for the OpenStack API."""
 

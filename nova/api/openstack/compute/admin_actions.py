@@ -32,6 +32,7 @@ It was removed in the 23.0.0 (Wallaby) release.
 """
 
 
+@validation.validated
 class AdminActionsController(wsgi.Controller):
     def __init__(self):
         super(AdminActionsController, self).__init__()

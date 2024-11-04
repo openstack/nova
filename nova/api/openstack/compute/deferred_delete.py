@@ -26,6 +26,7 @@ from nova import exception
 from nova.policies import deferred_delete as dd_policies
 
 
+@validation.validated
 class DeferredDeleteController(wsgi.Controller):
     def __init__(self):
         super(DeferredDeleteController, self).__init__()

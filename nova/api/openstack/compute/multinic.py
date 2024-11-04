@@ -26,6 +26,7 @@ from nova import exception
 from nova.policies import multinic as multinic_policies
 
 
+@validation.validated
 class MultinicController(wsgi.Controller):
     """This API is deprecated from Microversion '2.44'."""
 

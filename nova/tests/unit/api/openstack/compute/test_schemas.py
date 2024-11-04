@@ -30,53 +30,42 @@ class SchemaTest(test.NoDBTestCase):
     def test_schemas(self):
         missing_request_schemas = set()
         missing_query_schemas = set()
+        missing_response_schemas = set()
         invalid_schemas = set()
 
-        def _validate_func(func, method):
+        def _validate_schema(func, schema):
+            try:
+                self.meta_schema.check_schema(schema)
+            except jsonschema.exceptions.SchemaError:
+                LOG.exception(
+                    'schema validation failed for %s',
+                    func.__qualname__,
+                )
+                invalid_schemas.add(func.__qualname__)
+
+        def _validate_func(func, method, validated):
             if method in ("POST", "PUT", "PATCH"):
                 # request body validation
                 if not hasattr(func, 'request_body_schemas'):
                     missing_request_schemas.add(func.__qualname__)
                 else:
                     for schema, _, _ in func.request_body_schemas._schemas:
-                        try:
-                            self.meta_schema.check_schema(schema)
-                        except jsonschema.exceptions.SchemaError:
-                            LOG.exception(
-                                "Invalid request body schema for %s",
-                                func.__qualname__,
-                            )
-                            invalid_schemas.add(func.__qualname__)
-                            break
+                        _validate_schema(func, schema)
             elif method in ("GET",):
                 # request query string validation
                 if not hasattr(func, 'request_query_schemas'):
                     missing_request_schemas.add(func.__qualname__)
                 else:
                     for schema, _, _ in func.request_query_schemas._schemas:
-                        try:
-                            self.meta_schema.check_schema(schema)
-                        except jsonschema.exceptions.SchemaError:
-                            LOG.exception(
-                                "Invalid request query schema for %s",
-                                func.__qualname__,
-                            )
-                            invalid_schemas.add(func.__qualname__)
-                            break
+                        _validate_schema(func, schema)
 
-            # TODO(stephenfin): Check for missing schemas once we have added
-            # them all
-            if hasattr(func, 'response_body_schemas'):
+            # response body validation
+            if not hasattr(func, 'response_body_schemas'):
+                if validated:
+                    missing_response_schemas.add(func.__qualname__)
+            else:
                 for schema, _, _ in func.response_body_schemas._schemas:
-                    try:
-                        self.meta_schema.check_schema(schema)
-                    except jsonschema.exceptions.SchemaError:
-                        LOG.exception(
-                            "Invalid response body schema for %s",
-                            func.__qualname__,
-                        )
-                        invalid_schemas.add(func.__qualname__)
-                        break
+                    _validate_schema(func, schema)
 
         for route in self.router.map.matchlist:
             if 'controller' not in route.defaults:
@@ -84,6 +73,11 @@ class SchemaTest(test.NoDBTestCase):
 
             controller = route.defaults['controller']
 
+            validated = getattr(controller.controller, '_validated', False)
+
+            # NOTE: This is effectively a reimplementation of
+            # 'routes.route.Route.make_full_route' that uses OpenAPI-compatible
+            # template strings instead of regexes for parameters
             path = ""
             for part in route.routelist:
                 if isinstance(part, dict):
@@ -117,22 +111,28 @@ class SchemaTest(test.NoDBTestCase):
                 ) in wsgi_actions:
                     func = controller.wsgi_actions[wsgi_action]
                     # method will always be POST for actions
-                    _validate_func(func, method)
+                    _validate_func(func, method, validated)
             else:
                 # body validation
                 func = getattr(controller.controller, action)
-                _validate_func(func, method)
+                _validate_func(func, method, validated)
 
         if missing_request_schemas:
             raise test.TestingException(
-                f"Found API resources without schemas: "
+                f"Found API resources without request body schemas: "
                 f"{sorted(missing_request_schemas)}"
             )
 
         if missing_query_schemas:
             raise test.TestingException(
-                f"Found API resources without query schemas: "
+                f"Found API resources without request query schemas: "
                 f"{sorted(missing_query_schemas)}"
+            )
+
+        if missing_response_schemas:
+            raise test.TestingException(
+                f"Found API resources without response body schemas: "
+                f"{sorted(missing_response_schemas)}"
             )
 
         if invalid_schemas:
