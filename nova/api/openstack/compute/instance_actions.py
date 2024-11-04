@@ -38,6 +38,7 @@ ACTION_KEYS_V258 = ['action', 'instance_uuid', 'request_id', 'user_id',
 EVENT_KEYS = ['event', 'start_time', 'finish_time', 'result', 'traceback']
 
 
+@validation.validated
 class InstanceActionsController(wsgi.Controller):
     _view_builder_class = instance_actions_view.ViewBuilder
 
@@ -80,9 +81,11 @@ class InstanceActionsController(wsgi.Controller):
 
     @wsgi.expected_errors(404, "2.1", "2.57")
     @wsgi.expected_errors((400, 404), "2.58")
-    @validation.query_schema(schema.list_query, "2.1", "2.57")
-    @validation.query_schema(schema.list_query_v258, "2.58", "2.65")
-    @validation.query_schema(schema.list_query_v266, "2.66")
+    @validation.query_schema(schema.index_query, "2.1", "2.57")
+    @validation.query_schema(schema.index_query_v258, "2.58", "2.65")
+    @validation.query_schema(schema.index_query_v266, "2.66")
+    @validation.response_body_schema(schema.index_response, "2.1", "2.57")
+    @validation.response_body_schema(schema.index_response_v258, "2.58")
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
@@ -137,6 +140,11 @@ class InstanceActionsController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response, "2.1", "2.50")
+    @validation.response_body_schema(schema.show_response_v251, "2.51", "2.57")
+    @validation.response_body_schema(schema.show_response_v258, "2.58", "2.61")
+    @validation.response_body_schema(schema.show_response_v262, "2.62", "2.83")
+    @validation.response_body_schema(schema.show_response_v284, "2.84")
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
@@ -154,6 +162,7 @@ class InstanceActionsController(wsgi.Controller):
             action = self._format_action(action, ACTION_KEYS_V258)
         else:
             action = self._format_action(action, ACTION_KEYS)
+
         # Prior to microversion 2.51, events would only be returned in the
         # response for admins by default policy rules. Starting in
         # microversion 2.51, events are returned for admin_or_owner (of the
@@ -167,7 +176,8 @@ class InstanceActionsController(wsgi.Controller):
                        fatal=False):
             # For all microversions, the user can see all event details
             # including the traceback.
-            show_events = show_traceback = True
+            show_events = True
+            show_traceback = True
             show_host = api_version_request.is_supported(req, '2.62')
         elif api_version_request.is_supported(req, '2.51'):
             # The user is not able to see all event details, but they can at

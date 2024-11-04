@@ -20,40 +20,44 @@ FAKE_REQUEST_ID1 = 'req-3293a3f1-b44c-4609-b8d2-d81b105636b8'
 FAKE_REQUEST_ID2 = 'req-25517360-b757-47d3-be45-0e8d2a01b36a'
 FAKE_ACTION_ID1 = 123
 FAKE_ACTION_ID2 = 456
-FAKE_HOST_ID1 = '74824069503a752aaa3abf194f73200fcdd117ef70ab28b576e5bf7a'
-FAKE_HOST_ID2 = '858f5ed465b4967dd1306a38078e9b83b8705bdedfa7f16f898119b4'
+# the value of the hostId fields depends on the value of the projectID field,
+# so we define these statically
+FAKE_PROJECT_ID1 = '9ccc9bd7-8b23-4d57-8421-291fe888bdc6'
+FAKE_PROJECT_ID2 = '427b71e6-49d2-4c30-a8a0-d23adfe772e2'
+FAKE_HOST_ID1 = 'b7e03ca48116ea93152de5d2eff1c69f515a5198f3cfbe59103faf17'
+FAKE_HOST_ID2 = '7bd9ecf0b8cec52cd1410aee9b4bee5370c698bfc11f9478b35b80e2'
 
 FAKE_ACTIONS = {
     FAKE_UUID: {
-        FAKE_REQUEST_ID1: {'id': FAKE_ACTION_ID1,
-                          'action': 'reboot',
-                          'instance_uuid': FAKE_UUID,
-                          'request_id': FAKE_REQUEST_ID1,
-                          'project_id': '147',
-                          'user_id': '789',
-                          'start_time': datetime.datetime(
-                              2012, 12, 5, 0, 0, 0, 0),
-                          'finish_time': None,
-                          'message': '',
-                           'created_at': None,
-                           'updated_at': None,
-                           'deleted_at': None,
-                           'deleted': False,
+        FAKE_REQUEST_ID1: {
+            'id': FAKE_ACTION_ID1,
+            'action': 'reboot',
+            'instance_uuid': FAKE_UUID,
+            'request_id': FAKE_REQUEST_ID1,
+            'project_id': FAKE_PROJECT_ID1,
+            'user_id': '091d35ff-a42d-4717-8ba4-7dabfa7b13a4',
+            'start_time': datetime.datetime(2012, 12, 5, 0, 0, 0, 0),
+            'finish_time': None,
+            'message': '',
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': False,
         },
-        FAKE_REQUEST_ID2: {'id': FAKE_ACTION_ID2,
-                          'action': 'resize',
-                          'instance_uuid': FAKE_UUID,
-                          'request_id': FAKE_REQUEST_ID2,
-                          'user_id': '789',
-                          'project_id': '842',
-                          'start_time': datetime.datetime(
-                              2012, 12, 5, 1, 0, 0, 0),
-                          'finish_time': None,
-                          'message': '',
-                           'created_at': None,
-                           'updated_at': None,
-                           'deleted_at': None,
-                           'deleted': False,
+        FAKE_REQUEST_ID2: {
+            'id': FAKE_ACTION_ID2,
+            'action': 'resize',
+            'instance_uuid': FAKE_UUID,
+            'request_id': FAKE_REQUEST_ID2,
+            'project_id': FAKE_PROJECT_ID2,
+            'user_id': 'c0ab3ebb-ad1b-4b60-8e63-b8a5656315d0',
+            'start_time': datetime.datetime(2012, 12, 5, 1, 0, 0, 0),
+            'finish_time': None,
+            'message': '',
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': False,
         }
     }
 }
