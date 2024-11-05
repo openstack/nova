@@ -16,10 +16,8 @@
 
 from webob import exc
 
-from nova.api.openstack.api_version_request import \
-    MAX_IMAGE_META_PROXY_API_VERSION
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import image_metadata
+from nova.api.openstack.compute.schemas import image_metadata as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -27,11 +25,12 @@ from nova.i18n import _
 from nova.image import glance
 
 
+@validation.validated
 class ImageMetadataController(wsgi.Controller):
     """The image metadata API controller for the OpenStack API."""
 
     def __init__(self):
-        super(ImageMetadataController, self).__init__()
+        super().__init__()
         self.image_api = glance.API()
 
     def _get_image(self, context, image_id):
@@ -43,18 +42,20 @@ class ImageMetadataController(wsgi.Controller):
             msg = _("Image not found.")
             raise exc.HTTPNotFound(explanation=msg)
 
-    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version('2.1', '2.38')
     @wsgi.expected_errors((403, 404))
-    @validation.query_schema(image_metadata.index_query)
+    @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, image_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
         metadata = self._get_image(context, image_id)['properties']
-        return dict(metadata=metadata)
+        return {'metadata': metadata}
 
-    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version('2.1', '2.38')
     @wsgi.expected_errors((403, 404))
-    @validation.query_schema(image_metadata.show_query)
+    @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, image_id, id):
         context = req.environ['nova.context']
         metadata = self._get_image(context, image_id)['properties']
@@ -63,9 +64,10 @@ class ImageMetadataController(wsgi.Controller):
         else:
             raise exc.HTTPNotFound()
 
-    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version('2.1', '2.38')
     @wsgi.expected_errors((400, 403, 404))
-    @validation.schema(image_metadata.create)
+    @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, image_id, body):
         context = req.environ['nova.context']
         image = self._get_image(context, image_id)
@@ -78,11 +80,12 @@ class ImageMetadataController(wsgi.Controller):
                                           purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
-        return dict(metadata=image['properties'])
+        return {'metadata': image['properties']}
 
-    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version('2.1', '2.38')
     @wsgi.expected_errors((400, 403, 404))
-    @validation.schema(image_metadata.update)
+    @validation.schema(schema.update)
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, image_id, id, body):
         context = req.environ['nova.context']
 
@@ -101,11 +104,12 @@ class ImageMetadataController(wsgi.Controller):
                                   purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
-        return dict(meta=meta)
+        return {'meta': meta}
 
-    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version('2.1', '2.38')
     @wsgi.expected_errors((400, 403, 404))
-    @validation.schema(image_metadata.update_all)
+    @validation.schema(schema.update_all)
+    @validation.response_body_schema(schema.update_all_response)
     def update_all(self, req, image_id, body):
         context = req.environ['nova.context']
         image = self._get_image(context, image_id)
@@ -117,11 +121,12 @@ class ImageMetadataController(wsgi.Controller):
                                   purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
-        return dict(metadata=metadata)
+        return {'metadata': metadata}
 
-    @wsgi.api_version("2.1", MAX_IMAGE_META_PROXY_API_VERSION)
+    @wsgi.api_version('2.1', '2.38')
     @wsgi.expected_errors((403, 404))
     @wsgi.response(204)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, image_id, id):
         context = req.environ['nova.context']
         image = self._get_image(context, image_id)

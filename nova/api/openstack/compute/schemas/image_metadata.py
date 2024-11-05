@@ -15,6 +15,7 @@
 import copy
 
 from nova.api.validation import parameter_types
+from nova.api.validation import response_types
 
 
 create = {
@@ -48,3 +49,29 @@ update_all = create
 
 index_query = {}
 show_query = {}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'metadata': response_types.metadata,
+    },
+    'required': ['metadata'],
+    'additionalProperties': False,
+}
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'meta': response_types.meta,
+    },
+    'required': ['meta'],
+    'additionalProperties': False,
+}
+
+create_response = copy.deepcopy(index_response)
+
+update_response = copy.deepcopy(show_response)
+
+update_all_response = copy.deepcopy(index_response)
+
+delete_response = {'type': 'null'}
