@@ -949,51 +949,50 @@ def compute_node_statistics(context):
     agg_cols = [
         func.count().label('count'),
         sql.func.sum(
-            inner_sel.c.vcpus
-        ).label('vcpus'),
+            inner_sel.c.current_workload
+        ).label('current_workload'),
         sql.func.sum(
-            inner_sel.c.memory_mb
-        ).label('memory_mb'),
-        sql.func.sum(
-            inner_sel.c.local_gb
-        ).label('local_gb'),
-        sql.func.sum(
-            inner_sel.c.vcpus_used
-        ).label('vcpus_used'),
-        sql.func.sum(
-            inner_sel.c.memory_mb_used
-        ).label('memory_mb_used'),
-        sql.func.sum(
-            inner_sel.c.local_gb_used
-        ).label('local_gb_used'),
-        sql.func.sum(
-            inner_sel.c.free_ram_mb
-        ).label('free_ram_mb'),
+            inner_sel.c.disk_available_least
+        ).label('disk_available_least'),
         sql.func.sum(
             inner_sel.c.free_disk_gb
         ).label('free_disk_gb'),
         sql.func.sum(
-            inner_sel.c.current_workload
-        ).label('current_workload'),
+            inner_sel.c.free_ram_mb
+        ).label('free_ram_mb'),
+        sql.func.sum(
+            inner_sel.c.local_gb
+        ).label('local_gb'),
+        sql.func.sum(
+            inner_sel.c.local_gb_used
+        ).label('local_gb_used'),
+        sql.func.sum(
+            inner_sel.c.memory_mb
+        ).label('memory_mb'),
+        sql.func.sum(
+            inner_sel.c.memory_mb_used
+        ).label('memory_mb_used'),
         sql.func.sum(
             inner_sel.c.running_vms
         ).label('running_vms'),
         sql.func.sum(
-            inner_sel.c.disk_available_least
-        ).label('disk_available_least'),
+            inner_sel.c.vcpus
+        ).label('vcpus'),
+        sql.func.sum(
+            inner_sel.c.vcpus_used
+        ).label('vcpus_used'),
     ]
     select = sql.select(*agg_cols).select_from(j)
 
     with engine.connect() as conn, conn.begin():
-        results = conn.execute(select).fetchone()
+        results = conn.execute(select).mappings().fetchone()
 
     # Build a dict of the info--making no assumptions about result
-    fields = ('count', 'vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
-              'memory_mb_used', 'local_gb_used', 'free_ram_mb', 'free_disk_gb',
-              'current_workload', 'running_vms', 'disk_available_least')
-    results = {field: int(results[idx] or 0)
-               for idx, field in enumerate(fields)}
-    return results
+    fields = (
+        'count', 'current_workload', 'disk_available_least', 'free_disk_gb',
+        'free_ram_mb', 'local_gb', 'local_gb_used', 'memory_mb',
+        'memory_mb_used', 'running_vms', 'vcpus', 'vcpus_used')
+    return {field: int(results[field] or 0) for field in fields}
 
 
 ###################
