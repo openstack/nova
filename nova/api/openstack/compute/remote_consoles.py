@@ -28,6 +28,7 @@ removed from Nova in the 29.0.0 (Caracal) release.
 """
 
 
+@validation.validated
 class RemoteConsolesController(wsgi.Controller):
     def __init__(self):
         super(RemoteConsolesController, self).__init__()
@@ -103,6 +104,7 @@ class RemoteConsolesController(wsgi.Controller):
     @wsgi.action('os-getRDPConsole')
     @wsgi.removed('29.0.0', _rdp_console_removal_reason)
     @validation.schema(schema.get_rdp_console)
+    @validation.response_body_schema(schema.get_rdp_console_response)
     def get_rdp_console(self, req, id, body):
         """RDP console was available only for HyperV driver which has been
         removed from Nova in 29.0.0 (Caracal) release.
@@ -145,6 +147,9 @@ class RemoteConsolesController(wsgi.Controller):
     @validation.schema(schema.create_v26, "2.6", "2.7")
     @validation.schema(schema.create_v28, "2.8", "2.98")
     @validation.schema(schema.create_v299, "2.99")
+    @validation.response_body_schema(schema.create_response, "2.6", "2.7")
+    @validation.response_body_schema(schema.create_response_v28, "2.8", "2.98")
+    @validation.response_body_schema(schema.create_response_v299, "2.99")
     def create(self, req, server_id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
