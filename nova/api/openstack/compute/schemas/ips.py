@@ -10,8 +10,67 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# NOTE(stephenfin): These schemas are intentionally empty since these APIs have
-# been removed
+import copy
 
-index_query = {}
-show_query = {}
+# TODO(stephenfin): Remove additionalProperties in a future API version
+index_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+# TODO(stephenfin): Remove additionalProperties in a future API version
+show_query = {
+    'type': 'object',
+    'properties': {},
+    'additionalProperties': True,
+}
+
+_ip_address = {
+    'type': 'object',
+    'properties': {
+        'addr': {
+            'type': 'string',
+            'oneOf': [
+                {'format': 'ipv4'},
+                {'format': 'ipv6'},
+            ],
+        },
+        'version': {
+            'enum': [4, 6],
+        },
+    },
+    'required': ['addr', 'version'],
+    'additionalProperties': False,
+}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'addresses': {
+            'type': 'object',
+            'patternProperties': {
+                # TODO(stephenfin): Surely there are some limitations on
+                # network names?
+                '^.+$': {
+                    'type': 'array',
+                    'items': copy.deepcopy(_ip_address),
+                },
+            },
+        },
+    },
+    'required': ['addresses'],
+    'additionalProperties': False,
+}
+
+show_response = {
+    'type': 'object',
+    'patternProperties': {
+        # TODO(stephenfin): Surely there are some limitations on
+        # network names?
+        '^.+$': {
+            'type': 'array',
+            'items': copy.deepcopy(_ip_address),
+        },
+    },
+}
