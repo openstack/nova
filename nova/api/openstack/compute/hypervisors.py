@@ -255,6 +255,11 @@ class HypervisorsController(wsgi.Controller):
     @validation.query_schema(schema.index_query, '2.1', '2.32')
     @validation.query_schema(schema.index_query_v233, '2.33', '2.52')
     @validation.query_schema(schema.index_query_v253, '2.53')
+    @validation.response_body_schema(schema.detail_response, '2.1', '2.26')
+    @validation.response_body_schema(schema.detail_response_v227, '2.27', '2.32')  # noqa: E501
+    @validation.response_body_schema(schema.detail_response_v233, '2.33', '2.52')  # noqa: E501
+    @validation.response_body_schema(schema.detail_response_v253, '2.53', '2.87')  # noqa: E501
+    @validation.response_body_schema(schema.detail_response_v288, '2.88')
     def detail(self, req):
         """List hypervisors with extra details.
 
@@ -307,6 +312,10 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.expected_errors((400, 404), '2.53')
     @validation.query_schema(schema.show_query, '2.1', '2.52')
     @validation.query_schema(schema.show_query_v253, '2.53')
+    @validation.response_body_schema(schema.show_response, '2.1', '2.26')
+    @validation.response_body_schema(schema.show_response_v227, '2.27', '2.52')
+    @validation.response_body_schema(schema.show_response_v253, '2.53', '2.87')
+    @validation.response_body_schema(schema.show_response_v288, '2.88')
     def show(self, req, id):
         """Show a hypervisor.
 
@@ -365,6 +374,8 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.api_version('2.1', '2.87')
     @wsgi.expected_errors((400, 404, 501))
     @validation.query_schema(schema.uptime_query)
+    @validation.response_body_schema(schema.uptime_response, '2.1', '2.52')
+    @validation.response_body_schema(schema.uptime_response_v253, '2.53', '2.87')  # noqa: E501
     def uptime(self, req, id):
         """Prior to microversion 2.88, you could retrieve a special version of
         the hypervisor detail view that included uptime. Starting in 2.88, this
