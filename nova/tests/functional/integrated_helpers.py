@@ -1285,10 +1285,15 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
     #: do real authentication.
     STUB_KEYSTONE = True
 
+    #: Whether to treat RPC casts as calls. This shouldn't really default to
+    #: True but a significant number of existing tests may be relying on it.
+    CAST_AS_CALL = True
+
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
-        self.useFixture(nova_fixtures.CastAsCallFixture(self))
+        if self.CAST_AS_CALL:
+            self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
         self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
