@@ -758,6 +758,15 @@ Number of greenthreads available for spawning virtual machines.
 Possible values:
 * Any positive integer representing greenthreads count.
 """),
+    cfg.BoolOpt('sync_power_state_unexpected_call_stop',
+        default=True,
+        help="""
+Disable calling stop on servers, that are unexpectedly reported as shutdown
+
+If the hypervisor supports automatic HA, it will bring up the instance again on
+another host, so calling stop might actually be harmful, because nova will
+enforce the shutdown when the host is brought up by HA.
+"""),
 ]
 
 compute_group_opts = [
