@@ -18,14 +18,12 @@
 import logging
 
 from oslo_log import log
-from oslo_policy import opts as policy_opts
 from oslo_utils import importutils
 
 import nova.conf
 from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api
 from nova import middleware
-from nova import policy
 from nova import rpc
 from nova import version
 
@@ -53,9 +51,6 @@ def set_lib_defaults():
     # Update default value of oslo_log default_log_levels and
     # logging_context_format_string config option.
     set_log_defaults()
-
-    # Update default value of oslo.policy policy_file config option.
-    policy_opts.set_defaults(CONF, policy.DEFAULT_POLICY_FILE)
 
 
 def rabbit_heartbeat_filter(log_record):

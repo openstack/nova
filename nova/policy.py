@@ -19,7 +19,6 @@ import re
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_policy import opts
 from oslo_policy import policy
 from oslo_utils import excutils
 
@@ -40,14 +39,6 @@ USER_BASED_RESOURCES = ['os-keypairs']
 # rules whether were updated.
 saved_file_rules = []
 KEY_EXPR = re.compile(r'%\((\w+)\)s')
-
-# TODO(gmann): Remove overriding the default value of config options
-# 'policy_file' once oslo_policy change its default value to what
-# is overridden here.
-DEFAULT_POLICY_FILE = 'policy.yaml'
-opts.set_defaults(
-    cfg.CONF,
-    DEFAULT_POLICY_FILE)
 
 
 def reset():
