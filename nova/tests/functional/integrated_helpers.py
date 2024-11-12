@@ -411,7 +411,7 @@ class InstanceHelperMixin:
             'is_public': False,
             'container_format': 'raw',
             'disk_format': 'raw',
-            'size': '25165824',
+            'size': 25165824,
             'min_ram': 0,
             'min_disk': 0,
             'protected': False,
@@ -740,8 +740,9 @@ class InstanceHelperMixin:
     def _create_server_boot_from_volume(self, image_args=None,
                                         flavor_id=None, networks=None):
         bfv_image_id = uuids.bfv_image_uuid
-        timestamp = datetime.datetime(2011, 1, 1, 1, 2, 3)
-
+        timestamp = datetime.datetime(
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+        )
         image = {
             'id': bfv_image_id,
             'name': 'fake_image_name',
@@ -752,7 +753,8 @@ class InstanceHelperMixin:
             'status': 'active',
             'container_format': 'raw',
             'disk_format': 'raw',
-            'min_disk': 0
+            'min_disk': 0,
+            'size': 74185822,
         }
         if image_args:
             image.update(image_args)

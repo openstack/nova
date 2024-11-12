@@ -111,20 +111,23 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
             'hw_video_model': 'qxl',
             'hw_vif_model': 'e1000',
         }
+        timestamp = datetime.datetime(
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+        )
         self.glance.create(
             None,
             {
                 'id': uuids.hw_bus_model_image_uuid,
                 'name': 'hw_bus_model_image',
-                'created_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
-                'updated_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
+                'created_at': timestamp,
+                'updated_at': timestamp,
                 'deleted_at': None,
                 'deleted': False,
                 'status': 'active',
                 'is_public': False,
                 'container_format': 'bare',
                 'disk_format': 'qcow2',
-                'size': '74185822',
+                'size': 74185822,
                 'min_ram': 0,
                 'min_disk': 0,
                 'protected': False,
@@ -330,20 +333,23 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
             'hw_video_model': 'cirrus',
             'hw_vif_model': 'e1000',
         }
+        timestamp = datetime.datetime(
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+        )
         self.glance.create(
             None,
             {
                 'id': uuids.pc_image_uuid,
                 'name': 'pc_image',
-                'created_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
-                'updated_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
+                'created_at': timestamp,
+                'updated_at': timestamp,
                 'deleted_at': None,
                 'deleted': False,
                 'status': 'active',
                 'is_public': False,
                 'container_format': 'bare',
                 'disk_format': 'qcow2',
-                'size': '74185822',
+                'size': 74185822,
                 'min_ram': 0,
                 'min_disk': 0,
                 'protected': False,

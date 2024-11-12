@@ -75,7 +75,9 @@ class UEFIServersTest(base.ServersTestBase):
         self.assertIn('COMPUTE_SECURITY_UEFI_SECURE_BOOT', traits)
 
         # create a server with UEFI and secure boot
-        timestamp = datetime.datetime(2021, 1, 2, 3, 4, 5)
+        timestamp = datetime.datetime(
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+        )
         uefi_image = {
             'id': uuids.uefi_image,
             'name': 'uefi_image',
@@ -87,7 +89,7 @@ class UEFIServersTest(base.ServersTestBase):
             'is_public': False,
             'container_format': 'ova',
             'disk_format': 'vhd',
-            'size': '74185822',
+            'size': 74185822,
             'min_ram': 0,
             'min_disk': 0,
             'protected': False,

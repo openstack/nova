@@ -30,20 +30,23 @@ class LibvirtVifModelTest(base.ServersTestBase):
         CONF.set_default("image_metadata_prefilter", True, group='scheduler')
         super().setUp()
 
+        timestamp = datetime.datetime(
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+        )
         self.glance.create(
             None,
             {
                 'id': uuids.image_vif_model_igb,
                 'name': 'image-with-igb',
-                'created_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
-                'updated_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
+                'created_at': timestamp,
+                'updated_at': timestamp,
                 'deleted_at': None,
                 'deleted': False,
                 'status': 'active',
                 'is_public': False,
                 'container_format': 'bare',
                 'disk_format': 'qcow2',
-                'size': '74185822',
+                'size': 74185822,
                 'min_ram': 0,
                 'min_disk': 0,
                 'protected': False,

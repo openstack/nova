@@ -111,7 +111,7 @@ class DiskConfigTestCaseV21(test.TestCase):
                  'is_public': False,
                  'container_format': 'ova',
                  'disk_format': 'vhd',
-                 'size': '74185822',
+                 'size': 74185822,
                  'properties': {'auto_disk_config': 'Disabled'}}
         self.image_service.create(None, image)
 

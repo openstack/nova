@@ -38,20 +38,21 @@ SUPPORTED_FILTERS = {
 }
 
 
+@validation.validated
 class ImagesController(wsgi.Controller):
     """Base controller for retrieving/displaying images."""
 
     _view_builder_class = views_images.ViewBuilder
 
     def __init__(self):
-        super(ImagesController, self).__init__()
+        super().__init__()
         self._image_api = glance.API()
 
     def _get_filters(self, req):
         """Return a dictionary of query param filters from the request.
 
         :param req: the Request object coming from the wsgi layer
-        :retval a dict of key/value filters
+        :returns: a dict of key/value filters
         """
         filters = {}
         for param in req.params:
@@ -77,6 +78,7 @@ class ImagesController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         """Return detailed information about a specific image.
 
@@ -96,6 +98,7 @@ class ImagesController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((403, 404))
     @wsgi.response(204)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         """Delete an image, if allowed.
 
@@ -117,11 +120,11 @@ class ImagesController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """Return an index listing of images available to the request.
 
         :param req: `wsgi.Request` object
-
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
@@ -137,11 +140,11 @@ class ImagesController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
     @validation.query_schema(schema.detail_query)
+    @validation.response_body_schema(schema.detail_response)
     def detail(self, req):
         """Return a detailed index listing of images available to the request.
 
         :param req: `wsgi.Request` object.
-
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
