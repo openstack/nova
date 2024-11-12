@@ -111,11 +111,19 @@ server_sg_index_query = {
 add_security_group = {
     'type': 'object',
     'properties': {
-        'name': {
-            'type': 'string',
-            'minLength': 1,
-        },
+        'addSecurityGroup': {
+            'type': 'object',
+            'properties': {
+                'name': {
+                    'type': 'string',
+                    'minLength': 1,
+                },
+            },
+            'required': ['name'],
+            'additionalProperties': False
+        }
     },
+    'required': ['addSecurityGroup'],
     'additionalProperties': True,
 }
 
@@ -123,10 +131,18 @@ add_security_group = {
 remove_security_group = {
     'type': 'object',
     'properties': {
-        'name': {
-            'type': 'string',
-            'minLength': 1,
-        },
+        'removeSecurityGroup': {
+            'type': 'object',
+            'properties': {
+                'name': {
+                    'type': 'string',
+                    'minLength': 1,
+                },
+            },
+            'required': ['name'],
+            'additionalProperties': False
+        }
     },
+    'required': ['removeSecurityGroup'],
     'additionalProperties': True,
 }
