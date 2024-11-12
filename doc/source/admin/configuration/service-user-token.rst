@@ -4,7 +4,7 @@
 Service User Tokens
 ===================
 
-.. note::
+.. warning::
 
    Configuration of service user tokens is **required** for every Nova service
    for security reasons. See https://bugs.launchpad.net/nova/+bug/2004555 for
@@ -36,14 +36,14 @@ configuration file, for example:
 
    [service_user]
    send_service_user_token = true
-   auth_url = https://104.130.216.102/identity
+   auth_url = $AUTH_URL
    auth_strategy = keystone
    auth_type = password
-   project_domain_name = Default
+   project_domain_name = $PROJECT_DOMAIN_NAME
    project_name = service
-   user_domain_name = Default
+   user_domain_name = $USER_DOMAIN_NAME
    username = nova
-   password = secretservice
+   password = $SERVICE_USER_PASSWORD
    ...
 
 And configure the other identity options as necessary for the service user,
