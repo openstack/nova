@@ -226,8 +226,7 @@ To update a default limit:
 
 .. code-block:: console
 
-   openstack registered limit set --resource-name $RESOURCE \
-      --default-limit $LIMIT $REGISTERED_LIMIT_ID
+   openstack registered limit set --default-limit $LIMIT $REGISTERED_LIMIT_ID
 
 To delete a default limit:
 
@@ -267,8 +266,7 @@ To update a project limit:
 
 .. code-block:: console
 
-   openstack limit set --resource-name $RESOURCE --resource-limit $LIMIT \
-      $LIMIT_ID
+   openstack limit set --resource-limit $LIMIT $LIMIT_ID
 
 To delete a project limit:
 
