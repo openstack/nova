@@ -16,3 +16,42 @@ query_params_v21 = {
     'properties': {},
     'additionalProperties': True,
 }
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'nodes': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'cpu_pinning': {
+                        'type': 'object',
+                        'patternProperties': {
+                            '^[0-9]+$': {'type': 'integer'},
+                        },
+                        'additionalProperties': False,
+                    },
+                    'host_node': {'type': 'integer'},
+                    'memory_mb': {'type': 'integer'},
+                    'siblings': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'array',
+                            'items': {'type': 'integer'},
+                        },
+                    },
+                    'vcpu_set': {
+                        'type': 'array',
+                        'items': {'type': 'integer'},
+                    },
+                },
+                'required': ['memory_mb', 'siblings', 'vcpu_set'],
+                'additionalProperties': False,
+            },
+        },
+        'pagesize_kb': {'type': ['integer', 'null']},
+    },
+    'required': ['nodes', 'pagesize_kb'],
+    'additionalProperties': False,
+}
