@@ -19,31 +19,33 @@ create = {
     'type': 'object',
     'properties': {
         'events': {
-            'type': 'array', 'minItems': 1,
+            'type': 'array',
+            'minItems': 1,
             'items': {
                 'type': 'object',
                 'properties': {
-                    'server_uuid': {
-                        'type': 'string', 'format': 'uuid'
-                    },
                     'name': {
                         'type': 'string',
                         'enum': [
                             'network-changed',
                             'network-vif-plugged',
                             'network-vif-unplugged',
-                            'network-vif-deleted'
+                            'network-vif-deleted',
                         ],
                     },
+                    'server_uuid': {
+                        'type': 'string', 'format': 'uuid'
+                    },
                     'status': {
-                       'type': 'string',
-                       'enum': external_event_obj.EVENT_STATUSES,
+                        'type': 'string',
+                        'enum': external_event_obj.EVENT_STATUSES,
                     },
                     'tag': {
-                        'type': 'string', 'maxLength': 255,
+                        'type': 'string',
+                        'maxLength': 255,
                     },
                 },
-                'required': ['server_uuid', 'name'],
+                'required': ['name', 'server_uuid'],
                 'additionalProperties': False,
             },
         },
@@ -66,4 +68,75 @@ name['enum'].append('accelerator-request-bound')
 
 create_v293 = copy.deepcopy(create_v282)
 name = create_v293['properties']['events']['items']['properties']['name']
+name['enum'].append('volume-reimaged')
+
+create_response = {
+    'type': 'object',
+    'properties': {
+        'events': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'code': {
+                        'type': 'integer',
+                        'enum': [200, 400, 404, 422],
+                    },
+                    'name': {
+                        'type': 'string',
+                        'enum': [
+                            'network-changed',
+                            'network-vif-plugged',
+                            'network-vif-unplugged',
+                            'network-vif-deleted',
+                        ],
+                    },
+                    'server_uuid': {'type': 'string', 'format': 'uuid'},
+                    'status': {
+                        'type': 'string',
+                        'enum': external_event_obj.EVENT_STATUSES,
+                    },
+                    'tag': {
+                        'type': 'string',
+                        'maxLength': 255,
+                    },
+                },
+                'required': [
+                    'code',
+                    'name',
+                    'server_uuid',
+                    'status',
+                    # tag is not required in responses, although omitting it
+                    # from requests will result in a failed event response
+                ],
+                'additionalProperties': False,
+            },
+        },
+    },
+    'required': ['events'],
+    'additionalProperties': False,
+}
+
+create_response_v251 = copy.deepcopy(create_response)
+name = create_response_v251['properties']['events']['items']['properties'][
+    'name'
+]
+name['enum'].append('volume-extended')
+
+create_response_v276 = copy.deepcopy(create_response_v251)
+name = create_response_v276['properties']['events']['items']['properties'][
+    'name'
+]
+name['enum'].append('power-update')
+
+create_response_v282 = copy.deepcopy(create_response_v276)
+name = create_response_v282['properties']['events']['items']['properties'][
+    'name'
+]
+name['enum'].append('accelerator-request-bound')
+
+create_response_v293 = copy.deepcopy(create_response_v282)
+name = create_response_v293['properties']['events']['items']['properties'][
+    'name'
+]
 name['enum'].append('volume-reimaged')
