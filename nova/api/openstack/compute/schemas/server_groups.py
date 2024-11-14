@@ -59,16 +59,15 @@ policies['prefixItems'][0]['enum'].extend(
 
 create_v264 = copy.deepcopy(create_v215)
 del create_v264['properties']['server_group']['properties']['policies']
-sg_properties = create_v264['properties']['server_group']
-sg_properties['required'].remove('policies')
-sg_properties['required'].append('policy')
-sg_properties['properties']['policy'] = {
+create_v264['properties']['server_group']['required'].remove('policies')
+create_v264['properties']['server_group']['required'].append('policy')
+create_v264['properties']['server_group']['properties']['policy'] = {
     'type': 'string',
     'enum': ['anti-affinity', 'affinity',
              'soft-anti-affinity', 'soft-affinity'],
 }
 
-sg_properties['properties']['rules'] = {
+create_v264['properties']['server_group']['properties']['rules'] = {
     'type': 'object',
     'properties': {
         'max_server_per_host':
@@ -99,3 +98,132 @@ show_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+_server_group_response = {
+    'type': 'object',
+    'properties': {
+        'id': {'type': 'string', 'format': 'uuid'},
+        'members': {
+            'type': 'array',
+            'items': {
+                'type': 'string',
+                'format': 'uuid',
+            },
+        },
+        # Why yes, this is a **totally empty object**. It's removed later
+        'metadata': {
+            'type': 'object',
+            'properties': {},
+            'required': [],
+            'additionalProperties': False,
+        },
+        'name': {'type': 'string'},
+        'policies': {
+            'type': 'array',
+            'prefixItems': [
+                {
+                    'type': 'string',
+                    'enum': ['affinity', 'anti-affinity',],
+                },
+            ],
+            'minItems': 0,
+            'maxItems': 1,
+        },
+    },
+    'required': ['id', 'members', 'metadata', 'name', 'policies'],
+    'additionalProperties': False,
+}
+
+_server_group_response_v213 = copy.deepcopy(_server_group_response)
+_server_group_response_v213['properties'].update({
+    'project_id': parameter_types.project_id,
+    'user_id': parameter_types.user_id,
+})
+_server_group_response_v213['required'].extend(['project_id', 'user_id'])
+
+_server_group_response_v215 = copy.deepcopy(_server_group_response_v213)
+_server_group_response_v215['properties']['policies']['prefixItems'][0][
+    'enum'
+].extend(['soft-affinity', 'soft-anti-affinity'])
+
+_server_group_response_v264 = copy.deepcopy(_server_group_response_v215)
+del _server_group_response_v264['properties']['metadata']
+del _server_group_response_v264['properties']['policies']
+_server_group_response_v264['properties'].update({
+    'policy': {
+        'type': 'string',
+        'enum': [
+            'affinity',
+            'anti-affinity',
+            'soft-affinity',
+            'soft-anti-affinity',
+        ],
+    },
+    'rules': {
+        'type': 'object',
+        'properties': {
+            'max_server_per_host': {'type': 'integer'},
+        },
+        'required': [],
+        'additionalProperties': False,
+    },
+})
+_server_group_response_v264['required'].remove('metadata')
+_server_group_response_v264['required'].remove('policies')
+_server_group_response_v264['required'].extend(['policy', 'rules'])
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'server_group': copy.deepcopy(_server_group_response),
+    },
+    'required': ['server_group'],
+    'additionalProperties': True,
+}
+
+show_response_v213 = copy.deepcopy(show_response)
+show_response_v213['properties']['server_group'] = _server_group_response_v213
+
+show_response_v215 = copy.deepcopy(show_response)
+show_response_v215['properties']['server_group'] = _server_group_response_v215
+
+show_response_v264 = copy.deepcopy(show_response_v213)
+show_response_v264['properties']['server_group'] = _server_group_response_v264
+
+delete_response = {'type': 'null'}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'server_groups': {
+            'type': 'array',
+            'items': copy.deepcopy(_server_group_response),
+        },
+    },
+    'required': ['server_groups'],
+    'additionalProperties': True,
+}
+
+index_response_v213 = copy.deepcopy(index_response)
+index_response_v213['properties']['server_groups'][
+    'items'
+] = _server_group_response_v213
+
+index_response_v215 = copy.deepcopy(index_response_v213)
+index_response_v215['properties']['server_groups'][
+    'items'
+] = _server_group_response_v215
+
+index_response_v264 = copy.deepcopy(index_response_v215)
+index_response_v264['properties']['server_groups'][
+    'items'
+] = _server_group_response_v264
+
+
+create_response = copy.deepcopy(show_response)
+
+create_response_v213 = copy.deepcopy(show_response_v213)
+
+create_response_v215 = copy.deepcopy(show_response_v215)
+
+create_response_v264 = copy.deepcopy(show_response_v264)
