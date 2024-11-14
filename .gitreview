@@ -2,4 +2,4 @@
 host=review.opendev.org
 port=29418
 project=openstack/nova.git
-defaultbranch=stable/2023.1
+defaultbranch=unmaintained/2023.1
