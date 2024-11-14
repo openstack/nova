@@ -16,3 +16,14 @@ index_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'password': {'type': 'string'},
+    },
+    'required': ['password'],
+    'additionalProperties': False,
+}
+
+clear_response = {'type': 'null'}

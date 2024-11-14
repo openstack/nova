@@ -24,6 +24,7 @@ from nova.compute import api as compute
 from nova.policies import server_password as sp_policies
 
 
+@validation.validated
 class ServerPasswordController(wsgi.Controller):
     """The Server Password API controller for the OpenStack API."""
 
@@ -33,6 +34,7 @@ class ServerPasswordController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, server_id):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
@@ -44,6 +46,7 @@ class ServerPasswordController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @wsgi.response(204)
+    @validation.response_body_schema(schema.clear_response)
     def clear(self, req, server_id):
         """Removes the encrypted server password from the metadata server
 
