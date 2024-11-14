@@ -23,6 +23,7 @@ Includes injection of SSH PGP keys into authorized_keys file.
 
 """
 
+import crypt
 import os
 import random
 import tempfile
@@ -40,9 +41,6 @@ from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs
 from nova.virt.image import model as imgmodel
 from nova.virt import images
-
-if os.name != 'nt':
-    import crypt
 
 
 LOG = logging.getLogger(__name__)
@@ -621,9 +619,6 @@ def _set_passwd(username, admin_passwd, passwd_data, shadow_data):
     :raises: exception.NovaException(), IOError()
 
     """
-    if os.name == 'nt':
-        raise exception.NovaException(_('Not implemented on Windows'))
-
     # encryption algo - id pairs for crypt()
     algos = {'SHA-512': '$6$', 'SHA-256': '$5$', 'MD5': '$1$', 'DES': ''}
 

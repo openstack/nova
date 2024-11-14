@@ -1088,13 +1088,7 @@ class PoisonFunctions(fixtures.Fixture):
     def setUp(self):
         super(PoisonFunctions, self).setUp()
 
-        try:
-            self._poison_libvirt_driver()
-        except ImportError:
-            # The libvirt driver uses modules that are not available
-            # on Windows.
-            if os.name != 'nt':
-                raise
+        self._poison_libvirt_driver()
 
     def _poison_libvirt_driver(self):
         # The nova libvirt driver starts an event thread which only
