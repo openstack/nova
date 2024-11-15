@@ -34,21 +34,22 @@ def _translate_snapshot_detail_view(context, vol):
     return _translate_snapshot_summary_view(context, vol)
 
 
-def _translate_snapshot_summary_view(context, vol):
+def _translate_snapshot_summary_view(context, snapshot):
     """Maps keys for snapshots summary view."""
     d = {}
 
-    d['id'] = vol['id']
-    d['volumeId'] = vol['volume_id']
-    d['status'] = vol['status']
+    d['id'] = snapshot['id']
+    d['volumeId'] = snapshot['volume_id']
+    d['status'] = snapshot['status']
     # NOTE(gagupta): We map volume_size as the snapshot size
-    d['size'] = vol['volume_size']
-    d['createdAt'] = vol['created_at']
-    d['displayName'] = vol['display_name']
-    d['displayDescription'] = vol['display_description']
+    d['size'] = snapshot['volume_size']
+    d['createdAt'] = snapshot['created_at']
+    d['displayName'] = snapshot['display_name']
+    d['displayDescription'] = snapshot['display_description']
     return d
 
 
+@validation.validated
 class SnapshotController(wsgi.Controller):
     """The Snapshots API controller for the OpenStack API."""
 
@@ -59,6 +60,7 @@ class SnapshotController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         """Return data about the given snapshot."""
         context = req.environ['nova.context']
@@ -76,6 +78,7 @@ class SnapshotController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @wsgi.expected_errors(404)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']
@@ -91,6 +94,7 @@ class SnapshotController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """Returns a summary list of snapshots."""
         context = req.environ['nova.context']
@@ -102,6 +106,7 @@ class SnapshotController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.detail_query)
+    @validation.response_body_schema(schema.detail_response)
     def detail(self, req):
         """Returns a detailed list of snapshots."""
         context = req.environ['nova.context']
@@ -122,6 +127,7 @@ class SnapshotController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403))
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
