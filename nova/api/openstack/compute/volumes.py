@@ -89,6 +89,7 @@ def _translate_volume_summary_view(context, vol):
     return d
 
 
+@validation.validated
 class VolumeController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
@@ -99,6 +100,7 @@ class VolumeController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         """Return data about the given volume."""
         context = req.environ['nova.context']
@@ -116,6 +118,7 @@ class VolumeController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404))
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         """Delete a volume."""
         context = req.environ['nova.context']
@@ -133,6 +136,7 @@ class VolumeController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """Returns a summary list of volumes."""
         context = req.environ['nova.context']
@@ -144,6 +148,7 @@ class VolumeController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.detail_query)
+    @validation.response_body_schema(schema.detail_response)
     def detail(self, req):
         """Returns a detailed list of volumes."""
         context = req.environ['nova.context']
@@ -164,6 +169,7 @@ class VolumeController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         """Creates a new volume."""
         context = req.environ['nova.context']
