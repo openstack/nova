@@ -12,6 +12,7 @@
 
 from unittest import mock
 
+import os_traits
 from oslo_limit import fixture as limit_fixture
 from oslo_serialization import base64
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -52,7 +53,8 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
                                             'class:VCPU': 4,
                                             'class:MEMORY_MB': 16384,
                                             'class:DISK_GB': 100}}
-        self.useFixture(limit_fixture.LimitFixture(reglimits, projlimits))
+        self.limits = self.useFixture(
+                limit_fixture.LimitFixture(reglimits, projlimits))
         self.ctx = nova_context.get_admin_context()
 
     def _setup_services(self):
@@ -226,6 +228,33 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
         self.assertIn('server_group_members', e.response.text)
 
         self.admin_api.delete_server(server['id'])
+
+    def test_resource_request(self):
+        # Create a server with a flavor extra spec (hw:mem_encryption) that
+        # translates into a resource class (MEM_ENCRYPTION_CONTEXT) and a
+        # required host trait (HW_CPU_X86_AMD_SEV) only in combination with
+        # the image. Bug #2088831: the unified limits quota check translated
+        # the flavor against an empty image, raising a spurious flavor/image
+        # conflict (400).
+        self.limits.reglimits['class:MEM_ENCRYPTION_CONTEXT'] = 10
+        flavor_id = self._create_flavor(
+            vcpu=1, memory_mb=512, disk=1, ephemeral=0,
+            extra_spec={'hw:mem_encryption': 'true'})
+        for rp in self._get_all_providers():
+            self._set_inventory(
+                rp['uuid'],
+                {'resource_class': 'MEM_ENCRYPTION_CONTEXT', 'total': 10})
+            self._set_provider_traits(
+                rp['uuid'], [os_traits.HW_CPU_X86_AMD_SEV])
+        image_id = self._create_image(
+            metadata={'hw_firmware_type': 'uefi'})['id']
+        # FIXME(melwitt): Remove the expected exception and assert a
+        # successful create when bug #2088831 is fixed.
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server,
+            flavor_id=flavor_id, image_uuid=image_id)
+        self.assertEqual(400, e.response.status_code)
+        self.assertIn('hw:mem_encryption', e.response.text)
 
 
 class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):
