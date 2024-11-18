@@ -19,7 +19,7 @@ from oslo_utils import uuidutils
 import webob.exc
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.schemas import services
+from nova.api.openstack.compute.schemas import services as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import availability_zones
@@ -35,6 +35,7 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 
+@validation.validated
 class ServiceController(wsgi.Controller):
 
     def __init__(self):
@@ -240,6 +241,7 @@ class ServiceController(wsgi.Controller):
 
     @wsgi.response(204)
     @wsgi.expected_errors((400, 404, 409))
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         """Deletes the specified service."""
         context = req.environ['nova.context']
@@ -367,12 +369,17 @@ class ServiceController(wsgi.Controller):
                         'migrations or delete the instances first.'))
 
     @wsgi.expected_errors(())
-    @validation.query_schema(services.index_query_schema, '2.0', '2.74')
-    @validation.query_schema(services.index_query_schema_275, '2.75')
+    @validation.query_schema(schema.index_query, '2.0', '2.74')
+    @validation.query_schema(schema.index_query_v275, '2.75')
+    @validation.response_body_schema(schema.index_response, '2.0', '2.10')
+    @validation.response_body_schema(schema.index_response_v211, '2.11', '2.52')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v253, '2.53', '2.68')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v269, '2.69')
     def index(self, req):
         """Return a list of all running services. Filter by host & service
         name
         """
+
         context = req.environ['nova.context']
         context.can(services_policies.BASE_POLICY_NAME % 'list', target={})
         if api_version_request.is_supported(req, '2.11'):
@@ -383,9 +390,12 @@ class ServiceController(wsgi.Controller):
         return {'services': _services}
 
     @wsgi.expected_errors((400, 404))
-    @validation.schema(services.service_update, '2.0', '2.10')
-    @validation.schema(services.service_update_v211, '2.11', '2.52')
-    @validation.schema(services.service_update_v253, '2.53')
+    @validation.schema(schema.update, '2.0', '2.10')
+    @validation.schema(schema.update_v211, '2.11', '2.52')
+    @validation.schema(schema.update_v253, '2.53')
+    @validation.response_body_schema(schema.update_response, '2.0', '2.52')
+    @validation.response_body_schema(schema.update_response_v253, '2.53', '2.68')  # noqa: E501
+    @validation.response_body_schema(schema.update_response_v269, '2.69')
     def update(self, req, id, body):
         """Perform service update
 

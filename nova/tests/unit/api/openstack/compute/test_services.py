@@ -1144,7 +1144,7 @@ class FakeServiceGroupAPI(object):
         return True
 
     def get_updated_time(self, *args, **kwargs):
-        return mock.sentinel.updated_time
+        return '2024-11-18T18:38:54.000000'
 
 
 class ServicesTestV253(test.TestCase):
@@ -1243,7 +1243,7 @@ class ServicesTestV253(test.TestCase):
                 'binary': 'nova-compute',
                 'host': 'fake-compute-host',
                 'zone': 'nova',  # Comes from CONF.default_availability_zone
-                'updated_at': mock.sentinel.updated_time,
+                'updated_at': '2024-11-18T18:38:54.000000',
                 'disabled_reason': None,
                 'id': service.uuid,
                 'forced_down': False
@@ -1289,7 +1289,7 @@ class ServicesTestV253(test.TestCase):
                 'binary': 'nova-compute',
                 'host': 'fake-compute-host',
                 'zone': 'nova',  # Comes from CONF.default_availability_zone
-                'updated_at': mock.sentinel.updated_time,
+                'updated_at': '2024-11-18T18:38:54.000000',
                 'disabled_reason': 'maintenance',
                 'id': service.uuid,
                 'forced_down': True
