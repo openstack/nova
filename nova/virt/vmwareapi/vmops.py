@@ -35,7 +35,6 @@ import decorator
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import oslo_messaging as messaging
-from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
@@ -4006,12 +4005,8 @@ class VMwareVMOps(object):
         ticket = self._session._call_method(self._session.vim,
                                             'AcquireTicket',
                                             vm_ref,
-                                            ticketType='mks')
-        thumbprint = ticket.sslThumbprint.replace(':', '').lower()
-        mks_auth = {'ticket': ticket.ticket,
-                    'cfgFile': ticket.cfgFile,
-                    'thumbprint': thumbprint}
-        internal_access_path = jsonutils.dumps(mks_auth)
+                                            ticketType='webmks')
+        internal_access_path = f"/ticket/{ticket.ticket}"
         return ctype.ConsoleMKS(ticket.host, ticket.port, internal_access_path)
 
     def set_compute_host(self, compute_host):

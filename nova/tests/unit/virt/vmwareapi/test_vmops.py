@@ -18,7 +18,6 @@ import time
 from unittest import mock
 
 import ddt
-from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 from oslo_utils import uuidutils
@@ -4053,10 +4052,8 @@ class VMwareVMOpsTestCase(test.TestCase):
             console = self._vmops.get_mks_console(self._instance)
             self.assertEqual('esx1', console.host)
             self.assertEqual(902, console.port)
-            path = jsonutils.loads(console.internal_access_path)
-            self.assertEqual('fira', path['ticket'])
-            self.assertEqual('aabbccddeeff', path['thumbprint'])
-            self.assertEqual('[ds1] fira/foo.vmx', path['cfgFile'])
+            path = console.internal_access_path
+            self.assertEqual(f"/ticket/{ticket.ticket}", path)
 
     def test_get_cores_per_socket(self):
         extra_specs = {'hw:cpu_sockets': 7}
