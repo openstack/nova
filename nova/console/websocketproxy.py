@@ -27,8 +27,8 @@ from urllib import parse as urlparse
 
 from oslo_log import log as logging
 from oslo_utils import encodeutils
-from oslo_utils import importutils
 import websockify
+from websockify import websockifyserver
 
 from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
@@ -39,9 +39,6 @@ from nova import objects
 
 from oslo_utils import timeutils
 import threading
-
-# Location of WebSockifyServer class in websockify v0.9.0
-websockifyserver = importutils.try_import('websockify.websockifyserver')
 
 LOG = logging.getLogger(__name__)
 
