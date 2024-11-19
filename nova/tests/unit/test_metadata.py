@@ -1152,7 +1152,7 @@ class MetadataHandlerTestCase(test.TestCase):
                                 relpath="/2009-04-04/user-data-invalid")
         self.assertEqual(response.status_int, 404)
 
-    @mock.patch('oslo_utils.secretutils.constant_time_compare')
+    @mock.patch('hmac.compare_digest')
     def test_by_instance_id_uses_constant_time_compare(self, mock_compare):
         mock_compare.side_effect = test.TestingException
 

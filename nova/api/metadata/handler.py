@@ -21,7 +21,6 @@ import os
 
 from oslo_log import log as logging
 from oslo_utils import encodeutils
-from oslo_utils import secretutils as secutils
 from oslo_utils import strutils
 import webob.dec
 import webob.exc
@@ -303,7 +302,7 @@ class MetadataRequestHandler(wsgi.Application):
             encodeutils.to_utf8(requestor_id),
             hashlib.sha256).hexdigest()
         if (not signature or
-            not secutils.constant_time_compare(expected_signature, signature)):
+                not hmac.compare_digest(expected_signature, signature)):
             if requestor_id:
                 LOG.warning('X-Instance-ID-Signature: %(signature)s does '
                             'not match the expected value: '
