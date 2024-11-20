@@ -47,13 +47,6 @@ def _monkey_patch():
     else:
         eventlet.monkey_patch()
 
-    # Monkey patch the original current_thread to use the up-to-date _active
-    # global variable. See https://bugs.launchpad.net/bugs/1863021 and
-    # https://github.com/eventlet/eventlet/issues/592
-    import __original_module_threading as orig_threading
-    import threading
-    orig_threading.current_thread.__globals__['_active'] = threading._active
-
     # NOTE(mdbooth): Log here instead of earlier to avoid loading oslo logging
     # before monkey patching.
     # NOTE(mdbooth): Ideally we would raise an exception here, as this is
