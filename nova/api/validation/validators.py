@@ -32,7 +32,10 @@ from nova import exception
 from nova.i18n import _
 
 
-@jsonschema.FormatChecker.cls_checks('regex')
+_FORMAT_CHECKER = jsonschema.FormatChecker()
+
+
+@_FORMAT_CHECKER.checks('regex')
 def _validate_regex_format(instance):
     if not instance or not isinstance(instance, str):
         return False
@@ -43,7 +46,7 @@ def _validate_regex_format(instance):
     return True
 
 
-@jsonschema.FormatChecker.cls_checks('date-time')
+@_FORMAT_CHECKER.checks('date-time')
 def _validate_datetime_format(instance):
     try:
         timeutils.parse_isotime(instance)
@@ -53,7 +56,7 @@ def _validate_datetime_format(instance):
         return True
 
 
-@jsonschema.FormatChecker.cls_checks('base64')
+@_FORMAT_CHECKER.checks('base64')
 def _validate_base64_format(instance):
     try:
         if isinstance(instance, str):
@@ -67,7 +70,7 @@ def _validate_base64_format(instance):
     return True
 
 
-@jsonschema.FormatChecker.cls_checks('cidr')
+@_FORMAT_CHECKER.checks('cidr')
 def _validate_cidr_format(cidr):
     try:
         netaddr.IPNetwork(cidr)
@@ -80,12 +83,12 @@ def _validate_cidr_format(cidr):
     return True
 
 
-@jsonschema.FormatChecker.cls_checks('uuid')
+@_FORMAT_CHECKER.checks('uuid')
 def _validate_uuid_format(instance):
     return uuidutils.is_uuid_like(instance)
 
 
-@jsonschema.FormatChecker.cls_checks('uri')
+@_FORMAT_CHECKER.checks('uri')
 def _validate_uri(instance):
     uri = rfc3986.uri_reference(instance)
     validator = rfc3986.validators.Validator().require_presence_of(
@@ -100,8 +103,8 @@ def _validate_uri(instance):
     return True
 
 
-@jsonschema.FormatChecker.cls_checks('name_with_leading_trailing_spaces',
-                                     exception.InvalidName)
+@_FORMAT_CHECKER.checks('name_with_leading_trailing_spaces',
+                        exception.InvalidName)
 def _validate_name_with_leading_trailing_spaces(instance):
     regex = parameter_types.valid_name_leading_trailing_spaces_regex
     try:
@@ -114,7 +117,7 @@ def _validate_name_with_leading_trailing_spaces(instance):
     raise exception.InvalidName(reason=regex.reason)
 
 
-@jsonschema.FormatChecker.cls_checks('name', exception.InvalidName)
+@_FORMAT_CHECKER.checks('name', exception.InvalidName)
 def _validate_name(instance):
     regex = parameter_types.valid_name_regex
     try:
@@ -127,8 +130,8 @@ def _validate_name(instance):
     raise exception.InvalidName(reason=regex.reason)
 
 
-@jsonschema.FormatChecker.cls_checks('az_name_with_leading_trailing_spaces',
-                                     exception.InvalidName)
+@_FORMAT_CHECKER.checks('az_name_with_leading_trailing_spaces',
+                        exception.InvalidName)
 def _validate_az_name_with_leading_trailing_spaces(instance):
     regex = parameter_types.valid_az_name_leading_trailing_spaces_regex
     try:
@@ -141,7 +144,7 @@ def _validate_az_name_with_leading_trailing_spaces(instance):
     raise exception.InvalidName(reason=regex.reason)
 
 
-@jsonschema.FormatChecker.cls_checks('az_name', exception.InvalidName)
+@_FORMAT_CHECKER.checks('az_name', exception.InvalidName)
 def _validate_az_name(instance):
     regex = parameter_types.valid_az_name_regex
     try:
@@ -154,15 +157,15 @@ def _validate_az_name(instance):
     raise exception.InvalidName(reason=regex.reason)
 
 
-@jsonschema.FormatChecker.cls_checks('keypair_name_20',
-                                     exception.InvalidName)
+@_FORMAT_CHECKER.checks('keypair_name_20',
+                        exception.InvalidName)
 def _validate_keypair_name_20(keypair_name):
     safe_chars = "_- " + string.digits + string.ascii_letters
     return _validate_keypair_name(keypair_name, safe_chars)
 
 
-@jsonschema.FormatChecker.cls_checks('keypair_name_292',
-                                     exception.InvalidName)
+@_FORMAT_CHECKER.checks('keypair_name_292',
+                        exception.InvalidName)
 def _validate_keypair_name_292(keypair_name):
     safe_chars = "@._- " + string.digits + string.ascii_letters
     return _validate_keypair_name(keypair_name, safe_chars)
@@ -233,41 +236,6 @@ def _soft_validate_additional_properties(validator,
             del instance[prop]
 
 
-class FormatChecker(jsonschema.FormatChecker):
-    """A FormatChecker can output the message from cause exception
-
-       We need understandable validation errors messages for users. When a
-       custom checker has an exception, the FormatChecker will output a
-       readable message provided by the checker.
-    """
-
-    def check(self, instance, format):
-        """Check whether the instance conforms to the given format.
-
-        :argument instance: the instance to check
-        :type: any primitive type (str, number, bool)
-        :argument str format: the format that instance should conform to
-        :raises: :exc:`FormatError` if instance does not conform to format
-        """
-
-        if format not in self.checkers:
-            return
-
-        # For safety reasons custom checkers can be registered with
-        # allowed exception types. Anything else will fall into the
-        # default formatter.
-        func, raises = self.checkers[format]
-        result, cause = None, None
-
-        try:
-            result = func(instance)
-        except raises as e:
-            cause = e
-        if not result:
-            msg = "%r is not a %r" % (instance, format)
-            raise jsonschema_exc.FormatError(msg, cause=cause)
-
-
 class _SchemaValidator(object):
     """A validator class
 
@@ -294,8 +262,7 @@ class _SchemaValidator(object):
 
         validator_cls = jsonschema.validators.extend(self.validator_org,
                                                      validators)
-        format_checker = FormatChecker()
-        self.validator = validator_cls(schema, format_checker=format_checker)
+        self.validator = validator_cls(schema, format_checker=_FORMAT_CHECKER)
 
     def validate(self, *args, **kwargs):
         try:

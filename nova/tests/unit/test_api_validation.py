@@ -158,7 +158,7 @@ class APIValidationTestCase(test.NoDBTestCase):
 class FormatCheckerTestCase(test.NoDBTestCase):
 
     def _format_checker(self, format, value, error_message):
-        format_checker = validators.FormatChecker()
+        format_checker = validators._FORMAT_CHECKER
         exc = self.assertRaises(jsonschema_exc.FormatError,
                                 format_checker.check, value, format)
         self.assertIsInstance(exc.cause, exception.InvalidName)
