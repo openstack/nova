@@ -1,0 +1,12 @@
+features:
+  - |
+    The ``nova-manage limits migrate_to_unified_limits`` command will now scan
+    the API and cell databases to detect resource classes that do not have
+    registered limits set in Keystone and report them to the console.
+
+    The purpose of the flavor scan is to assist operators who are migrating
+    from legacy quotas to unified limits quotas. The current behavior with
+    unified limits is to fail quota checks if resources requested are missing
+    registered limits in Keystone. With flavor scanning in
+    ``migrate_to_unified_limits``, operators can easily determine what resource
+    classes for which they need to create registered limits.

@@ -27,6 +27,7 @@ import functools
 import os
 import re
 import sys
+import textwrap
 import time
 import traceback
 import typing as ty
@@ -50,8 +51,10 @@ from sqlalchemy.engine import url as sqla_url
 from nova.cmd import common as cmd_common
 from nova.compute import api
 from nova.compute import instance_actions
+from nova.compute import instance_list as list_instances
 from nova.compute import rpcapi
 import nova.conf
+from nova.conf import utils as conf_utils
 from nova import config
 from nova import context
 from nova.db import constants as db_const
@@ -3439,8 +3442,9 @@ class ImagePropertyCommands:
 
 class LimitsCommands():
 
-    def _create_unified_limits(self, ctxt, legacy_defaults, project_id,
-                               region_id, output, dry_run):
+    def _create_unified_limits(self, ctxt, keystone_api, service_id,
+                               legacy_defaults, project_id, region_id, output,
+                               dry_run):
         return_code = 0
 
         # Create registered (default) limits first.
@@ -3461,24 +3465,6 @@ class LimitsCommands():
             legacy_defaults['pcores'] = legacy_defaults['cores']
             unified_to_legacy_names['class:PCPU'] = 'pcores'
             legacy_to_unified_names['pcores'] = 'class:PCPU'
-
-        # For auth, a section for [keystone] is required in the config:
-        #
-        # [keystone]
-        # region_name = RegionOne
-        # user_domain_name = Default
-        # password = <password>
-        # username = <username>
-        # auth_url = http://127.0.0.1/identity
-        # auth_type = password
-        # system_scope = all
-        #
-        # The configured user needs 'role:admin and system_scope:all' by
-        # default in order to create limits in Keystone.
-        keystone_api = utils.get_sdk_adapter('identity')
-
-        # Service ID is required in unified limits APIs.
-        service_id = keystone_api.find_service('nova').id
 
         # Retrieve the existing resource limits from Keystone.
         registered_limits = keystone_api.registered_limits(region_id=region_id)
@@ -3567,6 +3553,133 @@ class LimitsCommands():
 
         return return_code
 
+    @staticmethod
+    def _get_resources_from_flavor(flavor, warn_output):
+        resources = set()
+        for spec in [
+                s for s in flavor.extra_specs if s.startswith('resources:')]:
+            resources.add('class:' + spec.lstrip('resources:'))
+        try:
+            for resource in scheduler_utils.resources_for_limits(flavor,
+                                                                 is_bfv=False):
+                resources.add('class:' + resource)
+        except Exception as e:
+            # This is to be resilient about potential extra spec translation
+            # bugs like https://bugs.launchpad.net/nova/+bug/2088831
+            msg = _('An exception was raised: %s, skipping flavor %s'
+                   % (str(e), flavor.flavorid))
+            warn_output(msg)
+        return resources
+
+    def _get_resources_from_api_flavors(self, ctxt, output, warn_output):
+        msg = _('Scanning flavors in API database for resource classes ...')
+        output(msg)
+        resources = set()
+        marker = None
+        while True:
+            flavors = objects.FlavorList.get_all(ctxt, limit=500,
+                                                 marker=marker)
+            for flavor in flavors:
+                resources |= self._get_resources_from_flavor(
+                    flavor, warn_output)
+            if not flavors:
+                break
+            marker = flavors[-1].flavorid
+        return resources
+
+    def _get_resources_from_embedded_flavors(self, ctxt, project_id, output,
+                                             warn_output):
+        project_str = f' project {project_id}' if project_id else ''
+        msg = _('Scanning%s non-deleted instances embedded flavors for '
+                'resource classes ...' % project_str)
+        output(msg)
+        resources = set()
+        down_cell_uuids = set()
+        marker = None
+        while True:
+            filters = {'deleted': False}
+            if project_id:
+                filters['project_id'] = project_id
+            instances, cells = list_instances.get_instance_objects_sorted(
+                ctxt, filters=filters, limit=500, marker=marker,
+                expected_attrs=['flavor'], sort_keys=None, sort_dirs=None)
+            down_cell_uuids |= set(cells)
+            for instance in instances:
+                resources |= self._get_resources_from_flavor(
+                    instance.flavor, warn_output)
+            if not instances:
+                break
+            marker = instances[-1].uuid
+        return resources, down_cell_uuids
+
+    def _scan_flavors(self, ctxt, keystone_api, service_id, project_id,
+                      region_id, output, warn_output, verbose,
+                      no_embedded_flavor_scan):
+        return_code = 0
+
+        # We already know we need to check class:DISK_GB because it is not a
+        # legacy resource from a quota perspective.
+        flavor_resources = set(['class:DISK_GB'])
+
+        # Scan existing flavors to check whether any requestable resources are
+        # missing registered limits in Keystone.
+        flavor_resources |= self._get_resources_from_api_flavors(
+            ctxt, output, warn_output)
+
+        down_cell_uuids = None
+        if not no_embedded_flavor_scan:
+            # Scan the embedded flavors of non-deleted instances.
+            resources, down_cell_uuids = (
+                self._get_resources_from_embedded_flavors(
+                    ctxt, project_id, output, warn_output))
+            flavor_resources |= resources
+
+        # Retrieve the existing resource limits from Keystone (we may have
+        # added new ones above).
+        registered_limits = keystone_api.registered_limits(
+            service_id=service_id, region_id=region_id)
+        existing_limits = {
+            li.resource_name: li.default_limit for li in registered_limits}
+
+        table = prettytable.PrettyTable()
+        table.align = 'l'
+        table.field_names = ['Resource', 'Registered Limit']
+        table.sortby = 'Resource'
+        found_missing = False
+        for resource in flavor_resources:
+            if resource in existing_limits:
+                if verbose:
+                    table.add_row([resource, existing_limits[resource]])
+            else:
+                found_missing = True
+                table.add_row([resource, 'missing'])
+
+        if table.rows:
+            msg = _(
+                'The following resource classes were found during the scan:\n')
+            warn_output(msg)
+            warn_output(table)
+
+            if down_cell_uuids:
+                msg = _(
+                    'NOTE: Cells %s did not respond and their data is not '
+                    'included in this table.' % down_cell_uuids)
+                warn_output('\n' + textwrap.fill(msg, width=80))
+
+        if found_missing:
+            msg = _(
+                'WARNING: It is strongly recommended to create registered '
+                'limits for resource classes missing limits in Keystone '
+                'before proceeding.')
+            warn_output('\n' + textwrap.fill(msg, width=80))
+            return_code = 3
+        else:
+            msg = _(
+                'SUCCESS: All resource classes have registered limits set.')
+            warn_output(msg)
+
+        return return_code
+
     @action_description(
         _("Copy quota limits from the Nova API database to Keystone."))
     @args('--project-id', metavar='<project-id>', dest='project_id',
@@ -3577,21 +3690,37 @@ class LimitsCommands():
           help='Provide verbose output during execution.')
     @args('--dry-run', action='store_true', dest='dry_run', default=False,
           help='Show what limits would be created without actually '
-               'creating them.')
+               'creating them. Flavors will still be scanned for resource '
+               'classes missing limits.')
+    @args('--quiet', action='store_true', dest='quiet', default=False,
+          help='Do not output anything during execution.')
+    @args('--no-embedded-flavor-scan', action='store_true',
+          dest='no_embedded_flavor_scan', default=False,
+          help='Do not scan instances embedded flavors for resource classes '
+               'missing limits.')
     def migrate_to_unified_limits(self, project_id=None, region_id=None,
-                                  verbose=False, dry_run=False):
+                                  verbose=False, dry_run=False, quiet=False,
+                                  no_embedded_flavor_scan=False):
         """Migrate quota limits from legacy quotas to unified limits.
 
         Return codes:
         * 0: Command completed successfully.
         * 1: An unexpected error occurred.
         * 2: Failed to connect to the database.
+        * 3: Missing registered limits were identified.
         """
+        if verbose and quiet:
+            print('--verbose and --quiet are mutually exclusive')
+            return 1
+
         ctxt = context.get_admin_context()
 
-        output = lambda msg: None
-        if verbose:
-            output = lambda msg: print(msg)
+        # Verbose output is optional details.
+        output = lambda msg: print(msg) if verbose else None
+        # In general, we always want to show important warning output (for
+        # example, warning about missing registered limits). Only suppress
+        # warning output if --quiet was specified by the caller.
+        warn_output = lambda msg: None if quiet else print(msg)
 
         output(_('Reading default limits from the Nova API database ...'))
 
@@ -3619,9 +3748,33 @@ class LimitsCommands():
             f'Found default limits in the database: {legacy_defaults} ...')
         output(_(msg))
 
+        # For auth, reuse the [keystone_authtoken] section.
+        if not hasattr(CONF, 'keystone_authtoken'):
+            conf_utils.register_ksa_opts(
+                CONF, 'keystone_authtoken', 'identity')
+        keystone_api = utils.get_sdk_adapter(
+            'identity', conf_group='keystone_authtoken')
+        # Service ID is required in unified limits APIs.
+        service_id = keystone_api.find_service('nova').id
+
         try:
-            return self._create_unified_limits(
-                ctxt, legacy_defaults, project_id, region_id, output, dry_run)
+            result = self._create_unified_limits(
+                ctxt, keystone_api, service_id, legacy_defaults, project_id,
+                region_id, output, dry_run)
+            if result:
+                # If there was an error, just return now.
+                return result
+            result = self._scan_flavors(
+                ctxt, keystone_api, service_id, project_id, region_id,
+                output, warn_output, verbose, no_embedded_flavor_scan)
+            return result
+        except db_exc.CantStartEngineError:
+            print(_('Failed to connect to the database so aborting this '
+                    'migration attempt. Please check your config file to make '
+                    'sure that [api_database]/connection and '
+                    '[database]/connection are set and run this '
+                    'command again.'))
+            return 2
         except Exception as e:
             msg = (f'Unexpected error, see nova-manage.log for the full '
                    f'trace: {str(e)}')

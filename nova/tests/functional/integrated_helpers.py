@@ -396,6 +396,9 @@ class InstanceHelperMixin:
 
         return flavor['id']
 
+    def _delete_flavor(self, flavor_id):
+        self.api_fixture.admin_api.delete_flavor(flavor_id)
+
     def _create_image(self, metadata):
         image = {
             'id': 'c456eb30-91d7-4f43-8f46-2efd9eccd744',
