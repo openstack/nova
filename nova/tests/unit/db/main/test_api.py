@@ -4288,6 +4288,83 @@ class ShareMappingDBApiTestCase(test.TestCase):
             self._compare(
                 share, expected_share_mappings_after_update[share.share_id])
 
+    def test_share_mapping_duplicate(self):
+        ctxt = context.get_admin_context()
+        expected_share_mappings = self.create_test_data(ctxt)
+
+        share_mappings = db.share_mapping_get_all(ctxt)
+        self.assertEqual(len(share_mappings), 2)
+        for share in share_mappings:
+            self._compare(
+                share, expected_share_mappings[share.share_id])
+
+        # Assuming we have a race condition, make sure we cannot create a
+        # duplicate entry with the same instance_uuid and share_id
+        with mock.patch(
+            "nova.db.main.api.share_mapping_get_by_instance_uuid_and_share_id"
+        ) as mock_db:
+            mock_db.return_value = None
+
+            exc = self.assertRaises(
+                db_exc.DBDuplicateEntry,
+                db.share_mapping_update,
+                ctxt,
+                uuid='fake-uuid3',
+                instance_uuid='fake-instance-uuid1',
+                share_id='1',
+                status='attached',
+                tag='fake-tag3',
+                export_location='fake-export_location1',
+                share_proto='NFS'
+            )
+
+            self.assertIn(
+                (
+                    "UNIQUE constraint failed: "
+                    "share_mapping.instance_uuid, share_mapping.share_id"
+                ),
+                str(exc),
+            )
+
+    def test_share_mapping_using_same_tag(self):
+        ctxt = context.get_admin_context()
+        expected_share_mappings = self.create_test_data(ctxt)
+
+        share_mappings = db.share_mapping_get_all(ctxt)
+        self.assertEqual(len(share_mappings), 2)
+        for share in share_mappings:
+            self._compare(
+                share, expected_share_mappings[share.share_id])
+
+        # Avoid the same tag name with the same instance. Resulting with:
+        # libvirt.libvirtError: unsupported configuration: filesystem target
+        # 'my-share' specified twice
+        with mock.patch(
+            "nova.db.main.api.share_mapping_get_by_instance_uuid_and_share_id"
+        ) as mock_db:
+            mock_db.return_value = None
+
+            exc = self.assertRaises(
+                db_exc.DBDuplicateEntry,
+                db.share_mapping_update,
+                ctxt,
+                uuid='fake-uuid3',
+                instance_uuid='fake-instance-uuid1',
+                share_id='3',
+                status='attached',
+                tag='fake-tag1',
+                export_location='fake-export_location1',
+                share_proto='NFS'
+            )
+
+            self.assertIn(
+                (
+                    "UNIQUE constraint failed: "
+                    "share_mapping.instance_uuid, share_mapping.tag"
+                ),
+                str(exc),
+            )
+
     def test_share_mapping_get_by_share_id(self):
         ctxt = context.get_admin_context()
         expected_share_mappings = self.create_test_data(ctxt)
