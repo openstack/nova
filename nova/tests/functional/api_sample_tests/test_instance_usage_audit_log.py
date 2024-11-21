@@ -28,13 +28,16 @@ class InstanceUsageAuditLogJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def setUp(self):
         super(InstanceUsageAuditLogJsonTest, self).setUp()
 
+        hosts = (
+            '2c8ef37b-f0cc-4a9e-92a6-32df0095cb12',
+            '60dbe74d-0cf3-419b-83f5-407e4b78c7b4',
+            '2aa90c00-23eb-4da6-aff9-eda66bb56182',
+            '329fa448-f6bb-4e72-b954-faa66c30d4fa',
+        )
+
         def fake_service_get_all(self, context,
                                  filters=None, set_zones=False):
-            services = [objects.Service(host='samplehost0'),
-                        objects.Service(host='samplehost1'),
-                        objects.Service(host='samplehost2'),
-                        objects.Service(host='samplehost3')]
-            return services
+            return [objects.Service(host=host) for host in hosts]
 
         def fake_utcnow(with_timezone=False):
             # It is not UTC time, but no effect for testing
@@ -46,7 +49,7 @@ class InstanceUsageAuditLogJsonTest(api_sample_base.ApiSampleTestBaseV21):
                       fake_service_get_all)
 
         for i in range(0, 3):
-            self._create_task_log('samplehost%d' % i, i + 1)
+            self._create_task_log(hosts[i], i + 1)
 
     def _create_task_log(self, host, num_instances):
         task_log = objects.TaskLog(context.get_admin_context())
