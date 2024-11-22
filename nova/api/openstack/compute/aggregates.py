@@ -50,6 +50,8 @@ class AggregateController(wsgi.Controller):
 
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response, '2.1', '2.40')
+    @validation.response_body_schema(schema.index_response_v241, '2.41')
     def index(self, req):
         """Returns a list a host aggregate's id, name, availability_zone."""
         context = _get_context(req)
@@ -63,6 +65,8 @@ class AggregateController(wsgi.Controller):
     @wsgi.expected_errors((400, 409))
     @validation.schema(schema.create_v20, '2.0', '2.0')
     @validation.schema(schema.create, '2.1')
+    @validation.response_body_schema(schema.create_response, '2.1', '2.40')
+    @validation.response_body_schema(schema.create_response_v241, '2.41')
     def create(self, req, body):
         """Creates an aggregate, given its name and
         optional availability zone.
@@ -96,6 +100,8 @@ class AggregateController(wsgi.Controller):
 
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response, '2.1', '2.40')
+    @validation.response_body_schema(schema.show_response_v241, '2.41')
     def show(self, req, id):
         """Shows the details of an aggregate, hosts and metadata included."""
         context = _get_context(req)
@@ -115,6 +121,8 @@ class AggregateController(wsgi.Controller):
     @wsgi.expected_errors((400, 404, 409))
     @validation.schema(schema.update_v20, '2.0', '2.0')
     @validation.schema(schema.update, '2.1')
+    @validation.response_body_schema(schema.update_response, '2.1', '2.40')
+    @validation.response_body_schema(schema.update_response_v241, '2.41')
     def update(self, req, id, body):
         """Updates the name and/or availability_zone of given aggregate."""
         context = _get_context(req)
@@ -143,6 +151,7 @@ class AggregateController(wsgi.Controller):
     # as this operation complete the deletion of aggregate resource and return
     # no response body.
     @wsgi.expected_errors((400, 404))
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         """Removes an aggregate by id."""
         context = _get_context(req)
@@ -280,7 +289,9 @@ class AggregateController(wsgi.Controller):
     @wsgi.Controller.api_version('2.81')
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404))
-    @validation.schema(aggregate_images.aggregate_images_v2_81)
+    @validation.schema(aggregate_images.aggregate_images)
+    @validation.response_body_schema(
+        aggregate_images.aggregate_images_response)
     def images(self, req, id, body):
         """Allows image cache management requests."""
         context = _get_context(req)

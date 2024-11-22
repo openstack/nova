@@ -272,12 +272,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     @mock.patch('nova.compute.api.AggregateAPI.create_aggregate')
     def test_create_with_none_availability_zone(self, mock_create_agg):
-        mock_create_agg.return_value = objects.Aggregate(
-            self.context,
-            name='test',
-            uuid=uuidsentinel.aggregate,
-            hosts=[],
-            metadata={})
+        mock_create_agg.return_value = _make_agg_obj(
+            {'name': 'test', 'metadata': {}})
         body = {"aggregate": {"name": "test",
                               "availability_zone": None}}
         result = self.controller.create(self.req, body=body)
@@ -388,12 +384,8 @@ class AggregateTestCaseV21(test.NoDBTestCase):
     @mock.patch('nova.compute.api.AggregateAPI.update_aggregate')
     def test_update_with_none_availability_zone(self, mock_update_agg):
         agg_id = 173
-        mock_update_agg.return_value = objects.Aggregate(self.context,
-                                                         name='test',
-                                                         uuid=uuidsentinel.agg,
-                                                         id=agg_id,
-                                                         hosts=[],
-                                                         metadata={})
+        mock_update_agg.return_value = _make_agg_obj(
+            {'name': 'test', 'metadata': {}})
         body = {"aggregate": {"name": "test",
                               "availability_zone": None}}
         result = self.controller.update(self.req, agg_id, body=body)
