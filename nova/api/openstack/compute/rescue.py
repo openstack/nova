@@ -18,7 +18,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import rescue
+from nova.api.openstack.compute.schemas import rescue as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -40,7 +40,8 @@ class RescueController(wsgi.Controller):
     # for backwards compatibility reasons.
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('rescue')
-    @validation.schema(rescue.rescue)
+    @validation.schema(schema.rescue)
+    @validation.response_body_schema(schema.rescue_response)
     def _rescue(self, req, id, body):
         """Rescue an instance."""
         context = req.environ["nova.context"]
@@ -85,7 +86,8 @@ class RescueController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('unrescue')
-    @validation.schema(rescue.unrescue)
+    @validation.schema(schema.unrescue)
+    @validation.response_body_schema(schema.unrescue_response)
     def _unrescue(self, req, id, body):
         """Unrescue an instance."""
         context = req.environ["nova.context"]

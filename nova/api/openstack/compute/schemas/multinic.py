@@ -34,7 +34,6 @@ add_fixed_ip = {
     'additionalProperties': False,
 }
 
-
 remove_fixed_ip = {
     'type': 'object',
     'properties': {
@@ -49,4 +48,12 @@ remove_fixed_ip = {
     },
     'required': ['removeFixedIp'],
     'additionalProperties': False,
+}
+
+add_fixed_ip_response = {
+    'type': 'null',
+}
+
+remove_fixed_ip_response = {
+    'type': 'null',
 }

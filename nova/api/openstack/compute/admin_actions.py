@@ -25,11 +25,6 @@ from nova import exception
 from nova import objects
 from nova.policies import admin_actions as aa_policies
 
-# States usable in resetState action
-# NOTE: It is necessary to update the schema of nova/api/openstack/compute/
-# schemas/reset_server_state.py, when updating this state_map.
-state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)
-
 _removal_reason = """\
 This action only works with the Xen virt driver, which was deprecated in the
 20.0.0 (Train) release.
@@ -54,6 +49,7 @@ class AdminActionsController(wsgi.Controller):
     @wsgi.expected_errors((404, 409))
     @wsgi.action('injectNetworkInfo')
     @validation.schema(schema.inject_network_info)
+    @validation.response_body_schema(schema.inject_network_info_response)
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server."""
         context = req.environ['nova.context']
@@ -69,6 +65,7 @@ class AdminActionsController(wsgi.Controller):
     @wsgi.expected_errors(404)
     @wsgi.action('os-resetState')
     @validation.schema(schema.reset_state)
+    @validation.response_body_schema(schema.reset_state_response)
     def _reset_state(self, req, id, body):
         """Permit admins to reset the state of a server."""
         context = req.environ["nova.context"]
@@ -81,7 +78,10 @@ class AdminActionsController(wsgi.Controller):
             context, instance.uuid, instance_actions.RESET_STATE)
 
         # Identify the desired state from the body
-        state = state_map[body["os-resetState"]["state"]]
+        state = {
+            'active': vm_states.ACTIVE,
+            'error': vm_states.ERROR,
+        }[body["os-resetState"]["state"]]
 
         instance.vm_state = state
         instance.task_state = None

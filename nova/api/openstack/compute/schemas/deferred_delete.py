@@ -29,3 +29,11 @@ force_delete = {
     'required': ['forceDelete'],
     'additionalProperties': False,
 }
+
+restore_response = {
+    'type': 'null',
+}
+
+force_delete_response = {
+    'type': 'null',
+}

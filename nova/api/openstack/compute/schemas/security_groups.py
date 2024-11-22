@@ -130,3 +130,11 @@ remove_security_group = {
     },
     'additionalProperties': True,
 }
+
+add_security_group_response = {
+    'type': 'null',
+}
+
+remove_security_group_response = {
+    'type': 'null',
+}

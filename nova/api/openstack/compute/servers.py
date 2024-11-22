@@ -27,7 +27,7 @@ from webob import exc
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute import helpers
-from nova.api.openstack.compute.schemas import servers as schema_servers
+from nova.api.openstack.compute.schemas import servers as schema
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -114,11 +114,11 @@ class ServersController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.expected_errors((400, 403))
-    @validation.query_schema(schema_servers.query_params_v275, '2.75')
-    @validation.query_schema(schema_servers.query_params_v273, '2.73', '2.74')
-    @validation.query_schema(schema_servers.query_params_v266, '2.66', '2.72')
-    @validation.query_schema(schema_servers.query_params_v226, '2.26', '2.65')
-    @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
+    @validation.query_schema(schema.query_params_v275, '2.75')
+    @validation.query_schema(schema.query_params_v273, '2.73', '2.74')
+    @validation.query_schema(schema.query_params_v266, '2.66', '2.72')
+    @validation.query_schema(schema.query_params_v226, '2.26', '2.65')
+    @validation.query_schema(schema.query_params_v21, '2.1', '2.25')
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
         context = req.environ['nova.context']
@@ -130,11 +130,11 @@ class ServersController(wsgi.Controller):
         return servers
 
     @wsgi.expected_errors((400, 403))
-    @validation.query_schema(schema_servers.query_params_v275, '2.75')
-    @validation.query_schema(schema_servers.query_params_v273, '2.73', '2.74')
-    @validation.query_schema(schema_servers.query_params_v266, '2.66', '2.72')
-    @validation.query_schema(schema_servers.query_params_v226, '2.26', '2.65')
-    @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
+    @validation.query_schema(schema.query_params_v275, '2.75')
+    @validation.query_schema(schema.query_params_v273, '2.73', '2.74')
+    @validation.query_schema(schema.query_params_v266, '2.66', '2.72')
+    @validation.query_schema(schema.query_params_v226, '2.26', '2.65')
+    @validation.query_schema(schema.query_params_v21, '2.1', '2.25')
     def detail(self, req):
         """Returns a list of server details for a given user."""
         context = req.environ['nova.context']
@@ -185,7 +185,7 @@ class ServersController(wsgi.Controller):
 
         for search_opt in search_opts:
             if (search_opt in
-                schema_servers.JOINED_TABLE_QUERY_PARAMS_SERVERS.keys() or
+                schema.JOINED_TABLE_QUERY_PARAMS_SERVERS.keys() or
                     search_opt.startswith('_')):
                 msg = _("Invalid filter field: %s.") % search_opt
                 raise exc.HTTPBadRequest(explanation=msg)
@@ -301,9 +301,9 @@ class ServersController(wsgi.Controller):
 
         limit, marker = common.get_limit_and_marker(req)
         sort_keys, sort_dirs = common.get_sort_params(req.params)
-        blacklist = schema_servers.SERVER_LIST_IGNORE_SORT_KEY
+        blacklist = schema.SERVER_LIST_IGNORE_SORT_KEY
         if api_version_request.is_supported(req, min_version='2.73'):
-            blacklist = schema_servers.SERVER_LIST_IGNORE_SORT_KEY_V273
+            blacklist = schema.SERVER_LIST_IGNORE_SORT_KEY_V273
         sort_keys, sort_dirs = remove_invalid_sort_keys(
             context, sort_keys, sort_dirs, blacklist, ('host', 'node'))
 
@@ -459,7 +459,7 @@ class ServersController(wsgi.Controller):
         return objects.NetworkRequestList(objects=networks)
 
     @wsgi.expected_errors(404)
-    @validation.query_schema(schema_servers.show_query)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
@@ -667,20 +667,20 @@ class ServersController(wsgi.Controller):
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 409))
-    @validation.schema(schema_servers.create_v20, '2.0', '2.0')
-    @validation.schema(schema_servers.create, '2.1', '2.18')
-    @validation.schema(schema_servers.create_v219, '2.19', '2.31')
-    @validation.schema(schema_servers.create_v232, '2.32', '2.32')
-    @validation.schema(schema_servers.create_v233, '2.33', '2.36')
-    @validation.schema(schema_servers.create_v237, '2.37', '2.41')
-    @validation.schema(schema_servers.create_v242, '2.42', '2.51')
-    @validation.schema(schema_servers.create_v252, '2.52', '2.56')
-    @validation.schema(schema_servers.create_v257, '2.57', '2.62')
-    @validation.schema(schema_servers.create_v263, '2.63', '2.66')
-    @validation.schema(schema_servers.create_v267, '2.67', '2.73')
-    @validation.schema(schema_servers.create_v274, '2.74', '2.89')
-    @validation.schema(schema_servers.create_v290, '2.90', '2.93')
-    @validation.schema(schema_servers.create_v294, '2.94')
+    @validation.schema(schema.create_v20, '2.0', '2.0')
+    @validation.schema(schema.create, '2.1', '2.18')
+    @validation.schema(schema.create_v219, '2.19', '2.31')
+    @validation.schema(schema.create_v232, '2.32', '2.32')
+    @validation.schema(schema.create_v233, '2.33', '2.36')
+    @validation.schema(schema.create_v237, '2.37', '2.41')
+    @validation.schema(schema.create_v242, '2.42', '2.51')
+    @validation.schema(schema.create_v252, '2.52', '2.56')
+    @validation.schema(schema.create_v257, '2.57', '2.62')
+    @validation.schema(schema.create_v263, '2.63', '2.66')
+    @validation.schema(schema.create_v267, '2.67', '2.73')
+    @validation.schema(schema.create_v274, '2.74', '2.89')
+    @validation.schema(schema.create_v290, '2.90', '2.93')
+    @validation.schema(schema.create_v294, '2.94')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -906,11 +906,11 @@ class ServersController(wsgi.Controller):
             self.compute_api.delete(context, instance)
 
     @wsgi.expected_errors(404)
-    @validation.schema(schema_servers.update_v20, '2.0', '2.0')
-    @validation.schema(schema_servers.update, '2.1', '2.18')
-    @validation.schema(schema_servers.update_v219, '2.19', '2.89')
-    @validation.schema(schema_servers.update_v290, '2.90', '2.93')
-    @validation.schema(schema_servers.update_v294, '2.94')
+    @validation.schema(schema.update_v20, '2.0', '2.0')
+    @validation.schema(schema.update, '2.1', '2.18')
+    @validation.schema(schema.update_v219, '2.19', '2.89')
+    @validation.schema(schema.update_v290, '2.90', '2.93')
+    @validation.schema(schema.update_v294, '2.94')
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
 
@@ -983,7 +983,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(204)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('confirmResize')
-    @validation.schema(schema_servers.confirm_resize)
+    @validation.schema(schema.confirm_resize)
+    @validation.response_body_schema(schema.confirm_resize_response)
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
@@ -1006,7 +1007,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('revertResize')
-    @validation.schema(schema_servers.revert_resize)
+    @validation.schema(schema.revert_resize)
+    @validation.response_body_schema(schema.revert_resize_response)
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
@@ -1029,7 +1031,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))
     @wsgi.action('reboot')
-    @validation.schema(schema_servers.reboot)
+    @validation.schema(schema.reboot)
+    @validation.response_body_schema(schema.reboot_response)
     def _action_reboot(self, req, id, body):
 
         reboot_type = body['reboot']['type'].upper()
@@ -1137,7 +1140,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 401, 403, 404, 409))
     @wsgi.action('resize')
-    @validation.schema(schema_servers.resize)
+    @validation.schema(schema.resize)
+    @validation.response_body_schema(schema.resize_response)
     def _action_resize(self, req, id, body):
         """Resizes a given instance to the flavor size requested."""
         resize_dict = body['resize']
@@ -1151,14 +1155,14 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('rebuild')
-    @validation.schema(schema_servers.rebuild_v20, '2.0', '2.0')
-    @validation.schema(schema_servers.rebuild, '2.1', '2.18')
-    @validation.schema(schema_servers.rebuild_v219, '2.19', '2.53')
-    @validation.schema(schema_servers.rebuild_v254, '2.54', '2.56')
-    @validation.schema(schema_servers.rebuild_v257, '2.57', '2.62')
-    @validation.schema(schema_servers.rebuild_v263, '2.63', '2.89')
-    @validation.schema(schema_servers.rebuild_v290, '2.90', '2.93')
-    @validation.schema(schema_servers.rebuild_v294, '2.94')
+    @validation.schema(schema.rebuild_v20, '2.0', '2.0')
+    @validation.schema(schema.rebuild, '2.1', '2.18')
+    @validation.schema(schema.rebuild_v219, '2.19', '2.53')
+    @validation.schema(schema.rebuild_v254, '2.54', '2.56')
+    @validation.schema(schema.rebuild_v257, '2.57', '2.62')
+    @validation.schema(schema.rebuild_v263, '2.63', '2.89')
+    @validation.schema(schema.rebuild_v290, '2.90', '2.93')
+    @validation.schema(schema.rebuild_v294, '2.94')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
@@ -1327,8 +1331,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('createImage')
-    @validation.schema(schema_servers.create_image, '2.0', '2.0')
-    @validation.schema(schema_servers.create_image, '2.1')
+    @validation.schema(schema.create_image, '2.0', '2.0')
+    @validation.schema(schema.create_image, '2.1')
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
@@ -1438,7 +1442,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))
     @wsgi.action('os-start')
-    @validation.schema(schema_servers.start_server)
+    @validation.schema(schema.start_server)
+    @validation.response_body_schema(schema.start_server_response)
     def _start_server(self, req, id, body):
         """Start an instance."""
         context = req.environ['nova.context']
@@ -1457,7 +1462,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))
     @wsgi.action('os-stop')
-    @validation.schema(schema_servers.stop_server)
+    @validation.schema(schema.stop_server)
+    @validation.response_body_schema(schema.stop_server_response)
     def _stop_server(self, req, id, body):
         """Stop an instance."""
         context = req.environ['nova.context']
@@ -1478,7 +1484,8 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('trigger_crash_dump')
-    @validation.schema(schema_servers.trigger_crash_dump)
+    @validation.schema(schema.trigger_crash_dump)
+    @validation.response_body_schema(schema.trigger_crash_dump_response)
     def _action_trigger_crash_dump(self, req, id, body):
         """Trigger crash dump in an instance"""
         context = req.environ['nova.context']

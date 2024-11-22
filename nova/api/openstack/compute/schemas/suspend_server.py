@@ -29,3 +29,11 @@ resume = {
     'required': ['resume'],
     'additionalProperties': False
 }
+
+suspend_response = {
+    'type': 'null',
+}
+
+resume_response = {
+    'type': 'null',
+}

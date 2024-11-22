@@ -574,7 +574,6 @@ trigger_crash_dump = {
     'additionalProperties': False
 }
 
-
 JOINED_TABLE_QUERY_PARAMS_SERVERS = {
     'block_device_mapping': parameter_types.common_query_param,
     'services': parameter_types.common_query_param,
@@ -743,4 +742,32 @@ show_query = {
     'type': 'object',
     'properties': {},
     'additionalProperties': True,
+}
+
+resize_response = {
+    'type': 'null',
+}
+
+confirm_resize_response = {
+    'type': 'null',
+}
+
+revert_resize_response = {
+    'type': 'null',
+}
+
+reboot_response = {
+    'type': 'null',
+}
+
+start_server_response = {
+    'type': 'null',
+}
+
+stop_server_response = {
+    'type': 'null',
+}
+
+trigger_crash_dump_response = {
+    'type': 'null',
 }

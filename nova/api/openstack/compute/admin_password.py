@@ -15,7 +15,7 @@
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import admin_password
+from nova.api.openstack.compute.schemas import admin_password as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -36,7 +36,8 @@ class AdminPasswordController(wsgi.Controller):
     @wsgi.action('changePassword')
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409, 501))
-    @validation.schema(admin_password.change_password)
+    @validation.schema(schema.change_password)
+    @validation.response_body_schema(schema.change_password_response)
     def change_password(self, req, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)

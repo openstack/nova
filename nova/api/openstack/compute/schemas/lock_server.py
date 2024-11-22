@@ -45,3 +45,11 @@ unlock = {
     'required': ['unlock'],
     'additionalProperties': False,
 }
+
+lock_response = {
+    'type': 'null',
+}
+
+unlock_response = {
+    'type': 'null',
+}

@@ -18,7 +18,7 @@
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import multinic
+from nova.api.openstack.compute.schemas import multinic as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -37,7 +37,8 @@ class MultinicController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.action('addFixedIp')
     @wsgi.expected_errors((400, 404))
-    @validation.schema(multinic.add_fixed_ip)
+    @validation.schema(schema.add_fixed_ip)
+    @validation.response_body_schema(schema.add_fixed_ip_response)
     def _add_fixed_ip(self, req, id, body):
         """Adds an IP on a given network to an instance."""
         context = req.environ['nova.context']
@@ -55,7 +56,8 @@ class MultinicController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.action('removeFixedIp')
     @wsgi.expected_errors((400, 404))
-    @validation.schema(multinic.remove_fixed_ip)
+    @validation.schema(schema.remove_fixed_ip)
+    @validation.response_body_schema(schema.remove_fixed_ip_response)
     def _remove_fixed_ip(self, req, id, body):
         """Removes an IP from an instance."""
         context = req.environ['nova.context']

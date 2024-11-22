@@ -33,6 +33,7 @@ class PauseServerController(wsgi.Controller):
     @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('pause')
     @validation.schema(schema.pause)
+    @validation.response_body_schema(schema.pause_response)
     def _pause(self, req, id, body):
         """Permit Admins to pause the server."""
         ctxt = req.environ['nova.context']
@@ -56,6 +57,7 @@ class PauseServerController(wsgi.Controller):
     @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('unpause')
     @validation.schema(schema.unpause)
+    @validation.response_body_schema(schema.unpause_response)
     def _unpause(self, req, id, body):
         """Permit Admins to unpause the server."""
         ctxt = req.environ['nova.context']

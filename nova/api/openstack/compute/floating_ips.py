@@ -190,6 +190,7 @@ class FloatingIPActionController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 404))
     @wsgi.action('addFloatingIp')
     @validation.schema(schema.add_floating_ip)
+    @validation.response_body_schema(schema.add_floating_ip_response)
     def _add_floating_ip(self, req, id, body):
         """Associate floating_ip to an instance."""
         context = req.environ['nova.context']
@@ -270,6 +271,7 @@ class FloatingIPActionController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('removeFloatingIp')
     @validation.schema(schema.remove_floating_ip)
+    @validation.response_body_schema(schema.remove_floating_ip_response)
     def _remove_floating_ip(self, req, id, body):
         """Dissociate floating_ip from an instance."""
         context = req.environ['nova.context']
