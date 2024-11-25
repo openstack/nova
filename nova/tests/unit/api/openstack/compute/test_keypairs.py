@@ -15,6 +15,7 @@
 
 from unittest import mock
 
+from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 
 from nova.api.openstack.compute import keypairs as keypairs_v21
@@ -98,7 +99,9 @@ class KeypairsTestV21(test.TestCase):
 
         self._setup_app_and_controller()
 
-        self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        self.req = fakes.HTTPRequest.blank(
+            '', version=self.wsgi_api_version, user_id=uuids.user_id,
+        )
 
     def test_keypair_list(self):
         res_dict = self.controller.index(self.req)
@@ -317,35 +320,50 @@ class KeypairsTestV210(KeypairsTestV22):
         pass
 
     def test_keypair_list_other_user(self):
-        req = fakes.HTTPRequest.blank(self.base_url +
-                                      '/os-keypairs?user_id=foo',
-                                      version=self.wsgi_api_version,
-                                      use_admin_context=True)
-        with mock.patch.object(self.controller.api, 'get_key_pairs') as mock_g:
+        req = fakes.HTTPRequest.blank(
+            self.base_url + f'/os-keypairs?user_id={uuids.other_user_id}',
+            version=self.wsgi_api_version,
+            use_admin_context=True)
+        kps = objects.KeyPairList(
+            objects=[
+                objects.KeyPair(
+                    nova_context.get_admin_context(), **fake_keypair('FAKE')
+                ),
+            ],
+        )
+        with mock.patch.object(
+            self.controller.api, 'get_key_pairs', return_value=kps,
+        ) as mock_g:
             self.controller.index(req)
             userid = mock_g.call_args_list[0][0][1]
-            self.assertEqual('foo', userid)
+            self.assertEqual(uuids.other_user_id, userid)
 
     def test_keypair_show_other_user(self):
-        req = fakes.HTTPRequest.blank(self.base_url +
-                                      '/os-keypairs/FAKE?user_id=foo',
-                                      version=self.wsgi_api_version,
-                                      use_admin_context=True)
-        with mock.patch.object(self.controller.api, 'get_key_pair') as mock_g:
+        req = fakes.HTTPRequest.blank(
+            self.base_url + f'/os-keypairs/FAKE?user_id={uuids.other_user_id}',
+            version=self.wsgi_api_version,
+            use_admin_context=True)
+        kp = objects.KeyPair(
+            nova_context.get_admin_context(), **fake_keypair('FAKE')
+        )
+        with mock.patch.object(
+            self.controller.api, 'get_key_pair', return_value=kp,
+        ) as mock_g:
             self.controller.show(req, 'FAKE')
             userid = mock_g.call_args_list[0][0][1]
-            self.assertEqual('foo', userid)
+            self.assertEqual(uuids.other_user_id, userid)
 
     def test_keypair_delete_other_user(self):
-        req = fakes.HTTPRequest.blank(self.base_url +
-                                      '/os-keypairs/FAKE?user_id=foo',
-                                      version=self.wsgi_api_version,
-                                      use_admin_context=True)
-        with mock.patch.object(self.controller.api,
-                               'delete_key_pair') as mock_g:
+        req = fakes.HTTPRequest.blank(
+            self.base_url + f'/os-keypairs/FAKE?user_id={uuids.other_user_id}',
+            version=self.wsgi_api_version,
+            use_admin_context=True)
+        with mock.patch.object(
+            self.controller.api, 'delete_key_pair', return_value=None,
+        ) as mock_g:
             self.controller.delete(req, 'FAKE')
             userid = mock_g.call_args_list[0][0][1]
-            self.assertEqual('foo', userid)
+            self.assertEqual(uuids.other_user_id, userid)
 
     def test_keypair_create_other_user(self):
         req = fakes.HTTPRequest.blank(self.base_url +
@@ -354,9 +372,12 @@ class KeypairsTestV210(KeypairsTestV22):
                                       use_admin_context=True)
         body = {'keypair': {'name': 'create_test',
                             'user_id': '8861f37f-034e-4ca8-8abe-6d13c074574a'}}
-        with mock.patch.object(self.controller.api,
-                               'create_key_pair',
-                               return_value=(mock.MagicMock(), 1)) as mock_g:
+        kp = objects.KeyPair(
+            nova_context.get_admin_context(), **fake_keypair('FAKE')
+        )
+        with mock.patch.object(
+            self.controller.api, 'create_key_pair', return_value=(kp, 'key')
+        ) as mock_g:
             res = self.controller.create(req, body=body)
             userid = mock_g.call_args_list[0][0][1]
             self.assertEqual('8861f37f-034e-4ca8-8abe-6d13c074574a', userid)
@@ -370,18 +391,22 @@ class KeypairsTestV210(KeypairsTestV22):
         body = {'keypair': {'name': 'create_test',
                             'user_id': '8861f37f-034e-4ca8-8abe-6d13c074574a',
                             'public_key': 'public_key'}}
-        with mock.patch.object(self.controller.api,
-                               'import_key_pair') as mock_g:
+        kp = objects.KeyPair(
+            nova_context.get_admin_context(), **fake_keypair('FAKE')
+        )
+        with mock.patch.object(
+            self.controller.api, 'import_key_pair', return_value=kp
+        ) as mock_g:
             res = self.controller.create(req, body=body)
             userid = mock_g.call_args_list[0][0][1]
             self.assertEqual('8861f37f-034e-4ca8-8abe-6d13c074574a', userid)
         self.assertIn('keypair', res)
 
     def test_keypair_list_other_user_invalid_in_old_microversion(self):
-        req = fakes.HTTPRequest.blank(self.base_url +
-                                      '/os-keypairs?user_id=foo',
-                                      version="2.9",
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(
+            self.base_url + f'/os-keypairs?user_id={uuids.other_user_id}',
+            version="2.9",
+            use_admin_context=True)
         with mock.patch.object(self.controller.api, 'get_key_pairs') as mock_g:
             self.controller.index(req)
             userid = mock_g.call_args_list[0][0][1]
@@ -457,13 +482,24 @@ class KeypairsTestV275(test.TestCase):
         super(KeypairsTestV275, self).setUp()
         self.controller = keypairs_v21.KeypairController()
 
-    @mock.patch('nova.objects.KeyPair.get_by_name')
-    def test_keypair_list_additional_param_old_version(self, mock_get_by_name):
+    def test_keypair_list_additional_param_old_version(self):
         req = fakes.HTTPRequest.blank(
             '/os-keypairs?unknown=3',
             version='2.74', use_admin_context=True)
-        self.controller.index(req)
-        self.controller.show(req, 1)
+
+        kp = objects.KeyPair(
+            nova_context.get_admin_context(), **fake_keypair('FAKE')
+        )
+        kps = objects.KeyPairList(objects=[kp])
+        with mock.patch.object(
+            self.controller.api, 'get_key_pairs', return_value=kps,
+        ):
+            self.controller.index(req)
+
+        with mock.patch.object(
+            self.controller.api, 'get_key_pair', return_value=kp,
+        ):
+            self.controller.show(req, 1)
         with mock.patch.object(self.controller.api, 'delete_key_pair'):
             self.controller.delete(req, 1)
 
@@ -496,9 +532,12 @@ class KeypairsTestV292(test.TestCase):
     def setUp(self):
         super(KeypairsTestV292, self).setUp()
         self.controller = keypairs_v21.KeypairController()
-        self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        self.req = fakes.HTTPRequest.blank(
+            '', version=self.wsgi_api_version, user_id=uuids.user_id,
+        )
         self.old_req = fakes.HTTPRequest.blank(
-            '', version=self.wsgi_old_api_version)
+            '', version=self.wsgi_old_api_version, user_id=uuids.user_id,
+        )
 
     def test_keypair_create_no_longer_supported(self):
         body = {

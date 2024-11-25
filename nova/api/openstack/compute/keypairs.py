@@ -20,7 +20,7 @@ import webob.exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import keypairs
+from nova.api.openstack.compute.schemas import keypairs as schema
 from nova.api.openstack.compute.views import keypairs as keypairs_view
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -30,6 +30,7 @@ from nova.objects import keypair as keypair_obj
 from nova.policies import keypairs as kp_policies
 
 
+@validation.validated
 class KeypairController(wsgi.Controller):
 
     """Keypair API controller for the OpenStack API."""
@@ -43,11 +44,14 @@ class KeypairController(wsgi.Controller):
     @wsgi.response(200, "2.0", "2.1")
     @wsgi.response(201, "2.2")
     @wsgi.expected_errors((400, 403, 409))
-    @validation.schema(keypairs.create_v20, "2.0", "2.0")
-    @validation.schema(keypairs.create, "2.1", "2.1")
-    @validation.schema(keypairs.create_v22, "2.2", "2.9")
-    @validation.schema(keypairs.create_v210, "2.10", "2.91")
-    @validation.schema(keypairs.create_v292, "2.92")
+    @validation.schema(schema.create_v20, "2.0", "2.0")
+    @validation.schema(schema.create, "2.1", "2.1")
+    @validation.schema(schema.create_v22, "2.2", "2.9")
+    @validation.schema(schema.create_v210, "2.10", "2.91")
+    @validation.schema(schema.create_v292, "2.92")
+    @validation.response_body_schema(schema.create_response, "2.0", "2.1")
+    @validation.response_body_schema(schema.create_response_v22, "2.2", "2.91")
+    @validation.response_body_schema(schema.create_response_v292, "2.92")
     def create(self, req, body):
         """Create or import keypair.
 
@@ -83,12 +87,12 @@ class KeypairController(wsgi.Controller):
         context.can(kp_policies.POLICY_ROOT % 'create',
                     target={'user_id': user_id})
 
-        return_priv_key = False
         try:
             if 'public_key' in params:
                 keypair = self.api.import_key_pair(
                     context, user_id, name, params['public_key'],
                     key_type_value)
+                return_priv_key = False
             else:
                 # public_key is a required field starting with 2.92 so this
                 # generation should only happen with older versions.
@@ -114,9 +118,10 @@ class KeypairController(wsgi.Controller):
 
     @wsgi.response(202, '2.0', '2.1')
     @wsgi.response(204, '2.2')
-    @validation.query_schema(keypairs.delete_query_schema_v20, '2.1', '2.9')
-    @validation.query_schema(keypairs.delete_query_schema_v210, '2.10', '2.74')
-    @validation.query_schema(keypairs.delete_query_schema_v275, '2.75')
+    @validation.query_schema(schema.delete_query_schema_v20, '2.0', '2.9')
+    @validation.query_schema(schema.delete_query_schema_v210, '2.10', '2.74')
+    @validation.query_schema(schema.delete_query_schema_v275, '2.75')
+    @validation.response_body_schema(schema.delete_response)
     @wsgi.expected_errors(404)
     def delete(self, req, id):
         user_id = None
@@ -138,9 +143,11 @@ class KeypairController(wsgi.Controller):
         except exception.KeypairNotFound as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
 
-    @validation.query_schema(keypairs.show_query_schema_v20, '2.0', '2.9')
-    @validation.query_schema(keypairs.show_query_schema_v210, '2.10', '2.74')
-    @validation.query_schema(keypairs.show_query_schema_v275, '2.75')
+    @validation.query_schema(schema.show_query_schema_v20, '2.0', '2.9')
+    @validation.query_schema(schema.show_query_schema_v210, '2.10', '2.74')
+    @validation.query_schema(schema.show_query_schema_v275, '2.75')
+    @validation.response_body_schema(schema.show_response, '2.0', '2.1')
+    @validation.response_body_schema(schema.show_response_v22, '2.2')
     @wsgi.expected_errors(404)
     def show(self, req, id):
         key_type = False
@@ -167,10 +174,13 @@ class KeypairController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
         return self._view_builder.show(keypair, key_type=key_type)
 
-    @validation.query_schema(keypairs.index_query_schema_v20, '2.0', '2.9')
-    @validation.query_schema(keypairs.index_query_schema_v210, '2.10', '2.34')
-    @validation.query_schema(keypairs.index_query_schema_v235, '2.35', '2.74')
-    @validation.query_schema(keypairs.index_query_schema_v275, '2.75')
+    @validation.query_schema(schema.index_query_schema_v20, '2.0', '2.9')
+    @validation.query_schema(schema.index_query_schema_v210, '2.10', '2.34')
+    @validation.query_schema(schema.index_query_schema_v235, '2.35', '2.74')
+    @validation.query_schema(schema.index_query_schema_v275, '2.75')
+    @validation.response_body_schema(schema.index_response, '2.0', '2.1')
+    @validation.response_body_schema(schema.index_response_v22, '2.2', '2.34')
+    @validation.response_body_schema(schema.index_response_v235, '2.35')
     @wsgi.expected_errors((), '2.0', '2.9')
     @wsgi.expected_errors(400, '2.10')
     def index(self, req):

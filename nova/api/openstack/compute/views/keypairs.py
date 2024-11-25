@@ -46,8 +46,6 @@ class ViewBuilder(common.ViewBuilder):
         params = []
         if private_key:
             params.append('private_key')
-        # TODO(takashin): After v2 and v2.1 is no longer supported,
-        # 'type' can always be included in the response.
         if key_type:
             params.append('type')
         params.extend(self._create_params)
