@@ -3143,6 +3143,10 @@ class ComputeManager(manager.Manager):
 
         network_info = instance.get_network_info()
 
+        share_info = self._get_share_info(
+            context, instance, check_status=False
+        )
+
         # NOTE(arnaudmorin) to avoid nova destroying the instance without
         # unplugging the interface, refresh network_info if it is empty.
         if not network_info:
@@ -3180,6 +3184,27 @@ class ComputeManager(manager.Manager):
             self._try_deallocate_network(context, instance, requested_networks)
 
         timer.restart()
+
+        for share in share_info:
+            # If we fail umounting or denying the share we may have a
+            # dangling share_mapping in the DB (share_mapping entry with an
+            # instance that does not exist anymore).
+            try:
+                self._umount_share(context, instance, share)
+                share.deactivate()
+                self.deny_share(context, instance, share)
+            except (
+                exception.ShareUmountError,
+                exception.ShareNotFound,
+                exception.ShareAccessNotFound,
+                exception.ShareAccessRemovalError,
+            ):
+                LOG.warning("An error occurred while unmounting or "
+                            "denying the share '%s'. This error is ignored to "
+                            "proceed with instance removal. "
+                            "Consequently, there may be a dangling "
+                            "share_mapping.", share.share_id)
+
         connector = None
         for bdm in vol_bdms:
             try:
@@ -3522,7 +3547,9 @@ class ComputeManager(manager.Manager):
             except NotImplementedError:
                 # Fallback to just powering off the instance if the
                 # hypervisor doesn't implement the soft_delete method
-                self.driver.power_off(context, instance)
+                self._power_off_instance(
+                    context, instance, clean_shutdown=False
+                )
             instance.power_state = self._get_power_state(instance)
             instance.vm_state = vm_states.SOFT_DELETED
             instance.task_state = None
@@ -4276,44 +4303,47 @@ class ComputeManager(manager.Manager):
         for bdm in bdms_to_delete:
             bdms.objects.remove(bdm)
 
-    def _get_share_info(self, context, instance):
+    def _get_share_info(self, context, instance, check_status=True):
         share_info = objects.ShareMappingList(context)
 
         for share_mapping in objects.ShareMappingList.get_by_instance_uuid(
             context, instance.uuid
         ):
-            if (
-                share_mapping.status == fields.ShareMappingStatus.ATTACHING or
-                share_mapping.status == fields.ShareMappingStatus.DETACHING
-            ):
-                # If the share status is attaching it means we are racing with
-                # the compute node. The mount is not completed yet or something
-                # really bad happened. So we set the instance in error state.
-                LOG.error(
-                    "Share id '%s' attached to server id '%s' is "
-                    "still in '%s' state. Setting the instance "
-                    "in error.",
-                    share_mapping.share_id,
-                    instance.id,
-                    share_mapping.status,
-                )
-                self._set_instance_obj_error_state(
-                    instance, clean_task_state=True
-                )
-                raise exception.ShareErrorUnexpectedStatus(
-                    share_id=share_mapping.share_id,
-                    instance_uuid=instance.id,
-                )
-
-            if share_mapping.status == fields.ShareMappingStatus.ERROR:
-                LOG.warning(
-                    "Share id '%s' attached to server id '%s' is in "
-                    "error state.",
-                    share_mapping.share_id,
-                    instance.id
-                )
-
             share_info.objects.append(share_mapping)
+
+            if check_status:
+                fsm = fields.ShareMappingStatus
+                if (
+                    share_mapping.status == fsm.ATTACHING or
+                    share_mapping.status == fsm.DETACHING
+                ):
+                    # If the share status is attaching it means we are racing
+                    # with the compute node. The mount is not completed yet or
+                    # something really bad happened. So we set the instance in
+                    # error state.
+                    LOG.error(
+                        "Share id '%s' attached to server id '%s' is "
+                        "still in '%s' state. Setting the instance "
+                        "in error.",
+                        share_mapping.share_id,
+                        instance.id,
+                        share_mapping.status,
+                    )
+                    self._set_instance_obj_error_state(
+                        instance, clean_task_state=True
+                    )
+                    raise exception.ShareErrorUnexpectedStatus(
+                        share_id=share_mapping.share_id,
+                        instance_uuid=instance.id,
+                    )
+
+                if share_mapping.status == fsm.ERROR:
+                    LOG.warning(
+                        "Share id '%s' attached to server id '%s' is in "
+                        "error state.",
+                        share_mapping.share_id,
+                        instance.id
+                    )
 
         return share_info
 
