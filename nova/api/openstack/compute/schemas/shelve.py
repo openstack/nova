@@ -94,27 +94,20 @@ unshelve_v291 = {
     "type": "object",
     "properties": {
         "unshelve": {
-            "oneOf": [
-                {
-                    "type": ["object"],
-                    "properties": {
-                        "availability_zone": {
-                            "oneOf": [
-                                {"type": ["null"]},
-                                {"type": "string"}]
-                        },
-                        "host": {
-                            "type": "string"
-                        }
-                    },
-                    "additionalProperties": False
+            "type": ["object", "null"],
+            "properties": {
+                "availability_zone": {
+                    "type": ["string", "null"],
                 },
-                {"type": ["null"]}
-            ]
+                "host": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": False,
         }
     },
     "required": ["unshelve"],
-    "additionalProperties": False
+    "additionalProperties": False,
 }
 
 shelve_response = {

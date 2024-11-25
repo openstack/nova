@@ -171,8 +171,7 @@ create = {
                         'properties': {
                             'fixed_ip': parameter_types.ip_address,
                             'port': {
-                                'oneOf': [{'type': 'string', 'format': 'uuid'},
-                                          {'type': 'null'}]
+                                'type': ['string', 'null'], 'format': 'uuid',
                             },
                             'uuid': {'type': 'string'},
                         },
@@ -238,10 +237,7 @@ create_v20['properties']['server']['properties'][
     'security_groups']['items']['properties']['name'] = (
     parameter_types.name_with_leading_trailing_spaces)
 create_v20['properties']['server']['properties']['user_data'] = {
-    'oneOf': [
-        {'type': 'string', 'format': 'base64', 'maxLength': 65535},
-        {'type': 'null'},
-    ],
+    'type': ['string', 'null'], 'format': 'base64', 'maxLength': 65535,
 }
 
 create_v219 = copy.deepcopy(create)
@@ -289,10 +285,7 @@ create_v237['properties']['server']['properties']['networks'] = {
                 'type': 'object',
                 'properties': {
                     'fixed_ip': parameter_types.ip_address,
-                    'port': {
-                        'oneOf': [{'type': 'string', 'format': 'uuid'},
-                                  {'type': 'null'}]
-                    },
+                    'port': {'type': ['string', 'null'], 'format': 'uuid'},
                     'uuid': {'type': 'string', 'format': 'uuid'},
                 },
                 'additionalProperties': False,
@@ -313,10 +306,7 @@ create_v242['properties']['server']['properties']['networks'] = {
                 'type': 'object',
                 'properties': {
                     'fixed_ip': parameter_types.ip_address,
-                    'port': {
-                        'oneOf': [{'type': 'string', 'format': 'uuid'},
-                                  {'type': 'null'}]
-                    },
+                    'port': {'type': ['string', 'null'], 'format': 'uuid'},
                     'uuid': {'type': 'string', 'format': 'uuid'},
                     'tag': parameter_types.tag,
                 },
@@ -450,10 +440,7 @@ rebuild_v254['properties']['rebuild'][
 rebuild_v257 = copy.deepcopy(rebuild_v254)
 rebuild_v257['properties']['rebuild']['properties'].pop('personality')
 rebuild_v257['properties']['rebuild']['properties']['user_data'] = ({
-    'oneOf': [
-        {'type': 'string', 'format': 'base64', 'maxLength': 65535},
-        {'type': 'null'}
-    ]
+    'type': ['string', 'null'], 'format': 'base64', 'maxLength': 65535,
 })
 
 # 2.63 builds on 2.57 and makes the following changes:
@@ -1053,10 +1040,7 @@ rebuild_response_v254['properties']['server']['required'].append('key_name')
 
 rebuild_response_v257 = copy.deepcopy(rebuild_response_v254)
 rebuild_response_v257['properties']['server']['properties']['user_data'] = {
-    'oneOf': [
-        {'type': 'string', 'format': 'base64', 'maxLength': 65535},
-        {'type': 'null'},
-    ],
+    'type': ['string', 'null'], 'format': 'base64', 'maxLength': 65535,
 }
 rebuild_response_v257['properties']['server']['required'].append('user_data')
 
@@ -1170,16 +1154,10 @@ rebuild_response_v275['properties']['server']['properties'].update(
             },
         },
         'OS-SRV-USG:launched_at': {
-            'oneOf': [
-                {'type': 'null'},
-                {'type': 'string', 'format': 'date-time'},
-            ],
+            'type': ['string', 'null'], 'format': 'date-time',
         },
         'OS-SRV-USG:terminated_at': {
-            'oneOf': [
-                {'type': 'null'},
-                {'type': 'string', 'format': 'date-time'},
-            ],
+            'type': ['string', 'null'], 'format': 'date-time',
         },
         'security_groups': {
             'type': 'array',

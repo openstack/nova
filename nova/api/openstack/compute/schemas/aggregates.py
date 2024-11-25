@@ -18,8 +18,10 @@ from nova.api.validation import parameter_types
 
 _availability_zone = {'oneOf': [parameter_types.az_name, {'type': 'null'}]}
 _availability_zone_with_leading_trailing_spaces = {
-    'oneOf': [parameter_types.az_name_with_leading_trailing_spaces,
-              {'type': 'null'}]
+    'oneOf': [
+        parameter_types.az_name_with_leading_trailing_spaces,
+        {'type': 'null'},
+    ],
 }
 
 create = {
@@ -143,12 +145,7 @@ _aggregate_response = {
         'availability_zone': {'type': ['null', 'string']},
         'created_at': {'type': 'string', 'format': 'date-time'},
         'deleted': {'type': 'boolean'},
-        'deleted_at': {
-            'oneOf': [
-                {'type': 'null'},
-                {'type': 'string', 'format': 'date-time'},
-            ],
-        },
+        'deleted_at': {'type': ['string', 'null'], 'format': 'date-time'},
         'hosts': {
             'type': ['array', 'null'],
             'items': {
@@ -163,12 +160,7 @@ _aggregate_response = {
             'additionalProperties': True,
         },
         'name': {'type': 'string'},
-        'updated_at': {
-            'oneOf': [
-                {'type': 'null'},
-                {'type': 'string', 'format': 'date-time'},
-            ],
-        },
+        'updated_at': {'type': ['string', 'null'], 'format': 'date-time'},
     },
     'required': [
         'availability_zone',
