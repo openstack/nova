@@ -26,6 +26,7 @@ from nova.limit import local as local_limit
 from nova.limit import utils as limit_utils
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 
 CONF = cfg.CONF
 
@@ -72,7 +73,8 @@ class TestLocalLimits(test.NoDBTestCase):
         self.assertEqual(expected, str(e))
 
     def test_enforce_api_limit_no_registered_limit_found(self):
-        self.useFixture(limit_fixture.LimitFixture({}, {}))
+        self.flags(unified_limits_resource_strategy='ignore', group='quota')
+        self.useFixture(nova_fixtures.UnifiedLimitsFixture())
         e = self.assertRaises(exception.MetadataLimitExceeded,
                               local_limit.enforce_api_limit,
                               local_limit.SERVER_METADATA_ITEMS, 42)
@@ -160,7 +162,8 @@ class TestLocalLimits(test.NoDBTestCase):
 
     @mock.patch.object(objects.KeyPairList, "get_count_by_user")
     def test_enforce_db_limit_no_registered_limit_found(self, mock_count):
-        self.useFixture(limit_fixture.LimitFixture({}, {}))
+        self.flags(unified_limits_resource_strategy='ignore', group='quota')
+        self.useFixture(nova_fixtures.UnifiedLimitsFixture())
         mock_count.return_value = 5
         e = self.assertRaises(exception.KeypairLimitExceeded,
                               local_limit.enforce_db_limit, self.context,

@@ -14,8 +14,37 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
 
+import os_resource_classes as orc
 from oslo_config import cfg
+from oslo_config import types as cfg_types
+
+
+class UnifiedLimitsResource(cfg_types.String):
+
+    # NOTE(melwitt): Attempting to import nova.limit.(local|placement) for
+    # LEGACY_LIMITS resource names results in error:
+    #       AttributeError: module 'nova' has no attribute 'conf'
+    resources = {
+        'server_metadata_items', 'server_injected_files',
+        'server_injected_file_content_bytes',
+        'server_injected_file_path_bytes', 'server_key_pairs', 'server_groups',
+        'server_group_members', 'servers'}
+
+    def __call__(self, value):
+        super().__call__(value)
+        valid_resources = self.resources
+        valid_resources |= {f'class:{cls}' for cls in orc.STANDARDS}
+        custom_regex = r'^class:CUSTOM_[A-Z0-9_]+$'
+        if value in valid_resources or re.fullmatch(custom_regex, value):
+            return value
+        msg = (
+            f'Value {value} is not a valid resource class name. Must be '
+            f'one of: {valid_resources} or a custom resource class name '
+            f'of the form {custom_regex[1:-1]}')
+        raise ValueError(msg)
+
 
 quota_group = cfg.OptGroup(
     name='quota',
@@ -269,6 +298,87 @@ query during each quota check, if this configuration option is set to True.
 Operators who want to avoid the performance hit from the EXISTS queries should
 wait to set this configuration option to True until after they have completed
 their online data migrations via ``nova-manage db online_data_migrations``.
+"""),
+    cfg.StrOpt(
+        'unified_limits_resource_strategy',
+        default='require',
+        choices=[
+            ('require', 'Require the resources in '
+             '``unified_limits_resource_list`` to have registered limits set '
+             'in Keystone'),
+            ('ignore', 'Ignore the resources in '
+             '``unified_limits_resource_list`` if they do not have registered '
+             'limits set in Keystone'),
+        ],
+        help="""
+Specify the semantics of the ``unified_limits_resource_list``.
+
+When the quota driver is set to the ``UnifiedLimitsDriver``, resources may be
+specified to ether require registered limits set in Keystone or ignore if they
+do not have registered limits set.
+
+When set to ``require``, if a resource in ``unified_limits_resource_list`` is
+requested and has no registered limit set, the quota limit for that resource
+will be considered to be 0 and all requests to allocate that resource will be
+rejected for being over quota.
+
+When set to ``ignore``, if a resource in ``unified_limits_resource_list`` is
+requested and has no registered limit set, the quota limit for that resource
+will be considered to be unlimited and all requests to allocate that resource
+will be accepted.
+
+Related options:
+
+* ``unified_limits_resource_list``: This must contain either resources for
+  which to require registered limits set or resources to ignore if they do not
+  have registered limits set. It can also be set to an empty list.
+"""),
+    cfg.ListOpt(
+        'unified_limits_resource_list',
+        item_type=UnifiedLimitsResource(),
+        default=['servers'],
+        help="""
+Specify a list of resources to require or ignore registered limits.
+
+When the quota driver is set to the ``UnifiedLimitsDriver``, require or ignore
+resources in this list to have registered limits set in Keystone.
+
+When ``unified_limits_resource_strategy`` is ``require``, if a resource in this
+list is requested and has no registered limit set, the quota limit for that
+resource will be considered to be 0 and all requests to allocate that resource
+will be rejected for being over quota.
+
+When ``unified_limits_resource_strategy`` is ``ignore``, if a resource in this
+list is requested and has no registered limit set, the quota limit for that
+resource will be considered to be unlimited and all requests to allocate that
+resource will be accepted.
+
+The list can also be set to an empty list.
+
+Valid list item values are:
+
+* ``servers``
+
+* ``class:<Placement resource class name>``
+
+* ``server_key_pairs``
+
+* ``server_groups``
+
+* ``server_group_members``
+
+* ``server_metadata_items``
+
+* ``server_injected_files``
+
+* ``server_injected_file_content_bytes``
+
+* ``server_injected_file_path_bytes``
+
+Related options:
+
+* ``unified_limits_resource_strategy``: This must be set to ``require`` or
+  ``ignore``
 """),
 ]
 

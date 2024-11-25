@@ -26,6 +26,7 @@ from nova import exception
 from nova.limit import local as local_limit
 from nova.objects import keypair as keypair_obj
 from nova import quota
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_crypto
 from nova.tests.unit.objects import test_keypair
@@ -165,8 +166,9 @@ class CreateImportSharedTestMixIn(object):
 
     def test_quota_unified_limits(self):
         self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
-        self.useFixture(limit_fixture.LimitFixture(
-            {'server_key_pairs': 0}, {}))
+        ul_api = self.useFixture(nova_fixtures.UnifiedLimitsFixture())
+        ul_api.create_registered_limit(
+            resource_name='server_key_pairs', default_limit=0)
         msg = ("Resource %s is over limit" % local_limit.KEY_PAIRS)
         self.assertKeypairRaises(exception.KeypairLimitExceeded, msg, 'foo')
 
@@ -177,8 +179,9 @@ class CreateImportSharedTestMixIn(object):
         recheck because a parallel request filled up the quota first.
         """
         self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
-        self.useFixture(limit_fixture.LimitFixture(
-            {'server_key_pairs': 100}, {}))
+        ul_api = self.useFixture(nova_fixtures.UnifiedLimitsFixture())
+        ul_api.create_registered_limit(
+            resource_name='server_key_pairs', default_limit=100)
         # First quota check succeeds, second (recheck) fails.
         mock_enforce.side_effect = [
             None, exception.KeypairLimitExceeded('oslo.limit message')]

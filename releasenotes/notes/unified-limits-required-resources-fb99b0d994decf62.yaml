@@ -1,0 +1,36 @@
+features:
+  - |
+    New configuration options ``[quota]unified_limits_resource_strategy`` and
+    ``[quota]unified_limits_resource_list`` have
+    been added to enable operators to specify a list of resources that are
+    either required or ignored to have registered limits set. The default
+    strategy is ``require`` and the default resource list contains ``servers``.
+    The configured list is only used when ``[quota]driver`` is set to the
+    ``UnifiedLimitsDriver``.
+
+    When ``unified_limits_resource_strategy = require``, if a resource in
+    ``unified_limits_resource_list`` is requested and has no registered limit
+    set, the quota limit for that resource will be considered to be 0 and all
+    requests to allocate that resource will be rejected for being over quota.
+    Any resource not in the list will be considered to have unlimited quota.
+
+    When ``unified_limits_resource_strategy = ignore``, if a resource in
+    ``unified_limits_resource_list`` is requested and has no registered limit
+    set, the quota limit for that resource will be considered to be unlimited
+    and all requests to allocate that resource will be accepted. Any resource
+    not in the list will be considered to have 0 quota.
+
+    The options should be configured for the :program:`nova-api` and
+    :program:`nova-conductor` services. The :program:`nova-conductor` service
+    performs quota enforcement when ``[quota]recheck_quota`` is ``True`` (the
+    default).
+
+    The ``unified_limits_resource_list`` list can also be set to an empty list.
+upgrade:
+  - |
+    When the ``[quota]driver`` configuration option is set to the
+    ``UnifiedLimitsDriver``, a limit of ``-1`` in Keystone will now be
+    considered as unlimited and the ``servers`` resource will be considered to
+    be required to have a registered limit set in Keystone because of the
+    values for ``[quota]unified_limits_resource_strategy`` and
+    ``unified_limits_resource_strategy``.

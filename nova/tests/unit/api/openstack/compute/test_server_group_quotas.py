@@ -16,7 +16,6 @@
 from unittest import mock
 
 from oslo_config import cfg
-from oslo_limit import fixture as limit_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import webob
@@ -27,6 +26,7 @@ from nova import exception
 from nova.limit import local as local_limit
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 
 
@@ -210,8 +210,9 @@ class ServerGroupQuotasUnifiedLimitsTestV21(ServerGroupQuotasTestV21):
         self.flags(driver='nova.quota.UnifiedLimitsDriver', group='quota')
         self.req = fakes.HTTPRequest.blank('')
         self.controller = sg_v21.ServerGroupController()
-        self.limit_fixture = self.useFixture(
-            limit_fixture.LimitFixture({'server_groups': 10}, {}))
+        self.ul_api = self.useFixture(nova_fixtures.UnifiedLimitsFixture())
+        self.ul_api.create_registered_limit(
+            resource_name='server_groups', default_limit=10)
 
     @mock.patch('nova.limit.local.enforce_db_limit')
     def test_create_server_group_during_recheck(self, mock_enforce):
@@ -238,7 +239,10 @@ class ServerGroupQuotasUnifiedLimitsTestV21(ServerGroupQuotasTestV21):
                                              delta=1)
 
     def test_create_group_fails_with_zero_quota(self):
-        self.limit_fixture.reglimits = {'server_groups': 0}
+        # UnifiedLimitsFixture doesn't support update of a limit.
+        self.ul_api.registered_limits_list.clear()
+        self.ul_api.create_registered_limit(
+            resource_name='server_groups', default_limit=0)
         sgroup = {'name': 'test', 'policies': ['anti-affinity']}
         exc = self.assertRaises(webob.exc.HTTPForbidden,
                                 self.controller.create,
@@ -247,7 +251,10 @@ class ServerGroupQuotasUnifiedLimitsTestV21(ServerGroupQuotasTestV21):
         self.assertIn(msg, str(exc))
 
     def test_create_only_one_group_when_limit_is_one(self):
-        self.limit_fixture.reglimits = {'server_groups': 1}
+        # UnifiedLimitsFixture doesn't support update of a limit.
+        self.ul_api.registered_limits_list.clear()
+        self.ul_api.create_registered_limit(
+            resource_name='server_groups', default_limit=1)
         policies = ['anti-affinity']
         sgroup = {'name': 'test', 'policies': policies}
         res_dict = self.controller.create(

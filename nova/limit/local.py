@@ -139,9 +139,10 @@ def enforce_api_limit(entity_type: str, count: int) -> None:
     try:
         enforcer.enforce(None, {entity_type: count})
     except limit_exceptions.ProjectOverLimit as e:
-        # Copy the exception message to a OverQuota to propagate to the
-        # API layer.
-        raise EXCEPTIONS.get(entity_type, exception.OverQuota)(str(e))
+        if nova_limit_utils.should_enforce(e):
+            # Copy the exception message to a OverQuota to propagate to the
+            # API layer.
+            raise EXCEPTIONS.get(entity_type, exception.OverQuota)(str(e))
 
 
 def enforce_db_limit(
@@ -188,9 +189,10 @@ def enforce_db_limit(
     try:
         enforcer.enforce(None, {entity_type: delta})
     except limit_exceptions.ProjectOverLimit as e:
-        # Copy the exception message to a OverQuota to propagate to the
-        # API layer.
-        raise EXCEPTIONS.get(entity_type, exception.OverQuota)(str(e))
+        if nova_limit_utils.should_enforce(e):
+            # Copy the exception message to a OverQuota to propagate to the
+            # API layer.
+            raise EXCEPTIONS.get(entity_type, exception.OverQuota)(str(e))
 
 
 def _convert_keys_to_legacy_name(
