@@ -17,7 +17,6 @@ Internal implementation of request Body validating middleware.
 """
 
 import re
-import string
 
 import jsonschema
 from jsonschema import exceptions as jsonschema_exc
@@ -192,28 +191,6 @@ def _validate_az_name(instance):
         # TypeError will be raised at here.
         pass
     raise exception.InvalidName(reason=regex.reason)
-
-
-@_FORMAT_CHECKER.checks('keypair_name_20',
-                        exception.InvalidName)
-def _validate_keypair_name_20(keypair_name):
-    safe_chars = "_- " + string.digits + string.ascii_letters
-    return _validate_keypair_name(keypair_name, safe_chars)
-
-
-@_FORMAT_CHECKER.checks('keypair_name_292',
-                        exception.InvalidName)
-def _validate_keypair_name_292(keypair_name):
-    safe_chars = "@._- " + string.digits + string.ascii_letters
-    return _validate_keypair_name(keypair_name, safe_chars)
-
-
-def _validate_keypair_name(keypair_name, safe_chars):
-    clean_value = "".join(x for x in keypair_name if x in safe_chars)
-    if clean_value != keypair_name:
-        reason = _("Only expected characters: [%s]") % safe_chars
-        raise exception.InvalidName(reason=reason)
-    return True
 
 
 def _soft_validate_additional_properties(validator,

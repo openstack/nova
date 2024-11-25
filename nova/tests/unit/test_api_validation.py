@@ -731,33 +731,6 @@ class NameWithLeadingTrailingSpacesTestCase(APIValidationTestCase):
             pass
 
 
-class NoneTypeTestCase(APIValidationTestCase):
-
-    post_schema = {
-        'type': 'object',
-        'properties': {
-            'foo': parameter_types.none
-        }
-    }
-
-    def test_validate_none(self):
-        self.post(body={'foo': 'None'}, req=FakeRequest())
-        self.post(body={'foo': None}, req=FakeRequest())
-        self.post(body={'foo': {}}, req=FakeRequest())
-
-    def test_validate_none_fails(self):
-        detail = ("Invalid input for field/attribute foo. Value: ."
-                  " '' is not one of ['None', None, {}]")
-        self.check_validation_error(self.post, body={'foo': ''},
-                                    expected_detail=detail)
-
-        detail = ("Invalid input for field/attribute foo. Value: "
-                  "{'key': 'val'}. {'key': 'val'} is not one of "
-                  "['None', None, {}]")
-        self.check_validation_error(self.post, body={'foo': {'key': 'val'}},
-                                    expected_detail=detail)
-
-
 class NameOrNoneTestCase(APIValidationTestCase):
 
     post_schema = {
