@@ -8078,9 +8078,13 @@ class ComputeTestCase(BaseTestCase,
         self.stub_out('nova.compute.manager.ComputeManager.'
                        '_complete_partial_deletion',
                        fake_partial_deletion)
-        self.compute._init_instance(admin_context, instance)
+        with mock.patch(
+            "nova.compute.manager.ComputeManager._get_share_info",
+            return_value=objects.ShareMappingList(),
+        ):
+            self.compute._init_instance(admin_context, instance)
 
-        self.assertNotEqual(0, instance['deleted'])
+        self.assertNotEqual(0, instance["deleted"])
 
     @mock.patch.object(compute_manager.ComputeManager,
                        '_complete_partial_deletion')

@@ -4424,7 +4424,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.sync_guest_time()
 
     def resume_state_on_host_boot(self, context, instance, network_info,
-                                  block_device_info=None):
+                                  share_info, block_device_info=None):
         """resume guest state when a host is booted."""
         # Check if the instance is running already and avoid doing
         # anything if it is.
@@ -4446,7 +4446,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # Be as absolute as possible about getting it back into
         # a known and running state.
         self._hard_reboot(context, instance, network_info,
-            objects.ShareMappingList(), block_device_info
+            share_info, block_device_info
         )
 
     def rescue(self, context, instance, network_info, image_meta,

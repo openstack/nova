@@ -1496,8 +1496,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute.driver, 'plug_vifs',
                 side_effect=exception.VirtualInterfacePlugException(
                     "Unexpected vif_type=binding_failed")),
-            mock.patch.object(self.compute, '_set_instance_obj_error_state')
-        ) as (get_admin_context, get_nw_info, plug_vifs, set_error_state):
+            mock.patch.object(self.compute, '_set_instance_obj_error_state'),
+            mock.patch('nova.compute.manager.ComputeManager._get_share_info',
+                return_value=objects.ShareMappingList()),
+        ) as (
+            get_admin_context,
+            get_nw_info,
+            plug_vifs,
+            set_error_state,
+            mock_shares,
+        ):
             self.compute._init_instance(self.context, instance)
             set_error_state.assert_called_once_with(instance)
 
@@ -1520,7 +1528,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute.driver, 'plug_vifs',
                 side_effect=exception.PciDeviceNotFoundById("pci-addr")),
             mock.patch("nova.compute.manager.LOG.exception"),
-        ) as (get_admin_context, get_nw_info, plug_vifs, log_exception):
+            mock.patch("nova.compute.manager.ComputeManager._get_share_info",
+            return_value=objects.ShareMappingList()),
+        ) as (
+                get_admin_context,
+                get_nw_info, plug_vifs,
+                log_exception,
+                mock_shares
+            ):
             # as this does not raise, we are sure that the compute service
             # continues initializing the rest of the instances
             self.compute._init_instance(self.context, instance)
@@ -1722,6 +1737,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               self.compute._get_power_state,
                               instance)
 
+    @mock.patch.object(manager.ComputeManager, '_mount_all_shares')
+    @mock.patch.object(manager.ComputeManager, '_get_share_info')
     @mock.patch.object(manager.ComputeManager, '_get_power_state')
     @mock.patch.object(fake_driver.FakeDriver, 'plug_vifs')
     @mock.patch.object(fake_driver.FakeDriver, 'resume_state_on_host_boot')
@@ -1729,7 +1746,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                        '_get_instance_block_device_info')
     @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
     def test_init_instance_failed_resume_sets_error(self, mock_set_inst,
-                mock_get_inst, mock_resume, mock_plug, mock_get_power):
+        mock_get_inst, mock_resume, mock_plug, mock_get_power,
+        mock_get_share_info, mock_mount):
         instance = fake_instance.fake_instance_obj(
                 self.context,
                 uuid=uuids.instance,
@@ -1745,14 +1763,19 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                       power_state.SHUTDOWN)
         mock_get_inst.return_value = 'fake-bdm'
         mock_resume.side_effect = test.TestingException
+        share_info = objects.ShareMappingList()
+        mock_get_share_info.return_value = share_info
+
         self.compute._init_instance('fake-context', instance)
         mock_get_power.assert_has_calls([mock.call(instance),
                                          mock.call(instance)])
         mock_plug.assert_called_once_with(instance, mock.ANY)
         mock_get_inst.assert_called_once_with(mock.ANY, instance)
         mock_resume.assert_called_once_with(mock.ANY, instance, mock.ANY,
-                                            'fake-bdm')
+                                            share_info, 'fake-bdm')
         mock_set_inst.assert_called_once_with(instance)
+        mock_get_share_info.assert_called_once_with(mock.ANY, instance)
+        mock_mount.assert_called_once_with(mock.ANY, instance, share_info)
 
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -1795,7 +1818,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                instance.user_id)
         mock_inst_destroy.side_effect = fake_inst_destroy()
 
-        self.compute._init_instance(self.context, instance)
+        with mock.patch(
+            "nova.compute.manager.ComputeManager._get_share_info",
+            return_value=objects.ShareMappingList(),
+        ):
+            self.compute._init_instance(self.context, instance)
 
         # Make sure that instance.destroy method was called and
         # instance was deleted from db.
@@ -1820,8 +1847,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 system_metadata={},
                 expected_attrs=['metadata', 'system_metadata'])
 
-        with mock.patch.object(self.compute,
-                               '_complete_partial_deletion') as mock_deletion:
+        with test.nested(
+            mock.patch.object(self.compute, '_complete_partial_deletion'),
+            mock.patch("nova.compute.manager.ComputeManager._get_share_info",
+                return_value=objects.ShareMappingList())
+        ) as (mock_deletion, mock_shares):
             mock_deletion.side_effect = test.TestingException()
             self.compute._init_instance(self, instance)
             msg = u'Failed to complete a deletion'
@@ -1846,8 +1876,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                   'get_by_instance_uuid',
                                   return_value=bdms),
                 mock.patch.object(self.compute, '_delete_instance'),
-                mock.patch.object(instance, 'obj_load_attr')
-        ) as (mock_get, mock_delete, mock_load):
+                mock.patch.object(instance, 'obj_load_attr'),
+                mock.patch(
+                    'nova.compute.manager.ComputeManager._get_share_info',
+                    return_value=objects.ShareMappingList()),
+        ) as (mock_get, mock_delete, mock_load, mock_shares):
             self.compute._init_instance(self.context, instance)
             mock_get.assert_called_once_with(self.context, instance.uuid)
             mock_delete.assert_called_once_with(self.context, instance,
@@ -1885,7 +1918,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_by_instance_uuid.return_value = bdms
         mock_get_by_uuid.return_value = instance
         mock_delete_instance.side_effect = test.TestingException('test')
-        self.compute._init_instance(self.context, instance)
+        with mock.patch(
+            "nova.compute.manager.ComputeManager._get_share_info",
+            return_value=objects.ShareMappingList(),
+        ):
+            self.compute._init_instance(self.context, instance)
         mock_set_instance_error_state.assert_called_once_with(instance)
 
     def _test_init_instance_reverts_crashed_migrations(self,
@@ -1920,9 +1957,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute, '_retry_reboot',
                               return_value=(False, None)),
             mock.patch.object(objects.Migration, 'get_by_id_and_instance',
-                              return_value=migration)
+                              return_value=migration),
+            mock.patch(
+                "nova.compute.manager.ComputeManager._get_share_info",
+                return_value=objects.ShareMappingList(),
+            ),
         ) as (mock_get_nw, mock_plug, mock_finish, mock_get_inst,
-              mock_get_info, mock_save, mock_retry, mock_get_mig):
+              mock_get_info, mock_save, mock_retry, mock_get_mig, mock_shares):
             mock_get_info.side_effect = (
                 hardware.InstanceInfo(state=power_state.SHUTDOWN),
                 hardware.InstanceInfo(state=power_state.SHUTDOWN))
@@ -1969,8 +2010,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(objects.Migration, 'get_by_instance_and_status',
                               return_value=migration),
             mock.patch.object(self.compute, 'live_migration_abort'),
-            mock.patch.object(self.compute, '_set_migration_status')
-        ) as (save, get_nw_info, mock_get_status, mock_abort, mock_set_migr):
+            mock.patch.object(self.compute, '_set_migration_status'),
+            mock.patch(
+                "nova.compute.manager.ComputeManager._get_share_info",
+                return_value=objects.ShareMappingList())
+        ) as (
+                save,
+                get_nw_info,
+                mock_get_status,
+                mock_abort,
+                mock_set_migr,
+                mock_shares,
+            ):
             self.compute._init_instance(self.context, instance)
             save.assert_called_once_with(expected_task_state=['migrating'])
             get_nw_info.assert_called_once_with()
@@ -1990,7 +2041,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 vm_state=vm_state,
                 host=self.compute.host,
                 task_state=task_state)
-        with mock.patch.object(instance, 'save') as save:
+        with test.nested(
+            mock.patch.object(instance, 'save'),
+            mock.patch("nova.compute.manager.ComputeManager._get_share_info",
+                       return_value=objects.ShareMappingList()),
+        ) as (save, mock_shares):
             self.compute._init_instance(self.context, instance)
             save.assert_called_once_with()
         self.assertIsNone(instance.task_state)
@@ -2010,7 +2065,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self._test_init_instance_sets_building_error(
                     vm_state, task_state)
 
-    def _test_init_instance_sets_building_tasks_error(self, instance):
+    @mock.patch(
+        "nova.compute.manager.ComputeManager._get_share_info",
+        return_value=objects.ShareMappingList()
+    )
+    def _test_init_instance_sets_building_tasks_error(
+            self, instance, mock_shares):
         instance.host = self.compute.host
         with mock.patch.object(instance, 'save') as save:
             self.compute._init_instance(self.context, instance)
@@ -2048,7 +2108,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self._test_init_instance_sets_building_tasks_error(instance)
 
     def _test_init_instance_cleans_image_states(self, instance):
-        with mock.patch.object(instance, 'save') as save:
+        with test.nested(
+            mock.patch.object(instance, 'save'),
+            mock.patch("nova.compute.manager.ComputeManager._get_share_info",
+                       return_value=objects.ShareMappingList()),
+        ) as (save, mock_shares):
             self.compute._get_power_state = mock.Mock()
             instance.info_cache = None
             instance.power_state = power_state.RUNNING
@@ -2057,11 +2121,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             save.assert_called_once_with()
         self.assertIsNone(instance.task_state)
 
+    @mock.patch("nova.compute.manager.ComputeManager._get_share_info",
+                return_value=objects.ShareMappingList())
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state',
                 return_value=power_state.RUNNING)
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     def _test_init_instance_cleans_task_states(self, powerstate, state,
-            mock_get_uuid, mock_get_power_state):
+            mock_get_uuid, mock_get_power_state, mock_shares):
         instance = objects.Instance(self.context)
         instance.uuid = uuids.instance
         instance.info_cache = None
@@ -2149,8 +2215,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                   'get_by_instance_uuid',
                                   return_value=bdms),
                 mock.patch.object(self.compute, '_delete_instance'),
-                mock.patch.object(instance, 'obj_load_attr')
-        ) as (mock_get, mock_delete, mock_load):
+                mock.patch.object(instance, 'obj_load_attr'),
+                mock.patch(
+                    "nova.compute.manager.ComputeManager._get_share_info",
+                    return_value=objects.ShareMappingList()),
+        ) as (mock_get, mock_delete, mock_load, mock_shares):
             self.compute._init_instance(self.context, instance)
             mock_get.assert_called_once_with(self.context, instance.uuid)
             mock_delete.assert_called_once_with(self.context, instance,
@@ -2169,8 +2238,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute, '_get_power_state',
                               return_value=power_state.RUNNING),
             mock.patch.object(objects.Instance, 'get_network_info'),
-            mock.patch.object(instance, 'save', autospec=True)
-        ) as (mock_get_power_state, mock_nw_info, mock_instance_save):
+            mock.patch.object(instance, 'save', autospec=True),
+            mock.patch("nova.compute.manager.ComputeManager._get_share_info",
+                       return_value=objects.ShareMappingList())
+        ) as (
+                mock_get_power_state,
+                mock_nw_info,
+                mock_instance_save,
+                mock_shares
+            ):
             self.compute._init_instance(self.context, instance)
             mock_instance_save.assert_called_once_with()
             self.assertIsNone(instance.task_state)
@@ -2887,8 +2963,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         exc = Exception('some other exception')
         self._test_shutdown_instance_exception(exc)
 
+    @mock.patch(
+        "nova.compute.manager.ComputeManager._get_share_info",
+        return_value=objects.ShareMappingList()
+    )
     def _test_init_instance_retries_reboot(self, instance, reboot_type,
-                                           return_power_state):
+                                           return_power_state, mock_shares):
         instance.host = self.compute.host
         with test.nested(
             mock.patch.object(self.compute, '_get_power_state',
@@ -2968,11 +3048,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(instance, 'save', autospec=True),
             mock.patch.object(objects.Instance, 'get_network_info'),
             mock.patch.object(self.compute, 'reboot_instance'),
+            mock.patch("nova.compute.manager.ComputeManager._get_share_info",
+                       return_value=objects.ShareMappingList())
           ) as (
             _get_power_state,
             instance_save,
             get_network_info,
             reboot_instance,
+            mock_shares,
           ):
             self.compute._init_instance(self.context, instance)
             # If instance was running, the instance should stay running,
@@ -3060,7 +3143,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.POWERING_OFF
         instance.host = self.compute.host
-        with mock.patch.object(self.compute, 'stop_instance'):
+        with test.nested(
+            mock.patch.object(self.compute, "stop_instance"),
+            mock.patch(
+                "nova.compute.manager.ComputeManager._get_share_info",
+                return_value=objects.ShareMappingList(),
+            ),
+        ):
             self.compute._init_instance(self.context, instance)
             call = mock.call(self.context, instance, True)
             self.compute.stop_instance.assert_has_calls([call])
@@ -3072,7 +3161,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.POWERING_ON
         instance.host = self.compute.host
-        with mock.patch.object(self.compute, 'start_instance'):
+        with test.nested(
+            mock.patch.object(self.compute, "start_instance"),
+            mock.patch(
+                "nova.compute.manager.ComputeManager._get_share_info",
+                return_value=objects.ShareMappingList(),
+            ),
+        ):
             self.compute._init_instance(self.context, instance)
             call = mock.call(self.context, instance)
             self.compute.start_instance.assert_has_calls([call])
@@ -3084,8 +3179,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.POWERING_ON
         instance.host = self.compute.host
-        with mock.patch.object(self.compute, 'start_instance',
-                              return_value=Exception):
+        with test.nested(
+            mock.patch.object(
+                self.compute, "start_instance", return_value=Exception
+            ),
+            mock.patch(
+                "nova.compute.manager.ComputeManager._get_share_info",
+                return_value=objects.ShareMappingList(),
+            ),
+        ):
             init_return = self.compute._init_instance(self.context, instance)
             call = mock.call(self.context, instance)
             self.compute.start_instance.assert_has_calls([call])
@@ -3098,8 +3200,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.POWERING_OFF
         instance.host = self.compute.host
-        with mock.patch.object(self.compute, 'stop_instance',
-                              return_value=Exception):
+        with test.nested(
+            mock.patch.object(
+                self.compute, "stop_instance", return_value=Exception
+            ),
+            mock.patch(
+                "nova.compute.manager.ComputeManager._get_share_info",
+                return_value=objects.ShareMappingList(),
+            ),
+        ):
+
             init_return = self.compute._init_instance(self.context, instance)
             call = mock.call(self.context, instance, True)
             self.compute.stop_instance.assert_has_calls([call])

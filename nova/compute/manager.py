@@ -1328,9 +1328,12 @@ class ComputeManager(manager.Manager):
         block_device_info = \
             self._get_instance_block_device_info(context, instance)
 
+        share_info = self._get_share_info(context, instance)
+        self._mount_all_shares(context, instance, share_info)
+
         try:
             self.driver.resume_state_on_host_boot(
-                context, instance, net_info, block_device_info)
+                context, instance, net_info, share_info, block_device_info)
         except NotImplementedError:
             LOG.warning('Hypervisor driver does not support '
                         'resume guests', instance=instance)

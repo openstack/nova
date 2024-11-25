@@ -241,7 +241,7 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def resume_state_on_host_boot(self, context, instance, network_info,
-                                  block_device_info=None):
+                                  share_info, block_device_info=None):
         pass
 
     def rescue(self, context, instance, network_info, image_meta,

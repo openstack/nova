@@ -994,10 +994,15 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def resume_state_on_host_boot(self, context, instance, network_info,
-                                  block_device_info=None):
+                                  share_info, block_device_info=None):
         """resume guest state when a host is booted.
 
         :param instance: nova.objects.instance.Instance
+        :param nova.network.model.NetworkInfo network_info:
+            Necessary network information for the resume.
+        :param share_info: a ShareMappingList containing the attached shares.
+        :param dict block_device_info:
+            The block device mapping of the instance.
         """
         raise NotImplementedError()
 

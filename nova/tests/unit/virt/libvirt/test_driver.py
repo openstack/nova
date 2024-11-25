@@ -17546,9 +17546,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_domain.return_value = mock_virDomain
         instance = objects.Instance(**self.test_instance)
         network_info = _fake_network_info(self)
+        share_info = objects.ShareMappingList()
 
         drvr.resume_state_on_host_boot(self.context, instance, network_info,
-                                       block_device_info=None)
+                                       share_info, block_device_info=None)
 
         ignored_states = (power_state.RUNNING,
                           power_state.SUSPENDED,
@@ -17579,12 +17580,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_resume_state_on_host_boot_with_instance_not_found_on_driver(
             self, mock_get_domain, mock_hard_reboot):
         instance = objects.Instance(**self.test_instance)
+        share_info = objects.ShareMappingList()
+        network_info = []
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_get_domain.side_effect = exception.InstanceNotFound(
             instance_id='fake')
-        drvr.resume_state_on_host_boot(self.context, instance, network_info=[],
-                                       block_device_info=None)
+        drvr.resume_state_on_host_boot(self.context, instance, network_info,
+                                       share_info, block_device_info=None)
 
         mock_hard_reboot.assert_called_once_with(
             self.context, instance, [], mock.ANY, None
