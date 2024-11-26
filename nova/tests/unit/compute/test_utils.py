@@ -16,8 +16,10 @@
 
 """Tests For miscellaneous util methods used with compute."""
 
+import collections
 import copy
 import datetime
+import socket
 import string
 from unittest import mock
 
@@ -1154,6 +1156,32 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         error = test.TestingException('uh oh')
         self.assertRaises(test.TestingException,
                           self._test_event_reporter_graceful_exit, error)
+
+    @mock.patch('psutil.net_if_addrs')
+    def test_get_machine_ips(self, mock_addrs):
+        fakeaddr = collections.namedtuple('fakeaddr', ['family', 'address'])
+        mock_addrs.return_value = {
+            'eth0': [
+                fakeaddr(family=socket.AF_INET, address='192.0.2.2'),
+                fakeaddr(family=socket.AF_INET6, address='2001:db8::10'),
+                fakeaddr(family=socket.AF_PACKET, address='10:00:00:00:00:10')
+            ],
+            'eth1': [
+                fakeaddr(family=socket.AF_INET, address='192.0.2.130'),
+                fakeaddr(family=socket.AF_INET6,
+                         address='2001:db8::f010%eth1'),
+                fakeaddr(family=socket.AF_PACKET, address='10:00:00:00:00:11')
+            ]
+        }
+        self.assertEqual(
+            [
+                '192.0.2.2',
+                '2001:db8::10',
+                '192.0.2.130',
+                '2001:db8::f010'
+            ],
+            compute_utils.get_machine_ips()
+        )
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
