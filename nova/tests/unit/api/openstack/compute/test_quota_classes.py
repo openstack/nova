@@ -64,12 +64,12 @@ class QuotaClassSetsTestV21(test.TestCase):
         self.assertEqual(-1, quota_set['security_group_rules'])
 
     def test_format_quota_set(self):
-        quota_set = self.controller._format_quota_set('test_class',
+        quota_set = self.controller._format_quota_set('default',
                                                       self.quota_resources,
                                                       self.filtered_quotas)
         qs = quota_set['quota_class_set']
 
-        self.assertEqual(qs['id'], 'test_class')
+        self.assertEqual(qs['id'], 'default')
         for resource, value in self.quota_resources.items():
             self.assertEqual(value, qs[resource])
         if self.filtered_quotas:
@@ -78,9 +78,9 @@ class QuotaClassSetsTestV21(test.TestCase):
         self._check_filtered_extended_quota(qs)
 
     def test_quotas_show(self):
-        res_dict = self.controller.show(self.req, 'test_class')
+        res_dict = self.controller.show(self.req, 'default')
 
-        self.assertEqual(res_dict, self.quota_set('test_class'))
+        self.assertEqual(res_dict, self.quota_set('default'))
 
     def test_quotas_update(self):
         expected_body = {'quota_class_set': self.quota_resources}
@@ -88,7 +88,7 @@ class QuotaClassSetsTestV21(test.TestCase):
         request_quota_resources['server_groups'] = 10
         request_quota_resources['server_group_members'] = 10
         request_body = {'quota_class_set': request_quota_resources}
-        res_dict = self.controller.update(self.req, 'test_class',
+        res_dict = self.controller.update(self.req, 'default',
                                           body=request_body)
 
         self.assertEqual(res_dict, expected_body)
@@ -96,12 +96,12 @@ class QuotaClassSetsTestV21(test.TestCase):
     def test_quotas_update_with_empty_body(self):
         body = {}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req, 'test_class', body=body)
+                          self.req, 'default', body=body)
 
     def test_quotas_update_with_invalid_integer(self):
         body = {'quota_class_set': {'instances': 2 ** 31 + 1}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req, 'test_class', body=body)
+                          self.req, 'default', body=body)
 
     def test_quotas_update_with_long_quota_class_name(self):
         name = 'a' * 256
@@ -112,22 +112,22 @@ class QuotaClassSetsTestV21(test.TestCase):
     def test_quotas_update_with_non_integer(self):
         body = {'quota_class_set': {'instances': "abc"}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req, 'test_class', body=body)
+                          self.req, 'default', body=body)
 
         body = {'quota_class_set': {'instances': 50.5}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req, 'test_class', body=body)
+                          self.req, 'default', body=body)
 
         body = {'quota_class_set': {
                 'instances': u'\u30aa\u30fc\u30d7\u30f3'}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req, 'test_class', body=body)
+                          self.req, 'default', body=body)
 
     def test_quotas_update_with_unsupported_quota_class(self):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'unsupported': 12}}
         self.assertRaises(self.validation_error, self.controller.update,
-                          self.req, 'test_class', body=body)
+                          self.req, 'default', body=body)
 
 
 class QuotaClassSetsTestV250(QuotaClassSetsTestV21):
@@ -140,7 +140,7 @@ class QuotaClassSetsTestV250(QuotaClassSetsTestV21):
                        'injected_file_path_bytes': 255,
                        'server_groups': 10,
                        'server_group_members': 10}
-    filtered_quotas = quota_classes_v21.FILTERED_QUOTAS_2_50
+    filtered_quotas = quota_classes_v21.FILTERED_QUOTAS_v250
 
     def _check_filtered_extended_quota(self, quota_set):
         self.assertEqual(10, quota_set['server_groups'])
@@ -152,7 +152,7 @@ class QuotaClassSetsTestV250(QuotaClassSetsTestV21):
         for resource in self.filtered_quotas:
             body = {'quota_class_set': {resource: 10}}
             self.assertRaises(self.validation_error, self.controller.update,
-                              self.req, 'test_class', body=body)
+                              self.req, 'default', body=body)
 
 
 class QuotaClassSetsTestV257(QuotaClassSetsTestV250):
@@ -160,9 +160,9 @@ class QuotaClassSetsTestV257(QuotaClassSetsTestV250):
 
     def setUp(self):
         super(QuotaClassSetsTestV257, self).setUp()
-        for resource in quota_classes_v21.FILTERED_QUOTAS_2_57:
+        for resource in quota_classes_v21.FILTERED_QUOTAS_v257:
             self.quota_resources.pop(resource, None)
-        self.filtered_quotas.extend(quota_classes_v21.FILTERED_QUOTAS_2_57)
+        self.filtered_quotas.extend(quota_classes_v21.FILTERED_QUOTAS_v257)
 
 
 class NoopQuotaClassesTest(test.NoDBTestCase):
@@ -175,10 +175,10 @@ class NoopQuotaClassesTest(test.NoDBTestCase):
 
     def test_show_v21(self):
         req = fakes.HTTPRequest.blank("")
-        response = self.controller.show(req, "test_class")
+        response = self.controller.show(req, "default")
         expected_response = {
             'quota_class_set': {
-                'id': 'test_class',
+                'id': 'default',
                 'cores': -1,
                 'fixed_ips': -1,
                 'floating_ips': -1,
@@ -217,7 +217,7 @@ class NoopQuotaClassesTest(test.NoDBTestCase):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'unsupported': 12}}
         self.assertRaises(exception.ValidationError, self.controller.update,
-                          req, 'test_class', body=body)
+                          req, 'default', body=body)
 
     @mock.patch.object(objects.Quotas, "update_class")
     def test_update_v21(self, mock_update):
@@ -286,10 +286,10 @@ class UnifiedLimitsQuotaClassesTest(NoopQuotaClassesTest):
     def test_show_v21(self, mock_default):
         mock_default.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("")
-        response = self.controller.show(req, "test_class")
+        response = self.controller.show(req, "default")
         expected_response = {
             'quota_class_set': {
-                'id': 'test_class',
+                'id': 'default',
                 'cores': 2,
                 'fixed_ips': -1,
                 'floating_ips': -1,
@@ -330,7 +330,7 @@ class UnifiedLimitsQuotaClassesTest(NoopQuotaClassesTest):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'unsupported': 12}}
         self.assertRaises(exception.ValidationError, self.controller.update,
-                          req, 'test_class', body=body)
+                          req, 'default', body=body)
 
     @mock.patch.object(placement_limit, "get_legacy_default_limits")
     @mock.patch.object(objects.Quotas, "update_class")

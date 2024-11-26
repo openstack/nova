@@ -10,10 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
 from nova.api.openstack.compute import quota_classes
 from nova.policies import quota_class_sets as policies
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
 
@@ -31,6 +30,8 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
         self.controller = quota_classes.QuotaClassSetsController()
         self.req = fakes.HTTPRequest.blank('')
 
+        self.useFixture(nova_fixtures.NoopQuotaDriverFixture())
+
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to get, update quota
         # class.
@@ -38,27 +39,31 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
-    @mock.patch('nova.objects.Quotas.update_class')
-    def test_update_quota_class_sets_policy(self, mock_update):
+    def test_update_quota_class_sets_policy(self):
         rule_name = policies.POLICY_ROOT % 'update'
-        body = {'quota_class_set':
-                    {'metadata_items': 128,
-                        'ram': 51200, 'floating_ips': -1,
-                        'fixed_ips': -1, 'instances': 10,
-                        'injected_files': 5, 'cores': 20}}
+        body = {
+            'quota_class_set': {
+                'cores': 20,
+                'fixed_ips': -1,
+                'floating_ips': -1,
+                'injected_files': 5,
+                'instances': 10,
+                'metadata_items': 128,
+                'ram': 51200,
+            }
+        }
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.update,
-                                self.req, 'test_class',
+                                self.req, 'default',
                                 body=body)
 
-    @mock.patch('nova.quota.QUOTAS.get_class_quotas')
-    def test_show_quota_class_sets_policy(self, mock_get):
+    def test_show_quota_class_sets_policy(self):
         rule_name = policies.POLICY_ROOT % 'show'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.show,
-                                self.req, 'test_class')
+                                self.req, 'default')
 
 
 class QuotaClassSetsNoLegacyNoScopePolicyTest(QuotaClassSetsPolicyTest):

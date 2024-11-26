@@ -17,7 +17,7 @@ import copy
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.schemas import quota_classes
+from nova.api.openstack.compute.schemas import quota_classes as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -36,21 +36,22 @@ EXTENDED_QUOTAS = ['server_groups', 'server_group_members']
 
 # NOTE(gmann): Network related quotas are filter out in
 # microversion 2.50. Bug#1701211.
-FILTERED_QUOTAS_2_50 = ["fixed_ips", "floating_ips",
+FILTERED_QUOTAS_v250 = ["fixed_ips", "floating_ips",
                         "security_group_rules", "security_groups"]
 
 # Microversion 2.57 removes personality (injected) files from the API.
-FILTERED_QUOTAS_2_57 = list(FILTERED_QUOTAS_2_50)
-FILTERED_QUOTAS_2_57.extend(['injected_files', 'injected_file_content_bytes',
+FILTERED_QUOTAS_v257 = list(FILTERED_QUOTAS_v250)
+FILTERED_QUOTAS_v257.extend(['injected_files', 'injected_file_content_bytes',
                              'injected_file_path_bytes'])
 
 
+@validation.validated
 class QuotaClassSetsController(wsgi.Controller):
 
     supported_quotas = []
 
     def __init__(self):
-        super(QuotaClassSetsController, self).__init__()
+        super().__init__()
         self.supported_quotas = QUOTAS.resources
 
     def _format_quota_set(self, quota_class, quota_set, filtered_quotas=None,
@@ -58,7 +59,7 @@ class QuotaClassSetsController(wsgi.Controller):
         """Convert the quota object to a result dict."""
 
         if quota_class:
-            result = dict(id=str(quota_class))
+            result = {'id': str(quota_class)}
         else:
             result = {}
         original_quotas = copy.deepcopy(self.supported_quotas)
@@ -79,14 +80,17 @@ class QuotaClassSetsController(wsgi.Controller):
 
     def _get_filtered_quotas(self, req):
         if api_version_request.is_supported(req, '2.57'):
-            return FILTERED_QUOTAS_2_57
+            return FILTERED_QUOTAS_v257
         elif api_version_request.is_supported(req, '2.50'):
-            return FILTERED_QUOTAS_2_50
+            return FILTERED_QUOTAS_v250
         else:
             return []
 
     @wsgi.expected_errors(())
-    @validation.query_schema(quota_classes.show_query)
+    @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response, '2.1', '2.49')
+    @validation.response_body_schema(schema.show_response_v250, '2.50', '2.56')  # noqa: E501
+    @validation.response_body_schema(schema.show_response_v257, '2.57')
     def show(self, req, id):
         filtered_quotas = self._get_filtered_quotas(req)
 
@@ -94,23 +98,20 @@ class QuotaClassSetsController(wsgi.Controller):
         if api_version_request.is_supported(req, '2.50'):
             exclude_server_groups = False
 
-        return self._show(
-            req, id, filtered_quotas=filtered_quotas,
-            exclude_server_groups=exclude_server_groups,
-        )
-
-    def _show(self, req, id, filtered_quotas=None,
-              exclude_server_groups=False):
         context = req.environ['nova.context']
         context.can(qcs_policies.POLICY_ROOT % 'show', target={})
         values = QUOTAS.get_class_quotas(context, id)
-        return self._format_quota_set(id, values, filtered_quotas,
-                                      exclude_server_groups)
+        return self._format_quota_set(
+            id, values, filtered_quotas, exclude_server_groups
+        )
 
     @wsgi.expected_errors(400)
-    @validation.schema(quota_classes.update, '2.1', '2.49')
-    @validation.schema(quota_classes.update_v250, '2.50', '2.56')
-    @validation.schema(quota_classes.update_v257, '2.57')
+    @validation.schema(schema.update, '2.1', '2.49')
+    @validation.schema(schema.update_v250, '2.50', '2.56')
+    @validation.schema(schema.update_v257, '2.57')
+    @validation.response_body_schema(schema.update_response, '2.1', '2.49')
+    @validation.response_body_schema(schema.update_response_v250, '2.50', '2.56')  # noqa: E501
+    @validation.response_body_schema(schema.update_response_v257, '2.57')
     def update(self, req, id, body):
         filtered_quotas = self._get_filtered_quotas(req)
 
@@ -118,15 +119,9 @@ class QuotaClassSetsController(wsgi.Controller):
         if api_version_request.is_supported(req, '2.50'):
             exclude_server_groups = False
 
-        return self._update(
-            req, id, body, filtered_quotas=filtered_quotas,
-            exclude_server_groups=exclude_server_groups,
-        )
-
-    def _update(self, req, id, body, filtered_quotas=None,
-                exclude_server_groups=False):
         context = req.environ['nova.context']
         context.can(qcs_policies.POLICY_ROOT % 'update', target={})
+
         try:
             utils.check_string_length(id, 'quota_class_name',
                                       min_length=1, max_length=255)
