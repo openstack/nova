@@ -16,6 +16,7 @@
 import datetime
 
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import routes
@@ -139,8 +140,10 @@ def stub_out_compute_api_snapshot(test):
         # emulate glance rejecting image names which are too long
         if len(name) > 256:
             raise exc.Invalid
-        return dict(id='123', status='ACTIVE', name=name,
-                    properties=extra_properties)
+        return {
+            'id': uuids.snapshot_id, 'status': 'ACTIVE', 'name': name,
+            'properties': extra_properties,
+        }
 
     test.stub_out('nova.compute.api.API.snapshot', snapshot)
 
@@ -154,10 +157,12 @@ class stub_out_compute_api_backup(object):
     def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
         self.extra_props_last_call = extra_properties
-        props = dict(backup_type=backup_type,
-                     rotation=rotation)
+        props = {'backup_type': backup_type, 'rotation': rotation}
         props.update(extra_properties or {})
-        return dict(id='123', status='ACTIVE', name=name, properties=props)
+        return {
+            'id': uuids.backup_id, 'status': 'ACTIVE', 'name': name,
+            'properties': props,
+        }
 
 
 def stub_out_nw_api(test, cls=None, private=None, publics=None):
@@ -244,11 +249,12 @@ class HTTPRequest(os_wsgi.Request):
         if use_admin_context:
             roles.append('admin')
         project_id = kwargs.pop('project_id', FAKE_PROJECT_ID)
+        user_id = kwargs.pop('user_id', FAKE_USER_ID)
         version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
         defaults.update(kwargs)
         out = super(HTTPRequest, cls).blank(*args, **defaults)
         out.environ['nova.context'] = FakeRequestContext(
-            user_id='fake_user',
+            user_id=user_id,
             project_id=project_id,
             is_admin=use_admin_context,
             roles=roles)
@@ -434,9 +440,9 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
                   services=None, trusted_certs=None, hidden=False,
                   compute_id=None):
     if user_id is None:
-        user_id = 'fake_user'
+        user_id = FAKE_USER_ID
     if project_id is None:
-        project_id = 'fake_project'
+        project_id = FAKE_PROJECT_ID
 
     if metadata:
         metadata = [{'key': k, 'value': v} for k, v in metadata.items()]

@@ -238,8 +238,9 @@ create_v20['properties']['server']['properties'][
     'security_groups']['items']['properties']['name'] = (
     parameter_types.name_with_leading_trailing_spaces)
 create_v20['properties']['server']['properties']['user_data'] = {
-    'oneOf': [{'type': 'string', 'format': 'base64', 'maxLength': 65535},
-              {'type': 'null'},
+    'oneOf': [
+        {'type': 'string', 'format': 'base64', 'maxLength': 65535},
+        {'type': 'null'},
     ],
 }
 
@@ -282,45 +283,49 @@ create_v237 = copy.deepcopy(create_v233)
 create_v237['properties']['server']['required'].append('networks')
 create_v237['properties']['server']['properties']['networks'] = {
     'oneOf': [
-        {'type': 'array',
-         'items': {
-             'type': 'object',
-             'properties': {
-                 'fixed_ip': parameter_types.ip_address,
-                 'port': {
-                     'oneOf': [{'type': 'string', 'format': 'uuid'},
-                               {'type': 'null'}]
-                 },
-                 'uuid': {'type': 'string', 'format': 'uuid'},
-             },
-             'additionalProperties': False,
-         },
+        {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'fixed_ip': parameter_types.ip_address,
+                    'port': {
+                        'oneOf': [{'type': 'string', 'format': 'uuid'},
+                                  {'type': 'null'}]
+                    },
+                    'uuid': {'type': 'string', 'format': 'uuid'},
+                },
+                'additionalProperties': False,
+            },
         },
         {'type': 'string', 'enum': ['none', 'auto']},
-    ]}
+    ],
+}
 
 # 2.42 builds on 2.37 and re-introduces the tag field to the list of network
 # objects.
 create_v242 = copy.deepcopy(create_v237)
 create_v242['properties']['server']['properties']['networks'] = {
     'oneOf': [
-        {'type': 'array',
-         'items': {
-             'type': 'object',
-             'properties': {
-                 'fixed_ip': parameter_types.ip_address,
-                 'port': {
-                     'oneOf': [{'type': 'string', 'format': 'uuid'},
-                               {'type': 'null'}]
-                 },
-                 'uuid': {'type': 'string', 'format': 'uuid'},
-                 'tag': parameter_types.tag,
-             },
-             'additionalProperties': False,
-         },
+        {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'fixed_ip': parameter_types.ip_address,
+                    'port': {
+                        'oneOf': [{'type': 'string', 'format': 'uuid'},
+                                  {'type': 'null'}]
+                    },
+                    'uuid': {'type': 'string', 'format': 'uuid'},
+                    'tag': parameter_types.tag,
+                },
+                'additionalProperties': False,
+            },
         },
         {'type': 'string', 'enum': ['none', 'auto']},
-    ]}
+    ],
+}
 create_v242['properties']['server'][
     'properties']['block_device_mapping_v2']['items'][
     'properties']['tag'] = parameter_types.tag
@@ -464,7 +469,6 @@ rebuild_v290['properties']['rebuild']['properties'][
 rebuild_v294 = copy.deepcopy(rebuild_v290)
 rebuild_v294['properties']['rebuild']['properties'][
     'hostname'] = parameter_types.fqdn
-
 
 resize = {
     'type': 'object',
@@ -771,3 +775,458 @@ stop_server_response = {
 trigger_crash_dump_response = {
     'type': 'null',
 }
+
+create_image_response = {
+    'type': 'null',
+}
+
+create_image_response_v245 = {
+    'type': 'object',
+    'properties': {
+        'image_id': {'type': 'string', 'format': 'uuid'},
+    },
+    'required': ['image_id'],
+    'additionalProperties': False,
+}
+
+rebuild_response = {
+    'type': 'object',
+    'properties': {
+        'server': {
+            'type': 'object',
+            'properties': {
+                'accessIPv4': {
+                    'type': 'string',
+                    'oneOf': [
+                        {'format': 'ipv4'},
+                        {'const': ''},
+                    ],
+                },
+                'accessIPv6': {
+                    'type': 'string',
+                    'oneOf': [
+                        {'format': 'ipv6'},
+                        {'const': ''},
+                    ],
+                },
+                'addresses': {
+                    'type': 'object',
+                    'patternProperties': {
+                        '^.+$': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'addr': {
+                                        'type': 'string',
+                                        'oneOf': [
+                                            {'format': 'ipv4'},
+                                            {'format': 'ipv6'},
+                                        ],
+                                    },
+                                    'version': {
+                                        'type': 'number',
+                                        'enum': [4, 6],
+                                    },
+                                },
+                                'required': [
+                                    'addr',
+                                    'version'
+                                ],
+                                'additionalProperties': False,
+                            },
+                        },
+                    },
+                    'additionalProperties': False,
+                },
+                'adminPass': {'type': ['null', 'string']},
+                'created': {'type': 'string', 'format': 'date-time'},
+                'fault': {
+                    'type': 'object',
+                    'properties': {
+                        'code': {'type': 'integer'},
+                        'created': {'type': 'string', 'format': 'date-time'},
+                        'details': {'type': 'string'},
+                        'message': {'type': 'string'},
+                    },
+                    'required': ['code', 'created', 'message'],
+                    'additionalProperties': False,
+                },
+                'flavor': {
+                    'type': 'object',
+                    'properties': {
+                        'id': {
+                            'type': 'string',
+                        },
+                        'links': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'href': {
+                                        'type': 'string',
+                                        'format': 'uri',
+                                    },
+                                    'rel': {
+                                        'type': 'string',
+                                    },
+                                },
+                                'required': [
+                                    'href',
+                                    'rel'
+                                ],
+                                "additionalProperties": False,
+                            },
+                        },
+                    },
+                    'additionalProperties': False,
+                },
+                'hostId': {'type': 'string'},
+                'id': {'type': 'string'},
+                'image': {
+                    'oneOf': [
+                        {
+                            'type': 'string',
+                            'const': '',
+                        },
+                        {
+                            'type': 'object',
+                            'properties': {
+                                'id': {
+                                    'type': 'string'
+                                },
+                                'links': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'object',
+                                        'properties': {
+                                            'href': {
+                                                'type': 'string',
+                                                'format': 'uri',
+                                            },
+                                            'rel': {
+                                                'type': 'string',
+                                            },
+                                        },
+                                        'required': [
+                                            'href',
+                                            'rel'
+                                        ],
+                                        "additionalProperties": False,
+                                    },
+                                },
+                            },
+                            'additionalProperties': False,
+                        },
+                    ],
+                },
+                'links': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'href': {
+                                'type': 'string',
+                                'format': 'uri',
+                            },
+                            'rel': {
+                                'type': 'string',
+                            },
+                        },
+                        'required': [
+                            'href',
+                            'rel'
+                        ],
+                        'additionalProperties': False,
+                    },
+                },
+                'metadata': {
+                    'type': 'object',
+                    'patternProperties': {
+                        '^.+$': {
+                            'type': 'string'
+                        },
+                    },
+                    'additionalProperties': False,
+                },
+                'name': {'type': ['string', 'null']},
+                'progress': {'type': ['null', 'number']},
+                'status': {'type': 'string'},
+                'tenant_id': {'type': 'string', 'format': 'uuid'},
+                'updated': {'type': 'string', 'format': 'date-time'},
+                'user_id': {'type': 'string'},
+                'OS-DCF:diskConfig': {'type': 'string'},
+            },
+            'required': [
+                'accessIPv4',
+                'accessIPv6',
+                'addresses',
+                'created',
+                'flavor',
+                'hostId',
+                'id',
+                'image',
+                'links',
+                'metadata',
+                'name',
+                'progress',
+                'status',
+                'tenant_id',
+                'updated',
+                'user_id',
+                'OS-DCF:diskConfig',
+            ],
+            'additionalProperties': False,
+        },
+    },
+    'required': [
+        'server'
+    ],
+    'additionalProperties': False,
+}
+
+rebuild_response_v29 = copy.deepcopy(rebuild_response)
+rebuild_response_v29['properties']['server']['properties']['locked'] = {
+    'type': 'boolean',
+}
+rebuild_response_v29['properties']['server']['required'].append('locked')
+
+rebuild_response_v219 = copy.deepcopy(rebuild_response_v29)
+rebuild_response_v219['properties']['server']['properties']['description'] = {
+    'type': ['null', 'string'],
+}
+rebuild_response_v219['properties']['server']['required'].append('description')
+
+rebuild_response_v226 = copy.deepcopy(rebuild_response_v219)
+rebuild_response_v226['properties']['server']['properties']['tags'] = {
+    'type': 'array',
+    'items': {
+        'type': 'string',
+    },
+    'maxItems': 50,
+}
+rebuild_response_v226['properties']['server']['required'].append('tags')
+
+# NOTE(stephenfin): We overwrite rather than extend 'flavor', since we now
+# embed the flavor in this version
+rebuild_response_v246 = copy.deepcopy(rebuild_response_v226)
+rebuild_response_v246['properties']['server']['properties']['flavor'] = {
+    'type': 'object',
+    'properties': {
+        'vcpus': {
+            'type': 'integer',
+        },
+        'ram': {
+            'type': 'integer',
+        },
+        'disk': {
+            'type': 'integer',
+        },
+        'ephemeral': {
+            'type': 'integer',
+        },
+        'swap': {
+            'type': 'integer',
+        },
+        'original_name': {
+            'type': 'string',
+        },
+        'extra_specs': {
+            'type': 'object',
+            'patternProperties': {
+                '^.+$': {
+                    'type': 'string'
+                },
+            },
+            'additionalProperties': False,
+        },
+    },
+    'required': ['vcpus', 'ram', 'disk', 'ephemeral', 'swap', 'original_name'],
+    'additionalProperties': False,
+}
+
+rebuild_response_v254 = copy.deepcopy(rebuild_response_v246)
+rebuild_response_v254['properties']['server']['properties']['key_name'] = {
+    'type': ['null', 'string'],
+}
+rebuild_response_v254['properties']['server']['required'].append('key_name')
+
+rebuild_response_v257 = copy.deepcopy(rebuild_response_v254)
+rebuild_response_v257['properties']['server']['properties']['user_data'] = {
+    'oneOf': [
+        {'type': 'string', 'format': 'base64', 'maxLength': 65535},
+        {'type': 'null'},
+    ],
+}
+rebuild_response_v257['properties']['server']['required'].append('user_data')
+
+rebuild_response_v263 = copy.deepcopy(rebuild_response_v257)
+rebuild_response_v263['properties']['server']['properties'].update(
+    {
+        'trusted_image_certificates': {
+            'type': ['array', 'null'],
+            'items': {
+                'type': 'string',
+            },
+        },
+    },
+)
+rebuild_response_v263['properties']['server']['required'].append(
+    'trusted_image_certificates'
+)
+
+rebuild_response_v271 = copy.deepcopy(rebuild_response_v263)
+rebuild_response_v271['properties']['server']['properties'].update(
+    {
+        'server_groups': {
+            'type': 'array',
+            'items': {
+                'type': 'string',
+                'format': 'uuid',
+            },
+            'maxLength': 1,
+        },
+    },
+)
+rebuild_response_v271['properties']['server']['required'].append(
+    'server_groups'
+)
+
+rebuild_response_v273 = copy.deepcopy(rebuild_response_v271)
+rebuild_response_v273['properties']['server']['properties'].update(
+    {
+        'locked_reason': {
+            'type': ['null', 'string'],
+        },
+    },
+)
+rebuild_response_v273['properties']['server']['required'].append(
+    'locked_reason'
+)
+
+rebuild_response_v275 = copy.deepcopy(rebuild_response_v273)
+rebuild_response_v275['properties']['server']['properties'].update(
+    {
+        'config_drive': {
+            # TODO(stephenfin): Our tests return null but this shouldn't happen
+            # in practice, apparently?
+            'type': ['string', 'boolean', 'null'],
+        },
+        'OS-EXT-AZ:availability_zone': {
+            'type': 'string',
+        },
+        'OS-EXT-SRV-ATTR:host': {
+            'type': ['string', 'null'],
+        },
+        'OS-EXT-SRV-ATTR:hypervisor_hostname': {
+            'type': ['string', 'null'],
+        },
+        'OS-EXT-SRV-ATTR:instance_name': {
+            'type': 'string',
+        },
+        'OS-EXT-STS:power_state': {
+            'type': 'integer',
+            'enum': [0, 1, 3, 4, 6, 7],
+        },
+        'OS-EXT-STS:task_state': {
+            'type': ['null', 'string'],
+        },
+        'OS-EXT-STS:vm_state': {
+            'type': 'string',
+        },
+        'OS-EXT-SRV-ATTR:hostname': {
+            'type': 'string',
+        },
+        'OS-EXT-SRV-ATTR:reservation_id': {
+            'type': ['string', 'null'],
+        },
+        'OS-EXT-SRV-ATTR:launch_index': {
+            'type': 'integer',
+        },
+        'OS-EXT-SRV-ATTR:kernel_id': {
+            'type': ['string', 'null'],
+        },
+        'OS-EXT-SRV-ATTR:ramdisk_id': {
+            'type': ['string', 'null'],
+        },
+        'OS-EXT-SRV-ATTR:root_device_name': {
+            'type': ['string', 'null'],
+        },
+        'os-extended-volumes:volumes_attached': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'id': {
+                        'type': 'string',
+                    },
+                    'delete_on_termination': {
+                        'type': 'boolean',
+                        'default': False,
+                    },
+                },
+                'required': ['id', 'delete_on_termination'],
+                'additionalProperties': False,
+            },
+        },
+        'OS-SRV-USG:launched_at': {
+            'oneOf': [
+                {'type': 'null'},
+                {'type': 'string', 'format': 'date-time'},
+            ],
+        },
+        'OS-SRV-USG:terminated_at': {
+            'oneOf': [
+                {'type': 'null'},
+                {'type': 'string', 'format': 'date-time'},
+            ],
+        },
+        'security_groups': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'name': {
+                        'type': 'string',
+                    },
+                },
+                'required': ['name'],
+                'additionalProperties': False,
+            },
+        },
+        'host_status': {
+            'type': 'string',
+        },
+    },
+)
+rebuild_response_v275['properties']['server']['required'].extend([
+    'config_drive',
+    'OS-EXT-AZ:availability_zone',
+    'OS-EXT-STS:power_state',
+    'OS-EXT-STS:task_state',
+    'OS-EXT-STS:vm_state',
+    'os-extended-volumes:volumes_attached',
+    'OS-SRV-USG:launched_at',
+    'OS-SRV-USG:terminated_at',
+])
+rebuild_response_v275['properties']['server']['properties']['addresses'][
+    'patternProperties'
+]['^.+$']['items']['properties'].update({
+    'OS-EXT-IPS-MAC:mac_addr': {'type': 'string', 'format': 'mac-address'},
+    'OS-EXT-IPS:type': {'type': 'string', 'enum': ['fixed', 'floating']},
+})
+rebuild_response_v275['properties']['server']['properties']['addresses'][
+    'patternProperties'
+]['^.+$']['items']['required'].extend([
+    'OS-EXT-IPS-MAC:mac_addr', 'OS-EXT-IPS:type'
+])
+
+rebuild_response_v296 = copy.deepcopy(rebuild_response_v275)
+rebuild_response_v296['properties']['server']['properties'].update({
+    'pinned_availability_zone': {
+        'type': ['null', 'string'],
+    },
+})
+rebuild_response_v296['properties']['server']['required'].append(
+    'pinned_availability_zone'
+)

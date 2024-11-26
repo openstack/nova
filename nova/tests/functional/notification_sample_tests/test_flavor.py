@@ -75,7 +75,7 @@ class TestFlavorNotificationSample(
 
         body = {
             "addTenantAccess": {
-                "tenant": "fake_tenant"
+                "tenant": "6f70656e737461636b20342065766572"
             }
         }
         self.admin_api.api_post(

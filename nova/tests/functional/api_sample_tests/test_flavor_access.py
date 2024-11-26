@@ -11,7 +11,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
@@ -21,7 +20,7 @@ class FlavorAccessTestsBase(api_sample_base.ApiSampleTestBaseV21):
 
     def _add_tenant(self):
         subs = {
-            'tenant_id': 'fake_tenant',
+            'tenant_id': self.api.project_id,
             'flavor_id': '10',
         }
         response = self._do_post('flavors/10/action',
@@ -49,7 +48,7 @@ class FlavorAccessSampleJsonTests(FlavorAccessTestsBase):
         response = self._do_get('flavors/%s/os-flavor-access' % flavor_id)
         subs = {
             'flavor_id': flavor_id,
-            'tenant_id': 'fake_tenant',
+            'tenant_id': self.api.project_id,
         }
         self._verify_response('flavor-access-list-resp', subs, response, 200)
 
@@ -61,7 +60,7 @@ class FlavorAccessSampleJsonTests(FlavorAccessTestsBase):
         self._create_flavor()
         self._add_tenant()
         subs = {
-            'tenant_id': 'fake_tenant',
+            'tenant_id': self.api.project_id,
         }
         response = self._do_post('flavors/10/action',
                                  "flavor-access-remove-tenant-req",
@@ -88,7 +87,7 @@ class FlavorAccessV27SampleJsonTests(FlavorAccessTestsBase):
 
         subs = {
             'flavor_id': '10',
-            'tenant_id': 'fake_tenant'
+            'tenant_id': self.api.project_id
         }
         # Version 2.7+ will return HTTPConflict (409)
         # if the flavor is public

@@ -20,6 +20,7 @@ from oslo_utils import timeutils
 from nova.api.openstack.compute import migrate_server
 from nova.api.openstack.compute import servers
 from nova.compute import api as compute
+from nova.compute import power_state
 from nova.compute import vm_states
 import nova.conf
 from nova import exception
@@ -63,14 +64,18 @@ class ServersPolicyTest(base.BasePolicyTest):
         self.controller._view_builder._add_security_grps = mock.MagicMock()
         self.controller._view_builder._get_metadata = mock.MagicMock()
         self.controller._view_builder._get_addresses = mock.MagicMock()
-        self.controller._view_builder._get_host_id = mock.MagicMock()
+        self.controller._view_builder._get_host_id = mock.MagicMock(
+            return_value=''
+        )
         self.controller._view_builder._get_fault = mock.MagicMock()
 
         self.instance = fake_instance.fake_instance_obj(
-                self.project_member_context,
-                id=1, uuid=uuids.fake_id, project_id=self.project_id,
-                user_id=user_id, vm_state=vm_states.ACTIVE,
-                system_metadata={}, expected_attrs=['system_metadata'])
+            self.project_member_context,
+            id=1, uuid=uuids.fake_id, project_id=self.project_id,
+            user_id=user_id, vm_state=vm_states.ACTIVE,
+            system_metadata={}, expected_attrs=['system_metadata'],
+            task_state=None, power_state=power_state.SHUTDOWN,
+            hostname='foo', launch_index=0)
 
         self.mock_flavor = self.useFixture(
             fixtures.MockPatch('nova.compute.flavors.get_flavor_by_flavor_id'
@@ -912,7 +917,8 @@ class ServersPolicyTest(base.BasePolicyTest):
                 self.assertNotIn(attr, resp['server'])
 
     @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
-    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                return_value=fields.HostStatus.UP)
     @mock.patch('nova.compute.api.API.rebuild')
     def test_server_rebuild_with_extended_attr_policy(self, mock_rebuild,
         mock_get, mock_bdm):
@@ -1011,7 +1017,8 @@ class ServersPolicyTest(base.BasePolicyTest):
             self.assertNotIn('host_status', resp['server'])
 
     @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
-    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                return_value=fields.HostStatus.UP)
     @mock.patch('nova.compute.api.API.rebuild')
     def test_server_rebuild_with_host_status_policy(self, mock_rebuild,
         mock_status, mock_bdm):

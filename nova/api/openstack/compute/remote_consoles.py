@@ -15,7 +15,7 @@
 import webob
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import remote_consoles
+from nova.api.openstack.compute.schemas import remote_consoles as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -40,7 +40,8 @@ class RemoteConsolesController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getVNCConsole')
-    @validation.schema(remote_consoles.get_vnc_console)
+    @validation.schema(schema.get_vnc_console)
+    @validation.response_body_schema(schema.get_vnc_console_response)
     def get_vnc_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
@@ -71,7 +72,8 @@ class RemoteConsolesController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getSPICEConsole')
-    @validation.schema(remote_consoles.get_spice_console)
+    @validation.schema(schema.get_spice_console)
+    @validation.response_body_schema(schema.get_spice_console_response)
     def get_spice_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
@@ -100,7 +102,7 @@ class RemoteConsolesController(wsgi.Controller):
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getRDPConsole')
     @wsgi.removed('29.0.0', _rdp_console_removal_reason)
-    @validation.schema(remote_consoles.get_rdp_console)
+    @validation.schema(schema.get_rdp_console)
     def get_rdp_console(self, req, id, body):
         """RDP console was available only for HyperV driver which has been
         removed from Nova in 29.0.0 (Caracal) release.
@@ -110,7 +112,8 @@ class RemoteConsolesController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getSerialConsole')
-    @validation.schema(remote_consoles.get_serial_console)
+    @validation.schema(schema.get_serial_console)
+    @validation.response_body_schema(schema.get_serial_console_response)
     def get_serial_console(self, req, id, body):
         """Get connection to a serial console."""
         context = req.environ['nova.context']
@@ -139,8 +142,8 @@ class RemoteConsolesController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.6")
     @wsgi.expected_errors((400, 404, 409, 501))
-    @validation.schema(remote_consoles.create_v26, "2.6", "2.7")
-    @validation.schema(remote_consoles.create_v28, "2.8")
+    @validation.schema(schema.create_v26, "2.6", "2.7")
+    @validation.schema(schema.create_v28, "2.8")
     def create(self, req, server_id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)

@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 add_tenant_access = {
     'type': 'object',
     'properties': {
@@ -30,7 +32,6 @@ add_tenant_access = {
     'required': ['addTenantAccess'],
     'additionalProperties': False,
 }
-
 
 remove_tenant_access = {
     'type': 'object',
@@ -57,3 +58,27 @@ index_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+_common_response = {
+    'type': 'object',
+    'properties': {
+        'flavor_access': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'flavor_id': {'type': 'string'},
+                    'tenant_id': {'type': 'string', 'format': 'uuid'},
+                },
+                'required': ['flavor_id', 'tenant_id'],
+                'additionalProperties': True,
+            },
+        },
+    },
+    'required': ['flavor_access'],
+    'additionalProperties': True,
+}
+
+add_tenant_access_response = copy.deepcopy(_common_response)
+
+remove_tenant_access_response = copy.deepcopy(_common_response)

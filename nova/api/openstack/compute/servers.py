@@ -1163,6 +1163,29 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema.rebuild_v263, '2.63', '2.89')
     @validation.schema(schema.rebuild_v290, '2.90', '2.93')
     @validation.schema(schema.rebuild_v294, '2.94')
+    @validation.response_body_schema(schema.rebuild_response, '2.0', '2.8')
+    @validation.response_body_schema(
+        schema.rebuild_response_v29, '2.9', '2.18')
+    @validation.response_body_schema(
+        schema.rebuild_response_v219, '2.19', '2.25')
+    @validation.response_body_schema(
+        schema.rebuild_response_v226, '2.26', '2.45')
+    @validation.response_body_schema(
+        schema.rebuild_response_v246, '2.46', '2.53')
+    @validation.response_body_schema(
+        schema.rebuild_response_v254, '2.54', '2.56')
+    @validation.response_body_schema(
+        schema.rebuild_response_v257, '2.57', '2.62')
+    @validation.response_body_schema(
+        schema.rebuild_response_v263, '2.63', '2.70')
+    @validation.response_body_schema(
+        schema.rebuild_response_v271, '2.71', '2.72')
+    @validation.response_body_schema(
+        schema.rebuild_response_v273, '2.73', '2.74')
+    @validation.response_body_schema(
+        schema.rebuild_response_v275, '2.75', '2.95')
+    @validation.response_body_schema(
+        schema.rebuild_response_v296, '2.96')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
@@ -1333,6 +1356,9 @@ class ServersController(wsgi.Controller):
     @wsgi.action('createImage')
     @validation.schema(schema.create_image, '2.0', '2.0')
     @validation.schema(schema.create_image, '2.1')
+    @validation.response_body_schema(
+        schema.create_image_response, '2.0', '2.44')
+    @validation.response_body_schema(schema.create_image_response_v245, '2.45')
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']

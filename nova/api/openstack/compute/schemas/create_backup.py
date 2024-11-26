@@ -41,5 +41,19 @@ create_backup = {
 
 create_backup_v20 = copy.deepcopy(create_backup)
 create_backup_v20['properties'][
-    'createBackup']['properties']['name'] = (parameter_types.
-        name_with_leading_trailing_spaces)
+    'createBackup']['properties']['name'] = (
+        parameter_types.name_with_leading_trailing_spaces)
+
+
+create_backup_response = {
+    'type': 'null',
+}
+
+create_backup_response_v245 = {
+    'type': 'object',
+    'properties': {
+        'image_id': {'type': 'string', 'format': 'uuid'},
+    },
+    'required': ['image_id'],
+    'additionalProperties': False,
+}
