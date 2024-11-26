@@ -112,6 +112,16 @@ class DiskMetadata(DeviceMetadata):
 
 
 @base.NovaObjectRegistry.register
+class ShareMetadata(DeviceMetadata):
+    VERSION = '1.0'
+
+    fields = {
+        'share_id': fields.StringField(nullable=True),
+        'tag': fields.StringField(nullable=True),
+    }
+
+
+@base.NovaObjectRegistry.register
 class InstanceDeviceMetadata(base.NovaObject):
     VERSION = '1.0'
     fields = {

@@ -198,15 +198,21 @@ def fake_metadata_objects():
         mac='00:00:00:00:00:00',
         tags=['foo']
     )
+    share_obj = metadata_obj.ShareMetadata(
+        share_id='ca3c176e-fd5a-438b-b595-e18a358f6909',
+        tag='my_share_tag'
+    )
     mdlist = metadata_obj.InstanceDeviceMetadata(
         instance_uuid='b65cee2f-8c69-4aeb-be2f-f79742548fc2',
         devices=[nic_obj, ide_disk_obj, scsi_disk_obj, usb_disk_obj,
                  fake_device_obj, device_with_fake_bus_obj, nic_vlans_obj,
-                 nic_vf_trusted_obj])
+                 nic_vf_trusted_obj, share_obj])
     return mdlist
 
 
-def fake_metadata_dicts(include_vlan=False, include_vf_trusted=False):
+def fake_metadata_dicts(
+    include_vlan=False, include_vf_trusted=False, include_shares=False
+):
     nic_meta = {
         'type': 'nic',
         'bus': 'pci',
@@ -236,6 +242,13 @@ def fake_metadata_dicts(include_vlan=False, include_vf_trusted=False):
         'path': '/dev/sda',
         'tags': ['baz'],
     }
+    share_meta = {
+        'type': 'share',
+        'bus': 'none',
+        'address': 'none',
+        'share_id': 'ca3c176e-fd5a-438b-b595-e18a358f6909',
+        'tag': 'my_share_tag',
+    }
 
     scsi_disk_meta = copy.copy(ide_disk_meta)
     scsi_disk_meta['bus'] = 'scsi'
@@ -254,6 +267,8 @@ def fake_metadata_dicts(include_vlan=False, include_vf_trusted=False):
         nic_meta['vf_trusted'] = False
         vlan_nic_meta['vf_trusted'] = False
         vf_trusted_nic_meta['vf_trusted'] = True
+    if include_shares:
+        dicts.append(share_meta)
     return dicts
 
 
@@ -512,6 +527,11 @@ class MetadataTestCase(test.TestCase):
             'openstack/2020-10-14/vendor_data.json',
             'openstack/2020-10-14/network_data.json',
             'openstack/2020-10-14/vendor_data2.json',
+            'openstack/2025-04-04/meta_data.json',
+            'openstack/2025-04-04/user_data',
+            'openstack/2025-04-04/vendor_data.json',
+            'openstack/2025-04-04/network_data.json',
+            'openstack/2025-04-04/vendor_data2.json',
             'openstack/latest/meta_data.json',
             'openstack/latest/user_data',
             'openstack/latest/vendor_data.json',
@@ -600,6 +620,10 @@ class MetadataTestCase(test.TestCase):
                 True, expose_trusted)
         if md._check_os_version(base.VICTORIA, os_version):
             expected_metadata['dedicated_cpus'] = []
+        if md._check_os_version(base.EPOXY, os_version):
+            expose_shares = md._check_os_version(base.VICTORIA, os_version)
+            expected_metadata['devices'] = fake_metadata_dicts(
+                True, True, expose_shares)
         md._metadata_as_json(os_version, 'non useless path parameter')
         self.assertEqual(md.md_mimetype, base.MIME_TYPE_APPLICATION_JSON)
         mock_json_dump_as_bytes.assert_called_once_with(expected_metadata)
@@ -673,7 +697,8 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdinst = fake_InstanceMetadata(self, inst)
         mdjson = mdinst.lookup("/openstack/latest/meta_data.json")
         mddict = jsonutils.loads(mdjson)
-        self.assertEqual(fake_metadata_dicts(True, True), mddict['devices'])
+        self.assertEqual(
+            fake_metadata_dicts(True, True, True), mddict["devices"])
 
     def test_top_level_listing(self):
         # request for /openstack/<version>/ should show metadata.json

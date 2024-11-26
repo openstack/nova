@@ -2332,6 +2332,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 <alias name='net0'/>
                 <address type='ccw' cssid='0xfe' ssid='0x0' devno='0x0001'/>
             </interface>
+            <filesystem type="mount" accessmode='passthrough'>
+              <driver type='virtiofs'/>
+              <source dir="/mnt/nfsmount"/>
+              <target dir="my_share_tag"/>
+            </filesystem>
             <hostdev mode="subsystem" type="pci" managed="yes">
                 <source>
                     <address bus="0x06" domain="0x0000" function="0x1"
@@ -2428,11 +2433,28 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         pci_utils.get_mac_by_pci_address.side_effect = None
         pci_utils.get_mac_by_pci_address.return_value = 'da:d1:f2:91:95:c1'
+
+        fake_share_mapping = {
+            'created_at': None,
+            'updated_at': None,
+            'id': 1,
+            'uuid': uuids.share_mapping,
+            'instance_uuid': uuids.instance,
+            'share_id': '33714a70-38d5-40d6-88e4-a382ae1c6dfe',
+            'status': 'inactive',
+            'tag': 'my_share_tag',
+            'export_location': '192.168.122.152:/manila/share',
+            'share_proto': 'NFS',
+            }
+
         with test.nested(
             mock.patch('nova.objects.VirtualInterfaceList'
                        '.get_by_instance_uuid', return_value=vifs),
             mock.patch('nova.objects.BlockDeviceMappingList'
                        '.get_by_instance_uuid', return_value=bdms),
+            mock.patch(
+                'nova.db.main.api.share_mapping_get_by_instance_uuid',
+                return_value=[fake_share_mapping]),
             mock.patch('nova.virt.libvirt.host.Host.get_guest',
                        return_value=guest),
             mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc',
@@ -2441,7 +2463,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             metadata_obj = drvr._build_device_metadata(self.context,
                                                        instance_ref)
             metadata = metadata_obj.devices
-            self.assertEqual(11, len(metadata))
+            self.assertEqual(12, len(metadata))
             self.assertIsInstance(metadata[0],
                                   objects.DiskMetadata)
             self.assertIsInstance(metadata[0].bus,
@@ -2504,10 +2526,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(['mytag3'], metadata[9].tags)
             self.assertFalse(metadata[9].vf_trusted)
             self.assertIsInstance(metadata[10],
+                                  objects.ShareMetadata)
+            self.assertEqual(
+                '33714a70-38d5-40d6-88e4-a382ae1c6dfe', metadata[10].share_id)
+            self.assertEqual(
+                'my_share_tag', metadata[10].tag)
+            self.assertIsInstance(metadata[11],
                                   objects.NetworkInterfaceMetadata)
-            self.assertEqual(['pf_tag'], metadata[10].tags)
-            self.assertEqual('da:d1:f2:91:95:c1', metadata[10].mac)
-            self.assertEqual('0000:06:00.1', metadata[10].bus.address)
+            self.assertEqual(['pf_tag'], metadata[11].tags)
+            self.assertEqual('da:d1:f2:91:95:c1', metadata[11].mac)
+            self.assertEqual('0000:06:00.1', metadata[11].bus.address)
 
     @mock.patch.object(host.Host, 'get_connection')
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
@@ -12696,12 +12724,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 'instance', data, block_device_info=bdi))
         self.assertEqual(0, mock_get_instance_disk_info.call_count)
 
+    @mock.patch('nova.objects.instance.Instance.save',
+                return_value=None)
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._build_device_metadata',
+                return_value=None)
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
     @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
-    def test_live_migration_update_graphics_xml(self, mock_xml,
-                                                      mock_migrateToURI3,
-                                                      mock_min_version):
+    def test_live_migration_update_graphics_xml(
+        self, mock_xml, mock_migrateToURI3, mock_min_version, mock_metadata,
+        mock_save
+    ):
         self.compute = manager.ComputeManager()
         instance_ref = objects.Instance(**self.test_instance)
         target_connection = '127.0.0.2'
@@ -17593,6 +17626,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.context, instance, [], mock.ANY, None
         )
 
+    @mock.patch('nova.objects.instance.Instance.save',
+                return_value=None)
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._build_device_metadata',
+                return_value=None)
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_guest_with_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
@@ -17603,7 +17640,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 '_get_all_assigned_mediated_devices')
     def test_hard_reboot(self, mock_get_mdev, mock_destroy, mock_get_disk_info,
                          mock_get_guest_xml, mock_create_guest_with_network,
-                         mock_get_info):
+                         mock_get_info, mock_metadata, mock_save):
         self.context.auth_token = True  # any non-None value will suffice
         instance = objects.Instance(**self.test_instance)
         network_info = _fake_network_info(self)
@@ -17674,6 +17711,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.context, dummyxml, instance, network_info,
                 block_device_info, vifs_already_plugged=True,
                 external_events=[])
+        mock_metadata.assert_called_once_with(self.context, instance)
 
     @mock.patch('nova.objects.instance.Instance.save',
                 return_value=None)
@@ -17778,6 +17816,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.context, dummyxml, instance, network_info, block_device_info,
             vifs_already_plugged=True,
             external_events=[])
+        mock_metadata.assert_called_once_with(self.context, instance)
 
     def _mount_or_umount_share(self, func, side_effect=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -17835,6 +17874,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self._mount_or_umount_share(
             'umount_share', processutils.ProcessExecutionError)
 
+    @mock.patch('nova.objects.instance.Instance.save',
+                return_value=None)
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._build_device_metadata',
+                return_value=None)
     @mock.patch('oslo_utils.fileutils.ensure_tree', new=mock.Mock())
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_guest_with_network')
@@ -17844,7 +17887,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         'nova.virt.libvirt.LibvirtDriver._get_all_assigned_mediated_devices',
         new=mock.Mock(return_value={}))
     def test_hard_reboot_wait_for_plug(
-        self, mock_get_guest_xml, mock_create_guest_with_network, mock_get_info
+        self, mock_get_guest_xml, mock_create_guest_with_network,
+        mock_get_info, mock_metadata, mock_save
     ):
         self.flags(
             group="workarounds",
@@ -17876,6 +17920,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ]
         )
 
+    @mock.patch('nova.objects.instance.Instance.save',
+                return_value=None)
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._build_device_metadata',
+                return_value=None)
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_guest_with_network')
@@ -17894,7 +17942,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_get_guest_config, mock_get_instance_path,
             mock_get_instance_disk_info, mock_create_images_and_backing,
             mock_create_domand_and_network,
-            mock_looping_call, mock_ensure_tree):
+            mock_looping_call, mock_ensure_tree, mock_metadata, mock_save):
         """For a hard reboot, we shouldn't need an additional call to glance
         to get the image metadata.
 
@@ -28161,6 +28209,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             [mock.call(device1), mock.call(device2)],
             drvr._host.device_start.mock_calls)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
+    @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(
         libvirt_driver.LibvirtDriver, '_get_all_assigned_mediated_devices',
         new=mock.Mock(return_value={}))
@@ -28179,7 +28229,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch(
         'oslo_service.loopingcall.FixedIntervalLoopingCall', new=mock.Mock())
     def _test_hard_reboot_allocate_missing_mdevs(
-            self, mock_get_xml, mock_image_meta, mock_allocate_mdevs):
+            self, mock_get_xml, mock_image_meta, mock_allocate_mdevs,
+            mock_db, mock_build_metadata):
         mock_compute = mock.Mock()
         mock_compute.reportclient.get_allocations_for_consumer.return_value = (
             mock.sentinel.allocations)
@@ -28193,6 +28244,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             flavor=objects.Flavor(extra_specs={'resources:VGPU': 1}))
 
         share_info = objects.ShareMappingList()
+        mock_build_metadata.return_value = objects.InstanceDeviceMetadata()
         drvr._hard_reboot(
             ctxt, instance, mock.sentinel.network_info, share_info
         )

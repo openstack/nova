@@ -4208,6 +4208,10 @@ class LibvirtDriver(driver.ComputeDriver):
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_reboot)
         timer.start(interval=0.5).wait()
 
+        # Rebuild device_metadata to get shares
+        instance.device_metadata = self._build_device_metadata(
+            context, instance)
+
     def pause(self, instance):
         """Pause VM instance."""
         self._host.get_guest(instance).pause()
@@ -12750,6 +12754,25 @@ class LibvirtDriver(driver.ComputeDriver):
             device.bus = bus
         return device
 
+    def _build_share_metadata(self, dev, shares):
+        """Builds a metadata object for a share
+
+        :param dev: The vconfig.LibvirtConfigGuestFilesys to build
+         metadata for.
+        :param shares: The list of ShareMapping objects.
+        :return: A ShareMetadata object, or None.
+        """
+        device = objects.ShareMetadata()
+
+        for share in shares:
+            if dev.driver_type == 'virtiofs' and share.tag == dev.target_dir:
+                device.share_id = share.share_id
+                device.tag = share.tag
+                return device
+        LOG.warning('Device %s of type filesystem found but it is not '
+                    'linked to any share.', dev)
+        return None
+
     def _build_hostdev_metadata(self, dev, vifs_to_expose, vlans_by_mac):
         """Builds a metadata object for a hostdev. This can only be a PF, so we
         don't need trusted_by_mac like in _build_interface_metadata because
@@ -12808,6 +12831,10 @@ class LibvirtDriver(driver.ComputeDriver):
             context, instance.uuid)
         tagged_bdms = {_get_device_name(bdm): bdm for bdm in bdms if bdm.tag}
 
+        shares = objects.ShareMappingList.get_by_instance_uuid(
+            context, instance.uuid
+        )
+
         devices = []
         guest = self._host.get_guest(instance)
         xml = guest.get_xml_desc()
@@ -12826,6 +12853,8 @@ class LibvirtDriver(driver.ComputeDriver):
             if isinstance(dev, vconfig.LibvirtConfigGuestHostdevPCI):
                 device = self._build_hostdev_metadata(dev, vifs_to_expose,
                                                       vlans_by_mac)
+            if isinstance(dev, vconfig.LibvirtConfigGuestFilesys):
+                device = self._build_share_metadata(dev, shares)
             if device:
                 devices.append(device)
         if devices:
