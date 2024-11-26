@@ -27,6 +27,7 @@ from nova.objects import fields
 from nova.policies import migrations as migrations_policies
 
 
+@validation.validated
 class MigrationsController(wsgi.Controller):
     """Controller for accessing migrations in OpenStack API."""
 
@@ -179,11 +180,14 @@ class MigrationsController(wsgi.Controller):
 
     @wsgi.expected_errors((), "2.1", "2.58")
     @wsgi.expected_errors(400, "2.59")
-    @validation.query_schema(schema.list_query_schema_v20, "2.0", "2.22")
-    @validation.query_schema(schema.list_query_schema_v20, "2.23", "2.58")
-    @validation.query_schema(schema.list_query_params_v259, "2.59", "2.65")
-    @validation.query_schema(schema.list_query_params_v266, "2.66", "2.79")
-    @validation.query_schema(schema.list_query_params_v280, "2.80")
+    @validation.query_schema(schema.index_query_v20, "2.0", "2.58")
+    @validation.query_schema(schema.index_query_v259, "2.59", "2.65")
+    @validation.query_schema(schema.index_query_v266, "2.66", "2.79")
+    @validation.query_schema(schema.index_query_v280, "2.80")
+    @validation.response_body_schema(schema.index_response_v20, "2.0", "2.22")
+    @validation.response_body_schema(schema.index_response_v223, "2.23", "2.58")  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v259, "2.59", "2.79")  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v280, "2.80")
     def index(self, req):
         """Return all migrations using the query parameters as filters."""
         add_link = False

@@ -4806,7 +4806,8 @@ migrate_dest_host:
   type: string
 migrate_dest_node:
   description: |
-    The target node for a migration.
+    The target node for a migration. This will be ``null`` if pre-migration
+    checks fail due to e.g. insufficient resources.
   in: body
   required: true
   type: string
@@ -4854,7 +4855,8 @@ migrate_source_compute:
   type: string
 migrate_source_node:
   description: |
-    The source node for a migration.
+    The source node for a migration. This will be ``null`` if pre-migration
+    checks fail due to e.g. insufficient resources.
   in: body
   required: true
   type: string
