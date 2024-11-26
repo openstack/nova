@@ -92,8 +92,8 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
                 'deleted': False,
                 'uuid': uuids.migration1,
                 'cross_cell_move': False,
-                'user_id': None,
-                'project_id': None
+                'user_id': uuids.user_id,
+                'project_id': uuids.project_id,
             },
         ]
 
@@ -140,13 +140,28 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
             rule, self.controller.index, self.req,
             self.instance.uuid)
 
-    @mock.patch('nova.api.openstack.compute.server_migrations.output')
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
-    def test_show_server_migrations_policy(self, mock_show, mock_output):
+    def test_show_server_migrations_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'show'
-        mock_show.return_value = objects.Migration(
+        mock_get.return_value = objects.Migration(
+            created_at=datetime.datetime(2024, 12, 21, 12, 21),
+            dest_compute='foo',
+            dest_host='foo',
+            dest_node='foo',
+            disk_processed=1,
+            disk_remaining=99,
+            disk_total=100,
+            id=123,
+            instance_uuid=uuids.server_id,
+            memory_processed=1,
+            memory_remaining=99,
+            memory_total=100,
             migration_type='live-migration',
+            source_compute='bar',
+            source_node='bar',
             status='running',
+            updated_at=datetime.datetime(2024, 12, 21, 12, 21),
+            uuid=uuids.migration_id,
         )
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.show,
