@@ -649,6 +649,8 @@ def add_to_instance(context, instance, security_group_name):
         except n_exc.NeutronClientException as e:
             if e.status_code == 400:
                 raise exception.SecurityGroupCannotBeApplied(str(e))
+            elif e.status_code == 409:
+                raise exception.SecurityGroupConnectionStateConflict(str(e))
             else:
                 raise e
         except Exception:
