@@ -69,12 +69,12 @@ class Bug1995153RegressionTest(
 
     def test_socket_policy_bug_1995153(self):
         """Previously, the numa_usage_from_instance_numa() method in
-        hardware.py saved the host NUMAToplogy object with NUMACells that have
+        hardware.py saved the host NUMATopology object with NUMACells that have
         no `socket` set. This was an omission in the original implementation of
         the `socket` PCI NUMA affinity policy. The consequence was that any
         code path that called into numa_usage_from_instance_numa() would
         clobber the host NUMA topology in the database with a socket-less
-        version. Booting an instance with NUMA toplogy would do that, for
+        version. Booting an instance with NUMA topology would do that, for
         example. If then a second instance was booted with the `socket` PCI
         NUMA affinity policy, it would read the socket-less host NUMATopology
         from the database, and error out with a NotImplementedError. This was

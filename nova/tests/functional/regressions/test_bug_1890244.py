@@ -26,7 +26,7 @@ class IgnoreDeletedServerGroupsTest(
     """Regression test for bug 1890244
 
     If instance are created as member of server groups it
-    should be possibel to evacuate them if the server groups are
+    should be possible to evacuate them if the server groups are
     deleted prior to the host failure.
     """
 

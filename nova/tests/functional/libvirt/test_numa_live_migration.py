@@ -95,7 +95,7 @@ class NUMALiveMigrationBase(
 
 class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
     """Base for all tests that expect the live migration to actually start.
-    Sets up an "environment" with two computes, each with 4 CPUs spead evenly
+    Sets up an "environment" with two computes, each with 4 CPUs spread evenly
     across 2 NUMA nodes.
     """
 

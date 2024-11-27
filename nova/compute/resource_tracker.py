@@ -1556,7 +1556,7 @@ class ResourceTracker(object):
                 LOG.debug('Migration instance not found: %s', e)
                 continue
 
-            # Skip migation if instance is neither in a resize state nor is
+            # Skip migration if instance is neither in a resize state nor is
             # live-migrating.
             if (not _instance_in_resize_state(instances[uuid]) and not
                     _instance_is_live_migrating(instances[uuid])):
