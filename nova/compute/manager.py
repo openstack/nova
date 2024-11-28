@@ -4386,6 +4386,8 @@ class ComputeManager(manager.Manager):
 
         accel_info = self._get_accel_info(context, instance)
 
+        share_info = self._get_share_info(context, instance)
+
         self._notify_about_instance_usage(context, instance, "reboot.start")
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
@@ -4423,12 +4425,24 @@ class ComputeManager(manager.Manager):
                 instance.task_state = task_states.REBOOT_STARTED_HARD
                 expected_state = task_states.REBOOT_PENDING_HARD
             instance.save(expected_task_state=expected_state)
+
+            # Attempt to mount the shares again.
+            # Note: The API ref states that soft reboot can only be
+            # done if the instance is in ACTIVE state. If the instance
+            # is in ACTIVE state it cannot have a share_mapping in ERROR
+            # so it is safe to ignore the re-mounting of the share for
+            # soft reboot.
+            if reboot_type == "HARD":
+                self._mount_all_shares(context, instance, share_info)
+
             self.driver.reboot(context, instance,
                                network_info,
                                reboot_type,
                                block_device_info=block_device_info,
                                accel_info=accel_info,
+                               share_info=share_info,
                                bad_volumes_callback=bad_volumes_callback)
+            share_info.activate_all()
 
         except Exception as error:
             with excutils.save_and_reraise_exception() as ctxt:

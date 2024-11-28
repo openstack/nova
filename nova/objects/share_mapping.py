@@ -163,3 +163,11 @@ class ShareMappingList(base.ObjectListBase, base.NovaObject):
     def deactivate_all(self):
         for share in self:
             share.deactivate()
+
+    def contains_error(self):
+        return any(
+            [
+                share_mapping.status == fields.ShareMappingStatus.ERROR
+                for share_mapping in self
+            ]
+        )
