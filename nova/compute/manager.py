@@ -7203,6 +7203,13 @@ class ComputeManager(manager.Manager):
         block_device_info = self._get_instance_block_device_info(
             context, instance, bdms=bdms)
 
+        # This allows passing share_info to the resume operation for
+        # futur usage. However, this scenario is currently not possible
+        # because suspending an instance with a share is not permitted
+        # by libvirt. As a result, the suspend action involving a share
+        # is blocked by the API.
+        share_info = self._get_share_info(context, instance)
+
         compute_utils.notify_about_instance_action(context, instance,
             self.host, action=fields.NotificationAction.RESUME,
             phase=fields.NotificationPhase.START, bdms=bdms)
@@ -7212,7 +7219,7 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance,
              instance_state=instance.vm_state):
             self.driver.resume(context, instance, network_info,
-                               block_device_info)
+                               block_device_info, share_info)
 
         instance.power_state = self._get_power_state(instance)
 

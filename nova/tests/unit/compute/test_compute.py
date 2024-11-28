@@ -2877,12 +2877,17 @@ class ComputeTestCase(BaseTestCase,
                       action='unpause', phase='end')])
         self.compute.terminate_instance(self.context, instance, [])
 
+    @mock.patch('nova.virt.fake.FakeDriver.resume')
+    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.context.RequestContext.elevated')
-    def test_suspend(self, mock_context, mock_notify):
+    def test_suspend(self, mock_context, mock_notify, mock_get_share_info,
+                     mock_resume):
         # ensure instance can be suspended and resumed.
         context = self.context
         mock_context.return_value = context
+        share_info = objects.ShareMappingList()
+        mock_get_share_info.return_value = share_info
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(context, instance, {}, {}, {},
                                             [], block_device_mapping=[])
@@ -2906,6 +2911,57 @@ class ComputeTestCase(BaseTestCase,
                   action='suspend', phase='start'),
         mock.call(context, instance, 'fake-mini',
                   action='suspend', phase='end')])
+
+        mock_get_share_info.assert_called_once_with(context, instance)
+
+        mock_resume.assert_called_once_with(
+            self.context, instance, mock.ANY, mock.ANY, share_info)
+
+        self.compute.terminate_instance(self.context, instance, [])
+
+    @mock.patch('nova.compute.manager.ComputeManager.deny_share')
+    @mock.patch('nova.virt.fake.FakeDriver.resume')
+    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.context.RequestContext.elevated')
+    def test_suspend_with_share(self, mock_context, mock_notify,
+            mock_get_share_info, mock_resume, mock_deny_share):
+        # ensure instance can be suspended and resumed.
+        context = self.context
+        mock_context.return_value = context
+        share_info = self.fake_share_info()
+        mock_get_share_info.return_value = share_info
+        instance = self._create_fake_instance_obj()
+        self.compute.build_and_run_instance(context, instance, {}, {}, {},
+                                            [], block_device_mapping=[])
+        instance.task_state = task_states.SUSPENDING
+        instance.save()
+        self.compute.suspend_instance(context, instance)
+        instance.task_state = task_states.RESUMING
+        instance.save()
+        self.compute.resume_instance(context, instance)
+
+        self.assertEqual(len(self.notifier.notifications), 6)
+
+        msg = self.notifier.notifications[2]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.suspend.start')
+        msg = self.notifier.notifications[3]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.suspend.end')
+        mock_notify.assert_has_calls([
+        mock.call(context, instance, 'fake-mini',
+                  action='suspend', phase='start'),
+        mock.call(context, instance, 'fake-mini',
+                  action='suspend', phase='end')])
+
+        mock_get_share_info.assert_called_once_with(context, instance)
+
+        mock_resume.assert_called_once_with(
+            self.context, instance, mock.ANY, mock.ANY, share_info)
+
+        # Because we have shares, terminate the instance requires
+        # to deny the share, so mocking is required
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_suspend_error(self):
