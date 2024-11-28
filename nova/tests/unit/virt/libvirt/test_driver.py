@@ -18298,10 +18298,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
               _attach_mediated_devices):
             get_image_metadata.return_value = {'bar': 234}
 
+            share_info = objects.share_mapping.ShareMappingList()
+
             drvr.resume(self.context, instance, network_info,
-                        block_device_info)
-            _get_existing_domain_xml.assert_has_calls([mock.call(instance,
-                                            network_info, block_device_info)])
+                        block_device_info, share_info=share_info)
+            _get_existing_domain_xml.assert_has_calls(
+                [mock.call(
+                    instance,
+                    network_info,
+                    block_device_info,
+                    share_info
+                )]
+            )
             _create_guest_with_network.assert_has_calls([
                 mock.call(
                     self.context, dummyxml, instance, network_info,
