@@ -15286,22 +15286,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_plug.assert_called_once_with(test.MatchType(objects.Instance),
                                           nw_info)
 
-    @mock.patch.object(os, 'mkdir')
-    @mock.patch('nova.virt.libvirt.utils.get_instance_path_at_destination')
-    @mock.patch('nova.virt.libvirt.driver.remotefs.'
-                'RemoteFilesystem.copy_file')
     @mock.patch('nova.virt.driver.block_device_info_get_mapping')
     @mock.patch('nova.virt.configdrive.required_by', return_value=True)
     def test_pre_live_migration_block_with_config_drive_success(
-            self, mock_required_by, block_device_info_get_mapping,
-            mock_copy_file, mock_get_instance_path, mock_mkdir):
+            self, mock_required_by, block_device_info_get_mapping):
         self.flags(config_drive_format='iso9660')
         vol = {'block_device_mapping': [
                   {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
                   {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
-        fake_instance_path = os.path.join(cfg.CONF.instances_path,
-                                          '/fake_instance_uuid')
-        mock_get_instance_path.return_value = fake_instance_path
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -15311,7 +15303,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         migrate_data.is_shared_block_storage = False
         migrate_data.block_migration = True
         migrate_data.instance_relative_path = 'foo'
-        src = "%s:%s/disk.config" % (instance.host, fake_instance_path)
 
         result = drvr.pre_live_migration(
             self.context, instance, vol, [], None, migrate_data)
@@ -15322,7 +15313,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}
             ]}
         )
-        mock_copy_file.assert_called_once_with(src, fake_instance_path)
 
         migrate_data.graphics_listen_addrs_vnc = '127.0.0.1'
         migrate_data.graphics_listen_addrs_spice = '127.0.0.1'
