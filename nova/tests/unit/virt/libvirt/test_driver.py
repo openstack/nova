@@ -26207,7 +26207,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self, instance, mock_instance_metadata, mock_supports_direct_io,
         mock_build_device_metadata, mock_set_host_enabled, mock_get_mdev,
         mock_get_image_meta_by_ref, image_meta_dict=None, exists=None,
-        instance_image_meta_dict=None, block_device_info=None,
+        instance_image_meta_dict=None, block_device_info=None, share_info=None
     ):
 
         self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
@@ -26246,9 +26246,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock.patch.object(self.drvr, '_connect_volume'),
         ) as (mock_create_guest, mock_connect_volume):
 
+            share_info = objects.ShareMappingList()
+
             self.drvr.rescue(self.context, instance,
                              network_info, image_meta, rescue_password,
-                             block_device_info)
+                             block_device_info, share_info)
 
             self.assertTrue(mock_create_guest.called)
 
@@ -26378,9 +26380,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Assert that InstanceNotRescuable is raised for lxc virt_type
 
         self.flags(virt_type='lxc', group='libvirt')
+        share_info = objects.ShareMappingList()
         self.assertRaises(exception.InstanceNotRescuable, self.drvr.rescue,
                           self.context, instance, network_info,
-                          rescue_image_meta, None, None)
+                          rescue_image_meta, None, None, share_info)
 
     def test_rescue_stable_device(self):
         # Assert the imagebackend behaviour and domain device layout
@@ -26452,12 +26455,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                              'block_device_mapping': bdms}
         bdm = block_device_info['block_device_mapping'][0]
         bdm['connection_info'] = conn_info
+        share_info = objects.ShareMappingList()
 
         backend, domain = self._test_rescue(
-                                instance,
-                                image_meta_dict=rescue_image_meta_dict,
-                                instance_image_meta_dict=inst_image_meta_dict,
-                                block_device_info=block_device_info)
+            instance,
+            image_meta_dict=rescue_image_meta_dict,
+            instance_image_meta_dict=inst_image_meta_dict,
+            block_device_info=block_device_info,
+            share_info=share_info,
+        )
 
         # Assert that we created the expected set of disks, and no others
         self.assertEqual(['disk.rescue', 'kernel.rescue', 'ramdisk.rescue'],
@@ -26526,16 +26532,18 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         ) as (
             mock_create, mock_destroy, mock_get_guest_xml, mock_create_image,
             mock_get_existing_xml, mock_inst_path, mock_get_disk_info,
-            mock_image_get, mock_from_dict, mock_open,
+            mock_image_get, mock_from_dict, mock_open
         ):
             self.flags(virt_type='kvm', group='libvirt')
             mock_image_get.return_value = mock.sentinel.bdm_image_meta_dict
             mock_from_dict.return_value = mock.sentinel.bdm_image_meta
             mock_get_disk_info.return_value = disk_info
 
+            share_info = nova.objects.share_mapping.ShareMappingList()
+
             drvr.rescue(self.context, instance, network_info,
                         rescue_image_meta, mock.sentinel.rescue_password,
-                        block_device_info)
+                        block_device_info, share_info=share_info)
 
             # Assert that we fetch image metadata from Glance using the image
             # uuid stashed in the BDM and build an image_meta object using the
@@ -26555,7 +26563,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_get_guest_xml.assert_called_once_with(
                 self.context, instance, network_info, disk_info,
                 mock.sentinel.bdm_image_meta, rescue=mock.ANY, mdevs=mock.ANY,
-                block_device_info=block_device_info)
+                block_device_info=block_device_info, share_info=share_info)
 
     def test_rescue_stable_device_bfv(self):
         """Assert the disk layout when rescuing BFV instances"""

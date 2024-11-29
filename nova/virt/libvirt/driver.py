@@ -4465,7 +4465,7 @@ class LibvirtDriver(driver.ComputeDriver):
         )
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password, block_device_info):
+               rescue_password, block_device_info, share_info):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
@@ -4496,9 +4496,13 @@ class LibvirtDriver(driver.ComputeDriver):
         :param rescue_password: new root password to set for rescue.
         :param dict block_device_info:
             The block device mapping of the instance.
+        :param nova.objects.ShareMappingList share_info:
+            list of share_mapping
         """
+
         instance_dir = libvirt_utils.get_instance_path(instance)
-        unrescue_xml = self._get_existing_domain_xml(instance, network_info)
+        unrescue_xml = self._get_existing_domain_xml(
+            instance, network_info, share_info=share_info)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         with open(unrescue_xml_path, 'w') as f:
             f.write(unrescue_xml)
@@ -4584,7 +4588,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   image_meta, rescue=rescue_images,
                                   mdevs=mdevs,
-                                  block_device_info=block_device_info)
+                                  block_device_info=block_device_info,
+                                  share_info=share_info)
         self._destroy(instance)
         self._create_guest(
             context, xml, instance, post_xml_callback=gen_confdrive,

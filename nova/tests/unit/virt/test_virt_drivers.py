@@ -284,8 +284,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_rescue(self):
         image_meta = objects.ImageMeta.from_dict({})
         instance_ref, network_info = self._get_running_instance()
+        share_info = objects.ShareMappingList()
         self.connection.rescue(self.ctxt, instance_ref, network_info,
-                               image_meta, '', None)
+                               image_meta, '', None, share_info)
 
     @catch_notimplementederror
     def test_unrescue_unrescued_instance(self):
@@ -297,8 +298,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_unrescue_rescued_instance(self, mock_unlink):
         image_meta = objects.ImageMeta.from_dict({})
         instance_ref, network_info = self._get_running_instance()
+        share_info = objects.ShareMappingList()
         self.connection.rescue(self.ctxt, instance_ref, network_info,
-                               image_meta, '', None)
+                               image_meta, '', None, share_info)
         self.connection.unrescue(self.ctxt, instance_ref)
 
     @catch_notimplementederror

@@ -656,7 +656,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._vmops.resume(instance)
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password, block_device_info):
+               rescue_password, block_device_info, share_info):
         """Rescue the specified instance."""
         self._vmops.rescue(context, instance, network_info, image_meta)
 
