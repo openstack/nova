@@ -15,6 +15,7 @@
 
 """Tests for the aggregates admin api."""
 
+import datetime
 from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel
@@ -32,7 +33,19 @@ from nova.tests.unit.api.openstack import fakes
 
 
 def _make_agg_obj(agg_dict):
-    return objects.Aggregate(**agg_dict)
+    _aggregate = {
+        "name": "aggregate1",
+        "id": "1",
+        "uuid": uuidsentinel.aggregate,
+        "metadata": {"availability_zone": "nova1"},
+        "hosts": ["host1", "host2"],
+        "created_at": datetime.datetime(2012, 11, 14, 9, 53, 25, 0),
+        "deleted": False,
+        "deleted_at": None,
+        "updated_at": None,
+    }
+    _aggregate.update(**agg_dict)
+    return objects.Aggregate(**_aggregate)
 
 
 def _make_agg_list(agg_list):
@@ -68,11 +81,12 @@ AGGREGATE_LIST = [
             "metadata": {"availability_zone": "nova1"}}]
 AGGREGATE_LIST = _make_agg_list(AGGREGATE_LIST)
 
-AGGREGATE = {"name": "aggregate1",
-                  "id": "1",
-                  "metadata": {"foo": "bar",
-                               "availability_zone": "nova1"},
-                  "hosts": ["host1", "host2"]}
+AGGREGATE = {
+    "name": "aggregate1",
+    "id": "1",
+    "metadata": {"foo": "bar", "availability_zone": "nova1"},
+    "hosts": ["host1", "host2"],
+}
 AGGREGATE = _make_agg_obj(AGGREGATE)
 
 FORMATTED_AGGREGATE = {"name": "aggregate1",
@@ -706,7 +720,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                'id': 1, 'uuid': uuidsentinel.aggregate,
                'metadata': {'foo': 'bar', 'availability_zone': 'nova'},
                'hosts': ['host1', 'host2']}
-        agg_obj = _make_agg_obj(agg)
+        agg_obj = objects.Aggregate(**agg)
 
         # _marshall_aggregate() puts all fields and obj_extra_fields in the
         # top-level dict, so we need to put availability_zone at the top also

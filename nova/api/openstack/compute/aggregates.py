@@ -23,7 +23,7 @@ from webob import exc
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import aggregate_images
-from nova.api.openstack.compute.schemas import aggregates
+from nova.api.openstack.compute.schemas import aggregates as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -49,7 +49,7 @@ class AggregateController(wsgi.Controller):
         self.conductor_tasks = conductor.ComputeTaskAPI()
 
     @wsgi.expected_errors(())
-    @validation.query_schema(aggregates.index_query)
+    @validation.query_schema(schema.index_query)
     def index(self, req):
         """Returns a list a host aggregate's id, name, availability_zone."""
         context = _get_context(req)
@@ -61,8 +61,8 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
     # as this operation complete the creation of aggregates resource.
     @wsgi.expected_errors((400, 409))
-    @validation.schema(aggregates.create_v20, '2.0', '2.0')
-    @validation.schema(aggregates.create, '2.1')
+    @validation.schema(schema.create_v20, '2.0', '2.0')
+    @validation.schema(schema.create, '2.1')
     def create(self, req, body):
         """Creates an aggregate, given its name and
         optional availability zone.
@@ -95,7 +95,7 @@ class AggregateController(wsgi.Controller):
         return agg
 
     @wsgi.expected_errors((400, 404))
-    @validation.query_schema(aggregates.show_query)
+    @validation.query_schema(schema.show_query)
     def show(self, req, id):
         """Shows the details of an aggregate, hosts and metadata included."""
         context = _get_context(req)
@@ -113,8 +113,8 @@ class AggregateController(wsgi.Controller):
         return self._marshall_aggregate(req, aggregate)
 
     @wsgi.expected_errors((400, 404, 409))
-    @validation.schema(aggregates.update_v20, '2.0', '2.0')
-    @validation.schema(aggregates.update, '2.1')
+    @validation.schema(schema.update_v20, '2.0', '2.0')
+    @validation.schema(schema.update, '2.1')
     def update(self, req, id, body):
         """Updates the name and/or availability_zone of given aggregate."""
         context = _get_context(req)
@@ -165,7 +165,9 @@ class AggregateController(wsgi.Controller):
     # request hypervisor driver to complete the same in async mode.
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('add_host')
-    @validation.schema(aggregates.add_host)
+    @validation.schema(schema.add_host)
+    @validation.response_body_schema(schema.add_host_response, '2.1', '2.40')  # noqa: E501
+    @validation.response_body_schema(schema.add_host_response_v241, '2.41')
     def _add_host(self, req, id, body):
         """Adds a host to the specified aggregate."""
         host = body['add_host']['host']
@@ -194,7 +196,9 @@ class AggregateController(wsgi.Controller):
     # request hypervisor driver to complete the same in async mode.
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('remove_host')
-    @validation.schema(aggregates.remove_host)
+    @validation.schema(schema.remove_host)
+    @validation.response_body_schema(schema.remove_host_response, '2.1', '2.40')  # noqa: E501
+    @validation.response_body_schema(schema.remove_host_response_v241, '2.41')
     def _remove_host(self, req, id, body):
         """Removes a host from the specified aggregate."""
         host = body['remove_host']['host']
@@ -226,7 +230,9 @@ class AggregateController(wsgi.Controller):
 
     @wsgi.expected_errors((400, 404))
     @wsgi.action('set_metadata')
-    @validation.schema(aggregates.set_metadata)
+    @validation.schema(schema.set_metadata)
+    @validation.response_body_schema(schema.set_metadata_response, '2.1', '2.40')  # noqa: E501
+    @validation.response_body_schema(schema.set_metadata_response_v241, '2.41')
     def _set_metadata(self, req, id, body):
         """Replaces the aggregate's existing metadata with new metadata."""
         context = _get_context(req)
