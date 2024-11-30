@@ -14,8 +14,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-from distutils import versionpredicate
-
 from oslo_log import log as logging
 from oslo_utils import versionutils
 
@@ -84,8 +82,8 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
             version_required = image_props.get('img_hv_requested_version')
             if not (hypervisor_version and version_required):
                 return True
-            img_prop_predicate = versionpredicate.VersionPredicate(
-                'image_prop (%s)' % version_required)
+            img_prop_predicate = versionutils.VersionPredicate(
+                version_required)
             hyper_ver_str = versionutils.convert_version_to_str(hyper_version)
             return img_prop_predicate.satisfied_by(hyper_ver_str)
 
