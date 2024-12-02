@@ -13,7 +13,7 @@
 from nova.api.validation import parameter_types
 
 
-aggregate_images_v2_81 = {
+aggregate_images = {
     'type': 'object',
     'properties': {
         'cache': {
@@ -31,4 +31,8 @@ aggregate_images_v2_81 = {
     },
     'required': ['cache'],
     'additionalProperties': False,
+}
+
+aggregate_images_response = {
+    'type': 'null',
 }
