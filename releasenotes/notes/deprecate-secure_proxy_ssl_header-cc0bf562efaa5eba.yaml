@@ -1,0 +1,5 @@
+---
+deprecations:
+  - |
+    The ``[wsgi] secure_proxy_ssl_header`` parameter has been deprecated. Use
+    the ``http_proxy_to_wsgi`` middleware from ``oslo.middleware`` instead.
