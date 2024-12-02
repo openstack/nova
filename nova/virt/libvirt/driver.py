@@ -416,6 +416,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self.capabilities = {
             "has_imagecache": True,
+            "resource_scheduling": False,
             "supports_evacuate": True,
             "supports_migrate_to_same_host": False,
             "supports_attach_interface": True,

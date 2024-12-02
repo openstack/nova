@@ -43,6 +43,7 @@ from nova.i18n import _
 from nova import objects
 import nova.privsep.path
 from nova.virt import driver
+from nova.virt.vmwareapi import cluster_util
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
@@ -68,6 +69,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         "has_imagecache": True,
         "supports_evacuate": False,
         "supports_migrate_to_same_host": True,
+        "resource_scheduling": True,
         "supports_attach_interface": True,
         "supports_multiattach": False,
         "supports_trusted_certs": False,
@@ -146,7 +148,8 @@ class VMwareVCDriver(driver.ComputeDriver):
                                       self._nodename,
                                       self._cluster_ref,
                                       self._datastore_regex)
-
+        self.capabilities['resource_scheduling'] = \
+            cluster_util.is_drs_enabled(self._session, self._cluster_ref)
         # Register the OpenStack extension
         self._register_openstack_extension()
 

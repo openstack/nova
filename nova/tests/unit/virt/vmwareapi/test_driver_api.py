@@ -362,10 +362,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                               ephemeral=ephemeral,
                               flavor_updates=flavor_updates)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None, allocations={},
-                        network_info=self.network_info,
-                        block_device_info=bdi)
+        with test.nested(
+            mock.patch.object(self.conn._vmops, 'update_cluster_placement',
+                              return_value=None),
+        ):
+            self.conn.spawn(self.context, self.instance, self.image,
+                            injected_files=[], admin_password=None,
+                            allocations={}, network_info=self.network_info,
+                            block_device_info=bdi)
         self._check_vm_record(num_instances=num_instances,
                               powered_on=powered_on,
                               uuid=uuid)
@@ -543,8 +547,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
     @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
-    def test_iso_disk_cdrom_attach_with_config_drive(self,
-                                                     mock_from_image):
+    def test_iso_disk_cdrom_attach_with_config_drive(self, mock_from_image):
         img_props = images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=80 * units.Gi,
@@ -655,8 +658,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                        side_effect=vexc.ManagedObjectNotFoundException())
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
     def test_destroy_with_attached_volumes_missing(self,
-                                                   mock_destroy,
-                                                   mock_power_off):
+            mock_destroy, mock_power_off):
         self._create_vm()
         connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
         bdm = [{'connection_info': connection_info,
@@ -674,7 +676,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                        side_effect=exception.NovaException())
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
     def test_destroy_with_attached_volumes_with_exception(
-        self, mock_destroy, mock_detach_volume):
+            self, mock_destroy, mock_detach_volume):
         self._create_vm()
         connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
         bdm = [{'connection_info': connection_info,
@@ -693,7 +695,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                        side_effect=exception.DiskNotFound(message='oh man'))
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
     def test_destroy_with_attached_volumes_with_disk_not_found(
-        self, mock_destroy, mock_detach_volume):
+            self, mock_destroy, mock_detach_volume):
         self._create_vm()
         connection_info = {'data': 'fake-data', 'serial': 'volume-fake-id'}
         bdm = [{'connection_info': connection_info,
@@ -1096,6 +1098,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             self._check_vm_info(info, power_state.RUNNING)
             self.assertTrue(self.exception)
 
+    @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps.'
+                'update_cluster_placement')
     @mock.patch.object(vm_util, 'relocate_vm')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
                 'attach_volume')
@@ -1108,6 +1112,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                                   mock_get_res_pool_of_vm,
                                   mock_attach_volume,
                                   mock_relocate_vm,
+                                  mock_update_cluster_placement,
                                   set_image_ref=True):
         self._create_instance(set_image_ref=set_image_ref)
 
@@ -1128,6 +1133,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_attach_volume.assert_called_once_with(connection_info,
             self.instance, constants.DEFAULT_ADAPTER_TYPE)
 
+    @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps.'
+                'update_cluster_placement')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
                 'attach_volume')
     @mock.patch('nova.block_device.volume_in_mapping')
@@ -1135,7 +1142,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def test_spawn_attach_volume_iscsi(self,
                                        mock_info_get_mapping,
                                        mock_block_volume_in_mapping,
-                                       mock_attach_volume):
+                                       mock_attach_volume,
+                                       mock_update_cluster_placement):
         self._create_instance()
         connection_info = self._test_vmdk_connection_info('iscsi')
         root_disk = [{'connection_info': connection_info,

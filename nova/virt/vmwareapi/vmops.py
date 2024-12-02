@@ -70,6 +70,9 @@ LOG = logging.getLogger(__name__)
 RESIZE_TOTAL_STEPS = 6
 
 
+GroupInfo = collections.namedtuple('GroupInfo', ['uuid', 'policies'])
+
+
 class VirtualMachineInstanceConfigInfo(object):
     """Parameters needed to create and configure a new instance."""
 
@@ -269,7 +272,7 @@ class VMwareVMOps(object):
         # We cannot truncate the 'id' as this is unique across OpenStack.
         return '%s (%s)' % (name[:40], id_[:36])
 
-    def build_virtual_machine(self, instance, image_info,
+    def build_virtual_machine(self, instance, context, image_info,
                               dc_info, datastore, network_info, extra_specs,
                               metadata):
         vif_infos = vmwarevif.get_vif_info(self._session,
@@ -302,6 +305,7 @@ class VMwareVMOps(object):
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, folder,
                                    config_spec, self._root_resource_pool)
+
         return vm_ref
 
     def _get_extra_specs(self, flavor, image_meta=None):
@@ -737,6 +741,12 @@ class VMwareVMOps(object):
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
 
+    def update_cluster_placement(self, context, instance):
+        server_group_infos = self._get_server_groups(
+                context, instance, include_provider_groups=True)
+        vm_util.update_cluster_placement(self._session, instance,
+                                         self._cluster, server_group_infos)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
 
@@ -753,6 +763,7 @@ class VMwareVMOps(object):
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
         vm_ref = self.build_virtual_machine(instance,
+                                            context,
                                             image_info,
                                             vi.dc_info,
                                             vi.datastore,
@@ -763,6 +774,8 @@ class VMwareVMOps(object):
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance uuid.
         vm_util.vm_ref_cache_update(instance.uuid, vm_ref)
+
+        self.update_cluster_placement(context, instance)
 
         # Update the Neutron VNIC index
         self._update_vnic_index(context, instance, network_info)
@@ -1068,6 +1081,28 @@ class VMwareVMOps(object):
                                                     "ResetVM_Task", vm_ref)
             self._session._wait_for_task(reset_task)
             LOG.debug("Did hard reboot of VM", instance=instance)
+
+    def _get_server_groups(self, context, instance,
+                           include_provider_groups=False):
+        server_group_infos = []
+        try:
+            instance_group_object = objects.instance_group.InstanceGroup
+            server_group = instance_group_object.get_by_instance_uuid(
+                context, instance.uuid)
+            if server_group:
+                server_group_infos.append(GroupInfo(server_group.uuid,
+                                                    server_group.policies))
+        except nova.exception.InstanceGroupNotFound:
+            pass
+
+        if include_provider_groups:
+            needs_empty_host = utils.vm_needs_special_spawning(
+                int(instance.memory_mb), instance.flavor)
+            if CONF.vmware.special_spawning_vm_group and not needs_empty_host:
+                name = CONF.vmware.special_spawning_vm_group
+                server_group_infos.append(GroupInfo(name, None))
+
+        return server_group_infos
 
     def _destroy_instance(self, instance, destroy_disks=True):
         # Destroy a VM instance
