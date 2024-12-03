@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 create = {
@@ -93,7 +95,7 @@ index_query = {
 }
 
 # TODO(stephenfin): Remove additionalProperties in a future API version
-server_sg_index_query = {
+index_server_query = {
     'type': 'object',
     'properties': {},
     'additionalProperties': True,
@@ -137,6 +139,108 @@ remove_security_group = {
     },
     'required': ['removeSecurityGroup'],
     'additionalProperties': True,
+}
+
+_security_group_rule_response = {
+    'type': 'object',
+    'properties': {
+        'from_port': {'type': ['integer', 'null'], 'minimum': -1},
+        'group': {
+            'type': 'object',
+            'properties': {
+                'name': {'type': 'string'},
+                'tenant_id': parameter_types.project_id,
+            },
+            'required': [],
+            'additionalProperties': False,
+        },
+        'id': {'type': 'string', 'format': 'uuid'},
+        'ip_protocol': {'type': ['string', 'null']},
+        'ip_range': {
+            'type': 'object',
+            'properties': {
+                'cidr': {'type': 'string', 'format': 'cidr'},
+            },
+            'required': [],
+            'additionalProperties': False,
+        },
+        'parent_group_id': {'type': 'string', 'format': 'uuid'},
+        'to_port': {'type': ['integer', 'null'], 'minimum': -1},
+    },
+    'required': [
+        'from_port',
+        'group',
+        'id',
+        'ip_protocol',
+        'ip_range',
+        'parent_group_id',
+        'to_port',
+    ],
+    'additionalProperties': False,
+}
+
+_security_group_response = {
+    'type': 'object',
+    'properties': {
+        'description': {'type': ['string', 'null']},
+        'id': {'type': 'string', 'format': 'uuid'},
+        'name': {'type': 'string'},
+        'rules': {'type': 'array', 'items': _security_group_rule_response},
+        'tenant_id': parameter_types.project_id,
+    },
+    'required': ['description', 'id', 'name', 'rules', 'tenant_id'],
+    'additionalProperties': False,
+
+}
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'security_group': _security_group_response,
+    },
+    'required': ['security_group'],
+    'additionalProperties': False,
+}
+
+delete_response = {'type': 'null'}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'security_groups': {
+            'type': 'array',
+            'items': _security_group_response,
+        },
+    },
+    'required': ['security_groups'],
+    'additionalProperties': False,
+}
+
+create_response = copy.deepcopy(show_response)
+
+update_response = copy.deepcopy(show_response)
+
+create_rule_response = {
+    'type': 'object',
+    'properties': {
+        'security_group_rule': _security_group_rule_response,
+    },
+    'required': ['security_group_rule'],
+    'additionalProperties': False,
+}
+
+delete_rule_response = {'type': 'null'}
+
+index_server_response = {
+    'type': 'object',
+    'properties': {
+        'security_groups': {
+            'type': 'array',
+            'items': _security_group_response,
+        },
+    },
+    'required': ['security_groups'],
+    'additionalProperties': False,
 }
 
 add_security_group_response = {

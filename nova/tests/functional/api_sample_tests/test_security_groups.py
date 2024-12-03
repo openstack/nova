@@ -13,13 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
 
 
 def fake_get(*args, **kwargs):
     nova_group = {}
-    nova_group['id'] = 1
+    nova_group['id'] = uuids.security_group
     nova_group['description'] = 'default'
     nova_group['name'] = 'default'
     nova_group['project_id'] = astb.PROJECT_ID
@@ -47,8 +49,7 @@ def fake_list(context, names=None, ids=None, project=None, search_opts=None):
     return [fake_get()]
 
 
-def fake_get_instance_security_groups(context, instance_uuid,
-                                      detailed=False):
+def fake_get_instance_security_groups(context, instance_uuid, detailed=False):
     return [fake_get()]
 
 
@@ -61,8 +62,8 @@ def fake_create_security_group_rule(context, security_group, new_rule):
         'from_port': 22,
         'to_port': 22,
         'cidr': '10.0.0.0/24',
-        'id': '00000000-0000-0000-0000-000000000000',
-        'parent_group_id': '11111111-1111-1111-1111-111111111111',
+        'id': uuids.security_group_rule,
+        'parent_group_id': 'd6f86d8c-06ef-4bef-8e7c-8bf8f9ba9b7a',
         'protocol': 'tcp',
         'group_id': None
     }
@@ -75,7 +76,7 @@ def fake_remove_rules(context, security_group, rule_ids):
 def fake_get_rule(context, id):
     return {
         'id': id,
-        'parent_group_id': '11111111-1111-1111-1111-111111111111'
+        'parent_group_id': 'd6f86d8c-06ef-4bef-8e7c-8bf8f9ba9b7a'
     }
 
 
@@ -83,7 +84,7 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     sample_dir = 'os-security-groups'
 
     def setUp(self):
-        super(SecurityGroupsJsonTest, self).setUp()
+        super().setUp()
         path = 'nova.network.security_group_api.'
         self.stub_out(path + 'get', fake_get)
         self.stub_out(path + 'get_instances_security_groups_bindings',
@@ -97,15 +98,13 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
                       fake_create_security_group)
         self.stub_out(path + 'create_security_group_rule',
                       fake_create_security_group_rule)
-        self.stub_out(path + 'remove_rules',
-                      fake_remove_rules)
-        self.stub_out(path + 'get_rule',
-                      fake_get_rule)
+        self.stub_out(path + 'remove_rules', fake_remove_rules)
+        self.stub_out(path + 'get_rule', fake_get_rule)
 
     def _get_create_subs(self):
         return {
-                'group_name': 'default',
-                "description": "default",
+            'group_name': 'default',
+            "description": "default",
         }
 
     def _create_security_group(self):
@@ -115,7 +114,7 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
 
     def _add_group(self, uuid):
         subs = {
-                'group_name': 'test'
+            'group_name': 'test'
         }
         return self._do_post('servers/%s/action' % uuid,
                              'security-group-add-post-req', subs)
@@ -134,8 +133,7 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
 
     def test_security_groups_get(self):
         # Get api sample of security groups get request.
-        security_group_id = '11111111-1111-1111-1111-111111111111'
-        response = self._do_get('os-security-groups/%s' % security_group_id)
+        response = self._do_get('os-security-groups/%s' % uuids.security_group)
         self._verify_response('security-groups-get-resp', {}, response, 200)
 
     def test_security_groups_list_server(self):
@@ -157,7 +155,7 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
         self._add_group(uuid)
         subs = {
-                'group_name': 'test'
+            'group_name': 'test'
         }
         response = self._do_post('servers/%s/action' % uuid,
                                  'security-group-remove-post-req', subs)
@@ -172,5 +170,5 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
 
     def test_security_group_rules_remove(self):
         response = self._do_delete(
-            'os-security-group-rules/00000000-0000-0000-0000-000000000000')
+            f'os-security-group-rules/{uuids.security_group_rule}')
         self.assertEqual(202, response.status_code)

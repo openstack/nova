@@ -131,12 +131,14 @@ class SecurityGroupControllerBase(object):
         return group_rule_data_by_rule_group_id
 
 
+@validation.validated
 class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     """The Security group API controller for the OpenStack API."""
 
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         """Return data about the given security group."""
         context = req.environ['nova.context']
@@ -157,6 +159,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
     @wsgi.response(202)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         """Delete a security group."""
         context = req.environ['nova.context']
@@ -175,6 +178,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @validation.query_schema(schema.index_query)
     @wsgi.expected_errors(404)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """Returns a list of security groups."""
         context = req.environ['nova.context']
@@ -199,6 +203,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403))
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         """Creates a new security group."""
         context = req.environ['nova.context']
@@ -222,6 +227,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
     @validation.schema(schema.update)
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, id, body):
         """Update a security group."""
         context = req.environ['nova.context']
@@ -251,12 +257,15 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
                                                               group_ref)}
 
 
-class SecurityGroupRulesController(SecurityGroupControllerBase,
-                                   wsgi.Controller):
+@validation.validated
+class SecurityGroupRulesController(
+    SecurityGroupControllerBase, wsgi.Controller,
+):
 
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(schema.create_rules)
+    @validation.response_body_schema(schema.create_rule_response)
     def create(self, req, body):
         context = req.environ['nova.context']
         context.can(sg_policies.POLICY_NAME % 'rule:create',
@@ -330,6 +339,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.response(202)
+    @validation.response_body_schema(schema.delete_rule_response)
     def delete(self, req, id):
         context = req.environ['nova.context']
         context.can(sg_policies.POLICY_NAME % 'rule:delete',
@@ -350,12 +360,14 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
             raise exc.HTTPBadRequest(explanation=exp.format_message())
 
 
+@validation.validated
 class ServerSecurityGroupController(
     SecurityGroupControllerBase, wsgi.Controller
 ):
 
     @wsgi.expected_errors(404)
-    @validation.query_schema(schema.server_sg_index_query)
+    @validation.query_schema(schema.index_server_query)
+    @validation.response_body_schema(schema.index_server_response)
     def index(self, req, server_id):
         """Returns a list of security groups for the given instance."""
         context = req.environ['nova.context']

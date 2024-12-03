@@ -170,6 +170,8 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.network.security_group_api.list')
     def test_list_security_groups_policy(self, mock_get):
+        mock_get.return_value = []
+
         rule_name = policies.POLICY_NAME % 'get'
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name,
@@ -178,6 +180,14 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.network.security_group_api.get')
     def test_show_security_groups_policy(self, mock_get):
+        mock_get.return_value = {
+            'id': uuids.sg_id,
+            'description': None,
+            'name': 'foo',
+            'project_id': uuids.project_id,
+            'rules': [],
+        }
+
         rule_name = policies.POLICY_NAME % 'show'
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name,
@@ -187,6 +197,14 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.network.security_group_api.get')
     @mock.patch('nova.network.security_group_api.update_security_group')
     def test_update_security_groups_policy(self, mock_update, mock_get):
+        mock_update.return_value = {
+            'id': uuids.sg_id,
+            'description': None,
+            'name': 'foo',
+            'project_id': uuids.project_id,
+            'rules': [],
+        }
+
         rule_name = policies.POLICY_NAME % 'update'
         body = {'security_group': {
             'name': 'test',
@@ -198,6 +216,14 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.network.security_group_api.create_security_group')
     def test_create_security_groups_policy(self, mock_create):
+        mock_create.return_value = {
+            'id': uuids.sg_id,
+            'description': None,
+            'name': 'foo',
+            'project_id': uuids.project_id,
+            'rules': [],
+        }
+
         rule_name = policies.POLICY_NAME % 'create'
         body = {'security_group': {
             'name': 'test',
@@ -219,6 +245,20 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.network.security_group_api.get')
     @mock.patch('nova.network.security_group_api.create_security_group_rule')
     def test_create_security_group_rules_policy(self, mock_create, mock_get):
+        mock_get.return_value = {
+            'id': uuids.sg_id,
+            'name': 'foo',
+            'project_id': uuids.project_id,
+        }
+        mock_create.return_value = {
+            'id': uuids.sg_rule_id,
+            'parent_group_id': uuids.sg_id,
+            'protocol': 'tcp',
+            'from_port': 22,
+            'to_port': 22,
+            'cidr': '10.0.0.0/24',
+        }
+
         rule_name = policies.POLICY_NAME % 'rule:create'
         body = {'security_group_rule': {
             'ip_protocol': 'test', 'group_id': uuids.fake_id,

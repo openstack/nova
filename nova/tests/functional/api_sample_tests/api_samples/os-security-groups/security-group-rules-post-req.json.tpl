@@ -1,6 +1,6 @@
 {
     "security_group_rule": {
-        "parent_group_id": "21111111-1111-1111-1111-111111111112",
+        "parent_group_id": "d6f86d8c-06ef-4bef-8e7c-8bf8f9ba9b7a",
         "ip_protocol": "tcp",
         "from_port": 22,
         "to_port": 22,
