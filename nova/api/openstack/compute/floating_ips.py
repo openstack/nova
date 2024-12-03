@@ -42,21 +42,21 @@ def _translate_floating_ip_view(floating_ip):
 
     return {
         'floating_ip': {
-            'id': floating_ip['id'],
-            'ip': floating_ip['floating_ip_address'],
-            'pool': floating_ip['network_details']['name'] or (
-                floating_ip['network_details']['id']),
             'fixed_ip': floating_ip['fixed_ip_address'],
+            'id': floating_ip['id'],
             'instance_id': instance_id,
+            'ip': floating_ip['floating_ip_address'],
+            'pool': (
+                floating_ip['network_details']['name'] or
+                floating_ip['network_details']['id']),
         }
     }
 
 
 def get_instance_by_floating_ip_addr(self, context, address):
     try:
-        instance_id =\
-            self.network_api.get_instance_id_by_floating_address(
-                context, address)
+        instance_id = self.network_api.get_instance_id_by_floating_address(
+            context, address)
     except exception.FloatingIpNotFoundForAddress as ex:
         raise webob.exc.HTTPNotFound(explanation=ex.format_message())
     except exception.FloatingIpMultipleFoundForAddress as ex:
@@ -74,6 +74,7 @@ def disassociate_floating_ip(self, context, instance, address):
         raise webob.exc.HTTPForbidden()
 
 
+@validation.validated
 class FloatingIPController(wsgi.Controller):
     """The Floating IPs API controller for the OpenStack API."""
 
@@ -85,6 +86,7 @@ class FloatingIPController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         """Return data about the given floating IP."""
         context = req.environ['nova.context']
@@ -104,6 +106,7 @@ class FloatingIPController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """Return a list of floating IPs allocated to a project."""
         context = req.environ['nova.context']
@@ -118,6 +121,7 @@ class FloatingIPController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body=None):
         context = req.environ['nova.context']
         context.can(fi_policies.BASE_POLICY_NAME % 'create',
@@ -151,6 +155,7 @@ class FloatingIPController(wsgi.Controller):
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         context = req.environ['nova.context']
         context.can(fi_policies.BASE_POLICY_NAME % 'delete',
