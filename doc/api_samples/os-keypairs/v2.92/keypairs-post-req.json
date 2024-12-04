@@ -1,0 +1,7 @@
+{
+    "keypair": {
+        "name": "foo",
+        "type": "ssh",
+        "user_id": "fake"
+    }
+}
