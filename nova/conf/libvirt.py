@@ -1240,6 +1240,34 @@ Possible values:
 """),
 ]
 
+libvirt_volume_ceph_opts = [
+    cfg.StrOpt('ceph_mount_point_base',
+               default=paths.state_path_def('mnt'),
+               help="""
+Directory where the ceph volume for each manila share is mounted on the
+compute node.
+The default is 'mnt' directory of the location where nova's Python module
+is installed.
+
+Possible values:
+
+* A string representing absolute path of mount point.
+"""),
+    cfg.ListOpt('ceph_mount_options',
+               help="""
+Mount options passed to the ceph client. See section of the ceph man page
+for details.
+
+Mount options controls the way the filesystem is mounted and how the
+ceph client behaves when accessing files on this mount point.
+
+Possible values:
+
+* Any string representing mount options separated by commas.
+* Example string: vers=3,lookupcache=pos
+"""),
+]
+
 libvirt_volume_quobyte_opts = [
     cfg.StrOpt('quobyte_mount_point_base',
                default=paths.state_path_def('mnt'),
@@ -1587,6 +1615,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_iser_opts,
     libvirt_volume_net_opts,
     libvirt_volume_nfs_opts,
+    libvirt_volume_ceph_opts,
     libvirt_volume_quobyte_opts,
     libvirt_volume_smbfs_opts,
     libvirt_remotefs_opts,

@@ -712,8 +712,8 @@ class ShareMappingAlreadyExists(NotFound):
     msg_fmt = _("Share %(share_id)s already associated to this server.")
 
 
-class ShareProtocolUnknown(NotFound):
-    msg_fmt = _("Share protocol %(share_proto)s is unknown.")
+class ShareProtocolNotSupported(NotFound):
+    msg_fmt = _("Share protocol %(share_proto)s is not supported.")
 
 
 class ShareError(NovaException):

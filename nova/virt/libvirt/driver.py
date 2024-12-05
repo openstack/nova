@@ -127,6 +127,7 @@ from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
+from nova.virt.libvirt.volume import cephfs
 from nova.virt.libvirt.volume import fs
 from nova.virt.libvirt.volume import mount
 from nova.virt.libvirt.volume import nfs
@@ -4319,13 +4320,25 @@ class LibvirtDriver(driver.ComputeDriver):
         if protocol == fields.ShareMappingProto.NFS:
             return nfs.LibvirtNFSVolumeDriver(host)
         elif protocol == fields.ShareMappingProto.CEPHFS:
-            raise NotImplementedError()
+            return cephfs.LibvirtCEPHFSVolumeDriver(host)
         else:
-            raise exception.ShareProtocolUnknown(share_proto=protocol)
+            raise exception.ShareProtocolNotSupported(share_proto=protocol)
 
     def _get_share_connection_info(self, share_mapping):
-        connection_info = {'data': {'export': share_mapping.export_location,
-                                    'name': share_mapping.share_id}}
+        connection_info = {
+            "data": {
+                "export": share_mapping.export_location,
+                "name": share_mapping.share_id,
+            }
+        }
+        if share_mapping.share_proto == fields.ShareMappingProto.CEPHFS:
+            if (
+                "access_to" in share_mapping and
+                share_mapping.access_to is not None
+            ):
+                name_opt = "name=" + share_mapping.access_to
+                secret_opt = "secret=" + share_mapping.access_key
+                connection_info["data"]["options"] = [name_opt, secret_opt]
         return connection_info
 
     def _get_share_mount_path(self, instance, share_mapping):
