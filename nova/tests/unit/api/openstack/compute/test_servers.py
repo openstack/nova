@@ -233,6 +233,21 @@ class ControllerTest(test.TestCase):
         mock_conductor.start()
         self.addCleanup(mock_conductor.stop)
 
+        # Do not mock functions in Testcase because it is called
+        # by functional tests.
+        self.mock_check_shares_supported = self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.compute.api.check_shares_supported',
+                mock.Mock(return_value=False),
+            )
+        )
+        self.mock_instance_has_share = self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.compute.api.instance_has_share',
+                mock.Mock(return_value=False),
+            )
+        )
+
     def req(self, url, use_admin_context=False):
         return fakes.HTTPRequest.blank(
             url,

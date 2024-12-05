@@ -95,6 +95,20 @@ class ServersPolicyTest(base.BasePolicyTest):
             fixtures.MockPatch('nova.objects.Instance.get_network_info')).mock
         self.mock_get_network_info.return_value = model.NetworkInfo()
 
+        self.mock_check_shares_supported = self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.compute.api.check_shares_supported',
+                mock.Mock(return_value=False),
+            )
+        )
+
+        self.mock_instance_has_share = self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.compute.api.instance_has_share',
+                mock.Mock(return_value=False),
+            )
+        )
+
         self.servers = [fakes.stub_instance_obj(
             1, vm_state=vm_states.ACTIVE, uuid=uuids.fake,
             project_id=self.project_id, user_id='user1'),

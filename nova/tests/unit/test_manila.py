@@ -23,6 +23,10 @@ from nova import test
 
 from openstack import exceptions as sdk_exc
 from openstack.shared_file_system.v2 import (
+    resource_locks as sdk_resource_locks
+)
+
+from openstack.shared_file_system.v2 import (
     share_access_rule as sdk_share_access_rule
 )
 from openstack.shared_file_system.v2 import (
@@ -148,6 +152,42 @@ def stub_access():
     return access
 
 
+def stub_lock(share_id):
+    lock = sdk_resource_locks.ResourceLock()
+    lock.id = "a37b7da7-5d72-49d3-bf3b-aebd64828089"
+    lock.project_id = "ded249b25f6f46918fef4e69f427590c"
+    lock.resource_type = "share"
+    lock.resource_id = share_id
+    lock.resource_action = "delete"
+    lock.lock_reason = "nova lock"
+    lock.created_at = "2023-07-31T09:39:38.441320"
+    lock.updated_at = None
+    lock.location = utils.Munch(
+        {
+            "cloud": "envvars",
+            "region_name": "RegionOne",
+            "zone": None,
+            "project": utils.Munch(
+                {
+                    "id": "bce4fcc3bd0d4c598f610cb45ec5c5ba",
+                    "name": "demo",
+                    "domain_id": "default",
+                    "domain_name": None,
+                }
+            ),
+        }
+    )
+    return lock
+
+
+def stub_resource_locks(share_id):
+    resource_locks = []
+    resource_lock = stub_lock(share_id)
+    resource_locks.append(resource_lock)
+    for lock in resource_locks:
+        yield lock
+
+
 class BaseManilaTestCase(object):
     project_id = fakes.FAKE_PROJECT_ID
 
@@ -213,7 +253,7 @@ class BaseManilaTestCase(object):
                     raise sdk_exc.ResourceNotFound
                 return stub_access()
 
-            def delete_access_rule(self, access_id, share_id):
+            def delete_access_rule(self, access_id, share_id, unrestrict):
                 if share_id == 'nonexisting':
                     raise sdk_exc.ResourceNotFound
                 res = Response()
@@ -222,6 +262,25 @@ class BaseManilaTestCase(object):
                 if share_id == '2345':
                     res.status_code = 500
                 return res
+
+            def get_all_resource_locks(self, resource_id=None):
+                if resource_id == '1234':
+                    return []
+                if resource_id == '2345':
+                    return []
+                if resource_id == 'nonexisting':
+                    return []
+                return stub_resource_locks(resource_id)
+
+            def create_resource_lock(
+                self, resource_id=None, resource_type=None, lock_reason=None
+            ):
+                if resource_id == "nonexisting":
+                    raise sdk_exc.BadRequestException
+                return stub_lock(resource_id)
+
+            def delete_resource_lock(self, share_id):
+                pass
 
         return FakeConnection()
 

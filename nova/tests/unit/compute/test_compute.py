@@ -166,6 +166,22 @@ class BaseTestCase(test.TestCase):
                     self.compute.driver)
         self.compute.rt = fake_rt
 
+        # Do not mock functions in Testcase because it is called
+        # by functional tests.
+        self.useFixture(
+            std_fixtures.MonkeyPatch(
+                'nova.compute.api.check_shares_supported',
+                mock.Mock(return_value=False),
+            )
+        )
+
+        self.useFixture(
+            std_fixtures.MonkeyPatch(
+                'nova.compute.api.instance_has_share',
+                mock.Mock(return_value=False),
+            )
+        )
+
         def fake_get_compute_nodes_in_db(self, context, *args, **kwargs):
             fake_compute_nodes = [{'local_gb': 259,
                                    'uuid': uuids.fake_compute_node,
