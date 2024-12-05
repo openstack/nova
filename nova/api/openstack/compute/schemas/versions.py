@@ -23,3 +23,110 @@ multi_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+_version_obj = {
+    'type': 'object',
+    'properties': {
+        'id': {'type': 'string'},
+        'status': {
+            'type': 'string',
+            'enum': ['CURRENT', 'SUPPORTED', 'DEPRECATED'],
+        },
+        'links': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'href': {'type': 'string'},
+                    'rel': {'type': 'string'},
+                    'type': {'type': 'string'},
+                },
+                'required': ['rel', 'href'],
+                'additionalProperties': False,
+            },
+        },
+        'min_version': {'type': 'string'},
+        'updated': {'type': 'string', 'format': 'date-time'},
+        'version': {'type': 'string'},
+    },
+    'required': ['id', 'status', 'links', 'min_version', 'updated'],
+    'additionalProperties': False,
+}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'versions': {'type': 'array', 'items': _version_obj}
+    },
+    'required': ['versions'],
+    'additionalProperties': False,
+}
+
+_version_obj_with_media_types = _version_obj
+_version_obj_with_media_types['properties'].update({
+    'media-types': {
+        'type': 'array',
+        'items': {
+            'type': 'object',
+            'properties': {
+                'base': {'type': 'string'},
+                'type': {'type': 'string'},
+            },
+            'required': ['base', 'type'],
+            'additionalProperties': False,
+        },
+    }
+})
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'version': _version_obj_with_media_types
+    },
+    'required': ['version'],
+    'additionalProperties': False,
+}
+
+_legacy_version_obj = {
+    'type': 'object',
+    'properties': {
+        'id': {'type': 'string'},
+        'status': {'type': 'string'},
+        'links': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'href': {'type': 'string'},
+                    'rel': {'type': 'string'},
+                    'type': {'type': 'string'},
+                },
+                'required': ['rel', 'href'],
+                'additionalProperties': False,
+            },
+        },
+        'media-types': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'base': {'type': 'string'},
+                    'type': {'type': 'string'},
+                },
+                'required': ['base', 'type'],
+                'additionalProperties': False,
+            },
+        },
+    },
+    'required': ['id', 'status', 'links', 'media-types'],
+    'additionalProperties': False,
+}
+
+multi_response = {
+    'type': 'object',
+    'properties': {
+        'choices': {'type': 'array', 'items': _legacy_version_obj}
+    },
+    'required': ['choices'],
+    'additionalProperties': False,
+}
