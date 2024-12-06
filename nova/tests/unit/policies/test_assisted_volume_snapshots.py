@@ -43,7 +43,13 @@ class AssistedVolumeSnapshotPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.API.volume_snapshot_create')
     def test_assisted_create_policy(self, mock_create):
         rule_name = "os_compute_api:os-assisted-volume-snapshots:create"
-        body = {'snapshot': {'volume_id': uuids.fake_id,
+        mock_create.return_value = {
+            'snapshot': {
+                'id': uuids.snapshot_id,
+                'volumeId': uuids.volume_id,
+            },
+        }
+        body = {'snapshot': {'volume_id': uuids.volume_id,
                              'create_info': {'type': 'qcow2',
                                              'new_file': 'new_file',
                                              'snapshot_id': 'snapshot_id'}}}
@@ -54,6 +60,7 @@ class AssistedVolumeSnapshotPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.API.volume_snapshot_delete')
     def test_assisted_delete_policy(self, mock_delete):
         rule_name = "os_compute_api:os-assisted-volume-snapshots:delete"
+        mock_delete.return_value = None
         params = {
             'delete_info': jsonutils.dumps({'volume_id': '1'}),
         }
