@@ -383,6 +383,9 @@
       Starting in Wallaby, the job defaults to the q35 machine type.
       Starting in Yoga, the job tests noVNC from source and enables unified limits.
       Starting in Caracal, the job compiles the mdev sample drivers from source.
+      Starting in Gazpacho, the job test placement with
+      allocation_candidates_generation_strategy=breadth-first and
+      optimize_for_wide_provider_trees=True.
       Runs all tempest compute API and most scenario tests concurrently.
     irrelevant-files: *nova-base-irrelevant-files
     # Run post-tempest tests like for nova-manage commands.
@@ -450,6 +453,12 @@
               tunnel_types: gre,vxlan
             ml2:
               type_drivers: flat,geneve,vlan,gre,local,vxlan
+          $PLACEMENT_CONF:
+            placement:
+              allocation_candidates_generation_strategy: breadth-first
+              max_allocation_candidates: 100000
+            workarounds:
+              optimize_for_wide_provider_trees: True
         test-config:
           $TEMPEST_CONFIG:
             network-feature-enabled:
