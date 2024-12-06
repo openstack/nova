@@ -1099,6 +1099,10 @@ class ServersController(wsgi.Controller):
         except exception.Invalid:
             msg = _("Invalid instance image.")
             raise exc.HTTPBadRequest(explanation=msg)
+        except (
+            exception.ForbiddenSharesNotSupported,
+            exception.ForbiddenWithShare) as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
 
     @wsgi.response(204)
     @wsgi.expected_errors((404, 409))

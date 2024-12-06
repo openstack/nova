@@ -59,6 +59,10 @@ class ShelveController(wsgi.Controller):
                                                                   'shelve', id)
         except exception.ForbiddenPortsWithAccelerator as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except (
+            exception.ForbiddenSharesNotSupported,
+            exception.ForbiddenWithShare) as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))

@@ -80,6 +80,29 @@ class ManilaFixture(fixtures.Fixture):
             manila_share, export_location
         )
 
+    def fake_get_share_status_error(self, context, share_id):
+        manila_share = ManilaShare(share_id)
+        manila_share.status = "error"
+        export_location = "10.0.0.50:/mnt/foo"
+        return nova.share.manila.Share.from_manila_share(
+            manila_share, export_location
+        )
+
+    def fake_get_share_export_location_missing(self, context, share_id):
+        manila_share = ManilaShare(share_id)
+        export_location = None
+        return nova.share.manila.Share.from_manila_share(
+            manila_share, export_location
+        )
+
+    def fake_get_share_unknown_protocol(self, context, share_id):
+        manila_share = ManilaShare(share_id)
+        manila_share.share_protocol = "CIFS"
+        export_location = "10.0.0.50:/mnt/foo"
+        return nova.share.manila.Share.from_manila_share(
+            manila_share, export_location
+        )
+
     def fake_get_cephfs(self, context, share_id):
         manila_share = ManilaShare(share_id, "CEPHFS")
         export_location = "10.0.0.50:/mnt/foo"

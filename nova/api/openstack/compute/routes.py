@@ -72,6 +72,7 @@ from nova.api.openstack.compute import server_groups
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import server_migrations
 from nova.api.openstack.compute import server_password
+from nova.api.openstack.compute import server_shares
 from nova.api.openstack.compute import server_tags
 from nova.api.openstack.compute import server_topology
 from nova.api.openstack.compute import servers
@@ -310,6 +311,8 @@ server_remote_consoles_controller = functools.partial(_create_controller,
 server_security_groups_controller = functools.partial(_create_controller,
     security_groups.ServerSecurityGroupController, [])
 
+server_shares_controller = functools.partial(_create_controller,
+    server_shares.ServerSharesController, [])
 
 server_tags_controller = functools.partial(_create_controller,
     server_tags.ServerTagsController, [])
@@ -824,6 +827,14 @@ ROUTE_LIST = (
     }),
     ('/servers/{server_id}/os-security-groups', {
         'GET': [server_security_groups_controller, 'index']
+    }),
+    ('/servers/{server_id}/shares', {
+        'GET': [server_shares_controller, 'index'],
+        'POST': [server_shares_controller, 'create'],
+    }),
+    ('/servers/{server_id}/shares/{id}', {
+        'GET': [server_shares_controller, 'show'],
+        'DELETE': [server_shares_controller, 'delete'],
     }),
     ('/servers/{server_id}/tags', {
         'GET': [server_tags_controller, 'index'],

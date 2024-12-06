@@ -311,6 +311,12 @@ service_id_path_2_53_no_version:
   in: path
   required: true
   type: string
+share_id_path:
+  description: |
+    The UUID of the attached share.
+  in: path
+  required: true
+  type: string
 snapshot_id_path:
   description: |
     The UUID of the snapshot.
@@ -3742,13 +3748,13 @@ hosts.availability_zone_none:
   type: none
 hours:
   description: |
-   The duration that the server exists (in hours).
+    The duration that the server exists (in hours).
   in: body
   required: true
   type: float
 hours_optional:
   description: |
-   The duration that the server exists (in hours).
+    The duration that the server exists (in hours).
   in: body
   required: false
   type: float
@@ -6809,6 +6815,56 @@ set_metadata:
   in: body
   required: true
   type: object
+share_body:
+  description: |
+    A dictionary representation of a share attachment containing the fields
+    ``uuid``, ``serverId``, ``status``, ``tag`` and ``export_location``.
+  in: body
+  required: true
+  type: object
+share_export_location_body:
+  description: |
+    The export location used to attach the share to the underlying host.
+  in: body
+  required: false
+  type: string
+share_id_body:
+  description: |
+    The UUID of the attached share.
+  in: body
+  required: true
+  type: string
+share_status_body:
+  description: |
+    Status of the Share:
+
+    - attaching: The share is being attached to the VM by the compute node.
+    - detaching: The share is being detached from the VM by the compute node.
+    - inactive: The share is attached but inactive because the VM is stopped.
+    - active: The share is attached, and the VM is running.
+    - error: The share is in an error state.
+  in: body
+  required: true
+  type: string
+share_tag_body:
+  description: |
+    The device tag to be used by users to mount the share within the instance,
+    if not provided then the share UUID will be used automatically.
+  in: body
+  required: true
+  type: string
+share_uuid_body:
+  description: |
+    The UUID of the share attachment.
+  in: body
+  required: false
+  type: string
+shares_body:
+  description: |
+    The list of share attachments.
+  in: body
+  required: true
+  type: array
 shelve:
   description: |
     The action.
