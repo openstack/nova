@@ -550,6 +550,24 @@ class InstanceHelperMixin:
         self.notifier.wait_for_versioned_notifications(
             'instance.interface_detach.end')
 
+    def _get_share(self, server, share_id):
+        return (self.api.get_server_share(server['id'], share_id))
+
+    def _attach_share(self, server, share_id, tag=None):
+        if not tag:
+            self.api.post_server_share(
+                server['id'], {"share": {"share_id": share_id}})
+        else:
+            self.api.post_server_share(
+                server['id'], {"share": {"share_id": share_id, "tag": tag}})
+        self.notifier.wait_for_versioned_notifications(
+            'instance.share_attach.end')
+
+    def _detach_share(self, server, share_id):
+        self.api.delete_server_share(server['id'], share_id)
+        self.notifier.wait_for_versioned_notifications(
+            'instance.share_detach.end')
+
     def _rebuild_server(self, server, image_uuid, expected_state='ACTIVE'):
         """Rebuild a server."""
         self.api.post_server_action(

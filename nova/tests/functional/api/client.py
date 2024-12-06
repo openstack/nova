@@ -395,6 +395,24 @@ class TestOpenStackClient(object):
         return self.api_delete('/servers/%s/os-volume_attachments/%s' %
                             (server_id, volume_id))
 
+    def get_server_shares(self, server_id):
+        return self.api_get('/servers/%s/shares' %
+                            (server_id)).body['share']
+
+    def get_server_share(self, server_id, share_id):
+        return self.api_get('/servers/%s/shares/%s' %
+                            (server_id, share_id)
+                        ).body['share']
+
+    def post_server_share(self, server_id, share_attachment):
+        return self.api_post('/servers/%s/shares' %
+                             (server_id), share_attachment
+                            ).body['share']
+
+    def delete_server_share(self, server_id, share_id):
+        return self.api_delete('/servers/%s/shares/%s' %
+                            (server_id, share_id))
+
     def post_server_metadata(self, server_id, metadata):
         post_body = {'metadata': {}}
         post_body['metadata'].update(metadata)
