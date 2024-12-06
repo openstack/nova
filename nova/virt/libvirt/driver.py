@@ -11522,6 +11522,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   migrate_data.block_migration)
 
         n = 0
+        sleep_time = 0.5
+        last_info_elapsed = 0.0
         start = time.time()
         is_post_copy_enabled = self._is_post_copy_enabled(migration_flags)
         # vpmem does not support post copy
@@ -11590,12 +11592,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 # We loop every 500ms, so don't log on every
                 # iteration to avoid spamming logs for long
-                # running migrations. Just once every 5 secs
+                # running migrations. Just once every 5 secs by default
                 # is sufficient for developers to debug problems.
                 # We log once every 30 seconds at info to help
                 # admins see slow running migration operations
                 # when debug logs are off.
-                if (n % 10) == 0:
+                divisor = int(
+                    CONF.libvirt.live_migration_monitor_interval / sleep_time)
+                if (n % divisor) == 0:
                     # Ignoring memory_processed, as due to repeated
                     # dirtying of data, this can be way larger than
                     # memory_total. Best to just look at what's
@@ -11621,8 +11625,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                100 / info.disk_total)
 
                     lg = LOG.debug
-                    if (n % 60) == 0:
+                    if elapsed - last_info_elapsed >= 30:
                         lg = LOG.info
+                        last_info_elapsed = elapsed
 
                     lg("Migration running for %(secs)d secs, "
                        "memory %(remaining)d%% remaining "
@@ -11670,7 +11675,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warning("Unexpected migration job type: %d",
                             info.type, instance=instance)
 
-            time.sleep(0.5)
+            time.sleep(sleep_time)
         self._clear_empty_migration(instance)
 
     def _clear_empty_migration(self, instance):

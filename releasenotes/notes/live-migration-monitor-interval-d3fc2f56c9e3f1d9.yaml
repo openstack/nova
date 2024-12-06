@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    A new ``[libvirt]live_migration_monitor_interval`` config option has
+    been added to control how frequently migration stats are saved to
+    the database during live migrations. The default remains 5 seconds.
+    In environments where long-running live migrations produce enough
+    database writes to overwhelm the message queue, this interval can
+    be increased to reduce the frequency of RPC calls to nova-conductor.
+    See `bug 2091138 <https://launchpad.net/bugs/2091138>`_ for details.

@@ -513,6 +513,26 @@ Related options:
 disk stream) over libvirtd.
 
 """),
+    cfg.IntOpt('live_migration_monitor_interval',
+               default=5,
+               help="""
+Interval, in seconds, at which to save migration stats to the database.
+
+During a live migration, the live migration monitoring thread will periodically
+save migration stats about the memory and disk data transfer to the database.
+By default this will occur every 5 seconds and a message about the ongoing
+migration will also be logged at level DEBUG at the same time.
+
+Because nova-compute does not have direct access to the database, all database
+writes it initiates must go over RPC to nova-conductor and nova-conductor will
+connect to the database. In certain deployment environments, long running live
+migrations can produce a substantial number of database writes and if the
+writes are sufficiently frequent, the message queue could become overwhelmed
+and culminate in MessagingTimeout errors for nova-compute.
+
+This option provides a way to control the frequency of database writes during
+running live migrations to suit the deployment environment.
+"""),
     cfg.StrOpt('disk_prefix',
                help="""
 Override the default disk prefix for the devices attached to an instance.
