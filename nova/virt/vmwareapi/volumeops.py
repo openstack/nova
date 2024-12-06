@@ -791,7 +791,7 @@ class VMwareVolumeOps(object):
                         volume, original_device_path, current_device_path,
                         instance=instance
                         )
-                    self.detach_disk_from_vm(self, volume_ref, instance,
+                    self.detach_disk_from_vm(volume_ref, instance,
                         original_device, destroy_disk=True)
 
                 disk_type = vm_util._get_device_disk_type(device)
