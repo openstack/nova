@@ -342,6 +342,7 @@ class TestInstanceNotificationSample(
         self.useFixture(self.neutron)
         self.cinder = fixtures.CinderFixture(self)
         self.useFixture(self.cinder)
+        self.useFixture(fixtures.ManilaFixture())
 
     def _wait_until_swap_volume(self, server, volume_id):
         for i in range(50):
@@ -388,6 +389,7 @@ class TestInstanceNotificationSample(
             self._test_interface_attach_error,
             self._test_lock_unlock_instance,
             self._test_lock_unlock_instance_with_reason,
+            self._test_share_attach,
         ]
 
         for action in actions:
@@ -1699,6 +1701,36 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=self.notifier.versioned_notifications[1])
+
+    def _test_share_attach(self, server):
+        self.api.post_server_action(server['id'], {'os-stop': {}})
+        self._wait_for_state_change(server, expected_status='SHUTOFF')
+        self.notifier.reset()
+
+        self._attach_share(server, "e8debdc0-447a-4376-a10a-4cd9122d7986")
+
+        self.assertEqual(2, len(self.notifier.versioned_notifications),
+                         self.notifier.versioned_notifications)
+        self._verify_notification(
+            'instance-share_attach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'state': 'stopped',
+                'power_state': 'shutdown'},
+            actual=self.notifier.versioned_notifications[0])
+        self._verify_notification(
+            'instance-share_attach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'state': 'stopped',
+                'power_state': 'shutdown'},
+            actual=self.notifier.versioned_notifications[1])
+
+        # Start server
+        self.api.post_server_action(server['id'], {'os-start': {}})
+        self._wait_for_state_change(server, expected_status='ACTIVE')
 
     def _test_rescue_unrescue_server(self, server):
         # Both "rescue" and "unrescue" notification asserts are made here

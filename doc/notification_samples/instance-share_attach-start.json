@@ -1,0 +1,8 @@
+{
+    "event_type": "instance.share_attach.start",
+    "payload": {
+        "$ref": "common_payloads/InstanceActionSharePayload.json#"
+    },
+    "priority": "INFO",
+    "publisher_id": "nova-api:compute"
+}

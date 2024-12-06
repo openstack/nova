@@ -142,9 +142,12 @@ class ServerSharesTest(BaseTestCase):
         mock_db_get_shares.assert_called_once_with(mock.ANY, instance.uuid)
         self.assertEqual(output, fake_shares)
 
-    @mock.patch('nova.compute.api.API.allow_share')
     @mock.patch(
         'nova.virt.hardware.check_shares_supported', return_value=None
+    )
+    @mock.patch(
+        'nova.compute.utils.notify_about_share_attach_detach',
+        return_value=None
     )
     @mock.patch(
         'nova.db.main.api.share_mapping_get_by_instance_uuid_and_share_id'
@@ -156,8 +159,8 @@ class ServerSharesTest(BaseTestCase):
         mock_get_instance,
         mock_db_update_share,
         mock_db_get_share,
+        mock_notifications,
         mock_shares_support,
-        mock_allow
     ):
         instance = self.fake_get_instance()
 
@@ -186,15 +189,6 @@ class ServerSharesTest(BaseTestCase):
         mock_db_update_share.return_value = fake_db_share
         mock_db_get_share.side_effect = [None, fake_db_share]
         self.controller.create(self.req, instance.uuid, body=body)
-
-        mock_allow.assert_called_once()
-        self.assertIsInstance(
-            mock_allow.call_args.args[1], objects.instance.Instance)
-        self.assertEqual(mock_allow.call_args.args[1].uuid, instance.uuid)
-        self.assertIsInstance(
-            mock_allow.call_args.args[2], objects.share_mapping.ShareMapping)
-        self.assertEqual(
-            mock_allow.call_args.args[2].share_id, fake_db_share['share_id'])
 
         mock_db_update_share.assert_called_once_with(
             mock.ANY,
@@ -366,6 +360,10 @@ class ServerSharesTest(BaseTestCase):
     @mock.patch(
         'nova.virt.hardware.check_shares_supported', return_value=None
     )
+    @mock.patch(
+        'nova.compute.utils.notify_about_share_attach_detach',
+        return_value=None
+    )
     @mock.patch('nova.db.main.api.'
             'share_mapping_delete_by_instance_uuid_and_share_id')
     @mock.patch('nova.db.main.api.'
@@ -376,6 +374,7 @@ class ServerSharesTest(BaseTestCase):
         mock_get_instance,
         mock_db_get_shares,
         mock_db_delete_share,
+        mock_notifications,
         mock_shares_support,
         mock_deny
     ):
