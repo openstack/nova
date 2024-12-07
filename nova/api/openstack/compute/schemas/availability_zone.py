@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
+
 # TODO(stephenfin): Remove additionalProperties in a future API version
 index_query = {
     'type': 'object',
@@ -20,3 +23,58 @@ index_query = {
 }
 
 detail_query = index_query
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'availabilityZoneInfo': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'hosts': {'type': 'null'},
+                    'zoneName': {'type': 'string'},
+                    'zoneState': {
+                        'type': 'object',
+                        'properties': {
+                            'available': {'type': 'boolean'},
+                        },
+                    },
+                },
+                'required': ['hosts', 'zoneName', 'zoneState'],
+                'additionalProperties': False,
+            },
+        },
+    },
+    'required': ['availabilityZoneInfo'],
+    'additionalProperties': False,
+}
+
+detail_response = copy.deepcopy(index_response)
+detail_response['properties']['availabilityZoneInfo']['items']['properties']['hosts'] = {  # noqa: E501
+    'type': ['null', 'object'],
+    'patternProperties': {
+        '^.+$': {
+            'type': 'object',
+            'patternProperties': {
+                '^.+$': {
+                    'type': 'object',
+                    'properties': {
+                        'active': {'type': 'boolean'},
+                        'available': {'type': 'boolean'},
+                        'updated_at': {
+                            'oneOf': [
+                                {'type': 'null'},
+                                {'type': 'string', 'format': 'date-time'},
+                            ],
+                        },
+                    },
+                    'required': ['active', 'available', 'updated_at'],
+                    'additionalProperties': False,
+                },
+            },
+            'additionalProperties': False,
+        },
+    },
+    'additionalProperties': False,
+}
