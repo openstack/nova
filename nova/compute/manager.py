@@ -4831,7 +4831,25 @@ class ComputeManager(manager.Manager):
                 # remove from manila, so we can still detach the share.
                 share_mapping.delete()
 
+        compute_utils.notify_about_share_attach_detach(
+            context,
+            instance,
+            instance.host,
+            action=fields.NotificationAction.SHARE_DETACH,
+            phase=fields.NotificationPhase.START,
+            share_id=share_mapping.share_id
+        )
+
         _deny_share(context, instance, share_mapping)
+
+        compute_utils.notify_about_share_attach_detach(
+            context,
+            instance,
+            instance.host,
+            action=fields.NotificationAction.SHARE_DETACH,
+            phase=fields.NotificationPhase.END,
+            share_id=share_mapping.share_id
+        )
 
     @wrap_exception()
     def _mount_all_shares(self, context, instance, share_info):

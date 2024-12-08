@@ -390,6 +390,7 @@ class TestInstanceNotificationSample(
             self._test_lock_unlock_instance,
             self._test_lock_unlock_instance_with_reason,
             self._test_share_attach,
+            self._test_share_detach,
         ]
 
         for action in actions:
@@ -1729,6 +1730,38 @@ class TestInstanceNotificationSample(
             actual=self.notifier.versioned_notifications[1])
 
         # Start server
+        self.api.post_server_action(server['id'], {'os-start': {}})
+        self._wait_for_state_change(server, expected_status='ACTIVE')
+
+    def _test_share_detach(self, server):
+        self.api.post_server_action(server['id'], {'os-stop': {}})
+        self._wait_for_state_change(server, expected_status='SHUTOFF')
+        self.notifier.reset()
+
+        # Detach share
+        self._detach_share(server, 'e8debdc0-447a-4376-a10a-4cd9122d7986')
+
+        self.assertEqual(2, len(self.notifier.versioned_notifications),
+                         self.notifier.versioned_notifications)
+        self._verify_notification(
+            'instance-share_detach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'state': 'stopped',
+                'power_state': 'shutdown'},
+            actual=self.notifier.versioned_notifications[0])
+        self._verify_notification(
+            'instance-share_detach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'state': 'stopped',
+                'power_state': 'shutdown',
+            },
+            actual=self.notifier.versioned_notifications[1])
+
+        # Restart server
         self.api.post_server_action(server['id'], {'os-start': {}})
         self._wait_for_state_change(server, expected_status='ACTIVE')
 

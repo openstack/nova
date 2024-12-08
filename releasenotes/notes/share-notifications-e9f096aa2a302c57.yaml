@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The following share attach and share detach versioned notifications have
+    been added to the nova-compute service:
+    * instance.share_attach.start
+    * instance.share_attach.end
+    * instance.share_detach.start
+    * instance.share_detach.end
