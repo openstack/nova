@@ -3043,7 +3043,9 @@ flavor_disabled:
   type: boolean
   description: |
     Whether or not the flavor has been administratively disabled.
-    This is typically only visible to administrative users.
+    This is an artifact of the legacy v2 API and will always be set to
+    ``false``. There is currently no way to disable a flavor and set this to
+    ``true``.
 flavor_disk:
   in: body
   required: true
