@@ -21,31 +21,23 @@ from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute import migrate_server as \
-    migrate_server_v21
+from nova.api.openstack.compute import migrate_server
 from nova import exception
 from nova import objects
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
 
 
-class MigrateServerTestsV21(admin_only_action_common.CommonTests):
-    migrate_server = migrate_server_v21
-    controller_name = 'MigrateServerController'
-    validation_error = exception.ValidationError
-    _api_version = '2.1'
+class MigrateServerTests(admin_only_action_common.CommonTests):
     disk_over_commit = False
     force = None
     async_ = False
     host_name = None
 
     def setUp(self):
-        super(MigrateServerTestsV21, self).setUp()
-        self.controller = getattr(self.migrate_server, self.controller_name)()
+        super().setUp()
+        self.controller = migrate_server.MigrateServerController()
         self.compute_api = self.controller.compute_api
-        self.stub_out('nova.api.openstack.compute.migrate_server.'
-                      'MigrateServerController',
-                      lambda *a, **kw: self.controller)
         self.mock_neutron_extension_list = self.useFixture(
             fixtures.MockPatch(
                 'nova.network.neutron.API._refresh_neutron_extensions_cache'
@@ -181,14 +173,14 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
     def test_migrate_live_without_host(self):
         body = self._get_migration_body()
         del body['os-migrateLive']['host']
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
     def test_migrate_live_without_block_migration(self):
         body = self._get_migration_body()
         del body['os-migrateLive']['block_migration']
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
@@ -196,13 +188,13 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         body = {'os-migrateLive':
                 {'host': 'hostname',
                  'block_migration': False}}
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
     def test_migrate_live_with_invalid_block_migration(self):
         body = self._get_migration_body(block_migration='foo')
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
@@ -211,7 +203,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                 {'host': 'hostname',
                  'block_migration': False,
                  'disk_over_commit': "foo"}}
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
@@ -219,7 +211,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         body = self._get_migration_body(host='hostname')
         del body['os-migrateLive']['host']
         body['os-migrateLive']['dummy'] = 'hostname'
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
@@ -337,7 +329,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                           self.req, fakes.FAKE_UUID, body=body)
 
 
-class MigrateServerTestsV225(MigrateServerTestsV21):
+class MigrateServerTestsV225(MigrateServerTests):
 
     # We don't have disk_over_commit in v2.25
     disk_over_commit = None
@@ -377,7 +369,7 @@ class MigrateServerTestsV225(MigrateServerTestsV21):
                 {'host': 'hostname',
                  'block_migration': 'auto',
                  'disk_over_commit': False}}
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
@@ -414,7 +406,7 @@ class MigrateServerTestsV230(MigrateServerTestsV225):
     def test_forced_live_migrate_with_no_provided_host(self):
         body = {'os-migrateLive':
                 {'force': 'true'}}
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
@@ -526,7 +518,7 @@ class MigrateServerTestsV256(MigrateServerTestsV234):
             '2.56')
 
     def _test_migrate_validation_error(self, body):
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller._migrate,
                           self.req, fakes.FAKE_UUID, body=body)
 
@@ -625,7 +617,7 @@ class MigrateServerTestsV268(MigrateServerTestsV256):
         body = {'os-migrateLive': {'host': 'hostname',
                                    'block_migration': 'auto',
                                    'force': 'true'}}
-        ex = self.assertRaises(self.validation_error,
+        ex = self.assertRaises(exception.ValidationError,
                                self.controller._migrate_live,
                                self.req, fakes.FAKE_UUID, body=body)
         self.assertIn('force', str(ex))

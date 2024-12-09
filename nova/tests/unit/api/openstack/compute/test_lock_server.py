@@ -17,24 +17,18 @@ from unittest import mock
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute import lock_server as lock_server_v21
+from nova.api.openstack.compute import lock_server
 from nova import exception
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit import fake_instance
 
 
-class LockServerTestsV21(admin_only_action_common.CommonTests):
-    lock_server = lock_server_v21
-    controller_name = 'LockServerController'
-    _api_version = '2.1'
+class LockServerTests(admin_only_action_common.CommonTests):
 
     def setUp(self):
-        super(LockServerTestsV21, self).setUp()
-        self.controller = getattr(self.lock_server, self.controller_name)()
+        super().setUp()
+        self.controller = lock_server.LockServerController()
         self.compute_api = self.controller.compute_api
-        self.stub_out('nova.api.openstack.compute.lock_server.'
-                      'LockServerController',
-                      lambda *a, **kw: self.controller)
 
     def test_lock_unlock(self):
         args_map = {'_lock': ((), {"reason": None})}
@@ -74,7 +68,7 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
                 self.req.environ['nova.context'], instance, reason=None)
 
 
-class LockServerTestsV273(LockServerTestsV21):
+class LockServerTestsV273(LockServerTests):
 
     def setUp(self):
         super(LockServerTestsV273, self).setUp()
