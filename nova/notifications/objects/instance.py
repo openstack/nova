@@ -683,6 +683,7 @@ class InstanceActionVolumeNotification(base.NotificationBase):
 
 
 @base.notification_sample('instance-share_attach-start.json')
+@base.notification_sample('instance-share_attach-error.json')
 @base.notification_sample('instance-share_attach-end.json')
 @base.notification_sample('instance-share_detach-start.json')
 @base.notification_sample('instance-share_detach-end.json')

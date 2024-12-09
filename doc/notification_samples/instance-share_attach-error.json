@@ -1,0 +1,22 @@
+{
+  "event_type": "instance.share_attach.error",
+  "payload": {
+    "$ref": "common_payloads/InstanceActionSharePayload.json#",
+    "nova_object.data": {
+      "fault": {
+        "nova_object.data": {
+          "exception": "ShareAccessGrantError",
+          "exception_message": "Share access could not be granted to share id 8db0037b-e98f-4bde-ae71-f96a077c19a4.\nReason: Connection timed out.",
+          "function_name": "_execute_mock_call",
+          "module_name": "unittest.mock",
+          "traceback": "Traceback (most recent call last):\n  File \"nova/compute/manager.py\", line ..."
+        },
+        "nova_object.name": "ExceptionPayload",
+        "nova_object.namespace": "nova",
+        "nova_object.version": "1.1"
+      }
+    }
+  },
+  "priority": "ERROR",
+  "publisher_id": "nova-api:compute"
+}

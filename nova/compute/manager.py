@@ -4637,7 +4637,6 @@ class ComputeManager(manager.Manager):
 
         @utils.synchronized(share_mapping.share_id)
         def _allow_share(context, instance, share_mapping):
-
             def _apply_policy():
                 # self.manila_api.lock(share_mapping.share_id)
                 # Explicitly locking the share is not needed as
@@ -4684,6 +4683,15 @@ class ComputeManager(manager.Manager):
                     )
 
             try:
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_ATTACH,
+                    phase=fields.NotificationPhase.START,
+                    share_id=share_mapping.share_id
+                )
+
                 share_mapping.set_access_according_to_protocol()
 
                 if not self.manila_api.has_access(
@@ -4700,6 +4708,15 @@ class ComputeManager(manager.Manager):
                     share_mapping, fields.ShareMappingStatus.INACTIVE
                 )
 
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_ATTACH,
+                    phase=fields.NotificationPhase.END,
+                    share_id=share_mapping.share_id
+                )
+
             except (
                 exception.ShareNotFound,
                 exception.ShareProtocolNotSupported,
@@ -4708,6 +4725,15 @@ class ComputeManager(manager.Manager):
                 self._set_share_mapping_status(
                     share_mapping, fields.ShareMappingStatus.ERROR
                 )
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_ATTACH,
+                    phase=fields.NotificationPhase.ERROR,
+                    share_id=share_mapping.share_id,
+                    exception=e
+                )
                 LOG.error(e.format_message())
                 raise
             except (
@@ -4715,6 +4741,15 @@ class ComputeManager(manager.Manager):
             ) as e:
                 self._set_share_mapping_status(
                     share_mapping, fields.ShareMappingStatus.ERROR
+                )
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_ATTACH,
+                    phase=fields.NotificationPhase.ERROR,
+                    share_id=share_mapping.share_id,
+                    exception=e
                 )
                 LOG.error(
                     "%s: %s error from url: %s, %s",
@@ -4728,28 +4763,19 @@ class ComputeManager(manager.Manager):
                 self._set_share_mapping_status(
                     share_mapping, fields.ShareMappingStatus.ERROR
                 )
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_ATTACH,
+                    phase=fields.NotificationPhase.ERROR,
+                    share_id=share_mapping.share_id,
+                    exception=e
+                )
                 LOG.error(e)
                 raise
 
-        compute_utils.notify_about_share_attach_detach(
-            context,
-            instance,
-            instance.host,
-            action=fields.NotificationAction.SHARE_ATTACH,
-            phase=fields.NotificationPhase.START,
-            share_id=share_mapping.share_id
-        )
-
         _allow_share(context, instance, share_mapping)
-
-        compute_utils.notify_about_share_attach_detach(
-            context,
-            instance,
-            instance.host,
-            action=fields.NotificationAction.SHARE_ATTACH,
-            phase=fields.NotificationPhase.END,
-            share_id=share_mapping.share_id
-        )
 
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_exception()
