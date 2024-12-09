@@ -38,9 +38,10 @@
         "request_id": "req-5b6c791d-5709-4f36-8fbe-c3e02869e35d",
         "action_initiator_user": "fake",
         "action_initiator_project": "6f70656e737461636b20342065766572",
-        "locked_reason": null
+        "locked_reason": null,
+        "shares": []
     },
     "nova_object.name":"InstancePayload",
     "nova_object.namespace":"nova",
-    "nova_object.version":"1.8"
+    "nova_object.version":"1.9"
 }

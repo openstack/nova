@@ -1,13 +1,10 @@
 {
-    "$ref": "InstanceActionPayload.json",
-    "nova_object.data": {
-        "architecture": null,
-        "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
-        "trusted_image_certificates": [
-            "rebuild-cert-id-1",
-            "rebuild-cert-id-2"
-        ]
-    },
-    "nova_object.name": "InstanceActionRebuildPayload",
-    "nova_object.version": "1.9"
+  "$ref": "InstanceActionPayload.json",
+  "nova_object.data": {
+    "architecture": null,
+    "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
+    "trusted_image_certificates": ["rebuild-cert-id-1", "rebuild-cert-id-2"]
+  },
+  "nova_object.name": "InstanceActionRebuildPayload",
+  "nova_object.version": "1.10"
 }

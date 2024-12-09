@@ -105,6 +105,15 @@ If enabled, include block device information in the versioned notification
 payload. Sending block device information is disabled by default as providing
 that information can incur some overhead on the system since the information
 may need to be loaded from the database.
+"""),
+    cfg.BoolOpt(
+        'include_share_mapping',
+        default=False,
+        help="""
+If enabled, include share mapping information in the versioned notification
+payload. Sending share mapping information is disabled by default as providing
+that information can incur some overhead on the system since the information
+may need to be loaded from the database.
 """)
 ]
 

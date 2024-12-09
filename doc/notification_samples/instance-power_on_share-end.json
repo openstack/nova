@@ -1,0 +1,8 @@
+{
+  "event_type": "instance.power_on.end",
+  "payload": {
+    "$ref": "common_payloads/InstanceActionPayloadShareActive.json#"
+  },
+  "priority": "INFO",
+  "publisher_id": "nova-compute:compute"
+}

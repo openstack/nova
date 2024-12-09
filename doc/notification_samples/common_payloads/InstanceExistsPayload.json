@@ -1,9 +1,11 @@
 {
     "$ref": "InstancePayload.json",
-    "nova_object.data":{
-        "audit_period": {"$ref": "AuditPeriodPayload.json#"}
+    "nova_object.data": {
+        "audit_period": {
+            "$ref": "AuditPeriodPayload.json#"
+        }
     },
-    "nova_object.name":"InstanceExistsPayload",
-    "nova_object.namespace":"nova",
-    "nova_object.version":"2.0"
+    "nova_object.name": "InstanceExistsPayload",
+    "nova_object.namespace": "nova",
+    "nova_object.version": "2.1"
 }

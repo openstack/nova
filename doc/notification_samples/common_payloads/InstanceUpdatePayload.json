@@ -1,32 +1,32 @@
 {
-    "$ref": "InstancePayload.json",
-    "nova_object.data": {
-        "audit_period": {
-            "nova_object.data": {
-                "audit_period_beginning": "2012-10-01T00:00:00Z",
-                "audit_period_ending": "2012-10-29T13:42:11Z"
-            },
-            "nova_object.name": "AuditPeriodPayload",
-            "nova_object.namespace": "nova",
-            "nova_object.version": "1.0"
-        },
-        "block_devices": [],
-        "old_display_name": null,
-        "state_update": {
-            "nova_object.data": {
-                "new_task_state": null,
-                "old_state": "active",
-                "old_task_state": null,
-                "state": "active"
-            },
-            "nova_object.name": "InstanceStateUpdatePayload",
-            "nova_object.namespace": "nova",
-            "nova_object.version": "1.0"
-        },
-        "tags": [],
-        "updated_at": "2012-10-29T13:42:11Z"
+  "$ref": "InstancePayload.json",
+  "nova_object.data": {
+    "audit_period": {
+      "nova_object.data": {
+        "audit_period_beginning": "2012-10-01T00:00:00Z",
+        "audit_period_ending": "2012-10-29T13:42:11Z"
+      },
+      "nova_object.name": "AuditPeriodPayload",
+      "nova_object.namespace": "nova",
+      "nova_object.version": "1.0"
     },
-    "nova_object.name": "InstanceUpdatePayload",
-    "nova_object.namespace": "nova",
-    "nova_object.version": "2.0"
+    "block_devices": [],
+    "old_display_name": null,
+    "state_update": {
+      "nova_object.data": {
+        "new_task_state": null,
+        "old_state": "active",
+        "old_task_state": null,
+        "state": "active"
+      },
+      "nova_object.name": "InstanceStateUpdatePayload",
+      "nova_object.namespace": "nova",
+      "nova_object.version": "1.0"
+    },
+    "tags": [],
+    "updated_at": "2012-10-29T13:42:11Z"
+  },
+  "nova_object.name": "InstanceUpdatePayload",
+  "nova_object.namespace": "nova",
+  "nova_object.version": "2.1"
 }

@@ -1,9 +1,9 @@
 {
-    "$ref": "InstanceActionPayload.json",
-    "nova_object.data":{
-        "snapshot_image_id": "d2aae36f-785c-4518-8016-bc9534d9fc7f"
-    },
-    "nova_object.name":"InstanceActionSnapshotPayload",
-    "nova_object.namespace":"nova",
-    "nova_object.version":"1.9"
+  "$ref": "InstanceActionPayload.json",
+  "nova_object.data": {
+    "snapshot_image_id": "d2aae36f-785c-4518-8016-bc9534d9fc7f"
+  },
+  "nova_object.name": "InstanceActionSnapshotPayload",
+  "nova_object.namespace": "nova",
+  "nova_object.version": "1.10"
 }

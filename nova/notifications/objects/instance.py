@@ -69,7 +69,8 @@ class InstancePayload(base.NotificationPayloadBase):
     # Version 1.7: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.8: Added locked_reason field
-    VERSION = '1.8'
+    # Version 1.9: Add shares related data
+    VERSION = '1.9'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
@@ -115,6 +116,7 @@ class InstancePayload(base.NotificationPayloadBase):
         'action_initiator_user': fields.StringField(nullable=True),
         'action_initiator_project': fields.StringField(nullable=True),
         'locked_reason': fields.StringField(nullable=True),
+        'shares': fields.ListOfObjectsField('SharePayload', nullable=True),
     }
 
     def __init__(self, context, instance, bdms=None):
@@ -126,6 +128,7 @@ class InstancePayload(base.NotificationPayloadBase):
             self.block_devices = BlockDevicePayload.from_bdms(bdms)
         else:
             self.block_devices = BlockDevicePayload.from_instance(instance)
+        self.shares = SharePayload.from_instance(instance)
         # NOTE(Kevin_Zheng): Don't include request_id for periodic tasks,
         # RequestContext for periodic tasks does not include project_id
         # and user_id. Consider modify this once periodic tasks got a
@@ -151,7 +154,8 @@ class InstanceActionPayload(InstancePayload):
     # Version 1.7: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.8: Added locked_reason field to InstancePayload
-    VERSION = '1.8'
+    # Version 1.9: Add shares related data
+    VERSION = '1.9'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
         'request_id': fields.StringField(nullable=True),
@@ -174,7 +178,8 @@ class InstanceActionVolumePayload(InstanceActionPayload):
     # Version 1.5: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.6: Added locked_reason field to InstancePayload
-    VERSION = '1.6'
+    # Version 1.7: Add shares to InstancePayload
+    VERSION = '1.7'
     fields = {
         'volume_id': fields.UUIDField()
     }
@@ -216,7 +221,8 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # Version 1.7: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.8: Added locked_reason field to InstancePayload
-    VERSION = '1.8'
+    # Version 1.9: Add shares to InstancePayload
+    VERSION = '1.9'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
@@ -252,7 +258,8 @@ class InstanceCreatePayload(InstanceActionPayload):
     #              InstancePayload
     #         1.11: Added instance_name to InstanceCreatePayload
     # Version 1.12: Added locked_reason field to InstancePayload
-    VERSION = '1.12'
+    # Version 1.13: Add shares to InstancePayload
+    VERSION = '1.13'
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload'),
         'tags': fields.ListOfStringsField(),
@@ -286,7 +293,8 @@ class InstanceActionResizePrepPayload(InstanceActionPayload):
     # Version 1.2: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.3: Added locked_reason field to InstancePayload
-    VERSION = '1.3'
+    # Version 1.4: Add shares to InstancePayload
+    VERSION = '1.4'
     fields = {
         'new_flavor': fields.ObjectField('FlavorPayload', nullable=True)
     }
@@ -313,7 +321,8 @@ class InstanceUpdatePayload(InstancePayload):
     #              InstancePayload
     # Version 1.9: Added locked_reason field to InstancePayload
     # Version 2.0: Remove bandwidth field
-    VERSION = '2.0'
+    # Version 2.1: Add shares to InstancePayload
+    VERSION = '2.1'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
@@ -339,7 +348,8 @@ class InstanceActionRescuePayload(InstanceActionPayload):
     # Version 1.2: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.3: Added locked_reason field to InstancePayload
-    VERSION = '1.3'
+    # Version 1.4: Add shares to InstancePayload
+    VERSION = '1.4'
     fields = {
         'rescue_image_ref': fields.UUIDField(nullable=True)
     }
@@ -364,7 +374,8 @@ class InstanceActionRebuildPayload(InstanceActionPayload):
     # Version 1.8: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.9: Added locked_reason field to InstancePayload
-    VERSION = '1.9'
+    # Version 1.10: Add shares to InstancePayload
+    VERSION = '1.10'
     fields = {
         'trusted_image_certificates': fields.ListOfStringsField(
             nullable=True)
@@ -493,6 +504,51 @@ class BlockDevicePayload(base.NotificationPayloadBase):
 
 
 @nova_base.NovaObjectRegistry.register_notification
+class SharePayload(base.NotificationPayloadBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    SCHEMA = {
+        'share_mapping_uuid': ('share', 'uuid'),
+        'share_id': ('share', 'share_id'),
+        'status': ('share', 'status'),
+        'tag': ('share', 'tag'),
+        # Do not include 'export_location' as it could contains sensitive data
+        # 'export_location': ('share', 'export_location')
+    }
+
+    fields = {
+        'share_mapping_uuid': fields.UUIDField(),
+        'share_id': fields.UUIDField(),
+        'status': fields.StringField(nullable=False),
+        'tag': fields.StringField(nullable=False),
+        # 'export_location': fields.StringField(nullable=False),
+    }
+
+    def __init__(self, share):
+        super(SharePayload, self).__init__()
+        self.populate_schema(share=share)
+
+    @classmethod
+    def from_instance(cls, instance):
+        """Returns a list of SharePayload objects based on the passed
+        shares.
+        """
+        if not CONF.notifications.include_share_mapping:
+            return None
+
+        instance_shares = instance.get_shares()
+        return [cls(share) for share in instance_shares]
+
+    @classmethod
+    def from_shares(cls, shares):
+        """Returns a list of SharePayload objects based on the passed
+        ShareMappingList.
+        """
+        return [cls(share) for share in shares]
+
+
+@nova_base.NovaObjectRegistry.register_notification
 class InstanceStateUpdatePayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -523,7 +579,9 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-suspend-start.json')
 @base.notification_sample('instance-suspend-end.json')
 @base.notification_sample('instance-power_on-start.json')
+@base.notification_sample('instance-power_on_share-start.json')
 @base.notification_sample('instance-power_on-end.json')
+@base.notification_sample('instance-power_on_share-end.json')
 @base.notification_sample('instance-power_off-start.json')
 @base.notification_sample('instance-power_off-end.json')
 @base.notification_sample('instance-reboot-start.json')
@@ -712,7 +770,8 @@ class InstanceActionSnapshotPayload(InstanceActionPayload):
     # Version 1.8: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.9: Added locked_reason field to InstancePayload
-    VERSION = '1.9'
+    # Version 1.10: Add shares to InstancePayload
+    VERSION = '1.10'
     fields = {
         'snapshot_image_id': fields.UUIDField(),
     }
@@ -732,7 +791,8 @@ class InstanceExistsPayload(InstancePayload):
     #              InstancePayload
     # Version 1.2: Added locked_reason field to InstancePayload
     # Version 2.0: Remove bandwidth field
-    VERSION = '2.0'
+    # Version 2.1: Add shares to InstancePayload
+    VERSION = '2.1'
     fields = {
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
     }

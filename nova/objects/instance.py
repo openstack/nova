@@ -1260,6 +1260,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         return objects.BlockDeviceMappingList.get_by_instance_uuid(
             self._context, self.uuid)
 
+    def get_shares(self):
+        return objects.ShareMappingList.get_by_instance_uuid(
+            self._context, self.uuid)
+
     def remove_pci_device_and_request(self, pci_device):
         """Remove the PciDevice and the related InstancePciRequest"""
         if pci_device in self.pci_devices.objects:
