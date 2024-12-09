@@ -64,6 +64,7 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((404, 501))
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         context = req.environ['nova.context']
         context.can(bn_policies.BASE_POLICY_NAME % 'list', target={})
@@ -77,9 +78,9 @@ class BareMetalNodeController(wsgi.Controller):
                 'interfaces': [],
                 'host': 'IRONIC MANAGED',
                 'task_state': inode.provision_state,
-                'cpus': inode.properties.get('cpus', 0),
-                'memory_mb': inode.properties.get('memory_mb', 0),
-                'disk_gb': inode.properties.get('local_gb', 0),
+                'cpus': inode.properties.get('cpus', str(0)),
+                'memory_mb': inode.properties.get('memory_mb', str(0)),
+                'disk_gb': inode.properties.get('local_gb', str(0)),
             }
             nodes.append(node)
 
@@ -88,6 +89,7 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((404, 501))
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(bn_policies.BASE_POLICY_NAME % 'show', target={})
@@ -105,9 +107,9 @@ class BareMetalNodeController(wsgi.Controller):
             'interfaces': [],
             'host': 'IRONIC MANAGED',
             'task_state': inode.provision_state,
-            'cpus': inode.properties.get('cpus', 0),
-            'memory_mb': inode.properties.get('memory_mb', 0),
-            'disk_gb': inode.properties.get('local_gb', 0),
+            'cpus': inode.properties.get('cpus', str(0)),
+            'memory_mb': inode.properties.get('memory_mb', str(0)),
+            'disk_gb': inode.properties.get('local_gb', str(0)),
             'instance_uuid': inode.instance_id,
         }
         for port in iports:
@@ -118,11 +120,13 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
         _no_ironic_proxy("node-create")
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         _no_ironic_proxy("node-delete")
 
@@ -130,6 +134,7 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.action('add_interface')
     @wsgi.expected_errors(400)
     @validation.schema(schema.add_interface)
+    @validation.response_body_schema(schema.add_interface_response)
     def _add_interface(self, req, id, body):
         _no_ironic_proxy("port-create")
 
@@ -137,5 +142,6 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.action('remove_interface')
     @wsgi.expected_errors(400)
     @validation.schema(schema.remove_interface)
+    @validation.response_body_schema(schema.remove_interface_response)
     def _remove_interface(self, req, id, body):
         _no_ironic_proxy("port-delete")

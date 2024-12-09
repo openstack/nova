@@ -15,6 +15,7 @@
 
 import fixtures
 from openstack import exceptions as sdk_exc
+from oslo_utils.fixture import uuidsentinel as uuids
 from webob import exc
 
 from nova.api.openstack.compute import baremetal_nodes
@@ -44,8 +45,9 @@ class BareMetalNodesTest(test.NoDBTestCase):
         self.controller = baremetal_nodes.BareMetalNodeController()
 
     def test_index_ironic(self):
-        properties = {'cpus': 2, 'memory_mb': 1024, 'local_gb': 20}
-        node = ironic_utils.get_test_node(properties=properties)
+        properties = {'cpus': '2', 'memory_mb': '1024', 'local_gb': '20'}
+        node = ironic_utils.get_test_node(
+            instance_id=uuids.instance_id, properties=properties)
         self.mock_conn.nodes.return_value = iter([node])
 
         res_dict = self.controller.index(self.request)
@@ -62,16 +64,17 @@ class BareMetalNodesTest(test.NoDBTestCase):
         self.mock_conn.nodes.assert_called_once_with(details=True)
 
     def test_index_ironic_missing_properties(self):
-        properties = {'cpus': 2}
-        node = ironic_utils.get_test_node(properties=properties)
+        properties = {'cpus': '2'}
+        node = ironic_utils.get_test_node(
+            instance_id=uuids.instance_id, properties=properties)
         self.mock_conn.nodes.return_value = iter([node])
 
         res_dict = self.controller.index(self.request)
 
         expected_output = {'nodes':
-                            [{'memory_mb': 0,
+                            [{'memory_mb': '0',
                              'host': 'IRONIC MANAGED',
-                             'disk_gb': 0,
+                             'disk_gb': '0',
                              'interfaces': [],
                              'task_state': 'available',
                              'id': node.id,
@@ -80,8 +83,9 @@ class BareMetalNodesTest(test.NoDBTestCase):
         self.mock_conn.nodes.assert_called_once_with(details=True)
 
     def test_show_ironic(self):
-        properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
-        node = ironic_utils.get_test_node(properties=properties)
+        properties = {'cpus': '1', 'memory_mb': '512', 'local_gb': '10'}
+        node = ironic_utils.get_test_node(
+            instance_id=uuids.instance_id, properties=properties)
         port = ironic_utils.get_test_port()
         self.mock_conn.get_node.return_value = node
         self.mock_conn.ports.return_value = iter([port])
@@ -90,7 +94,7 @@ class BareMetalNodesTest(test.NoDBTestCase):
 
         expected_output = {'node':
                             {'memory_mb': properties['memory_mb'],
-                             'instance_uuid': None,
+                             'instance_uuid': node.instance_id,
                              'host': 'IRONIC MANAGED',
                              'disk_gb': properties['local_gb'],
                              'interfaces': [{'address': port.address}],
@@ -103,7 +107,8 @@ class BareMetalNodesTest(test.NoDBTestCase):
 
     def test_show_ironic_no_properties(self):
         properties = {}
-        node = ironic_utils.get_test_node(properties=properties)
+        node = ironic_utils.get_test_node(
+            instance_id=uuids.instance_id, properties=properties)
         port = ironic_utils.get_test_port()
         self.mock_conn.get_node.return_value = node
         self.mock_conn.ports.return_value = iter([port])
@@ -111,21 +116,22 @@ class BareMetalNodesTest(test.NoDBTestCase):
         res_dict = self.controller.show(self.request, node.id)
 
         expected_output = {'node':
-                            {'memory_mb': 0,
-                             'instance_uuid': None,
+                            {'memory_mb': '0',
+                             'instance_uuid': node.instance_id,
                              'host': 'IRONIC MANAGED',
-                             'disk_gb': 0,
+                             'disk_gb': '0',
                              'interfaces': [{'address': port.address}],
                              'task_state': 'available',
                              'id': node.id,
-                             'cpus': 0}}
+                             'cpus': '0'}}
         self.assertEqual(expected_output, res_dict)
         self.mock_conn.get_node.assert_called_once_with(node.id)
         self.mock_conn.ports.assert_called_once_with(node=node.id)
 
     def test_show_ironic_no_interfaces(self):
-        properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
-        node = ironic_utils.get_test_node(properties=properties)
+        properties = {'cpus': '1', 'memory_mb': '512', 'local_gb': '10'}
+        node = ironic_utils.get_test_node(
+            instance_id=uuids.instance_id, properties=properties)
         self.mock_conn.get_node.return_value = node
         self.mock_conn.ports.return_value = iter([])
 
