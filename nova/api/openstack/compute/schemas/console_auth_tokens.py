@@ -16,3 +16,34 @@ show_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'console': {
+            'type': 'object',
+            'properties': {
+                'instance_uuid': {'type': 'string', 'format': 'uuid'},
+                'host': {'type': ['string', 'null']},
+                'port': {'type': 'integer'},
+                'internal_access_path': {
+                    'oneOf': [
+                        {
+                            'type': 'null',
+                        },
+                        {
+                            'type': 'string',
+                            'format': 'uuid',
+                        },
+                    ],
+                },
+            },
+            'required': [
+                'instance_uuid', 'host', 'port', 'internal_access_path',
+            ],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['console'],
+    'additionalProperties': False,
+}

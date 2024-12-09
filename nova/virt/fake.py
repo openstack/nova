@@ -476,25 +476,29 @@ class FakeDriver(driver.ComputeDriver):
         return 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE'
 
     def get_vnc_console(self, context, instance):
-        return ctype.ConsoleVNC(internal_access_path='FAKE',
-                                host='fakevncconsole.com',
-                                port=6969)
+        return ctype.ConsoleVNC(
+            internal_access_path=uuids.vnc_access_path,
+            host='fakevncconsole.com',
+            port=6969)
 
     def get_spice_console(self, context, instance):
-        return ctype.ConsoleSpice(internal_access_path='FAKE',
-                                  host='fakespiceconsole.com',
-                                  port=6969,
-                                  tlsPort=6970)
+        return ctype.ConsoleSpice(
+            internal_access_path=uuids.spice_access_path,
+            host='fakespiceconsole.com',
+            port=6969,
+            tlsPort=6970)
 
     def get_serial_console(self, context, instance):
-        return ctype.ConsoleSerial(internal_access_path='FAKE',
-                                   host='fakerdpconsole.com',
-                                   port=6969)
+        return ctype.ConsoleSerial(
+            internal_access_path=uuids.serial_access_path,
+            host='fakerdpconsole.com',
+            port=6969)
 
     def get_mks_console(self, context, instance):
-        return ctype.ConsoleMKS(internal_access_path='FAKE',
-                                host='fakemksconsole.com',
-                                port=6969)
+        return ctype.ConsoleMKS(
+            internal_access_path=uuids.mks_access_path,
+            host='fakemksconsole.com',
+            port=6969)
 
     def get_available_resource(self, nodename):
         """Updates compute manager resource info on ComputeNode table.

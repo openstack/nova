@@ -12,7 +12,10 @@
 
 from unittest import mock
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
 from nova.api.openstack.compute import console_auth_tokens
+from nova import objects
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
 
@@ -43,6 +46,16 @@ class ConsoleAuthTokensPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_console_connect_info_token_policy(self, mock_validate):
         rule_name = "os_compute_api:os-console-auth-tokens"
+        mock_validate.return_value = objects.ConsoleAuthToken(
+            id=1,
+            host='node1',
+            port=10000,
+            console_type='novnc',
+            access_url_base='https://example.net:6080',
+            internal_access_path=None,
+            instance_uuid=uuids.instance,
+            token='123-456-789',
+        )
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.show,
                                 self.req, fakes.FAKE_UUID)
