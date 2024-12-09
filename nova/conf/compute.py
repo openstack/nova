@@ -626,11 +626,11 @@ notifications are consumed by OpenStack Telemetry service.
     cfg.IntOpt('live_migration_retry_count',
         default=30,
         min=0,
+        advanced=True,
         help="""
-Maximum number of 1 second retries in live_migration. It specifies number
-of retries to iptables when it complains. It happens when an user continuously
-sends live-migration request to same host leading to concurrent request
-to iptables.
+This option controls the maximum number of attempts to plug VIFs on the
+destination host. Historically this could fail due to rate limiting in
+iptables. Operators should not need to modify this value from its default.
 
 Possible values:
 
