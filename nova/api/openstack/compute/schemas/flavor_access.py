@@ -79,6 +79,8 @@ _common_response = {
     'additionalProperties': True,
 }
 
+index_response = copy.deepcopy(_common_response)
+
 add_tenant_access_response = copy.deepcopy(_common_response)
 
 remove_tenant_access_response = copy.deepcopy(_common_response)
