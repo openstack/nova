@@ -90,12 +90,12 @@ _flavor_description = {
 }
 
 
-create_v2_55 = copy.deepcopy(create)
-create_v2_55['properties']['flavor']['properties']['description'] = (
+create_v255 = copy.deepcopy(create)
+create_v255['properties']['flavor']['properties']['description'] = (
     _flavor_description)
 
 
-update_v2_55 = {
+update = {
     'type': 'object',
     'properties': {
         'flavor': {
@@ -145,3 +145,200 @@ show_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+_flavor_basic = {
+    'type': 'object',
+    'properties': {
+        'id': {'type': 'string'},
+        'links': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'href': {'type': 'string', 'format': 'uri'},
+                    'rel': {'type': 'string'},
+                },
+                'required': ['href', 'rel'],
+                'additionalProperties': False,
+            },
+        },
+        'name': {'type': 'string'},
+    },
+    'required': ['id', 'links', 'name'],
+    'additionalProperties': False,
+}
+
+_flavor_basic_v255 = copy.deepcopy(_flavor_basic)
+_flavor_basic_v255['properties']['description'] = {'type': ['string', 'null']}
+_flavor_basic_v255['required'].append('description')
+
+_flavor = {
+    'type': 'object',
+    'properties': {
+        'disk': {'type': 'integer'},
+        'id': {'type': 'string'},
+        'links': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'href': {'type': 'string', 'format': 'uri'},
+                    'rel': {'type': 'string'},
+                },
+                'required': ['href', 'rel'],
+            },
+        },
+        'name': {'type': 'string'},
+        'os-flavor-access:is_public': {},
+        'ram': {'type': 'integer'},
+        'rxtx_factor': {},
+        'swap': {
+            'anyOf': [
+                {'type': 'integer'},
+                {'const': ''},
+            ],
+        },
+        'vcpus': {'type': 'integer'},
+        'OS-FLV-EXT-DATA:ephemeral': {'type': 'integer'},
+        'OS-FLV-DISABLED:disabled': {'type': 'boolean'},
+    },
+    'required': [
+        'disk',
+        'id',
+        'links',
+        'name',
+        'os-flavor-access:is_public',
+        'ram',
+        'rxtx_factor',
+        'swap',
+        'vcpus',
+        'OS-FLV-DISABLED:disabled',
+        'OS-FLV-EXT-DATA:ephemeral',
+    ],
+    'additionalProperties': False,
+}
+
+_flavor_v255 = copy.deepcopy(_flavor)
+_flavor_v255['properties']['description'] = {'type': ['string', 'null']}
+_flavor_v255['required'].append('description')
+
+_flavor_v261 = copy.deepcopy(_flavor_v255)
+_flavor_v261['properties']['extra_specs'] = {
+    'type': 'object',
+    'patternProperties': {
+        '^[a-zA-Z0-9-_:. ]{1,255}$': {'type': 'string', 'maxLength': 255},
+    },
+    'additionalProperties': False,
+}
+
+_flavor_v275 = copy.deepcopy(_flavor_v261)
+# we completely overwrite this since the new variant is much simpler
+_flavor_v275['properties']['swap'] = {'type': 'integer'}
+
+_flavors_links = {
+    'type': 'array',
+    'items': {
+        'type': 'object',
+        'properties': {
+            'href': {'type': 'string', 'format': 'uri'},
+            'rel': {'type': 'string'},
+        },
+        'required': ['href', 'rel'],
+        'additionalProperties': False,
+    },
+}
+
+delete_response = {
+    'type': 'null',
+}
+
+create_response = {
+    'type': 'object',
+    'properties': {
+        'flavor': copy.deepcopy(_flavor),
+    },
+    'required': ['flavor'],
+    'additionalProperties': False,
+}
+
+create_response_v255 = copy.deepcopy(create_response)
+create_response_v255['properties']['flavor'] = copy.deepcopy(_flavor_v255)
+
+create_response_v261 = copy.deepcopy(create_response_v255)
+create_response_v261['properties']['flavor'] = copy.deepcopy(_flavor_v261)
+
+create_response_v275 = copy.deepcopy(create_response_v261)
+create_response_v275['properties']['flavor'] = copy.deepcopy(_flavor_v275)
+
+# NOTE(stephenfin): update is only available from 2.55 and the response is
+# identical to the create and show response from that point forward
+update_response = {
+    'type': 'object',
+    'properties': {
+        'flavor': copy.deepcopy(_flavor_v255),
+    },
+    'required': ['flavor'],
+    'additionalProperties': False,
+}
+
+update_response_v261 = copy.deepcopy(update_response)
+update_response_v261['properties']['flavor'] = copy.deepcopy(_flavor_v261)
+
+update_response_v275 = copy.deepcopy(update_response_v261)
+update_response_v275['properties']['flavor'] = copy.deepcopy(_flavor_v275)
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'flavors': {
+            'type': 'array',
+            'items': _flavor_basic,
+        },
+        'flavors_links': _flavors_links,
+    },
+    'required': ['flavors'],
+    'additionalProperties': False,
+}
+
+index_response_v255 = copy.deepcopy(index_response)
+index_response_v255['properties']['flavors']['items'] = _flavor_basic_v255
+
+detail_response = {
+    'type': 'object',
+    'properties': {
+        'flavors': {
+            'type': 'array',
+            'items': _flavor,
+        },
+        'flavors_links': _flavors_links,
+    },
+    'required': ['flavors'],
+    'additionalProperties': False,
+}
+
+detail_response_v255 = copy.deepcopy(detail_response)
+detail_response_v255['properties']['flavors']['items'] = _flavor_v255
+
+detail_response_v261 = copy.deepcopy(detail_response_v255)
+detail_response_v261['properties']['flavors']['items'] = _flavor_v261
+
+detail_response_v275 = copy.deepcopy(detail_response_v261)
+detail_response_v275['properties']['flavors']['items'] = _flavor_v275
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'flavor': copy.deepcopy(_flavor),
+    },
+    'required': ['flavor'],
+    'additionalProperties': False,
+}
+
+show_response_v255 = copy.deepcopy(show_response)
+show_response_v255['properties']['flavor'] = copy.deepcopy(_flavor_v255)
+
+show_response_v261 = copy.deepcopy(show_response_v255)
+show_response_v261['properties']['flavor'] = copy.deepcopy(_flavor_v261)
+
+show_response_v275 = copy.deepcopy(show_response_v261)
+show_response_v275['properties']['flavor'] = copy.deepcopy(_flavor_v275)
