@@ -618,6 +618,31 @@ the summit. There will always be ideas that come up at the summit and
 need to be finalised after the summit. This causes a rush which is best
 avoided.
 
+How can you get the current specs and bug fixes tracked?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As there are a lot of incoming changes, both feature implementation and
+bug fixes, that core reviewers need to keep up with, the Nova team is
+using a tracking process.
+
+The team creates an etherpad for every new release cycle and tracks the
+status of blueprints, feature implementations and bug fixes. The purpose
+of this process is to help with managing the core reviewers’ load, while
+ensuring that things don’t fall through the cracks.
+
+If you have a blueprint or bug fix to track during the release cycle,
+please add it to the correct section in the etherpad. You can follow
+the format that is already applied in the different sections. Please
+check the below template to use as guidance for what information to
+include at the minimum:
+
+- <lauchpad tracker link (bug or blueprint)> [<launchpad issue title>
+  optional]
+
+  - <gerrit review link or topic> repeat as needed
+  - short note of summary of current status. i.e. needs second +2,
+    needs spec approval.
+
 How can I get my code merged faster?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -676,83 +701,6 @@ up a third party CI so your combination of drivers will keep working?
 Getting that extra testing in place should stop a whole heap of bugs,
 again giving reviewers more time to get to the issues or features you
 want to add in the future.
-
-What the Review-Priority label in Gerrit are use for?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-A bit of history first. Nova used so called runway slots for multiple cycles.
-There was 3 slots, each can be filled with a patch series ready for review for
-two weeks at a time. We assumed that cores are focusing on reviewing the series
-while it is in the slot. We also assumed that the patch author is available and
-quickly fixing feedback while the series is in the slot. Meanwhile other
-patches waited in a FIFO queue for a free slot.
-
-Our experience was:
-
-1) It only worked if somebody kept the state of the queue and the slots up to
-   date in the etherpad. So it needed a central authority to manage the
-   process. This did not scale well.
-
-2) It was as effective as we, cores, are kept it honest and allocated our
-   review time on the patches in the slots. Such commitment is hard to get or
-   follow up on without being aggressive.
-
-3) Non-cores were not able to tell they were happy with reviewing some change
-
-So the aim of the new review priority process is to be as decentralized amongst
-cores as possible. We trust cores that when they mark something as priority
-then they also themselves commit to review the patch. We also assume that if a
-core reviewed a patch then that core should easily find another core as a
-second reviewer when needed. We also want contributors to be able to "ping"
-cores asynchronously by asking them to review some changes they saw.
-
-That said, this process doesn't explain how a patch is discovered to be
-ready for review. While previously The patch authors were able to
-asynchronously beg for reviews by adding their changes to the etherpad, now
-they need to find ways to get review attention. For this, we need to understand
-first whether this is a problem for contributors or not, so let us know please
-if you have issues for asking to get reviews by going to the nova meeting.
-
-Therefore we use the Review-Priority label in Gerrit in the following way:
-
-* Review-Priority is a label with 0, +1 or +2 values.
-
-* A contributor can set the Review-Priority flag to +1 to indicate they will
-  want cores to review the patch.
-
-* A core sets the Review-Priority flag to +2 to indicate that they will help
-  the author to get the patch merged.
-
-* We expect the contributors setting +1 for a patch that they will continue
-  to look at the patch even if a core reviews it so they can then provide
-  their own comments or replies.
-
-* We expect that the cores will limit the number of patches marked with +2
-  Review-Priority based on their actual review bandwidth
-
-* We expect that cores will check the list of reviews already having
-  Review-Priority +2 set by other cores before they mark a new one as such to
-  see where they can help first by being the second core.
-
-* There will be a regular agenda point on the weekly meeting where the team
-  look at the list of patches with +1 or +2 mark to keep an overall view what
-  is happening in nova.
-
-Pros:
-
-* Decentralized
-
-* Each core is responsible of its own commitments
-
-* Review priority information is kept close to the review system
-
-Cons:
-
-* No externally enforced time limit on patches sitting idle with +1
-  Review-Priority
-
-* No externally enforced limit on how many things can be a priority at any
-  given time.
 
 Process Evolution Ideas
 =======================
@@ -857,39 +805,6 @@ To get your blueprint approved:
 This still needs more thought, but should decouple the spec review from
 the release process. It is also more compatible with a runway style
 system, that might be less focused on milestones.
-
-Runways
-~~~~~~~
-
-Runways are a form of Kanban, where we look at optimising the flow
-through the system, by ensuring we focus our efforts on reviewing a
-specific subset of patches.
-
-The idea goes something like this:
-
--  define some states, such as: design backlog, design review, code
-   backlog, code review, test+doc backlog, complete
--  blueprints must be in one of the above state
-
-   -  large or high priority bugs may also occupy a code review slot
-
--  core reviewer member moves item between the slots
-
-   -  must not violate the rules on the number of items in each state
-   -  states have a limited number of slots, to ensure focus
-   -  certain percentage of slots are dedicated to priorities, depending
-      on point in the cycle, and the type of the cycle, etc
-
-Reasons for:
-
--  more focused review effort, get more things merged more quickly
--  more upfront about when your code is likely to get reviewed
--  smooth out current "lumpy" non-priority feature freeze system
-
-Reasons against:
-
--  feels like more process overhead
--  control is too centralised
 
 Replacing Milestones with SemVer Releases
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

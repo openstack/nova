@@ -53,6 +53,9 @@ CONTRIBUTING.rst.
 Any new code must follow the development guidelines detailed in the HACKING.rst
 file, and pass all unit tests.
 
+To understand better the processes that the team is using, please refer to the
+`Process document <https://docs.openstack.org/nova/latest/contributor/process.html>`__.
+
 Further developer focused documentation is available at:
 
 - `Official Nova Documentation <https://docs.openstack.org/nova/>`__
