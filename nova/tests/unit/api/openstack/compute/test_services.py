@@ -1154,8 +1154,7 @@ class ServicesTestV253(test.TestCase):
         super(ServicesTestV253, self).setUp()
         self.controller = services_v21.ServiceController()
         self.controller.servicegroup_api = FakeServiceGroupAPI()
-        self.req = fakes.HTTPRequest.blank(
-            '', version=services_v21.UUID_FOR_ID_MIN_VERSION)
+        self.req = fakes.HTTPRequest.blank('', version='2.53')
 
     def assert_services_equal(self, s1, s2):
         for k in ('binary', 'host'):
@@ -1253,8 +1252,7 @@ class ServicesTestV253(test.TestCase):
         self.assertDictEqual(expected_resp, resp)
 
         # Now enable the service to see the response change.
-        req = fakes.HTTPRequest.blank(
-            '', version=services_v21.UUID_FOR_ID_MIN_VERSION)
+        req = fakes.HTTPRequest.blank('', version='2.53')
         resp = self.controller.update(req, service.uuid,
                                       body={'status': 'enabled'})
         expected_resp['service']['status'] = 'enabled'

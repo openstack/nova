@@ -986,7 +986,7 @@ class HypervisorsTestV252(HypervisorsTestV233):
 
 
 class HypervisorsTestV253(HypervisorsTestV252):
-    api_version = hypervisors_v21.UUID_FOR_ID_MIN_VERSION
+    api_version = '2.53'
     expect_uuid_for_id = True
 
     # This is an expected response for index().

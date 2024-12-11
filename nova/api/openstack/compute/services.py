@@ -32,9 +32,6 @@ from nova.scheduler.client import report
 from nova import servicegroup
 from nova import utils
 
-UUID_FOR_ID_MIN_VERSION = '2.53'
-PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION = '2.69'
-
 LOG = logging.getLogger(__name__)
 
 
@@ -62,7 +59,7 @@ class ServiceController(wsgi.Controller):
         context = req.environ['nova.context']
 
         cell_down_support = api_version_request.is_supported(
-            req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
+            req, min_version='2.69')
 
         _services = [
             s
@@ -102,7 +99,7 @@ class ServiceController(wsgi.Controller):
         updated_time = self.servicegroup_api.get_updated_time(svc)
 
         uuid_for_id = api_version_request.is_supported(
-            req, min_version=UUID_FOR_ID_MIN_VERSION)
+            req, min_version='2.53')
 
         if 'availability_zone' not in svc:
             # The service wasn't loaded with the AZ so we need to do it here.
@@ -130,8 +127,8 @@ class ServiceController(wsgi.Controller):
 
     def _get_services_list(self, req, additional_fields=()):
         _services = self._get_services(req)
-        cell_down_support = api_version_request.is_supported(req,
-            min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
+        cell_down_support = api_version_request.is_supported(
+            req, min_version='2.69')
         return [self._get_service_detail(svc, additional_fields, req,
                 cell_down_support=cell_down_support) for svc in _services]
 
@@ -251,8 +248,7 @@ class ServiceController(wsgi.Controller):
         context = req.environ['nova.context']
         context.can(services_policies.BASE_POLICY_NAME % 'delete', target={})
 
-        if api_version_request.is_supported(
-                req, min_version=UUID_FOR_ID_MIN_VERSION):
+        if api_version_request.is_supported(req, min_version='2.53'):
             if not uuidutils.is_uuid_like(id):
                 msg = _('Invalid uuid %s') % id
                 raise webob.exc.HTTPBadRequest(explanation=msg)
@@ -411,9 +407,9 @@ class ServiceController(wsgi.Controller):
 
         return self._perform_action(req, id, body, actions)
 
-    @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)  # noqa F811
+    @wsgi.Controller.api_version('2.53')  # noqa F811
     @wsgi.expected_errors((400, 404))
-    @validation.schema(services.service_update_v2_53, UUID_FOR_ID_MIN_VERSION)
+    @validation.schema(services.service_update_v2_53, '2.53')
     def update(self, req, id, body):   # noqa
         """Perform service update
 

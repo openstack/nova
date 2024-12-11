@@ -64,8 +64,7 @@ class ServicesPolicyTest(base.BasePolicyTest):
 
     def test_update_service_policy(self):
         rule_name = "os_compute_api:os-services:update"
-        req = fakes.HTTPRequest.blank(
-            '', version=services_v21.UUID_FOR_ID_MIN_VERSION)
+        req = fakes.HTTPRequest.blank('', version='2.53')
         service = self.start_service(
             'compute', 'fake-compute-host').service_ref
         with mock.patch('nova.compute.api.HostAPI.service_update'):
