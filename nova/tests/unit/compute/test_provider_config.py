@@ -61,6 +61,15 @@ class SchemaValidationMixin(base.BaseTestCase):
         for msg in expected_messages:
             self.assertIn(msg, actual_msg)
 
+    def run_test_validation_errors_regex(self, config, pattern):
+        self.set_config(config=config)
+
+        actual_msg = self.assertRaises(
+            nova_exc.ProviderConfigException,
+            provider_config._parse_provider_yaml, 'test_path').message
+
+        self.assertRegex(actual_msg, pattern)
+
     def run_test_validation_success(self, config):
         reference = self.set_config(config=config)
 
@@ -116,8 +125,14 @@ class SchemaValidationTestCasesV1(SchemaValidationMixin):
 
     @ddt.unpack
     @ddt.file_data('provider_config_data/v1/validation_error_test_data.yaml')
-    def test_validation_errors(self, config, expected_messages):
-        self.run_test_validation_errors(config, expected_messages)
+    def test_validation_errors(
+        self, config, expected_messages=None, expected_message_regex=None
+    ):
+        if expected_message_regex is None:
+            self.run_test_validation_errors(config, expected_messages)
+        else:
+            self.run_test_validation_errors_regex(
+                config, expected_message_regex)
 
     @ddt.unpack
     @ddt.file_data('provider_config_data/v1/validation_success_test_data.yaml')

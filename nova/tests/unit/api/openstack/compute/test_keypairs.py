@@ -126,9 +126,11 @@ class KeypairsTestV21(test.TestCase):
 
     def test_keypair_create_with_empty_name(self):
         body = {'keypair': {'name': ''}}
-        self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error,
-                                                   'is too short')
+        self._test_keypair_create_bad_request_case(
+            body,
+            self.validation_error,
+            '(is too short)|'  # jsonschema < 4.23.0
+            '(should be non-empty)')  # jsonschema >= 4.23.0
 
     def test_keypair_create_with_name_too_long(self):
         body = {

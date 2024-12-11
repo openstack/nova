@@ -1325,8 +1325,16 @@ class SchedulerReportClientTests(test.TestCase):
         try:
             self.client._reshape(self.context, {}, {})
         except exception.ReshapeFailed as e:
-            self.assertIn('JSON does not validate: {} does not have '
-                          'enough properties', e.kwargs['error'])
+            # NOTE(gibi): jsonschema 4.23.0 changed the error message, but we
+            # need to pass with both older and newer jsonschema. If the
+            # minimum jsonschema is bumped to 4.23.0 or higher than this can
+            # be simplified.
+            self.assertRegex(
+                e.kwargs['error'],
+                'JSON does not validate: {} '
+                '(does not have enough properties)|'  # jsonschema < 4.23.0
+                '(should be non-empty)'  # jsonschema >= 4.23.0
+            )
 
         # Okay, do some real stuffs. We're just smoke-testing that we can
         # hit a good path to the API here; real testing of the API happens
