@@ -393,7 +393,7 @@ class TestInstanceNotificationSample(
             self._test_lock_unlock_instance,
             self._test_lock_unlock_instance_with_reason,
             self._test_share_attach_detach,
-            self._test_share_attach_error,
+            self._test_share_attach_detach_error,
         ]
 
         for action in actions:
@@ -1844,7 +1844,7 @@ class TestInstanceNotificationSample(
             },
             actual=self.notifier.versioned_notifications[1])
 
-        # Restart server
+        # Start server
         self.notifier.reset()
         self.api.post_server_action(server['id'], {'os-start': {}})
         self._wait_for_state_change(server, expected_status='ACTIVE')
@@ -1869,7 +1869,7 @@ class TestInstanceNotificationSample(
             },
             actual=self.notifier.versioned_notifications[1])
 
-    def _test_share_attach_error(self, server):
+    def _test_share_attach_detach_error(self, server):
 
         expected_shares = [
             {
@@ -1906,6 +1906,7 @@ class TestInstanceNotificationSample(
         ):
 
             # Simulate an error attaching the share.
+            original_side_effect = self.manila_fixture.mock_allow.side_effect
             self.manila_fixture.mock_allow.side_effect = (
                 exception.ShareAccessGrantError(
                     share_id="8db0037b-e98f-4bde-ae71-f96a077c19a4",
@@ -2003,6 +2004,95 @@ class TestInstanceNotificationSample(
             self.api.post_server_action(server['id'], post)
             self._wait_for_notification('instance.reboot.start')
             self._wait_for_notification('instance.reboot.end')
+
+        # Attach a share again in order to simulate a detach error
+        self.manila_fixture.mock_allow.side_effect = original_side_effect
+        self.api.post_server_action(server['id'], {'os-stop': {}})
+        self._wait_for_state_change(server, expected_status='SHUTOFF')
+        self.notifier.reset()
+
+        self._attach_share(server, "e8debdc0-447a-4376-a10a-4cd9122d7986")
+        share_info = self._get_share(
+            server, "e8debdc0-447a-4376-a10a-4cd9122d7986", admin=True
+        )
+        expected_shares[0]["nova_object.data"][
+            "share_mapping_uuid"
+        ] = share_info["uuid"]
+
+        self.assertEqual(2, len(self.notifier.versioned_notifications),
+                            self.notifier.versioned_notifications)
+        expected_shares[0]['nova_object.data']['status'] = 'attaching'
+        self._verify_notification(
+            'instance-share_attach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'state': 'stopped',
+                'power_state': 'shutdown',
+                'shares': expected_shares
+            },
+            actual=self.notifier.versioned_notifications[0])
+        expected_shares[0]['nova_object.data']['status'] = 'inactive'
+        self._verify_notification(
+            'instance-share_attach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'state': 'stopped',
+                'power_state': 'shutdown',
+                'shares': expected_shares
+            },
+            actual=self.notifier.versioned_notifications[1])
+
+        # Simulate an error detaching the share.
+        self.manila_fixture.mock_deny.side_effect = (
+            exception.ShareAccessRemovalError(
+                share_id="8db0037b-e98f-4bde-ae71-f96a077c19a4",
+                reason="Connection timed out"
+            )
+        )
+        self.notifier.reset()
+        self._detach_share_with_error(
+            server, "e8debdc0-447a-4376-a10a-4cd9122d7986")
+
+        # 0: instance-share_detach-start
+        # 1: instance-share_detach-error
+        # 2: compute.exception
+        self.assertEqual(3, len(self.notifier.versioned_notifications),
+                            self.notifier.versioned_notifications)
+        expected_shares[0]["nova_object.data"]["status"] = "detaching"
+        self._verify_notification(
+            'instance-share_detach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'state': 'stopped',
+                'power_state': 'shutdown',
+                'shares': expected_shares,
+            },
+            actual=self.notifier.versioned_notifications[0])
+        expected_shares[0]["nova_object.data"]["status"] = "error"
+        self._verify_notification(
+            'instance-share_detach-error',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'state': 'stopped',
+                'power_state': 'shutdown',
+                'shares': expected_shares,
+                'fault.traceback': self.ANY
+            },
+            actual=self.notifier.versioned_notifications[1])
+
+        self._wait_for_notification('compute.exception')
+
+        # Reboot server
+        self.notifier.reset()
+
+        post = {'reboot': {'type': 'HARD'}}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_notification('instance.reboot.start')
+        self._wait_for_notification('instance.reboot.end')
 
     def _test_rescue_unrescue_server(self, server):
         # Both "rescue" and "unrescue" notification asserts are made here

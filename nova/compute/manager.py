@@ -4783,6 +4783,7 @@ class ComputeManager(manager.Manager):
 
         @utils.synchronized(share_mapping.share_id)
         def _deny_share(context, instance, share_mapping):
+
             def check_share_usage(context, instance_uuid):
                 share_mappings_used_by_share = (
                     objects.share_mapping.ShareMappingList.get_by_share_id(
@@ -4819,6 +4820,15 @@ class ComputeManager(manager.Manager):
                 )
 
             try:
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_DETACH,
+                    phase=fields.NotificationPhase.START,
+                    share_id=share_mapping.share_id,
+                )
+
                 still_used = check_share_usage(context, instance.uuid)
 
                 share_mapping.set_access_according_to_protocol()
@@ -4837,6 +4847,15 @@ class ComputeManager(manager.Manager):
 
                 share_mapping.delete()
 
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_DETACH,
+                    phase=fields.NotificationPhase.END,
+                    share_id=share_mapping.share_id,
+                )
+
             except (
                 exception.ShareAccessRemovalError,
                 exception.ShareProtocolNotSupported,
@@ -4844,11 +4863,29 @@ class ComputeManager(manager.Manager):
                 self._set_share_mapping_status(
                     share_mapping, fields.ShareMappingStatus.ERROR
                 )
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_DETACH,
+                    phase=fields.NotificationPhase.ERROR,
+                    share_id=share_mapping.share_id,
+                    exception=e
+                )
                 LOG.error(e.format_message())
                 raise
             except keystone_exception.http.Unauthorized as e:
                 self._set_share_mapping_status(
                     share_mapping, fields.ShareMappingStatus.ERROR
+                )
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_DETACH,
+                    phase=fields.NotificationPhase.ERROR,
+                    share_id=share_mapping.share_id,
+                    exception=e
                 )
                 LOG.error(e)
                 raise
@@ -4856,26 +4893,16 @@ class ComputeManager(manager.Manager):
                 # Ignore the error if for any reason there is nothing to
                 # remove from manila, so we can still detach the share.
                 share_mapping.delete()
-
-        compute_utils.notify_about_share_attach_detach(
-            context,
-            instance,
-            instance.host,
-            action=fields.NotificationAction.SHARE_DETACH,
-            phase=fields.NotificationPhase.START,
-            share_id=share_mapping.share_id
-        )
+                compute_utils.notify_about_share_attach_detach(
+                    context,
+                    instance,
+                    instance.host,
+                    action=fields.NotificationAction.SHARE_DETACH,
+                    phase=fields.NotificationPhase.END,
+                    share_id=share_mapping.share_id,
+                )
 
         _deny_share(context, instance, share_mapping)
-
-        compute_utils.notify_about_share_attach_detach(
-            context,
-            instance,
-            instance.host,
-            action=fields.NotificationAction.SHARE_DETACH,
-            phase=fields.NotificationPhase.END,
-            share_id=share_mapping.share_id
-        )
 
     @wrap_exception()
     def _mount_all_shares(self, context, instance, share_info):
