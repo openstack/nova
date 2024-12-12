@@ -56,6 +56,18 @@ fake_pci_5 = dict(fake_pci, address='0000:00:02.2',
                   dev_type=fields.PciDeviceType.SRIOV_VF,
                   parent_addr='0000:00:01.1',
                   vendor_id='v2', product_id='p2', numa_node=None)
+fake_pci_6 = dict(fake_pci, address='0000:00:02.2',
+                  dev_type=fields.PciDeviceType.SRIOV_VF,
+                  parent_addr='0000:00:00.1',
+                  vendor_id='10c9', product_id='8086', numa_node=None)
+fake_pci_7 = dict(fake_pci, address='0000:00:02.3',
+                  dev_type=fields.PciDeviceType.SRIOV_VF,
+                  parent_addr='0000:00:00.1',
+                  vendor_id='10c9', product_id='8086', numa_node=None)
+fake_pci_8 = dict(fake_pci, address='0000:00:02.4',
+                  dev_type=fields.PciDeviceType.SRIOV_VF,
+                  parent_addr='0000:00:00.1',
+                  vendor_id='10c9', product_id='8086', numa_node=None)
 fake_pci_devs_tree = [fake_pci_3, fake_pci_4, fake_pci_5]
 
 fake_db_dev = {
@@ -220,15 +232,91 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertIsNone(vf.parent_device)
         self.assertEqual([], vf.child_devices)
 
-    @mock.patch('nova.pci.whitelist.Whitelist.device_assignable',
-                return_value=True)
-    def test_update_devices_from_hypervisor_resources(self, _mock_dev_assign):
-        fake_pci_devs = [copy.deepcopy(fake_pci_4), copy.deepcopy(fake_pci_5)]
+    # Mocking as a vf to avoid
+    # os.path.isdir on /sys/bus/pci/devices/0000:00:02.2
+    # which is not appropriate for tests
+    @mock.patch("nova.pci.utils.is_physical_function", return_value=False)
+    def test_update_devices_from_hypervisor_resources(self, mock_vf):
+        self.flags(
+            group="pci",
+            device_spec=[
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.2"}',
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.3"}',
+            ],
+        )
+        # fake_pci_4 and fake_pci_5 vendor id 'v2' is not valid so use
+        # fake_pci_6 and fake_pci_7 instead
+        fake_pci_devs = [copy.deepcopy(fake_pci_6), copy.deepcopy(fake_pci_7)]
         fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
         tracker = manager.PciDevTracker(
             self.fake_context, objects.ComputeNode(id=1, numa_topology=None))
         tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
         self.assertEqual(5, len(tracker.pci_devs))
+
+    @mock.patch("nova.pci.utils.is_physical_function", return_value=False)
+    def test_update_devices_from_hypervisor_resources_with_managed(
+        self, _mock_vf
+    ):
+        self.flags(
+            group="pci",
+            device_spec=[
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.2", "managed":"no"}',
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.3", "managed":"yes"}',
+            ],
+        )
+        fake_pci_devs = [copy.deepcopy(fake_pci_6), copy.deepcopy(fake_pci_7)]
+        fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
+        tracker = manager.PciDevTracker(
+            self.fake_context, objects.ComputeNode(id=1, numa_topology=None)
+        )
+        tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
+        self.assertEqual(5, len(tracker.pci_devs))
+
+        pci_addr_extra_info = {
+            dev.address: dev.extra_info for dev in tracker.pci_devs
+        }
+
+        self.assertEqual(
+            pci_addr_extra_info["0000:00:02.2"]["managed"], "false"
+        )
+        self.assertEqual(
+            pci_addr_extra_info["0000:00:02.3"]["managed"], "true"
+        )
+
+    @mock.patch("nova.pci.manager.LOG.debug")
+    @mock.patch("nova.pci.utils.is_physical_function", return_value=False)
+    def test_update_devices_from_hypervisor_resources_with_managed_invalid(
+        self, _mock_vf, mock_debug
+    ):
+        self.flags(
+            group="pci",
+            device_spec=[
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.2", "managed":"no"}',
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.3", "managed":"yes"}',
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.4", "managed":"invalid"}',
+            ],
+        )
+
+        exc = self.assertRaises(
+            exception.PciConfigInvalidSpec,
+            manager.PciDevTracker,
+            self.fake_context,
+            objects.ComputeNode(id=1, numa_topology=None),
+        )
+
+        self.assertEqual(
+            "Invalid [pci]device_spec config: Unrecognized value 'invalid', "
+            "acceptable values are: '0', '1', 'f', 'false', 'n', 'no', 'off', "
+            "'on', 't', 'true', 'y', 'yes'",
+            str(exc)
+        )
 
     @mock.patch("nova.pci.manager.LOG.debug")
     def test_update_devices_from_hypervisor_resources_32bit_domain(

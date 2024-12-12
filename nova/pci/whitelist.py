@@ -82,15 +82,20 @@ class Whitelist(object):
 
         return specs
 
-    def device_assignable(self, dev: ty.Dict[str, ty.Any]) -> bool:
-        """Check if a device can be assigned to a guest.
+    def device_assignable(
+        self, dev: ty.Dict[str, ty.Any]
+    ) -> ty.Optional[devspec.PciDeviceSpec]:
+        """Check if a device is part of pci device_spec (whitelist) and so
+        can be assigned to a guest.
+        If yes return the spec, else return None
 
         :param dev: A dictionary describing the device properties
+        :return: A devspec.PciDeviceSpec or None
         """
         for spec in self.specs:
             if spec.match(dev):
-                return True
-        return False
+                return spec
+        return None
 
     def get_devspec(
         self, pci_dev: 'objects.PciDevice',

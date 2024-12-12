@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import exception
 from nova.pci import whitelist
 from nova import test
 
@@ -81,3 +82,59 @@ class WhitelistTestCase(test.NoDBTestCase):
         white_list = '{"product_id":"0001", "vendor_id":"8086"}'
         parsed = whitelist.Whitelist([white_list])
         self.assertTrue(parsed.device_assignable(dev_dict))
+
+    def test_device_managed(self):
+        white_list = (
+            '{"product_id":"0001", "vendor_id":"8086", "managed": "yes"}'
+        )
+        parsed = whitelist.Whitelist([white_list])
+        self.assertEqual(1, len(parsed.specs))
+        self.assertTrue(parsed.specs[0].tags["managed"], "true")
+
+    def test_device_managed_true(self):
+        white_list = (
+            '{"product_id":"0001", "vendor_id":"8086", "managed": "true"}'
+        )
+        parsed = whitelist.Whitelist([white_list])
+        self.assertEqual(1, len(parsed.specs))
+        self.assertTrue(parsed.specs[0].tags["managed"], "true")
+
+    def test_device_managed_int(self):
+        white_list = (
+            '{"product_id":"0001", "vendor_id":"8086", "managed": 1}'
+        )
+        parsed = whitelist.Whitelist([white_list])
+        self.assertEqual(1, len(parsed.specs))
+        self.assertTrue(parsed.specs[0].tags["managed"], "true")
+
+    def test_device_not_managed(self):
+        white_list = (
+            '{"product_id":"0001", "vendor_id":"8086", "managed": "no"}'
+        )
+        parsed = whitelist.Whitelist([white_list])
+        self.assertEqual(1, len(parsed.specs))
+        self.assertTrue(parsed.specs[0].tags["managed"], "false")
+
+    def test_device_managed_not_set(self):
+        white_list = (
+            '{"product_id":"0001", "vendor_id":"8086"}'
+        )
+        parsed = whitelist.Whitelist([white_list])
+        self.assertEqual(1, len(parsed.specs))
+        self.assertNotIn("managed", parsed.specs[0].tags)
+
+    def test_device_managed_invalid_value(self):
+        white_list = (
+            '{"product_id":"0001", "vendor_id":"8086", "managed": "invalid"}'
+        )
+
+        exc = self.assertRaises(
+            exception.PciConfigInvalidSpec, whitelist.Whitelist, [white_list]
+        )
+
+        self.assertEqual(
+            "Invalid [pci]device_spec config: Unrecognized value 'invalid', "
+            "acceptable values are: '0', '1', 'f', 'false', 'n', 'no', 'off', "
+            "'on', 't', 'true', 'y', 'yes'",
+            str(exc)
+        )

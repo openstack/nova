@@ -131,7 +131,12 @@ class PciDevTracker(object):
         devices = []
         for dev in jsonutils.loads(devices_json):
             try:
-                if self.dev_filter.device_assignable(dev):
+                pci_dev_spec = self.dev_filter.device_assignable(dev)
+                if pci_dev_spec is not None:
+                    # Since some configuration parameters cannot be
+                    # discovered by the driver, we need to add them from
+                    # the device specification provided by the operator.
+                    pci_dev_spec.enhanced_pci_device_with_spec_tags(dev)
                     devices.append(dev)
             except exception.PciConfigInvalidSpec as e:
                 # The raised exception is misleading as the problem is not with
