@@ -2477,6 +2477,8 @@ class LibvirtFixture(fixtures.Fixture):
             'Linux', '', '5.4.0-0-generic', '', obj_fields.Architecture.X86_64)
         self.mock_uname = self.useFixture(
             fixtures.MockPatch('os.uname', return_value=fake_uname)).mock
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.sys.platform', 'linux'))
 
         real_exists = os.path.exists
 

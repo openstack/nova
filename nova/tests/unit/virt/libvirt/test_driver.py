@@ -22388,6 +22388,9 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
         # Don't initialise the Host
         self.useFixture(fixtures.MockPatch('nova.virt.libvirt.driver.host'))
 
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.sys.platform', 'linux'))
+
     def _test_get_guest_config_sysinfo_serial(self, expected_serial):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 

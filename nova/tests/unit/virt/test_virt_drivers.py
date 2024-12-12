@@ -607,8 +607,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_get_available_resource(self):
-        available_resource = self.connection.get_available_resource(
-                'myhostname')
+        with mock.patch('nova.virt.libvirt.host.Host._get_avail_memory_kb',
+                        mock.Mock(return_value=1024)):
+            available_resource = self.connection.get_available_resource(
+                    'myhostname')
         self._check_available_resource_fields(available_resource)
 
     @catch_notimplementederror
