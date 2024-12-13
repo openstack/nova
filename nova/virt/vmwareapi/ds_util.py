@@ -173,12 +173,22 @@ def _get_allowed_datastores(datastores, datastore_regex):
                                     freespace=propdict['summary.freeSpace']))
 
 
-def get_available_datastores(session, cluster=None, datastore_regex=None):
+def get_available_datastores(session, cluster=None,
+                             datastore_regex=None, dc_ref=None):
     """Get the datastore list and choose the first local storage."""
-    ds = session._call_method(vutil,
-                              "get_object_property",
-                              cluster,
-                              "datastore")
+    if cluster:
+        ds = session._call_method(vutil,
+                                  "get_object_property",
+                                  cluster,
+                                  "datastore")
+    elif dc_ref:
+        ds = session._call_method(vutil,
+                                  "get_object_property",
+                                  dc_ref,
+                                  "datastore")
+    else:
+        return []
+
     if not ds:
         return []
     datastore_mors = ds.ManagedObjectReference

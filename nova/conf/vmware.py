@@ -380,6 +380,12 @@ With the right hardware support, it might be faster, especially on the export.
                 help="""
 Create a snapshot of the VM before cloning it
 """),
+    cfg.BoolOpt('fetch_image_from_other_datastores',
+                default=True,
+                help="""
+Before fetching from Glance an image missing on the datastore first look
+for it on other datastores and clone it from there if available.
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +

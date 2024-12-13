@@ -171,7 +171,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
             mock_get_vmdk_info.assert_called_once_with(
                     session, mock.sentinel.vm_ref, 'fake-vm')
             session._call_method.assert_called_once_with(
-                    session.vim, "UnregisterVM", mock.sentinel.vm_ref)
+                    session.vim, "MarkAsTemplate", mock.sentinel.vm_ref)
 
     @mock.patch('oslo_vmware.rw_handles.ImageReadHandle')
     @mock.patch('oslo_vmware.rw_handles.VmdkWriteHandle')
@@ -217,7 +217,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
             mock_image_transfer.assert_called_once_with(mock_read_handle,
                                                         mock_write_handle)
             session._call_method.assert_called_once_with(
-                    session.vim, "UnregisterVM", mock.sentinel.vm_ref)
+                    session.vim, "MarkAsTemplate", mock.sentinel.vm_ref)
             mock_get_vmdk_info.assert_called_once_with(
                     session, mock.sentinel.vm_ref, 'fake-vm')
 

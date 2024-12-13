@@ -406,9 +406,14 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'power_on_instance')
     @mock.patch.object(ds_obj, 'get_datastore_by_ref')
-    def test_rescue(self, mock_get_ds_by_ref, mock_power_on, mock_reconfigure,
-                    mock_get_boot_spec, mock_find_rescue,
-                    mock_get_vm_ref, mock_disk_copy,
+    @mock.patch.object(vmops.VMwareVMOps, '_find_image_template_vm',
+                       return_value=None)
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_from_other_datastores',
+                       return_value=None)
+    def test_rescue(self, mock_fetch_image_from_other_datastores,
+                    mock_find_image_template_vm, mock_get_ds_by_ref,
+                    mock_power_on, mock_reconfigure, mock_get_boot_spec,
+                    mock_find_rescue, mock_get_vm_ref, mock_disk_copy,
                     mock_power_off, mock_glance):
         _volumeops = mock.Mock()
         self._vmops._volumeops = _volumeops
@@ -1975,10 +1980,17 @@ class VMwareVMOpsTestCase(test.TestCase):
                                   return_value=extra_specs),
                 mock.patch.object(self._vmops, '_get_instance_metadata',
                                   return_value='fake-metadata'),
-                mock.patch.object(ds_util, 'file_size', return_value=0)
+                mock.patch.object(ds_util, 'file_size', return_value=0),
+                mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps.'
+                           '_find_image_template_vm',
+                           return_value=None),
+                mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps.'
+                           '_fetch_image_from_other_datastores',
+                           return_value=None)
         ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image,
               _get_img_svc, _get_inventory_path, _get_extra_specs,
-              _get_instance_metadata, file_size):
+              _get_instance_metadata, file_size, _find_image_template_vm,
+              _fetch_image_from_other_datastores):
             self._vmops.spawn(self._context, self._instance, image,
                               injected_files='fake_files',
                               admin_password='password',
@@ -1998,6 +2010,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                     extra_specs,
                     constants.DEFAULT_OS_TYPE,
                     profile_spec=None,
+                    vm_name=None,
                     metadata='fake-metadata')
             mock_create_vm.assert_called_once_with(
                     self._session,
@@ -2722,7 +2735,13 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_cache_flat_image')
     @mock.patch.object(vmops.VMwareVMOps, '_delete_datastore_file')
     @mock.patch.object(vmops.VMwareVMOps, '_update_image_size')
+    @mock.patch.object(vmops.VMwareVMOps, '_find_image_template_vm',
+                       return_value=None)
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_from_other_datastores',
+                       return_value=None)
     def _test_fetch_image_if_missing(self,
+                                     mock_fetch_image_from_other_datastores,
+                                     mock_find_image_template_vm,
                                      mock_update_image_size,
                                      mock_delete_datastore_file,
                                      mock_cache_flat_image,

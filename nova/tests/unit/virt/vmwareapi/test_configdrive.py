@@ -127,7 +127,12 @@ class ConfigDriveTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata',
                        return_value='fake_metadata')
-    def _spawn_vm(self, fake_get_instance_meta,
+    @mock.patch.object(vmops.VMwareVMOps, '_find_image_template_vm',
+                       return_value=None)
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_from_other_datastores',
+                       return_value=None)
+    def _spawn_vm(self, fake_fetch_image_from_other_datastores,
+                  fake_find_image_template_vm, fake_get_instance_meta,
                   mock_update_cluster_placement,
                   injected_files=None, admin_password=None,
                   block_device_info=None):

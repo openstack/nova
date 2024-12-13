@@ -356,9 +356,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
-    def _create_vm(self, fake_is_volume_backed, node=None, num_instances=1,
-                   uuid=None, flavor='m1.large', powered_on=True,
-                   ephemeral=None, bdi=None, flavor_updates=None):
+    @mock.patch.object(vmops.VMwareVMOps, '_find_image_template_vm',
+                       return_value=None)
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_from_other_datastores',
+                       return_value=None)
+    def _create_vm(self, fake_fetch_image_from_other_datastores,
+                   fake_find_image_template_vm, fake_is_volume_backed,
+                   node=None, num_instances=1, uuid=None, flavor='m1.large',
+                   powered_on=True, ephemeral=None, bdi=None,
+                   flavor_updates=None):
         """Create and spawn the VM."""
         if not node:
             node = self.node_name
@@ -1159,7 +1165,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 'attach_volume')
     @mock.patch('nova.block_device.volume_in_mapping')
     @mock.patch('nova.virt.driver.block_device_info_get_mapping')
+    @mock.patch.object(vmops.VMwareVMOps, '_find_image_template_vm',
+                       return_value=None)
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_from_other_datastores',
+                       return_value=None)
     def test_spawn_attach_volume_iscsi(self,
+                                       mock_fetch_image_from_other_datastores,
+                                       mock_find_image_template_vm,
                                        mock_info_get_mapping,
                                        mock_block_volume_in_mapping,
                                        mock_attach_volume,
