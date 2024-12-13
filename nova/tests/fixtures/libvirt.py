@@ -914,6 +914,25 @@ def _parse_vcpu_info(element):
     return vcpu_info
 
 
+def _parse_filesystem_info(element):
+    filesystem_info = {}
+    filesystem_info['type'] = element.get('type', 'mount')
+
+    driver = element.find('./driver')
+    if driver is not None:
+        filesystem_info['driver_type'] = driver.get('type')
+
+    source = element.find('./source')
+    if source is not None:
+        filesystem_info['source'] = source.get('dir')
+
+    target = element.find('./target')
+    if target is not None:
+        filesystem_info['target'] = target.get('dir')
+
+    return filesystem_info
+
+
 def _parse_nic_info(element):
     nic_info = {}
     nic_info['type'] = element.get('type', 'bridge')
@@ -1176,6 +1195,13 @@ class Domain(object):
             for disk in disks:
                 disks_info += [_parse_disk_info(disk)]
             devices['disks'] = disks_info
+
+            # Manage shares
+            filesystems_info = []
+            filesystems = device_nodes.findall('./filesystem')
+            for filesystem in filesystems:
+                filesystems_info += [_parse_filesystem_info(filesystem)]
+            devices['filesystem'] = filesystems_info
 
             nics_info = []
             nics = device_nodes.findall('./interface')
@@ -1458,6 +1484,13 @@ class Domain(object):
       <address type='drive' controller='0' bus='0' unit='0'/>
     </disk>"""
             disks += strformat % dict(source_attr=source_attr, **disk)
+        filesystems = ''
+        for filesystem in self._def['devices']['filesystem']:
+            filesystems += '''<filesystem type='%(type)s'>
+      <driver type='%(driver_type)s'/>
+      <source dir='%(source)s'/>
+      <target dir='%(target)s'/>
+    </filesystem>''' % dict(source_attr=source_attr, **filesystem)
         nics = ''
         for func, nic in enumerate(self._def['devices']['nics']):
             if func > 7:
@@ -1590,6 +1623,7 @@ class Domain(object):
   <devices>
     <emulator>/usr/bin/kvm</emulator>
     %(disks)s
+    %(filesystems)s
     <controller type='ide' index='0'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x01'
                function='0x1'/>
@@ -1624,6 +1658,7 @@ class Domain(object):
                 'arch': self._def['os']['arch'],
                 'loader': loader,
                 'disks': disks,
+                'filesystems': filesystems,
                 'nics': nics,
                 'hostdevs': hostdevs,
                 'vpmems': vpmems,
