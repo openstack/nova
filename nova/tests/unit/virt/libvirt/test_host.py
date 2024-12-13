@@ -1135,23 +1135,11 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(1048576, self.host.get_memory_mb_total())
 
     def test_get_memory_used(self):
-        m = mock.mock_open(read_data="""
-MemTotal:       16194180 kB
-MemFree:          233092 kB
-MemAvailable:    8892356 kB
-Buffers:          567708 kB
-Cached:          8362404 kB
-SwapCached:            0 kB
-Active:          8381604 kB
-""")
-        with test.nested(
-            mock.patch('builtins.open', m, create=True),
-            mock.patch.object(host.Host, "get_connection"),
-        ) as (mock_file, mock_conn):
+        with mock.patch.object(host.Host, "get_connection") as mock_conn:
             mock_conn().getInfo.return_value = [
                 obj_fields.Architecture.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
 
-            self.assertEqual(6866, self.host.get_memory_mb_used())
+            self.assertEqual(5574, self.host.get_memory_mb_used())
 
     def test_sum_domain_memory_mb_file_backed(self):
         class DiagFakeDomain(object):
