@@ -5782,6 +5782,8 @@ class LibvirtDriver(driver.ComputeDriver):
                              'migration can break unless all compute nodes '
                              'have identical cpus. AArch64 does not support '
                              'other modes.')
+                elif arch == fields.Architecture.LOONGARCH64:
+                    model = "la464"
                 else:
                     mode = "host-model"
             if mode == "none":
@@ -5792,6 +5794,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 if arch == fields.Architecture.AARCH64:
                     if not models:
                         models = ['max']
+                if arch == fields.Architecture.LOONGARCH64:
+                    if not models:
+                        models = ["la464"]
 
         else:
             if mode is None or mode == "none":
@@ -6768,6 +6773,8 @@ class LibvirtDriver(driver.ComputeDriver):
             return 'virtio'
         elif guestarch == fields.Architecture.MIPSEL:
             return 'virtio'
+        elif guestarch == fields.Architecture.LOONGARCH64:
+            return 'virtio'
         elif CONF.spice.enabled:
             return 'qxl'
 
@@ -7027,7 +7034,7 @@ class LibvirtDriver(driver.ComputeDriver):
             hw_firmware_stateless = hardware.get_stateless_firmware_constraint(
                 image_meta)
 
-            if arch == fields.Architecture.AARCH64:
+            if arch == fields.Architecture.AARCH64 or arch == fields.Architecture.LOONGARCH64:
                 if not hw_firmware_type:
                     hw_firmware_type = fields.FirmwareType.UEFI
 
@@ -7181,6 +7188,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _is_aarch64_guest(self, image_meta: 'objects.ImageMeta') -> bool:
         arch = fields.Architecture.AARCH64
+        return self._check_emulation_arch(image_meta) == arch
+
+    def _is_loongarch64_guest(self, image_meta: 'objects.ImageMeta') -> bool:
+        arch = fields.Architecture.LOONGARCH64
         return self._check_emulation_arch(image_meta) == arch
 
     def _is_x86_guest(self, image_meta: 'objects.ImageMeta') -> bool:
@@ -7413,6 +7424,13 @@ class LibvirtDriver(driver.ComputeDriver):
             'q35' in guest.os_mach_type
         ):
             return True
+
+        if (
+            caps.host.cpu.arch == fields.Architecture.LOONGARCH64 and
+            guest.os_mach_type.startswith('virt')
+        ):
+            return True
+
 
         return False
 
@@ -7872,7 +7890,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # TODO(stephenfin): We might want to do this for other non-x86
             # architectures
             arch = self._check_emulation_arch(image_meta)
-            if arch != fields.Architecture.AARCH64:
+            if arch != fields.Architecture.AARCH64 and arch != fields.Architecture.LOONGARCH64:
                 return None
 
             bus = 'usb'
@@ -7899,6 +7917,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         is_x86 = self._is_x86_guest(image_meta)
         is_aarch64 = self._is_aarch64_guest(image_meta)
+        is_loongarch64 = self._is_loongarch64_guest(image_meta)
 
         if is_x86:
             if guest.os_mach_type is not None and not (
@@ -7911,6 +7930,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidVIOMMUMachineType(
                     mtype=mtype, arch=arch)
         elif is_aarch64:
+            if guest.os_mach_type is not None and not (
+                    'virt' in guest.os_mach_type
+            ):
+                arch = self._check_emulation_arch(image_meta)
+                mtype = guest.os_mach_type if (
+                    guest.os_mach_type is not None
+                ) else "unknown"
+                raise exception.InvalidVIOMMUMachineType(
+                    mtype=mtype, arch=arch)
+        elif is_loongarch64:
             if guest.os_mach_type is not None and not (
                     'virt' in guest.os_mach_type
             ):

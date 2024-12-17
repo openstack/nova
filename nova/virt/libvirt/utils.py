@@ -633,6 +633,8 @@ def get_cpu_model_from_arch(arch: str) -> str:
     # that all the stuff it can currently emulate, both for "TCG" and "KVM"
     elif arch == obj_fields.Architecture.AARCH64:
         mode = 'max'
+    elif arch == obj_fields.Architecture.LOONGARCH64:
+        mode = 'la464'
     return mode
 
 
@@ -676,6 +678,7 @@ def get_default_machine_type(arch: str) -> ty.Optional[str]:
         obj_fields.Architecture.S390X: "s390-ccw-virtio",
         obj_fields.Architecture.I686: "pc",
         obj_fields.Architecture.X86_64: "pc",
+        obj_fields.Architecture.LOONGARCH64: "virt",
     }
     return default_mtypes.get(arch)
 

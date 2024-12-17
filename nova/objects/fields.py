@@ -137,6 +137,7 @@ class Architecture(BaseNovaEnum):
     I686 = arch.I686
     IA64 = arch.IA64
     LM32 = arch.LM32
+    LOONGARCH64 = arch.LOONGARCH64
 
     M68K = arch.M68K
     MICROBLAZE = arch.MICROBLAZE
