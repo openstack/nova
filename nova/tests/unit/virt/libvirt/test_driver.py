@@ -5174,6 +5174,212 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(set([7]), cfg.cputune.vcpupin[2].cpuset)
             self.assertEqual(set([8]), cfg.cputune.vcpupin[3].cpuset)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_iothreads_instance(self):
+        self.flags(cpu_shared_set='0-5', cpu_dedicated_set=None,
+                group='compute')
+
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0, 1, 2, 3]), pcpuset=set(),
+                memory=1024, pagesize=None),
+        ])
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        flavor = objects.Flavor(memory_mb=2048, vcpus=4, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={}, id=42, flavorid='someflavor')
+        instance_ref.flavor = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, image_meta)
+
+        with test.nested(
+                mock.patch.object(
+                    objects.InstanceNUMATopology, "get_by_instance_uuid",
+                    return_value=instance_topology),
+                mock.patch.object(host.Host, 'has_min_version',
+                                return_value=True),
+                mock.patch.object(host.Host, "get_capabilities",
+                                return_value=caps),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                return_value=set(range(8))),
+                ):
+            cfg = drvr._get_guest_config(instance_ref, [],
+                                        image_meta, disk_info)
+
+            self.assertEqual(1, cfg.iothreads)
+
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_iothreadpin_matches_emulatorpin(self):
+        self.flags(cpu_shared_set=None, cpu_dedicated_set='4-8',
+                group='compute')
+
+        instance_topology = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset=set(), pcpuset=set([0, 1]),
+                    memory=1024, pagesize=2048,
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_pinning={0: 4, 1: 5},
+                    cpuset_reserved=set([6])),
+                objects.InstanceNUMACell(
+                    id=1, cpuset=set(), pcpuset=set([2, 3]),
+                    memory=1024, pagesize=2048,
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_pinning={2: 7, 3: 8}),
+            ])
+
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = fakelibvirt.NUMATopology()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, image_meta)
+
+        with test.nested(
+                mock.patch.object(
+                    objects.InstanceNUMATopology, "get_by_instance_uuid",
+                    return_value=instance_topology),
+                mock.patch.object(host.Host, 'has_min_version',
+                                return_value=True),
+                mock.patch.object(host.Host, "get_capabilities",
+                                return_value=caps),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                return_value=set(range(10))),
+                ):
+            cfg = drvr._get_guest_config(instance_ref, [],
+                                        image_meta, disk_info)
+
+            self.assertIsInstance(cfg.cputune.iothreadpin,
+                                vconfig.LibvirtConfigGuestCPUTuneIOThreadPin)
+            self.assertEqual(cfg.cputune.emulatorpin.cpuset,
+                            cfg.cputune.iothreadpin.cpuset)
+            self.assertEqual(set([6]), cfg.cputune.iothreadpin.cpuset)
+
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_iothreadpin_shared_emulator_threads(self):
+        self.flags(cpu_shared_set='1-2', cpu_dedicated_set='4-8',
+                group='compute')
+
+        instance_topology = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.SHARE),
+            cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset=set(), pcpuset=set([0, 1]),
+                    memory=1024, pagesize=2048,
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_pinning={0: 4, 1: 5}),
+                objects.InstanceNUMACell(
+                    id=1, cpuset=set(), pcpuset=set([2, 3]),
+                    memory=1024, pagesize=2048,
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_pinning={2: 7, 3: 8}),
+            ])
+
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = fakelibvirt.NUMATopology()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, image_meta)
+
+        with test.nested(
+                mock.patch.object(
+                    objects.InstanceNUMATopology, "get_by_instance_uuid",
+                    return_value=instance_topology),
+                mock.patch.object(host.Host, 'has_min_version',
+                                return_value=True),
+                mock.patch.object(host.Host, "get_capabilities",
+                                return_value=caps),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                return_value=set(range(10))),
+                ):
+            cfg = drvr._get_guest_config(instance_ref, [],
+                                        image_meta, disk_info)
+
+            self.assertIsInstance(cfg.cputune.iothreadpin,
+                                vconfig.LibvirtConfigGuestCPUTuneIOThreadPin)
+            self.assertEqual(cfg.cputune.emulatorpin.cpuset,
+                            cfg.cputune.iothreadpin.cpuset)
+            self.assertEqual(set([1, 2]), cfg.cputune.iothreadpin.cpuset)
+
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_iothreadpin_numa_topology(self):
+        self.flags(cpu_shared_set='0-5', cpu_dedicated_set=None,
+                group='compute')
+
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0, 1]), pcpuset=set(), memory=1024,
+                pagesize=None),
+            objects.InstanceNUMACell(
+                id=1, cpuset=set([2, 3]), pcpuset=set(), memory=1024,
+                pagesize=None),
+        ])
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        flavor = objects.Flavor(memory_mb=2048, vcpus=4, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={}, id=42, flavorid='someflavor')
+        instance_ref.flavor = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, image_meta)
+
+        with test.nested(
+                mock.patch.object(
+                    objects.InstanceNUMATopology, "get_by_instance_uuid",
+                    return_value=instance_topology),
+                mock.patch.object(host.Host, 'has_min_version',
+                                return_value=True),
+                mock.patch.object(host.Host, "get_capabilities",
+                                return_value=caps),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                return_value=set(range(8))),
+                ):
+            cfg = drvr._get_guest_config(instance_ref, [],
+                                        image_meta, disk_info)
+
+            self.assertIsInstance(cfg.cputune.iothreadpin,
+                                vconfig.LibvirtConfigGuestCPUTuneIOThreadPin)
+            self.assertEqual(cfg.cputune.emulatorpin.cpuset,
+                            cfg.cputune.iothreadpin.cpuset)
+            self.assertEqual(set([0, 1, 2, 3]), cfg.cputune.iothreadpin.cpuset)
+
     def test_get_guest_config_numa_host_instance_shared_emulthreads_err(
             self):
         self.flags(cpu_shared_set='48-50', cpu_dedicated_set='4-8',

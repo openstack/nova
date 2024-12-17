@@ -2664,6 +2664,25 @@ class LibvirtConfigGuestCPUTuneEmulatorPin(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestCPUTuneIOThreadPin(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestCPUTuneIOThreadPin, self).__init__(
+            root_name="iothreadpin",
+            **kwargs)
+
+        self.cpuset = None
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestCPUTuneIOThreadPin, self).format_dom()
+
+        if self.cpuset is not None:
+            root.set("cpuset",
+                     hardware.format_cpu_spec(self.cpuset))
+
+        return root
+
+
 class LibvirtConfigGuestCPUTuneVCPUSched(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -2699,6 +2718,7 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
         self.period = None
         self.vcpupin = []
         self.emulatorpin = None
+        self.iothreadpin = None
         self.vcpusched = []
 
     def format_dom(self):
@@ -2713,6 +2733,8 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
 
         if self.emulatorpin is not None:
             root.append(self.emulatorpin.format_dom())
+        if self.iothreadpin is not None:
+            root.append(self.iothreadpin.format_dom())
         for vcpu in self.vcpupin:
             root.append(vcpu.format_dom())
         for sched in self.vcpusched:
@@ -3092,6 +3114,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.cpuset = None
         self.cpu = None
         self.cputune = None
+        self.iothreads = None
         self.features = []
         self.clock = None
         self.sysinfo = None
@@ -3261,6 +3284,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self._format_os(root)
         self._format_features(root)
 
+        # Set 1 IO thread per VM for all instances.
+        if self.iothreads is not None:
+            root.append(self._text_node("iothreads", str(self.iothreads)))
+
         if self.cputune is not None:
             root.append(self.cputune.format_dom())
 
@@ -3390,6 +3417,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                         self.add_perf_event(p.get('name'))
             elif c.tag == 'os':
                 self._parse_os(c)
+            elif c.tag == 'iothreads':
+                self.iothreads = int(c.text)
             else:
                 self._parse_basic_props(c)
 

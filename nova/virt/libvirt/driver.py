@@ -6490,6 +6490,9 @@ class LibvirtDriver(driver.ComputeDriver):
         guest_cpu_tune.emulatorpin = (
             vconfig.LibvirtConfigGuestCPUTuneEmulatorPin())
         guest_cpu_tune.emulatorpin.cpuset = set([])
+        guest_cpu_tune.iothreadpin = (
+            vconfig.LibvirtConfigGuestCPUTuneIOThreadPin())
+        guest_cpu_tune.iothreadpin.cpuset = set([])
 
         # Init NUMATune configuration
         guest_numa_tune = vconfig.LibvirtConfigGuestNUMATune()
@@ -6528,7 +6531,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 emu_pin_cpuset = self._get_emulatorpin_cpuset(
                     cpu, object_numa_cell, vcpus_rt,
                     emulator_threads_policy, pin_cpuset)
+                # Note(lajoskatona): Here we set emu_pin_cpuset for both
+                # emulatorpin and iothreadpin, this is makes sure that
+                # both emulator and iothreads are pinned to cores other
+                # than the instance's cores to support realtime cpus.
                 guest_cpu_tune.emulatorpin.cpuset.update(emu_pin_cpuset)
+                guest_cpu_tune.iothreadpin.cpuset.update(emu_pin_cpuset)
 
         # TODO(berrange) When the guest has >1 NUMA node, it will
         # span multiple host NUMA nodes. By pinning emulator threads
@@ -7558,6 +7566,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._set_features(guest, instance.os_type, image_meta, flavor)
         self._set_clock(guest, instance.os_type, image_meta)
+
+        # Set IOThreads to 1 for everybody
+        guest.iothreads = 1
 
         storage_configs = self._get_guest_storage_config(context,
                 instance, image_meta, disk_info, rescue, block_device_info,
