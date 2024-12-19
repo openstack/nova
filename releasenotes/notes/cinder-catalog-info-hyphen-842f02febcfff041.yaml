@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Nova now allows to use a hyphen in the ``[cinder]catalog_info``
+    service-type field, so in particular the official
+    ``block-storage`` type is now valid.
+    `Bug 2092194 <https://bugs.launchpad.net/nova/+bug/2092194>`_
