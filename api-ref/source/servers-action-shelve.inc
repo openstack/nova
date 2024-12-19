@@ -180,6 +180,11 @@ The behavior according to unshelve parameters will follow the below table.
 (2) Schedule to any host available.
 
 
+.. note:: If the user provides a destination AZ during an unshelve request and
+   if scheduling fails for some reason, Nova will revert the instance state but
+   the destination AZ will remain as requested and will not be reverted.
+   This maintains the intended API behaviour as discussed in the following bug:
+   https://bugs.launchpad.net/nova/+bug/1978573
 
 **Asynchronous Postconditions**
 
