@@ -24,7 +24,7 @@ cinder_group = cfg.OptGroup(
 cinder_opts = [
     cfg.StrOpt('catalog_info',
             default='volumev3::publicURL',
-            regex=r'^\w+:\w*:.*$',
+            regex=r'^[\w-]+:\w*:.*$',
             help="""
 Info to match when looking for cinder in the service catalog.
 
