@@ -6172,19 +6172,22 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return sysinfo
 
-    def _set_managed_mode(self, pcidev):
+    def _set_managed_mode(self, pcidev, managed):
         # only kvm support managed mode
         if CONF.libvirt.virt_type in ('parallels',):
             pcidev.managed = 'no'
+            LOG.debug("Managed mode set to '%s' but it is overwritten by "
+                      "parallels hypervisor settings.", managed)
         if CONF.libvirt.virt_type in ('kvm', 'qemu'):
-            pcidev.managed = 'yes'
+            pcidev.managed = "yes" if managed == "true" else "no"
 
     def _get_guest_pci_device(self, pci_device):
 
         dbsf = pci_utils.parse_address(pci_device.address)
         dev = vconfig.LibvirtConfigGuestHostdevPCI()
         dev.domain, dev.bus, dev.slot, dev.function = dbsf
-        self._set_managed_mode(dev)
+        managed = pci_device.extra_info.get('managed', 'true')
+        self._set_managed_mode(dev, managed)
 
         return dev
 
@@ -7769,7 +7772,7 @@ class LibvirtDriver(driver.ComputeDriver):
             dev.domain, dev.bus, dev.slot, dev.function = (
                 pci_addr['domain'], pci_addr['bus'],
                 pci_addr['device'], pci_addr['function'])
-            self._set_managed_mode(dev)
+            self._set_managed_mode(dev, "true")
 
             guest.add_device(dev)
 

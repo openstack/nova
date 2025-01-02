@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    This release adds support for SR-IOV devices
+    using the new kernel VFIO SR-IOV variant driver interface.
+    See the `OpenStack pci-passthrough documentation`__ for more details.
+
+    .. __: https://docs.openstack.org/nova/latest/admin/pci-passthrough.html

@@ -174,6 +174,21 @@ Possible values:
       VPD capability with a card serial number (either on a VF itself on
       its corresponding PF), otherwise they will be ignored and not
       available for allocation.
+    - ``managed`` - Specify if the PCI device is managed by libvirt.
+      May have boolean-like string values case-insensitive values:
+      "yes" or "no". By default, "yes" is assumed for all devices.
+
+      - ``managed='yes'`` means that nova will use libvirt to detach the
+        device from the host before attaching it to the guest and re-attach
+        it to the host after the guest is deleted.
+
+      - ``managed='no'`` means that nova will not request libvirt to
+        detach / attach the device from / to the host. In this case nova
+        assumes that the operator configured the host in a way that these
+        VFs are not attached to the host.
+
+       Warning: Incorrect configuration of this parameter may result in compute
+       node crashes.
     - ``resource_class`` - optional Placement resource class name to be used
       to track the matching PCI devices in Placement when
       [pci]report_in_placement is True.
@@ -234,6 +249,15 @@ Possible values:
                    "address": "0000:82:00.0",
                    "resource_class": "PGPU",
                    "traits": "HW_GPU_API_VULKAN,my-awesome-gpu"}
+    device_spec = {"vendor_id":"10de",
+                   "product_id":"25b6",
+                   "address": "0000:25:00.4",
+                   "managed": "no"}
+    device_spec = {"vendor_id":"10de",
+                   "product_id":"25b6",
+                   "address": "0000:25:00.4",
+                   "resource_class": "CUSTOM_A16_16A",
+                   "managed": "no"}
 
   The following are invalid, as they specify mutually exclusive options::
 

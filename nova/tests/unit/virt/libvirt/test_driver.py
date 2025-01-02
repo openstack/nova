@@ -7942,26 +7942,28 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         compute_ref = objects.ComputeNode(**compute_info)
         return (service_ref, compute_ref)
 
-    def test_get_guest_config_with_pci_passthrough_kvm(self):
-        self.flags(virt_type='kvm', group='libvirt')
-        service_ref, compute_ref = self._create_fake_service_compute()
-
+    def _setup_instance_and_pci_device(
+        self, compute_ref, pci_address, managed=None
+    ):
         instance = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         pci_device_info = dict(test_pci_device.fake_db_dev)
-        pci_device_info.update(compute_node_id=1,
-                               label='fake',
-                               status=fields.PciDeviceStatus.ALLOCATED,
-                               address='0000:00:00.1',
-                               compute_id=compute_ref.id,
-                               instance_uuid=instance.uuid,
-                               request_id=uuids.pci_req1,
-                               extra_info={})
+        pci_device_info.update(
+            compute_node_id=1,
+            label="fake",
+            status=fields.PciDeviceStatus.ALLOCATED,
+            address=pci_address,
+            compute_id=compute_ref.id,
+            instance_uuid=instance.uuid,
+            request_id=uuids.pci_req1,
+            extra_info={"managed": managed} if managed is not None else {},
+        )
+
         pci_device = objects.PciDevice(**pci_device_info)
-        pci_list = objects.PciDeviceList()
-        pci_list.objects.append(pci_device)
+        pci_list = objects.PciDeviceList(objects=[pci_device])
         instance.pci_devices = pci_list
+
         instance.pci_requests = objects.InstancePCIRequests(
             requests=[
                 objects.InstancePCIRequest(
@@ -7970,27 +7972,74 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ]
         )
 
+        return instance, image_meta
+
+    def _assert_pci_device_config(
+        self, cfg, expected_managed, expected_function
+    ):
+        had_pci = [
+            dev
+            for dev in cfg.devices
+            if isinstance(dev, vconfig.LibvirtConfigGuestHostdevPCI)
+        ]
+        self.assertEqual(len(had_pci), 1)
+
+        pci_dev = had_pci[0]
+        self.assertEqual(pci_dev.type, "pci")
+        if expected_managed is not None:
+            self.assertEqual(pci_dev.managed, expected_managed)
+        self.assertEqual(pci_dev.mode, "subsystem")
+        self.assertEqual(pci_dev.domain, "0000")
+        self.assertEqual(pci_dev.bus, "00")
+        self.assertEqual(pci_dev.slot, "00")
+        self.assertEqual(pci_dev.function, expected_function)
+
+    def _test_get_guest_config_with_pci(
+        self, pci_address, managed, expected_managed, expected_function
+    ):
+        service_ref, compute_ref = self._create_fake_service_compute()
+        instance, image_meta = self._setup_instance_and_pci_device(
+            compute_ref, pci_address, managed
+        )
+
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance,
-                                            image_meta)
-        cfg = drvr._get_guest_config(instance, [],
-                                     image_meta, disk_info)
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance, image_meta
+        )
+        cfg = drvr._get_guest_config(instance, [], image_meta, disk_info)
 
-        had_pci = 0
-        # care only about the PCI devices
-        for dev in cfg.devices:
-            if type(dev) is vconfig.LibvirtConfigGuestHostdevPCI:
-                had_pci += 1
-                self.assertEqual(dev.type, 'pci')
-                self.assertEqual(dev.managed, 'yes')
-                self.assertEqual(dev.mode, 'subsystem')
+        self._assert_pci_device_config(
+            cfg, expected_managed, expected_function)
 
-                self.assertEqual(dev.domain, "0000")
-                self.assertEqual(dev.bus, "00")
-                self.assertEqual(dev.slot, "00")
-                self.assertEqual(dev.function, "1")
-        self.assertEqual(had_pci, 1)
+    def test_get_guest_config_with_pci_passthrough_kvm(self):
+        self._test_get_guest_config_with_pci("0000:00:00.1", None, "yes", "1")
+
+    def test_get_guest_config_with_pci_passthrough_kvm_managed_yes(self):
+        self._test_get_guest_config_with_pci(
+            "0000:00:00.2", "true", "yes", "2")
+
+    def test_get_guest_config_with_pci_passthrough_kvm_managed_no(self):
+        self._test_get_guest_config_with_pci(
+            "0000:00:00.3", "false", "no", "3")
+
+    @mock.patch('nova.virt.libvirt.driver.LOG', autospec=True)
+    def test_log_in_set_managed_node(self, mock_log):
+        self.flags(virt_type='parallels', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        # Just a fake class to check result
+
+        class PciDevice():
+            managed = None
+
+        pcidev = PciDevice()
+        drvr._set_managed_mode(pcidev, "yes")
+
+        mock_log.debug.assert_called_once_with(
+            "Managed mode set to '%s' but it is overwritten by parallels "
+            "hypervisor settings.",
+            "yes",
+        )
+        self.assertEqual(pcidev.managed, "no")
 
     def test_get_guest_config_os_command_line_through_image_meta(self):
         self.flags(virt_type="kvm",

@@ -69,6 +69,11 @@ capabilities.
    Nova provides Placement based scheduling support for servers with flavor
    based PCI requests. This support is disable by default.
 
+.. versionchanged:: 31.0.0 (2025.1 Epoxy):
+   Add managed tag to define if the PCI device is managed by libvirt.
+   This is required to support SR-IOV devices using the new kernel variant
+   driver interface.
+
 Enabling PCI passthrough
 ------------------------
 
@@ -222,6 +227,31 @@ have special meaning:
      place. It is recommended to test specific devices, drivers and firmware
      versions before assuming this feature can be used.
 
+``managed``
+  Users must specify whether the PCI device is managed by libvirt to allow
+  detachment from the host and assignment to the guest, or vice versa.
+  The managed mode of a device depends on the specific device and the support
+  provided by its driver.
+
+  - ``managed='yes'`` means that nova will let libvirt to detach the device
+    from the host before attaching it to the guest and re-attach it to the host
+    after the guest is deleted.
+
+  - ``managed='no'`` means that Nova will not request libvirt to attach
+    or detach the device from the host. Instead, Nova assumes that
+    the operator has pre-configured the host so that the devices are
+    already bound to vfio-pci or an appropriate variant driver. This
+    setup allows the devices to be directly usable by QEMU without
+    requiring any additional operations to enable passthrough.
+
+  .. note::
+    If not set, the default value is managed='yes' to preserve the existing
+    behavior, primarily for upgrade purposes.
+
+  .. warning::
+     Incorrect configuration of this parameter may result in compute
+     node crashes.
+
 
 Configure ``nova-scheduler``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -352,9 +382,11 @@ PCI tracking in Placement
    The feature described below are optional and disabled by default in nova
    26.0.0. (Zed). The legacy PCI tracker code path is still supported and
    enabled. The Placement PCI tracking can be enabled via the
-   :oslo.config:option:`pci.report_in_placement` configuration. But please note
-   that once it is enabled on a given compute host it cannot be disabled there
-   any more.
+   :oslo.config:option:`pci.report_in_placement` configuration.
+
+.. warning::
+   Please note that once it is enabled on a given compute host
+   **it cannot be disabled there any more**.
 
 Since nova 26.0.0 (Zed) PCI passthrough device inventories are tracked in
 Placement. If a PCI device exists on the hypervisor and
@@ -460,6 +492,40 @@ by nova to ``CUSTOM_PCI_<vendor_id>_<product_id>``.
 
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_
 
+Support for multiple types of VFs
+---------------------------------
+
+SR-IOV devices, such as GPUs, can be configured to provide VFs with various
+characteristics under the same vendor ID and product ID.
+
+To enable Nova to model this, if you configure the VFs with different
+resource allocations, you will need to use separate resource_classes for each.
+
+This can be achieved by following the steps below:
+
+- Enable PCI in Placement: This is necessary to track PCI devices with
+  custom resource classes in the placement service.
+
+- Define Device Specifications: Use a custom resource class to represent
+  a specific VF type and ensure that the VFs existing on the hypervisor are
+  matched via the VF's PCI address.
+
+- Specify Type-Specific Flavors: Define flavors with an alias that matches
+  the resource class to ensure proper allocation.
+
+Examples:
+
+.. note::
+  The following example demonstrates device specifications and alias
+  configurations, utilizing resource classes as part of the "PCI in
+  placement" feature.
+
+.. code-block:: shell
+
+  [pci]
+  device_spec = { "vendor_id": "10de", "product_id": "25b6", "address": "0000:25:00.4", "resource_class": "CUSTOM_A16_16A", "managed": "no" }
+  device_spec = { "vendor_id": "10de", "product_id": "25b6", "address": "0000:25:00.5", "resource_class": "CUSTOM_A16_8A", "managed": "no" }
+  alias = { "device_type": "type-VF", resource_class: "CUSTOM_A16_16A", "name": "A16_16A" }
 
 Virtual IOMMU support
 ---------------------
