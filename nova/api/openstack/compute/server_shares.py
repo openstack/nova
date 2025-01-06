@@ -74,7 +74,7 @@ class ServerSharesController(wsgi.Controller):
     @wsgi.response(200)
     @wsgi.expected_errors((400, 403, 404))
     @validation.query_schema(schema.index_query)
-    @validation.response_body_schema(schema.share_list_response)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         # Get instance mapping to query the required cell database
@@ -95,7 +95,7 @@ class ServerSharesController(wsgi.Controller):
     @wsgi.response(201)
     @wsgi.expected_errors((400, 403, 404, 409))
     @validation.schema(schema.create, min_version='2.97')
-    @validation.response_body_schema(schema.share_response)
+    @validation.response_body_schema(schema.show_response)
     def create(self, req, server_id, body):
         def _try_create_share_mapping(context, share_mapping):
             """Block the request if the share is already created.
@@ -200,7 +200,7 @@ class ServerSharesController(wsgi.Controller):
     @wsgi.response(200)
     @wsgi.expected_errors((400, 403, 404))
     @validation.query_schema(schema.show_query)
-    @validation.response_body_schema(schema.share_response)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         # Get instance mapping to query the required cell database

@@ -50,44 +50,36 @@ show_query = {
 #   "tag": "e8debdc0-447a-4376-a10a-4cd9122d7986"
 # }
 
-share_response = {
+_share_response = {
+    'type': 'object',
+    'properties': {
+        'export_location': parameter_types.share_export_location,
+        'share_id': parameter_types.share_id,
+        'status': parameter_types.share_status,
+        'tag': parameter_types.share_tag,
+        'uuid': parameter_types.share_id,
+    },
+    'required': ['share_id', 'status', 'tag'],
+    'additionalProperties': False
+}
+
+show_response = {
     'title': 'Server share',
     'type': 'object',
     'properties': {
-        'share': {
-            'type': 'object',
-            'properties': {
-                'uuid': parameter_types.share_id,
-                'export_location': parameter_types.share_export_location,
-                'share_id': parameter_types.share_id,
-                'status': parameter_types.share_status,
-                'tag': parameter_types.share_tag,
-            },
-            'required': ['share_id', 'status', 'tag'],
-            'additionalProperties': False
-        }
+        'share': _share_response
     },
     'required': ['share'],
     'additionalProperties': False
 }
 
-share_list_response = {
+index_response = {
     'title': 'Server shares',
     'type': 'object',
     'properties': {
         'shares': {
             'type': 'array',
-            'items': {
-                'properties': {
-                    'uuid': parameter_types.share_id,
-                    'export_location': parameter_types.share_export_location,
-                    'share_id': parameter_types.share_id,
-                    'status': parameter_types.share_status,
-                    'tag': parameter_types.share_tag,
-                },
-                'required': ['share_id', 'status', 'tag'],
-                'additionalProperties': False
-            }
+            'items': _share_response
         },
     },
     'required': ['shares'],
