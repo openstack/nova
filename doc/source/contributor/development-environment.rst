@@ -100,10 +100,10 @@ On Debian-based distributions (e.g., Debian/Mint/Ubuntu)::
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
-  sudo yum install python-pip
+  sudo dnf install python-pip
   sudo pip install tox
   tox -e bindep
-  sudo yum install <indicated missing package names>
+  sudo dnf install <indicated missing package names>
 
 On openSUSE-based distributions (SLES, openSUSE Leap / Tumbleweed)::
 

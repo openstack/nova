@@ -28,7 +28,7 @@ Install and configure components
 
    .. code-block:: console
 
-      # yum install openstack-nova-compute
+      # dnf install openstack-nova-compute
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 

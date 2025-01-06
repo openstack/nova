@@ -174,7 +174,7 @@ Install and configure components
 
    .. code-block:: console
 
-      # yum install openstack-nova-api openstack-nova-conductor \
+      # dnf install openstack-nova-api openstack-nova-conductor \
         openstack-nova-novncproxy openstack-nova-scheduler
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
