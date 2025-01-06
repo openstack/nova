@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    The nova scheduler now supports enabling the nova cell discover hosts
+    perodic task on multiple schedulers. In prior release enabling this
+    feature required setting the discover_hosts_in_cells_interval option
+    to a value greater than 0 in at most one scheduler, with the 2025.1
+    release it was possible to enable the feature on multiple schedulers
+    via the introduction of leader election. This simplifies deployment
+    of nova in kubernetes by allowing the operator to deploy
+    multiple schedulers and have them elect a single leader that will run
+    the discover hosts perodic task.

@@ -37,6 +37,7 @@ from nova import manager
 from nova import objects
 from nova.objects import fields as fields_obj
 from nova.objects import host_mapping as host_mapping_obj
+from nova.objects import service as obj_service
 from nova import quota
 from nova import rpc
 from nova.scheduler.client import report
@@ -108,6 +109,18 @@ class SchedulerManager(manager.Manager):
         spacing=CONF.scheduler.discover_hosts_in_cells_interval,
         run_immediately=True)
     def _discover_hosts_in_cells(self, context):
+        services = obj_service.ServiceList.get_by_binary(
+            context, 'nova-scheduler')
+        leader = sorted(
+            [service.host for service in services
+             if self.servicegroup_api.service_is_up(service)])[0]
+
+        if CONF.host != leader:
+            LOG.debug(
+                f"Current leader is {leader}, "
+                f"skipping discover hosts on {CONF.host}")
+            return
+
         global HOST_MAPPING_EXISTS_WARNING
         try:
             host_mappings = host_mapping_obj.discover_hosts(context)
@@ -124,9 +137,8 @@ class SchedulerManager(manager.Manager):
                 )
         except exception.HostMappingExists as exp:
             msg = (
-                'This periodic task should only be enabled on a single '
-                'scheduler to prevent collisions between multiple '
-                'schedulers: %s' % str(exp)
+                'This periodic task should only be enabled if discover hosts '
+                'is not run via nova-manage, schedulers: %s' % str(exp)
             )
             if not HOST_MAPPING_EXISTS_WARNING:
                 LOG.warning(msg)
