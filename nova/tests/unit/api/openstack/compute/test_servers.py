@@ -69,6 +69,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_request_spec
 from nova.tests.unit import matchers
 from nova import utils as nova_utils
 
@@ -8467,6 +8468,65 @@ class ServersViewBuilderTestV296(_ServersViewBuilderTest):
         req = self.req('/%s/servers' % self.project_id)
         self.assertRaises(KeyError, self.view_builder.index,
                           req, self.instances, False)
+
+
+class ServersViewBuilderTestV2100(_ServersViewBuilderTest):
+    """Server ViewBuilder test for microversion 2.100
+
+    The intent is simply to verify that when showing server details
+    after microversion 2.100 the response will always have a dict for
+    scheduler_hints.
+    """
+
+    def setUp(self):
+        super(ServersViewBuilderTestV2100, self).setUp()
+        self.view_builder = views.servers.ViewBuilder()
+        self.ctxt = context.RequestContext('fake', self.project_id)
+        self.request.api_version_request = (
+            api_version_request.APIVersionRequest('2.100'))
+
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    def test_build_server_detail_v2100(self, mock_get_req_spec):
+        mock_get_req_spec.return_value = fake_request_spec.fake_spec_obj()
+        expected_hints = {'hint': ['over-there']}
+
+        output = self.view_builder.show(self.request, self.instance)
+
+        self.assertIn('scheduler_hints', output['server'].keys())
+        self.assertThat(output['server']['scheduler_hints'],
+                        matchers.DictMatches(expected_hints))
+        exp_call = mock.call(
+            self.request.environ['nova.context'], self.instance.uuid)
+        mock_get_req_spec.assert_has_calls([exp_call, exp_call])
+
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    def test_build_server_detail_v2100_no_spec(self, mock_get_req_spec):
+        mock_get_req_spec.side_effect = exception.RequestSpecNotFound(
+            instance_uuid='foo')
+        expected_hints = {}
+
+        output = self.view_builder.show(self.request, self.instance)
+
+        self.assertIn('scheduler_hints', output['server'].keys())
+        self.assertThat(output['server']['scheduler_hints'],
+                        matchers.DictMatches(expected_hints))
+        exp_call = mock.call(
+            self.request.environ['nova.context'], self.instance.uuid)
+        mock_get_req_spec.assert_has_calls([exp_call, exp_call])
+
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    def test_build_server_detail_v299_no_hints(self, mock_get_req_spec):
+        # req_spec is retrieved since 2.96, but no scheduler_hints
+        # should be returned
+        self.request.api_version_request = (
+            api_version_request.APIVersionRequest('2.99'))
+        mock_get_req_spec.return_value = fake_request_spec.fake_spec_obj()
+
+        output = self.view_builder.show(self.request, self.instance)
+
+        self.assertNotIn('scheduler_hints', output['server'].keys())
+        mock_get_req_spec.assert_called_once_with(
+            self.request.environ['nova.context'], self.instance.uuid)
 
 
 class ServersActionsJsonTestV239(test.NoDBTestCase):

@@ -1288,3 +1288,13 @@ under the struct at the existing ``image`` key in the response for
 Add the ``spice-direct`` console type to the spice console protocol. Also
 add a ``tls_port`` field to the return value from
 ``GET /os-console-auth-tokens/{console_token}``.
+
+.. _microversion 2.100:
+
+2.100
+-----------------------------------------------------
+
+The ``GET /servers/{server_id}``, ``GET /servers/detail``
+``PUT /servers/{server_id}`` and ``POST /server/{server_id}/action``
+(rebuild) responses now include the scheduler hints provided during
+server creation.

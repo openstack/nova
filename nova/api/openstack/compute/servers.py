@@ -1190,7 +1190,9 @@ class ServersController(wsgi.Controller):
     @validation.response_body_schema(
         schema.rebuild_response_v296, '2.96', '2.97')
     @validation.response_body_schema(
-        schema.rebuild_response_v298, '2.98')
+        schema.rebuild_response_v298, '2.98', '2.99')
+    @validation.response_body_schema(
+        schema.rebuild_response_v2100, '2.100')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']

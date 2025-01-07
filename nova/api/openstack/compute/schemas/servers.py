@@ -1244,3 +1244,11 @@ rebuild_response_v298['properties']['server']['properties']['image'][
             'additionalProperties': False,
     },
 })
+
+rebuild_response_v2100 = copy.deepcopy(rebuild_response_v298)
+rebuild_response_v2100['properties']['server']['properties'].update({
+    'scheduler_hints': _hints,
+})
+rebuild_response_v2100['properties']['server']['required'].append(
+    'scheduler_hints'
+)
