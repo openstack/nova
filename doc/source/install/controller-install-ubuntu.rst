@@ -195,7 +195,8 @@ Install and configure components
      Replace ``NOVA_DBPASS`` with the password you chose for the Compute
      databases.
 
-   * In the ``[DEFAULT]`` section, configure ``RabbitMQ`` message queue access:
+   * In the ``[DEFAULT]`` section, configure ``RabbitMQ`` message queue access
+     (RabbitMQ should be already `installed and configured <https://docs.openstack.org/install-guide/environment-messaging-ubuntu.html>`_):
 
      .. path /etc/nova/nova.conf
      .. code-block:: ini
