@@ -1648,7 +1648,9 @@ class Host(object):
         :returns: a list of virNodeDevice instance
         """
         try:
-            return self.get_connection().listDevices(cap, flags)
+            devs = [self._wrap_libvirt_proxy(dev)
+                    for dev in self.get_connection().listDevices(cap, flags)]
+            return devs
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_SUPPORT:
@@ -1668,7 +1670,10 @@ class Host(object):
         :returns: a list of virNodeDevice instances.
         """
         try:
-            return self.get_connection().listAllDevices(flags) or []
+            alldevs = [
+                self._wrap_libvirt_proxy(dev)
+                for dev in self.get_connection().listAllDevices(flags)] or []
+            return alldevs
         except libvirt.libvirtError as ex:
             LOG.warning(ex)
             return []
