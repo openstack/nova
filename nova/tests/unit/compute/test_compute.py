@@ -7078,9 +7078,9 @@ class ComputeTestCase(BaseTestCase,
                 'Migrating instance to desthost finished successfully.',
                 self.stdlog.logger.output)
 
-    def test_post_live_migration_exc_on_dest_works_correctly(self):
-        """Confirm that post_live_migration() completes successfully
-        even after post_live_migration_at_destination() raises an exception.
+    def test_post_live_migration_exc_on_dest_fails(self):
+        """Confirm that post_live_migration() raise an error.
+        This is the new behavior to correct bug #2143972
         """
         dest = 'desthost'
         srchost = self.compute.host
@@ -7113,29 +7113,32 @@ class ComputeTestCase(BaseTestCase,
                               'migrate_instance_start'),
             mock.patch.object(self.compute.compute_rpcapi,
                               'post_live_migration_at_destination',
-                              side_effect=Exception),
+                              side_effect=OSError),
             mock.patch.object(self.compute.driver,
                               'post_live_migration_at_source'),
             mock.patch.object(self.compute.network_api,
                               'setup_networks_on_host'),
             mock.patch.object(self.compute.instance_events,
                               'clear_events_for_instance'),
-            mock.patch.object(self.compute, 'update_available_resource'),
             mock.patch.object(migration_obj, 'save'),
         ) as (
             post_live_migration,
             migrate_instance_start, post_live_migration_at_destination,
             post_live_migration_at_source, setup_networks_on_host,
-            clear_events, update_available_resource, mig_save
+            clear_events, mig_save
         ):
-            self.compute._post_live_migration(c, instance, dest,
-                                              migrate_data=migrate_data,
-                                              source_bdms=bdms)
-            update_available_resource.assert_has_calls([mock.call(c)])
-            self.assertEqual('completed', migration_obj.status)
-            # assert we did not log a success message
-            self.assertNotIn(
-                'Migrating instance to desthost finished successfully.',
+            self.assertRaises(
+                OSError,
+                self.compute._post_live_migration,
+                c,
+                instance,
+                dest,
+                migrate_data=migrate_data,
+                source_bdms=bdms
+            )
+            # assert we log a failure message
+            self.assertIn(
+                'Post live migration at destination desthost failed',
                 self.stdlog.logger.output)
 
     @mock.patch.object(objects.ComputeNode,
