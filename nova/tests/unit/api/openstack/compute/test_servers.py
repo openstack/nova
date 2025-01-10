@@ -3670,7 +3670,10 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('is too short', str(ex))
+        self.assertRegex(
+            str(ex),
+            '(is too short)|'  # jsonschema < 4.23.0
+            '(should be non-empty)')  # jsonschema >= 4.23.0
 
     def test_rebuild_server_with_empty_trusted_certs(self):
         """Make sure that we can't rebuild with an empty array of IDs"""
@@ -3679,7 +3682,10 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('is too short', str(ex))
+        self.assertRegex(
+            str(ex),
+            '(is too short)|'  # jsonschema < 4.23.0
+            '(should be non-empty)')  # jsonschema >= 4.23.0
 
     def test_rebuild_server_with_too_many_trusted_certs(self):
         """Make sure that we can't rebuild with an array of >50 unique IDs"""
@@ -7172,7 +7178,10 @@ class ServersControllerCreateTestV263(_ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('is too short', str(ex))
+        self.assertRegex(
+            str(ex),
+            '(is too short)|'  # jsonschema < 4.23.0
+            '(should be non-empty)')  # jsonschema >= 4.23.0
 
     def test_create_instance_with_empty_trusted_certs(self):
         """Make sure we can't create with an empty array of IDs"""
@@ -7183,7 +7192,10 @@ class ServersControllerCreateTestV263(_ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('is too short', str(ex))
+        self.assertRegex(
+            str(ex),
+            '(is too short)|'  # jsonschema < 4.23.0
+            '(should be non-empty)')  # jsonschema >= 4.23.0
 
     def test_create_instance_with_too_many_trusted_certs(self):
         """Make sure we can't create with an array of >50 unique IDs"""

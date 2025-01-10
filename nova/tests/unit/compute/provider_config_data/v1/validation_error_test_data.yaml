@@ -71,7 +71,7 @@ provider_empty_name:
     providers:
       - identification:
           name: ''
-  expected_messages: ["'' is too short"]
+  expected_message_regex: "'' (is too short)|(should be non-empty)"
 provider_null_name:
   config:
     meta:
@@ -190,7 +190,7 @@ traits_multiple_additional_traits_two_invalid:
             - TRAIT1: invalid
             - TRAIT2
             - TRAIT3: invalid
-  expected_messages: ["{'TRAIT1': 'invalid'} is not of type 'string'"]
+  expected_message_regex: "{'TRAIT[13]': 'invalid'} is not of type 'string'"
 traits_invalid_trait_name:
   config:
     meta:
