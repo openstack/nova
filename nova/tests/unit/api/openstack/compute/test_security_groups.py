@@ -728,14 +728,14 @@ class TestSecurityGroupsV21(test.TestCase):
         body = dict(addSecurityGroup=None)
 
         self.assertRaises(
-            webob.exc.HTTPBadRequest,
+            exception.ValidationError,
             self.manager._addSecurityGroup, self.req, '1', body=body)
 
     def test_associate_no_security_group_name(self):
         body = dict(addSecurityGroup=dict())
 
         self.assertRaises(
-            webob.exc.HTTPBadRequest,
+            exception.ValidationError,
             self.manager._addSecurityGroup, self.req, '1', body=body)
 
     def test_associate_security_group_name_with_whitespaces(self):
@@ -846,14 +846,14 @@ class TestSecurityGroupsV21(test.TestCase):
     def test_disassociate_without_body(self):
         body = dict(removeSecurityGroup=None)
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.manager._removeSecurityGroup, self.req,
                           '1', body=body)
 
     def test_disassociate_no_security_group_name(self):
         body = dict(removeSecurityGroup=dict())
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.manager._removeSecurityGroup, self.req,
                           '1', body=body)
 
