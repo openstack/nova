@@ -108,7 +108,7 @@ class _TestVirtualInterface(object):
         vif.address = '00:00:00:00:00:00'
         vif.network_id = 123
         vif.instance_uuid = uuids.instance_uuid
-        vif.uuid = uuids.vif_uuid
+        vif.uuid = '4c461286-ff41-4e8c-a592-6afdc8f345fd'
         vif.tag = 'foo'
         vif.create()
 
@@ -116,8 +116,9 @@ class _TestVirtualInterface(object):
             update.return_value = fake_vif
             vif.tag = 'bar'
             vif.save()
-            update.assert_called_once_with(self.context, '00:00:00:00:00:00',
-                                          {'tag': 'bar'})
+            update.assert_called_once_with(self.context,
+                                        '4c461286-ff41-4e8c-a592-6afdc8f345fd',
+                                           {'tag': 'bar'})
 
     def test_delete_by_instance_uuid(self):
         with mock.patch.object(db,

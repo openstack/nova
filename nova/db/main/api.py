@@ -1061,9 +1061,9 @@ def _virtual_interface_query(context):
 
 @require_context
 @pick_context_manager_writer
-def virtual_interface_update(context, address, values):
+def virtual_interface_update(context, vif_uuid, values):
     """Create a virtual interface record in the database."""
-    vif_ref = virtual_interface_get_by_address(context, address)
+    vif_ref = virtual_interface_get_by_uuid(context, vif_uuid)
     vif_ref.update(values)
     vif_ref.save(context.session)
     return vif_ref

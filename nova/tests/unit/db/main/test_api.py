@@ -5036,10 +5036,10 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                    'tag': 'bar',
                    'deleted': 0}
         ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
-        vif_addr = db.virtual_interface_create(self.ctxt, create)['address']
-        db.virtual_interface_update(self.ctxt, vif_addr, update)
-        updated_vif = db.virtual_interface_get_by_address(self.ctxt,
-                                                          updated['address'])
+        vif_uuid = db.virtual_interface_create(self.ctxt, create)['uuid']
+        db.virtual_interface_update(self.ctxt, vif_uuid, update)
+        updated_vif = db.virtual_interface_get_by_uuid(self.ctxt,
+                                                       updated['uuid'])
         self._assertEqualObjects(updated, updated_vif, ignored_keys)
 
 
