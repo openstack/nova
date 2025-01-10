@@ -97,7 +97,7 @@ Checking an existing attachment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Existing volume attachments can be checked using the following
-:python-openstackclient-doc:`OpenStack Client commands <cli/command-objects>`:
+:python-openstackclient-doc:`OpenStack Client commands <cli/command-list>`:
 
 List all volume attachments for a given instance:
 
