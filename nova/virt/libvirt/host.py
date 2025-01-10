@@ -35,7 +35,6 @@ from lxml import etree
 import operator
 import os
 import queue
-import socket
 import threading
 import typing as ty
 
@@ -465,22 +464,9 @@ class Host(object):
         """
 
         self._event_queue = native_Queue.Queue()
-        try:
-            rpipe, wpipe = os.pipe()
-            self._event_notify_send = greenio.GreenPipe(wpipe, 'wb', 0)
-            self._event_notify_recv = greenio.GreenPipe(rpipe, 'rb', 0)
-        except (ImportError, NotImplementedError):
-            # This is Windows compatibility -- use a socket instead
-            #  of a pipe because pipes don't really exist on Windows.
-            sock = native_socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(('localhost', 0))
-            sock.listen(50)
-            csock = native_socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            csock.connect(('localhost', sock.getsockname()[1]))
-            nsock, addr = sock.accept()
-            self._event_notify_send = nsock.makefile('wb', 0)
-            gsock = greenio.GreenSocket(csock)
-            self._event_notify_recv = gsock.makefile('rb', 0)
+        rpipe, wpipe = os.pipe()
+        self._event_notify_send = greenio.GreenPipe(wpipe, 'wb', 0)
+        self._event_notify_recv = greenio.GreenPipe(rpipe, 'rb', 0)
 
     def _init_events(self):
         """Initializes the libvirt events subsystem.
