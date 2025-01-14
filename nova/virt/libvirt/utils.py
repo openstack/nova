@@ -163,7 +163,7 @@ def create_image(
         # the backing file if the image is not created by nova for swap or
         # ephemeral disks.
         if not CONF.workarounds.disable_deep_image_inspection and not safe:
-            inspector = format_inspector.detect_file_format(backing_file)
+            inspector = images.get_image_format(backing_file)
             try:
                 inspector.safety_check()
             except format_inspector.SafetyCheckFailed as e:

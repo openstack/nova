@@ -107,7 +107,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
     @mock.patch('tempfile.NamedTemporaryFile')
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.virt.images.qemu_img_info')
-    @mock.patch('oslo_utils.imageutils.format_inspector.detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     def _test_create_image(
         self, path, disk_format, disk_size, mock_detect, mock_info,
         mock_execute, mock_ntf, backing_file=None, encryption=None,
@@ -443,7 +443,7 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             _context, image_id, target, trusted_certs)
 
     @mock.patch.object(images, 'IMAGE_API')
-    @mock.patch.object(format_inspector, 'detect_file_format')
+    @mock.patch('nova.virt.images.get_image_format')
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('nova.privsep.qemu.unprivileged_convert_image')

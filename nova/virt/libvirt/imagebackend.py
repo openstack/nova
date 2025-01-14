@@ -688,7 +688,7 @@ class Qcow2(Image):
         # NOTE(sean-k-mooney) If the image was created by nova as a swap
         # or ephemeral disk it is safe to skip the deep inspection.
         if not CONF.workarounds.disable_deep_image_inspection and not safe:
-            inspector = format_inspector.detect_file_format(base)
+            inspector = images.get_image_format(base)
             try:
                 inspector.safety_check()
             except format_inspector.SafetyCheckFailed as e:

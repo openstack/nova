@@ -142,6 +142,30 @@ def check_vmdk_image(image_id, data):
         raise exception.ImageUnacceptable(image_id=image_id, reason=msg)
 
 
+def get_image_format(path):
+    with open(path, 'rb') as f:
+        wrapper = format_inspector.InspectWrapper(f)
+        try:
+            while f.peek():
+                wrapper.read(4096)
+                if wrapper.formats:
+                    break
+        finally:
+            wrapper.close()
+
+    try:
+        return wrapper.format
+    except format_inspector.ImageFormatError:
+        format_names = set(str(x) for x in wrapper.formats)
+        if format_names == {'iso', 'gpt'}:
+            # If iso+gpt, we choose the iso because bootable-as-block ISOs
+            # can legitimately have a GPT bootloader in front.
+            LOG.debug('Detected %s as ISO+GPT, allowing as ISO', path)
+            return [x for x in wrapper.formats if str(x) == 'iso'][0]
+        # Any other case of multiple formats is an error
+        raise
+
+
 def do_image_deep_inspection(img, image_href, path):
     ami_formats = ('ami', 'aki', 'ari')
     disk_format = img['disk_format']
@@ -158,7 +182,7 @@ def do_image_deep_inspection(img, image_href, path):
                 image_id=image_href,
                 reason=_('Image not in a supported format'))
 
-        inspector = format_inspector.detect_file_format(path)
+        inspector = get_image_format(path)
         inspector.safety_check()
 
         # Images detected as gpt but registered as raw are legacy "whole disk"
