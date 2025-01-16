@@ -1737,8 +1737,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         node = self._get_node(node_id)
 
         metadata = self.get_instance_driver_metadata(instance, network_info)
-        self._add_instance_info_to_node(node, instance, image_meta, metadata,
-                                        instance.flavor, preserve_ephemeral)
+        self._add_instance_info_to_node(node, instance, image_meta,
+                                        instance.flavor, metadata,
+                                        preserve_ephemeral=preserve_ephemeral)
 
         # Config drive
         configdrive_value = None
