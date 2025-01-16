@@ -10425,7 +10425,9 @@ class ComputeManager(manager.Manager):
         return False
 
     @periodic_task.periodic_task(
-        spacing=CONF.heal_instance_info_cache_interval)
+        spacing= CONF.heal_instance_info_cache_interval
+            if CONF.heal_instance_info_cache_interval != 0
+            else -1)
     def _heal_instance_info_cache(self, context):
         """Called periodically.  On every call, try to update the
         info_cache's network information for another instance by
@@ -10437,10 +10439,6 @@ class ComputeManager(manager.Manager):
         If anything errors don't fail, as it's possible the instance
         has been deleted, etc.
         """
-        heal_interval = CONF.heal_instance_info_cache_interval
-        if not heal_interval:
-            return
-
         instance_uuids = getattr(self, '_instance_uuids_to_heal', [])
         instance = None
 

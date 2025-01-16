@@ -1091,16 +1091,21 @@ Interval between instance network information cache updates.
 
 Number of seconds after which each compute node runs the task of
 querying Neutron for all of its instances networking information,
-then updates the Nova db with that information. Nova will never
-update it's cache if this option is set to 0. If we don't update the
-cache, the metadata service and nova-api endpoints will be proxying
-incorrect network data about the instance. So, it is not recommended
-to set this option to 0.
+then updates the Nova db with that information. Nova will not
+update it's cache periodically if this option is set to <= 0. Nova will still
+react to network-changed external events to update its cache.
+Each in tree neutron backend is sending network-changed external events to
+update nova's view. So in these deployment scenarios this periodic is safe to
+be turned off.
+Out of tree neutron backends might not send this event and if the cache is not
+up to date, then the metadata service and nova-api endpoints will be proxying
+incorrect network data about the instance. So for these backends it is not
+recommended to turn the periodic off.
 
 Possible values:
 
 * Any positive integer in seconds.
-* Any value <=0 will disable the sync. This is not recommended.
+* Any value <=0 will disable the sync.
 """),
     cfg.IntOpt('reclaim_instance_interval',
         default=0,
