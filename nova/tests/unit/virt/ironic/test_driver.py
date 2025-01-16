@@ -2240,8 +2240,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_add_instance_info.assert_called_once_with(
             node, instance,
             test.MatchType(objects.ImageMeta),
+            flavor,
             test.MatchType(driver.InstanceDriverMetadata),
-            flavor, preserve)
+            preserve_ephemeral=preserve)
         self.mock_conn.set_node_provision_state.assert_called_once_with(
             node_uuid, ironic_states.REBUILD, config_drive=mock.ANY,
         )

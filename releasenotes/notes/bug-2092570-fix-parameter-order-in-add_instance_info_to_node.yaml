@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fixed an issue where the instance rebuild option failed for Ironic instances.
+    The problem was caused by an incorrect parameter order in the ``add_instance_info_to_node``
+    function, which was introduced by commit `93b90d2b` <https://review.opendev.org/c/openstack/nova/+/923910>.
+    For more details, see `bug 2092570` <https://bugs.launchpad.net/nova/+bug/2092570>.
