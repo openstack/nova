@@ -631,6 +631,12 @@ class ServersSampleJson296Test(ServersSampleJsonTest):
     ADMIN_API = False
 
 
+class ServerSampleJson298Test(ServersSampleJsonTest):
+    microversion = '2.98'
+    scenarios = [('v2_98', {'api_major_version': 'v2.1'})]
+    ADMIN_API = False
+
+
 class ServersUpdateSampleJsonTest(ServersSampleBase):
 
     # Many of the 'os_compute_api:servers:*' policies are admin-only, and we

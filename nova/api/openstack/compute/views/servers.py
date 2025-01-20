@@ -584,13 +584,26 @@ class ViewBuilder(common.ViewBuilder):
             bookmark = self._image_builder._get_bookmark_link(request,
                                                               image_id,
                                                               "images")
-            return {
+            image = {
                 "id": image_id,
                 "links": [{
                     "rel": "bookmark",
                     "href": bookmark,
                 }],
             }
+
+            if api_version_request.is_supported(request, min_version='2.98'):
+                image_props = {}
+                for key, value in instance.system_metadata.items():
+                    if key.startswith(utils.SM_IMAGE_PROP_PREFIX):
+                        # remove prefix 'image_' at start of key, so that
+                        # key 'image_<key-name>' becomes '<key-name>'
+                        k = key.partition('_')[2]
+                        image_props[k] = value
+
+                image['properties'] = image_props
+
+            return image
         else:
             return ""
 

@@ -2818,6 +2818,10 @@ class ServersControllerTestV290(ControllerTest):
         self.assertEqual(uuids.fake, servers[0]['id'])
 
 
+class ServersControllerTestV298(ServersControllerTestV290):
+    microversion = '2.98'
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):

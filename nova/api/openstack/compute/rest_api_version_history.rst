@@ -1268,3 +1268,14 @@ display shares. For detailed insights and usage instructions, please refer
 to the `manage-shares documentation`_.
 
 .. _manage-shares documentation: https://docs.openstack.org/nova/latest/admin/manage-shares.html
+
+.. _microversion 2.98:
+
+2.98
+----
+
+Add support for including image properties as new ``properties`` subkey
+under the struct at the existing ``image`` key in the response for
+``GET /servers/{server_id}`` (server show), ``GET /servers/detail``
+(list server --long) and in the rebuild case of
+``POST /server/{server_id}/action`` (server rebuild) API response.
