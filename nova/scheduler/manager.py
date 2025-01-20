@@ -38,6 +38,7 @@ from nova.objects import host_mapping as host_mapping_obj
 from nova import quota
 from nova import rpc
 from nova.scheduler.client import report
+from nova.scheduler.external import call_external_scheduler_api
 from nova.scheduler import host_manager
 from nova.scheduler import request_filter
 from nova.scheduler import utils
@@ -627,11 +628,23 @@ class SchedulerManager(manager.Manager):
             random.shuffle(best_hosts)
             weighed_hosts = best_hosts + weighed_hosts[len(best_hosts):]
 
+        # Save the weights in case we'll call an external scheduling service.
+        # This service can then consider the previous weights when making its
+        # own decisions.
+        weights = {h.obj.host: h.weight for h in weighed_hosts}
+
         # Log the weighed hosts before stripping off the wrapper class so that
         # the weight value gets logged.
         LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
         # Strip off the WeighedHost wrapper class...
         weighed_hosts = [h.obj for h in weighed_hosts]
+
+        # Call an external service that can modify `weighed_hosts` once more.
+        # This service may filter out some hosts, or it may re-order them.
+        weighed_hosts = call_external_scheduler_api(
+            weighed_hosts, weights, spec_obj)
+        if not weighed_hosts:
+            return []
 
         # We randomize the first element in the returned list to alleviate
         # congestion where the same host is consistently selected among

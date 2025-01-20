@@ -982,6 +982,28 @@ Possible values are:
 Related options:
 
 * ``[DEFAULT] bigvm_mb``
+"""),
+    cfg.StrOpt("external_scheduler_api_url",
+        default="",
+        help="""
+The API URL of the external scheduler.
+
+If this URL is provided, Nova will call an external service after filters
+and weighers have been applied. This service can reorder and filter the
+list of hosts before Nova attempts to place the instance.
+
+If not provided, this step will be skipped.
+"""),
+    cfg.IntOpt("external_scheduler_timeout",
+        default=10,
+        min=1,
+        help="""
+The timeout in seconds for the external scheduler.
+
+If external_scheduler_api_url is configured, Nova will call and wait for the
+external scheduler to respond for this long. If the external scheduler does not
+respond within this time, the request will be aborted. In this case, the
+scheduler will continue with the original host selection and weights.
 """)
 ]
 
