@@ -1065,6 +1065,26 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         # remaining list of weighed host state objects
         self.assertEqual([hs2, hs1], results)
 
+    @mock.patch('requests.post')
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_filtered_hosts')
+    def test_get_sorted_hosts_external_scheduler_disabled(
+        self, mock_filt, mock_weighed, mock_post
+    ):
+        """Tests that the external scheduler is not called when disabled."""
+        self.flags(external_scheduler_api_url="", group='filter_scheduler')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
+                cell_uuid=uuids.cell1)
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
+                cell_uuid=uuids.cell2)
+        mock_filt.return_value = [hs1, hs2]
+        mock_weighed.return_value = [
+            weights.WeighedHost(hs1, 1.0), weights.WeighedHost(hs2, 1.0),
+        ]
+        _ = self.manager._get_sorted_hosts(mock.sentinel.spec,
+            [hs1, hs2], mock.sentinel.index)
+        mock_post.assert_not_called()
+
     @mock.patch('random.choice', side_effect=lambda x: x[0])
     @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')
     @mock.patch('nova.scheduler.host_manager.HostManager.get_filtered_hosts')
