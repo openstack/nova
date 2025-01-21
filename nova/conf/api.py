@@ -420,12 +420,24 @@ so if your hypervisor does not support password injection, set this to False.
 """)
 ]
 
+instance_delete_opts = [
+    cfg.BoolOpt(
+        "disable_db_only_delete",
+        default=False,
+        help="""
+If a user requests an instance to be deleted, but nova-compute is not running,
+do not delete the instance from the database. Throw an error instead.
+""",
+    ),
+]
+
 API_OPTS = (auth_opts +
             metadata_opts +
             file_opts +
             osapi_opts +
             os_network_opts +
-            enable_inst_pw_opts)
+            enable_inst_pw_opts +
+            instance_delete_opts)
 
 
 def register_opts(conf):
