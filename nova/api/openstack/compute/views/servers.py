@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import collections
-
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
@@ -39,6 +37,9 @@ from nova import utils
 
 
 LOG = logging.getLogger(__name__)
+
+
+AZ_NOT_IN_REQUEST_SPEC = object()
 
 
 class ViewBuilder(common.ViewBuilder):
@@ -221,16 +222,20 @@ class ViewBuilder(common.ViewBuilder):
         return unknown_only
 
     def _get_pinned_az(self, context, instance, provided_az):
-        pinned_az = ''
-        if provided_az is not None:
+        if provided_az is AZ_NOT_IN_REQUEST_SPEC:
+            # Case the provided_az is pre fetched, but not specified
+            pinned_az = None
+        elif provided_az is not None:
+            # Case the provided_az is pre fetched, and specified
             pinned_az = provided_az
         else:
+            # Case the provided_az is not pre fethed.
             try:
                 req_spec = objects.RequestSpec.get_by_instance_uuid(
                         context, instance.uuid)
                 pinned_az = req_spec.availability_zone
             except exception.RequestSpecNotFound:
-                pinned_az = ''
+                pinned_az = None
         return pinned_az
 
     def show(self, request, instance, extend_address=True,
@@ -517,14 +522,15 @@ class ViewBuilder(common.ViewBuilder):
         :returns: Server data in dictionary format
         """
         req_specs = None
-        req_specs_dict = collections.defaultdict(str)
+        req_specs_dict = {}
         if api_version_request.is_supported(request, min_version='2.96'):
             context = request.environ['nova.context']
             instance_uuids = [s.uuid for s in servers]
             req_specs = objects.RequestSpec.get_by_instance_uuids(
                     context, instance_uuids)
-            req_specs_dict = {req.instance_uuid: req.availability_zone
-                              for req in req_specs}
+            req_specs_dict.update({req.instance_uuid: req.availability_zone
+                                   for req in req_specs
+                                   if req.availability_zone is not None})
 
         server_list = [func(request, server,
                             show_extra_specs=show_extra_specs,
@@ -532,7 +538,8 @@ class ViewBuilder(common.ViewBuilder):
                             show_host_status=show_host_status,
                             show_sec_grp=show_sec_grp, bdms=bdms,
                             cell_down_support=cell_down_support,
-                            provided_az=req_specs_dict[server.uuid])["server"]
+                            provided_az=req_specs_dict.get(
+                                server.uuid, AZ_NOT_IN_REQUEST_SPEC))["server"]
                        for server in servers
                        # Filter out the fake marker instance created by the
                        # fill_virtual_interface_list online data migration.
