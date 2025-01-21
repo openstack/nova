@@ -5721,6 +5721,7 @@ pinned_availability_zone:
     Also when default_schedule_zone config option set to specific AZ, in that
     case, instance would be pinned to that specific AZ, and instance will be
     scheduled on host belonging to pinned AZ.
+    In case of no pinned availability zone, this value is set to `null`.
   in: body
   type: string
   min_version: 2.96

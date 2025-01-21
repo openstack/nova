@@ -1,0 +1,15 @@
+---
+fixes:
+  - |
+    `Bug #2095364`_: Fixed the List Server API and the List Server Detail API
+    500 Internal Server Error issue in v2.96 or later API microversion if
+    one or more instance has no request spec object. One usecase was when cloud
+    user tried to create instance which exceeded their quota, the request does
+    not create instance request spec. Once the no request spec instance is
+    created in cloud user project, the server list API and the list server
+    details API return 500 Internal Server Error for the project until the
+    cloud user deletes the no request spec object instance.
+    After this fix, the v2.96 or later returns `null` at the
+    `pinned_availability_zone` value if not specified.
+
+    .. _Bug #2095364: https://launchpad.net/bugs/2095364
