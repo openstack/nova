@@ -78,6 +78,13 @@ class TestValidators(test.NoDBTestCase):
             ('hw:viommu_model', 'intel'),
             ('hw:viommu_model', 'smmuv3'),
             ('hw:viommu_model', 'virtio'),
+            ('hw:tpm_model', 'tpm-tis'),
+            ('hw:tpm_model', 'tpm-crb'),
+            ('hw:tpm_version', '1.2'),
+            ('hw:tpm_version', '2.0'),
+            ('hw:tpm_secret_security', 'user'),
+            ('hw:tpm_secret_security', 'host'),
+            ('hw:tpm_secret_security', 'deployment'),
         )
         for key, value in valid_specs:
             validators.validate(key, value)
@@ -97,6 +104,9 @@ class TestValidators(test.NoDBTestCase):
             ('hw:pci_numa_affinity_policy', 'prefrred'),
             ('hw:pci_numa_affinity_policy', 'socet'),
             ('hw:viommu_model', 'autt'),
+            ('hw:tpm_model', 'tpm-foo'),
+            ('hw:tpm_version', '4.2'),
+            ('hw:tpm_secret_security', 'bar'),
         )
         for key, value in invalid_specs:
             with testtools.ExpectedException(exception.ValidationError):
