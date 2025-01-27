@@ -146,6 +146,12 @@ class TestImageMetaProps(test.NoDBTestCase):
                           virtprops.get,
                           "doesnotexist")
 
+    def test_to_dict(self):
+        props = {'os_type': 'windows'}
+        virtprops = objects.ImageMetaProps.from_dict(props)
+        self.assertEqual({'os_type': 'windows'},
+                         virtprops.to_dict())
+
     def test_legacy_compat(self):
         legacy_props = {
             'architecture': 'x86_64',

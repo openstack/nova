@@ -1073,6 +1073,19 @@ strategy) while a negative value will follow a spread strategy that will
 favor hosts with the lesser number of instances.
 
 
+``ImagePropertiesWeigher``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 31.0.0 (Epoxy)
+
+This weigher compares hosts and orders them based on the existing instances
+image properties respectively. By default the weigher is doing nothing but you
+can change its behaviour by modifying the value of
+:oslo.config:option:`filter_scheduler.image_props_weight_multiplier`.
+A positive value will favor hosts with the same image properties (packing
+strategy) while a negative value will follow a spread strategy that will
+favor hosts not already having instances with those image properties.
+
 Utilization-aware scheduling
 ----------------------------
 

@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    A new `ImagePropertiesWeigher` has been added. It will compare the number
+    of image properties of the image being booted for each of the host with how
+    many existing instances use them. By default this weigher is enabled but
+    with a value of 0.0 for
+    `[filter_scheduler]/image_props_weight_multiplier` which
+    won't modify the existing scheduling behavior.
+    If you want to pack instances having the same image properties on the same
+    hosts, modify `image_props_weight_multiplier` to a positive value. If you
+    want to spread instances with the same properties around all hosts, then
+    please modify `image_props_weight_multiplier` to a negative value.
+
