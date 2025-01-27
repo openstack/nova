@@ -747,6 +747,17 @@ per-host serials in addition to per-instance serial numbers, then consider
 restricting flavors via host aggregates.
 """
                ),
+    cfg.StrOpt('smbios_asset_tag',
+               default=None,
+               help="""
+Set the SMBIOS chassis asset tag to the specified value, so users can identify
+the cloud-platform they're running on. E.g. Amazon sets this to "Amazon EC2".
+
+Possible values:
+
+* Any string or None to not populate the asset tag.
+"""
+               ),
     cfg.IntOpt('mem_stats_period_seconds',
                default=10,
                help='A number of seconds to memory usage statistics period. '

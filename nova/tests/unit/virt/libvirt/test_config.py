@@ -706,6 +706,19 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
             </sysinfo>
         """)
 
+    def test_config_chassis(self):
+        obj = config.LibvirtConfigGuestSysinfo()
+        obj.chassis_asset = "ACME Cloud VM"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <sysinfo type="smbios">
+              <chassis>
+                <entry name="asset">ACME Cloud VM</entry>
+              </chassis>
+            </sysinfo>
+        """)
+
     def test_config_mixed(self):
         obj = config.LibvirtConfigGuestSysinfo()
         obj.bios_vendor = "Acme"
@@ -713,6 +726,7 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
         obj.system_product = "Wile Coyote"
         obj.system_uuid = "c7a5fdbd-edaf-9455-926a-d65c16db1809"
         obj.system_family = "Anvils"
+        obj.chassis_asset = "ACME Cloud VM"
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -726,6 +740,9 @@ class LibvirtConfigGuestSysinfoTest(LibvirtConfigBaseTest):
                 <entry name="uuid">c7a5fdbd-edaf-9455-926a-d65c16db1809</entry>
                 <entry name="family">Anvils</entry>
               </system>
+              <chassis>
+                <entry name="asset">ACME Cloud VM</entry>
+              </chassis>
             </sysinfo>
         """)
 

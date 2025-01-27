@@ -21537,6 +21537,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertXmlEqual(expected, cfg.features[2].to_xml())
 
 
+class TestGuestConfigSysinfoAssetTag(test.NoDBTestCase):
+    def setUp(self):
+        super(TestGuestConfigSysinfoAssetTag, self).setUp()
+
+        # Don't import libvirt
+        self.useFixture(fixtures.MockPatch('nova.virt.libvirt.driver.libvirt'))
+
+        # Don't initialise the Host
+        self.useFixture(fixtures.MockPatch('nova.virt.libvirt.driver.host'))
+
+    def _test_get_guest_config_sysinfo_chassis_asset(self, expected_chassis):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        test_instance = _create_test_instance()
+        instance_ref = objects.Instance(**test_instance)
+
+        cfg = drvr._get_guest_config_sysinfo(instance_ref)
+
+        self.assertIsInstance(cfg, vconfig.LibvirtConfigGuestSysinfo)
+        self.assertEqual(expected_chassis, cfg.chassis_asset)
+
+    def test_get_guest_config_sysinfo_chassis_default_none(self):
+        self._test_get_guest_config_sysinfo_chassis_asset(None)
+
+    def test_get_guest_config_sysinfo_chassis_from_config(self):
+        expected_chassis = "ACME Cloud VM"
+        CONF.set_override("smbios_asset_tag", expected_chassis, "libvirt")
+        self._test_get_guest_config_sysinfo_chassis_asset(expected_chassis)
+
+
 class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
     def setUp(self):
         super(TestGuestConfigSysinfoSerialOS, self).setUp()

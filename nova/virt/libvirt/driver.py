@@ -5751,6 +5751,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         sysinfo.system_family = "Virtual Machine"
 
+        if CONF.libvirt.smbios_asset_tag:
+            sysinfo.chassis_asset = CONF.libvirt.smbios_asset_tag
+
         return sysinfo
 
     def _set_managed_mode(self, pcidev):
