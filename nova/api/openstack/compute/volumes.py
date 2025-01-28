@@ -271,7 +271,7 @@ def _translate_attachment_detail_view(
 
 
 def _check_request_version(req, min_version, method, server_id, server_state):
-    if not api_version_request.is_supported(req, min_version=min_version):
+    if not api_version_request.is_supported(req, min_version):
         exc_inv = exception.InstanceInvalidState(
                 attr='vm_state',
                 instance_uuid=server_id,
@@ -496,8 +496,7 @@ class VolumeAttachmentController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))
     @validation.schema(volumes_schema.update_volume_attachment, '2.0', '2.84')
-    @validation.schema(volumes_schema.update_volume_attachment_v285,
-                       min_version='2.85')
+    @validation.schema(volumes_schema.update_volume_attachment_v285, '2.85')
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)

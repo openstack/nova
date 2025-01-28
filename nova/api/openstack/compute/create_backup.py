@@ -65,9 +65,7 @@ class CreateBackupController(wsgi.Controller):
         props = {}
         metadata = entity.get('metadata', {})
         # Starting from microversion 2.39 we don't check quotas on createBackup
-        if api_version_request.is_supported(
-                req, max_version=
-                api_version_request.MAX_IMAGE_META_PROXY_API_VERSION):
+        if not api_version_request.is_supported(req, '2.39'):
             common.check_img_metadata_properties_quota(context, metadata)
         props.update(metadata)
 

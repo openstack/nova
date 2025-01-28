@@ -16,9 +16,6 @@
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 
-FLAVOR_DESCRIPTION_MICROVERSION = '2.55'
-FLAVOR_EXTRA_SPECS_MICROVERSION = '2.61'
-
 
 class ViewBuilder(common.ViewBuilder):
 
@@ -78,16 +75,14 @@ class ViewBuilder(common.ViewBuilder):
     def index(self, request, flavors):
         """Return the 'index' view of flavors."""
         coll_name = self._collection_name
-        include_description = api_version_request.is_supported(
-            request, FLAVOR_DESCRIPTION_MICROVERSION)
+        include_description = api_version_request.is_supported(request, '2.55')
         return self._list_view(self.basic, request, flavors, coll_name,
                                include_description=include_description)
 
     def detail(self, request, flavors, include_extra_specs=False):
         """Return the 'detail' view of flavors."""
         coll_name = self._collection_name + '/detail'
-        include_description = api_version_request.is_supported(
-            request, FLAVOR_DESCRIPTION_MICROVERSION)
+        include_description = api_version_request.is_supported(request, '2.55')
         return self._list_view(self.show, request, flavors, coll_name,
                                include_description=include_description,
                                include_extra_specs=include_extra_specs)

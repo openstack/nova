@@ -42,7 +42,7 @@ class ServerDiagnosticsController(wsgi.Controller):
                     target={'project_id': instance.project_id})
 
         try:
-            if api_version_request.is_supported(req, min_version='2.48'):
+            if api_version_request.is_supported(req, '2.48'):
                 diagnostics = self.compute_api.get_instance_diagnostics(
                     context, instance)
                 return self._view_builder.instance_diagnostics(diagnostics)

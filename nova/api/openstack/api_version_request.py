@@ -306,22 +306,18 @@ def max_api_version():
     return APIVersionRequest(_MAX_API_VERSION)
 
 
-def is_supported(req, min_version=_MIN_API_VERSION,
-                 max_version=_MAX_API_VERSION):
+def is_supported(req, version):
     """Check if API request version satisfies version restrictions.
 
     :param req: request object
-    :param min_version: minimal version of API needed for correct
-           request processing
-    :param max_version: maximum version of API needed for correct
-           request processing
+    :param version: minimal version of API needed for correct
+        request processing
 
     :returns: True if request satisfies minimal and maximum API version
-             requirements. False in other case.
+        requirements. False in other case.
     """
 
-    return (APIVersionRequest(max_version) >= req.api_version_request >=
-            APIVersionRequest(min_version))
+    return req.api_version_request >= APIVersionRequest(version)
 
 
 class APIVersionRequest(object):

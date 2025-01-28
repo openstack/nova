@@ -72,7 +72,7 @@ class InstanceActionsController(wsgi.Controller):
         return event
 
     def _get_instance(self, req, context, server_id):
-        if not api_version_request.is_supported(req, min_version="2.21"):
+        if not api_version_request.is_supported(req, '2.21'):
             return common.get_instance(self.compute_api, context, server_id)
 
         with utils.temporary_mutation(context, read_deleted='yes'):
@@ -119,7 +119,7 @@ class InstanceActionsController(wsgi.Controller):
         except exception.MarkerNotFound as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        if api_version_request.is_supported(req, min_version="2.58"):
+        if api_version_request.is_supported(req, '2.58'):
             actions = [self._format_action(action, ACTION_KEYS_V258)
                        for action in actions_raw]
         else:
@@ -150,7 +150,7 @@ class InstanceActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
         action_id = action['id']
-        if api_version_request.is_supported(req, min_version="2.58"):
+        if api_version_request.is_supported(req, '2.58'):
             action = self._format_action(action, ACTION_KEYS_V258)
         else:
             action = self._format_action(action, ACTION_KEYS)

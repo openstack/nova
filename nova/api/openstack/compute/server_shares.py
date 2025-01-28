@@ -94,7 +94,7 @@ class ServerSharesController(wsgi.Controller):
     @wsgi.Controller.api_version("2.97")
     @wsgi.response(201)
     @wsgi.expected_errors((400, 403, 404, 409))
-    @validation.schema(schema.create, min_version='2.97')
+    @validation.schema(schema.create, '2.97')
     @validation.response_body_schema(schema.show_response)
     def create(self, req, server_id, body):
         def _try_create_share_mapping(context, share_mapping):

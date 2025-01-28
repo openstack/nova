@@ -41,8 +41,10 @@ class LockServerController(wsgi.Controller):
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
         reason = None
-        if (api_version_request.is_supported(req, min_version='2.73') and
-            body['lock'] is not None):
+        if (
+            api_version_request.is_supported(req, '2.73') and
+            body['lock'] is not None
+        ):
             reason = body['lock'].get('locked_reason')
         self.compute_api.lock(context, instance, reason=reason)
 

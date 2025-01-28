@@ -79,8 +79,7 @@ class FlavorsController(wsgi.Controller):
         is_public = vals.get('os-flavor-access:is_public', True)
 
         # The user can specify a description starting with microversion 2.55.
-        include_description = api_version_request.is_supported(
-            req, flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
+        include_description = api_version_request.is_supported(req, '2.55')
         description = vals.get('description') if include_description else None
 
         try:
@@ -97,8 +96,7 @@ class FlavorsController(wsgi.Controller):
             raise webob.exc.HTTPConflict(explanation=err.format_message())
 
         include_extra_specs = False
-        if api_version_request.is_supported(
-                req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
+        if api_version_request.is_supported(req, '2.61'):
             include_extra_specs = context.can(
                 fes_policies.POLICY_ROOT % 'index', fatal=False)
             # NOTE(yikun): This empty extra_specs only for keeping consistent
@@ -130,8 +128,7 @@ class FlavorsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         include_extra_specs = False
-        if api_version_request.is_supported(
-                req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
+        if api_version_request.is_supported(req, '2.61'):
             include_extra_specs = context.can(
                 fes_policies.POLICY_ROOT % 'index', fatal=False)
         return self._view_builder.show(req, flavor, include_description=True,
@@ -157,11 +154,12 @@ class FlavorsController(wsgi.Controller):
         """Return all flavors in detail."""
         context = req.environ['nova.context']
         limited_flavors = self._get_flavors(req)
+
         include_extra_specs = False
-        if api_version_request.is_supported(
-                req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
+        if api_version_request.is_supported(req, '2.61'):
             include_extra_specs = context.can(
                 fes_policies.POLICY_ROOT % 'index', fatal=False)
+
         return self._view_builder.detail(
             req, limited_flavors, include_extra_specs=include_extra_specs)
 
@@ -180,12 +178,12 @@ class FlavorsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         include_extra_specs = False
-        if api_version_request.is_supported(
-                req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
+        if api_version_request.is_supported(req, '2.61'):
             include_extra_specs = context.can(
                 fes_policies.POLICY_ROOT % 'index', fatal=False)
-        include_description = api_version_request.is_supported(
-            req, flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
+
+        include_description = api_version_request.is_supported(req, '2.55')
+
         return self._view_builder.show(
             req, flavor, include_description=include_description,
             include_extra_specs=include_extra_specs)
