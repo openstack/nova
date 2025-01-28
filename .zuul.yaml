@@ -381,7 +381,8 @@
       Starting in Train, the job enabled counting quota usage from placement.
       Starting in Ussuri, the job was changed to multinode.
       Starting in Wallaby, the job defaults to the q35 machine type.
-      Starting in Yoga, the job tests noVNC from source.
+      Starting in Yoga, the job tests noVNC from source and enables unified limits.
+      Starting in Caracal, the job compiles the mdev sample drivers from source.
       Runs all tempest compute API and most scenario tests concurrently.
     irrelevant-files: *nova-base-irrelevant-files
     # Run post-tempest tests like for nova-manage commands.
@@ -477,7 +478,7 @@
         # Added in Yoga.
         NOVNC_FROM_PACKAGE: False
         NOVA_USE_UNIFIED_LIMITS: True
-        MYSQL_REDUCE_MEMORY: True
+        # Added in Caracal.
         NOVA_COMPILE_MDEV_SAMPLES: True
       devstack_services:
         # Disable OVN services
