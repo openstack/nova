@@ -304,3 +304,40 @@ def is_drs_enabled(session, cluster):
         return drs_config.enabled
 
     return False
+
+
+def update_cluster_drs_vm_override(session, cluster, vm_ref, operation='add',
+                                   behavior=None, enabled=True):
+    """Add/Update `ClusterDrsVmConfigSpec` for a VM.
+
+    `behavior` can be any `DrsBehaviour` as string.
+
+    `behavior` and `enabled` are only used if `operation` is `add`.
+    """
+    if operation not in ('add', 'remove'):
+        msg = _('%s operation for ClusterDrsVmConfigSpec not supported.')
+        raise exception.ValidationError(msg % operation)
+
+    client_factory = session.vim.client.factory
+
+    drs_vm_spec = client_factory.create('ns0:ClusterDrsVmConfigSpec')
+    drs_vm_spec.operation = operation
+
+    if operation == 'add':
+        if behavior is None:
+            msg = _('behavior cannot be unset for operation "add"')
+            raise exception.ValidationError(msg)
+        drs_vm_info = client_factory.create('ns0:ClusterDrsVmConfigInfo')
+        drs_vm_info.behavior = behavior
+        drs_vm_info.enabled = enabled
+        drs_vm_info.key = vm_ref
+
+        drs_vm_spec.info = drs_vm_info
+
+    elif operation == 'remove':
+        drs_vm_spec.removeKey = vm_ref
+
+    config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
+    config_spec.drsVmConfigSpec = [drs_vm_spec]
+
+    reconfigure_cluster(session, cluster, config_spec)
