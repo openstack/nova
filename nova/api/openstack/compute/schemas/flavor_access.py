@@ -14,6 +14,9 @@
 
 import copy
 
+from nova.api.validation import parameter_types
+
+
 add_tenant_access = {
     'type': 'object',
     'properties': {
@@ -68,7 +71,7 @@ _common_response = {
                 'type': 'object',
                 'properties': {
                     'flavor_id': {'type': 'string'},
-                    'tenant_id': {'type': 'string', 'format': 'uuid'},
+                    'tenant_id': parameter_types.project_id,
                 },
                 'required': ['flavor_id', 'tenant_id'],
                 'additionalProperties': True,

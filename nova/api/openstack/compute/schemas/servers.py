@@ -952,9 +952,9 @@ rebuild_response = {
                 'name': {'type': ['string', 'null']},
                 'progress': {'type': ['null', 'number']},
                 'status': {'type': 'string'},
-                'tenant_id': {'type': 'string', 'format': 'uuid'},
+                'tenant_id': parameter_types.project_id,
                 'updated': {'type': 'string', 'format': 'date-time'},
-                'user_id': {'type': 'string'},
+                'user_id': parameter_types.user_id,
                 'OS-DCF:diskConfig': {'type': 'string'},
             },
             'required': [
