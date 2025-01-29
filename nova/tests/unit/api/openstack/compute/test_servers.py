@@ -8410,6 +8410,61 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
         self.assertThat(output, matchers.DictMatches(expected))
 
 
+class ServersViewBuilderTestV296(_ServersViewBuilderTest):
+    """Server ViewBuilder test for microversion 2.96
+
+    The test targets of this class is regression test for bugs
+    related to this microversion.
+    """
+    microversion = '2.96'
+
+    def setUp(self):
+        super(ServersViewBuilderTestV296, self).setUp()
+        self.view_builder = views.servers.ViewBuilder()
+        self.ctxt = context.RequestContext('fake', self.project_id)
+
+    def req(self, url, use_admin_context=False):
+        return fakes.HTTPRequest.blank(
+            url,
+            use_admin_context=use_admin_context,
+            version=self.microversion)
+
+    def create_instance(self, instance_id, uuid, display_name):
+        db_inst = fakes.stub_instance(
+            id=instance_id,
+            image_ref="5",
+            uuid=uuid,
+            display_name=display_name,
+            include_fake_metadata=False,
+            availability_zone='nova',
+            launched_at=None,
+            terminated_at=None,
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
+
+        return fake_instance.fake_instance_obj(
+            self.request.context,
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
+            **db_inst)
+
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuids')
+    def test_list_view_with_missing_request_specs(self, m_rs):
+
+        self.instances = [
+            self.instance,
+            self.create_instance(2, uuids.fake1, 'fake-server')
+        ]
+        # Return only first instance's request spec
+        m_rs.return_value = [objects.RequestSpec(
+            instance_uuid=self.instance.uuid,
+            availability_zone=self.instance.availability_zone)]
+
+        req = self.req('/%s/servers' % self.project_id)
+        self.assertRaises(KeyError, self.view_builder.index,
+                          req, self.instances, False)
+
+
 class ServersActionsJsonTestV239(test.NoDBTestCase):
 
     def setUp(self):
