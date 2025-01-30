@@ -74,7 +74,6 @@ def call_external_scheduler_api(weighed_hosts, weights, spec_obj):
             {
                 "host": h.host,  # e.g. nova-compute-bb123
                 "hypervisor_hostname": h.hypervisor_hostname,
-                "status": h.status,
             } for h in weighed_hosts
         ],
         # Also pass previous weights from the Nova weigher pipeline.
