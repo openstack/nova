@@ -15,6 +15,7 @@
 #    under the License.
 
 import functools
+import typing as ty
 
 import microversion_parse
 from oslo_log import log as logging
@@ -664,7 +665,11 @@ def removed(version: str, reason: str):
     return decorator
 
 
-def expected_errors(errors):
+def expected_errors(
+    errors: ty.Union[int, tuple[int, ...]],
+    min_version: ty.Optional[str] = None,
+    max_version: ty.Optional[str] = None,
+):
     """Decorator for v2.1 API methods which specifies expected exceptions.
 
     Specify which exceptions may occur when an API method is called. If an
@@ -674,9 +679,27 @@ def expected_errors(errors):
     def decorator(f):
         @functools.wraps(f)
         def wrapped(*args, **kwargs):
+            min_ver = api_version.APIVersionRequest(min_version)
+            max_ver = api_version.APIVersionRequest(max_version)
+
+            # The request object is always the second argument.
+            # However numerous unittests pass in the request object
+            # via kwargs instead so we handle that as well.
+            # TODO(cyeoh): cleanup unittests so we don't have to
+            # to do this
+            if 'req' in kwargs:
+                ver = kwargs['req'].api_version_request
+            else:
+                ver = args[1].api_version_request
+
             try:
                 return f(*args, **kwargs)
             except Exception as exc:
+                # if this instance of the decorator is intended for other
+                # versions, let the exception bubble up as-is
+                if not ver.matches(min_ver, max_ver):
+                    raise
+
                 if isinstance(exc, webob.exc.WSGIHTTPException):
                     if isinstance(errors, int):
                         t_errors = (errors,)

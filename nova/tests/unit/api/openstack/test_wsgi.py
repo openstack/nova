@@ -930,36 +930,81 @@ class TestController(test.NoDBTestCase):
 class ExpectedErrorTestCase(test.NoDBTestCase):
 
     def test_expected_error(self):
-        @wsgi.expected_errors(404)
-        def fake_func():
-            raise webob.exc.HTTPNotFound()
+        class FakeController(wsgi.Controller):
+            @wsgi.expected_errors(404)
+            def fake_func(self, req):
+                raise webob.exc.HTTPNotFound()
 
-        self.assertRaises(webob.exc.HTTPNotFound, fake_func)
+        controller = FakeController()
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(webob.exc.HTTPNotFound, controller.fake_func, req)
 
     def test_expected_error_from_list(self):
-        @wsgi.expected_errors((404, 403))
-        def fake_func():
-            raise webob.exc.HTTPNotFound()
+        class FakeController(wsgi.Controller):
+            @wsgi.expected_errors((404, 403))
+            def fake_func(self, req):
+                raise webob.exc.HTTPNotFound()
 
-        self.assertRaises(webob.exc.HTTPNotFound, fake_func)
+        controller = FakeController()
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(webob.exc.HTTPNotFound, controller.fake_func, req)
+
+    def test_expected_error_with_microversion(self):
+        class FakeController(wsgi.Controller):
+            @wsgi.expected_errors(404, '2.1', '2.5')
+            @wsgi.expected_errors((400, 404), '2.6')
+            def fake_func(self, req):
+                raise webob.exc.HTTPBadRequest()
+
+        controller = FakeController()
+        req = fakes.HTTPRequest.blank('', version='2.7')
+        self.assertRaises(webob.exc.HTTPBadRequest, controller.fake_func, req)
 
     def test_unexpected_error(self):
-        @wsgi.expected_errors(404)
-        def fake_func():
-            raise webob.exc.HTTPConflict()
+        class FakeController(wsgi.Controller):
+            @wsgi.expected_errors(404)
+            def fake_func(self, req):
+                raise webob.exc.HTTPConflict()
 
-        self.assertRaises(webob.exc.HTTPInternalServerError, fake_func)
+        controller = FakeController()
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(
+            webob.exc.HTTPInternalServerError, controller.fake_func, req
+        )
 
     def test_unexpected_error_from_list(self):
-        @wsgi.expected_errors((404, 413))
-        def fake_func():
-            raise webob.exc.HTTPConflict()
+        class FakeController(wsgi.Controller):
+            @wsgi.expected_errors((404, 413))
+            def fake_func(self, req):
+                raise webob.exc.HTTPConflict()
 
-        self.assertRaises(webob.exc.HTTPInternalServerError, fake_func)
+        controller = FakeController()
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(
+            webob.exc.HTTPInternalServerError, controller.fake_func, req
+        )
+
+    def test_unexpected_error_with_microversion(self):
+        class FakeController(wsgi.Controller):
+            @wsgi.expected_errors(404, '2.1', '2.5')
+            @wsgi.expected_errors((400, 404), '2.6')
+            def fake_func(self, req):
+                raise webob.exc.HTTPBadRequest()
+
+        controller = FakeController()
+        req = fakes.HTTPRequest.blank('', version='2.5')
+        self.assertRaises(
+            webob.exc.HTTPInternalServerError, controller.fake_func, req
+        )
 
     def test_unexpected_policy_not_authorized_error(self):
-        @wsgi.expected_errors(404)
-        def fake_func():
-            raise exception.PolicyNotAuthorized(action="foo")
+        class FakeController(wsgi.Controller):
+            @wsgi.expected_errors(404)
+            def fake_func(self, req):
+                raise exception.PolicyNotAuthorized(action="foo")
 
-        self.assertRaises(exception.PolicyNotAuthorized, fake_func)
+        controller = FakeController()
+        req = fakes.HTTPRequest.blank('')
+        self.assertRaises(
+            exception.PolicyNotAuthorized, controller.fake_func, req
+        )
