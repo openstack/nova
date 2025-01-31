@@ -158,31 +158,39 @@ class ExternalSchedulerAPITestCase(test.NoDBTestCase):
 
     @patch('requests.post')
     @patch('nova.scheduler.external.LOG.error')
-    def test_enabled_api_json_decode_err(self, mock_err_log, mock_post):
-        log = ""
+    def test_enabled_api_request_exceptions(self, mock_err_log, mock_post):
+        """Test that request exceptions are caught and logged."""
+        tests = [
+            # Simulate a http error during request fetch.
+            (400, requests.exceptions.HTTPError),
+            # Simulate a parsing error after the fetch has happened.
+            (200, requests.exceptions.InvalidJSONError),
+        ]
 
-        def append_log(msg, data):
-            nonlocal log
-            log += msg % data
-        mock_err_log.side_effect = append_log
+        for status_code, request_exception in tests:
+            log = ""
 
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        # Note: requests.exceptions.InvalidJSONError is also a RequestException
-        mock_response.json.side_effect = requests.exceptions.InvalidJSONError
-        mock_post.return_value = mock_response
+            def append_log(msg, data):
+                nonlocal log
+                log += msg % data
+            mock_err_log.side_effect = append_log
 
-        hosts = call_external_scheduler_api(
-            self.example_hosts,
-            self.example_weights,
-            self.example_spec,
-        )
-        # Should fallback to the original host list.
-        self.assertEqual(
-            ['host1', 'host2', 'host3'],
-            [h.host for h in hosts]
-        )
-        self.assertIn('Failed to call external scheduler API: ', log)
+            mock_response = MagicMock()
+            mock_response.status_code = status_code
+            mock_response.json.side_effect = request_exception
+            mock_post.return_value = mock_response
+
+            hosts = call_external_scheduler_api(
+                self.example_hosts,
+                self.example_weights,
+                self.example_spec,
+            )
+            # Should fallback to the original host list.
+            self.assertEqual(
+                ['host1', 'host2', 'host3'],
+                [h.host for h in hosts]
+            )
+            self.assertIn('Failed to call external scheduler API: ', log)
 
     @patch('requests.post')
     @patch('nova.scheduler.external.LOG.error')
