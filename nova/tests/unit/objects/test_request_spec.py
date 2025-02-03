@@ -722,6 +722,9 @@ class _TestRequestSpecObject(object):
                     id=1, cpuset={3, 4}, memory=512, cpu_policy="dedicated"),
             ]
         )
+        for cell in numa_topology.cells:
+            cell.VERSION = '1.4'
+
         spec_obj = fake_request_spec.fake_spec_obj()
         spec_obj.numa_topology = numa_topology
         fake_spec = fake_request_spec.fake_db_spec(spec_obj)
