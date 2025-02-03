@@ -31,7 +31,6 @@ from keystoneauth1 import exceptions as keystone_exception
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 import retrying
@@ -397,15 +396,15 @@ def translate_cinder_exception(method):
             res = method(self, ctx, *args, **kwargs)
         except (cinder_exception.ConnectionError,
                 keystone_exception.ConnectionError) as exc:
-            err_msg = encodeutils.exception_to_unicode(exc)
+            err_msg = str(exc)
             _reraise(exception.CinderConnectionFailed(reason=err_msg))
         except (keystone_exception.BadRequest,
                 cinder_exception.BadRequest) as exc:
-            err_msg = encodeutils.exception_to_unicode(exc)
+            err_msg = str(exc)
             _reraise(exception.InvalidInput(reason=err_msg))
         except (keystone_exception.Forbidden,
                 cinder_exception.Forbidden) as exc:
-            err_msg = encodeutils.exception_to_unicode(exc)
+            err_msg = str(exc)
             _reraise(exception.Forbidden(err_msg))
         return res
     return wrapper
