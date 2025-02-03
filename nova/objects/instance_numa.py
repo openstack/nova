@@ -196,26 +196,78 @@ class InstanceNUMATopology(base.NovaObject,
         # come from instance_extra or request_spec too.
         update_db = False
         for cell in obj.cells:
-            if len(cell.cpuset) == 0:
+            version = versionutils.convert_version_to_tuple(cell.VERSION)
+
+            if version < (1, 4):
+                LOG.warning(
+                    "InstanceNUMACell %s with version %s for instance %s has "
+                    "too old version in the DB, don't know how to update, "
+                    "ignoring.", cell, cell.VERSION, obj.instance_uuid)
                 continue
-            # NOTE(gibi): This data migration populates the pcpuset field that
-            # is new in version 1.5. However below we bump the object version
-            # to 1.6 directly. This is intentional. The version 1.6 introduced
-            # a new possible value 'mixed' for the cpu_policy field. As that
-            # is a forward compatible change we don't have a specific data
-            # migration for it. But we also don't have an automated way to bump
-            # old object versions from 1.5 to 1.6. So we do it here just to
-            # avoid inconsistency between data and version in the DB.
-            if cell.cpu_policy == obj_fields.CPUAllocationPolicy.DEDICATED:
-                cell.pcpuset = cell.cpuset
-                cell.cpuset = set()
-                cell.VERSION = '1.6'
-                update_db = True
-            else:
-                if 'pcpuset' not in cell:
+
+            if (version >= (1, 5) and
+                cell.cpu_policy == obj_fields.CPUAllocationPolicy.DEDICATED and
+                (cell.cpuset or not cell.pcpuset)
+            ):
+                LOG.warning(
+                    "InstanceNUMACell %s with version %s is inconsistent as "
+                    "the version is 1.5 or greater, cpu_policy is dedicated, "
+                    "but cpuset is not empty or pcpuset is empty.",
+                    cell, cell.VERSION)
+                continue
+
+            # NOTE(gibi): The data migration between 1.4. and 1.5 populates the
+            # pcpuset field that is new in version 1.5. However below we update
+            # the object version to 1.6 directly. This is intentional. The
+            # version 1.6 introduced a new possible value 'mixed' for the
+            # cpu_policy field. As that is a forward compatible change we don't
+            # have a specific data migration for it. But we also don't have an
+            # automated way to update old object versions from 1.5 to 1.6. So
+            # we do it here just to avoid inconsistency between data and
+            # version in the DB.
+            if version < (1, 6):
+                if cell.cpu_policy == obj_fields.CPUAllocationPolicy.DEDICATED:
+                    if "pcpuset" not in cell or not cell.pcpuset:
+                        # this cell was never migrated to 1.6, migrate it.
+                        cell.pcpuset = cell.cpuset
+                        cell.cpuset = set()
+                        cell.VERSION = '1.6'
+                        update_db = True
+                    else:
+                        # This data was already migrated to 1.6 format but the
+                        # version string wasn't updated to 1.6. This happened
+                        # before the fix
+                        # https://bugs.launchpad.net/nova/+bug/2097360
+                        # Only update the version string.
+                        cell.VERSION = '1.6'
+                        update_db = True
+                elif cell.cpu_policy in (
+                        None, obj_fields.CPUAllocationPolicy.SHARED):
+                    # no data migration needed just add the new field and
+                    # stamp the new version in the DB
                     cell.pcpuset = set()
                     cell.VERSION = '1.6'
                     update_db = True
+                else:  # obj_fields.CPUAllocationPolicy.MIXED
+                    # This means the cell data already got updated to the 1.6
+                    # content as MIXED only supported with 1.6 but the version
+                    # was not updated to 1.6.
+                    # We should not do the data migration as that would trample
+                    # the pcpuset field. Just stamp the 1.6 version in the DB
+                    # and hope for the best.
+                    LOG.warning(
+                        "InstanceNUMACell %s with version %s for instance %s "
+                        "has older than 1.6 version in the DB but using the "
+                        "1.6 feature CPUAllocationPolicy.MIXED. So nova "
+                        "assumes that the data is in 1.6 format and only the "
+                        "version string is old. Correcting the version string "
+                        "in the DB.", cell, cell.VERSION, obj.instance_uuid)
+                    cell.VERSION = '1.6'
+                    update_db = True
+
+            # When the next ovo version 1.7 is added it needs to be handed
+            # here to do any migration if needed and to ensure the version in
+            # the DB is stamped to 1.7
 
         return update_db
 
