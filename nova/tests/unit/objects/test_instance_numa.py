@@ -13,6 +13,7 @@
 import copy
 from unittest import mock
 
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_versionedobjects import base as ovo_base
 import testtools
@@ -410,6 +411,46 @@ class _TestInstanceNUMATopology(object):
                 fake_topo_obj_w_cell_v1_4['cells']):
             self.assertEqual(topo_cell.cpuset, obj_cell.cpuset)
             self.assertEqual(set(), obj_cell.pcpuset)
+
+    def test__migrate_legacy_dedicated_instance_cpuset(self):
+        # Create a topology with a cell on latest version. Would be nice
+        # to create one the old 1.4 cell version directly but that is only
+        # possible indirectly as done below.
+        topo = objects.InstanceNUMATopology(
+            instance_uuid=fake_instance_uuid,
+            cells=[
+                objects.InstanceNUMACell(id=0, cpuset=set(), pcpuset={0, 1}),
+            ])
+        topo.cells[0].cpu_policy = objects.fields.CPUAllocationPolicy.DEDICATED
+
+        # Use the builtin backlevelling logic to pull it back to old cell
+        # version
+        topo_with_cell_1_4 = topo.obj_to_primitive(
+            target_version='1.3', version_manifest={'InstanceNUMACell': '1.4'})
+
+        # Just check that the backlevelling works, and we have a cell with
+        # version and data on 1.4 level
+        cell_1_4_primitive = topo_with_cell_1_4['nova_object.data']['cells'][0]
+        self.assertEqual('1.4', cell_1_4_primitive['nova_object.version'])
+        self.assertEqual(
+            (0, 1), cell_1_4_primitive['nova_object.data']['cpuset'])
+        self.assertNotIn('pcpuset', cell_1_4_primitive['nova_object.data'])
+
+        # Now simulate that such old data is loaded from the DB and migrated
+        # from 1.4 to 1.6 by the data migration
+        topo_loaded = objects.InstanceNUMATopology.obj_from_db_obj(
+            self.context, fake_instance_uuid,
+            jsonutils.dumps(topo_with_cell_1_4))
+
+        # In place data migration happens during load, cpuset data is moved to
+        # pcpuset
+        self.assertEqual(set(), topo_loaded.cells[0].cpuset)
+        self.assertEqual({0, 1}, topo_loaded.cells[0].pcpuset)
+        # but the object version isn't bumped. So when the
+        # data is saved back to the DB it still has the old version 1.4, but
+        # also it has the new pcpuset field from version 1.6. This is bug
+        # https://bugs.launchpad.net/nova/+bug/2097359.
+        self.assertEqual('1.4', topo_loaded.cells[0].VERSION)
 
 
 class TestInstanceNUMATopology(
