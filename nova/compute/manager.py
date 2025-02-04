@@ -1524,9 +1524,9 @@ class ComputeManager(manager.Manager):
         to write our node identity uuid (if not already done) based on
         nodes assigned to us in the database.
         """
-        if 'ironic' in CONF.compute_driver.lower():
+        if CONF.compute_driver.lower().startswith(('ironic', 'vmwareapi')):
             # We do not persist a single local node identity for
-            # ironic
+            # ironic or VMware in SAP
             return
 
         if service_ref.version >= service_obj.NODE_IDENTITY_VERSION:

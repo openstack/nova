@@ -256,13 +256,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         host = '1.0|{}'.format(self.conn._vcenter_uuid)
         self.assertEqual(host, self.conn.get_host_ip_addr())
 
-    def test_init_host_with_no_session(self):
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    def test_init_host_with_no_session(self, mock_get_by_host_and_nodename):
         self.conn._session = mock.Mock()
         self.conn._session.vim = None
         self.conn.init_host('fake_host')
         self.conn._session._create_session.assert_called_once_with()
 
-    def test_init_host(self):
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    def test_init_host(self, mock_get_by_host_and_nodename):
         try:
             self.conn.init_host("fake_host")
         except Exception as ex:
@@ -275,7 +277,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.exception = False
 
     def test_cleanup_host(self):
-        self.conn.init_host("fake_host")
+        with mock.patch.object(objects.ComputeNode,
+                'get_by_host_and_nodename'):
+            self.conn.init_host("fake_host")
         try:
             self.conn.cleanup_host("fake_host")
         except Exception as ex:
@@ -2233,6 +2237,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.virt.vmwareapi.ds_util.get_available_datastores')
     def test_datastore_regex_configured_vcstate(self, mock_get_ds_ref):
+        self.conn._node_uuid = mock.sentinel.node_uuid
         vcstate = self.conn._vc_state
         vcstate._stats = {}  # Clear cache to force new collection
         self.conn.get_available_resource(self.node_name)
@@ -2240,6 +2245,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             vcstate._session, vcstate._cluster, vcstate._datastore_regex)
 
     def test_get_available_resource(self):
+        self.conn._node_uuid = mock.sentinel.node_uuid
         stats = self.conn.get_available_resource(self.node_name)
         self.assertEqual(32, stats['vcpus'])
         self.assertEqual(CONF.reserved_host_cpus, stats['vcpus_reserved'])
@@ -2267,9 +2273,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.assertEqual(memory_mbmax_unit, 1024 - 500)
         # vcpus_max_unit = fake.HostSystem.summary.hardware.numCpuThreads
         self.assertEqual(vcpus_max_unit, 16)
+        self.assertEqual(mock.sentinel.node_uuid, stats['uuid'])
 
     @mock.patch('nova.virt.vmwareapi.ds_util.get_available_datastores')
     def test_update_provider_tree(self, mock_get_avail_ds):
+        self.conn._node_uuid = mock.sentinel.node_uuid
         self.assertEqual(CONF.reserved_host_memory_mb, 512)
         ds1 = ds_obj.Datastore(ref='fake-ref', name='datastore1',
                                capacity=10 * units.Gi, freespace=3 * units.Gi)

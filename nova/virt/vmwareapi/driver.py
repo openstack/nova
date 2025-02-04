@@ -30,6 +30,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 from oslo_utils import versionutils as v_utils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
@@ -244,10 +245,32 @@ class VMwareVCDriver(driver.ComputeDriver):
         if vim is None:
             self._session._create_session()
 
+        # cache our node's UUID as found in the DB. This is part of
+        # deactivating compute-node-identification
+        context = nova_context.get_admin_context()
+        try:
+            node = objects.ComputeNode.get_by_host_and_nodename(
+                context, host, self._nodename)
+        except exception.ComputeHostNotFound:
+            self._node_uuid = uuidutils.generate_uuid()
+        else:
+            self._node_uuid = node.uuid
+
         self._vmops.set_compute_host(host)
         LOG.debug("Starting green server-group sync-loop thread")
         utils.spawn(self._server_group_sync_loop, host)
         utils.spawn(self._custom_traits_sync_loop, host)
+
+    def get_nodenames_by_uuid(self, refresh=False):
+        """Overwritten method to return a locally-cached node UUID
+
+        In SAP we do not want the local node UUID saved into a file as we do
+        not keep state inside our nova-compute containers. We overwrite this
+        method to return the DB's node UUID we cached in `init_host()` instead
+        of using `nova.virt.node`'s functionality to read a local file.
+        This is part of deactivating compute-node-identification
+        """
+        return {self._node_uuid: self._nodename}
 
     def cleanup_host(self, host):
         self._session.logout()
@@ -448,6 +471,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         """
         host_stats = self._vc_state.get_host_stats()
         stats_dict = self._get_available_resources(host_stats, nodename)
+        # This is part of deactivating compute-node-identification
+        stats_dict['uuid'] = self._node_uuid
         return stats_dict
 
     def get_available_nodes(self, refresh=False):
