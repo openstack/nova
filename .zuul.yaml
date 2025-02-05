@@ -735,16 +735,15 @@
             image_conversion:
               output_format: raw
 
-# TODO(gmann): Remove this jobs once all the required services for intergrate
-# compute gate (Cinder, Glance, Neutron) by default enable scope and new
-# defaults which means all the nova jobs will be tested with new RBAC in
-# integrated way and we do not need this separate job.
 - job:
-    name: tempest-integrated-compute-enforce-scope-new-defaults
+    name: tempest-integrated-compute-rbac-old-defaults
     parent: tempest-integrated-compute
+    # TODO(gmann): As per the 2025.1 testing runtime, we need to run at least
+    # one job on jammy. This job can be moved to Noble in the next cycle
+    # (2025.2).
+    nodeset: openstack-single-node-jammy
     description: |
-      This job runs the Tempest tests with scope and new defaults enabled
-      for Nova, Neutron, Glance, and Cinder services.
+      This job runs the Tempest tests with Nova RBAC old defaults
     irrelevant-files: &policies-irrelevant-files
       - ^api-.*$
       - ^(test-|)requirements.txt$
@@ -760,37 +759,6 @@
       - ^setup.cfg$
       - ^tools/.*$
       - ^tox.ini$
-# TODO (gmann): There were few fixes in neutron and neutron-lib for the
-    # RBAC but they are not yet released so we need to add both projcts as
-    # the required-projects. Those can be removed once new version of neutron
-    # and neutron-lib is released.
-    required-projects:
-      - openstack/neutron
-      - openstack/neutron-lib
-    vars:
-      devstack_services:
-        openstack-cli-server: true
-      devstack_localrc:
-        # Enabeling the scope and new defaults for services implemented it.
-        # NOTE (gmann): We need to keep keystone scope check disable as
-        # services (except ironic) does not support the system scope and
-        # they need keystone to continue working with project scope. Until
-        # Keystone policies are changed to work for project scoped also, we
-        # need to keep scope check disable for keystone.
-        # Nova and Glance scope and new defaults are enabled by default in
-        # Devstack so we do not need to explicitly set that to True.
-        CINDER_ENFORCE_SCOPE: true
-        NEUTRON_ENFORCE_SCOPE: true
-
-- job:
-    name: tempest-integrated-compute-rbac-old-defaults
-    parent: tempest-integrated-compute
-    # TODO(gmann): As per the 2025.1 testing runtime, we need to run at least
-    # one job on jammy. This job can be moved to Noble in the next cycle
-    # (2025.2).
-    nodeset: openstack-single-node-jammy
-    description: |
-      This job runs the Tempest tests with Nova RBAC old defaults
     vars:
       devstack_services:
         openstack-cli-server: true
@@ -843,10 +811,6 @@
            # common jobs will be enough along with nova functional
            # and unit tests.
            irrelevant-files: *policies-irrelevant-files
-        - tempest-integrated-compute-enforce-scope-new-defaults:
-            irrelevant-files: *policies-irrelevant-files
-        - tempest-integrated-compute-rbac-old-defaults:
-            irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
@@ -881,10 +845,6 @@
               - nova/virt/libvirt/vif.py
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
-        - tempest-integrated-compute-enforce-scope-new-defaults:
-            irrelevant-files: *policies-irrelevant-files
-        - tempest-integrated-compute-rbac-old-defaults:
-            irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
@@ -901,6 +861,7 @@
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode-shard
         - tempest-centos9-stream-fips
         - whitebox-devstack-multinode
+        - tempest-integrated-compute-rbac-old-defaults
     experimental:
       jobs:
         - ironic-tempest-bfv:
@@ -932,3 +893,5 @@
         - tempest-integrated-compute-centos-9-stream:
             irrelevant-files: *nova-base-irrelevant-files
         - whitebox-devstack-multinode
+        - tempest-integrated-compute-rbac-old-defaults:
+            irrelevant-files: *policies-irrelevant-files
