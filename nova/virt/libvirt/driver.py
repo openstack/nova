@@ -6768,8 +6768,6 @@ class LibvirtDriver(driver.ComputeDriver):
             return 'virtio'
         elif guestarch == fields.Architecture.MIPSEL:
             return 'virtio'
-        elif CONF.spice.enabled:
-            return 'qxl'
 
         # NOTE(lyarwood): Return None and default to the default of
         # LibvirtConfigGuestVideo.type that is currently virtio

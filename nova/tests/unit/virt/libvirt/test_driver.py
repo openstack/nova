@@ -6077,8 +6077,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(pointer_model='usbtablet')
 
         video_map = {
-            fields.Architecture.X86_64: 'qxl',
-            fields.Architecture.I686: 'qxl',
+            fields.Architecture.X86_64: 'virtio',
+            fields.Architecture.I686: 'virtio',
             fields.Architecture.PPC: 'vga',
             fields.Architecture.PPC64: 'vga',
             fields.Architecture.PPC64LE: 'vga',
