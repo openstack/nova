@@ -55,8 +55,9 @@ class RemoteConsolesPolicyTest(base.BasePolicyTest):
         # server remote consoles.
         self.project_action_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context]
 
     def test_create_console_policy(self):
         rule_name = rc_policies.BASE_POLICY_NAME

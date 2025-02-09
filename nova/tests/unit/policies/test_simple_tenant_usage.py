@@ -39,8 +39,9 @@ class SimpleTenantUsagePolicyTest(base.BasePolicyTest):
         # and project reader can get their usage statistics.
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
         ]
 
     def test_index_simple_tenant_usage_policy(self):

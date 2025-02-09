@@ -55,14 +55,16 @@ class ServerSecurityGroupsPolicyTest(base.BasePolicyTest):
         # server security groups.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context]
         # With legacy rule, any admin or project role is able to get their
         # server SG.
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
         ]
 
     @mock.patch('nova.network.security_group_api.get_instance_security_groups')
@@ -143,20 +145,24 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
         # appropriate error.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
             self.other_project_reader_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
             self.other_project_reader_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
 
@@ -261,16 +267,18 @@ class SecurityGroupsNoLegacyNoScopePolicyTest(
         # to operate on SG.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.system_member_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.system_member_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
             self.other_project_reader_context,
             self.system_member_context, self.system_reader_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
 
@@ -292,14 +300,18 @@ class SecurityGroupsScopeTypePolicyTest(SecurityGroupsPolicyTest):
         # operate on SG.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
+            self.project_manager_context, self.project_member_context,
+            self.project_reader_context,
             self.project_foo_context, self.other_project_reader_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
+            self.project_manager_context, self.project_member_context,
+            self.project_reader_context,
             self.project_foo_context, self.other_project_reader_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
 
@@ -377,12 +389,15 @@ class SecurityGroupsNoLegacyPolicyTest(SecurityGroupsScopeTypePolicyTest):
         # other roles like foo will not be able to operate SG.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context,
+            self.project_manager_context, self.project_member_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
+            self.project_manager_context, self.project_member_context,
+            self.project_reader_context,
+            self.other_project_manager_context,
             self.other_project_reader_context,
             self.other_project_member_context
         ]

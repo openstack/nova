@@ -48,8 +48,9 @@ class ConsoleOutputPolicyTest(base.BasePolicyTest):
         # can get the server console.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context]
 
     @mock.patch('nova.compute.api.API.get_console_output')
     def test_console_output_policy(self, mock_console):

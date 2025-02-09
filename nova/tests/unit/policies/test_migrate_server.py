@@ -145,4 +145,5 @@ class MigrateServerOverridePolicyTest(
         # Check that project member role as override above
         # is able to migrate the server
         self.project_admin_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context]
