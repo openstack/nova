@@ -18,25 +18,18 @@ import ddt
 from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 
-from nova.api.openstack.compute import suspend_server as \
-    suspend_server_v21
+from nova.api.openstack.compute import suspend_server
 from nova import exception
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 
 
 @ddt.ddt
-class SuspendServerTestsV21(admin_only_action_common.CommonTests):
-    suspend_server = suspend_server_v21
-    controller_name = 'SuspendServerController'
-    _api_version = '2.1'
+class SuspendServerTests(admin_only_action_common.CommonTests):
 
     def setUp(self):
-        super(SuspendServerTestsV21, self).setUp()
-        self.controller = getattr(self.suspend_server, self.controller_name)()
+        super().setUp()
+        self.controller = suspend_server.SuspendServerController()
         self.compute_api = self.controller.compute_api
-        self.stub_out('nova.api.openstack.compute.suspend_server.'
-                      'SuspendServerController',
-                      lambda *a, **kw: self.controller)
 
     def test_suspend_resume(self):
         self._test_actions(

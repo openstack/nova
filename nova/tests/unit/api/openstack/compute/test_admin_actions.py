@@ -12,21 +12,16 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from nova.api.openstack.compute import admin_actions as admin_actions_v21
+from nova.api.openstack.compute import admin_actions
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 
 
-class AdminActionsTestV21(admin_only_action_common.CommonTests):
-    admin_actions = admin_actions_v21
-    _api_version = '2.1'
+class AdminActionsTest(admin_only_action_common.CommonTests):
 
     def setUp(self):
-        super(AdminActionsTestV21, self).setUp()
-        self.controller = self.admin_actions.AdminActionsController()
+        super().setUp()
+        self.controller = admin_actions.AdminActionsController()
         self.compute_api = self.controller.compute_api
-        self.stub_out('nova.api.openstack.compute.admin_actions.'
-                      'AdminActionsController',
-                      lambda *a, **k: self.controller)
 
     def test_actions(self):
         actions = ['_inject_network_info']

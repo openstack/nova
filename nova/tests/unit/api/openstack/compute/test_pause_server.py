@@ -13,23 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute import pause_server as \
-    pause_server_v21
+from nova.api.openstack.compute import pause_server
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 
 
-class PauseServerTestsV21(admin_only_action_common.CommonTests):
-    pause_server = pause_server_v21
-    controller_name = 'PauseServerController'
-    _api_version = '2.1'
+class PauseServerTests(admin_only_action_common.CommonTests):
 
     def setUp(self):
-        super(PauseServerTestsV21, self).setUp()
-        self.controller = getattr(self.pause_server, self.controller_name)()
+        super().setUp()
+        self.controller = pause_server.PauseServerController()
         self.compute_api = self.controller.compute_api
-        self.stub_out('nova.api.openstack.compute.pause_server.'
-                      'PauseServerController',
-                      lambda *a, **kw: self.controller)
 
     def test_pause_unpause(self):
         self._test_actions(
