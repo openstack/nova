@@ -91,13 +91,14 @@ class FlavorManageTestV21(test.NoDBTestCase):
 
     @mock.patch('nova.objects.Flavor.destroy')
     def test_delete(self, mock_destroy):
-        res = self.controller.delete(self._get_http_request(), 1234)
+        req = self._get_http_request()
+        res = self.controller.delete(req, 1234)
 
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.controller,
                       flavors_v21.FlavorsController):
-            status_int = self.controller.delete.wsgi_code
+            status_int = self.controller.delete.wsgi_codes(req)
         else:
             status_int = res.status_int
         self.assertEqual(202, status_int)

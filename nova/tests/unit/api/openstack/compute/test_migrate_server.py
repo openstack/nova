@@ -159,7 +159,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                'live_migrate') as mock_live_migrate:
             live_migrate_method(self.req, instance.uuid,
                                 body={'os-migrateLive': param})
-            self.assertEqual(202, live_migrate_method.wsgi_code)
+            self.assertEqual(202, live_migrate_method.wsgi_codes(self.req))
             mock_live_migrate.assert_called_once_with(
                 self.context, instance, False, self.disk_over_commit,
                 'hostname', self.force, self.async_)

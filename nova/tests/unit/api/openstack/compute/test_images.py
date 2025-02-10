@@ -42,7 +42,6 @@ IMAGE_FIXTURES = image_fixtures.get_image_fixtures()
 class ImagesControllerTestV21(test.NoDBTestCase):
     """Test of the OpenStack API /images application controller w/Glance.
     """
-    image_controller_class = images_v21.ImagesController
     url_base = '/v2/%s' % fakes.FAKE_PROJECT_ID
     bookmark_base = '/%s' % fakes.FAKE_PROJECT_ID
     http_request = fakes.HTTPRequestV21
@@ -56,7 +55,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         fakes.stub_out_compute_api_snapshot(self)
         fakes.stub_out_compute_api_backup(self)
 
-        self.controller = self.image_controller_class()
+        self.controller = images_v21.ImagesController()
         self.url_prefix = "http://localhost%s/images" % self.url_base
         self.bookmark_prefix = "http://localhost%s/images" % self.bookmark_base
         self.uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
@@ -357,16 +356,13 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         actual_url = "%s/images/1" % glance.generate_glance_url('ctx')
         self.assertEqual(generated_url, actual_url)
 
-    def _check_response(self, controller_method, response, expected_code):
-        self.assertEqual(expected_code, controller_method.wsgi_code)
-
     @mock.patch('nova.image.glance.API.delete')
     def test_delete_image(self, delete_mocked):
         request = self.http_request.blank(self.url_base + 'images/124')
         request.method = 'DELETE'
         delete_method = self.controller.delete
-        response = delete_method(request, '124')
-        self._check_response(delete_method, response, 204)
+        delete_method(request, '124')
+        self.assertEqual(204, delete_method.wsgi_codes(request))
         delete_mocked.assert_called_once_with(mock.ANY, '124')
 
     @mock.patch('nova.image.glance.API.delete',

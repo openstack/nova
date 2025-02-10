@@ -120,11 +120,11 @@ class RescueTestV21(test.NoDBTestCase):
     def test_unrescue(self):
         body = dict(unrescue=None)
         resp = self.controller._unrescue(self.fake_req, UUID, body=body)
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.controller,
                       rescue_v21.RescueController):
-            status_int = self.controller._unrescue.wsgi_code
+            status_int = self.controller._unrescue.wsgi_codes(self.fake_req)
         else:
             status_int = resp.status_int
         self.assertEqual(202, status_int)

@@ -26,9 +26,6 @@ class CloudpipeUpdateTestV21(test.NoDBTestCase):
         self.controller = clup_v21.CloudpipeController()
         self.req = fakes.HTTPRequest.blank('')
 
-    def _check_status(self, expected_status, res, controller_method):
-        self.assertEqual(expected_status, controller_method.wsgi_code)
-
     def test_cloudpipe_configure_project(self):
         body = {"configure_project": {"vpn_ip": "1.2.3.4", "vpn_port": 222}}
         self.assertRaises(webob.exc.HTTPGone, self.controller.update,

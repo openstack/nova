@@ -25,7 +25,6 @@ from nova.tests.unit import fake_instance
 class ServerPasswordTestV21(test.NoDBTestCase):
     content_type = 'application/json'
     server_password = server_password_v21
-    delete_call = 'self.controller.clear'
 
     def setUp(self):
         super(ServerPasswordTestV21, self).setUp()
@@ -55,8 +54,8 @@ class ServerPasswordTestV21(test.NoDBTestCase):
 
     def test_reset_password(self):
         with mock.patch('nova.objects.Instance._save_flavor'):
-            eval(self.delete_call)(self.fake_req, 'fake')
-        self.assertEqual(eval(self.delete_call).wsgi_code, 204)
+            self.controller.clear(self.fake_req, 'fake')
+        self.assertEqual(self.controller.clear.wsgi_codes(self.fake_req), 204)
 
         res = self.controller.index(self.fake_req, 'fake')
         self.assertEqual(res['password'], '')

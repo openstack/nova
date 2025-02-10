@@ -605,10 +605,10 @@ class ServerGroupTestV21(test.NoDBTestCase):
         resp = self.controller.delete(self.member_req, uuidsentinel.sg1_id)
         mock_destroy.assert_called_once_with()
 
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.controller, sg_v21.ServerGroupController):
-            status_int = self.controller.delete.wsgi_code
+            status_int = self.controller.delete.wsgi_codes(self.member_req)
         else:
             status_int = resp.status_int
         self.assertEqual(204, status_int)

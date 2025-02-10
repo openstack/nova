@@ -495,11 +495,11 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         with mock.patch.object(common, 'get_instance',
                                return_value=inst) as mock_get_instance:
             result = self.attachments.delete(self.req, FAKE_UUID, FAKE_UUID_A)
-            # NOTE: on v2.1, http status code is set as wsgi_code of API
+            # NOTE: on v2.1, http status code is set as wsgi_codes of API
             # method instead of status_int in a response object.
             if isinstance(self.attachments,
                           volumes_v21.VolumeAttachmentController):
-                status_int = self.attachments.delete.wsgi_code
+                status_int = self.attachments.delete.wsgi_codes(self.req)
             else:
                 status_int = result.status_int
             self.assertEqual(202, status_int)
@@ -762,11 +762,11 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, 'swap_volume')
     def test_swap_volume(self, mock_swap_volume):
         result = self._test_swap(self.attachments)
-        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
         if isinstance(self.attachments,
                       volumes_v21.VolumeAttachmentController):
-            status_int = self.attachments.update.wsgi_code
+            status_int = self.attachments.update.wsgi_codes(self.req)
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)
@@ -1861,8 +1861,8 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
     assisted_snaps = assisted_snaps_v21
     microversion = '2.1'
 
-    def _check_status(self, expected_status, res, controller_method):
-        self.assertEqual(expected_status, controller_method.wsgi_code)
+    def _check_status(self, expected_status, req, res, controller_method):
+        self.assertEqual(expected_status, controller_method.wsgi_codes(req))
 
     def setUp(self):
         super(AssistedSnapshotDeleteTestCaseV21, self).setUp()
@@ -1885,7 +1885,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
                 version=self.microversion)
         req.method = 'DELETE'
         result = self.controller.delete(req, '5')
-        self._check_status(204, result, self.controller.delete)
+        self._check_status(204, req, result, self.controller.delete)
 
     def test_assisted_delete_missing_delete_info(self):
         req = fakes.HTTPRequest.blank(self.url,

@@ -52,18 +52,18 @@ class AdminPasswordTestV21(test.NoDBTestCase):
     def _get_action(self):
         return admin_password_v21.AdminPasswordController().change_password
 
-    def _check_status(self, expected_status, res, controller_method):
-        self.assertEqual(expected_status, controller_method.wsgi_code)
+    def _check_status(self, expected_status, req, res, controller_method):
+        self.assertEqual(expected_status, controller_method.wsgi_codes(req))
 
     def test_change_password(self):
         body = {'changePassword': {'adminPass': 'test'}}
         res = self._get_action()(self.fake_req, fakes.FAKE_UUID, body=body)
-        self._check_status(202, res, self._get_action())
+        self._check_status(202, self.fake_req, res, self._get_action())
 
     def test_change_password_empty_string(self):
         body = {'changePassword': {'adminPass': ''}}
         res = self._get_action()(self.fake_req, fakes.FAKE_UUID, body=body)
-        self._check_status(202, res, self._get_action())
+        self._check_status(202, self.fake_req, res, self._get_action())
 
     @mock.patch('nova.compute.api.API.set_admin_password',
                 side_effect=NotImplementedError())
@@ -147,7 +147,7 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         self.flags(enable_instance_password=False, group='api')
         body = {'changePassword': {'adminPass': '1234pass'}}
         res = self._get_action()(self.fake_req, fakes.FAKE_UUID, body=body)
-        self._check_status(202, res, self._get_action())
+        self._check_status(202, self.fake_req, res, self._get_action())
 
     @mock.patch('nova.compute.api.API.set_admin_password',
                 side_effect=exception.InstanceInvalidState(
