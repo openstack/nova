@@ -1086,6 +1086,24 @@ A positive value will favor hosts with the same image properties (packing
 strategy) while a negative value will follow a spread strategy that will
 favor hosts not already having instances with those image properties.
 
+You can also use
+:oslo.config:option:`filter_scheduler.image_props_weight_setting` config option
+for defining the exact properties you would like to weigh. For example, if you
+configure ``os_distro`` to 2 and ``hw_machine_type`` to 0, then the latter
+property won't be weighed while the former will count twice. Say you configure
+``os_distro=10,os_secure_boot=1,os_require_quiesce=0``, then when requesting
+an instance with an image using those properties, then, for each of the
+instances already running on the host having an image using at least one of
+those properties, a match of the same ``os_distro`` value (eg. ``windows`` or
+``linux``) would count 10 times more than a match of the same
+``os_secure_boot`` value (eg. ``true`` or ``false``), while any matches about
+the same ``os_require_quiesce`` value wouldn't count.
+If you define :oslo.config:option:`filter_scheduler.image_props_weight_setting`
+then any property from the image used for booting wouldn't be counted if not
+provided in the option value.
+The resulted host weight would then be multiplied by the value of
+:oslo.config:option:`filter_scheduler.image_props_weight_multiplier`.
+
 Utilization-aware scheduling
 ----------------------------
 

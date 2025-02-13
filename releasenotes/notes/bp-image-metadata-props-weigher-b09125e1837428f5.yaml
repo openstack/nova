@@ -11,4 +11,8 @@ features:
     hosts, modify `image_props_weight_multiplier` to a positive value. If you
     want to spread instances with the same properties around all hosts, then
     please modify `image_props_weight_multiplier` to a negative value.
-
+    Another configuration option
+    `[filter_scheduler]/image_props_weight_setting` allows you to define
+    fine-grained weights for each of the properties you actually would like to
+    weigh (eg. `os_distro`). Please refer to the documentation for more details
+    about how to use this configuration option.

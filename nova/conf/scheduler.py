@@ -590,6 +590,53 @@ Related options:
 
 * ``[filter_scheduler] weight_classes``
 """),
+    cfg.ListOpt("image_props_weight_setting",
+        default=[],
+        help="""
+Mapping of image properties to weight modifier.
+
+This setting specifies the properties to be weighed and the relative ratios for
+each property. This should be a list of key/value pairs, consisting of a series
+of one or more 'name=ratio' pairs, separated by commas, where ``name`` is the
+name of the property to be weighed, and ``ratio`` is the relative weight for
+that metric.
+
+Note that if the ratio is set to 0, the property value is ignored, and instead
+the weight will be set to the value of the
+``[filter_scheduler] image_props_weight_multiplier`` option.
+
+As an example, let's consider the case where this option is set to:
+
+    ``os_distro=1, hw_machine_type=-1``
+
+If an instance would boot with an image having ``os_distro=windows`` and
+``hw_machine_type=q35``, the final host weight will be:
+
+    ``(nb_inst(``os_distro=windows``)  * 1.0) +
+      (nb_inst(``hw_machine_type=q35``) * -1)``
+
+where nb_inst(``prop=value``) would give me the number of instances having
+an image where ``prop`` is set to ``value`` (eg. the number of instances
+running with ``os_distro=windows``)
+
+Possible values:
+
+* A list of zero or more key/value pairs separated by commas, where the key is
+  a string representing the name of a property and the value is a numeric
+  weight for that property. If any value is set to 0, the number of instances
+  match is ignored for that specific property key.
+  If no key/value pairs are provided, then the weigher will compare all the
+  instance's images with the requested image properties, all of them weighed
+  evenly.
+
+
+The overall host weight will be multiplied by the value of the
+  ``[filter_scheduler] image_props_weight_multiplier`` option.
+
+Related options:
+
+* ``[filter_scheduler] image_props_weight_multiplier``
+"""),
     cfg.FloatOpt("pci_weight_multiplier",
         default=1.0,
         min=0.0,
