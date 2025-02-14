@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 from nova import exception
 from nova.pci import whitelist
 from nova import test
@@ -28,6 +29,7 @@ dev_dict = {
     }
 
 
+@ddt.ddt
 class WhitelistTestCase(test.NoDBTestCase):
     def test_whitelist(self):
         white_list = '{"product_id":"0001", "vendor_id":"8086"}'
@@ -83,57 +85,57 @@ class WhitelistTestCase(test.NoDBTestCase):
         parsed = whitelist.Whitelist([white_list])
         self.assertTrue(parsed.device_assignable(dev_dict))
 
-    def test_device_managed(self):
-        white_list = (
-            '{"product_id":"0001", "vendor_id":"8086", "managed": "yes"}'
+    @ddt.data(
+        {"tag": "managed", "value": "yes", "expected": "true"},
+        {"tag": "managed", "value": "true", "expected": "true"},
+        {"tag": "managed", "value": "1", "expected": "true"},
+        {"tag": "managed", "value": "no", "expected": "false"},
+        {"tag": "managed", "value": "false", "expected": "false"},
+        {"tag": "managed", "value": "0", "expected": "false"},
+        {"tag": "live_migratable", "value": "yes", "expected": "true"},
+        {"tag": "live_migratable", "value": "true", "expected": "true"},
+        {"tag": "live_migratable", "value": "1", "expected": "true"},
+        {"tag": "live_migratable", "value": "no", "expected": "false"},
+        {"tag": "live_migratable", "value": "false", "expected": "false"},
+        {"tag": "live_migratable", "value": "0", "expected": "false"},
+    )
+    def test_device_tags(self, data):
+        wl = (
+            '{"product_id":"0001", "vendor_id":"8086", "' +
+            data["tag"] +
+            '":"' +
+            data["value"] +
+            '"}'
         )
+        white_list = wl
         parsed = whitelist.Whitelist([white_list])
         self.assertEqual(1, len(parsed.specs))
-        self.assertTrue(parsed.specs[0].tags["managed"], "true")
+        self.assertEqual(parsed.specs[0].tags[data["tag"]], data["expected"])
 
-    def test_device_managed_true(self):
-        white_list = (
-            '{"product_id":"0001", "vendor_id":"8086", "managed": "true"}'
-        )
-        parsed = whitelist.Whitelist([white_list])
-        self.assertEqual(1, len(parsed.specs))
-        self.assertTrue(parsed.specs[0].tags["managed"], "true")
-
-    def test_device_managed_int(self):
-        white_list = (
-            '{"product_id":"0001", "vendor_id":"8086", "managed": 1}'
-        )
-        parsed = whitelist.Whitelist([white_list])
-        self.assertEqual(1, len(parsed.specs))
-        self.assertTrue(parsed.specs[0].tags["managed"], "true")
-
-    def test_device_not_managed(self):
-        white_list = (
-            '{"product_id":"0001", "vendor_id":"8086", "managed": "no"}'
-        )
-        parsed = whitelist.Whitelist([white_list])
-        self.assertEqual(1, len(parsed.specs))
-        self.assertTrue(parsed.specs[0].tags["managed"], "false")
-
-    def test_device_managed_not_set(self):
+    @ddt.data({"tag": "managed"},
+              {"tag": "live_migratable"})
+    def test_device_managed_not_set(self, data):
         white_list = (
             '{"product_id":"0001", "vendor_id":"8086"}'
         )
         parsed = whitelist.Whitelist([white_list])
         self.assertEqual(1, len(parsed.specs))
-        self.assertNotIn("managed", parsed.specs[0].tags)
+        self.assertNotIn(data["tag"], parsed.specs[0].tags)
 
-    def test_device_managed_invalid_value(self):
-        white_list = (
-            '{"product_id":"0001", "vendor_id":"8086", "managed": "invalid"}'
-        )
+    @ddt.data({"tag": "managed"},
+              {"tag": "live_migratable"})
+    def test_device_managed_invalid_value(self, data):
+        wl = '{"product_id":"0001", "vendor_id":"8086", "' + \
+            data["tag"] + '":"' + 'invalid"}'
+        white_list = (wl)
 
         exc = self.assertRaises(
             exception.PciConfigInvalidSpec, whitelist.Whitelist, [white_list]
         )
 
         self.assertEqual(
-            "Invalid [pci]device_spec config: Unrecognized value 'invalid', "
+            "Invalid [pci]device_spec config: Cannot parse tag "
+            f"'{data['tag']}': Unrecognized value 'invalid', "
             "acceptable values are: '0', '1', 'f', 'false', 'n', 'no', 'off', "
             "'on', 't', 'true', 'y', 'yes'",
             str(exc)
