@@ -516,12 +516,16 @@ class InstanceHelperMixin:
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
 
-    def _reboot_server(self, server, hard=False, expected_state='ACTIVE'):
+    def _reboot_server(self, server, hard=False, expected_state='ACTIVE',
+                       api=None):
         """Reboot a server."""
-        self.api.post_server_action(
+        api = api or self.api
+        api.post_server_action(
             server['id'], {'reboot': {'type': 'HARD' if hard else 'SOFT'}},
         )
-        self.notifier.wait_for_versioned_notifications('instance.reboot.end')
+        if expected_state != 'ERROR':
+            self.notifier.wait_for_versioned_notifications(
+                    'instance.reboot.end')
         return self._wait_for_state_change(server, expected_state)
 
     def _show_server(self, server):

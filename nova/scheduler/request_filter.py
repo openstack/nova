@@ -483,6 +483,9 @@ def tpm_secret_security_filter(
     if security == 'user':
         request_spec.root_required.add(
             os_traits.COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER)
+    elif security == 'host':
+        request_spec.root_required.add(
+            os_traits.COMPUTE_SECURITY_TPM_SECRET_SECURITY_HOST)
     else:
         # We can get here if the requested TPM secret security passed extra
         # spec validation but is not otherwise supported in the code at this

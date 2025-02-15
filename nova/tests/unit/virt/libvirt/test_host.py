@@ -21,6 +21,7 @@ import ddt
 import eventlet
 from eventlet import greenthread
 from eventlet import tpool
+from lxml import etree
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -1050,6 +1051,21 @@ class HostTestCase(test.NoDBTestCase):
         mock_sec.return_value = secret
         self.host.create_secret('iscsi', 'iscsivol', password="foo")
         secret.setValue.assert_called_once_with("foo")
+
+    @mock.patch.object(fakelibvirt.virConnect, "secretDefineXML")
+    def test_create_secret_vtpm_ephemeral_private_default(self, mock_sec):
+        self.host.create_secret('vtpm', uuids.instance)
+        xml = etree.fromstring(mock_sec.call_args.args[0])
+        self.assertEqual('yes', xml.get('ephemeral'))
+        self.assertEqual('yes', xml.get('private'))
+
+    @mock.patch.object(fakelibvirt.virConnect, "secretDefineXML")
+    def test_create_secret_vtpm_not_ephemeral_private(self, mock_sec):
+        self.host.create_secret('vtpm', uuids.instance, ephemeral=False,
+                                private=False)
+        xml = etree.fromstring(mock_sec.call_args.args[0])
+        self.assertEqual('no', xml.get('ephemeral'))
+        self.assertEqual('no', xml.get('private'))
 
     @mock.patch('nova.virt.libvirt.host.Host.find_secret')
     def test_delete_secret(self, mock_find_secret):

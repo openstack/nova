@@ -20978,6 +20978,55 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # ...and undefined it after, despite the error
         drvr._host.create_secret.return_value.undefine.assert_called_once()
 
+    @mock.patch('nova.virt.libvirt.host.Host')
+    @mock.patch('nova.crypto.ensure_vtpm_secret')
+    def test_get_or_create_secret_for_vtpm_host_security_found(
+            self, mock_secret, mock_host):
+        """Test that the key manager service API is not called.
+
+        If the secret can be found locally from libvirt with 'host' TPM secret
+        security, there should be no call to the key manager API.
+        """
+        instance = objects.Instance(**self.test_instance)
+        instance.flavor.extra_specs = {'hw:tpm_secret_security': 'host'}
+        mock_host.return_value.find_secret.return_value = mock.sentinel.secret
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        secret, security = drvr._get_or_create_secret_for_vtpm(self.context,
+                                                               instance)
+
+        mock_secret.assert_not_called()
+        self.assertEqual(mock.sentinel.secret, secret)
+        self.assertEqual('host', security)
+
+    @mock.patch('nova.virt.libvirt.host.Host')
+    @mock.patch('nova.crypto.ensure_vtpm_secret')
+    def test_get_or_create_secret_for_vtpm_host_security_not_found(
+            self, mock_secret, mock_host):
+        """Test that the key manager service API is called.
+
+        If the secret is not found locally from libvirt with 'host' TPM secret
+        security, there should be a call to the key manager API.
+        """
+        instance = objects.Instance(**self.test_instance)
+        instance.flavor.extra_specs = {'hw:tpm_secret_security': 'host'}
+        mock_host.return_value.find_secret.return_value = None
+        mock_secret.return_value = (uuids.secret, mock.sentinel.passphrase)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        secret, security = drvr._get_or_create_secret_for_vtpm(self.context,
+                                                               instance)
+
+        mock_secret.assert_called_once_with(self.context, instance)
+        # ensure_vtpm_secret() returns (secret_uuid, passphrase)
+        mock_host.return_value.create_secret.assert_called_once_with(
+            'vtpm', uuids.instance, password=mock.sentinel.passphrase,
+            uuid=uuids.secret, ephemeral=False, private=False)
+
+        self.assertEqual(
+            mock_host.return_value.create_secret.return_value, secret)
+        self.assertEqual('host', security)
+
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')
@@ -27807,7 +27856,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         instance = objects.Instance(
             uuid=uuids.instance, id=1,
             ephemeral_key_uuid=uuids.ephemeral_key_uuid,
-            resources=None)
+            resources=None, flavor=objects.Flavor())
         instance.system_metadata = {}
         block_device_info = {'root_device_name': '/dev/vda',
                              'ephemerals': [],

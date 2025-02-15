@@ -749,8 +749,13 @@ class TestRequestFilter(test.NoDBTestCase):
             reqspec.root_required)
         self.assertEqual(set(), reqspec.root_forbidden)
 
-    @ddt.data('flavor', 'image')
-    def test_tpm_secret_security_filter(self, source):
+    @ddt.data(
+        ('flavor', 'user', ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER),
+        ('flavor', 'host', ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_HOST),
+        ('image', 'user', ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER),
+        ('image', 'host', ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_HOST))
+    @ddt.unpack
+    def test_tpm_secret_security_filter(self, source, secret_security, trait):
         # First ensure that tpm_secret_security_filter is included
         self.assertIn(request_filter.tpm_secret_security_filter,
                       request_filter.ALL_REQUEST_FILTERS)
@@ -761,14 +766,14 @@ class TestRequestFilter(test.NoDBTestCase):
                     extra_specs={
                         'hw:tpm_model': 'tpm-tis',
                         'hw:tpm_version': '1.2',
-                        'hw:tpm_secret_security': 'user',
+                        'hw:tpm_secret_security': secret_security,
                     }),
                 image=objects.ImageMeta(properties=objects.ImageMetaProps()))
         elif source == 'image':
             reqspec = objects.RequestSpec(
                 flavor=objects.Flavor(
                     extra_specs={
-                        'hw:tpm_secret_security': 'user',
+                        'hw:tpm_secret_security': secret_security,
                     }),
                 image=objects.ImageMeta(
                     properties=objects.ImageMetaProps(hw_tpm_model='tpm-tis',
@@ -778,9 +783,7 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertEqual(set(), reqspec.root_forbidden)
         self.assertTrue(
             request_filter.tpm_secret_security_filter(self.context, reqspec))
-        self.assertEqual(
-            {ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER},
-            reqspec.root_required)
+        self.assertEqual({trait}, reqspec.root_required)
         self.assertEqual(set(), reqspec.root_forbidden)
 
     def test_tpm_secret_security_filter_skip(self):
