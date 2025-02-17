@@ -32,6 +32,7 @@ import warnings
 import eventlet
 import fixtures
 import futurist
+from openstack.cloud import _utils
 from openstack import service_description
 from oslo_concurrency import lockutils
 from oslo_config import cfg
@@ -1662,6 +1663,8 @@ class OpenStackSDKFixture(fixtures.Fixture):
         self.useFixture(fixtures.MockPatchObject(
             service_description.ServiceDescription, '_make_proxy',
             fake_make_proxy))
+        self.useFixture(fixtures.MockPatchObject(
+            _utils, 'localhost_supports_ipv6', return_value=False))
 
 
 class HostNameWeigher(weights.BaseHostWeigher):
@@ -1716,7 +1719,7 @@ class HostNameWeigherFixture(fixtures.Fixture):
 class GenericPoisonFixture(fixtures.Fixture):
     POISON_THESE = (
         (
-            'netifaces.interfaces',
+            'psutil.net_if_addrs',
             'tests should not be inspecting real interfaces on the test node',
         ),
         (
