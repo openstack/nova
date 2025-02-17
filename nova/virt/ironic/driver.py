@@ -676,9 +676,11 @@ class IronicDriver(virt_driver.ComputeDriver):
         :raises: VirtDriverNotReady
 
         """
-
-        uuids = [node.instance_uuid for node in self._get_node_list(
-            associated=True, fields=['instance_uuid'])]
+        conductor_group = CONF.ironic.conductor_group
+        kwargs = {'associated': True, 'fields': ['instance_uuid']}
+        if conductor_group is not None:
+            kwargs['conductor_group'] = conductor_group
+        uuids = [node.instance_uuid for node in self._get_node_list(**kwargs)]
         filters = {'uuid': uuids}
         context = nova_context.get_admin_context()
         instances = objects.InstanceList.get_by_filters(context,
