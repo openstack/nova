@@ -15,8 +15,12 @@
 import threading
 from unittest import mock
 
-
+import ddt
 import futurist.waiters
+from keystoneauth1.fixture import plugin as ks_plugin_fixture
+from keystoneauth1 import loading as ks_loading
+from oslo_config import cfg
+from oslo_config import fixture as config_fixture
 from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -24,10 +28,28 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova import context
 from nova import exception
 from nova import objects
+from nova import service_auth
 from nova import test
 from nova import utils
 
 
+class TestPluginWithAccess(ks_plugin_fixture.TestPlugin):
+
+    def get_access(self, session):
+        return mock.Mock(role_names=['service'])
+
+
+class LoadingFixtureWithAccess(ks_plugin_fixture.LoadingFixture):
+
+    def create_plugin(self):
+        return TestPluginWithAccess(
+                token=self.token,
+                endpoint=self.endpoint,
+                user_id=self.user_id,
+                project_id=self.project_id)
+
+
+@ddt.ddt
 class ContextTestCase(test.NoDBTestCase):
     # NOTE(danms): Avoid any cells setup by claiming we will
     # do things ourselves.
@@ -177,6 +199,93 @@ class ContextTestCase(test.NoDBTestCase):
                                       overwrite=True)
         context.get_admin_context()
         self.assertIs(o_context.get_current(), ctx1)
+
+    @mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
+    @mock.patch('keystoneauth1.loading.load_session_from_conf_options')
+    def test_get_nova_service_user_context(self, mock_load_session,
+                                           mock_load_auth):
+        """Verify the basic get of a Nova service user context."""
+        # Get a Nova service user context.
+        ctxt = context.get_nova_service_user_context()
+
+        # Verify we called the loading functions as expected.
+        mock_load_auth.assert_called_once_with(context.CONF, 'service_user')
+        mock_load_session.assert_called_once_with(context.CONF, 'service_user',
+                                                  auth=None)
+        mock_plugin = mock_load_auth.return_value
+        mock_session = mock_load_session.return_value
+
+        # Verify we called the user_id and project_id getting methods as
+        # expected.
+        mock_plugin.get_user_id.assert_called_once_with(mock_session)
+        mock_plugin.get_project_id.assert_called_once_with(mock_session)
+
+        # Verify the RequestContext attributes got set as expected.
+        self.assertEqual(mock_plugin.get_user_id.return_value, ctxt.user_id)
+        self.assertEqual(mock_plugin.get_project_id.return_value,
+                         ctxt.project_id)
+        self.assertEqual(mock_plugin, ctxt.user_auth_plugin)
+
+        # Get another context to verify we create the context with
+        # overwrite=False to avoid overwriting the thread local storage.
+        with mock.patch('nova.context.RequestContext') as mock_context:
+            ctxt = context.get_nova_service_user_context()
+            mock_context.assert_called_once_with(
+                user_id=mock_plugin.get_user_id.return_value,
+                project_id=mock_plugin.get_project_id.return_value,
+                roles=mock_plugin.get_access.return_value.role_names,
+                user_auth_plugin=mock_plugin, overwrite=False)
+
+    def test_get_nova_service_user_context_user_project(self):
+        """Verify the user_id and project_id get set to what we expect."""
+        # Use a new config fixture so that the options we register here will
+        # get unregistered after the test.
+        conf_fixture = self.useFixture(
+                config_fixture.Config(conf=cfg.ConfigOpts()))
+
+        # Register the auth and session options in the [service_user]
+        # config section.
+        oslo_opts = (ks_loading.get_auth_common_conf_options() +
+                     ks_loading.get_session_conf_options() +
+                     ks_loading.get_auth_plugin_conf_options('password'))
+        conf_fixture.register_opts(oslo_opts, group='service_user')
+
+        # Fill in typical values for the Nova service user.
+        conf_fixture.config(
+            group='service_user', auth_type='password', username='nova',
+            project_name='service', auth_url='http://anyhost/auth')
+
+        # Use the plugin loading fixture from keystoneauth in order to skip all
+        # of the real authentication steps of calling Keystone and set expected
+        # user_id and project_id values.
+        self.useFixture(LoadingFixtureWithAccess(user_id=uuids.nova,
+                                                 project_id=uuids.service))
+
+        # Verify we get the expected user_id and project_id in the
+        # RequestContext.
+        with mock.patch.object(service_auth, 'CONF', conf_fixture.conf):
+            ctxt = context.get_nova_service_user_context()
+        self.assertEqual(uuids.nova, ctxt.user_id)
+        self.assertEqual(uuids.service, ctxt.project_id)
+        self.assertEqual(['service'], ctxt.roles)
+
+    @mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
+    @mock.patch('keystoneauth1.loading.load_session_from_conf_options')
+    @ddt.data('auth', 'session')
+    def test_get_nova_service_user_context_load_fail(
+            self, to_fail, mock_load_session, mock_load_auth):
+        if to_fail == 'auth':
+            mock_load_auth.return_value = None
+        elif to_fail == 'session':
+            mock_load_session.return_value = None
+
+        ex = self.assertRaises(exception.InvalidConfiguration,
+                               context.get_nova_service_user_context)
+        msg = (
+            'Failed to load auth plugin or session from configuration. '
+            'Ensure the [service_user] section of the Nova configuration '
+            'file is correctly configured for the Nova service user.')
+        self.assertIn(msg, str(ex))
 
     def test_convert_from_rc_to_dict(self):
         ctx = context.RequestContext(

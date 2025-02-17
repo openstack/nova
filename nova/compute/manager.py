@@ -67,7 +67,6 @@ from nova.compute import vm_states
 from nova import conductor
 import nova.conf
 import nova.context
-from nova import crypto
 from nova import exception
 from nova import exception_wrapper
 from nova.i18n import _
@@ -99,6 +98,7 @@ import nova.virt.node
 from nova.virt import storage_users
 from nova.virt import virtapi
 from nova.volume import cinder
+from nova import vtpm
 
 CONF = nova.conf.CONF
 
@@ -970,6 +970,9 @@ class ComputeManager(manager.Manager):
                 self.host, action=fields.NotificationAction.DELETE,
                 phase=fields.NotificationPhase.END, bdms=bdms)
 
+    def _complete_deletion_vtpm(self, context, instance):
+        vtpm.delete_secret(context, instance)
+
     def _complete_deletion(self, context, instance):
         self._update_resource_tracker(context, instance)
 
@@ -985,7 +988,7 @@ class ComputeManager(manager.Manager):
         self._delete_scheduler_instance_info(context, instance.uuid)
 
         # Delete the vTPM secret in the key manager service if needed.
-        crypto.delete_vtpm_secret(context, instance)
+        self._complete_deletion_vtpm(context, instance)
 
     def _validate_pinning_configuration(self, instances):
         if not self.driver.capabilities.get('supports_pcpus', False):

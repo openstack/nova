@@ -279,7 +279,8 @@ class VTPMTest(test.NoDBTestCase):
 
         We should create a new one.
         """
-        instance = objects.Instance()
+        instance = objects.Instance(flavor=objects.Flavor(),
+                                    image_ref=uuids.image)
         instance.uuid = uuids.instance
         instance.system_metadata = {}
         mock_get_manager.return_value.store.return_value = uuids.secret

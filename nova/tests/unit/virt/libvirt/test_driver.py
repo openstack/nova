@@ -17241,6 +17241,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(swtpm_enabled=True, group='libvirt')
         self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
 
+        mock_ensure_vtpm.return_value = uuids.secret, mock.sentinel.password
         mock_get_info.return_value = hardware.InstanceInfo(
             state=power_state.RUNNING)
 
@@ -21237,6 +21238,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(
             mock_host.return_value.create_secret.return_value, secret)
         self.assertEqual('host', security)
+
+    @mock.patch('nova.context.get_nova_service_user_context')
+    @mock.patch('nova.crypto.ensure_vtpm_secret')
+    def test_get_or_create_secret_for_vtpm_security_deployment(
+            self, mock_ensure_secret, mock_get_ctxt):
+        # Test that vTPM secret security 'deployment' will use the Nova service
+        # user auth to create the secret in the key manager service.
+        mock_ensure_secret.return_value = uuids.secret, mock.sentinel.password
+        instance = objects.Instance(**self.test_instance)
+        instance.flavor.extra_specs = {'hw:tpm_secret_security': 'deployment'}
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._get_or_create_secret_for_vtpm(self.context, instance)
+
+        # We should use the service user context.
+        mock_get_ctxt.assert_called_once_with()
+        mock_ensure_secret.assert_called_once_with(
+            mock_get_ctxt.return_value, instance)
 
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
