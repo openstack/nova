@@ -1213,14 +1213,20 @@ class IronicDriver(virt_driver.ComputeDriver):
         ):
             # something is wrong. undo what we have done
             self._cleanup_deploy(node, instance, network_info)
+            deploy_msg = ("No Error" if validate_chk['deploy'].result
+                          else validate_chk['deploy'].reason)
+            power_msg = ("No Error" if validate_chk['power'].result
+                         else validate_chk['power'].reason)
+            storage_msg = ("No Error" if validate_chk['storage'].result
+                           else validate_chk['storage'].reason)
             raise exception.ValidationError(_(
                 "Ironic node: %(id)s failed to validate. "
                 "(deploy: %(deploy)s, power: %(power)s, "
                 "storage: %(storage)s)")
                 % {'id': node.id,
-                   'deploy': validate_chk['deploy'],
-                   'power': validate_chk['power'],
-                   'storage': validate_chk['storage']})
+                   'deploy': deploy_msg,
+                   'power': power_msg,
+                   'storage': storage_msg})
 
         # Config drive
         configdrive_value = None

@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fix displaying the reason messages from the Ironic validate node operation that
+    is called just before the instance is deployed on the bare metal node. The
+    message from Ironic is now correctly logged.
+    Fixes `bug 2100009 <https://bugs.launchpad.net/nova/+bug/2100009>_`.
