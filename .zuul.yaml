@@ -210,6 +210,9 @@
           $NEUTRON_CONF:
             nova:
               live_migration_events: True
+          $NOVA_CPU_CONF:
+              compute:
+                heal_instance_info_cache_interval: 60
     group-vars:
       subnode:
         devstack_localrc:
@@ -250,6 +253,9 @@
             $NEUTRON_CONF:
               nova:
                 live_migration_events: True
+            $NOVA_CPU_CONF:
+              compute:
+                heal_instance_info_cache_interval: 60
     post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
@@ -423,10 +429,6 @@
               # reduce the number of placement calls in steady state. Added in
               # Stein.
               resource_provider_association_refresh: 0
-              # Neutron networking backends today are expected to work without
-              # the periodic healing of the cache in Nova. Turn it off to gain
-              # additional performance.
-              heal_instance_info_cache_interval: -1
             workarounds:
               # This wa is an improvement on hard reboot that cannot be turned
               # on unconditionally. But we know that ml2/ovs sends plug time

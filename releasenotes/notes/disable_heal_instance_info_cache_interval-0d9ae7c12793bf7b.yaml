@@ -1,0 +1,43 @@
+---
+upgrade:
+  - |
+    ``[compute]heal_instance_info_cache_interval`` now defaults to -1.
+
+    In the early days of Nova, all networking was internal, then ``quantum``,
+    now known as ``neutron`` was introduced.
+    When the networking subsystem was being externalized and neutron was
+    optional Nova still needed to keep track of the ports associated with an
+    instance.
+    To that end, to avoid these expensive calls to an optional service the
+    instance info cache was extended to include network information and a
+    periodic task was introduced to update it in
+    ``08fa534a0d28fa1be48aef927584161becb936c7`` as part of the
+    ``Essex`` release.
+
+    As we have learned over the years per compute periodic tasks that call
+    other services do not scale well as the number of compute nodes increases.
+    In ``ce936ea5f3ae0b4d3b816a7fe42d5f0100b20fca`` the os-server-external-events
+    API was introduced. The server external events API allows external systems
+    such as Neutron to trigger cache refreshes on demand, this was part
+    of the Icehouse release. With the introduction of this API, neutron was
+    modified to send network-changed events on a per-port basis as API actions
+    are performed on neutron ports. When that was introduced the default value
+    of ``[compute]heal_instance_info_cache_interval`` was not changed
+    to ensure there was no upgrade impact.
+
+    In``ba44c155ce1dcefede9741722a0525820d6da2b8`` as part of bug #1751923
+    the _heal_instance_info_cache periodic task was modified to pass a
+    "force_refresh" forcing Nova to lookup the current state of all ports for
+    the instance from neutron and fully rebuild the info_cache. This has the
+    side effect of making the already poor scaling of this optional periodic
+    task even worse.
+
+    In this release, the default behaviour of Nova has been changed to
+    disable the periodic, optimizing for performance, scale, power consumption
+    and typical deployment topologies, where the instance network information
+    is updated by neutron via the external event API as ports are modified.
+    This should significantly reduce the background neutron API load in
+    medium to large clouds. If you have a neutron backend that does not
+    reliably send network-changed event notifications to Nova you can
+    re-enable this periodic task by setting
+    ``[compute]heal_instance_info_cache_interval`` to a value greater than 0.

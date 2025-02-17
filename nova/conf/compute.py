@@ -1085,7 +1085,7 @@ Related options:
   to be synchronized manually.
 """),
     cfg.IntOpt('heal_instance_info_cache_interval',
-        default=60,
+        default=-1,
         help="""
 Interval between instance network information cache updates.
 
