@@ -3994,6 +3994,13 @@ image_progress:
   in: body
   required: true
   type: integer
+image_properties:
+  description: |
+    The image properties key/value pairs.
+  in: body
+  required: true
+  type: object
+  min_version: 2.98
 image_server:
   description: |
     The server booted from image.

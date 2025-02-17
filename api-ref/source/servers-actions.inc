@@ -637,6 +637,7 @@ Response
   - image: image
   - image.id: image_id_body
   - image.links: links
+  - image.properties: image_properties
   - links: server_links
   - metadata: metadata_object
   - name: server_name
@@ -677,6 +678,11 @@ Response
   - security_groups: security_groups_obj_update_rebuild
   - security_group.name: name_update_rebuild
   - host_status: host_status_update_rebuild
+
+**Example Rebuild Server (rebuild Action) (v2.98)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.98/server-action-rebuild-resp.json
+   :language: javascript
 
 **Example Rebuild Server (rebuild Action) (v2.75)**
 

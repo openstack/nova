@@ -1230,3 +1230,17 @@ rebuild_response_v296['properties']['server']['properties'].update({
 rebuild_response_v296['properties']['server']['required'].append(
     'pinned_availability_zone'
 )
+rebuild_response_v298 = copy.deepcopy(rebuild_response_v296)
+rebuild_response_v298['properties']['server']['properties']['image'][
+        'oneOf'][1]['properties'].update({
+    'properties': {
+        'type': 'object',
+        'patternProperties': {
+            '^[a-zA-Z0-9_:. ]{1,255}$': {
+                'type': 'string',
+                'max_Length': 255,
+                },
+            },
+            'additionalProperties': False,
+    },
+})

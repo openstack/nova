@@ -681,6 +681,11 @@ Response
   - trusted_image_certificates: server_trusted_image_certificates_resp
   - locked_reason: locked_reason_resp
 
+**Example List Servers Detailed (2.98)**
+
+.. literalinclude:: /../../doc/api_samples/servers/v2.98/servers-details-resp.json
+   :language: javascript
+
 **Example List Servers Detailed (2.96)**
 
 .. literalinclude:: /../../doc/api_samples/servers/v2.96/servers-details-resp.json
@@ -810,6 +815,11 @@ Response
   - trusted_image_certificates: server_trusted_image_certificates_resp
   - server_groups: server_groups_2_71
   - locked_reason: locked_reason_resp
+
+**Example Show Server Details (2.98)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.98/server-get-resp.json
+   :language: javascript
 
 **Example Show Server Details (2.96)**
 
