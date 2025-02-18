@@ -97,6 +97,7 @@ from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields
 from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import utils as pci_utils
+from nova.pci import whitelist
 import nova.privsep.libvirt
 import nova.privsep.path
 import nova.privsep.utils
@@ -265,6 +266,10 @@ MIN_LIBVIRT_STATELESS_FIRMWARE = (8, 6, 0)
 # Minimum versions supporting igb hw_vif_model
 MIN_IGB_LIBVIRT_VERSION = (9, 3, 0)
 MIN_IGB_QEMU_VERSION = (8, 0, 0)
+
+# Minimum versions supporting vfio-pci variant driver.
+MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION = (10, 0, 0)
+MIN_VFIO_PCI_VARIANT_QEMU_VERSION = (8, 2, 2)
 
 REGISTER_IMAGE_PROPERTY_DEFAULTS = [
     'hw_machine_type',
@@ -902,9 +907,34 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._check_multipath()
 
+        # Even if we already checked the whitelist at startup, this driver
+        # needs to check specific hypervisor versions
+        self._check_pci_whitelist()
+
         # Set REGISTER_IMAGE_PROPERTY_DEFAULTS in the instance system_metadata
         # to default values for properties that have not already been set.
         self._register_all_undefined_instance_details()
+
+    def _check_pci_whitelist(self):
+
+        need_specific_version = False
+
+        if CONF.pci.device_spec:
+            pci_whitelist = whitelist.Whitelist(CONF.pci.device_spec)
+            for spec in pci_whitelist.specs:
+                if spec.tags.get("live_migratable"):
+                    need_specific_version = True
+
+        if need_specific_version and not self._host.has_min_version(
+            lv_ver=MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION,
+            hv_ver=MIN_VFIO_PCI_VARIANT_QEMU_VERSION,
+            hv_type=host.HV_DRIVER_QEMU,
+        ):
+            msg = _(
+                "PCI device spec is configured for "
+                "live_migratable but it's not supported by libvirt."
+            )
+            raise exception.InvalidConfiguration(msg)
 
     def _update_host_specific_capabilities(self) -> None:
         """Update driver capabilities based on capabilities of the host."""

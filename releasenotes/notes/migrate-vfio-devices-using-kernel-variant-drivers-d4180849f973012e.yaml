@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    This release adds support for migrating SR-IOV devices
+    using the new kernel VFIO SR-IOV variant driver interface.
+    See the `OpenStack configuration documentation`__ for more details.
+
+    .. __: https://docs.openstack.org/nova/latest/configuration/config.html#pci
