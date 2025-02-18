@@ -23,10 +23,13 @@ from keystoneauth1 import exceptions as ks_exc
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
+from oslo_utils import timeutils
+
 
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import service
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova.scheduler import manager
@@ -1658,35 +1661,83 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             self.manager.reset()
             mock_refresh.assert_called_once_with()
 
+    @mock.patch('nova.objects.service.ServiceList.get_by_binary')
     @mock.patch('nova.objects.host_mapping.discover_hosts')
-    def test_discover_hosts(self, mock_discover):
+    def test_discover_hosts(self, mock_discover, mock_get_by_binary):
         cm1 = objects.CellMapping(name='cell1')
         cm2 = objects.CellMapping(name='cell2')
         mock_discover.return_value = [objects.HostMapping(host='a',
                                                           cell_mapping=cm1),
                                       objects.HostMapping(host='b',
                                                           cell_mapping=cm2)]
-        self.manager._discover_hosts_in_cells(mock.sentinel.context)
 
+        self.flags(host="test-host")
+        mock_get_by_binary.return_value = service.ServiceList(
+            objects=[
+                service.Service(
+                    host="test-host", forced_down=False,
+                    last_seen_up=timeutils.utcnow())
+                ])
+        self.manager._discover_hosts_in_cells(mock.sentinel.context)
+        mock_get_by_binary.assert_called_once_with(
+            mock.sentinel.context, 'nova-scheduler')
+
+    @mock.patch('nova.objects.service.ServiceList.get_by_binary')
     @mock.patch('nova.scheduler.manager.LOG.debug')
     @mock.patch('nova.scheduler.manager.LOG.warning')
     @mock.patch('nova.objects.host_mapping.discover_hosts')
-    def test_discover_hosts_duplicate_host_mapping(self, mock_discover,
-                                                   mock_log_warning,
-                                                   mock_log_debug):
+    def test_discover_hosts_duplicate_host_mapping(
+        self, mock_discover, mock_log_warning, mock_log_debug,
+        mock_get_by_binary):
         # This tests the scenario of multiple schedulers running discover_hosts
         # at the same time.
         mock_discover.side_effect = exception.HostMappingExists(name='a')
+        self.flags(host="test-host")
+        mock_get_by_binary.return_value = service.ServiceList(
+            objects=[
+                service.Service(
+                    host="test-host", forced_down=False,
+                    last_seen_up=timeutils.utcnow())
+                ])
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
-        msg = ("This periodic task should only be enabled on a single "
-               "scheduler to prevent collisions between multiple "
-               "schedulers: Host 'a' mapping already exists")
+        mock_get_by_binary.assert_called_once_with(
+            mock.sentinel.context, 'nova-scheduler')
+        msg = ("This periodic task should only be enabled if discover hosts "
+                "is not run via nova-manage, "
+                "schedulers: Host 'a' mapping already exists")
         mock_log_warning.assert_called_once_with(msg)
         mock_log_debug.assert_not_called()
         # Second collision should log at debug, not warning.
         mock_log_warning.reset_mock()
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
         mock_log_warning.assert_not_called()
+        mock_log_debug.assert_called_once_with(msg)
+
+    @mock.patch('nova.objects.service.ServiceList.get_by_binary')
+    @mock.patch('nova.scheduler.manager.LOG.debug')
+    @mock.patch('nova.objects.host_mapping.discover_hosts')
+    def test_discover_hosts_not_leader(
+        self, mock_discover, mock_log_debug, mock_get_by_binary):
+        # This tests the scenario of multiple schedulers running discover_hosts
+        # at the same time.
+        mock_discover.side_effect = exception.HostMappingExists(name='a')
+        self.flags(host="test-host-2")
+        mock_get_by_binary.return_value = service.ServiceList(
+            objects=[
+                service.Service(
+                    host="test-host-1", forced_down=False,
+                    last_seen_up=timeutils.utcnow()),
+                service.Service(
+                    host="test-host-2", forced_down=False,
+                    last_seen_up=timeutils.utcnow())
+                ]
+                )
+        self.manager._discover_hosts_in_cells(mock.sentinel.context)
+        mock_get_by_binary.assert_called_once_with(
+            mock.sentinel.context, 'nova-scheduler')
+        msg = (
+            "Current leader is test-host-1, skipping discover "
+            "hosts on test-host-2")
         mock_log_debug.assert_called_once_with(msg)
 
     @mock.patch('nova.scheduler.client.report.report_client_singleton')
