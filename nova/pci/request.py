@@ -53,6 +53,7 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.pci import utils
+from oslo_utils import strutils
 
 Alias = ty.Dict[str, ty.Tuple[str, ty.List[ty.Dict[str, str]]]]
 
@@ -112,6 +113,9 @@ _ALIAS_SCHEMA = {
         "traits": {
             "type": "string",
         },
+        "live_migratable": {
+            "type": "string",
+        },
     },
     "required": ["name"],
 }
@@ -143,6 +147,15 @@ def _get_alias_from_config() -> Alias:
             dev_type = spec.pop('device_type', None)
             if dev_type:
                 spec['dev_type'] = dev_type
+
+            live_migratable = spec.pop('live_migratable', None)
+            if live_migratable is not None:
+                live_migratable = (
+                    "true"
+                    if strutils.bool_from_string(live_migratable, strict=True)
+                    else "false"
+                )
+                spec['live_migratable'] = live_migratable
 
             if name not in aliases:
                 aliases[name] = (numa_policy, [spec])
