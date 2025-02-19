@@ -2060,6 +2060,49 @@ class TestInstanceListObject(test_objects._LocalTest,
                                                     {})
         self.assertEqual(2, len(insts))
 
+    def test_fill_metadata(self):
+        values = {'user_id': self.context.user_id,
+                  'project_id': self.context.project_id,
+                  'host': 'foo'}
+
+        for i in range(5):
+            db.instance_create(self.context,
+                               dict(values))
+
+        insts = objects.InstanceList.get_all(self.context)
+        self.assertEqual(5, len(insts))
+
+        # One instance has system_metadata populated *and* saved in the DB
+        insts[1].system_metadata = {'BTTF1': '1955'}
+        insts[1].save()
+
+        # One instance has system_metadata populated but dirty
+        insts[2].system_metadata = {'bttf3': '1885'}
+
+        # Three do not have system_metadata populated
+        self.assertEqual(3, len([i for i in insts
+                                 if 'system_metadata' not in i]))
+
+        insts.fill_metadata()
+
+        # Now all five have it populated
+        self.assertEqual(0, len([i for i in insts
+                                 if 'system_metadata' not in i]))
+
+        # Inst 2 should have not had its in-memory copy clobbered
+        self.assertEqual({'bttf3': '1885'}, insts[2].system_metadata)
+
+        # Inst 1 should have system_metadata loaded, but empty
+        self.assertIn('system_metadata', insts[0])
+        self.assertEqual({}, insts[0].system_metadata)
+
+    def test_fill_metadata_nop(self):
+        insts = objects.InstanceList([objects.Instance(uuid=uuids.inst,
+                                                       system_metadata={})])
+        # This would fail if it tries to actually load anything
+        # because context is None
+        insts.fill_metadata()
+
 
 class TestRemoteInstanceListObject(test_objects._RemoteTest,
                                    _TestInstanceListObject):
