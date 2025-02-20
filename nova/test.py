@@ -482,7 +482,7 @@ class TestCase(base.BaseTestCase):
         self.computes[host] = compute
         return compute
 
-    def _run_periodics(self):
+    def _run_periodics(self, raise_on_error=False):
         """Run the update_available_resource task on every compute manager
 
         This runs periodics on the computes in an undefined order; some child
@@ -497,6 +497,15 @@ class TestCase(base.BaseTestCase):
             with context.target_cell(
                     ctx, self.host_mappings[host].cell_mapping) as cctxt:
                 compute.manager.update_available_resource(cctxt)
+
+        if raise_on_error:
+            if 'Traceback (most recent call last' in self.stdlog.logger.output:
+                # Get the last line of the traceback, for example:
+                #   TypeError: virNodeDeviceLookupByName() argument 2 must be
+                #   str or None, not Proxy
+                last_tb_line = self.stdlog.logger.output.splitlines()[-1]
+                raise TestingException(last_tb_line)
+
         LOG.info('Finished with periodics')
 
     def restart_compute_service(self, compute, keep_hypervisor_state=True):
