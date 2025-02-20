@@ -851,7 +851,8 @@ class LibvirtConfigCPUMaxPhysAddr(LibvirtConfigObject):
         super(LibvirtConfigCPUMaxPhysAddr, self).parse_dom(xmldoc)
 
         self.mode = xmldoc.get("mode")
-        self.bits = int(xmldoc.get("bits"))
+        if xmldoc.get("bits") is not None:
+            self.bits = int(xmldoc.get("bits"))
 
     def format_dom(self):
         m = super(LibvirtConfigCPUMaxPhysAddr, self).format_dom()
