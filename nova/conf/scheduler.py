@@ -546,6 +546,50 @@ Related options:
 
 * ``[filter_scheduler] weight_classes``
 """),
+    cfg.FloatOpt("image_props_weight_multiplier",
+        default=0.0,
+        help="""
+Image Properties weight multiplier ratio.
+
+The multiplier is used for weighting hosts based on the reported
+image properties for the instances they have.
+A positive value will favor hosts with the same image properties (packing
+strategy) while a negative value will follow a spread strategy that will favor
+hosts not already having instances with those image properties.
+The default value of the multiplier is 0, which disables the weigher.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multiplier
+  ratio for this weigher.
+
+Example:
+
+* Strongly prefer to pack instances with related image properties.
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    image_props_weight_multiplier=1000
+
+* Softly prefer to spread instances having same properties between hosts
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    image_props_weight_multiplier=-1.0
+
+* Disable weigher influence
+
+  .. code-block:: ini
+
+    [filter_scheduler]
+    image_props_weight_multiplier=0
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
+"""),
     cfg.FloatOpt("pci_weight_multiplier",
         default=1.0,
         min=0.0,

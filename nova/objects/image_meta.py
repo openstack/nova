@@ -736,6 +736,10 @@ class ImageMetaProps(base.NovaObject):
 
         return obj
 
+    def to_dict(self):
+        """Returns a dictionary of image properties that are set."""
+        return base.obj_to_primitive(self)
+
     def get(self, name, defvalue=None):
         """Get the value of an attribute
         :param name: the attribute to request
