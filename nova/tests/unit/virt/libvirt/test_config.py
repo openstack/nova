@@ -525,7 +525,7 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
             </cpu>
         """)
 
-    def test_parse_dom(self):
+    def test_parse_dom_emulate(self):
         xml = """
             <cpu>
               <maxphysaddr mode='emulate' bits='42'/>
@@ -537,6 +537,20 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
 
         self.assertEqual("emulate", obj.maxphysaddr.mode)
         self.assertEqual(42, obj.maxphysaddr.bits)
+
+    def test_parse_dom_passthrough(self):
+        """Passthrough mode has no "bits" attribute"""
+        xml = """
+            <cpu>
+              <maxphysaddr mode='passthrough'/>
+            </cpu>
+        """
+        xmldoc = etree.fromstring(xml)
+        obj = config.LibvirtConfigCPU()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual("passthrough", obj.maxphysaddr.mode)
+        self.assertIsNone(obj.maxphysaddr.bits)
 
 
 class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
