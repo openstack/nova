@@ -2067,6 +2067,17 @@ class Connection(object):
         return self.pci_info.get_device_by_name(dev_name)
 
     def nodeDeviceLookupByName(self, name):
+        # See bug https://bugs.launchpad.net/nova/+bug/2098892
+        # We don't test this by importing the libvirt module because the
+        # libvirt module is forbidden to be imported into our test
+        # environment. It is excluded from test-requirements.txt and we
+        # also use the ImportModulePoisonFixture in nova/test.py to prevent
+        # use of modules such as libvirt.
+        if not isinstance(name, str) and name is not None:
+            raise TypeError(
+                'virNodeDeviceLookupByName() argument 2 must be str or '
+                f'None, not {type(name)}')
+
         if name.startswith('mdev'):
             return self.mdev_info.get_device_by_name(name)
 
