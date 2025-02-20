@@ -11,14 +11,14 @@ upgrade:
     operators should change the spice video model from QXL to virtio and
     replace the spice console with vnc. For existing instances the video
     model can be updated with the ``nova-manage image_property set`` command.
-    when updating the embedded image properties Operators should evaluate if
+    When updating the embedded image properties, operators should evaluate if
     any glance images request the QXL video model and update them or work
     with the image owner to have them move to a modern video model.
 fixes:
   - |
     When the default video model for libvirt was updated to virtio in Yoga
-    the default for host using spice was not changed. This lead to issues
+    the default for hosts using spice was not changed. This lead to issues
     when starting instances on hosts that had spice configured with QXL as
-    the default video model on modern distros. To address this the default
+    the default video model on modern distros. To address this, the default
     spice video model is now virtio.
-    see https://bugs.launchpad.net/nova/+bug/2097529 for more details.
+    See https://bugs.launchpad.net/nova/+bug/2097529 for more details.
