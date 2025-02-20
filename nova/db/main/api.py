@@ -1521,6 +1521,18 @@ def _instances_fill_metadata(context, instances, manual_joins=None):
     return filled_instances
 
 
+@require_context
+@pick_context_manager_reader
+def instances_fill_metadata(context, instances, manual_joins=None):
+    """Selectively fill instances with manually-joined metadata.
+
+    See _instances_fill_metadata(). This is only for use as a standalone
+    operation in its own transaction.
+    """
+    return _instances_fill_metadata(context, instances,
+                                    manual_joins=manual_joins)
+
+
 def _manual_join_columns(columns_to_join):
     """Separate manually joined columns from columns_to_join
 
