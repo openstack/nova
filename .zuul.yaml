@@ -143,6 +143,7 @@
 - job:
     name: nova-ovs-hybrid-plug
     parent: tempest-multinode-full-py3
+    nodeset: devstack-two-node-debian-bookworm
     description: |
       Run move operations, reboot, and evacuation (via the same post-run hook
       as the nova-live-migration job) tests with the OVS network backend and
@@ -175,6 +176,7 @@
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
         ML2_L3_PLUGIN: router
+        NOVA_VNC_ENABLED: False
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
@@ -202,6 +204,9 @@
         s-object: false
         s-proxy: false
         openstack-cli-server: true
+        # disable vnc and enable spice
+        n-novnc: false
+        n-spice: true
       devstack_local_conf:
         post-config:
           "/$NEUTRON_CORE_PLUGIN_CONF":
@@ -220,6 +225,8 @@
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
           Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
           ML2_L3_PLUGIN: router
+          NOVA_VNC_ENABLED: False
+          NOVA_SPICE_ENABLED: true
         devstack_services:
           # Disable OVN services
           br-ex-tcpdump: false

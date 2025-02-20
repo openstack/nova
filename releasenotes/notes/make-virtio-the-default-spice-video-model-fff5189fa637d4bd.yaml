@@ -1,0 +1,24 @@
+---
+upgrade:
+  - |
+    Ubuntu 24.04 does not support the QXL video model or spice.
+    Operators using instances with this video model will be unable to start
+    them if moving to Ubuntu 24.04. CentOS 9 and RHEL 9 previously compiled
+    out support for spice, and as QXL was implemented in libspice, support
+    for QXL was removed as a result for the removal of support for spice.
+    The QXL model was a spice optimized video model and is no longer
+    supported by several distros. To avoid issues with starting instances,
+    operators should change the spice video model from QXL to virtio and
+    replace the spice console with vnc. For existing instances the video
+    model can be updated with the ``nova-manage image_property set`` command.
+    when updating the embedded image properties Operators should evaluate if
+    any glance images request the QXL video model and update them or work
+    with the image owner to have them move to a modern video model.
+fixes:
+  - |
+    When the default video model for libvirt was updated to virtio in Yoga
+    the default for host using spice was not changed. This lead to issues
+    when starting instances on hosts that had spice configured with QXL as
+    the default video model on modern distros. To address this the default
+    spice video model is now virtio.
+    see https://bugs.launchpad.net/nova/+bug/2097529 for more details.
