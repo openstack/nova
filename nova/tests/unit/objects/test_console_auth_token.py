@@ -62,6 +62,7 @@ class _TestConsoleAuthToken(object):
             console_type=console_type,
             host=fakes.fake_token_dict['host'],
             port=fakes.fake_token_dict['port'],
+            tls_port=fakes.fake_token_dict['tls_port'],
             internal_access_path=fakes.fake_token_dict['internal_access_path'],
             instance_uuid=fakes.fake_token_dict['instance_uuid'],
             access_url_base=fakes.fake_token_dict['access_url_base'],
@@ -143,6 +144,7 @@ class _TestConsoleAuthToken(object):
             console_type=fakes.fake_token_dict['console_type'],
             host=fakes.fake_token_dict['host'],
             port=fakes.fake_token_dict['port'],
+            tls_port=fakes.fake_token_dict['tls_port'],
             internal_access_path=fakes.fake_token_dict['internal_access_path'],
             instance_uuid=fakes.fake_token_dict['instance_uuid'],
             access_url_base=fakes.fake_token_dict['access_url_base'],
@@ -162,6 +164,7 @@ class _TestConsoleAuthToken(object):
             console_type=fakes.fake_token_dict['console_type'],
             host=fakes.fake_token_dict['host'],
             port=fakes.fake_token_dict['port'],
+            tls_port=fakes.fake_token_dict['tls_port'],
             internal_access_path=fakes.fake_token_dict['internal_access_path'],
             instance_uuid=fakes.fake_token_dict['instance_uuid'],
             access_url_base=fakes.fake_token_dict['access_url_base'],
@@ -190,6 +193,7 @@ class _TestConsoleAuthToken(object):
             console_type=fakes.fake_token_dict['console_type'],
             host=fakes.fake_token_dict['host'],
             port=fakes.fake_token_dict['port'],
+            tls_port=fakes.fake_token_dict['tls_port'],
             internal_access_path=fakes.fake_token_dict['internal_access_path'],
             instance_uuid=fakes.fake_token_dict['instance_uuid'],
             access_url_base=fakes.fake_token_dict['access_url_base'],
@@ -217,6 +221,15 @@ class _TestConsoleAuthToken(object):
             self.context, 'fake-host')
         mock_destroy.assert_called_once_with(
             self.context, 'fake-host')
+
+    def test_obj_make_compatible_tls_port(self):
+        """Test that checks if we pop tls_port."""
+        obj = token_obj.ConsoleAuthToken(tls_port=5901)
+        primitive = obj.obj_to_primitive()
+        self.assertIn('tls_port', primitive['nova_object.data'])
+
+        primitive = obj.obj_to_primitive('1.2')
+        self.assertNotIn('tls_port', primitive['nova_object.data'])
 
 
 class TestConsoleAuthToken(test_objects._LocalTest,
