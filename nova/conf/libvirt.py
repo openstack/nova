@@ -1635,6 +1635,20 @@ Related options:
 
 * ``swtpm_user`` must also be set.
 """),
+    cfg.ListOpt('supported_tpm_secret_security',
+        default=['user'],
+        help="""
+The list of TPM security policies supported by this compute host. If a value is
+absent, it is not supported by this host, and any instance that requests it
+will not be scheduled on this host.
+
+Possible values are:
+
+* ``user``: The Barbican secret is owned by the instance owner and cannot be
+  accessed by anyone else. The Libvirt secret is private and non-persistent.
+  The instance cannot be live-migrated or automatically resumed after host
+  reboot.
+"""),
 ]
 
 libvirt_cpu_mgmt_opts = [

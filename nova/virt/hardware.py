@@ -2123,6 +2123,20 @@ def get_vtpm_constraint(
     return VTPMConfig(version, model)
 
 
+def get_tpm_secret_security_constraint(
+    flavor: 'objects.Flavor',
+) -> ty.Optional[str]:
+    # NOTE(melwitt): An image property for TPM secret security is intentionally
+    # not provided because server rebuild is blocked in the API. If a user were
+    # to create a server with a given TPM secret security policy via an image
+    # property, that policy would become locked-in and unable to be changed.
+    # The user would not be able to change the image property because they
+    # would not be able to rebuild, and they would not be able to resize to a
+    # different TPM secret security policy because the image property and
+    # flavor extra spec would conflict.
+    return flavor.get('extra_specs', {}).get('hw:tpm_secret_security')
+
+
 def get_secure_boot_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',

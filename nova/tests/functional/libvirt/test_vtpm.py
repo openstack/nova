@@ -166,10 +166,14 @@ class VTPMServersTest(base.ServersTestBase):
 
         self.key_mgr = crypto._get_key_manager()
 
-    def _create_server_with_vtpm(self):
+    def _create_server_with_vtpm(self, secret_security=None,
+                                 expected_state='ACTIVE'):
         extra_specs = {'hw:tpm_model': 'tpm-tis', 'hw:tpm_version': '1.2'}
+        if secret_security:
+            extra_specs.update({'hw:tpm_secret_security': secret_security})
         flavor_id = self._create_flavor(extra_spec=extra_specs)
-        server = self._create_server(flavor_id=flavor_id)
+        server = self._create_server(flavor_id=flavor_id,
+                                     expected_state=expected_state)
 
         return server
 
@@ -185,12 +189,46 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertIn(
             instance.system_metadata['vtpm_secret_uuid'],
             self.key_mgr._passphrases)
+        return instance.system_metadata['vtpm_secret_uuid']
 
     def assertInstanceHasNoSecret(self, server):
         ctx = nova_context.get_admin_context()
         instance = objects.Instance.get_by_uuid(ctx, server['id'])
         self.assertNotIn('vtpm_secret_uuid', instance.system_metadata)
         self.assertEqual(0, len(self.key_mgr._passphrases))
+
+    def _assert_libvirt_had_secret(self, compute, secret_uuid):
+        # This assert is for ephemeral private libvirt secrets that we
+        # undefine immediately after guest creation. Examples include 'user'
+        # and 'deployment' TPM secret security modes and legacy servers.
+        # The LibvirtFixture tracks secrets that existed before they were
+        # removed, so we can assert this.
+        conn = compute.driver._host.get_connection()
+        self.assertIn(secret_uuid, conn._removed_secrets)
+
+    def test_tpm_secret_security_user(self):
+        self.flags(supported_tpm_secret_security=['user'], group='libvirt')
+        host = self.start_compute(hostname='tpm-host')
+        compute = self.computes['tpm-host']
+
+        # ensure we are reporting the correct traits
+        traits = self._get_provider_traits(self.compute_rp_uuids[host])
+        self.assertIn('COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER', traits)
+
+        server = self._create_server_with_vtpm(secret_security='user')
+
+        # The server should have a secret in the key manager service.
+        secret_uuid = self.assertInstanceHasSecret(server)
+
+        # And it should have had a libvirt secret created and undefined.
+        self._assert_libvirt_had_secret(compute, secret_uuid)
+
+    def test_tpm_secret_security_user_negative(self):
+        self.flags(supported_tpm_secret_security=['deployment'],
+                   group='libvirt')
+        self.start_compute(hostname='tpm-host')
+        self._create_server_with_vtpm(secret_security='user',
+                                      expected_state='ERROR')
 
     def test_create_server(self):
         compute = self.start_compute()
@@ -392,6 +430,24 @@ class VTPMServersTest(base.ServersTestBase):
         # ensure we have finally deleted the key for the vTPM device since
         # there is no going back now
         self.assertInstanceHasNoSecret(server)
+
+    def test_create_server_secret_security_unsupported(self):
+        """Test when a not supported TPM secret security mode is requested
+
+        We expect the create to fail for NoValidHost.
+        """
+        # Start a compute host which supports no modes.
+        self.flags(supported_tpm_secret_security=[], group='libvirt')
+        self.start_compute('test_compute0')
+
+        # Try to create an instance on that host defaulting to 'user'.
+        server = self._create_server_with_vtpm(expected_state='ERROR')
+
+        # The create should have failed for NoValidHost.
+        event = self._wait_for_instance_action_event(
+            server, 'create', 'conductor_schedule_and_build_instances',
+            'Error')
+        self.assertIn('NoValidHost', event['traceback'])
 
     def test_migrate_server(self):
         """Test cold migrate as a non-admin user.

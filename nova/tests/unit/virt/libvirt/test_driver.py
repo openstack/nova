@@ -23503,6 +23503,30 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
             self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
+    def test_update_provider_tree_with_tpm_secret_security_traits(self):
+        self.flags(swtpm_enabled=True, group='libvirt')
+        self.flags(
+            supported_tpm_secret_security=['user', 'host', 'deployment'],
+            group='libvirt')
+        self._test_update_provider_tree()
+        for trait in (
+            'COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER',
+            'COMPUTE_SECURITY_TPM_SECRET_SECURITY_HOST',
+            'COMPUTE_SECURITY_TPM_SECRET_SECURITY_DEPLOYMENT'
+        ):
+            self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
+
+    def test_update_provider_tree_with_tpm_secret_security_traits_none(self):
+        self.flags(swtpm_enabled=True, group='libvirt')
+        self.flags(supported_tpm_secret_security=[], group='libvirt')
+        self._test_update_provider_tree()
+        for trait in (
+            'COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER',
+            'COMPUTE_SECURITY_TPM_SECRET_SECURITY_HOST',
+            'COMPUTE_SECURITY_TPM_SECRET_SECURITY_DEPLOYMENT'
+        ):
+            self.assertNotIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
+
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_devices', new=
         fakelibvirt.virConnect._domain_capability_devices_with_tpm_supported

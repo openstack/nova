@@ -5931,6 +5931,28 @@ class VTPMConfigTest(test.NoDBTestCase):
                 expected, hw.get_vtpm_constraint(flavor, image_meta),
             )
 
+    @ddt.unpack
+    @ddt.data(
+        # pass: no configuration
+        (None, None),
+        # pass: flavor-only
+        ('user', 'user'),
+        ('host', 'host'),
+        ('deployment', 'deployment'),
+    )
+    def test_get_tpm_secret_security_constraint(self, flavor_security,
+                                                expected):
+        extra_specs = {}
+
+        if flavor_security:
+            extra_specs['hw:tpm_secret_security'] = flavor_security
+
+        flavor = objects.Flavor(
+            name='foo', vcpus=1, memory_mb=1024, extra_specs=extra_specs)
+
+        self.assertEqual(
+            expected, hw.get_tpm_secret_security_constraint(flavor))
+
 
 @ddt.ddt
 class SecureBootPolicyTest(test.NoDBTestCase):
