@@ -52,3 +52,38 @@ class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
         subs["internal_access_path"] = ".*"
         self._verify_response('get-console-connect-info-get-resp', subs,
                               response, 200)
+
+
+class ConsoleV299AuthTokensSampleJsonTests(test_servers.ServersSampleBase):
+    ADMIN_API = True
+    sample_dir = "os-console-auth-tokens"
+    microversion = '2.99'
+    scenarios = [('v2_99', {'api_major_version': 'v2.1'})]
+
+    def _get_console_url(self, data):
+        return jsonutils.loads(data)["remote_console"]["url"]
+
+    def _get_console_token(self, uuid):
+        body = {'protocol': 'spice', 'type': 'spice-direct'}
+        response = self._do_post('servers/%s/remote-consoles' % uuid,
+                                 'create-spice-direct-console-req', body)
+
+        url = self._get_console_url(response.content)
+        return re.match('.+?token=([^&]+)', url).groups()[0]
+
+    def test_get_console_connect_info(self):
+        self.flags(enabled=True, group='spice')
+
+        uuid = self._post_server()
+        token = self._get_console_token(uuid)
+
+        response = self._do_get('os-console-auth-tokens/%s' % token)
+
+        subs = {}
+        subs["uuid"] = uuid
+        subs["host"] = r"[\w\.\-]+"
+        subs["port"] = "[0-9]+"
+        subs["tls_port"] = "[0-9]+"
+        subs["internal_access_path"] = ".*"
+        self._verify_response('get-console-connect-info-get-resp', subs,
+                              response, 200)

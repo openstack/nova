@@ -29,7 +29,7 @@ CONF = nova.conf.CONF
 
 class ConsoleAuthTokensController(wsgi.Controller):
 
-    def _show(self, req, id):
+    def _show(self, req, id, include_tls_port=False):
         """Checks a console auth token and returns the related connect info."""
         context = req.environ['nova.context']
         context.can(cat_policies.BASE_POLICY_NAME)
@@ -57,12 +57,19 @@ class ConsoleAuthTokensController(wsgi.Controller):
         if not connect_info:
             raise webob.exc.HTTPNotFound(explanation=_("Token not found"))
 
-        return {'console': {
-            'instance_uuid': connect_info.instance_uuid,
-            'host': connect_info.host,
-            'port': connect_info.port,
-            'internal_access_path': connect_info.internal_access_path,
-        }}
+        retval = {
+            'console': {
+                'instance_uuid': connect_info.instance_uuid,
+                'host': connect_info.host,
+                'port': connect_info.port,
+                'internal_access_path': connect_info.internal_access_path,
+            }
+        }
+
+        if connect_info.console_type == 'spice-direct' and include_tls_port:
+            retval['console']['tls_port'] = connect_info.tls_port
+
+        return retval
 
     @wsgi.Controller.api_version("2.1", "2.30")
     @wsgi.expected_errors((400, 401, 404))
@@ -83,8 +90,14 @@ class ConsoleAuthTokensController(wsgi.Controller):
         raise webob.exc.HTTPBadRequest()
 
     @wsgi.Controller.api_version("2.31")  # noqa
+    @wsgi.Controller.api_version("2.31", "2.98")  # noqa
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
-    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):  # noqa
-        return self._show(req, id)
+        return self._show(req, id, include_tls_port=False)
+
+    @wsgi.Controller.api_version("2.99")  # noqa
+    @wsgi.expected_errors((400, 404))
+    @validation.query_schema(schema.show_query)
+    def show(self, req, id):  # noqa
+        return self._show(req, id, include_tls_port=True)

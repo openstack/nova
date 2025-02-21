@@ -1,0 +1,8 @@
+{
+    "remote_console": {
+        "protocol": "spice",
+        "type": "spice-direct",
+        "url": "http://127.0.0.1:13002/nova?token=aeabd4ec-3acb-4898-9130-10521ccbe5f3"
+    }
+}
+

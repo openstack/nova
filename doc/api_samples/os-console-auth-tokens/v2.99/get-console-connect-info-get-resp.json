@@ -1,0 +1,9 @@
+{
+    "console": {
+        "host": "fakespiceconsole.com",
+        "instance_uuid": "16802173-4e67-44f9-ba84-6d99080b81b5",
+        "internal_access_path": null,
+        "port": 6969,
+        "tls_port": 6970
+    }
+}

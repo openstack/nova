@@ -268,6 +268,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.98 - Add support for returning embedded image properties in
              ``server show`` and ``server list --long`` and in the ``server
              rebuild`` responses.
+    * 2.99 - Add the spice-direct console type to the spice console protocol.
 """
 
 # The minimum and maximum versions of the API supported
@@ -276,7 +277,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = '2.1'
-_MAX_API_VERSION = '2.98'
+_MAX_API_VERSION = '2.99'
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

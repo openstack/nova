@@ -143,7 +143,8 @@ class RemoteConsolesController(wsgi.Controller):
     @wsgi.Controller.api_version("2.6")
     @wsgi.expected_errors((400, 404, 409, 501))
     @validation.schema(schema.create_v26, "2.6", "2.7")
-    @validation.schema(schema.create_v28, "2.8")
+    @validation.schema(schema.create_v28, "2.8", "2.98")
+    @validation.schema(schema.create_v299, "2.99")
     def create(self, req, server_id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)

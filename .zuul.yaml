@@ -170,7 +170,7 @@
       tox_envlist: all
       # bug #1940425  only affect ml2/ovn so we execute
       # test_live_migration_with_trunk in this job to keep
-      tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot).*)
+      tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot|spice).*)
       devstack_localrc:
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
