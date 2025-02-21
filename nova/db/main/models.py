@@ -1218,6 +1218,7 @@ class ConsoleAuthToken(BASE, NovaBase):
     console_type = sa.Column(sa.String(255), nullable=False)
     host = sa.Column(sa.String(255), nullable=False)
     port = sa.Column(sa.Integer, nullable=False)
+    tls_port = sa.Column(sa.Integer, nullable=True)
     internal_access_path = sa.Column(sa.String(255))
     instance_uuid = sa.Column(sa.String(36), nullable=False)
     expires = sa.Column(sa.Integer, nullable=False)
