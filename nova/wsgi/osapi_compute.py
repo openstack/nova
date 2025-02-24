@@ -20,9 +20,10 @@ import threading
 from nova.api.openstack import wsgi_app
 
 NAME = "osapi_compute"
+PROG = "nova-api-os-compute"
 
 application = None
 lock = threading.Lock()
 with lock:
     if application is None:
-        application = wsgi_app.init_application(NAME)
+        application = wsgi_app.init_application(NAME, PROG)

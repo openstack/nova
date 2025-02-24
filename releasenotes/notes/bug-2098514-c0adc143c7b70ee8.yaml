@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    [`bug 2098514 <https://bugs.launchpad.net/nova/+bug/2098514>_`] Fixed
+    the per-service configuration directories for the API wsgi modules
+    (``nova.wsgi.osapi_compute`` and ``nova.wsgi.metadata``), unexpectedly
+    affected by the application servers hosting these.  Now these modules use
+    the following per-service configuration directories regardless of
+    the application server used.
+
+    - ``nova.wsgi.osapi_compute``: ``/etc/nova/nova-api-os-compute.d``
+    - ``nova.wsgi.metadata``: ``/etc/nova/nova-api-metadata.d``
