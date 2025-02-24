@@ -62,5 +62,5 @@ retrying>=1.3.3 # Apache-2.0
 os-service-types>=1.7.0 # Apache-2.0
 python-dateutil>=2.7.0 # BSD
 futurist>=1.8.0 # Apache-2.0
-openstacksdk>=4.0.0 # Apache-2.0
+openstacksdk>=4.4.0 # Apache-2.0
 PyYAML>=5.1 # MIT

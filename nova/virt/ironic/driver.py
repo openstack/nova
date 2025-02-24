@@ -1857,7 +1857,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         def _enable_console(mode):
             """Request to enable/disable node console."""
             try:
-                self.ironic_connection.set_node_console_mode(node_id, mode)
+                if mode:
+                    self.ironic_connection.enable_node_console(node_id)
+                else:
+                    self.ironic_connection.disable_node_console(node_id)
             except sdk_exc.SDKException as e:
                 LOG.error('Failed to set console mode to "%(mode)s" '
                           'for instance %(inst)s: %(reason)s',
