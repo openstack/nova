@@ -30,6 +30,14 @@ CONF = nova.conf.CONF
 
 
 class ImagePropertiesWeigher(weights.BaseHostWeigher):
+    def __init__(self):
+        self._parse_setting()
+
+    def _parse_setting(self):
+        self.setting = dict(utils.parse_options(
+            CONF.filter_scheduler.image_props_weight_setting,
+            sep='=', converter=float,
+            name="filter_scheduler.image_props_weight_setting"))
 
     def weight_multiplier(self, host_state):
         """Override the weight multiplier."""
@@ -81,6 +89,13 @@ class ImagePropertiesWeigher(weights.BaseHostWeigher):
 
         common_props = requested_props & set(existing_props)
 
-        for prop in common_props:
-            weight += existing_props.count(prop)
+        for (prop, value) in common_props:
+            if self.setting:
+                # Calculate the weigh for each property by what was set
+                # If it wasn't defined, then don't weigh this property.
+                weight += self.setting.get(
+                            prop, 0.0) * existing_props.count((prop, value))
+            else:
+                # By default, all properties are weighed evenly.
+                weight += existing_props.count((prop, value))
         return weight

@@ -152,3 +152,45 @@ class ImagePropertiesWeigherTestCase(test.NoDBTestCase):
         self.assertEqual('host3', weights[0].obj.host)
         mock_fm.assert_has_calls([mock.call(), mock.call(),
                                   mock.call(), mock.call()])
+
+    @mock.patch('nova.objects.InstanceList.fill_metadata')
+    def test_multiplier_per_property(self, mock_fm):
+        self.flags(image_props_weight_multiplier=1.0, group='filter_scheduler')
+        hostinfo_list = self._get_all_hosts()
+
+        # For now, don't exclude any property check and boot with an image
+        # using both hw_machine_type and os_distro properties.
+        weights = self.weight_handler.get_weighed_objects(
+            self.weighers, hostinfo_list,
+            weighing_properties=objects.RequestSpec(image=PROP_LIN_PC))
+        # host3 is preferred as it has both of the correct properties with
+        # the right values.
+        # host2 and host4 only support one of each property.
+        expected_weights = [{'weight': 1.0, 'host': 'host3'},
+                            {'weight': (1 / 3), 'host': 'host2'},
+                            {'weight': (1 / 3), 'host': 'host4'},
+                            {'weight': 0.0, 'host': 'host1'}]
+        self.assertEqual(expected_weights, [weigh.to_dict()
+                                            for weigh in weights])
+        self.assertEqual('host3', weights[0].obj.host)
+
+        # Now, let's exclude hw_machine_type property to be weighed.
+        self.flags(image_props_weight_setting=['os_distro=1',
+                                               'hw_machine_type=0'],
+                   group='filter_scheduler')
+        # Force a refresh of the settings since we updated them
+        self.weighers[0]._parse_setting()
+        weights = self.weight_handler.get_weighed_objects(
+            self.weighers, hostinfo_list,
+            weighing_properties=objects.RequestSpec(image=PROP_LIN_PC))
+        # host3 and host4 have instances with linux distro but we favor
+        # host3 given he has more instances having the same requested property
+        expected_weights = [{'weight': 1.0, 'host': 'host3'},
+                            {'weight': 0.5, 'host': 'host4'},
+                            {'weight': 0.0, 'host': 'host1'},
+                            {'weight': 0.0, 'host': 'host2'}]
+        self.assertEqual(expected_weights, [weigh.to_dict()
+                                            for weigh in weights])
+        self.assertEqual('host3', weights[0].obj.host)
+        mock_fm.assert_has_calls([mock.call(), mock.call(),
+                                  mock.call(), mock.call()])
