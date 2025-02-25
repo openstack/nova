@@ -7,6 +7,14 @@ features:
     This allows downstream clients that queries libvirt domain metadata,
     such as Ceilometer, to avoid performing additional Nova API queries
     to get this information.
+  - |
+    Additional attributes relating to the image metadata an instance is
+    configured with have been added to the libvirt domain metadata under
+    the ``<nova:image>`` element. This allows downstream services that
+    read libvirt domain metadata, such as Ceilometer, to use and expose
+    more information about an instance without needing to perform
+    additional API queries (potentially to multiple services) to get that
+    information.
 
 upgrades:
   - |

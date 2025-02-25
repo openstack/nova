@@ -6241,6 +6241,13 @@ class LibvirtDriver(driver.ComputeDriver):
         meta.roottype = dmeta.root_type
         meta.rootid = dmeta.root_id
 
+        # Always set the image meta, even when booting from volume
+        # as volumes can contain image meta as well.
+        imeta = vconfig.LibvirtConfigGuestMetaImage()
+        imeta.uuid = meta.rootid
+        imeta.image_meta = dmeta.image
+        meta.image = imeta
+
         ometa = vconfig.LibvirtConfigGuestMetaNovaOwner()
         ometa.userid = dmeta.owner.userid
         ometa.username = dmeta.owner.username

@@ -62,7 +62,38 @@ class FlavorMeta:
 class ImageMeta:
     id: str
     name: str
+    container_format: str | None
+    disk_format: str | None
+    min_disk: int | None
+    min_ram: int | None
     properties: dict
+
+    @staticmethod
+    def from_instance(
+        instance: 'nova.objects.instance.Instance',
+    ) -> 'ImageMeta':
+        image_meta = instance.image_meta
+        return ImageMeta(
+            id=instance.image_ref,
+            name=instance.system_metadata.get('image_name'),
+            container_format=(
+                image_meta.container_format
+                if image_meta.obj_attr_is_set('container_format')
+                else None),
+            disk_format=(
+                image_meta.disk_format
+                if image_meta.obj_attr_is_set('disk_format')
+                else None),
+            min_disk=(
+                image_meta.min_disk
+                if image_meta.obj_attr_is_set('min_disk')
+                else None),
+            min_ram=(
+                image_meta.min_ram
+                if image_meta.obj_attr_is_set('min_ram')
+                else None),
+            properties=image_meta.properties.to_dict(),
+        )
 
 
 @dataclasses.dataclass
@@ -385,11 +416,7 @@ class ComputeDriver(object):
             swap=instance.flavor.swap,
             extra_specs=instance.flavor.extra_specs,
         )
-        image = ImageMeta(
-            id=instance.image_ref,
-            name=system_meta.get('image_name'),
-            properties=instance.image_meta.properties
-        )
+        image = ImageMeta.from_instance(instance)
         meta = InstanceDriverMetadata(
             instance_meta=instance_meta,
             owner=owner,
