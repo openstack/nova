@@ -48,6 +48,7 @@ class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
         subs["uuid"] = uuid
         subs["host"] = r"[\w\.\-]+"
         subs["port"] = "[0-9]+"
+        subs["tls_port"] = "[0-9]+"
         subs["internal_access_path"] = ".*"
         self._verify_response('get-console-connect-info-get-resp', subs,
                               response, 200)

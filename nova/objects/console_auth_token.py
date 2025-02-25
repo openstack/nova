@@ -41,13 +41,15 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
     #              was deprecated.
     # Version 1.2: Add expires field.
     #              This is to see token expire time.
-    VERSION = '1.2'
+    # Version 1.3: Added tls_port field.
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
         'console_type': fields.StringField(nullable=False),
         'host': fields.StringField(nullable=False),
         'port': fields.IntegerField(nullable=False),
+        'tls_port': fields.IntegerField(nullable=True),
         'internal_access_path': fields.StringField(nullable=True),
         'instance_uuid': fields.UUIDField(nullable=False),
         'access_url_base': fields.StringField(nullable=True),
@@ -88,6 +90,10 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         super().obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+
+        if target_version < (1, 3) and 'tls_port' in primitive:
+            primitive.pop('tls_port', None)
+
         if target_version < (1, 2) and 'expires' in primitive:
             primitive.pop('expires', None)
 
@@ -98,7 +104,7 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
         # field is populated in the authorize method after the token
         # authorization is created in the database.
         for field in obj.fields:
-            setattr(obj, field, db_obj[field])
+            setattr(obj, field, db_obj.get(field))
         obj._context = context
         obj.obj_reset_changes()
         return obj
