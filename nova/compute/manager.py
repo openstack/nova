@@ -7837,22 +7837,30 @@ class ComputeManager(manager.Manager):
         if not CONF.spice.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
-        if console_type != 'spice-html5':
+        if console_type not in ['spice-html5', 'spice-direct']:
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
             console = self.driver.get_spice_console(context, instance)
-            console_auth = objects.ConsoleAuthToken(
-                context=context,
-                console_type=console_type,
-                host=console.host,
-                port=console.port,
-                internal_access_path=console.internal_access_path,
-                instance_uuid=instance.uuid,
-                access_url_base=CONF.spice.html5proxy_base_url,
-            )
+            fields = {
+                'context': context,
+                'console_type': console_type,
+                'host': console.host,
+                'port': console.port,
+                'tls_port': console.tlsPort,
+                'instance_uuid': instance.uuid
+            }
+            if console_type == 'spice-html5':
+                fields['internal_access_path'] = console.internal_access_path
+                fields['access_url_base'] = CONF.spice.html5proxy_base_url
+            if console_type == 'spice-direct':
+                fields['internal_access_path'] = None
+                fields['access_url_base'] = \
+                    CONF.spice.spice_direct_proxy_base_url
+
+            console_auth = objects.ConsoleAuthToken(**fields)
             console_auth.authorize(CONF.consoleauth.token_ttl)
             connect_info = console.get_connection_info(
                 console_auth.token, console_auth.access_url)
@@ -7974,7 +7982,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def validate_console_port(self, ctxt, instance, port, console_type):
-        if console_type == "spice-html5":
+        if console_type in ["spice-html5", "spice-direct"]:
             console_info = self.driver.get_spice_console(ctxt, instance)
         elif console_type == "serial":
             console_info = self.driver.get_serial_console(ctxt, instance)

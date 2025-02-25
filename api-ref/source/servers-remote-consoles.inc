@@ -40,6 +40,13 @@ Request
 .. literalinclude:: ../../doc/api_samples/os-remote-consoles/v2.6/create-vnc-console-req.json
    :language: javascript
 
+**Example Get Remote spice-direct Console**
+
+*``spice-direct`` consoles were added in microversion 2.99.*
+
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/v2.99/create-spice-direct-console-req.json
+   :language: javascript
+
 Response
 --------
 
@@ -55,6 +62,12 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-remote-consoles/v2.6/create-vnc-console-resp.json
    :language: javascript
 
+**Example Get Remote spice-direct Console**
+
+*``spice-direct`` consoles were added in microversion 2.99.*
+
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/v2.99/create-spice-direct-console-resp.json
+   :language: javascript
 
 Show Console Connection Information
 ===================================
@@ -90,9 +103,17 @@ Response
   - instance_uuid: instance_id_body
   - host: console_host
   - port: port_number
+  - tls_port: tls_port_number
   - internal_access_path: internal_access_path
 
 **Example Show Console Authentication Token**
 
 .. literalinclude:: ../../doc/api_samples/os-console-auth-tokens/v2.31/get-console-connect-info-get-resp.json
+   :language: javascript
+
+**Example Console Connection Information for a spice-direct Console**
+
+*``spice-direct`` consoles were added in microversion 2.99.*
+
+.. literalinclude:: ../../doc/api_samples/os-console-auth-tokens/v2.99/get-console-connect-info-get-resp.json
    :language: javascript

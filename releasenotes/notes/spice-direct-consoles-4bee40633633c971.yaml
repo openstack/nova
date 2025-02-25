@@ -6,3 +6,15 @@ features:
     behavior, if set to true the SPICE consoles will require TLS
     protected connections. Unencrypted connections will be gracefully
     redirected to the TLS port via the SPICE protocol.
+  - |
+    This release adds a new console type, ``spice-direct`` which provides
+    the connection information required to talk the native SPICE
+    protocol directly to qemu on the hypervisor. This is intended to
+    be fronted by a proxy which will handle authentication separately.
+    This new console type is exposed in the Compute API v2.99
+    microversion. To facilitate this proxying, a new config option
+    ``spice_direct_proxy_base_url`` is added to the spice configuration group.
+    This option is used to construct a URL containing an access token for
+    the console, and that access token can be turned into hypervisor
+    connection information using the pre-existing
+    os-console-auth-tokens API.

@@ -120,6 +120,30 @@ create_v28 = {
     'additionalProperties': False,
 }
 
+create_v299 = {
+    'type': 'object',
+    'properties': {
+        'remote_console': {
+            'type': 'object',
+            'properties': {
+                'protocol': {
+                    'type': 'string',
+                    'enum': ['vnc', 'spice', 'rdp', 'serial', 'mks'],
+                },
+                'type': {
+                    'type': 'string',
+                    'enum': ['novnc', 'xvpvnc', 'spice-html5', 'spice-direct',
+                             'serial', 'webmks'],
+                },
+            },
+            'required': ['protocol', 'type'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['remote_console'],
+    'additionalProperties': False,
+}
+
 get_vnc_console_response = {
     'type': 'object',
     'properties': {

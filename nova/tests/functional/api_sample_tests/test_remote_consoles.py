@@ -125,3 +125,23 @@ class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
                                  'create-mks-console-req', body)
         self._verify_response('create-mks-console-resp', {'url': HTTP_RE},
                               response, 200)
+
+
+class ConsolesV299SampleJsonTests(test_servers.ServersSampleBase):
+    sample_dir = "os-remote-consoles"
+    microversion = '2.99'
+    scenarios = [('v2_99', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(ConsolesV299SampleJsonTests, self).setUp()
+        self.flags(enabled=True, group='spice')
+
+    def test_create_spice_direct_console(self):
+        uuid = self._post_server()
+
+        body = {'protocol': 'spice', 'type': 'spice-direct'}
+        response = self._do_post('servers/%s/remote-consoles' % uuid,
+                                 'create-spice-direct-console-req', body)
+        self._verify_response(
+            'create-spice-direct-console-resp', {'url': HTTP_RE},
+            response, 200)

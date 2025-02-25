@@ -474,3 +474,35 @@ class ConsolesExtensionTestV28(ConsolesExtensionTestV26):
                                              'url': 'http://fake'}}, output)
         mock_handler.assert_called_once_with(self.context, self.instance,
                                              'webmks')
+
+
+class ConsolesExtensionTestV299(ConsolesExtensionTestV26):
+    def setUp(self):
+        super(ConsolesExtensionTestV299, self).setUp()
+        self.req = fakes.HTTPRequest.blank('')
+        self.context = self.req.environ['nova.context']
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.99')
+        self.controller = console_v21.RemoteConsolesController()
+
+    def test_create_spice_direct_console(self):
+        mock_handler = mock.MagicMock()
+        mock_handler.return_value = {'url': 'http://fake'}
+        self.controller.handlers['spice'] = mock_handler
+
+        body = {
+            'remote_console': {
+                'protocol': 'spice',
+                'type': 'spice-direct'
+                }
+            }
+        output = self.controller.create(self.req, fakes.FAKE_UUID, body=body)
+        self.assertEqual({
+            'remote_console': {
+                'protocol': 'spice',
+                'type': 'spice-direct',
+                'url': 'http://fake'
+                }
+            }, output)
+        mock_handler.assert_called_once_with(self.context, self.instance,
+                                             'spice-direct')

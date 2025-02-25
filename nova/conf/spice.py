@@ -151,7 +151,7 @@ running. This service is typically launched on the controller node.
 
 Possible values:
 
-* Must be a valid URL of the form:  ``http://host:port/spice_auto.html``
+* Must be a valid URL of the form: ``http://host:port/spice_auto.html``
   where host is the node running ``nova-spicehtml5proxy`` and the port is
   typically 6082. Consider not using default value as it is not well defined
   for any real deployment.
@@ -161,6 +161,22 @@ Related options:
 * This option depends on ``html5proxy_host`` and ``html5proxy_port`` options.
   The access URL returned by the compute node must have the host
   and port where the ``nova-spicehtml5proxy`` service is listening.
+"""),
+    cfg.URIOpt('spice_direct_proxy_base_url',
+        default='http://127.0.0.1:13002/nova',
+        help="""
+Location of a SPICE protocol native console proxy.
+
+A user can retrieve a virt-viewer style .vv connection configuration file by
+accessing this URL with the attached token when a console is created.
+
+Possible values:
+
+* Must be a valid URL of the form: ``http://host:port/nova`` where host is the
+  node running the SPICE protocol native proxy and the port is typically 13002.
+  Note that the port component is optional if you are using the default port
+  for HTTP or HTTPS. Consider not using the default value as it is not well
+  defined for any real deployment.
 """),
     cfg.StrOpt('server_listen',
         default='127.0.0.1',
