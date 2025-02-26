@@ -830,7 +830,7 @@ class VMwareVolumeOps(object):
                 if driver_type == constants.DISK_FORMAT_FCD:
                     continue
                 data = connection_info["data"]
-                volume_ref = self._get_volume_ref(data["volume"])
+                volume_ref = self._get_volume_ref(data)
                 destroy_task = session._call_method(session.vim,
                                             "Destroy_Task",
                                             volume_ref)
