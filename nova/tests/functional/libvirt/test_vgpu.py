@@ -42,8 +42,8 @@ class VGPUTestBase(base.ServersTestBase):
     microversion = 'latest'
     ADMIN_API = True
 
-    FAKE_LIBVIRT_VERSION = 7000000
-    FAKE_QEMU_VERSION = 5002000
+    FAKE_LIBVIRT_VERSION = 8000000
+    FAKE_QEMU_VERSION = 6002000
 
     # Since we run all computes by a single process, we need to identify which
     # current compute service we use at the moment.
@@ -869,10 +869,3 @@ class DifferentMdevClassesTests(VGPUTestBase):
                                expected_rc='CUSTOM_NOTVGPU')
         self.assert_mdev_usage(self.compute2, expected_amount=1,
                                expected_rc='CUSTOM_NOTVGPU')
-
-
-class VGPUTestsLibvirt7_3(VGPUTests):
-
-    # Minimum version supporting persistent mdevs is 7.3.0.
-    # https://libvirt.org/drvnodedev.html#mediated-devices-mdevs
-    FAKE_LIBVIRT_VERSION = 7003000

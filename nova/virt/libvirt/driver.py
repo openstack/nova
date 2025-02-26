@@ -218,10 +218,10 @@ patch_tpool_proxy()
 # doc/source/reference/libvirt-distro-support-matrix.rst
 #
 # DO NOT FORGET to update this document when touching any versions below!
-MIN_LIBVIRT_VERSION = (7, 0, 0)
-MIN_QEMU_VERSION = (5, 2, 0)
-NEXT_MIN_LIBVIRT_VERSION = (8, 0, 0)
-NEXT_MIN_QEMU_VERSION = (6, 2, 0)
+MIN_LIBVIRT_VERSION = (8, 0, 0)
+MIN_QEMU_VERSION = (6, 2, 0)
+NEXT_MIN_LIBVIRT_VERSION = (10, 0, 0)
+NEXT_MIN_QEMU_VERSION = (8, 2, 2)
 
 # vIOMMU model value `virtio` minimal support version
 MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL = (8, 3, 0)
@@ -887,6 +887,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not self._host.has_min_version(MIN_LIBVIRT_PERSISTENT_MDEV):
             # TODO(sbauza): Remove this code once mediated devices are
             # persisted across reboots.
+            # TODO(Uggla): Remove in bump cleanup patch
             self._recreate_assigned_mediated_devices()
         else:
             # NOTE(melwitt): We shouldn't need to do this with libvirt 7.8.0
@@ -8938,6 +8939,11 @@ class LibvirtDriver(driver.ComputeDriver):
         self._host.device_create(conf)
         # Define it to make it persistent.
         mdev_dev = self._host.device_define(conf)
+        # TODO(Uggla): Remove this in the libvirt bump cleanup patch
+        # As we are not setting autostart anymore, because we are not
+        # passing in following code.
+        # It makes test_allocate_mdevs_with_no_mdevs_but_capacity test to fail.
+        # So removing the tests.
         if self._host.has_min_version(MIN_LIBVIRT_NODEDEV_AUTOSTART):
             # Set it to automatically start when the compute host boots or the
             # parent device becomes available.

@@ -211,6 +211,12 @@ support the decided libvirt version.
       - 8.0.0
       - 5.2.0
       - 6.2.0
+    * - 2025.1 Epoxy
+      - 31.0.0
+      - 8.0.0
+      - 10.0.0
+      - 6.2.0
+      - 8.2.2
 
 
 OS distribution versions
@@ -244,10 +250,10 @@ important OS distros.
       - 5.2.0-16
       - 1.44.0-2
     * - 9
-      - As of 2021-11-18.
-      - 7.8.0-1
-      - 6.1.0-6
-      - 1.46.0-4
+      - As of 2025-02-27.
+      - 10.10.0
+      - 9.1.0
+      - 1.50.1
     * - **Debian**
       -
       -
@@ -258,41 +264,16 @@ important OS distros.
       - 7.0.0
       - 5.2
       - 1.42.0
-    * - 12.x (Bookworm) ("testing")
-      - No GA date as of 2021-11-18
-      - 7.6.0
-      - 6.1
-      - 1.42.0
-    * - **Fedora**
-      -
-      -
-      -
-      -
-    * - 34
-      - 2021-04-27
-      - 7.0.0
-      - 5.2.0
-      - 1.45.4
-    * - 35
-      - 2021-11-02
-      - 7.6.0
-      - 6.1.0
-      - 1.46.0
-    * - **SUSE**
-      -
-      -
-      -
-      -
-    * - Leap 15.2
-      - 2020-07-02
-      - 6.0.0
-      - 4.2.0
-      - 1.38.0
-    * - Leap 15.3
-      - 2021-06-02
+    * - 12.x (Bookworm)
+      - 2023-06-10
+      - 9.0.0
       - 7.2.0
-      - 6.0.0
-      - 1.44.1
+      - 1.48.6
+    * - 13.x (Trixie) ("testing")
+      - No GA date as of 2025-02-27
+      - 11.0.0
+      - 9.2.1
+      - 1.54.0
     * - **RHEL**
       -
       -
@@ -348,6 +329,16 @@ important OS distros.
       - 7.0.0
       - 5.2
       - 1.44.1
+    * - 22.04 (Jammy Jellyfish)
+      - 2022-04-21
+      - 8.0.0
+      - 6.2
+      - 1.44.2
+    * - 24.04 (Noble Numbat)
+      - 2024-04-25
+      - 10.0.0
+      - 8.2.2
+      - 1.52.0
 
 .. NB: maintain alphabetical ordering of distros, followed by oldest released
        versions first
