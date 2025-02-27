@@ -256,7 +256,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.94 - Allow FQDN in server hostname.
     * 2.95 - Evacuate will now stop instance at destination.
     * 2.96 - Add support for returning pinned_availability_zone in
-             ``server show`` and ``server list --long`` responses.
+             ``server show``, ``server list --long``, ``server update``, and
+             ``server rebuild`` responses.
     * 2.97 - Adds new API ``GET /servers/{server_id}/shares`` which shows
              shares attachments of a given server.
              ``GET /servers/{server_id}/shares/{share_id} which gives details

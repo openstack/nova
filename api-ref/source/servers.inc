@@ -926,6 +926,7 @@ Response
   - fault.created: fault_created
   - fault.message: fault_message
   - fault.details: fault_details
+  - pinned_availability_zone: pinned_availability_zone
   - progress: progress
   - locked: locked
   - description: server_description_resp
@@ -957,6 +958,11 @@ Response
   - security_group.name: name_update_rebuild
   - host_status: host_status_update_rebuild
   - key_name: key_name_resp_update
+
+**Example Update Server Details (2.96)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.96/server-update-resp.json
+   :language: javascript
 
 **Example Update Server (2.75)**
 

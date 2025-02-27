@@ -647,6 +647,7 @@ Response
   - updated: updated
   - user_id: user_id
   - adminPass: adminPass_response
+  - pinned_availability_zone: pinned_availability_zone
   - progress: progress
   - locked: locked
   - description: server_description_resp
@@ -687,6 +688,11 @@ Response
 **Example Rebuild Server (rebuild Action) (v2.98)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.98/server-action-rebuild-resp.json
+   :language: javascript
+
+**Example Rebuild Server (rebuild Action) (v2.96)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.96/server-action-rebuild-resp.json
    :language: javascript
 
 **Example Rebuild Server (rebuild Action) (v2.75)**
