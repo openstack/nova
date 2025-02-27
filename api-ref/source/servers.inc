@@ -959,6 +959,11 @@ Response
   - host_status: host_status_update_rebuild
   - key_name: key_name_resp_update
 
+**Example Update Server Details (2.98)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.98/server-update-resp.json
+   :language: javascript
+
 **Example Update Server Details (2.96)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.96/server-update-resp.json

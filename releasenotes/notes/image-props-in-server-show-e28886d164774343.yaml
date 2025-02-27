@@ -4,6 +4,7 @@ features:
     The 2.98 microversion has been added. This microversion adds support for
     including image properties as new ``properties`` subkey under the struct at
     the existing ``image`` key in the response for ``GET /servers/{server_id}``
-    (server show) and ``GET /servers/detail`` (list server --long) APIs.
+    (server show), ``PUT /servers/{server_id}``
+    (server update), and ``GET /servers/detail`` (list server --long) APIs.
     Also the same is included in rebuild case of
     ``POST /server/{server_id}/action`` (server rebuild) API response.

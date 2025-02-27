@@ -670,6 +670,40 @@ class ServerSampleJson298Test(ServersSampleJsonTest):
     scenarios = [('v2_98', {'api_major_version': 'v2.1'})]
     ADMIN_API = False
 
+    def test_server_rebuild(self):
+        uuid = self._post_server(
+            use_common_server_api_samples=self.use_common_server_post
+        )
+        params = {
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
+            'name': 'foobar',
+            'pass': 'seekr3t',
+            'hostid': '[a-f0-9]+',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+            'hostname': 'updated-hostname.example.com',
+        }
+
+        resp = self._do_post(
+            'servers/%s/action' % uuid,
+            'server-action-rebuild',
+            params,
+        )
+        subs = params.copy()
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+    def test_update_server(self):
+        uuid = self._post_server(
+            use_common_server_api_samples=self.use_common_server_post)
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-req', subs)
+        self._verify_response('server-update-resp', subs, response, 200)
+
 
 class ServersSampleJson2100Test(ServersSampleJsonTest):
     microversion = '2.100'

@@ -73,6 +73,7 @@
         },
         "name": "foobar",
         "os-extended-volumes:volumes_attached": [],
+        "pinned_availability_zone": "us-west",
         "progress": 0,
         "security_groups": [
             {
