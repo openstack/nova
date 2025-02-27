@@ -2522,8 +2522,10 @@ class API:
                         # get deleted once the compute service is up again
                         instance.task_state = None
                         instance.save()
+                        msg = _("The server's hypervisor is not available at "
+                                "the moment. Please try again later.")
                         raise exception.ComputeServiceUnavailable(
-                            host=instance.host)
+                            host=instance.host, message=msg)
                 if not is_local_delete:
                     if original_task_state in (task_states.DELETING,
                                                   task_states.SOFT_DELETING):

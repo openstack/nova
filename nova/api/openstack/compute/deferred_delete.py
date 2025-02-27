@@ -47,7 +47,7 @@ class DeferredDeleteController(wsgi.Controller):
                     'restore', id)
 
     @wsgi.response(202)
-    @wsgi.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409, 503))
     @wsgi.action('forceDelete')
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
@@ -62,3 +62,6 @@ class DeferredDeleteController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except exception.ComputeServiceUnavailable as e:
+            raise webob.exc.HTTPServiceUnavailable(
+                explanation=e.format_message())

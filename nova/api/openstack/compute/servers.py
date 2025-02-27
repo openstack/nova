@@ -1114,10 +1114,9 @@ class ServersController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'delete', id)
-        except exception.ComputeServiceUnavailable:
-            msg = _("The server's hypervisor is not available at the moment. "
-                    "Please try again later.")
-            raise webob.exc.HTTPServiceUnavailable(explanation=msg)
+        except exception.ComputeServiceUnavailable as e:
+            raise webob.exc.HTTPServiceUnavailable(
+                explanation=e.format_message())
 
     def _image_from_req_data(self, server_dict, create_kwargs):
         """Get image data from the request or raise appropriate
