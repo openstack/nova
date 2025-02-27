@@ -16,6 +16,14 @@
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'CpuDiagnostics',
+    'Diagnostics',
+    'DiskDiagnostics',
+    'MemoryDiagnostics',
+    'NicDiagnostics',
+]
+
 
 @base.NovaObjectRegistry.register
 class CpuDiagnostics(base.NovaObject):

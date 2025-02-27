@@ -33,6 +33,13 @@ from nova.objects import virtual_interface
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'InstanceMapping',
+    'InstanceMappingList',
+    'populate_queued_for_delete',
+    'populate_user_id',
+]
+
 
 @base.NovaObjectRegistry.register
 class InstanceMapping(base.NovaTimestampObject, base.NovaObject):

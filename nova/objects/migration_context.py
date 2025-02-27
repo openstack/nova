@@ -24,6 +24,10 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'MigrationContext',
+]
+
 
 @base.NovaObjectRegistry.register
 class MigrationContext(base.NovaPersistentObject, base.NovaObject):

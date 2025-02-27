@@ -25,6 +25,16 @@ from nova.objects import fields
 LOG = log.getLogger(__name__)
 OS_VIF_DELEGATION = 'os_vif_delegation'
 
+__all__ = [
+    'HyperVLiveMigrateData',
+    'LibvirtLiveMigrateBDMInfo',
+    'LibvirtLiveMigrateData',
+    'LibvirtLiveMigrateNUMAInfo',
+    'LiveMigrateData',
+    'VIFMigrateData',
+    'VMwareLiveMigrateData',
+]
+
 
 @obj_base.NovaObjectRegistry.register
 class VIFMigrateData(obj_base.NovaObject):

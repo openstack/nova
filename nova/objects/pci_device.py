@@ -31,6 +31,12 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'PciDevice',
+    'PciDeviceList',
+    'compare_pci_device_attributes',
+]
+
 
 def compare_pci_device_attributes(obj_a, obj_b):
     if not isinstance(obj_b, PciDevice):

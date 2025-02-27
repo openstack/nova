@@ -28,6 +28,11 @@ NULLABLE_STRING_FIELDS = ['name', 'checksum', 'owner',
                           'container_format', 'disk_format']
 NULLABLE_INTEGER_FIELDS = ['size', 'virtual_size']
 
+__all__ = [
+    'ImageMeta',
+    'ImageMetaProps',
+]
+
 
 @base.NovaObjectRegistry.register
 class ImageMeta(base.NovaObject):

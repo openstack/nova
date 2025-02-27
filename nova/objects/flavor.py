@@ -39,6 +39,11 @@ DEPRECATED_FIELDS = ['deleted', 'deleted_at']
 # Non-joined fields which can be updated.
 MUTABLE_FIELDS = set(['description'])
 
+__all__ = [
+    'Flavor',
+    'FlavorList',
+]
+
 CONF = nova.conf.CONF
 
 

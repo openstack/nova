@@ -15,6 +15,10 @@
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'NetworkMetadata',
+]
+
 
 @base.NovaObjectRegistry.register
 class NetworkMetadata(base.NovaObject):

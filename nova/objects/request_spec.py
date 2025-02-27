@@ -41,6 +41,15 @@ REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination',
                                'request_level_params',
                                'requested_networks']
 
+__all__ = [
+    'Destination',
+    'RequestGroup',
+    'RequestLevelParams',
+    'RequestSpec',
+    'SchedulerLimits',
+    'SchedulerRetries',
+]
+
 
 @base.NovaObjectRegistry.register
 class RequestSpec(base.NovaObject):

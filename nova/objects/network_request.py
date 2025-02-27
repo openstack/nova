@@ -25,6 +25,11 @@ from nova.objects import fields
 NETWORK_ID_NONE = 'none'
 NETWORK_ID_AUTO = 'auto'
 
+__all__ = [
+    'NetworkRequest',
+    'NetworkRequestList',
+]
+
 
 @obj_base.NovaObjectRegistry.register
 class NetworkRequest(obj_base.NovaObject):

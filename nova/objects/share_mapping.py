@@ -30,6 +30,11 @@ EPHEMERAL_FIELDS = [
     "access_key",
 ]
 
+__all__ = [
+    'ShareMapping',
+    'ShareMappingList',
+]
+
 
 @base.NovaObjectRegistry.register
 class ShareMapping(base.NovaTimestampObject, base.NovaObject):

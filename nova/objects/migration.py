@@ -27,6 +27,12 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'Migration',
+    'MigrationList',
+    'determine_migration_type',
+]
+
 
 def determine_migration_type(migration):
     if isinstance(migration, dict):

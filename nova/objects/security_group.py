@@ -24,6 +24,12 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'SecurityGroup',
+    'SecurityGroupList',
+    'make_secgroup_list',
+]
+
 
 @base.NovaObjectRegistry.register
 class SecurityGroup(base.NovaPersistentObject, base.NovaObject):

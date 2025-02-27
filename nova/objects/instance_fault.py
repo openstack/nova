@@ -25,6 +25,11 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'InstanceFault',
+    'InstanceFaultList',
+]
+
 
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register

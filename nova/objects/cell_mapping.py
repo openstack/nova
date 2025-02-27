@@ -27,6 +27,11 @@ from nova.objects import fields
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'CellMapping',
+    'CellMappingList',
+]
+
 
 def _parse_netloc(netloc):
     """Parse a user:pass@host:port and return a dict suitable for formatting

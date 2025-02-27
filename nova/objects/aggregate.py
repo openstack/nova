@@ -31,6 +31,11 @@ LOG = logging.getLogger(__name__)
 
 DEPRECATED_FIELDS = ['deleted', 'deleted_at']
 
+__all__ = [
+    'Aggregate',
+    'AggregateList',
+]
+
 
 @api_db_api.context_manager.reader
 def _aggregate_get_from_db(context, aggregate_id):

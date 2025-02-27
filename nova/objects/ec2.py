@@ -27,6 +27,18 @@ from nova.objects import fields
 _CACHE_TIME = 7 * 24 * 60 * 60
 _CACHE = None
 
+__all__ = [
+    'EC2Ids',
+    'EC2InstanceMapping',
+    'S3ImageMapping',
+    'get_int_id_from_instance_uuid',
+    'glance_id_to_ec2_id',
+    'glance_id_to_id',
+    'glance_type_to_ec2_type',
+    'id_to_ec2_id',
+    'id_to_ec2_inst_id',
+]
+
 
 def memoize(func):
     @functools.wraps(func)

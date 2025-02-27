@@ -22,6 +22,13 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'InstanceAction',
+    'InstanceActionEvent',
+    'InstanceActionEventList',
+    'InstanceActionList',
+]
+
 
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register

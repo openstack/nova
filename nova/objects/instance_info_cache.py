@@ -22,6 +22,10 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'InstanceInfoCache',
+]
+
 
 @base.NovaObjectRegistry.register
 class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):

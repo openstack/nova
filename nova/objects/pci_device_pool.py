@@ -22,6 +22,12 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'PciDevicePool',
+    'PciDevicePoolList',
+    'from_pci_stats',
+]
+
 
 @base.NovaObjectRegistry.register
 class PciDevicePool(base.NovaObject):

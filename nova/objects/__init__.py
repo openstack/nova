@@ -19,6 +19,56 @@
 # on this module automatically, pointing to the newest/latest version of
 # the object.
 
+import typing as ty
+
+if ty.TYPE_CHECKING:
+    from nova.objects.aggregate import *  # noqa
+    from nova.objects.block_device import *  # noqa
+    from nova.objects.build_request import *  # noqa
+    from nova.objects.cell_mapping import *  # noqa
+    from nova.objects.compute_node import *  # noqa
+    from nova.objects.diagnostics import *  # noqa
+    from nova.objects.console_auth_token import *  # noqa
+    from nova.objects.ec2 import *  # noqa
+    from nova.objects.external_event import *  # noqa
+    from nova.objects.flavor import *  # noqa
+    from nova.objects.host_mapping import *  # noqa
+    from nova.objects.hv_spec import *  # noqa
+    from nova.objects.image_meta import *  # noqa
+    from nova.objects.instance import *  # noqa
+    from nova.objects.instance_action import *  # noqa
+    from nova.objects.instance_fault import *  # noqa
+    from nova.objects.instance_group import *  # noqa
+    from nova.objects.instance_info_cache import *  # noqa
+    from nova.objects.instance_mapping import *  # noqa
+    from nova.objects.instance_numa import *  # noqa
+    from nova.objects.instance_pci_requests import *  # noqa
+    from nova.objects.keypair import *  # noqa
+    from nova.objects.migrate_data import *  # noqa
+    from nova.objects.virt_device_metadata import *  # noqa
+    from nova.objects.migration import *  # noqa
+    from nova.objects.migration_context import *  # noqa
+    from nova.objects.monitor_metric import *  # noqa
+    from nova.objects.network_metadata import *  # noqa
+    from nova.objects.network_request import *  # noqa
+    from nova.objects.numa import *  # noqa
+    from nova.objects.pci_device import *  # noqa
+    from nova.objects.pci_device_pool import *  # noqa
+    from nova.objects.request_spec import *  # noqa
+    from nova.objects.tag import *  # noqa
+    from nova.objects.quotas import *  # noqa
+    from nova.objects.resource import *  # noqa
+    from nova.objects.security_group import *  # noqa
+    from nova.objects.selection import *  # noqa
+    from nova.objects.service import *  # noqa
+    from nova.objects.task_log import *  # noqa
+    from nova.objects.trusted_certs import *  # noqa
+    from nova.objects.vcpu_model import *  # noqa
+    from nova.objects.virt_cpu_topology import *  # noqa
+    from nova.objects.virtual_interface import *  # noqa
+    from nova.objects.volume_usage import *  # noqa
+    from nova.objects.share_mapping import *  # noqa
+
 
 def register_all():
     # NOTE(danms): You must make sure your object gets imported in this

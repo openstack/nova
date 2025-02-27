@@ -26,6 +26,16 @@ from nova.objects import base
 from nova.objects import fields
 from nova import quota
 
+__all__ = [
+    'Quotas',
+    'QuotasNoOp',
+    'ids_from_instance',
+    'ids_from_security_group',
+    'ids_from_server_group',
+    'migrate_quota_classes_to_api_db',
+    'migrate_quota_limits_to_api_db',
+]
+
 
 def ids_from_instance(context, instance):
     if (context.is_admin and

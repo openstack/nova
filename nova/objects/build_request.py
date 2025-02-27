@@ -28,6 +28,11 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'BuildRequest',
+    'BuildRequestList',
+]
+
 
 @base.NovaObjectRegistry.register
 class BuildRequest(base.NovaObject):

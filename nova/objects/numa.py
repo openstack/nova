@@ -20,6 +20,13 @@ from nova.objects import base
 from nova.objects import fields as obj_fields
 from nova.virt import hardware
 
+__all__ = [
+    'NUMACell',
+    'NUMAPagesTopology',
+    'NUMATopology',
+    'NUMATopologyLimits',
+]
+
 
 @base.NovaObjectRegistry.register
 class NUMACell(base.NovaObject):

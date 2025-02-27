@@ -26,6 +26,11 @@ from nova.virt import hardware
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'InstanceNUMACell',
+    'InstanceNUMATopology',
+]
+
 
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register

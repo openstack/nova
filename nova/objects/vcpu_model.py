@@ -16,6 +16,11 @@ from nova.db.main import api as db
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'VirtCPUFeature',
+    'VirtCPUModel',
+]
+
 
 @base.NovaObjectRegistry.register
 class VirtCPUModel(base.NovaObject):

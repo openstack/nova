@@ -66,6 +66,14 @@ _MIGRATION_CONTEXT_ATTRS = ['numa_topology', 'pci_requests',
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
                            _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS +
                            _INSTANCE_EXTRA_FIELDS)
+
+__all__ = [
+    'Instance',
+    'InstanceList',
+    'populate_instance_compute_id',
+    'populate_missing_availability_zones',
+]
+
 # These are fields that most query calls load by default
 INSTANCE_DEFAULT_FIELDS = ['metadata', 'system_metadata',
                            'info_cache', 'security_groups']

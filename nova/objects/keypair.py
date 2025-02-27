@@ -28,6 +28,11 @@ KEYPAIR_TYPE_SSH = 'ssh'
 KEYPAIR_TYPE_X509 = 'x509'
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'KeyPair',
+    'KeyPairList',
+]
+
 
 @api_db_api.context_manager.reader
 def _get_from_db(context, user_id, name=None, limit=None, marker=None):

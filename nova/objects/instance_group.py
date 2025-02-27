@@ -33,6 +33,11 @@ from nova.objects import fields
 LAZY_LOAD_FIELDS = ['hosts']
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'InstanceGroup',
+    'InstanceGroupList',
+]
+
 
 def _instance_group_get_query(context, id_field=None, id=None):
     query = context.session.query(api_models.InstanceGroup).\

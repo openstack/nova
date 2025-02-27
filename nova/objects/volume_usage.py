@@ -14,6 +14,10 @@ from nova.db.main import api as db
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'VolumeUsage',
+]
+
 
 @base.NovaObjectRegistry.register
 class VolumeUsage(base.NovaPersistentObject, base.NovaObject):

@@ -13,6 +13,10 @@
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'VirtCPUTopology',
+]
+
 
 @base.NovaObjectRegistry.register
 class VirtCPUTopology(base.NovaObject):

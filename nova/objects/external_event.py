@@ -15,6 +15,12 @@
 from nova.objects import base as obj_base
 from nova.objects import fields
 
+__all__ = [
+    'EVENT_NAMES',
+    'EVENT_STATUSES',
+    'InstanceExternalEvent',
+]
+
 EVENT_NAMES = [
     # Network has changed for this instance, rebuild info_cache
     'network-changed',

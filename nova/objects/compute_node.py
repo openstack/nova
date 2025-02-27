@@ -30,6 +30,11 @@ from nova.objects import pci_device_pool
 
 CONF = nova.conf.CONF
 
+__all__ = [
+    'ComputeNode',
+    'ComputeNodeList',
+]
+
 
 @base.NovaObjectRegistry.register
 class ComputeNode(base.NovaPersistentObject, base.NovaObject):

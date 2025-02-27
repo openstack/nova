@@ -27,6 +27,11 @@ FIELDS_REQUIRING_CONVERSION = [fields.MonitorMetricType.CPU_USER_PERCENT,
                                fields.MonitorMetricType.CPU_IOWAIT_PERCENT,
                                fields.MonitorMetricType.CPU_PERCENT]
 
+__all__ = [
+    'MonitorMetric',
+    'MonitorMetricList',
+]
+
 
 @base.NovaObjectRegistry.register
 class MonitorMetric(base.NovaObject):

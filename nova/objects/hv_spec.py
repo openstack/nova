@@ -18,6 +18,10 @@ from oslo_utils import versionutils
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'HVSpec',
+]
+
 
 @base.NovaObjectRegistry.register
 class HVSpec(base.NovaObject):

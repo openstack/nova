@@ -29,6 +29,12 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'Service',
+    'ServiceList',
+    'get_minimum_version_all_cells',
+]
+
 
 # NOTE(danms): This is the global service version counter
 SERVICE_VERSION = 70

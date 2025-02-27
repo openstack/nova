@@ -22,6 +22,12 @@ from nova.objects import base
 from nova.objects import cell_mapping
 from nova.objects import fields
 
+__all__ = [
+    'HostMapping',
+    'HostMappingList',
+    'discover_hosts',
+]
+
 
 def _cell_id_in_updates(updates):
     cell_mapping_obj = updates.pop("cell_mapping", None)

@@ -32,6 +32,10 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'ConsoleAuthToken',
+]
+
 
 @base.NovaObjectRegistry.register
 class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):

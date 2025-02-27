@@ -18,6 +18,13 @@ from nova.db.main import api as db
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'LibvirtVPMEMDevice',
+    'Resource',
+    'ResourceList',
+    'ResourceMetadata',
+]
+
 
 @base.NovaObjectRegistry.register
 class ResourceMetadata(base.NovaObject):

@@ -17,6 +17,11 @@ from nova.db.main import api as db
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'InstancePCIRequest',
+    'InstancePCIRequests',
+]
+
 
 @base.NovaObjectRegistry.register
 class InstancePCIRequest(base.NovaObject):

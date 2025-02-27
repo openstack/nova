@@ -14,6 +14,11 @@ from nova.db.main import api as db
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'TaskLog',
+    'TaskLogList',
+]
+
 
 @base.NovaObjectRegistry.register
 class TaskLog(base.NovaPersistentObject, base.NovaObject):

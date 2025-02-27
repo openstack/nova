@@ -19,6 +19,20 @@ from nova.db.main import api as db
 from nova.objects import base
 from nova.objects import fields
 
+__all__ = [
+    'DeviceBus',
+    'DeviceMetadata',
+    'DiskMetadata',
+    'IDEDeviceBus',
+    'InstanceDeviceMetadata',
+    'NetworkInterfaceMetadata',
+    'PCIDeviceBus',
+    'SCSIDeviceBus',
+    'ShareMetadata',
+    'USBDeviceBus',
+    'XenDeviceBus',
+]
+
 
 @base.NovaObjectRegistry.register
 class DeviceBus(base.NovaObject):

@@ -24,6 +24,10 @@ from nova.scheduler.filters import utils as filter_utils
 
 CONF = conf.CONF
 
+__all__ = [
+    'Selection',
+]
+
 
 @base.NovaObjectRegistry.register
 class Selection(base.NovaObject, ovo_base.ComparableVersionedObject):

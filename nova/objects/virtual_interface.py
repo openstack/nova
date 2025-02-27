@@ -26,6 +26,12 @@ from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
 
+__all__ = [
+    'VirtualInterface',
+    'VirtualInterfaceList',
+    'fill_virtual_interface_list',
+]
+
 VIF_OPTIONAL_FIELDS = ['network_id']
 FAKE_UUID = '00000000-0000-0000-0000-000000000000'
 
