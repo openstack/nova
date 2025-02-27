@@ -48,7 +48,7 @@ On Red Hat Enterprise Linux, Fedora, or CentOS:
 
 .. code-block:: console
 
-   # yum install libguestfs-tools
+   # dnf install libguestfs-tools
 
 On openSUSE:
 
