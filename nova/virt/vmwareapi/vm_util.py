@@ -1537,7 +1537,7 @@ def _set_host_reservations(stats, host_reservations_map, host_moref):
     stats["memory_mb_reserved"] = 0
 
     default_key = _HOST_RESERVATIONS_DEFAULT_KEY
-    host_reservations = host_reservations_map.get(default_key, {})
+    host_reservations = host_reservations_map.get(default_key, {}).copy()
     group_reservations = host_reservations_map.get(host_moref.value, {})
     for key in ['vcpus', 'vcpus_percent', 'memory_mb', 'memory_percent']:
         if key in group_reservations:
@@ -1810,9 +1810,19 @@ def get_hosts_and_reservations_for_cluster(session, cluster):
         return None, None
 
     failover_hosts = []
+    additional_reservations = {}
     policy = prop_dict.get(admission_policy_key)
-    if policy and hasattr(policy, 'failoverHosts'):
-        failover_hosts = set(h.value for h in policy.failoverHosts)
+    if policy:
+        # full hosts are reserved for failover
+        if hasattr(policy, 'failoverHosts'):
+            failover_hosts = set(h.value for h in policy.failoverHosts)
+        # percentages of every host are reserved for failover
+        if hasattr(policy, 'cpuFailoverResourcesPercent'):
+            additional_reservations['vcpus_percent'] = \
+                    policy.cpuFailoverResourcesPercent
+        if hasattr(policy, 'memoryFailoverResourcesPercent'):
+            additional_reservations['memory_percent'] = \
+                    policy.memoryFailoverResourcesPercent
 
     group_ret = getattr(prop_dict.get('configurationEx'), 'group', None)
 
@@ -1823,7 +1833,16 @@ def get_hosts_and_reservations_for_cluster(session, cluster):
 
     host_mors = [m for m in host_ret.ManagedObjectReference
                             if m.value not in failover_hosts]
-    return host_mors, _get_host_reservations_map(group_ret)
+    host_reservations = _get_host_reservations_map(group_ret)
+    if additional_reservations:
+        # NOTE(jkulik): we add the failover reservations to the default and
+        # every specific group in the cluster, because they have to be
+        # available on all hosts
+        for host, reservations in host_reservations.items():
+            for key, value in additional_reservations.items():
+                reservations[key] = reservations.get(key, 0) + value
+
+    return host_mors, host_reservations
 
 
 def get_host_ref(session, cluster=None):

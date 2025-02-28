@@ -225,15 +225,45 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self._test_get_stats_from_cluster(failover_policy=policy,
                                           failover_hosts_filtered=0)
 
-    def test_get_stats_from_cluster_failover_resources_policy(self):
+    @mock.patch('nova.virt.vmwareapi.vm_util._get_host_reservations_map')
+    def test_get_stats_from_cluster_failover_resources_policy(self, mock_map):
         name = 'ClusterFailoverResourcesAdmissionControlPolicy'
         policy = fake.DataObject(name)
         policy.cpuFailoverResourcesPercent = 25
         policy.memoryFailoverResourcesPercent = 25
         policy.resourceReductionToToleratePercent = 100
         policy.autoComputePercentages = True
+
+        CONF.set_override('hostgroup_reservations_json_file', '/some/path',
+                          'vmware')
+        mock_map.return_value = {
+            "__default__": {
+                'memory_percent': 5
+            },
+            "host1": {
+                'vcpus_percent': 25,
+                'memory_percent': 10
+            }}
+
+        expected = {
+            'cpu_info': self._expected_cpu_info(),
+            'vcpus': 2 * 16,
+            'vcpus_used': 0,
+            # 50 % from host1 + 25 % from host2
+            'vcpus_reserved': 8 + 4,
+            'max_vcpus_per_host': 16 - 4,  # by host2 counts
+            'memory_mb': 2 * 4096,
+            'memory_mb_used': 2 * 512,
+            # host1 35 %, host 2 30 %
+            'memory_mb_reserved': 4096 * 35 // 100 + 4096 * 30 // 100,
+            'max_mem_mb_per_host': 4096 - (4096 * 30 // 100),  # host2
+            'vm_reservable_memory_ratio': 1.0,
+            'cpu_mhz': 900,
+        }
+
         self._test_get_stats_from_cluster(failover_policy=policy,
-                                          failover_hosts_filtered=0)
+                                          failover_hosts_filtered=0,
+                                          expected_stats=expected)
 
     @mock.patch('nova.virt.vmwareapi.vm_util._get_host_reservations_map')
     def test_get_stats_from_cluster_reservations(self, mock_map):
