@@ -177,10 +177,21 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 #     - "parent_ifname": the netdev name of the parent (PF)
                 #        device of a VF
                 #     - "mac_address": the MAC address of the PF
+                #     - "managed": "true"/"false" if the device is managed by
+                #       hypervisor
                 extra_info = self.extra_info
                 data = v if isinstance(v, str) else jsonutils.dumps(v)
                 extra_info.update({k: data})
                 self.extra_info = extra_info
+
+        # Remove the "managed" key if it was set previously
+        # As with the previous case, we must explicitly assign to
+        # self.extra_info so that obj_what_changed detects the modification
+        # and triggers a save later.
+        if "managed" not in dev_dict and "managed" in self.extra_info:
+            extra_info = self.extra_info
+            del extra_info["managed"]
+            self.extra_info = extra_info
 
     def __init__(self, *args, **kwargs):
         super(PciDevice, self).__init__(*args, **kwargs)

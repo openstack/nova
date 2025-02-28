@@ -317,6 +317,15 @@ class PciDeviceSpec(PciAddressSpec):
         address_obj = self._address_obj()
         self._remote_managed = strutils.bool_from_string(
             self.tags.get(PCI_REMOTE_MANAGED_TAG))
+
+        if self.tags.get("managed", None) is not None:
+            try:
+                self.tags["managed"] = (
+                    "true" if strutils.bool_from_string(
+                        self.tags.get("managed"), strict=True) else "false"
+                )
+            except ValueError as e:
+                raise exception.PciConfigInvalidSpec(reason=str(e))
         if self._remote_managed:
             if address_obj is None:
                 # Note that this will happen if a netdev was specified in the
@@ -399,3 +408,8 @@ class PciDeviceSpec(PciAddressSpec):
 
     def get_tags(self) -> ty.Dict[str, str]:
         return self.tags
+
+    def enhanced_pci_device_with_spec_tags(self, dev: ty.Dict[str, ty.Any]):
+        managed = self.tags.get("managed")
+        if managed is not None:
+            dev.update({'managed': managed})

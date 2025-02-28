@@ -190,6 +190,39 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['vendor_id', 'product_id', 'parent_addr']))
 
+    def test_update_and_remove_extra_info_key(self):
+        self.dev_dict = copy.copy(dev_dict)
+        self.dev_dict['managed'] = "true"
+        self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
+
+        self.pci_device.obj_reset_changes()
+        changes = {'managed': 'no'}
+        self.pci_device.update_device(changes)
+        self.assertEqual(
+            self.pci_device.obj_what_changed(),
+            set(
+                [
+                    "parent_addr",
+                    "extra_info"
+                ]
+            ),
+        )
+        self.assertEqual(self.pci_device.extra_info, {"managed": "no"})
+
+        self.pci_device.obj_reset_changes()
+        changes = {}
+        self.pci_device.update_device(changes)
+        self.assertEqual(
+            self.pci_device.obj_what_changed(),
+            set(
+                [
+                    "parent_addr",
+                    "extra_info"
+                ]
+            ),
+        )
+        self.assertNotIn("managed", self.pci_device.extra_info)
+
     def test_update_device_same_value(self):
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.pci_device.obj_reset_changes()
