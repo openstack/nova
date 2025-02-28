@@ -6250,11 +6250,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         fmeta = vconfig.LibvirtConfigGuestMetaNovaFlavor()
         fmeta.name = dmeta.flavor.name
+        fmeta.id = dmeta.flavor.flavorid
         fmeta.memory = dmeta.flavor.memory_mb
         fmeta.vcpus = dmeta.flavor.vcpus
         fmeta.ephemeral = dmeta.flavor.ephemeral_gb
         fmeta.disk = dmeta.flavor.root_gb
         fmeta.swap = dmeta.flavor.swap
+        fmeta.extra_specs = dmeta.flavor.extra_specs
 
         meta.flavor = fmeta
 

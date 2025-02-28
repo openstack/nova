@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    Additional information regarding an instance's flavor (the ID
+    and the defined extra specs at the time the instance was launched)
+    has been added to the libvirt domain metadata for instances.
+    This allows downstream clients that queries libvirt domain metadata,
+    such as Ceilometer, to avoid performing additional Nova API queries
+    to get this information.
+
+upgrades:
+  - |
+    To expose the newly added attributes in the libvirt domain metadata
+    in an upgraded environment, already running instances will need to
+    be shutdown, restarted, cold migrated or shelved and unshelved.

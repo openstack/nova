@@ -3804,15 +3804,18 @@ class LibvirtConfigGuestMetaNovaFlavor(LibvirtConfigObject):
                              ns_uri=NOVA_NS)
 
         self.name = None
+        self.id = None
         self.memory = None
         self.disk = None
         self.swap = None
         self.ephemeral = None
         self.vcpus = None
+        self.extra_specs = None
 
     def format_dom(self):
         meta = super(LibvirtConfigGuestMetaNovaFlavor, self).format_dom()
         meta.set("name", self.name)
+        meta.set("id", self.id)
         if self.memory is not None:
             meta.append(self._text_node("memory", str(self.memory)))
         if self.disk is not None:
@@ -3823,6 +3826,28 @@ class LibvirtConfigGuestMetaNovaFlavor(LibvirtConfigObject):
             meta.append(self._text_node("ephemeral", str(self.ephemeral)))
         if self.vcpus is not None:
             meta.append(self._text_node("vcpus", str(self.vcpus)))
+        extra_specs_meta = LibvirtConfigGuestMetaNovaFlavorExtraSpecs()
+        if self.extra_specs is not None:
+            extra_specs_meta.extra_specs = self.extra_specs
+        meta.append(extra_specs_meta.format_dom())
+        return meta
+
+
+class LibvirtConfigGuestMetaNovaFlavorExtraSpecs(LibvirtConfigObject):
+
+    def __init__(self):
+        super().__init__(root_name="extraSpecs",
+                         ns_prefix="nova",
+                         ns_uri=NOVA_NS)
+        self.extra_specs = None
+
+    def format_dom(self):
+        meta = super().format_dom()
+        if self.extra_specs is not None:
+            for key, value in self.extra_specs.items():
+                node = self._text_node("extraSpec", value)
+                node.set("name", key)
+                meta.append(node)
         return meta
 
 

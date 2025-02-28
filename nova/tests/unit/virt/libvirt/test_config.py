@@ -4117,6 +4117,7 @@ class LibvirtConfigGuestMetadataNovaTest(LibvirtConfigBaseTest):
 
         flavor = config.LibvirtConfigGuestMetaNovaFlavor()
         flavor.name = "m1.lowgravity"
+        flavor.id = "f719a0dd-4b43-4efe-8336-48ef74099ad4"
         flavor.vcpus = 8
         flavor.memory = 2048
         flavor.swap = 10
@@ -4152,12 +4153,102 @@ class LibvirtConfigGuestMetadataNovaTest(LibvirtConfigBaseTest):
       <nova:package version="2014.2.3"/>
       <nova:name>moonbuggy</nova:name>
       <nova:creationTime>2009-02-13 23:31:30</nova:creationTime>
-      <nova:flavor name="m1.lowgravity">
+      <nova:flavor name="m1.lowgravity"
+        id="f719a0dd-4b43-4efe-8336-48ef74099ad4">
         <nova:memory>2048</nova:memory>
         <nova:disk>50</nova:disk>
         <nova:swap>10</nova:swap>
         <nova:ephemeral>10</nova:ephemeral>
         <nova:vcpus>8</nova:vcpus>
+        <nova:extraSpecs></nova:extraSpecs>
+      </nova:flavor>
+      <nova:owner>
+        <nova:user
+         uuid="3472c2a6-de91-4fb5-b618-42bc781ef670">buzz</nova:user>
+        <nova:project
+         uuid="f241e906-010e-4917-ae81-53f4fb8aa021">moonshot</nova:project>
+      </nova:owner>
+      <nova:root type="image" uuid="fe55c69a-8b2e-4bbc-811a-9ad2023a0426"/>
+      <nova:ports>
+        <nova:port uuid="567a4527-b0e4-4d0a-bcc2-71fda37897f7">
+          <nova:ip type="fixed" address="192.168.1.1" ipVersion="4"/>
+          <nova:ip type="fixed" address="fe80::f95c:b030:7094" ipVersion="6"/>
+          <nova:ip type="floating" address="11.22.33.44" ipVersion="4"/>
+        </nova:port>
+        <nova:port uuid="a3ca97e2-0cf9-4159-9bfc-afd55bc13ead">
+          <nova:ip type="fixed" address="10.0.0.1" ipVersion="4"/>
+          <nova:ip type="fixed" address="fdf8:f53b:82e4::52" ipVersion="6"/>
+          <nova:ip type="floating" address="1.2.3.4" ipVersion="4"/>
+        </nova:port>
+      </nova:ports>
+    </nova:instance>
+        """)
+
+    def test_config_metadata_flavor_extra_specs(self):
+        meta = config.LibvirtConfigGuestMetaNovaInstance()
+        meta.package = "2014.2.3"
+        meta.name = "moonbuggy"
+        meta.creationTime = 1234567890
+        meta.roottype = "image"
+        meta.rootid = "fe55c69a-8b2e-4bbc-811a-9ad2023a0426"
+
+        owner = config.LibvirtConfigGuestMetaNovaOwner()
+        owner.userid = "3472c2a6-de91-4fb5-b618-42bc781ef670"
+        owner.username = "buzz"
+        owner.projectid = "f241e906-010e-4917-ae81-53f4fb8aa021"
+        owner.projectname = "moonshot"
+
+        meta.owner = owner
+
+        flavor = config.LibvirtConfigGuestMetaNovaFlavor()
+        flavor.name = "m1.lowgravity"
+        flavor.id = "f719a0dd-4b43-4efe-8336-48ef74099ad4"
+        flavor.vcpus = 8
+        flavor.memory = 2048
+        flavor.swap = 10
+        flavor.disk = 50
+        flavor.ephemeral = 10
+        flavor.extra_specs = {"hw_rng:allowed": "true"}
+
+        meta.flavor = flavor
+
+        meta.ports = config.LibvirtConfigGuestMetaNovaPorts(
+            ports=[
+                config.LibvirtConfigGuestMetaNovaPort(
+                    '567a4527-b0e4-4d0a-bcc2-71fda37897f7',
+                    ips=[
+                        config.LibvirtConfigGuestMetaNovaIp(
+                            'fixed', '192.168.1.1', '4'),
+                        config.LibvirtConfigGuestMetaNovaIp(
+                            'fixed', 'fe80::f95c:b030:7094', '6'),
+                        config.LibvirtConfigGuestMetaNovaIp(
+                            'floating', '11.22.33.44', '4')]),
+                config.LibvirtConfigGuestMetaNovaPort(
+                    'a3ca97e2-0cf9-4159-9bfc-afd55bc13ead',
+                    ips=[
+                        config.LibvirtConfigGuestMetaNovaIp(
+                            'fixed', '10.0.0.1', '4'),
+                        config.LibvirtConfigGuestMetaNovaIp(
+                            'fixed', 'fdf8:f53b:82e4::52', '6'),
+                        config.LibvirtConfigGuestMetaNovaIp(
+                            'floating', '1.2.3.4', '4')])])
+
+        xml = meta.to_xml()
+        self.assertXmlEqual(xml, """
+    <nova:instance xmlns:nova='http://openstack.org/xmlns/libvirt/nova/1.1'>
+      <nova:package version="2014.2.3"/>
+      <nova:name>moonbuggy</nova:name>
+      <nova:creationTime>2009-02-13 23:31:30</nova:creationTime>
+      <nova:flavor name="m1.lowgravity"
+        id="f719a0dd-4b43-4efe-8336-48ef74099ad4">
+        <nova:memory>2048</nova:memory>
+        <nova:disk>50</nova:disk>
+        <nova:swap>10</nova:swap>
+        <nova:ephemeral>10</nova:ephemeral>
+        <nova:vcpus>8</nova:vcpus>
+        <nova:extraSpecs>
+          <nova:extraSpec name="hw_rng:allowed">true</nova:extraSpec>
+        </nova:extraSpecs>
       </nova:flavor>
       <nova:owner>
         <nova:user
