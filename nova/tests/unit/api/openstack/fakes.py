@@ -740,8 +740,8 @@ FLAVORS = {
 
 
 def stub_out_flavor_get_by_flavor_id(test):
-    @staticmethod
-    def fake_get_by_flavor_id(context, flavor_id, read_deleted=None):
+    @classmethod
+    def fake_get_by_flavor_id(cls, context, flavor_id, read_deleted=None):
         return FLAVORS[flavor_id]
 
     test.stub_out('nova.objects.Flavor.get_by_flavor_id',
