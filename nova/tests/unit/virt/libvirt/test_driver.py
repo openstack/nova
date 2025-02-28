@@ -691,6 +691,7 @@ def _create_test_instance():
         'root_gb': 10,
         'ephemeral_gb': 20,
         'system_metadata': {
+            'image_base_image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
             'image_disk_format': 'raw'
         },
         'instance_type_id': flavor.id,
@@ -2901,6 +2902,48 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          '2001:db8:0:2:dcad:beff:feef:1')
         self.assertEqual(meta.ports.ports[1].ips[1].ip_type, 'fixed')
         self.assertEqual(meta.ports.ports[1].ips[1].ip_version, 6)
+
+    def test_get_guest_config_meta_building_image_id(self):
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["vm_state"] = "building"
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        idm = drvr.get_instance_driver_metadata(
+            objects.Instance(**test_instance),
+            _fake_network_info(self))
+        meta = drvr._get_guest_config_meta(idm)
+
+        self.assertEqual("image", meta.roottype)
+        self.assertEqual("155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                         meta.rootid)
+
+    def test_get_guest_config_meta_no_base_image_ref_image_id(self):
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["system_metadata"] = {"image_disk_format": "raw"}
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        idm = drvr.get_instance_driver_metadata(
+            objects.Instance(**test_instance),
+            _fake_network_info(self))
+        meta = drvr._get_guest_config_meta(idm)
+
+        self.assertEqual("image", meta.roottype)
+        self.assertEqual("155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                         meta.rootid)
+
+    def test_get_guest_config_meta_unshelve_image_id(self):
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["vm_state"] = "shelved_offloaded"
+        test_instance["system_metadata"]["image_base_image_ref"] = (
+            "85daefce-4e20-4d2b-a4f3-11d3765f2a8f")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        idm = drvr.get_instance_driver_metadata(
+            objects.Instance(**test_instance),
+            _fake_network_info(self))
+        meta = drvr._get_guest_config_meta(idm)
+
+        self.assertEqual("image", meta.roottype)
+        self.assertEqual(test_instance["system_metadata"][
+                            "image_base_image_ref"],
+                         meta.rootid)
 
     @mock.patch.object(time, "time")
     def test_get_guest_config(self, time_mock):
