@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    A new microversion has been added that allows users to retrieve
+    server's associated scheduler hints in ``GET /servers/{server_id}``,
+    ``GET /servers/detail``, ``PUT /servers/{server_id}`` and
+    ``POST /server/{server_id}/action`` (rebuild) responses.

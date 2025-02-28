@@ -6127,6 +6127,14 @@ running_vms_total:
   in: body
   required: true
   type: integer
+scheduler_hints:
+  description: |
+    The dictionary of hints sent to the scheduler during server
+    creation time.
+  in: body
+  required: true
+  type: object
+  min_version: 2.100
 secgroup_default_rule_id:
   description: |
     The security group default rule ID.
