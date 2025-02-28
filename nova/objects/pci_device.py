@@ -186,12 +186,12 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 extra_info.update({k: data})
                 self.extra_info = extra_info
 
-        # Remove the "managed" key if it was set previously
-        # As with the previous case, we must explicitly assign to
-        # self.extra_info so that obj_what_changed detects the modification
-        # and triggers a save later.
-        spec_tags = ["managed", "live_migratable"]
-        for tag in spec_tags:
+        # Remove the tag keys if they were set previously.
+        # As in the above case, we must explicitly assign to self.extra_info
+        # so that obj_what_changed detects the modification and triggers
+        # a save later.
+        tags_to_clean = ["managed", "live_migratable"]
+        for tag in tags_to_clean:
             if tag not in dev_dict and tag in self.extra_info:
                 extra_info = self.extra_info
                 del extra_info[tag]
