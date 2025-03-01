@@ -33,7 +33,8 @@ class LibvirtISERVolumeDriver(iscsi.LibvirtISCSIVolumeDriver):
             initiator.ISER, utils.get_root_helper(),
             use_multipath=CONF.libvirt.iser_use_multipath,
             device_scan_attempts=CONF.libvirt.num_iser_scan_tries,
-            transport=self._get_transport())
+            transport=self._get_transport(),
+            enforce_multipath=CONF.libvirt.volume_enforce_multipath)
 
     def _get_transport(self):
         return 'iser'

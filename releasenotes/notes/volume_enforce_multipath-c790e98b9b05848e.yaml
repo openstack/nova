@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The new ``[libvirt] volume_enforce_multipath`` option has been added. When
+    this option is set to ``True``, attachment of volumes is aborted when
+    multipathd is not running in the host. Otherwise it falls back to single
+    path. This option also makes the libvirt driver to check multipathd during
+    initialization, and the compute service fails to start if mulitipathd is
+    not running.

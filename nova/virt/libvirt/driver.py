@@ -56,6 +56,7 @@ from os_brick import encryptors
 from os_brick.encryptors import luks as luks_encryptor
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector
+from os_brick.initiator import linuxscsi
 import os_resource_classes as orc
 import os_traits as ot
 from oslo_concurrency import processutils
@@ -899,6 +900,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._check_vtpm_support()
 
+        self._check_multipath()
+
         # Set REGISTER_IMAGE_PROPERTY_DEFAULTS in the instance system_metadata
         # to default values for properties that have not already been set.
         self._register_all_undefined_instance_details()
@@ -1162,6 +1165,22 @@ class LibvirtDriver(driver.ComputeDriver):
                 msg % CONF.libvirt.swtpm_group)
 
         LOG.debug('Enabling emulated TPM support')
+
+    def _check_multipath(self) -> None:
+        if not CONF.libvirt.volume_enforce_multipath:
+            return
+
+        if not CONF.libvirt.volume_use_multipath:
+            msg = _("The 'volume_use_multipath' option should be 'True' when "
+                    "the 'volume_enforce_multipath' option is 'True'.")
+            raise exception.InvalidConfiguration(msg)
+
+        multipath_running = linuxscsi.LinuxSCSI.is_multipath_running(
+            root_helper=utils.get_root_helper())
+        if not multipath_running:
+            msg = _("The 'volume_enforce_multipath' option is 'True' but "
+                    "multipathd is not running.")
+            raise exception.InvalidConfiguration(msg)
 
     def _start_inactive_mediated_devices(self):
         # Get a list of inactive mdevs so we can start them and make them
