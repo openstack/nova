@@ -18,10 +18,10 @@ Manage hosts in the current zone.
 """
 
 import collections
+import datetime
 import functools
 import time
 
-import iso8601
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
@@ -88,7 +88,7 @@ def set_update_time_on_success(function):
         else:
             now = timeutils.utcnow()
             # NOTE(sbauza): Objects are UTC tz-aware by default
-            self.updated = now.replace(tzinfo=iso8601.UTC)
+            self.updated = now.replace(tzinfo=datetime.timezone.utc)
         return return_value
 
     return decorated_function

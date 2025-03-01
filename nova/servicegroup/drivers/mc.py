@@ -17,7 +17,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import iso8601
+import datetime
+
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
@@ -77,7 +78,8 @@ class MemcachedDriver(base.Driver):
 
         if updated_time_in_mc:
             # Change mc time to offset-aware time
-            updated_time_in_mc = updated_time_in_mc.replace(tzinfo=iso8601.UTC)
+            updated_time_in_mc = updated_time_in_mc.replace(
+                tzinfo=datetime.timezone.utc)
             # If [DEFAULT]/enable_new_services is set to be false, the
             # ``updated_time_in_db`` will be None, in this case, use
             # ``updated_time_in_mc`` instead.

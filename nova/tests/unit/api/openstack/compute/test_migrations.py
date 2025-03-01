@@ -15,7 +15,6 @@
 import datetime
 from unittest import mock
 
-import iso8601
 from oslo_utils.fixture import uuidsentinel as uuids
 from webob import exc
 
@@ -396,10 +395,10 @@ class MigrationTestCaseV266(MigrationsTestCaseV259):
         search_opts = {'instance_uuid': uuids.instance_uuid,
                        'changes-before':
                            datetime.datetime(2013, 10, 22, 13, 42, 3,
-                                             tzinfo=iso8601.iso8601.UTC),
+                                             tzinfo=datetime.timezone.utc),
                        'changes-since':
                            datetime.datetime(2013, 10, 22, 13, 42, 2,
-                                             tzinfo=iso8601.iso8601.UTC)}
+                                             tzinfo=datetime.timezone.utc)}
         get_migrations_sorted.assert_called_once_with(
             req.environ['nova.context'], search_opts, sort_dirs=mock.ANY,
             sort_keys=mock.ANY, limit=1000, marker=None)

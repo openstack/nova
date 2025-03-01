@@ -15,9 +15,9 @@
 import datetime
 from unittest import mock
 
-import iso8601
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
+from oslo_utils import timeutils
 
 from nova.api.openstack.compute import availability_zone as az_v21
 from nova.api.openstack.compute import servers as servers_v21
@@ -135,7 +135,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
         self.assertEqual(len(zones), 3)
-        timestamp = iso8601.parse_date("2012-12-26T14:45:25Z")
+        timestamp = timeutils.parse_isotime("2012-12-26T14:45:25Z")
         expected = [
             {
                 'zoneName': 'internal',

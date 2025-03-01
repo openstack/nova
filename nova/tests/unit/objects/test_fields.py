@@ -17,7 +17,6 @@ import datetime
 import os
 from unittest import mock
 
-import iso8601
 from oslo_serialization import jsonutils
 from oslo_versionedobjects import exception as ovo_exc
 
@@ -380,7 +379,7 @@ class TestBoolean(TestField):
 class TestDateTime(TestField):
     def setUp(self):
         super(TestDateTime, self).setUp()
-        self.dt = datetime.datetime(1955, 11, 5, tzinfo=iso8601.UTC)
+        self.dt = datetime.datetime(1955, 11, 5, tzinfo=datetime.timezone.utc)
         self.field = fields.DateTimeField()
         self.coerce_good_values = [(self.dt, self.dt),
                                    (utils.isotime(self.dt), self.dt)]
@@ -393,7 +392,7 @@ class TestDateTime(TestField):
             '1955-11-05T18:00:00Z',
             self.field.stringify(
                 datetime.datetime(1955, 11, 5, 18, 0, 0,
-                                  tzinfo=iso8601.UTC)))
+                                  tzinfo=datetime.timezone.utc)))
 
 
 class TestDict(TestField):

@@ -24,7 +24,6 @@ import functools
 from urllib import parse as urlparse
 
 import fixtures
-import iso8601
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
@@ -1398,7 +1397,7 @@ class ServersControllerTest(_ServersControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1,
-                                              tzinfo=iso8601.iso8601.UTC)
+                                              tzinfo=datetime.timezone.utc)
             self.assertEqual(search_opts['changes-since'], changes_since)
             self.assertNotIn('deleted', search_opts)
             return objects.InstanceList(
@@ -2475,7 +2474,7 @@ class ServersControllerTestV266(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-before', search_opts)
             changes_before = datetime.datetime(2011, 1, 24, 17, 8, 1,
-                                              tzinfo=iso8601.iso8601.UTC)
+                                              tzinfo=datetime.timezone.utc)
             self.assertEqual(search_opts['changes-before'], changes_before)
             self.assertNotIn('deleted', search_opts)
             return objects.InstanceList(
@@ -2513,10 +2512,10 @@ class ServersControllerTestV266(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 23, 17, 8, 1,
-                                              tzinfo=iso8601.iso8601.UTC)
+                                              tzinfo=datetime.timezone.utc)
             self.assertIn('changes-before', search_opts)
             changes_before = datetime.datetime(2011, 1, 24, 17, 8, 1,
-                                              tzinfo=iso8601.iso8601.UTC)
+                                              tzinfo=datetime.timezone.utc)
             self.assertEqual(search_opts['changes-since'], changes_since)
             self.assertEqual(search_opts['changes-before'], changes_before)
             self.assertNotIn('deleted', search_opts)

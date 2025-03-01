@@ -19,7 +19,6 @@ from unittest import mock
 
 import ddt
 import fixtures
-import iso8601
 import os_traits as ot
 from oslo_limit import exception as limit_exceptions
 from oslo_messaging import exceptions as oslo_exceptions
@@ -981,7 +980,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def _test_delete(self, delete_type, **attrs):
         delete_time = datetime.datetime(
-            1955, 11, 5, 9, 30, tzinfo=iso8601.UTC)
+            1955, 11, 5, 9, 30, tzinfo=datetime.timezone.utc)
         timeutils.set_time_override(delete_time)
         self.addCleanup(timeutils.clear_time_override)
 
@@ -1351,7 +1350,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         mock_cons.return_value = 'constraint'
         delete_time = datetime.datetime(1955, 11, 5, 9, 30,
-                                        tzinfo=iso8601.UTC)
+                                        tzinfo=datetime.timezone.utc)
         updates['deleted_at'] = delete_time
         updates['deleted'] = True
         fake_inst = fake_instance.fake_db_instance(**updates)
