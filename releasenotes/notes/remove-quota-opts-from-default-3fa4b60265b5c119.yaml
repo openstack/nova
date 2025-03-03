@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The deprecated aliases of quota related options in the ``[DEFAULT]``
+    section have been removed. Use the options in the ``[quota]`` section
+    instead.

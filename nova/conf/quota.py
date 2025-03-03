@@ -57,8 +57,6 @@ quota_opts = [
     cfg.IntOpt('instances',
         min=-1,
         default=10,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_instances',
         help="""
 The number of instances allowed per project.
 
@@ -70,8 +68,6 @@ Possible Values
     cfg.IntOpt('cores',
         min=-1,
         default=20,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_cores',
         help="""
 The number of instance cores or vCPUs allowed per project.
 
@@ -83,8 +79,6 @@ Possible values:
     cfg.IntOpt('ram',
         min=-1,
         default=50 * 1024,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_ram',
         help="""
 The number of megabytes of instance RAM allowed per project.
 
@@ -96,8 +90,6 @@ Possible values:
     cfg.IntOpt('metadata_items',
         min=-1,
         default=128,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_metadata_items',
         help="""
 The number of metadata items allowed per instance.
 
@@ -112,8 +104,6 @@ Possible values:
     cfg.IntOpt('injected_files',
         min=-1,
         default=5,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_injected_files',
         help="""
 The number of injected files allowed.
 
@@ -131,8 +121,6 @@ Possible values:
     cfg.IntOpt('injected_file_content_bytes',
         min=-1,
         default=10 * 1024,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_injected_file_content_bytes',
         help="""
 The number of bytes allowed per injected file.
 
@@ -144,8 +132,6 @@ Possible values:
     cfg.IntOpt('injected_file_path_length',
         min=-1,
         default=255,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_injected_file_path_length',
         help="""
 The maximum allowed injected file path length.
 
@@ -157,8 +143,6 @@ Possible values:
     cfg.IntOpt('key_pairs',
         min=-1,
         default=100,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_key_pairs',
         help="""
 The maximum number of key pairs allowed per user.
 
@@ -173,8 +157,6 @@ Possible values:
     cfg.IntOpt('server_groups',
         min=-1,
         default=10,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_server_groups',
         help="""
 The maximum number of server groups per project.
 
@@ -191,8 +173,6 @@ Possible values:
     cfg.IntOpt('server_group_members',
         min=-1,
         default=10,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_server_group_members',
         help="""
 The maximum number of servers per server group.
 
