@@ -1160,8 +1160,15 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             pf_port['binding:profile'],
         )
 
-        # now live migrate that server
-        self._live_migrate(server, 'completed')
+        # By mocking threading.Event.wait we prevent the test to wait until the
+        # timeout happens.
+        # We return True signalling that the event is set, i.e. the libvirt
+        # event the caller is waiting for has been received.
+        # Note: This mock behavior cannot be added to the fixture because
+        # many unit tests rely on it for different side effects.
+        with mock.patch("threading.Event.wait", side_effect=[True]):
+            # now live migrate that server
+            self._live_migrate(server, "completed")
 
         # we should now have transitioned our usage to the destination, freeing
         # up the source in the process
