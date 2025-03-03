@@ -242,8 +242,16 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         """
         self.useFixture(
             fixtures.MonkeyPatch(
+                'nova.utils.spawn',
+                self._fake_spawn))
+
+        self.useFixture(
+            fixtures.MonkeyPatch(
                 'nova.utils.vm_needs_special_spawning',
                 self._fake_vm_needs_special_spawning))
+
+    def _fake_spawn(self, func, *args, **kwargs):
+        return None
 
     def _fake_vm_needs_special_spawning(self, *args, **kwargs):
         return True
