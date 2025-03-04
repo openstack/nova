@@ -14,6 +14,7 @@
 
 import itertools
 
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
@@ -23,6 +24,8 @@ from nova.i18n import _
 from nova.objects import base
 from nova.objects import fields as obj_fields
 from nova.virt import hardware
+
+LOG = logging.getLogger(__name__)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -63,6 +66,11 @@ class InstanceNUMACell(base.NovaEphemeralObject,
                     obj_fields.CPUAllocationPolicy.DEDICATED):
                 primitive['cpuset'] = primitive['pcpuset']
             primitive.pop('pcpuset', None)
+            LOG.warning(
+                f'Downgrading InstanceNUMACell to version {target_version} '
+                f'may cause the loss of pinned CPUs if mixing different '
+                f'verisons of nova on different hosts. This should not '
+                f'happen on any supported version after Victoria.')
 
         if target_version < (1, 4):
             primitive.pop('cpuset_reserved', None)
@@ -193,17 +201,15 @@ class InstanceNUMATopology(base.NovaObject,
             if len(cell.cpuset) == 0:
                 continue
 
-            if cell.cpu_policy != obj_fields.CPUAllocationPolicy.DEDICATED:
-                # FIXME(sean-k-mooney): we should be setting the pcpuset
-                # to an empty set here
-                # if not 'pcpuset' in cell:
-                #     cell.pcpuset = set()
-                #     update_db = True
-                continue
+            if cell.cpu_policy == obj_fields.CPUAllocationPolicy.DEDICATED:
+                cell.pcpuset = cell.cpuset
+                cell.cpuset = set()
+                update_db = True
+            else:
+                if 'pcpuset' not in cell:
+                    cell.pcpuset = set()
+                    update_db = True
 
-            cell.pcpuset = cell.cpuset
-            cell.cpuset = set()
-            update_db = True
         return update_db
 
     # TODO(huaqiang): Remove after Yoga once we are sure these objects have
