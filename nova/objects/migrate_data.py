@@ -153,7 +153,8 @@ class LiveMigrateData(obj_base.NovaObject):
     # Version 1.1: Added old_vol_attachment_ids field.
     # Version 1.2: Added wait_for_vif_plugged
     # Version 1.3: Added vifs field.
-    VERSION = '1.3'
+    # Version 1.4: Added pci_dev_map_src_dst field.
+    VERSION = '1.4'
 
     fields = {
         'is_volume_backed': fields.BooleanField(),
@@ -170,6 +171,7 @@ class LiveMigrateData(obj_base.NovaObject):
         # default for the config option may change in the future
         'wait_for_vif_plugged': fields.BooleanField(),
         'vifs': fields.ListOfObjectsField('VIFMigrateData'),
+        'pci_dev_map_src_dst': fields.DictOfStringsField(),
     }
 
 
@@ -243,7 +245,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.11: Added dst_supports_mdev_live_migration,
     #               source_mdev_types and target_mdevs fields
     # Version 1.12: Added dst_cpu_shared_set_info
-    VERSION = '1.12'
+    # Version 1.13: Inherited pci_dev_map_src_dst from LiveMigrateData
+    VERSION = '1.13'
 
     fields = {
         'filename': fields.StringField(),
@@ -288,6 +291,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if (target_version < (1, 13)):
+            primitive.pop('pci_dev_map_src_dst', None)
         if (target_version < (1, 12)):
             primitive.pop('dst_cpu_shared_set_info', None)
         if target_version < (1, 11):
@@ -341,7 +346,8 @@ class HyperVLiveMigrateData(LiveMigrateData):
     # Version 1.2: Added old_vol_attachment_ids
     # Version 1.3: Added wait_for_vif_plugged
     # Version 1.4: Inherited vifs from LiveMigrateData
-    VERSION = '1.4'
+    # Version 1.5: Inherited pci_dev_map_src_dst from LiveMigrateData
+    VERSION = '1.5'
 
     fields = {'is_shared_instance_path': fields.BooleanField()}
 
@@ -349,6 +355,8 @@ class HyperVLiveMigrateData(LiveMigrateData):
         super(HyperVLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if (target_version < (1, 5)):
+            primitive.pop('pci_dev_map_src_dst', None)
         if target_version < (1, 4) and 'vifs' in primitive:
             del primitive['vifs']
         if target_version < (1, 3) and 'wait_for_vif_plugged' in primitive:
@@ -363,9 +371,18 @@ class HyperVLiveMigrateData(LiveMigrateData):
 
 @obj_base.NovaObjectRegistry.register
 class VMwareLiveMigrateData(LiveMigrateData):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: Inherited pci_dev_map_src_dst from LiveMigrateData
+    VERSION = '1.1'
 
     fields = {
         'cluster_name': fields.StringField(nullable=False),
         'datastore_regex': fields.StringField(nullable=False),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(VMwareLiveMigrateData, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if (target_version < (1, 1)):
+            primitive.pop('pci_dev_map_src_dst', None)

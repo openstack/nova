@@ -100,7 +100,8 @@ class _TestLibvirtLiveMigrateData(object):
             dst_supports_mdev_live_migration=True,
             source_mdev_types={},
             target_mdevs={},
-            dst_cpu_shared_set_info=set())
+            dst_cpu_shared_set_info=set(),
+            pci_dev_map_src_dst={})
         manifest = ovo_base.obj_tree_get_versions(obj.obj_name())
 
         data = lambda x: x['nova_object.data']
@@ -145,6 +146,9 @@ class _TestLibvirtLiveMigrateData(object):
         primitive = data(obj.obj_to_primitive(target_version='1.11',
                                               version_manifest=manifest))
         self.assertNotIn('dst_cpu_shared_set_info', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.12',
+                                              version_manifest=manifest))
+        self.assertNotIn('pci_dev_map_src_dst', primitive)
 
     def test_bdm_obj_make_compatible(self):
         obj = migrate_data.LibvirtLiveMigrateBDMInfo(
@@ -207,7 +211,8 @@ class _TestHyperVLiveMigrateData(object):
         obj = migrate_data.HyperVLiveMigrateData(
             is_shared_instance_path=True,
             old_vol_attachment_ids={'yes': 'no'},
-            wait_for_vif_plugged=True)
+            wait_for_vif_plugged=True,
+            pci_dev_map_src_dst={})
 
         data = lambda x: x['nova_object.data']
 
@@ -219,6 +224,8 @@ class _TestHyperVLiveMigrateData(object):
         self.assertNotIn('old_vol_attachment_ids', primitive)
         primitive = data(obj.obj_to_primitive(target_version='1.2'))
         self.assertNotIn('wait_for_vif_plugged', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.4'))
+        self.assertNotIn('pci_dev_map_src_dst', primitive)
 
 
 class TestHyperVLiveMigrateData(test_objects._LocalTest,
@@ -228,6 +235,29 @@ class TestHyperVLiveMigrateData(test_objects._LocalTest,
 
 class TestRemoteHyperVLiveMigrateData(test_objects._RemoteTest,
                                       _TestHyperVLiveMigrateData):
+    pass
+
+
+class _TestVMwareLiveMigrateData(object):
+    def test_obj_make_compatible(self):
+        obj = migrate_data.VMwareLiveMigrateData(
+            pci_dev_map_src_dst={})
+
+        data = lambda x: x['nova_object.data']
+
+        primitive = data(obj.obj_to_primitive())
+        self.assertIn('pci_dev_map_src_dst', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.0'))
+        self.assertNotIn('pci_dev_map_src_dst', primitive)
+
+
+class TestVMwareLiveMigrateData(test_objects._LocalTest,
+                                _TestVMwareLiveMigrateData):
+    pass
+
+
+class TestRemoteVMwareLiveMigrateData(test_objects._RemoteTest,
+                                      _TestVMwareLiveMigrateData):
     pass
 
 
