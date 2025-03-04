@@ -1288,7 +1288,8 @@ API response.
 
 Add the ``spice-direct`` console type to the spice console protocol. Also
 add a ``tls_port`` field to the return value from
-``GET /os-console-auth-tokens/{console_token}``.
+``GET /os-console-auth-tokens/{console_token}`` and no longer allow random
+query string parameters.
 
 .. _microversion 2.100:
 

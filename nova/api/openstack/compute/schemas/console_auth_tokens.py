@@ -12,12 +12,14 @@
 
 import copy
 
-# TODO(stephenfin): Remove additionalProperties in a future API version
 show_query = {
     'type': 'object',
     'properties': {},
     'additionalProperties': True,
 }
+
+show_query_v299 = copy.deepcopy(show_query)
+show_query_v299['additionalProperties'] = False
 
 show_response = {
     'type': 'object',
