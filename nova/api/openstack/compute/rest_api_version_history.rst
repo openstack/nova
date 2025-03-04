@@ -1253,8 +1253,8 @@ behavior.
 2.96 (Maximum in 2024.1 Caracal and 2024.2 Dalmatian)
 -----------------------------------------------------
 
-The ``server show`` and ``server list --long`` responses now include the
-pinned availability zone as well.
+The ``server show``, ``server list --long``, ``server update``, and
+``server rebuild`` responses now include the pinned availability zone as well.
 
 .. _microversion 2.97:
 
