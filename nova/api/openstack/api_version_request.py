@@ -267,8 +267,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``DELETE /servers/{server_id}/shares/{share_id} which delete an
              attachment.
     * 2.98 - Add support for returning embedded image properties in
-             ``server show`` and ``server list --long`` and in the ``server
-             rebuild`` responses.
+             ``server show``, ``server list --long``, `server update``, and
+             in the ``server rebuild`` responses.
     * 2.99 - Add the spice-direct console type to the spice console protocol.
     * 2.100 - Add support for returning associated scheduler_hints in
              ``GET /servers/{server_id}``, ``GET /servers/detail``,

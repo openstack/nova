@@ -2,11 +2,11 @@
     "server": {
         "OS-DCF:diskConfig": "AUTO",
         "OS-EXT-AZ:availability_zone": "us-west",
-        "OS-EXT-SRV-ATTR:hostname": "updated-hostname.example.com",
+        "OS-EXT-SRV-ATTR:hostname": "new-server-hostname.example.com",
         "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "active",
-        "OS-SRV-USG:launched_at": "2021-08-19T15:16:22.177882",
+        "OS-SRV-USG:launched_at": "2025-02-27T03:58:15.509865",
         "OS-SRV-USG:terminated_at": null,
         "accessIPv4": "1.2.3.4",
         "accessIPv6": "80fe::",
@@ -20,9 +20,8 @@
                 }
             ]
         },
-        "adminPass": "seekr3t",
         "config_drive": "",
-        "created": "2019-04-23T17:10:22Z",
+        "created": "2025-02-27T03:58:14Z",
         "description": null,
         "flavor": {
             "disk": 1,
@@ -34,7 +33,7 @@
             "vcpus": 1
         },
         "hostId": "2091634baaccdc4c5a1d57069c833e402921df696b7f970791b12ec6",
-        "id": "0c37a84a-c757-4f22-8c7f-0bf8b6970886",
+        "id": "39115d82-00be-4432-84b5-381a89d7ebde",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
@@ -58,20 +57,20 @@
         "key_name": null,
         "links": [
             {
-                "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/0c37a84a-c757-4f22-8c7f-0bf8b6970886",
+                "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/39115d82-00be-4432-84b5-381a89d7ebde",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/0c37a84a-c757-4f22-8c7f-0bf8b6970886",
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/39115d82-00be-4432-84b5-381a89d7ebde",
                 "rel": "bookmark"
             }
         ],
         "locked": false,
         "locked_reason": null,
         "metadata": {
-            "meta_var": "meta_val"
+            "My Server Name": "Apache1"
         },
-        "name": "foobar",
+        "name": "new-server-test",
         "os-extended-volumes:volumes_attached": [],
         "pinned_availability_zone": "us-west",
         "progress": 0,
@@ -85,8 +84,7 @@
         "tags": [],
         "tenant_id": "6f70656e737461636b20342065766572",
         "trusted_image_certificates": null,
-        "updated": "2019-04-23T17:10:24Z",
-        "user_data": "ZWNobyAiaGVsbG8gd29ybGQi",
+        "updated": "2025-02-27T03:58:15Z",
         "user_id": "fake"
     }
 }

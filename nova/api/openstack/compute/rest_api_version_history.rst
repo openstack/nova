@@ -1277,8 +1277,9 @@ to the `manage-shares documentation`_.
 Add support for including image properties as new ``properties`` subkey
 under the struct at the existing ``image`` key in the response for
 ``GET /servers/{server_id}`` (server show), ``GET /servers/detail``
-(list server --long) and in the rebuild case of
-``POST /server/{server_id}/action`` (server rebuild) API response.
+(list server --long), ``PUT /servers/{server_id}`` (server update), and in the
+rebuild case of ``POST /server/{server_id}/action`` (server rebuild)
+API response.
 
 .. _microversion 2.99:
 
