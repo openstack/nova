@@ -179,6 +179,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 #     - "mac_address": the MAC address of the PF
                 #     - "managed": "true"/"false" if the device is managed by
                 #       hypervisor
+                #     - "live_migratable": true/false if the device can be live
+                #       migratable
                 extra_info = self.extra_info
                 data = v if isinstance(v, str) else jsonutils.dumps(v)
                 extra_info.update({k: data})
@@ -188,10 +190,12 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         # As with the previous case, we must explicitly assign to
         # self.extra_info so that obj_what_changed detects the modification
         # and triggers a save later.
-        if "managed" not in dev_dict and "managed" in self.extra_info:
-            extra_info = self.extra_info
-            del extra_info["managed"]
-            self.extra_info = extra_info
+        spec_tags = ["managed", "live_migratable"]
+        for tag in spec_tags:
+            if tag not in dev_dict and tag in self.extra_info:
+                extra_info = self.extra_info
+                del extra_info[tag]
+                self.extra_info = extra_info
 
     def __init__(self, *args, **kwargs):
         super(PciDevice, self).__init__(*args, **kwargs)

@@ -14,6 +14,7 @@
 #    under the License.
 
 import copy
+import ddt
 from unittest import mock
 
 from oslo_serialization import jsonutils
@@ -113,6 +114,7 @@ fake_db_dev_old = {
     }
 
 
+@ddt.ddt
 class _TestPciDeviceObject(object):
     def _create_fake_instance(self):
         self.inst = instance.Instance()
@@ -190,13 +192,15 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['vendor_id', 'product_id', 'parent_addr']))
 
-    def test_update_and_remove_extra_info_key(self):
+    @ddt.data({"tag": "managed"},
+              {"tag": "live_migratable"})
+    def test_update_and_remove_extra_info_key(self, data):
         self.dev_dict = copy.copy(dev_dict)
-        self.dev_dict['managed'] = "true"
+        self.dev_dict[data['tag']] = "true"
         self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
 
         self.pci_device.obj_reset_changes()
-        changes = {'managed': 'no'}
+        changes = {data['tag']: 'no'}
         self.pci_device.update_device(changes)
         self.assertEqual(
             self.pci_device.obj_what_changed(),
@@ -207,7 +211,7 @@ class _TestPciDeviceObject(object):
                 ]
             ),
         )
-        self.assertEqual(self.pci_device.extra_info, {"managed": "no"})
+        self.assertEqual(self.pci_device.extra_info, {data['tag']: "no"})
 
         self.pci_device.obj_reset_changes()
         changes = {}
@@ -221,7 +225,7 @@ class _TestPciDeviceObject(object):
                 ]
             ),
         )
-        self.assertNotIn("managed", self.pci_device.extra_info)
+        self.assertNotIn(data['tag'], self.pci_device.extra_info)
 
     def test_update_device_same_value(self):
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)

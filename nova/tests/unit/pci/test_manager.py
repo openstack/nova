@@ -14,6 +14,7 @@
 #    under the License.
 
 import copy
+import ddt
 from unittest import mock
 
 from oslo_serialization import jsonutils
@@ -124,6 +125,7 @@ fake_pci_requests = [
      'spec': [{'vendor_id': 'v1'}]}]
 
 
+@ddt.ddt
 class PciDevTrackerTestCase(test.NoDBTestCase):
     def _create_fake_instance(self):
         self.inst = objects.Instance()
@@ -256,17 +258,54 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(5, len(tracker.pci_devs))
 
     @mock.patch("nova.pci.utils.is_physical_function", return_value=False)
-    def test_update_devices_from_hypervisor_resources_with_managed(
-        self, _mock_vf
+    @ddt.data({"tag": "managed"},
+              {"tag": "live_migratable"})
+    def test_update_devices_from_hypervisor_resources_with_tag(
+        self, data, _mock_vf
     ):
+        spec = [
+            '{"product_id":"8086", "vendor_id":"10c9", '
+            '"address":"0000:00:02.2", "' + data["tag"] + '":"no"}',
+            '{"product_id":"8086", "vendor_id":"10c9", '
+            '"address":"0000:00:02.3", "' + data["tag"] + '":"yes"}',
+        ]
         self.flags(
             group="pci",
-            device_spec=[
-                '{"product_id":"8086", "vendor_id":"10c9", '
-                '"address":"0000:00:02.2", "managed":"no"}',
-                '{"product_id":"8086", "vendor_id":"10c9", '
-                '"address":"0000:00:02.3", "managed":"yes"}',
-            ],
+            device_spec=spec,
+        )
+        fake_pci_devs = [copy.deepcopy(fake_pci_6), copy.deepcopy(fake_pci_7)]
+        fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
+        tracker = manager.PciDevTracker(
+            self.fake_context, objects.ComputeNode(id=1, numa_topology=None)
+        )
+        tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
+        self.assertEqual(5, len(tracker.pci_devs))
+
+        pci_addr_extra_info = {
+            dev.address: dev.extra_info for dev in tracker.pci_devs
+        }
+
+        self.assertEqual(
+            pci_addr_extra_info["0000:00:02.2"][data["tag"]], "false")
+        self.assertEqual(
+            pci_addr_extra_info["0000:00:02.3"][data["tag"]], "true"
+        )
+
+    @mock.patch("nova.pci.utils.is_physical_function", return_value=False)
+    def test_update_devices_from_hypervisor_resources_with_multiple_tags(
+        self, _mock_vf
+    ):
+        spec = [
+            '{"product_id":"8086", "vendor_id":"10c9", '
+            '"address":"0000:00:02.2", "managed":"no", '
+            '"live_migratable":"no"}',
+            '{"product_id":"8086", "vendor_id":"10c9", '
+            '"address":"0000:00:02.3", "managed":"no", '
+            '"live_migratable":"yes"}',
+        ]
+        self.flags(
+            group="pci",
+            device_spec=spec,
         )
         fake_pci_devs = [copy.deepcopy(fake_pci_6), copy.deepcopy(fake_pci_7)]
         fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
@@ -284,24 +323,34 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
             pci_addr_extra_info["0000:00:02.2"]["managed"], "false"
         )
         self.assertEqual(
-            pci_addr_extra_info["0000:00:02.3"]["managed"], "true"
+            pci_addr_extra_info["0000:00:02.2"]["live_migratable"], "false"
+        )
+        self.assertEqual(
+            pci_addr_extra_info["0000:00:02.3"]["managed"], "false"
+        )
+        self.assertEqual(
+            pci_addr_extra_info["0000:00:02.3"]["live_migratable"], "true"
         )
 
     @mock.patch("nova.pci.manager.LOG.debug")
     @mock.patch("nova.pci.utils.is_physical_function", return_value=False)
-    def test_update_devices_from_hypervisor_resources_with_managed_invalid(
-        self, _mock_vf, mock_debug
+    @ddt.data({"tag": "managed"},
+              {"tag": "live_migratable"})
+    def test_update_devices_from_hypervisor_resources_with_invalid_tag(
+        self, data, _mock_vf, mock_debug
     ):
+        spec = [
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.2", "' + data["tag"] + '":"no"}',
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.3", "' + data["tag"] + '":"yes"}',
+                '{"product_id":"8086", "vendor_id":"10c9", '
+                '"address":"0000:00:02.4", "' + data["tag"] + '":"invalid"}',
+            ]
+
         self.flags(
             group="pci",
-            device_spec=[
-                '{"product_id":"8086", "vendor_id":"10c9", '
-                '"address":"0000:00:02.2", "managed":"no"}',
-                '{"product_id":"8086", "vendor_id":"10c9", '
-                '"address":"0000:00:02.3", "managed":"yes"}',
-                '{"product_id":"8086", "vendor_id":"10c9", '
-                '"address":"0000:00:02.4", "managed":"invalid"}',
-            ],
+            device_spec=spec,
         )
 
         exc = self.assertRaises(
@@ -312,7 +361,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         )
 
         self.assertEqual(
-            "Invalid [pci]device_spec config: Unrecognized value 'invalid', "
+            "Invalid [pci]device_spec config: Cannot parse tag "
+            f"'{data['tag']}': Unrecognized value 'invalid', "
             "acceptable values are: '0', '1', 'f', 'false', 'n', 'no', 'off', "
             "'on', 't', 'true', 'y', 'yes'",
             str(exc)
