@@ -838,6 +838,53 @@ class WarningsFixture(fixtures.Fixture):
             category=UserWarning,
         )
 
+        # NOTE(stephenfin): Ignore deprecation warnings related to eventlet: we
+        # know it needs to go, there's no point having our unit tests
+        # continuously shout about it
+        warnings.filterwarnings(
+            'ignore',
+            message=(
+                "Using class 'GreenThreadPoolExecutor' \\(either directly or "
+                "via inheritance\\) is deprecated: Eventlet support is "
+                "deprecated. Please migrate your code and stop using Green "
+                "executor."
+            ),
+            category=DeprecationWarning,
+        )
+        warnings.filterwarnings(
+            'ignore',
+            message=(
+                "Using class 'GreenFuture' \\(either directly or "
+                "via inheritance\\) is deprecated: Eventlet support is "
+                "deprecated. Please migrate your code and stop using Green "
+                "future."
+            ),
+            category=DeprecationWarning,
+        )
+        warnings.filterwarnings(
+            'ignore',
+            message='Eventlet support is deprecated and will be removed.',
+            category=DeprecationWarning,
+        )
+        warnings.filterwarnings(
+            'ignore',
+            message=(
+                "Using the 'executor' argument is deprecated: the eventlet "
+                "executor is now deprecated. Threading will be the only "
+                "execution model available."
+            ),
+            category=DeprecationWarning,
+        )
+        warnings.filterwarnings(
+            'ignore',
+            message=(
+                "Eventlet usages are deprecated and the removal of Eventlet "
+                "from OpenStack is planned, for this reason the Eventlet "
+                "executor is deprecated."
+            ),
+            category=DeprecationWarning,
+        )
+
         # NOTE(gibi): The UUIDFields emits a warning if the value is not a
         # valid UUID. Let's escalate that to an exception in the test to
         # prevent adding violations.
