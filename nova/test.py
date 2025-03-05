@@ -329,8 +329,8 @@ class TestCase(base.BaseTestCase):
         # Reset the global key manager
         nova.crypto._KEYMGR = None
 
-        # Reset the global endpoint
-        nova.limit.utils.ENDPOINT = None
+        # Reset the global identity client
+        nova.limit.utils.IDENTITY_CLIENT = None
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.

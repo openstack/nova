@@ -16,6 +16,7 @@ from oslo_limit import fixture as limit_fixture
 from oslo_serialization import base64
 from oslo_utils.fixture import uuidsentinel as uuids
 
+import nova.conf
 from nova import context as nova_context
 from nova.limit import local as local_limit
 from nova.objects import flavor as flavor_obj
@@ -23,6 +24,8 @@ from nova.objects import instance_group as group_obj
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
+
+CONF = nova.conf.CONF
 
 
 class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
@@ -432,3 +435,45 @@ class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):
             client.OpenStackApiException, self._create_server,
             api=self.admin_api)
         self.assertEqual(403, e.response.status_code)
+
+
+class EndpointDiscoveryTest(UnifiedLimitsTest):
+
+    def setUp(self):
+        super().setUp()
+        if 'endpoint_service_type' not in CONF.oslo_limit:
+            self.skipTest(
+                'oslo.limit < 2.6.0, skipping endpoint discovery tests')
+        # endpoint_id has a default value in the ConfFixture but we want it to
+        # be None so that we do endpoint discovery.
+        self.flags(endpoint_id=None, group='oslo_limit')
+        self.flags(endpoint_service_type='compute', group='oslo_limit')
+        self.flags(endpoint_service_name='nova', group='oslo_limit')
+
+    def test_endpoint_service_type_and_name_not_set(self):
+        self.flags(endpoint_service_type=None, group='oslo_limit')
+        self.flags(endpoint_service_name=None, group='oslo_limit')
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server, api=self.api)
+        self.assertEqual(500, e.response.status_code)
+
+    def test_endpoint_service_type_set(self):
+        self.flags(endpoint_service_type='compute', group='oslo_limit')
+        self.flags(endpoint_service_name=None, group='oslo_limit')
+        self._create_server()
+
+    def test_endpoint_service_name_set(self):
+        self.flags(endpoint_service_type=None, group='oslo_limit')
+        self.flags(endpoint_service_name='nova', group='oslo_limit')
+        self._create_server()
+
+    def test_endpoint_service_type_and_name_set(self):
+        self.flags(endpoint_service_type='compute', group='oslo_limit')
+        self.flags(endpoint_service_name='nova', group='oslo_limit')
+        self._create_server()
+
+    def test_endpoint_region_name_set(self):
+        self.flags(endpoint_service_type='compute', group='oslo_limit')
+        self.flags(endpoint_service_name='nova', group='oslo_limit')
+        self.flags(endpoint_region_name='somewhere', group='oslo_limit')
+        self._create_server()
