@@ -93,11 +93,13 @@ class ConsoleAuthTokensController(wsgi.Controller):
     @wsgi.Controller.api_version("2.31", "2.98")  # noqa
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):  # noqa
         return self._show(req, id, include_tls_port=False)
 
     @wsgi.Controller.api_version("2.99")  # noqa
     @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response_v299)
     def show(self, req, id):  # noqa
         return self._show(req, id, include_tls_port=True)

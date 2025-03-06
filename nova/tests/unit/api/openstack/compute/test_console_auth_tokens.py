@@ -35,7 +35,7 @@ class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
             'instance_uuid': fakes.FAKE_UUID,
             'host': 'fake_host',
             'port': '1234',
-            'internal_access_path': 'fake_access_path'
+            'internal_access_path': fakes.FAKE_UUID,
         }
     }
     _EXPECTED_OUTPUT_SPICE = {
@@ -53,11 +53,11 @@ class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
     _EXPECTED_OUTPUT_DB = copy.deepcopy(_EXPECTED_OUTPUT)
     _EXPECTED_OUTPUT_DB['console'].update(
         {'host': 'fake_host', 'port': 1234,
-         'internal_access_path': 'fake_access_path'})
+         'internal_access_path': fakes.FAKE_UUID})
 
     _EXPECTED_OUTPUT_DB_SPICE = copy.deepcopy(_EXPECTED_OUTPUT_SPICE)
     _EXPECTED_OUTPUT_DB_SPICE['console'].update(
-        {'host': u'fake_host', 'port': 5900, 'tls_port': 5901})
+        {'host': 'fake_host', 'port': 5900, 'tls_port': 5901})
 
     def setUp(self):
         super(ConsoleAuthTokensExtensionTestV21, self).setUp()
@@ -82,7 +82,7 @@ class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
     @mock.patch('nova.objects.ConsoleAuthToken.validate',
                 return_value=objects.ConsoleAuthToken(
                     instance_uuid=fakes.FAKE_UUID, host='fake_host',
-                    port='1234', internal_access_path='fake_access_path',
+                    port='1234', internal_access_path=fakes.FAKE_UUID,
                     console_type='webmks',
                     token=fakes.FAKE_UUID))
     def test_get_console_connect_info(self, mock_validate):
@@ -108,7 +108,7 @@ class ConsoleAuthTokensExtensionTestV299(ConsoleAuthTokensExtensionTestV21):
     @mock.patch('nova.objects.ConsoleAuthToken.validate',
                 return_value=objects.ConsoleAuthToken(
                     instance_uuid=fakes.FAKE_UUID, host='fake_host',
-                    port='1234', internal_access_path='fake_access_path',
+                    port='1234', internal_access_path=fakes.FAKE_UUID,
                     console_type='webmks', token=fakes.FAKE_UUID))
     def test_get_console_connect_info(self, mock_validate):
         output = self.controller.show(self.req, fakes.FAKE_UUID)

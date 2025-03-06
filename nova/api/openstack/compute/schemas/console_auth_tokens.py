@@ -10,6 +10,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
+
 # TODO(stephenfin): Remove additionalProperties in a future API version
 show_query = {
     'type': 'object',
@@ -47,3 +49,8 @@ show_response = {
     'required': ['console'],
     'additionalProperties': False,
 }
+
+show_response_v299 = copy.deepcopy(show_response)
+show_response_v299['properties']['console']['properties'].update({
+    'tls_port': {'type': ['integer', 'null']},
+})
