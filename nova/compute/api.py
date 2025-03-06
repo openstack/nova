@@ -864,7 +864,7 @@ class API:
     # TODO(huaqiang): Remove in Wallaby when there is no nova-compute node
     # having a version prior to Victoria.
     @staticmethod
-    def _check_compute_service_for_mixed_instance(numa_topology):
+    def _check_compute_service_for_mixed_instance(numa_topology, min_comp_ver):
         """Check if the nova-compute service is ready to support mixed instance
         when the CPU allocation policy is 'mixed'.
         """
@@ -878,9 +878,7 @@ class API:
 
         # Catch a request creating a mixed instance, make sure all nova-compute
         # service have been upgraded and support the mixed policy.
-        minimal_version = objects.service.get_minimum_version_all_cells(
-            nova_context.get_admin_context(), ['nova-compute'])
-        if minimal_version < MIN_VER_NOVA_COMPUTE_MIXED_POLICY:
+        if min_comp_ver < MIN_VER_NOVA_COMPUTE_MIXED_POLICY:
             raise exception.MixedInstanceNotSupportByComputeService()
 
     @staticmethod
@@ -1042,7 +1040,7 @@ class API:
 
     def _checks_for_create_and_rebuild(
         self, context, image_id, image, flavor, metadata, files_to_inject,
-        root_bdm, validate_numa=True,
+        root_bdm, min_comp_ver, validate_numa=True,
     ):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, files_to_inject)
@@ -1051,15 +1049,12 @@ class API:
                                     flavor, root_bdm,
                                     validate_numa=validate_numa)
 
-    def _check_support_vnic_accelerator(self, context, requested_networks):
+    def _check_support_vnic_accelerator(
+            self, context, requested_networks, min_comp_ver):
         if requested_networks:
             for request_net in requested_networks:
                 if request_net.device_profile:
-                    min_version = (objects.service.
-                        get_minimum_version_all_cells(
-                            context,
-                            ['nova-compute']))
-                    if min_version < SUPPORT_VNIC_TYPE_ACCELERATOR:
+                    if min_comp_ver < SUPPORT_VNIC_TYPE_ACCELERATOR:
                         msg = ("Port with cyborg profile is not available"
                             " until upgrade finished.")
                         raise exception.ForbiddenPortsWithAccelerator(msg)
@@ -1086,7 +1081,7 @@ class API:
         key_data, security_groups, availability_zone, user_data, metadata,
         access_ip_v4, access_ip_v6, requested_networks, config_drive,
         auto_disk_config, reservation_id, max_count,
-        supports_port_resource_request,
+        supports_port_resource_request, min_comp_ver,
     ):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed.
@@ -1149,7 +1144,8 @@ class API:
             affinity_policy=pci_numa_affinity_policy)
         network_metadata, port_resource_requests, req_lvl_params = result
 
-        self._check_support_vnic_accelerator(context, requested_networks)
+        self._check_support_vnic_accelerator(
+            context, requested_networks, min_comp_ver)
         self._check_support_vnic_remote_managed(context, requested_networks)
 
         # Creating servers with ports that have resource requests, like QoS
@@ -1165,9 +1161,7 @@ class API:
         ):
             # we only support the extended resource request if the computes are
             # upgraded to Xena.
-            min_version = objects.service.get_minimum_version_all_cells(
-                context, ["nova-compute"])
-            if min_version < MIN_COMPUTE_BOOT_WITH_EXTENDED_RESOURCE_REQUEST:
+            if min_comp_ver < MIN_COMPUTE_BOOT_WITH_EXTENDED_RESOURCE_REQUEST:
                 raise exception.ExtendedResourceRequestOldCompute()
 
         base_options = {
@@ -1704,6 +1698,10 @@ class API:
                 context, self.image_api, self.volume_api, block_device_mapping,
                 legacy_bdm)
 
+        # Only lookup the minimum compute version once
+        min_comp_ver = objects.service.get_minimum_version_all_cells(
+            context, ["nova-compute"])
+
         self._check_auto_disk_config(image=boot_meta,
                                      auto_disk_config=auto_disk_config)
 
@@ -1717,13 +1715,15 @@ class API:
             user_data, metadata, access_ip_v4, access_ip_v6,
             requested_networks, config_drive, auto_disk_config,
             reservation_id, max_count, supports_port_resource_request,
+            min_comp_ver
         )
 
         # TODO(huaqiang): Remove in Wallaby
         # check nova-compute nodes have been updated to Victoria to support the
         # mixed CPU policy for creating a new instance.
         numa_topology = base_options.get('numa_topology')
-        self._check_compute_service_for_mixed_instance(numa_topology)
+        self._check_compute_service_for_mixed_instance(
+            numa_topology, min_comp_ver)
 
         # max_net_count is the maximum number of instances requested by the
         # user adjusted for any network quota constraints, including
@@ -1754,7 +1754,8 @@ class API:
         # _validate_and_build_base_options().
         self._checks_for_create_and_rebuild(context, image_id, boot_meta,
                 flavor, metadata, injected_files,
-                block_device_mapping.root_bdm(), validate_numa=False)
+                block_device_mapping.root_bdm(), min_comp_ver,
+                validate_numa=False)
 
         instance_group = self._get_requested_instance_group(
             context, filter_properties)
@@ -3649,6 +3650,10 @@ class API:
                 instance.key_data = None
                 instance.keypairs = objects.KeyPairList(objects=[])
 
+        # Only lookup the minimum compute version once
+        min_comp_ver = objects.service.get_minimum_version_all_cells(
+            context, ["nova-compute"])
+
         # Use trusted_certs value from kwargs to create TrustedCerts object
         trusted_certs = None
         if 'trusted_certs' in kwargs:
@@ -3721,7 +3726,7 @@ class API:
             context, instance.uuid)
 
         self._checks_for_create_and_rebuild(context, image_id, image,
-                flavor, metadata, files_to_inject, root_bdm)
+                flavor, metadata, files_to_inject, root_bdm, min_comp_ver)
 
         # Check the state of the volume. If it is not in-use, an exception
         # will occur when creating attachment during reconstruction,
@@ -4096,7 +4101,7 @@ class API:
                                                migration,
                                                migration.source_compute)
 
-    def _allow_cross_cell_resize(self, context, instance):
+    def _allow_cross_cell_resize(self, context, instance, min_comp_ver):
         """Determine if the request can perform a cross-cell resize on this
         instance.
 
@@ -4117,15 +4122,12 @@ class API:
         if allowed:
             # TODO(mriedem): We can remove this minimum compute version check
             # in the 22.0.0 "V" release.
-            min_compute_version = (
-                objects.service.get_minimum_version_all_cells(
-                    context, ['nova-compute']))
-            if min_compute_version < MIN_COMPUTE_CROSS_CELL_RESIZE:
+            if min_comp_ver < MIN_COMPUTE_CROSS_CELL_RESIZE:
                 LOG.debug('Request is allowed by policy to perform cross-cell '
                           'resize but the minimum nova-compute service '
                           'version in the deployment %s is less than %s so '
                           'cross-cell resize is not allowed at this time.',
-                          min_compute_version, MIN_COMPUTE_CROSS_CELL_RESIZE)
+                          min_comp_ver, MIN_COMPUTE_CROSS_CELL_RESIZE)
                 return False
 
             res_req, req_lvl_params = (
@@ -4206,8 +4208,12 @@ class API:
         host_name can be set in the cold migration case only.
         """
 
+        # Only lookup the minimum compute version once
+        min_comp_ver = objects.service.get_minimum_version_all_cells(
+            context, ["nova-compute"])
+
         allow_cross_cell_resize = self._allow_cross_cell_resize(
-            context, instance)
+            context, instance, min_comp_ver)
 
         if host_name is not None:
             node = self._validate_host_for_cold_migrate(
@@ -4339,7 +4345,7 @@ class API:
             # instance to a new mixed instance from a dedicated or shared
             # instance.
             self._check_compute_service_for_mixed_instance(
-                request_spec.numa_topology)
+                request_spec.numa_topology, min_comp_ver)
 
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0
