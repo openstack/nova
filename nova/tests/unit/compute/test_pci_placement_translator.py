@@ -270,6 +270,129 @@ class TestTranslator(test.NoDBTestCase):
             pt.data("fake-node_0000:72:00.0").uuid, pf.extra_info["rp_uuid"]
         )
 
+    def test_otu_decorates_with_trait(self):
+        pv = ppt.PlacementView(
+            "fake-node", instances_under_same_host_resize=[])
+        sd = pci_device.PciDevice(
+            address="0000:71:00.0",
+            parent_addr="0000:71:00.0",
+            dev_type=fields.PciDeviceType.STANDARD,
+            vendor_id="dead",
+            product_id="beef",
+        )
+        pf1 = pci_device.PciDevice(
+            address="0000:72:00.0",
+            parent_addr=None,
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
+        )
+        pf2 = pci_device.PciDevice(
+            address="0000:73:00.0",
+            parent_addr=None,
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
+        )
+        pf3 = pci_device.PciDevice(
+            address="0000:74:00.0",
+            parent_addr=None,
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
+        )
+        vf1 = pci_device.PciDevice(
+            address="0000:75:00.0",
+            parent_addr="0000:75:00.0",
+            dev_type=fields.PciDeviceType.SRIOV_VF,
+            vendor_id="dead",
+            product_id="beef",
+        )
+        vf2 = pci_device.PciDevice(
+            address="0000:74:00.0",
+            parent_addr="0000:76:00.0",
+            dev_type=fields.PciDeviceType.SRIOV_VF,
+            vendor_id="dead",
+            product_id="beef",
+        )
+
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+
+        # PF and regular devices are fine...
+        pv._add_dev(sd, {'one_time_use': 'true'})
+        pv._add_dev(pf1, {'one_time_use': 'true'})
+        pv._add_dev(pf2, {})
+        pv._add_dev(pf3, {'one_time_use': 'false'})
+        # ... but VFs are not allowed
+        self.assertRaisesRegex(exception.PlacementPciException,
+                               'Only.*may set one_time_use',
+                               pv._add_dev, vf1, {'one_time_use': 'true'})
+        self.assertRaisesRegex(exception.PlacementPciException,
+                               'Only.*may set one_time_use',
+                               pv._add_dev, vf2, {'one_time_use': 'false'})
+        pv.update_provider_tree(pt)
+
+        # These are both OTU, make sure we get the trait added
+        self.assertIn('HW_PCI_ONE_TIME_USE',
+                      pt.data("fake-node_0000:71:00.0").traits)
+        self.assertIn('HW_PCI_ONE_TIME_USE',
+                      pt.data("fake-node_0000:72:00.0").traits)
+        # These are not, so make sure we do not
+        self.assertNotIn('HW_PCI_ONE_TIME_USE',
+                      pt.data("fake-node_0000:73:00.0").traits)
+        self.assertNotIn('HW_PCI_ONE_TIME_USE',
+                      pt.data("fake-node_0000:74:00.0").traits)
+
+    def test_otu_reservation_workflow(self):
+        pv = ppt.PlacementView(
+            "fake-node", instances_under_same_host_resize=[])
+        sd = pci_device.PciDevice(
+            address="0000:71:00.0",
+            parent_addr="0000:71:00.0",
+            dev_type=fields.PciDeviceType.STANDARD,
+            vendor_id="dead",
+            product_id="beef",
+        )
+        pf = pci_device.PciDevice(
+            address="0000:72:00.0",
+            parent_addr=None,
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
+        )
+
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+
+        pv._add_dev(sd, {'one_time_use': 'true'})
+        pv._add_dev(pf, {'one_time_use': 'true'})
+
+        def assert_inventory(addr, reserved):
+            self.assertEqual(
+                reserved,
+                pt.data("fake-node_0000:%i:00.0" % addr
+                        ).inventory['CUSTOM_PCI_DEAD_BEEF'].get('reserved', 0))
+
+        # Before allocation, reserved is unset
+        pv.update_provider_tree(pt)
+        assert_inventory(71, 0)
+        assert_inventory(72, 0)
+
+        # After allocation, reserved gets set to total (only for the device
+        # that is used)
+        pf.instance_uuid = uuids.instance
+        pv.update_provider_tree(pt)
+        assert_inventory(71, 0)
+        assert_inventory(72, 1)
+
+        # After deallocation, reserved is again unchanged (i.e. never
+        # decremented)
+        pf.instance_uuid = None
+        pv.update_provider_tree(pt)
+        assert_inventory(71, 0)
+        assert_inventory(72, 1)
+
     def test_update_provider_tree_for_pci_update_pools(self):
         pt = provider_tree.ProviderTree()
         pt.new_root("fake-node", uuids.compute_rp)
