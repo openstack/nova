@@ -38,14 +38,7 @@
             ],
             "properties": {
                 "architecture": "x86_64",
-                "auto_disk_config": "True",
-                "base_image_ref": "%(uuid)s",
-                "container_format": "ova",
-                "disk_format": "vhd",
-                "kernel_id": "nokernel",
-                "min_disk": "1",
-                "min_ram": "0",
-                "ramdisk_id": "nokernel"
+                "auto_disk_config": "True"
             }
         },
         "key_name": null,
