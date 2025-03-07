@@ -9064,6 +9064,22 @@ class ComputeManager(manager.Manager):
                 LOG.info('Destination was ready for NUMA live migration, '
                          'but source is either too old, or is set to an '
                          'older upgrade level.', instance=instance)
+
+            # At this point, we know that this compute node (destination)
+            # potentially has enough live-migratable PCI devices, based on the
+            # fact that the scheduler selected this host as the destination.
+            # The claim code below is the decisive step to move from a
+            # potentially correct to a known to be correct destination.
+            flavored_pci_reqs = [
+                pci_req
+                for pci_req in instance.pci_requests.requests
+                if pci_req.source == objects.InstancePCIRequest.FLAVOR_ALIAS
+            ]
+
+            migrate_data.pci_dev_map_src_dst = self._flavor_based_pci_claim(
+                ctxt, instance, flavored_pci_reqs
+            )
+
             if self.network_api.has_port_binding_extension(ctxt):
                 # Create migrate_data vifs if not provided by driver.
                 if 'vifs' not in migrate_data:
@@ -9085,6 +9101,71 @@ class ComputeManager(manager.Manager):
             self.driver.cleanup_live_migration_destination_check(ctxt,
                     dest_check_data)
         return migrate_data
+
+    def _flavor_based_pci_claim(self, ctxt, instance, pci_requests):
+        if not pci_requests:
+            # Return an empty dict as migrate_data.pci_dev_map_src_dst
+            # cannot be None
+            return {}
+
+        # Create an InstancePCIRequests and claim against PCI resource
+        # tracker for out dest instance
+        pci_requests = objects.InstancePCIRequests(
+            requests=pci_requests,
+            instance_uuid=instance.uuid)
+
+        src_devs = objects.PciDeviceList.get_by_instance_uuid(
+            ctxt, instance.uuid
+        )
+
+        claimed_dst_devs = self._claim_from_pci_reqs(
+            ctxt, instance, pci_requests
+        )
+
+        pci_dev_map_src_dst = {}
+        for req_id in (
+            pci_req.request_id for pci_req in pci_requests.requests
+        ):
+            req_src_addr = [
+                dev.address
+                for dev in src_devs
+                if dev.request_id == req_id
+            ]
+            req_claimed_dst__addr = [
+                dev.address
+                for dev in claimed_dst_devs
+                if dev.request_id == req_id
+            ]
+
+            # This still depends on ordering, but only within the scope
+            # of the same  InstancePCIRequest. The only case where multiple
+            # devices per compute  node are allocated for a single request
+            # is when req.count > 1. In that case, the allocated devices are
+            # interchangeable since they match the  same specification from
+            # the same InstancePCIRequest.
+            #
+            # Therefore, this ordering dependency is acceptable.
+            pci_dev_map_src_dst.update(dict(
+                zip(req_src_addr, req_claimed_dst__addr)
+            ))
+
+        return pci_dev_map_src_dst
+
+    def _claim_from_pci_reqs(self, ctxt, instance, pci_requests):
+        # if we are called during the live migration with NUMA topology
+        # support the PCI claim needs to consider the destination NUMA
+        # topology that is then stored in the migration_context
+        dest_topo = None
+        if instance.migration_context:
+            dest_topo = instance.migration_context.new_numa_topology
+
+        claimed_pci_devices_objs = self.rt.claim_pci_devices(
+            ctxt, pci_requests, dest_topo)
+
+        for pci_dev in claimed_pci_devices_objs:
+            LOG.debug("PCI device: %s Claimed on destination node",
+                      pci_dev.address)
+        return claimed_pci_devices_objs
 
     def _live_migration_claim(self, ctxt, instance, migrate_data,
                               migration, limits, allocs):
