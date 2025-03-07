@@ -200,14 +200,23 @@ class InstanceNUMATopology(base.NovaObject,
         for cell in obj.cells:
             if len(cell.cpuset) == 0:
                 continue
-
+            # NOTE(gibi): This data migration populates the pcpuset field that
+            # is new in version 1.5. However below we bump the object version
+            # to 1.6 directly. This is intentional. The version 1.6 introduced
+            # a new possible value 'mixed' for the cpu_policy field. As that
+            # is a forward compatible change we don't have a specific data
+            # migration for it. But we also don't have an automated way to bump
+            # old object versions from 1.5 to 1.6. So we do it here just to
+            # avoid inconsistency between data and version in the DB.
             if cell.cpu_policy == obj_fields.CPUAllocationPolicy.DEDICATED:
                 cell.pcpuset = cell.cpuset
                 cell.cpuset = set()
+                cell.VERSION = '1.6'
                 update_db = True
             else:
                 if 'pcpuset' not in cell:
                     cell.pcpuset = set()
+                    cell.VERSION = '1.6'
                     update_db = True
 
         return update_db
