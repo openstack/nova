@@ -67,6 +67,15 @@ class InstancePCIRequest(base.NovaObject):
         if target_version < (1, 1) and 'request_id' in primitive:
             del primitive['request_id']
 
+    def is_live_migratable(self):
+        return (
+            "spec" in self and
+            self.spec is not None and
+            all(
+                spec.get("live_migratable") == "true" for spec in self.spec
+            )
+        )
+
 
 @base.NovaObjectRegistry.register
 class InstancePCIRequests(base.NovaObject):
@@ -151,3 +160,12 @@ class InstancePCIRequests(base.NovaObject):
                  'request_id': x.request_id,
                  'requester_id': x.requester_id} for x in self.requests]
         return jsonutils.dumps(blob)
+
+    def neutron_requests(self):
+        return all(
+            [
+                req
+                for req in self.requests
+                if req.source == InstancePCIRequest.NEUTRON_PORT
+            ]
+        )

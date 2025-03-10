@@ -433,8 +433,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                        return_value=[[fake_selection1]])
     @mock.patch.object(objects.RequestSpec, 'reset_forced_destinations')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
-    def test_find_destination_works(self, mock_setup, mock_reset, mock_select,
-                                    mock_check, mock_call):
+    @mock.patch.object(objects.RequestSpec,
+                       'generate_request_groups_from_pci_requests')
+    def test_find_destination_works(self, mock_gengrp, mock_setup, mock_reset,
+                                    mock_select, mock_check, mock_call):
         self.assertEqual(("host1", "node1", fake_limits1),
                          self.task._find_destination())
 
@@ -444,6 +446,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         # Make sure the spec was updated to include the project_id.
         self.assertEqual(self.fake_spec.project_id, self.instance.project_id)
 
+        mock_gengrp.assert_called_once()
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_reset.assert_called_once_with()
         self.ensure_network_information_mock.assert_called_once_with(
@@ -462,13 +465,17 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        return_value=[[fake_selection1]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
-    def test_find_destination_no_image_works(self, mock_setup, mock_select,
-                                             mock_check, mock_call):
+    @mock.patch.object(objects.RequestSpec,
+                       'generate_request_groups_from_pci_requests')
+    def test_find_destination_no_image_works(
+        self, mock_gengrp, mock_setup, mock_select, mock_check, mock_call
+    ):
         self.instance['image_ref'] = ''
 
         self.assertEqual(("host1", "node1", fake_limits1),
                          self.task._find_destination())
 
+        mock_gengrp.assert_called_once()
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_called_once_with(
             self.context, self.fake_spec, [self.instance.uuid],
@@ -520,8 +527,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        side_effect=[[[fake_selection1]], [[fake_selection2]]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(objects.RequestSpec,
+                       'generate_request_groups_from_pci_requests')
     def test_find_destination_retry_with_invalid_livem_checks(
-            self, mock_setup, mock_select, mock_check, mock_call, mock_remove):
+            self, mock_gengrp, mock_setup, mock_select, mock_check,
+            mock_call, mock_remove):
         self.flags(migrate_max_retries=1)
         mock_call.side_effect = [exception.Invalid(), None]
 
@@ -529,6 +539,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                          self.task._find_destination())
         # Should have removed allocations for the first host.
         mock_remove.assert_called_once_with(fake_selection1.compute_node_uuid)
+        mock_gengrp.assert_called_once()
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_has_calls([
             mock.call(self.context, self.fake_spec, [self.instance.uuid],
@@ -548,8 +559,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        side_effect=[[[fake_selection1]], [[fake_selection2]]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(objects.RequestSpec,
+                       'generate_request_groups_from_pci_requests')
     def test_find_destination_retry_with_failed_migration_pre_checks(
-            self, mock_setup, mock_select, mock_check, mock_call, mock_remove):
+            self, mock_gengrp, mock_setup, mock_select, mock_check,
+            mock_call, mock_remove):
         self.flags(migrate_max_retries=1)
         mock_call.side_effect = [exception.MigrationPreCheckError('reason'),
                                  None]
@@ -558,6 +572,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                          self.task._find_destination())
         # Should have removed allocations for the first host.
         mock_remove.assert_called_once_with(fake_selection1.compute_node_uuid)
+        mock_gengrp.assert_called_once()
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_has_calls([
             mock.call(self.context, self.fake_spec, [self.instance.uuid],
@@ -577,8 +592,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        return_value=[[fake_selection1]])
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    @mock.patch.object(objects.RequestSpec,
+                       'generate_request_groups_from_pci_requests')
     def test_find_destination_retry_exceeds_max(
-            self, mock_setup, mock_select, mock_check, mock_remove, mock_save):
+            self, mock_gengrp, mock_setup, mock_select, mock_check,
+            mock_remove, mock_save):
         self.flags(migrate_max_retries=0)
 
         self.assertRaises(exception.MaxRetriesExceeded,
@@ -587,6 +605,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         mock_save.assert_called_once_with()
         # Should have removed allocations for the first host.
         mock_remove.assert_called_once_with(fake_selection1.compute_node_uuid)
+        mock_gengrp.assert_called_once()
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_called_once_with(
             self.context, self.fake_spec, [self.instance.uuid],
@@ -596,9 +615,13 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
                        side_effect=exception.NoValidHost(reason=""))
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
-    def test_find_destination_when_runs_out_of_hosts(self, mock_setup,
-                                                     mock_select):
+    @mock.patch.object(objects.RequestSpec,
+                       'generate_request_groups_from_pci_requests')
+    def test_find_destination_when_runs_out_of_hosts(
+        self, mock_gengrp, mock_setup, mock_select
+    ):
         self.assertRaises(exception.NoValidHost, self.task._find_destination)
+        mock_gengrp.assert_called_once()
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_called_once_with(
             self.context, self.fake_spec, [self.instance.uuid],
@@ -837,10 +860,18 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         remove_provider.assert_called_once_with(
             self.task.context, self.task.instance.uuid, uuids.cn)
 
-    def test_check_can_migrate_pci(self):
-        """Tests that _check_can_migrate_pci() allows live-migration if
-        instance does not contain non-network related PCI requests and
-        raises MigrationPreCheckError otherwise
+    @mock.patch.object(objects.Instance, 'get_pci_devices')
+    def test_check_can_migrate_pci(self, mock_get_pci):
+        """Tests that _check_can_migrate_pci() allows live migration
+        if the instance contains:
+        - Network PCI requests.
+        - Non-network PCI requests that are live migratable.
+        - A combination of the above.
+
+        Raises MigrationPreCheckError if:
+        - Non-network PCI requests are not live migratable.
+        - Network PCI requests involve devices that lack binding extensions
+          or do not support VIF-related PCI allocations.
         """
 
         @mock.patch.object(self.task.network_api,
@@ -864,6 +895,32 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                     self.context)
                 self.assertTrue(mock_supp_vif_related_pci_alloc.called)
 
+        def _assert_precheck_error(msg):
+            exc = self.assertRaises(exception.MigrationPreCheckError,
+                            _test, pci_requests, False, False)
+            self.assertIn(msg, str(exc))
+            exc = self.assertRaises(exception.MigrationPreCheckError,
+                            _test, pci_requests, True, False)
+            self.assertIn(msg, str(exc))
+            exc = self.assertRaises(exception.MigrationPreCheckError,
+                            _test, pci_requests, False, True)
+            self.assertIn(msg, str(exc))
+            exc = self.assertRaises(exception.MigrationPreCheckError,
+                            _test, pci_requests, True, True)
+            self.assertIn(msg, str(exc))
+
+        fake_devs = objects.PciDeviceList(
+            objects=[
+                objects.PciDevice(
+                    compute_node_id=1,
+                    address="0000:04:00.3",
+                    vendor_id="1377",
+                    product_id="0047",
+                    extra_info={"live_migratable": "true"},
+                    request_id=uuids.pcidev1,
+                )
+            ]
+        )
         # instance has no PCI requests
         _test(None, False, False)  # No support in Neutron and Computes
         _test(None, True, False)  # No support in Computes
@@ -879,17 +936,39 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertRaises(exception.MigrationPreCheckError,
                           _test, pci_requests, False, True)
         _test(pci_requests, True, True)
-        # instance contains Non network related PCI requests (alias_name!=None)
+        # instance contains Non network (flavor based) related PCI
+        # requests (alias_name!=None)
+        # Warning, we are appending, so we have 2 requests
+        # 1 x neutron_port + 1 x flavor_based
         pci_requests.requests.append(
-            objects.InstancePCIRequest(alias_name="non-network-related-pci"))
+            objects.InstancePCIRequest(
+                alias_name="non-network-related-pci",
+                spec=[{"live_migratable": "true"}],
+            )
+        )
+        mock_get_pci.return_value = fake_devs
         self.assertRaises(exception.MigrationPreCheckError,
                           _test, pci_requests, False, False)
         self.assertRaises(exception.MigrationPreCheckError,
                           _test, pci_requests, True, False)
         self.assertRaises(exception.MigrationPreCheckError,
                           _test, pci_requests, False, True)
-        self.assertRaises(exception.MigrationPreCheckError,
-                          _test, pci_requests, True, True)
+        _test(pci_requests, True, True)
+
+        # Simulate we have a flavor based request not requesting explicitly
+        # live migratable devices.
+        # device.
+        pci_requests = objects.InstancePCIRequests(
+            requests=[
+                objects.InstancePCIRequest(
+                    alias_name="non-network-related-pci",
+                ),
+            ]
+        )
+        _assert_precheck_error(
+            "This request does not explicitly request "
+            "live-migratable devices."
+        )
 
     def test_check_can_migrate_specific_resources(self):
         """Test _check_can_migrate_specific_resources allows live migration

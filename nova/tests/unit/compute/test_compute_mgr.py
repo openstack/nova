@@ -5272,7 +5272,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                     {
                         "vendor_id": "1377",
                         "product_id": "0047",
-                        "live_migratable": "yes",
+                        "live_migratable": "true",
                     }
                 ],
             ),

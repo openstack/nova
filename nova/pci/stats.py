@@ -608,6 +608,38 @@ class PciDeviceStats(object):
 
         return matching_pools
 
+    def _filter_pools_for_live_migratable_devices(
+        self, pools: ty.List[Pool], request: 'objects.InstancePCIRequest',
+    ) -> ty.List[Pool]:
+        """Filter out pools with non live_migratable devices.
+
+        :param pools: A list of PCI device pool dicts
+        :param request: An InstancePCIRequest object describing the type,
+            quantity and required NUMA affinity of device(s) we want.
+        :returns: A list of pools that can be used to support the request if
+            this is possible.
+        """
+
+        # The following code handles the case where 'live_migratable' is
+        # set (either "true" or "false") by filtering devices to select the
+        # appropriate ones.
+        # If it is not set, we skip the next code block and no filtering
+        # is applied to the pools.
+        if all(spec.get("live_migratable") == 'true' for spec in request.spec):
+            #  if all specs require live migratable devices, then we need to
+            #  reduce the pools by the ones that support them.
+            pools = [pool for pool in pools if pool.get("live_migratable") and
+                     pool['live_migratable'] == 'true']
+        elif all(
+            spec.get("live_migratable") == "false" for spec in request.spec
+        ):
+            #  If the request asks to NOT support live-migratable devices, then
+            #  we don't provide the ones that support them.
+            #  We want to exclude the devices that don't have this value yet.
+            pools = [pool for pool in pools if pool.get("live_migratable") and
+                     pool['live_migratable'] == 'false']
+        return pools
+
     def _filter_pools(
         self,
         pools: ty.List[Pool],
@@ -725,6 +757,16 @@ class PciDeviceStats(object):
             LOG.debug(
                 'Dropped %d device(s) that are not part of the placement '
                 'allocation',
+                before_count - after_count
+            )
+
+        before_count = after_count
+        pools = self._filter_pools_for_live_migratable_devices(
+            pools, request)
+        after_count = sum([pool['count'] for pool in pools])
+        if after_count < before_count:
+            LOG.debug(
+                'Dropped %d device(s) that are not live migratable',
                 before_count - after_count
             )
 

@@ -229,20 +229,34 @@ class LiveMigrationTask(base.TaskBase):
 
         At the moment support only if:
 
-            1. Instance contains VIF related PCI requests.
-            2. Neutron supports multiple port binding extension.
-            3. Src and Dest host support VIF related PCI allocations.
+            a) Instance contains flavor based PCI requests configured with
+               live_migratable tag specified.
+
+            b) Instance contains neutron port related PCI request and:
+                - Neutron supports multiple port binding extension.
+                - Src and Dest host support VIF related PCI allocations.
         """
         if self.instance.pci_requests is None or not len(
                 self.instance.pci_requests.requests):
             return
 
         for pci_request in self.instance.pci_requests.requests:
-            if pci_request.source != objects.InstancePCIRequest.NEUTRON_PORT:
-                # allow only VIF related PCI requests in live migration.
-                raise exception.MigrationPreCheckError(
-                    reason= "non-VIF related PCI requests for instance "
-                            "are not allowed for live migration.")
+            if pci_request.source == objects.InstancePCIRequest.FLAVOR_ALIAS:
+
+                # A pre-Epoxy instance using a device that would
+                # technically be live-migratable will be accepted only if
+                # all InstancePCIRequests have the 'live_migratable' flag
+                # set to "true".
+                if not pci_request.is_live_migratable():
+                    # Ensure the request explicitly requests migratable devices
+                    raise exception.MigrationPreCheckError(
+                        reason="This request does not explicitly request "
+                        "live-migratable devices."
+                    )
+
+        if not self.instance.pci_requests.neutron_requests():
+            return
+
         # All PCI requests are VIF related, now check neutron,
         # source and destination compute nodes.
         if not self.network_api.has_port_binding_extension(self.context):
@@ -482,6 +496,12 @@ class LiveMigrationTask(base.TaskBase):
         # add them to the RequestSpec.
         request_spec.requested_resources = port_res_req
         request_spec.request_level_params = req_lvl_params
+
+        # NOTE(gibi): as PCI devices is tracked in placement we
+        # need to generate request groups from InstancePCIRequests.
+        # This will append new RequestGroup objects to the
+        # request_spec.requested_resources list if needed
+        request_spec.generate_request_groups_from_pci_requests()
 
         scheduler_utils.setup_instance_group(self.context, request_spec)
 

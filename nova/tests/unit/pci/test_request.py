@@ -37,6 +37,7 @@ _fake_alias1 = jsonutils.dumps({
     "vendor_id": "8086",
     "device_type": "type-PCI",
     "numa_policy": "legacy",
+    "live_migratable": "true",
 })
 
 _fake_alias2 = jsonutils.dumps({
@@ -45,6 +46,7 @@ _fake_alias2 = jsonutils.dumps({
     "product_id": "1111",
     "vendor_id": "8086",
     "device_type": "type-PF",
+    "live_migratable": "false",
 })
 
 
@@ -87,6 +89,7 @@ class PciRequestTestCase(test.NoDBTestCase):
                 "product_id": "4443",
                 "vendor_id": "8086",
                 "dev_type": "type-PCI",
+                "live_migratable": "true",
             }])
         self.assertEqual(expected_result, result['QuickAssist'])
 
@@ -107,7 +110,8 @@ class PciRequestTestCase(test.NoDBTestCase):
                 "capability_type": "pci",
                 "product_id": "4443",
                 "vendor_id": "8086",
-                "dev_type": "type-PCI"
+                "dev_type": "type-PCI",
+                "live_migratable": "true",
             }, {
                 "capability_type": "pci",
                 "product_id": "4444",
@@ -126,6 +130,13 @@ class PciRequestTestCase(test.NoDBTestCase):
         fake_alias = jsonutils.dumps({
             "name": "xxx",
             "device_type": "N",
+        })
+        self._test_get_alias_from_config_invalid(fake_alias)
+
+    def test_get_alias_from_config_invalid_live_migratable(self):
+        fake_alias = jsonutils.dumps({
+            "name": "xxx",
+            "live_migratable": "invalid",
         })
         self._test_get_alias_from_config_invalid(fake_alias)
 
@@ -259,14 +270,14 @@ class PciRequestTestCase(test.NoDBTestCase):
              'requester_id': None,
              'spec': [{'vendor_id': '8086', 'product_id': '4443',
                        'dev_type': 'type-PCI',
-                       'capability_type': 'pci'}],
+                       'capability_type': 'pci', 'live_migratable': 'true'}],
                        'alias_name': 'QuickAssist'},
 
             {'count': 1,
              'requester_id': None,
              'spec': [{'vendor_id': '8086', 'product_id': '1111',
                        'dev_type': "type-PF",
-                       'capability_type': 'pci'}],
+                       'capability_type': 'pci', 'live_migratable': 'false'}],
              'alias_name': 'IntelNIC'}, ]
 
         requests = request._translate_alias_to_requests(
@@ -292,7 +303,7 @@ class PciRequestTestCase(test.NoDBTestCase):
              'requester_id': None,
              'spec': [{'vendor_id': '8086', 'product_id': '4443',
                        'dev_type': 'type-PCI',
-                       'capability_type': 'pci'}],
+                       'capability_type': 'pci', 'live_migratable': 'true'}],
              'alias_name': 'QuickAssist',
              'numa_policy': policy
              },
@@ -301,7 +312,7 @@ class PciRequestTestCase(test.NoDBTestCase):
              'requester_id': None,
              'spec': [{'vendor_id': '8086', 'product_id': '1111',
                        'dev_type': "type-PF",
-                       'capability_type': 'pci'}],
+                       'capability_type': 'pci', 'live_migratable': 'false'}],
              'alias_name': 'IntelNIC',
              'numa_policy': policy
              }, ]
@@ -417,6 +428,7 @@ class PciRequestTestCase(test.NoDBTestCase):
                         'product_id': '4443',
                         'dev_type': "type-PCI",
                         'capability_type': 'pci',
+                        'live_migratable': 'true',
                     }
                 ],
                 'alias_name': 'QuickAssist'
@@ -435,13 +447,13 @@ class PciRequestTestCase(test.NoDBTestCase):
             {'count': 3,
              'spec': [{'vendor_id': '8086', 'product_id': '4443',
                        'dev_type': "type-PCI",
-                       'capability_type': 'pci'}],
+                       'capability_type': 'pci', 'live_migratable': 'true'}],
              'alias_name': 'QuickAssist'},
 
             {'count': 1,
              'spec': [{'vendor_id': '8086', 'product_id': '1111',
                        'dev_type': "type-PF",
-                       'capability_type': 'pci'}],
+                       'capability_type': 'pci', 'live_migratable': 'false'}],
              'alias_name': 'IntelNIC'}, ]
 
         flavor = {'extra_specs': {"pci_passthrough:alias":
@@ -471,7 +483,7 @@ class PciRequestTestCase(test.NoDBTestCase):
             {'count': 3,
              'spec': [{'vendor_id': '8086', 'product_id': '1111',
                        'dev_type': "type-PF",
-                       'capability_type': 'pci'}],
+                       'capability_type': 'pci', 'live_migratable': 'false'}],
              'alias_name': 'IntelNIC'}, ]
 
         flavor = {'extra_specs': {"pci_passthrough:alias":

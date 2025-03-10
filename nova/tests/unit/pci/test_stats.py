@@ -511,6 +511,20 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                     "remote_managed": "false",
                 }
             ),
+            jsonutils.dumps(
+                {
+                    "vendor_id": "15b4",
+                    "product_id": "102e",
+                    "live_migratable": "true",
+                }
+            ),
+            jsonutils.dumps(
+                {
+                    "vendor_id": "15b5",
+                    "product_id": "102f",
+                    "live_migratable": "false",
+                }
+            ),
         ]
         self.flags(device_spec=device_spec, group="pci")
         dev_filter = whitelist.Whitelist(device_spec)
@@ -593,6 +607,40 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                     'parent_addr': '0000:0e:00.0',
                     'numa_node': 0}))
 
+        # live_migratable set to true
+        # Warning: 'extra_info' field is set by the init or create method
+        self.live_migratable = []
+        self.live_migratable.append(
+            objects.PciDevice.create(
+                None, {
+                    'compute_node_id': 1,
+                    'address': '0000:0f:00.1',
+                    'vendor_id': '15b4',
+                    'product_id': '102e',
+                    'status': 'available',
+                    'request_id': None,
+                    'dev_type': fields.PciDeviceType.SRIOV_VF,
+                    'parent_addr': '0000:0f:00.0',
+                    'numa_node': 0,
+                }))
+
+        # live_migratable set to false
+        # Warning: 'extra_info' field is set by the init or create method
+        self.non_live_migratable = []
+        self.non_live_migratable.append(
+            objects.PciDevice.create(
+                None, {
+                    'compute_node_id': 1,
+                    'address': '0000:10:00.1',
+                    'vendor_id': '15b5',
+                    'product_id': '102f',
+                    'status': 'available',
+                    'request_id': None,
+                    'dev_type': fields.PciDeviceType.SRIOV_VF,
+                    'parent_addr': '0000:10:00.0',
+                    'numa_node': 0,
+                }))
+
         for dev in self.pci_tagged_devices:
             self.pci_stats.add_device(dev)
 
@@ -603,6 +651,12 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
             self.pci_stats.add_device(dev)
 
         for dev in self.locally_managed_netdevs:
+            self.pci_stats.add_device(dev)
+
+        for dev in self.live_migratable:
+            self.pci_stats.add_device(dev)
+
+        for dev in self.non_live_migratable:
             self.pci_stats.add_device(dev)
 
     def _assertPoolContent(self, pool, vendor_id, product_id, count, **tags):
@@ -618,8 +672,10 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         nr_untagged = len(self.pci_untagged_devices)
         nr_remote = len(self.remote_managed_netdevs)
         nr_local = len(self.locally_managed_netdevs)
+        nr_lm = len(self.live_migratable)
+        nr_nlm = len(self.non_live_migratable)
         self.assertEqual(
-            nr_tagged + nr_untagged + nr_remote + nr_local,
+            nr_tagged + nr_untagged + nr_remote + nr_local + nr_lm + nr_nlm,
             len(self.pci_stats.pools),
         )
         # Pools are ordered based on the number of keys. 'product_id',
@@ -677,6 +733,32 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         self.assertEqual(self.locally_managed_netdevs, devs)
         j += nr_local
 
+        # one live_migratable
+        devs = []
+        for i in range(j, j + nr_lm):
+            self._assertPoolContent(
+                self.pci_stats.pools[i],
+                "15b4",
+                "102e",
+                1,
+            )
+            devs += self.pci_stats.pools[i]['devices']
+        self.assertEqual(self.live_migratable, devs)
+        j += nr_lm
+
+        # one non_live_migratable
+        devs = []
+        for i in range(j, j + nr_nlm):
+            self._assertPoolContent(
+                self.pci_stats.pools[i],
+                "15b5",
+                "102f",
+                1,
+            )
+            devs += self.pci_stats.pools[i]['devices']
+        self.assertEqual(self.non_live_migratable, devs)
+        j += nr_nlm
+
     def test_add_devices(self):
         self._create_pci_devices()
         self._assertPools()
@@ -699,10 +781,19 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                         objects.InstancePCIRequest(count=1,
                             spec=[{'vendor_id': '15b3',
                                    'product_id': '101c',
-                                   PCI_REMOTE_MANAGED_TAG: 'False'}])]
+                                   PCI_REMOTE_MANAGED_TAG: 'False'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'vendor_id': '15b4',
+                                   'product_id': '102e',
+                                   'live_migratable': 'true'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'vendor_id': '15b5',
+                                   'product_id': '102f',
+                                   'live_migratable': 'false'}]),
+                        ]
         devs = self.pci_stats.consume_requests(pci_requests)
-        self.assertEqual(5, len(devs))
-        self.assertEqual(set(['0071', '0072', '101e', '101c']),
+        self.assertEqual(7, len(devs))
+        self.assertEqual(set(['0071', '0072', '101e', '101c', '102e', '102f']),
                          set([dev.product_id for dev in devs]))
         self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072', 0)
         self._assertPoolContent(self.pci_stats.pools[1], '1137', '0072', 1)
@@ -723,6 +814,10 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                                 remote_managed='false')
         self._assertPoolContent(self.pci_stats.pools[9], '15b3', '101c', 0,
                                 remote_managed='false')
+        self._assertPoolContent(self.pci_stats.pools[10], '15b4', '102e', 0,
+                                live_migratable='true')
+        self._assertPoolContent(self.pci_stats.pools[11], '15b5', '102f', 0,
+                                live_migratable='false')
 
     def test_add_device_no_devspec(self):
         self._create_pci_devices()
