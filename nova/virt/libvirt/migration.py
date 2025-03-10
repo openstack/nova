@@ -16,7 +16,6 @@
 """Utility methods to manage guests migration
 
 """
-
 from collections import deque
 
 from lxml import etree
@@ -88,6 +87,11 @@ def get_updated_guest_xml(instance, guest, migrate_data, get_volume_config,
         xml_doc = _update_numa_xml(xml_doc, migrate_data)
     if 'target_mdevs' in migrate_data:
         xml_doc = _update_mdev_xml(xml_doc, migrate_data.target_mdevs)
+    if "pci_dev_map_src_dst" in migrate_data:
+        xml_doc = _update_pci_dev_xml(
+            xml_doc, migrate_data.pci_dev_map_src_dst
+        )
+
     if new_resources:
         xml_doc = _update_device_resources_xml(xml_doc, new_resources)
     return etree.tostring(xml_doc, encoding='unicode')
@@ -147,6 +151,77 @@ def _update_mdev_xml(xml_doc, target_mdevs):
     LOG.debug('_update_mdev_xml output xml=%s',
               etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
     return xml_doc
+
+
+def _update_pci_dev_xml(xml_doc, pci_dev_map_src_dst):
+    hostdevs = xml_doc.findall('./devices/hostdev')
+
+    for src_addr, dst_addr in pci_dev_map_src_dst.items():
+        src_fields = _get_pci_address_fields_with_prefix(src_addr)
+        dst_fields = _get_pci_address_fields_with_prefix(dst_addr)
+
+        if not _update_hostdev_address(hostdevs, src_fields, dst_fields):
+            _raise_hostdev_not_found_exception(xml_doc, src_addr)
+
+    LOG.debug(
+        '_update_pci_xml output xml=%s',
+        etree.tostring(xml_doc, encoding='unicode', pretty_print=True)
+    )
+    return xml_doc
+
+
+def _get_pci_address_fields_with_prefix(addr):
+    (domain, bus, slot, func) = nova.pci.utils.get_pci_address_fields(addr)
+    return (f"0x{domain}", f"0x{bus}", f"0x{slot}", f"0x{func}")
+
+
+def _update_hostdev_address(hostdevs, src_fields, dst_fields):
+    src_domain, src_bus, src_slot, src_function = src_fields
+    dst_domain, dst_bus, dst_slot, dst_function = dst_fields
+
+    for hostdev in hostdevs:
+        if hostdev.get('type') != 'pci':
+            continue
+
+        address_tag = hostdev.find('./source/address')
+        if address_tag is None:
+            continue
+
+        if _address_matches(
+            address_tag, src_domain, src_bus, src_slot, src_function
+        ):
+            _set_address_fields(
+                address_tag, dst_domain, dst_bus, dst_slot, dst_function
+            )
+            return True
+
+    return False
+
+
+def _address_matches(address_tag, domain, bus, slot, function):
+    return (
+        address_tag.get('domain') == domain and
+        address_tag.get('bus') == bus and
+        address_tag.get('slot') == slot and
+        address_tag.get('function') == function
+    )
+
+
+def _set_address_fields(address_tag, domain, bus, slot, function):
+    address_tag.set('domain', domain)
+    address_tag.set('bus', bus)
+    address_tag.set('slot', slot)
+    address_tag.set('function', function)
+
+
+def _raise_hostdev_not_found_exception(xml_doc, src_addr):
+    xml = etree.tostring(
+        xml_doc, encoding="unicode", pretty_print=True
+    ).strip()
+    raise exception.NovaException(
+        'Unable to find the hostdev to replace for this source PCI '
+        f'address: {src_addr} in the xml: {xml}'
+    )
 
 
 def _update_cpu_shared_set_xml(xml_doc, migrate_data):
