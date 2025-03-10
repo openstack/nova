@@ -347,6 +347,12 @@ project_id = {
     'pattern': '^[a-zA-Z0-9-]*$'
 }
 
+user_id = {
+    'type': 'string',
+    'pattern': '^[a-zA-Z0-9-]*$',
+    'minLength': 1,
+    'maxLength': 255,
+}
 
 server_id = {
     'type': 'string', 'format': 'uuid'
