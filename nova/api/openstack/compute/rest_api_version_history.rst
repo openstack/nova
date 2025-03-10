@@ -1293,7 +1293,7 @@ query string parameters.
 
 .. _microversion 2.100:
 
-2.100
+2.100 (Maximum in 2025.1 Epoxy)
 -----------------------------------------------------
 
 The ``GET /servers/{server_id}``, ``GET /servers/detail``
