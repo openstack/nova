@@ -270,6 +270,7 @@ SERVICE_VERSION_ALIASES = {
     'Bobcat': 66,
     'Caracal': 66,
     'Dalmatian': 67,
+    'Epoxy': 68,
 }
 
 
