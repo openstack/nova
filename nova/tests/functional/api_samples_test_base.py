@@ -376,24 +376,12 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         self.assertEqual(exp_code, response.status_code, message)
         response_data = response.content
         response_data = pretty_data(response_data)
-        if not os.path.exists(self._get_template(name,
-                                                 self.microversion)):
+        template_path = self._get_template(name, self.microversion)
+        if not os.path.exists(template_path):
             self._write_template(name, response_data)
             template_data = response_data
         else:
             template_data = self._read_template(name)
-        if (self.generate_samples and
-                not os.path.exists(self._get_sample(
-                    name, self.microversion))):
-
-            self._write_sample(name, response_data)
-            sample_data = response_data
-        else:
-            with open(self._get_sample(name,
-                                       self.microversion)) as sample:
-                sample_data = sample.read()
-                if update_links:
-                    sample_data = self._update_links(sample_data)
 
         try:
             template_data = objectify(template_data)
@@ -403,11 +391,20 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         except NoMatch as e:
             raise NoMatch("\nFailed to match Template to Response: \n%s\n"
                           "Template: %s\n\n"
+                          "Template Path: %s\n\n"
                           "Response: %s\n\n" %
-                          (e,
-                           pp.pformat(template_data),
+                          (e, pp.pformat(template_data), template_path,
                            pp.pformat(response_data)))
 
+        sample_path = self._get_sample(name, self.microversion)
+        if (self.generate_samples and not os.path.exists(sample_path)):
+            self._write_sample(name, response_data)
+            sample_data = response_data
+        else:
+            with open(sample_path) as sample:
+                sample_data = sample.read()
+                if update_links:
+                    sample_data = self._update_links(sample_data)
         try:
             # NOTE(danms): replace some of the subs with patterns for the
             # doc/api_samples check, which won't have things like the
@@ -426,12 +423,13 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         except NoMatch as e:
             raise NoMatch("\nFailed to match Template to Sample: \n%s\n"
                           "Template: %s\n\n"
+                          "Template Path: %s\n\n"
                           "Sample: %s\n\n"
+                          "sample Path: %s\n\n"
                           "Hint: does your test need to override "
                           "ApiSampleTestBase.generalize_subs()?" %
-                          (e,
-                           pp.pformat(template_data),
-                           pp.pformat(sample_data)))
+                          (e, pp.pformat(template_data), template_path,
+                           pp.pformat(response_data), sample_path))
 
     def _get_host(self):
         return 'http://openstack.example.com'
