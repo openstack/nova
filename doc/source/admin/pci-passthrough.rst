@@ -436,6 +436,12 @@ be added to the resource provider representing the matching PCI devices.
    (Zed) the nova-compute service will refuse to start with such configuration.
    It is suggested to use the PCI address of the device instead.
 
+.. important::
+   While nova supported configuring :oslo.config:option:`pci.alias` where an
+   alias name is repeated and therefore associated to multiple alias
+   specifications, such configuration is not supported when PCI tracking in
+   Placement is enabled.
+
 The nova-compute service makes sure that existing instances with PCI
 allocations in the nova DB will have a corresponding PCI allocation in
 placement. This allocation healing also acts on any new instances regardless of
