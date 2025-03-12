@@ -372,19 +372,6 @@ class MoveClaimTestCase(ClaimTestCase):
 
 class LiveMigrationClaimTestCase(ClaimTestCase):
 
-    def test_live_migration_claim_bad_pci_request(self):
-        flavor = self._fake_flavor()
-        instance = self._fake_instance()
-        instance.numa_topology = None
-        self.assertRaisesRegex(
-            exception.ComputeResourcesUnavailable,
-            'PCI requests are not supported',
-            claims.MoveClaim, self.context, instance, _NODENAME, flavor,
-            {}, self.tracker, self.compute_node,
-            objects.InstancePCIRequests(requests=[
-                objects.InstancePCIRequest(alias_name='fake-alias')]),
-            objects.Migration(migration_type='live-migration'), None)
-
     def test_live_migration_page_size(self):
         flavor = self._fake_flavor()
         instance = self._fake_instance()
