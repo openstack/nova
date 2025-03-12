@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fixes an issue when serial console for baremetal instances is not
+    available. `See bug 2099872
+    <https://bugs.launchpad.net/nova/+bug/2099872>`__
