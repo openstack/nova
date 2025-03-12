@@ -353,6 +353,18 @@ Caveats
    This information is correct as of the 17.0.0 Queens release. Where
    improvements have been made or issues fixed, they are noted per item.
 
+* After installing the NVIDIA driver on compute nodes, if ``mdev`` are not
+  visible but VF devices are present under a path like
+  ``/sys/bus/pci/devices/0000:25:00.4/nvidia``, this indicates that the
+  **kernel variant driver** is in use.
+
+  This most likely occurs on **Ubuntu Noble** or **RHEL 10**.
+
+  .. versionchanged:: 31.0.0
+
+   Please refer to the `PCI passthrough documentation`_ for proper
+   configuration.
+
 * When live-migrating an instance using vGPUs, the libvirt guest domain XML
   isn't updated with the new mediated device UUID to use for the target.
 
@@ -451,3 +463,4 @@ For nested vGPUs:
 .. _Intel GVT-g: https://01.org/igvt-g
 .. _NVIDIA GRID vGPU: http://docs.nvidia.com/grid/5.0/pdf/grid-vgpu-user-guide.pdf
 .. _osc-placement plugin: https://docs.openstack.org/osc-placement/latest/index.html
+.. _PCI passthrough documentation: https://docs.openstack.org/nova/latest/admin/pci-passthrough.html
