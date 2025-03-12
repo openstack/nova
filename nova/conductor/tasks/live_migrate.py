@@ -249,6 +249,10 @@ class LiveMigrationTask(base.TaskBase):
                 # set to "true".
                 if not pci_request.is_live_migratable():
                     # Ensure the request explicitly requests migratable devices
+                    LOG.warning(
+                        "Migration pre-check failed: The request does "
+                        "not explicitly request live-migratable devices."
+                    )
                     raise exception.MigrationPreCheckError(
                         reason="This request does not explicitly request "
                         "live-migratable devices."

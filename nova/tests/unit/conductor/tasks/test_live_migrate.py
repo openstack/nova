@@ -860,8 +860,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         remove_provider.assert_called_once_with(
             self.task.context, self.task.instance.uuid, uuids.cn)
 
+    @mock.patch('nova.conductor.tasks.live_migrate.LOG')
     @mock.patch.object(objects.Instance, 'get_pci_devices')
-    def test_check_can_migrate_pci(self, mock_get_pci):
+    def test_check_can_migrate_pci(self, mock_get_pci, mock_warn):
         """Tests that _check_can_migrate_pci() allows live migration
         if the instance contains:
         - Network PCI requests.
@@ -968,6 +969,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         _assert_precheck_error(
             "This request does not explicitly request "
             "live-migratable devices."
+        )
+        mock_warn.warning.assert_called_with(
+            "Migration pre-check failed: The request does "
+            "not explicitly request live-migratable devices."
         )
 
     def test_check_can_migrate_specific_resources(self):
