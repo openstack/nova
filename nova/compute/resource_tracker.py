@@ -138,6 +138,26 @@ class ResourceTracker(object):
                 'not match host')
         self.service_ref = service_ref
 
+    def _invalidate_pci_in_placement_cached_rps(self, allocs):
+        """Invalidate cache for PCI-in-placement providers.
+
+        This invalidates the local cached copy of any provider for which an
+        allocation of a PCI-in-placement device exists. We do this in case the
+        reserved count has been modified externally to make sure we see it.
+        """
+        if not allocs:
+            return
+        for rp, rp_allocs in allocs.items():
+            try:
+                p_data = self.provider_tree.data(rp)
+            except ValueError:
+                # Not all allocations for an instance are necessarily against
+                # a provider in our tree
+                continue
+            if os_traits.COMPUTE_MANAGED_PCI_DEVICE in p_data.traits:
+                self.reportclient.invalidate_resource_provider(
+                    rp, cacheonly=True)
+
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def instance_claim(self, context, instance, nodename, allocations,
                        limits=None):
@@ -206,6 +226,11 @@ class ResourceTracker(object):
 
         claimed_resources = self._claim_resources(allocations)
         instance.resources = claimed_resources
+
+        # In case we have any allocations for PCI-in-placement devices, be
+        # sure to invalidate our cache of those providers before we run
+        # _update() below (which does the PCI-in-placement sync).
+        self._invalidate_pci_in_placement_cached_rps(allocations)
 
         # Mark resources in-use and update stats
         self._update_usage_from_instance(context, instance, nodename)
@@ -369,6 +394,11 @@ class ResourceTracker(object):
 
         instance.migration_context = mig_context
         instance.save()
+
+        # In case we have any allocations for PCI-in-placement devices, be
+        # sure to invalidate our cache of those providers before we run
+        # _update() below (which does the PCI-in-placement sync).
+        self._invalidate_pci_in_placement_cached_rps(allocations)
 
         # Mark the resources in-use for the resize landing on this
         # compute host:
