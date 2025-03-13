@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import collections
+import copy
+import ddt
 from unittest import mock
 
 from oslo_config import cfg
@@ -1027,6 +1029,7 @@ class PciDeviceStatsPlacementSupportTestCase(test.NoDBTestCase):
         )
 
 
+@ddt.ddt
 class PciDeviceStatsProviderMappingTestCase(test.NoDBTestCase):
     def setUp(self):
         super().setUp()
@@ -1512,6 +1515,115 @@ class PciDeviceStatsProviderMappingTestCase(test.NoDBTestCase):
                 if pool["count"] > 0
             },
         )
+
+    @mock.patch("nova.pci.stats.LOG.warning")
+    def _test_split_pool_rejected(self, consume_fn, mock_warning):
+        self.pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(), dev_filter=self.dev_filter
+        )
+        for vf_index in [1, 2]:
+            dev = objects.PciDevice(
+                compute_node_id=1,
+                vendor_id="dead",
+                product_id="beef",
+                address=f"0000:81:01.{vf_index}",
+                parent_addr="0000:81:01.0",
+                numa_node=0,
+                dev_type="type-VF",
+            )
+            self.pci_stats.add_device(dev)
+            dev.extra_info = {'rp_uuid': uuids.pf1}
+
+        self.pci_stats.populate_pools_metadata_from_assigned_devices()
+        # NOTE(gibi): this simulates an invalid situation where the same
+        # VFs from the same PF are split across multiple pools. This should
+        # not happen, but we want to check that the code rejects it
+        self.pci_stats.pools.extend(copy.deepcopy(self.pci_stats.pools))
+
+        vf_req = objects.InstancePCIRequest(
+            count=1,
+            alias_name='a-vf',
+            request_id=uuids.vf_req,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-VF",
+                    # Simulate that the scheduler already allocate a candidate
+                    # and the mapping is stored in the request.
+                    "rp_uuids": ",".join([uuids.pf1])
+                }
+            ],
+        )
+
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            consume_fn,
+            [vf_req],
+        )
+        mock_warning.assert_called_once_with(
+            'The PCI allocation logic assumes that devices related to the '
+            'same rp_uuid are in the same pool. However the following '
+            'rp_uuids are split across multiple pools. This should not '
+            'happen. Please file a bug report. %s',
+            {uuids.pf1: self.pci_stats.pools})
+
+    def test_consume_split_pool_rejected(self):
+        self._test_split_pool_rejected(
+            lambda reqs: self.pci_stats.consume_requests(reqs))
+
+    def test_apply_split_pool_rejected(self):
+        self._test_split_pool_rejected(
+            lambda reqs: self.pci_stats.apply_requests(reqs, {}))
+
+    @ddt.data(
+        # no pool no problem
+        [[], True],
+        # single pool without rp_uuid is OK
+        [[{}], True],
+        # single pool with rp_uuid is OK
+        [[{}, {"rp_uuid": uuids.pf1}], True],
+        # two pools with different rp_uuid is OK
+        [[{"rp_uuid": uuids.pf1}, {"rp_uuid": uuids.pf2}], True],
+        # two pools with the same rp_uuid is NOT OK
+        [[{}, {"rp_uuid": uuids.pf1}, {"rp_uuid": uuids.pf2},
+          {"rp_uuid": uuids.pf1}], False]
+    )
+    @ddt.unpack
+    def test_assert_one_pool_per_rp_uuid(self, pools, result):
+        self.assertEqual(
+            result, stats.PciDeviceStats._assert_one_pool_per_rp_uuid(pools))
+
+    def test_find_pool_ignores_metadata(self):
+        self.pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(), dev_filter=self.dev_filter
+        )
+        dev1 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:01.1",
+            parent_addr="0000:81:01.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        dev1.extra_info = {'rp_uuid': uuids.pf1}
+        self.pci_stats.add_device(dev1)
+        self.pci_stats.populate_pools_metadata_from_assigned_devices()
+
+        dev2 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:01.2",
+            parent_addr="0000:81:01.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        dev2.extra_info = {'rp_uuid': uuids.pf1}
+        self.pci_stats.add_device(dev2)
+
+        self.assertEqual(1, len(self.pci_stats.pools))
 
 
 class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
