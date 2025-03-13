@@ -656,3 +656,88 @@ A fix for this issue is planned in a follow-up for the **Epoxy** release.
 The upstream bug report is `here`__.
 
 .. __: https://bugs.launchpad.net/nova/+bug/2102161
+
+One-Time-Use Devices
+--------------------
+
+Certain devices may need attention after they are released from one user and
+before they are attached to another. This is especially true of direct
+passthrough devices because the instance has full control over them while
+attached, and Nova doesn't know specifics about the device itself, unlike
+regular more cloudy resources. Examples include:
+
+* Securely erasing NVMe devices to ensure data residue is not passed from one
+  user to the other unintentionally
+* Reinstalling known-good firmware to the device to avoid a hijack attack
+* Updating firmware to the latest release before each user
+* Checking a property of the device to determine if it needs repair or
+  replacement before giving it to another user (i.e. NVMe write-wear indicator)
+* Some custom behavior, reset, etc
+
+Nova's scope does not cover the above, but it does support a feature that makes
+it easier for the operator to orchestrate tasks like this. By marking a device
+as "one time use" (hereafter referred to as OTU), Nova will allocate a device
+once, after which it will remain in a "reserved" state to avoid being
+allocated to another instance. After the operator's workflow is performed and
+the device should be returned to the pool of available resources, the reserved
+flag can be dropped and Nova will consider it usable again.
+
+.. note:: This feature requires :ref:`pci-tracking-in-placement` in order to
+  work. The compute configuration is required, but the transitional scheduler
+  config is optional (during transition but required for safety).
+
+A device can be marked as OTU by adding a tag in the ``device_spec`` like this:
+
+.. code-block:: shell
+
+  device_spec = {"address": "0000:00:1.0", "one_time_use": true}
+
+By marking the device as such, Nova will set the ``reserved`` inventory value
+on the placement provider to fully cover the device (i.e. ``reserved=total``
+at the point at which the instance is assigned the PCI device on the compute
+node. When the instance is deleted, the ``used`` value will return to zero but
+``reserved`` will remain. It is the operator's responsibility to return the
+``reserved`` value to zero when the device is ready for re-assignment.
+
+The best way to handle this would be to listen to Nova's notifications for the
+``instance.delete.end`` event so that the post-processing workflow can happen
+immediately. However, since notifications could be dropped or missed, regular
+polling should be performed. Providers that represent devices that Nova is
+applying the OTU behavior to will have the ``HW_PCI_ONE_TIME_USE`` trait,
+making it easier to identify them. For example:
+
+.. code-block:: shell
+
+ $ openstack resource provider list --required HW_PCI_ONE_TIME_USE
+ +--------------------------------------+--------------------+------------+--------------------------------------+--------------------------------------+
+ | uuid                                 | name               | generation | root_provider_uuid                   | parent_provider_uuid                 |
+ +--------------------------------------+--------------------+------------+--------------------------------------+--------------------------------------+
+ | b9e67d7d-43db-49c7-8ce8-803cad08e656 | jammy_0000:00:01.0 |         39 | 2ee402e8-c5c6-4586-9ac7-58e7594d27d1 | 2ee402e8-c5c6-4586-9ac7-58e7594d27d1 |
+ +--------------------------------------+--------------------+------------+--------------------------------------+--------------------------------------+
+
+Will find all such providers. For each of those, checking the inventory to find
+ones with ``used=0`` and ``reserved=1`` will identify devices in need of
+processing. To use the above example:
+
+.. code-block:: shell
+
+ $ openstack resource provider inventory list b9e67d7d-43db-49c7-8ce8-803cad08e656
+ +----------------------+------------------+----------+----------+----------+-----------+-------+------+
+ | resource_class       | allocation_ratio | min_unit | max_unit | reserved | step_size | total | used |
+ +----------------------+------------------+----------+----------+----------+-----------+-------+------+
+ | CUSTOM_PCI_1B36_0100 |              1.0 |        1 |        1 |        1 |         1 |     1 |    0 |
+ +----------------------+------------------+----------+----------+----------+-----------+-------+------+
+
+To return the above device back to the pool of allocatable resources, we can
+set the reserved count back to zero:
+
+.. code-block:: shell
+
+ $ openstack resource provider inventory set --amend \
+     --resource CUSTOM_PCI_1B36_0100:reserved=0 \
+     b9e67d7d-43db-49c7-8ce8-803cad08e656
+ +----------------------+------------------+----------+----------+----------+-----------+-------+
+ | resource_class       | allocation_ratio | min_unit | max_unit | reserved | step_size | total |
+ +----------------------+------------------+----------+----------+----------+-----------+-------+
+ | CUSTOM_PCI_1B36_0100 |              1.0 |        1 |        1 |        0 |         1 |     1 |
+ +----------------------+------------------+----------+----------+----------+-----------+-------+
