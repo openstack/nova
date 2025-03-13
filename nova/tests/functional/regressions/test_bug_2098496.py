@@ -113,69 +113,23 @@ class PCIInPlacementCreateAfterDeleteTestCase(base.PlacementPCIReportingTests):
         self.assertPCIDeviceCounts('compute1', total=2, free=2)
         self.assert_placement_pci_view("compute1", **compute1_empty)
 
-        # This is already shows the potential issue behind bug/2098496.
-        # After the server is deleted we are not back to a single pool of 2
-        # VFs but instead two separate pools with one device each but both
-        # related to the same rp_uuid. This breaks an assumption of the pool
-        # allocation logic later.
-        pools = objects.ComputeNode.get_first_node_by_host_for_old_compat(
-            self.ctxt, "compute1").pci_device_pools
-        self.assertEqual(len(pools), 2)
-        self.assertEqual(pools[0].count, 1)
-        self.assertEqual(pools[1].count, 1)
-        self.assertEqual(pools[0].tags['rp_uuid'], pools[1].tags['rp_uuid'])
-
-        # This is the expected state after the bug is fixed
         # assert that the single pool is not broken into two during the
         # de-allocation
-        # pools = objects.ComputeNode.get_first_node_by_host_for_old_compat(
-        #     self.ctxt, "compute1").pci_device_pools
-        # self.assertEqual(len(pools), 1)
-        # self.assertEqual(pools[0].count, 2)
+        pools = objects.ComputeNode.get_first_node_by_host_for_old_compat(
+            self.ctxt, "compute1").pci_device_pools
+        self.assertEqual(len(pools), 1)
+        self.assertEqual(pools[0].count, 2)
 
         server_1vf = self._create_server(flavor_id=flavor_id, networks=[])
-        # This is bug/2098496 as the VM now consumes 2 VFs instead of one it
-        # requested
-        self.assertPCIDeviceCounts('compute1', total=2, free=0)
+
+        self.assertPCIDeviceCounts('compute1', total=2, free=1)
         compute1_expected_placement_view = copy.deepcopy(compute1_empty)
         compute1_expected_placement_view["usages"] = {
-            "0000:81:00.0": {rc: 2}
+            "0000:81:00.0": {rc: 1}
         }
         compute1_expected_placement_view["allocations"][server_1vf["id"]] = {
-            "0000:81:00.0": {rc: 2},
+            "0000:81:00.0": {rc: 1},
         }
         self.assert_placement_pci_view(
             "compute1", **compute1_expected_placement_view)
-        # prove that the placement view got corrupted only after the claim
-        # on the compute due the allocation healing logic
-        last_healing = self.pci_healing_fixture.last_healing("compute1")
-        alloc_before = last_healing[0]
-        alloc_after = last_healing[1]
-
-        def alloc_by_rc(allocations, rc):
-            return [
-                alloc["resources"][rc]
-                for alloc in allocations.values()
-                if rc in alloc["resources"]
-            ]
-
-        pci_alloc_before = alloc_by_rc(
-            alloc_before[server_1vf["id"]]["allocations"], rc)
-        self.assertEqual(1, sum(pci_alloc_before))
-
-        pci_alloc_after = alloc_by_rc(
-            alloc_after[server_1vf["id"]]["allocations"], rc)
-        self.assertEqual(2, sum(pci_alloc_after))
-
-        # This is the expected result after the bug is fixed
-        # self.assertPCIDeviceCounts('compute1', total=2, free=1)
-        # compute1_expected_placement_view = copy.deepcopy(compute1_empty)
-        # compute1_expected_placement_view["usages"] = {
-        #     "0000:81:00.0": {rc: 1}
-        # }
-        # compute1_expected_placement_view["allocations"][server_1vf["id"]] = {
-        #     "0000:81:00.0": {rc: 1},
-        # }
-        # self.assert_placement_pci_view(
-        #     "compute1", **compute1_expected_placement_view)
-        # self.assert_no_pci_healing("compute1")
+        self.assert_no_pci_healing("compute1")
