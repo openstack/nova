@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The ``one_time_use`` tag was added to the PCI ``device_spec`` description,
+    which allows leaving devices in reserved state after they have been
+    assigned to an instance. This is useful for data cleaning, firmware
+    updates, and other operator-specific workflows.
