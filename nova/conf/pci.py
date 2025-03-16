@@ -50,8 +50,7 @@ Possible Values:
       ["live_migratable": "<live_migratable>"],
     }
 
-  Where ``[`` indicates zero or one occurrences, ``{`` indicates zero or
-  multiple occurrences, and ``|`` mutually exclusive options.
+  Note that ``[...]`` indicates optional field.
 
   For example::
 
@@ -70,7 +69,7 @@ Possible Values:
     alias = {
       "name": "A16_16A",
       "device_type": "type-VF",
-      resource_class: "CUSTOM_A16_16A",
+      "resource_class": "CUSTOM_A16_16A",
     }
 
   Valid key values are :
