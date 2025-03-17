@@ -1296,8 +1296,7 @@ class ResourceTracker(object):
             context, compute_node.uuid, name=compute_node.hypervisor_hostname)
         # Let the virt driver rearrange the provider tree and set/update
         # the inventory, traits, and aggregates throughout.
-        allocs = self.reportclient.get_allocations_for_provider_tree(
-            context, nodename)
+        allocs = None
         driver_reshaped = False
         try:
             self.driver.update_provider_tree(prov_tree, nodename)
@@ -1309,6 +1308,8 @@ class ResourceTracker(object):
             LOG.info("Performing resource provider inventory and "
                      "allocation data migration during compute service "
                      "startup or fast-forward upgrade.")
+            allocs = self.reportclient.get_allocations_for_provider_tree(
+                context, nodename)
             self.driver.update_provider_tree(
                 prov_tree, nodename, allocations=allocs)
             driver_reshaped = True
@@ -1354,13 +1355,19 @@ class ResourceTracker(object):
         # PCI allocation without placement being involved until the prefilter
         # is enabled. So we need to be ready to heal PCI allocations at
         # every call not just at startup.
-        pci_reshaped = pci_placement_translator.update_provider_tree_for_pci(
-            prov_tree,
-            nodename,
-            self.pci_tracker,
-            allocs,
-            instances_under_same_host_resize,
-        )
+        pci_reshaped = False
+        if self.pci_tracker and self.pci_tracker.pci_devs:
+            if not driver_reshaped:
+                allocs = self.reportclient.get_allocations_for_provider_tree(
+                    context, nodename)
+            pci_reshaped = (
+                pci_placement_translator.update_provider_tree_for_pci(
+                    prov_tree,
+                    nodename,
+                    self.pci_tracker,
+                    allocs,
+                    instances_under_same_host_resize,
+            ))
 
         self.provider_tree = prov_tree
 

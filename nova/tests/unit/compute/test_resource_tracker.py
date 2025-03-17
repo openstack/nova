@@ -1940,13 +1940,17 @@ class TestUpdateComputeNode(BaseTestCase):
     )
     @mock.patch(
         'nova.compute.pci_placement_translator.update_provider_tree_for_pci')
-    def test_update_pci_reporting(self, mock_update_provider_tree_for_pci):
+    @mock.patch('nova.objects.PciDevice.save')
+    def test_update_pci_reporting(
+            self, mock_pci_save, mock_update_provider_tree_for_pci
+    ):
         """Assert that resource tracker calls update_provider_tree_for_pci
         and that call did not change any allocations so
         update_from_provider_tree called without triggering reshape
         """
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
+        self._setup_pci_tracker()
         ptree = self._setup_ptree(compute_obj)
         # simulate that pci reporting did not touch allocations
         mock_update_provider_tree_for_pci.return_value = False
@@ -1978,8 +1982,9 @@ class TestUpdateComputeNode(BaseTestCase):
     )
     @mock.patch(
         'nova.compute.pci_placement_translator.update_provider_tree_for_pci')
+    @mock.patch('nova.objects.PciDevice.save')
     def test_update_pci_reporting_reshape(
-        self, mock_update_provider_tree_for_pci
+        self, mock_pci_save, mock_update_provider_tree_for_pci
     ):
         """Assert that resource tracker calls update_provider_tree_for_pci
         and that call changed allocations so
@@ -1987,6 +1992,7 @@ class TestUpdateComputeNode(BaseTestCase):
         """
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
+        self._setup_pci_tracker()
         ptree = self._setup_ptree(compute_obj)
         # simulate that pci reporting changed some allocations
         mock_update_provider_tree_for_pci.return_value = True
@@ -2008,6 +2014,33 @@ class TestUpdateComputeNode(BaseTestCase):
         upt.assert_called_once_with(
             mock.sentinel.ctx, ptree, allocations=mock_get_allocs.return_value)
 
+    def _setup_pci_tracker(self):
+        pci_dev = pci_device.PciDevice.create(
+            None,
+            dev_dict={
+                "compute_node_id": 1,
+                "address": "0000:81:00.0",
+                "product_id": "0002",
+                "vendor_id": "0001",
+                "numa_node": 0,
+                "dev_type": obj_fields.PciDeviceType.STANDARD,
+                "status": obj_fields.PciDeviceStatus.AVAILABLE,
+                "parent_addr": None,
+            },
+        )
+
+        pci_dev.instance_uuid = None
+        pci_devs = [pci_dev]
+
+        # TODO(jaypipes): Remove once the PCI tracker is always created
+        # upon the resource tracker being initialized...
+        with mock.patch.object(
+            objects.PciDeviceList, 'get_by_compute_node',
+            return_value=objects.PciDeviceList(objects=pci_devs)
+        ):
+            self.rt.pci_tracker = pci_manager.PciDevTracker(
+                mock.sentinel.ctx, _COMPUTE_NODE_FIXTURES[0])
+
     @ddt.data(True, False)
     @mock.patch(
         'nova.compute.resource_tracker.ResourceTracker.'
@@ -2020,8 +2053,9 @@ class TestUpdateComputeNode(BaseTestCase):
     )
     @mock.patch(
         'nova.compute.pci_placement_translator.update_provider_tree_for_pci')
+    @mock.patch('nova.objects.PciDevice.save')
     def test_update_pci_reporting_driver_reshape(
-        self, pci_reshape, mock_update_provider_tree_for_pci
+        self, mock_pci_save, pci_reshape, mock_update_provider_tree_for_pci
     ):
         """Assert that resource tracker first called the
         driver.update_provider_tree and that needed reshape so the allocations
@@ -2031,6 +2065,7 @@ class TestUpdateComputeNode(BaseTestCase):
         """
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
+        self._setup_pci_tracker()
         ptree = self._setup_ptree(compute_obj)
         # simulate that the driver requests reshape
         self.driver_mock.update_provider_tree.side_effect = [
@@ -2065,8 +2100,9 @@ class TestUpdateComputeNode(BaseTestCase):
     )
     @mock.patch(
         'nova.compute.pci_placement_translator.update_provider_tree_for_pci')
+    @mock.patch('nova.objects.PciDevice.save')
     def test_update_pci_reporting_same_host_resize(
-        self, mock_update_provider_tree_for_pci
+        self, mock_pci_save, mock_update_provider_tree_for_pci
     ):
         """Assert that resource tracker calls update_provider_tree_for_pci
         and with the list of instances that are being resized to the same
@@ -2074,6 +2110,7 @@ class TestUpdateComputeNode(BaseTestCase):
         """
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
+        self._setup_pci_tracker()
         ptree = self._setup_ptree(compute_obj)
         # simulate that pci reporting did not touch allocations
         mock_update_provider_tree_for_pci.return_value = False
