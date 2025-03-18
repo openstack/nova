@@ -36,8 +36,8 @@ class ServerSharesTestBase(base.ServersTestBase):
     api_major_version = 'v2.1'
     microversion = 'latest'
     ADMIN_API = True
-    FAKE_LIBVIRT_VERSION = 7000000
-    FAKE_QEMU_VERSION = 5002000
+    FAKE_LIBVIRT_VERSION = 8000000
+    FAKE_QEMU_VERSION = 6002000
 
     def setUp(self):
         super(ServerSharesTestBase, self).setUp()

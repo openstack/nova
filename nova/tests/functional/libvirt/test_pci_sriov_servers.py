@@ -4879,7 +4879,7 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
     vf_ratio = NUM_VFS // NUM_PFS
 
     # Min Libvirt version that supports working with PCI VPD.
-    FAKE_LIBVIRT_VERSION = 7_009_000  # 7.9.0
+    FAKE_LIBVIRT_VERSION = 8_000_000  # 8.0.0
 
     def setUp(self):
         super().setUp()
