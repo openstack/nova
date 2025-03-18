@@ -1,0 +1,47 @@
+---
+prelude: |
+    The OpenStack 2025.1 Epoxy (Nova 31.0.0) release includes many new features
+    and bug fixes. Please be sure to read the upgrade section which describes
+    the required actions to upgrade your cloud from 30.0.0 (2024.2) to 31.0.0
+    (2025.1).
+    As a reminder, OpenStack 2025.1 is a `Skip-Level-Upgrade Release`__
+    (starting from now, we name it a `SLURP release`) meaning that you can
+    do rolling-upgrades from 2024.1 Caracal directly by skipping to upgrade to
+    2024.2 Dalmatian release.
+
+    .. __: https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for 2024.2 is `v2.100`__.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-2025-1-epoxy
+
+    - New kernel vfio-PCI variant drivers like nvidia GRID on Ubuntu 24.04 are
+      now supported by our PCI passthrough feature. You can create instances
+      using those specific PCI devices but also live migrate them.
+
+    - Manila shares can now be directly attached to instances by a new Nova
+      shares API.
+
+    - A new ImagePropertiesWeigher is able to spread or pack instances using the
+      same image properties.
+
+    - The nova-scheduler service now does leader election in an attempt to have
+      only one run host discovery periodically (if configured) instead of all
+      of them running it all the time in parallel.
+
+    - Image properties and scheduler hints are now returned as part of the
+      instance show API response.
+
+    - Nova added support for the IGB VIF model.
+
+    - Unified limits are no longer experimental since we added a nova-manage tool
+      for migrating existing quota limits to Keystone automatically and given
+      we added new configuration options for telling which resource classes
+      are either required or ignored.
+
+    - Nova now supports a new console type called `spice-direct`  if you define
+      a specific SPICE protocol native proxy URL (eg. a kerbside URL). Direct
+      SPICE VDI consoles enable a much richer virtual desktop experience.
