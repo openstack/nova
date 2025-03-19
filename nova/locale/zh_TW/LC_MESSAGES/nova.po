@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2024-10-09 20:12+0000\n"
+"POT-Creation-Date: 2025-03-18 12:55+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1638,9 +1638,6 @@ msgstr "未被授權"
 
 msgid "Not enough parameters to build a valid rule."
 msgstr "參數數目不足以建置有效的規則。"
-
-msgid "Not implemented on Windows"
-msgstr "未在 Windows 上實作"
 
 msgid "Not stored in rbd"
 msgstr "未儲存在 rbd 中"

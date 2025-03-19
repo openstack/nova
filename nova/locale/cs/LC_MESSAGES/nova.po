@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2024-10-09 20:12+0000\n"
+"POT-Creation-Date: 2025-03-18 12:55+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1588,9 +1588,6 @@ msgstr "Neschváleno."
 
 msgid "Not enough parameters to build a valid rule."
 msgstr "Není dostatek parametrů k sestavení platného pravidla."
-
-msgid "Not implemented on Windows"
-msgstr "Nezavedeno ve Windows"
 
 msgid "Not stored in rbd"
 msgstr "Neuloženo v rbd"
