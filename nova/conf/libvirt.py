@@ -602,7 +602,7 @@ disable certain CPU features.  An example of this is Intel's "invtsc"
 flag to a Nova instance, you need to explicitly enable it.
 
 The possible values for ``cpu_model_extra_flags`` depends on the CPU
-model in use.  Refer to `/usr/share/libvirt/cpu_map/*.xml`` for possible
+model in use.  Refer to ``/usr/share/libvirt/cpu_map/*.xml`` for possible
 CPU feature flags for a given CPU model.
 
 A special note on a particular CPU flag: ``pcid`` (an Intel processor
