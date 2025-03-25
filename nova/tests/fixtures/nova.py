@@ -2110,6 +2110,8 @@ class UnifiedLimitsFixture(fixtures.Fixture):
             'model': {'name': 'flat'}}
         self.mock_sdk_adapter.get_endpoint.return_value.service_id = None
         self.mock_sdk_adapter.get_endpoint.return_value.region_id = None
+        self.mock_sdk_adapter.endpoints.return_value = [
+            mock.Mock(service_id=None, region_id=None)]
 
         # These are Keystone API calls that oslo.limit will also use.
         self.mock_sdk_adapter.registered_limits.side_effect = (
@@ -2118,6 +2120,10 @@ class UnifiedLimitsFixture(fixtures.Fixture):
         self.mock_sdk_adapter.create_registered_limit.side_effect = (
             self.create_registered_limit)
         self.mock_sdk_adapter.create_limit.side_effect = self.create_limit
+
+        # These are calls made for service endpoint discovery in limit/utils.py
+        self.mock_sdk_adapter.services.return_value = [mock.Mock(id=None)]
+        self.mock_sdk_adapter.regions.return_value = [mock.Mock(id=None)]
 
         self.registered_limits_list = []
         self.limits_list = []

@@ -12,33 +12,80 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import typing as ty
+
+if ty.TYPE_CHECKING:
+    from openstack import proxy
+
 from oslo_limit import exception as limit_exceptions
-from oslo_limit import limit
 from oslo_log import log as logging
 
 import nova.conf
+from nova import utils as nova_utils
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 UNIFIED_LIMITS_DRIVER = "nova.quota.UnifiedLimitsDriver"
-ENDPOINT = None
+IDENTITY_CLIENT = None
 
 
 def use_unified_limits():
     return CONF.quota.driver == UNIFIED_LIMITS_DRIVER
 
 
-def _endpoint():
-    global ENDPOINT
-    if ENDPOINT is None:
-        # This is copied from oslo_limit/limit.py
-        endpoint_id = CONF.oslo_limit.endpoint_id
-        if not endpoint_id:
-            raise ValueError("endpoint_id is not configured")
-        enforcer = limit.Enforcer(lambda: None)
-        ENDPOINT = enforcer.connection.get_endpoint(endpoint_id)
-    return ENDPOINT
+class IdentityClient:
+    connection: 'proxy.Proxy'
+    service_id: str
+    region_id: str
+
+    def __init__(self, connection, service_id, region_id):
+        self.connection = connection
+        self.service_id = service_id
+        self.region_id = region_id
+
+    def registered_limits(self):
+        return list(self.connection.registered_limits(
+            service_id=self.service_id, region_id=self.region_id))
+
+
+def _identity_client():
+    global IDENTITY_CLIENT
+    if not IDENTITY_CLIENT:
+        connection = nova_utils.get_sdk_adapter(
+            'identity', True, conf_group='oslo_limit')
+        service_id = None
+        region_id = None
+        # Prefer the endpoint_id if present, same as oslo.limit.
+        if CONF.oslo_limit.endpoint_id is not None:
+            endpoint = connection.get_endpoint(CONF.oslo_limit.endpoint_id)
+            service_id = endpoint.service_id
+            region_id = endpoint.region_id
+        elif 'endpoint_service_type' in CONF.oslo_limit:
+            # This must be oslo.limit >= 2.6.0 and this block is more or less
+            # copied from there.
+            if (not CONF.oslo_limit.endpoint_service_type and not
+                    CONF.oslo_limit.endpoint_service_name):
+                raise ValueError(
+                    'Either endpoint_service_type or endpoint_service_name '
+                    'must be set')
+            # Get the service_id for registered limits calls.
+            services = connection.services(
+                type=CONF.oslo_limit.endpoint_service_type,
+                name=CONF.oslo_limit.endpoint_service_name)
+            if len(services) > 1:
+                raise ValueError('Multiple services found')
+            service_id = services[0].id
+            # Get the region_id if region name is configured.
+            # endpoint_region_name was added in oslo.limit 2.6.0.
+            if CONF.oslo_limit.endpoint_region_name:
+                regions = connection.regions(
+                    name=CONF.oslo_limit.endpoint_region_name)
+                if len(regions) > 1:
+                    raise ValueError('Multiple regions found')
+                region_id = regions[0].id
+        IDENTITY_CLIENT = IdentityClient(connection, service_id, region_id)
+    return IDENTITY_CLIENT
 
 
 def should_enforce(exc: limit_exceptions.ProjectOverLimit) -> bool:
@@ -95,9 +142,7 @@ def should_enforce(exc: limit_exceptions.ProjectOverLimit) -> bool:
     # resource names however this will do one API call whereas the alternative
     # is calling GET /registered_limits/{registered_limit_id} for each resource
     # name.
-    enforcer = limit.Enforcer(lambda: None)
-    registered_limits = list(enforcer.connection.registered_limits(
-        service_id=_endpoint().service_id, region_id=_endpoint().region_id))
+    registered_limits = _identity_client().registered_limits()
 
     # Make a set of resource names of the registered limits.
     have_limits_set = {limit.resource_name for limit in registered_limits}
