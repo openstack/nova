@@ -9,9 +9,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from __future__ import annotations
 
 import functools
 
+from keystoneauth1 import exceptions as kse
+from keystoneauth1 import loading as ks_loading
 import os_traits
 from oslo_log import log as logging
 from oslo_utils import timeutils
@@ -24,6 +27,7 @@ from nova.network import neutron
 from nova import objects
 from nova.scheduler.client import report
 from nova.scheduler import utils
+from nova import utils as nova_utils
 from nova.virt import hardware
 
 CONF = nova.conf.CONF
@@ -444,6 +448,125 @@ def ephemeral_encryption_filter(
     return True
 
 
+# Store a cache from project id to domaind id and domain id to domain name used
+# in external_customer_filter
+PROJECT_ID_DOMAIN_ID_CACHE: dict[str, str] = {}
+DOMAIN_ID_NAME_CACHE: dict[str, str] = {}
+_SERVICE_AUTH = None
+
+
+def _fetch_domain_name(project_id: str) -> str:
+    """Fetch the domain name belonging to the given project id"""
+    global _SERVICE_AUTH
+
+    if _SERVICE_AUTH is None:
+        _SERVICE_AUTH = ks_loading.load_auth_from_conf_options(
+                            CONF,
+                            group=
+                            nova.conf.service_token.SERVICE_USER_GROUP)
+        if _SERVICE_AUTH is None:
+            # This indicates a misconfiguration so log a warning and
+            # return the user_auth.
+            LOG.error('Unable to load auth from [service_user] '
+                      'configuration. Ensure "auth_type" is set.')
+            raise exception.NovaException("Unable to load service_user auth")
+
+    adap = None
+    if project_id not in PROJECT_ID_DOMAIN_ID_CACHE:
+        if adap is None:
+            adap = nova_utils.get_ksa_adapter(
+                'identity', ksa_auth=_SERVICE_AUTH,
+                min_version=(3, 0), max_version=(3, 'latest'))
+
+        url = f"/projects/{project_id}"
+        try:
+            resp = adap.get(url, raise_exc=False)
+        except kse.EndpointNotFound:
+            LOG.error(
+                "Keystone identity service version 3.0 was not found. "
+                "This might be because your endpoint points to the v2.0 "
+                "versioned endpoint which is not supported. Please fix "
+                "this.")
+            raise exception.NovaException(
+                f"Could not fetch project {project_id}")
+        except kse.ClientException:
+            LOG.error("Unable to contact keystone to fetch domain %s",
+                      project_id)
+            raise exception.NovaException(
+                f"Could not fetch domain {project_id}")
+
+        if resp.status_code == 404:
+            LOG.error("Fetching project %s returned 404", project_id)
+            raise exception.NovaException(
+                f"Could not fetch domain {project_id}")
+
+        resp.raise_for_status()
+
+        data = resp.json()
+        PROJECT_ID_DOMAIN_ID_CACHE[project_id] = data['project']['domain_id']
+
+    domain_id = PROJECT_ID_DOMAIN_ID_CACHE[project_id]
+
+    if domain_id in DOMAIN_ID_NAME_CACHE:
+        return DOMAIN_ID_NAME_CACHE[domain_id]
+
+    if adap is None:
+        adap = nova_utils.get_ksa_adapter(
+            'identity', ksa_auth=_SERVICE_AUTH,
+            min_version=(3, 0), max_version=(3, 'latest'))
+
+    url = f"/domains/{domain_id}"
+    try:
+        resp = adap.get(url, raise_exc=False)
+    except kse.EndpointNotFound:
+        LOG.error(
+            "Keystone identity service version 3.0 was not found. "
+            "This might be because your endpoint points to the v2.0 "
+            "versioned endpoint which is not supported. Please fix "
+            "this.")
+        raise exception.NovaException(f"Could not fetch domain {domain_id}")
+    except kse.ClientException:
+        LOG.error("Unable to contact keystone to fetch domain %s", domain_id)
+        raise exception.NovaException(f"Could not fetch domain {domain_id}")
+
+    if resp.status_code == 404:
+        LOG.error("Fetching domain %s returned 404", domain_id)
+        raise exception.NovaException(f"Could not fetch domain {domain_id}")
+
+    resp.raise_for_status()
+
+    data = resp.json()
+    DOMAIN_ID_NAME_CACHE[domain_id] = data['domain']['name']
+    return data['domain']['name']
+
+
+@trace_request_filter
+def external_customer_filter(
+    ctxt: nova_context.RequestContext,
+    request_spec: 'objects.RequestSpec'
+) -> bool:
+    """Pre-filter resource privders for external customers
+
+    If the request is for an external customer, identified by prefix-matching
+    the domain name the instance is getting spawned in, we add an additional
+    filter for the trait CUSTOM_EXTERNAL_CUSTOMER_SUPPORTED.
+    """
+    prefixes = tuple(CONF.scheduler.external_customer_domain_name_prefixes)
+    if not prefixes:
+        return False
+
+    domain_name = _fetch_domain_name(request_spec.project_id)
+    if not domain_name.startswith(prefixes):
+        return False
+
+    request_spec.root_required.add(
+        nova_utils.EXTERNAL_CUSTOMER_SUPPORTED_TRAIT)
+    LOG.debug("external_customer_filter added trait %s",
+              nova_utils.EXTERNAL_CUSTOMER_SUPPORTED_TRAIT)
+
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
@@ -456,6 +579,8 @@ ALL_REQUEST_FILTERS = [
     routed_networks_filter,
     remote_managed_ports_filter,
     ephemeral_encryption_filter,
+] + [
+    external_customer_filter
 ]
 
 

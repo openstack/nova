@@ -196,6 +196,19 @@ Related options:
 
 - ``[compute] compute_driver``
 """),
+    cfg.ListOpt("external_customer_domain_name_prefixes",
+        default=[],
+        help="""
+List of prefixes for domain names to identify an external customer
+
+External customer VMs have to be spawned on specially-prepared hosts. To
+identify that a VM is spawning for an external customer, we check the prefix of
+the domain name against this list. If domain matches, we add an additional
+trait - the one defined in nova.utils.EXTERNAL_CUSTOMER_SUPPORTED_TRAIT - to
+the request for allocations candidates towards Placement.
+
+If kept empty, the trait will not be added to any VM-build request.
+"""),
 ]
 
 filter_scheduler_group = cfg.OptGroup(

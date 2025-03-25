@@ -23,6 +23,7 @@ from nova import objects
 from nova.scheduler import request_filter
 from nova import test
 from nova.tests.unit import utils
+from nova import utils as nova_utils
 
 
 class TestRequestFilter(test.NoDBTestCase):
@@ -724,3 +725,50 @@ class TestRequestFilter(test.NoDBTestCase):
              ot.COMPUTE_EPHEMERAL_ENCRYPTION_LUKS},
             reqspec.root_required)
         self.assertEqual(set(), reqspec.root_forbidden)
+
+    def test_external_customer_filter_no_config(self):
+        reqspec = objects.RequestSpec()
+
+        self.flags(external_customer_domain_name_prefixes=[],
+                   group='scheduler')
+
+        self.assertFalse(request_filter.external_customer_filter(
+                         self.context, reqspec))
+
+    def test_external_customer_filter_cache_filled(self):
+        reqspec = objects.RequestSpec(project_id="some-project")
+
+        request_filter.DOMAIN_ID_NAME_CACHE[mock.sentinel.domain_id] = "test"
+        request_filter.PROJECT_ID_DOMAIN_ID_CACHE["some-project"] = \
+                mock.sentinel.domain_id
+        request_filter._SERVICE_AUTH = mock.sentinel.service_auth
+        self.flags(external_customer_domain_name_prefixes=['foo', 'bar'],
+                   group='scheduler')
+
+        self.assertFalse(request_filter.external_customer_filter(
+                         self.context, reqspec))
+
+    @mock.patch('nova.scheduler.request_filter._fetch_domain_name')
+    def test_external_customer_filter_no_match(self, mock_fetch):
+        reqspec = objects.RequestSpec(project_id="some-project")
+        mock_fetch.return_value = "test"
+
+        self.flags(external_customer_domain_name_prefixes=['foo', 'bar'],
+                   group='scheduler')
+
+        self.assertFalse(request_filter.external_customer_filter(
+                         self.context, reqspec))
+
+    @mock.patch('nova.scheduler.request_filter._fetch_domain_name')
+    def test_external_customer_filter_matching(self, mock_fetch):
+        reqspec = objects.RequestSpec(project_id="some-project")
+        mock_fetch.return_value = "test"
+
+        self.flags(external_customer_domain_name_prefixes=['foo', 'bar', 'te'],
+                   group='scheduler')
+
+        self.assertTrue(request_filter.external_customer_filter(
+                         self.context, reqspec))
+        self.assertEqual(
+            {nova_utils.EXTERNAL_CUSTOMER_SUPPORTED_TRAIT},
+            reqspec.root_required)
