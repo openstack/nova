@@ -15,6 +15,7 @@ import os
 import sys
 
 from oslo_config import cfg
+from oslo_db import exception as odbe
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 from oslo_reports import opts as gmr_opts
@@ -116,6 +117,7 @@ def init_global_data(conf_files, service_name):
             logging.DEBUG)
 
 
+@utils.latch_error_on_raise(retryable=(odbe.DBConnectionError,))
 def init_application(name):
     conf_files = _get_config_files()
 

@@ -304,6 +304,7 @@ class TestCase(base.BaseTestCase):
         # make sure that the wsgi app is fully initialized for all testcase
         # instead of only once initialized for test worker
         wsgi_app.init_global_data.reset()
+        wsgi_app.init_application.reset()
 
         # Reset the placement client singleton
         report.PLACEMENTCLIENT = None
