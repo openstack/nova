@@ -10,7 +10,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from nova import test
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import test_vgpu
 
@@ -47,73 +46,7 @@ class VGPUTestsListDevices(test_vgpu.VGPUTestBase):
 
         self.start_compute_with_vgpu('host1')
 
-        def fake_nodeDeviceLookupByName(self, name):
-            # See bug https://bugs.launchpad.net/nova/+bug/2098892
-            # We don't test this by importing the libvirt module because the
-            # libvirt module is forbidden to be imported into our test
-            # environment.  It is excluded from test-requirements.txt and we
-            # also use the ImportModulePoisonFixture in nova/test.py to prevent
-            # use of modules such as libvirt.
-            if not isinstance(name, str) and name is not None:
-                raise TypeError(
-                    'virNodeDeviceLookupByName() argument 2 must be str or '
-                    f'None, not {type(name)}')
-
-        # FIXME(melwitt): We need to patch this only for this test because if
-        # we add it to the LibvirtFixture right away, it will cause the
-        # following additional tests to fail:
-        #
-        # nova.tests.functional.libvirt.test_reshape.VGPUReshapeTests
-        #   test_create_servers_with_vgpu
-        #
-        # nova.tests.functional.libvirt.test_vgpu.DifferentMdevClassesTests
-        #   test_create_servers_with_different_mdev_classes
-        #   test_resize_servers_with_mlx5
-        #
-        # nova.tests.functional.libvirt.test_vgpu.VGPULimitMultipleTypesTests
-        #   test_create_servers_with_vgpu
-        #
-        # nova.tests.functional.libvirt.test_vgpu.VGPULiveMigrationTests
-        #   test_live_migrate_server
-        #   test_live_migration_fails_on_old_source
-        #   test_live_migration_fails_due_to_non_supported_mdev_types
-        #   test_live_migration_fails_on_old_destination
-        #
-        # nova.tests.functional.libvirt.
-        #                           test_vgpu.VGPULiveMigrationTestsLMFailed
-        #   test_live_migrate_server
-        #   test_live_migration_fails_on_old_source
-        #   test_live_migration_fails_due_to_non_supported_mdev_types
-        #   test_live_migration_fails_on_old_destination
-        #
-        # nova.tests.functional.libvirt.test_vgpu.VGPUMultipleTypesTests
-        #   test_create_servers_with_specific_type
-        #   test_create_servers_with_vgpu
-        #
-        # nova.tests.functional.libvirt.test_vgpu.VGPUTests
-        #   test_multiple_instance_create
-        #   test_create_servers_with_vgpu
-        #   test_create_server_with_two_vgpus_isolated
-        #   test_resize_servers_with_vgpu
-        #
-        # nova.tests.functional.libvirt.test_vgpu.VGPUTestsLibvirt7_3
-        #   test_create_servers_with_vgpu
-        #   test_create_server_with_two_vgpus_isolated
-        #   test_resize_servers_with_vgpu
-        #   test_multiple_instance_create
-        #
-        # nova.tests.functional.regressions.
-        #                               test_bug_1951656.VGPUTestsLibvirt7_7
-        #   test_create_servers_with_vgpu
-        self.stub_out(
-            'nova.tests.fixtures.libvirt.Connection.nodeDeviceLookupByName',
-            fake_nodeDeviceLookupByName)
-
     def test_update_available_resource(self):
         # We only want to verify no errors were logged by
         # update_available_resource (logging under the 'except Exception:').
-        # FIXME(melwitt): This currently will log an error and traceback
-        # because of the bug. Update this when the bug is fixed.
-        e = self.assertRaises(
-            test.TestingException, self._run_periodics, raise_on_error=True)
-        self.assertIn('TypeError', str(e))
+        self._run_periodics(raise_on_error=True)
