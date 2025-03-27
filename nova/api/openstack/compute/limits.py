@@ -13,14 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.api_version_request \
-    import MAX_IMAGE_META_PROXY_API_VERSION
-from nova.api.openstack.api_version_request \
-    import MAX_PROXY_API_SUPPORT_VERSION
-from nova.api.openstack.api_version_request \
-    import MIN_WITHOUT_IMAGE_META_PROXY_API_VERSION
-from nova.api.openstack.api_version_request \
-    import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas import limits
 from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import wsgi
@@ -44,32 +37,23 @@ FILTERED_LIMITS_2_57.extend(['injected_files', 'injected_file_content_bytes'])
 class LimitsController(wsgi.Controller):
     """Controller for accessing limits in the OpenStack API."""
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
-    @validation.query_schema(limits.limits_query_schema)
-    def index(self, req):
-        return self._index(req)
-
-    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION,  # noqa
-                                 MAX_IMAGE_META_PROXY_API_VERSION)
-    @wsgi.expected_errors(())
-    @validation.query_schema(limits.limits_query_schema)
-    def index(self, req):  # noqa
-        return self._index(req, FILTERED_LIMITS_2_36)
-
-    @wsgi.Controller.api_version(  # noqa
-        MIN_WITHOUT_IMAGE_META_PROXY_API_VERSION, '2.56')
-    @wsgi.expected_errors(())
-    @validation.query_schema(limits.limits_query_schema)
-    def index(self, req):  # noqa
-        return self._index(req, FILTERED_LIMITS_2_36, max_image_meta=False)
-
-    @wsgi.Controller.api_version('2.57')  # noqa
-    @wsgi.expected_errors(())
-    @validation.query_schema(limits.limits_query_schema_275, '2.75')
+    @validation.query_schema(limits.limits_query_schema, '2.1', '2.56')
     @validation.query_schema(limits.limits_query_schema, '2.57', '2.74')
-    def index(self, req):  # noqa
-        return self._index(req, FILTERED_LIMITS_2_57, max_image_meta=False)
+    @validation.query_schema(limits.limits_query_schema_275, '2.75')
+    def index(self, req):
+        filtered_limits = []
+        if api_version_request.is_supported(req, '2.57'):
+            filtered_limits = FILTERED_LIMITS_2_57
+        elif api_version_request.is_supported(req, '2.36'):
+            filtered_limits = FILTERED_LIMITS_2_36
+
+        max_image_meta = True
+        if api_version_request.is_supported(req, '2.39'):
+            max_image_meta = False
+
+        return self._index(req, filtered_limits=filtered_limits,
+                           max_image_meta=max_image_meta)
 
     def _index(self, req, filtered_limits=None, max_image_meta=True):
         """Return all global limit information."""
@@ -80,8 +64,7 @@ class LimitsController(wsgi.Controller):
             project_id = req.GET.get('tenant_id')
             context.can(limits_policies.OTHER_PROJECT_LIMIT_POLICY_NAME)
 
-        quotas = QUOTAS.get_project_quotas(context, project_id,
-                                           usages=True)
+        quotas = QUOTAS.get_project_quotas(context, project_id, usages=True)
         builder = limits_views.ViewBuilder()
         return builder.build(req, quotas, filtered_limits=filtered_limits,
                              max_image_meta=max_image_meta)

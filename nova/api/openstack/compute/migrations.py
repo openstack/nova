@@ -15,7 +15,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import migrations as schema_migrations
+from nova.api.openstack.compute.schemas import migrations as schema
 from nova.api.openstack.compute.views import migrations as migrations_view
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -145,47 +145,41 @@ class MigrationsController(wsgi.Controller):
                 migrations_dict['migrations_links'] = migrations_links
         return migrations_dict
 
-    @wsgi.Controller.api_version("2.1", "2.22")  # noqa
-    @wsgi.expected_errors(())
-    @validation.query_schema(schema_migrations.list_query_schema_v20,
-                             "2.0", "2.22")
+    @wsgi.expected_errors((), "2.1", "2.58")
+    @wsgi.expected_errors(400, "2.59")
+    @validation.query_schema(schema.list_query_schema_v20, "2.0", "2.22")
+    @validation.query_schema(schema.list_query_schema_v20, "2.23", "2.58")
+    @validation.query_schema(schema.list_query_params_v259, "2.59", "2.65")
+    @validation.query_schema(schema.list_query_params_v266, "2.66", "2.79")
+    @validation.query_schema(schema.list_query_params_v280, "2.80")
     def index(self, req):
         """Return all migrations using the query parameters as filters."""
-        return self._index(req)
+        add_link = False
+        if api_version_request.is_supported(req, '2.23'):
+            add_link = True
 
-    @wsgi.Controller.api_version("2.23", "2.58")  # noqa
-    @wsgi.expected_errors(())
-    @validation.query_schema(schema_migrations.list_query_schema_v20,
-                             "2.23", "2.58")
-    def index(self, req):  # noqa
-        """Return all migrations using the query parameters as filters."""
-        return self._index(req, add_link=True)
+        next_link = False
+        add_uuid = False
+        sort_keys = None
+        sort_dirs = None
+        limit = None
+        marker = None
+        allow_changes_since = False
+        if api_version_request.is_supported(req, '2.59'):
+            next_link = True
+            add_uuid = True
+            sort_keys = ['created_at', 'id']
+            # FIXME(stephenfin): This looks like a typo?
+            sort_dirs = ['desc', 'desc']
+            limit, marker = common.get_limit_and_marker(req)
+            allow_changes_since = True
 
-    @wsgi.Controller.api_version("2.59", "2.65")  # noqa
-    @wsgi.expected_errors(400)
-    @validation.query_schema(schema_migrations.list_query_params_v259,
-                             "2.59", "2.65")
-    def index(self, req):  # noqa
-        """Return all migrations using the query parameters as filters."""
-        limit, marker = common.get_limit_and_marker(req)
-        return self._index(req, add_link=True, next_link=True, add_uuid=True,
-                           sort_keys=['created_at', 'id'],
-                           sort_dirs=['desc', 'desc'],
-                           limit=limit, marker=marker,
-                           allow_changes_since=True)
+        allow_changes_before = False
+        if api_version_request.is_supported(req, '2.66'):
+            allow_changes_before = True
 
-    @wsgi.Controller.api_version("2.66")  # noqa
-    @wsgi.expected_errors(400)
-    @validation.query_schema(schema_migrations.list_query_params_v266,
-                             "2.66", "2.79")
-    @validation.query_schema(schema_migrations.list_query_params_v280,
-                             "2.80")
-    def index(self, req):  # noqa
-        """Return all migrations using the query parameters as filters."""
-        limit, marker = common.get_limit_and_marker(req)
-        return self._index(req, add_link=True, next_link=True, add_uuid=True,
-                           sort_keys=['created_at', 'id'],
-                           sort_dirs=['desc', 'desc'],
-                           limit=limit, marker=marker,
-                           allow_changes_since=True,
-                           allow_changes_before=True)
+        return self._index(
+            req, add_link=add_link, next_link=next_link, add_uuid=add_uuid,
+            sort_keys=sort_keys, sort_dirs=sort_dirs, limit=limit,
+            marker=marker, allow_changes_since=allow_changes_since,
+            allow_changes_before=allow_changes_before)

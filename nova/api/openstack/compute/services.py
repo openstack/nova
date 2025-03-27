@@ -369,9 +369,9 @@ class ServiceController(wsgi.Controller):
                         'in-progress migrations. Complete the '
                         'migrations or delete the instances first.'))
 
-    @validation.query_schema(services.index_query_schema_275, '2.75')
-    @validation.query_schema(services.index_query_schema, '2.0', '2.74')
     @wsgi.expected_errors(())
+    @validation.query_schema(services.index_query_schema, '2.0', '2.74')
+    @validation.query_schema(services.index_query_schema_275, '2.75')
     def index(self, req):
         """Return a list of all running services. Filter by host & service
         name
@@ -385,10 +385,10 @@ class ServiceController(wsgi.Controller):
 
         return {'services': _services}
 
-    @wsgi.Controller.api_version('2.1', '2.52')
     @wsgi.expected_errors((400, 404))
     @validation.schema(services.service_update, '2.0', '2.10')
     @validation.schema(services.service_update_v211, '2.11', '2.52')
+    @validation.schema(services.service_update_v253, '2.53')
     def update(self, req, id, body):
         """Perform service update
 
@@ -396,7 +396,17 @@ class ServiceController(wsgi.Controller):
         to identify the service on which to perform the action. There is no
         service ID passed on the path, just the action, for example
         PUT /os-services/disable.
+
+        Starting with microversion 2.53, the service uuid is passed in on the
+        path of the request to uniquely identify the service record on which to
+        perform a given update, which is defined in the body of the request.
         """
+        if api_version_request.is_supported(req, min_version='2.53'):
+            return self._update_v253(req, id, body)
+        else:
+            return self._update_v21(req, id, body)
+
+    def _update_v21(self, req, id, body):
         context = req.environ['nova.context']
         context.can(services_policies.BASE_POLICY_NAME % 'update', target={})
         if api_version_request.is_supported(req, min_version='2.11'):
@@ -407,16 +417,7 @@ class ServiceController(wsgi.Controller):
 
         return self._perform_action(req, id, body, actions)
 
-    @wsgi.Controller.api_version('2.53')  # noqa F811
-    @wsgi.expected_errors((400, 404))
-    @validation.schema(services.service_update_v2_53, '2.53')
-    def update(self, req, id, body):   # noqa
-        """Perform service update
-
-        Starting with microversion 2.53, the service uuid is passed in on the
-        path of the request to uniquely identify the service record on which to
-        perform a given update, which is defined in the body of the request.
-        """
+    def _update_v253(self, req, id, body):
         service_id = id
         # Validate that the service ID is a UUID.
         if not uuidutils.is_uuid_like(service_id):

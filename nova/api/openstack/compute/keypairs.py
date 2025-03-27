@@ -40,67 +40,39 @@ class KeypairController(wsgi.Controller):
         super(KeypairController, self).__init__()
         self.api = compute_api.KeypairAPI()
 
-    @wsgi.Controller.api_version("2.10")
-    @wsgi.response(201)
+    @wsgi.response(200, "2.0", "2.1")
+    @wsgi.response(201, "2.2")
     @wsgi.expected_errors((400, 403, 409))
+    @validation.schema(keypairs.create_v20, "2.0", "2.0")
+    @validation.schema(keypairs.create, "2.1", "2.1")
+    @validation.schema(keypairs.create_v22, "2.2", "2.9")
     @validation.schema(keypairs.create_v210, "2.10", "2.91")
     @validation.schema(keypairs.create_v292, "2.92")
     def create(self, req, body):
         """Create or import keypair.
 
-        Keypair generations are allowed until version 2.91.
-        Afterwards, only imports are allowed.
+        Sending name will generate a key and return private_key and
+        fingerprint. You can send a public_key to add an existing ssh key.
 
-        A policy check restricts users from creating keys for other users
+        Starting in API microversion 2.2, keypairs will have the type ssh or
+        x509, specified by type.
 
-        params: keypair object with:
-            name (required) - string
-            public_key (optional or required if >=2.92) - string
-            type (optional) - string
-            user_id (optional) - string
+        Starting in API microversion 2.10, you can request a user if you are an
+        admin.
+
+        Starting in API microversion 2.91, keypair generation is no longer
+        permitted.
         """
-        # handle optional user-id for admin only
-        user_id = body['keypair'].get('user_id')
-        return self._create(req, body, key_type=True, user_id=user_id)
+        key_type = False
+        if api_version_request.is_supported(req, '2.2'):
+            key_type = True
 
-    @wsgi.Controller.api_version("2.2", "2.9")  # noqa
-    @wsgi.response(201)
-    @wsgi.expected_errors((400, 403, 409))
-    @validation.schema(keypairs.create_v22)
-    def create(self, req, body):  # noqa
-        """Create or import keypair.
+        user_id = None
+        if api_version_request.is_supported(req, '2.10'):
+            # handle optional user-id for admin only
+            user_id = body['keypair'].get('user_id')
 
-        Sending name will generate a key and return private_key
-        and fingerprint.
-
-        Keypair will have the type ssh or x509, specified by type.
-
-        You can send a public_key to add an existing ssh/x509 key.
-
-        params: keypair object with:
-            name (required) - string
-            public_key (optional) - string
-            type (optional) - string
-        """
-        return self._create(req, body, key_type=True)
-
-    @wsgi.Controller.api_version("2.1", "2.1")  # noqa
-    @wsgi.expected_errors((400, 403, 409))
-    @validation.schema(keypairs.create_v20, "2.0", "2.0")
-    @validation.schema(keypairs.create, "2.1", "2.1")
-    def create(self, req, body):  # noqa
-        """Create or import keypair.
-
-        Sending name will generate a key and return private_key
-        and fingerprint.
-
-        You can send a public_key to add an existing ssh key.
-
-        params: keypair object with:
-            name (required) - string
-            public_key (optional) - string
-        """
-        return self._create(req, body)
+        return self._create(req, body, key_type=key_type, user_id=user_id)
 
     def _create(self, req, body, user_id=None, key_type=False):
         context = req.environ['nova.context']
@@ -135,28 +107,23 @@ class KeypairController(wsgi.Controller):
                                          private_key=return_priv_key,
                                          key_type=key_type)
 
-    @wsgi.Controller.api_version("2.1", "2.1")
-    @validation.query_schema(keypairs.delete_query_schema_v20)
-    @wsgi.response(202)
+    def _get_user_id(self, req):
+        if 'user_id' in req.GET.keys():
+            user_id = req.GET.getall('user_id')[0]
+            return user_id
+
+    @wsgi.response(202, '2.0', '2.1')
+    @wsgi.response(204, '2.2')
+    @validation.query_schema(keypairs.delete_query_schema_v20, '2.1', '2.9')
+    @validation.query_schema(keypairs.delete_query_schema_v210, '2.10', '2.74')
+    @validation.query_schema(keypairs.delete_query_schema_v275, '2.75')
     @wsgi.expected_errors(404)
     def delete(self, req, id):
-        self._delete(req, id)
+        user_id = None
+        if api_version_request.is_supported(req, '2.10'):
+            # handle optional user-id for admin only
+            user_id = self._get_user_id(req)
 
-    @wsgi.Controller.api_version("2.2", "2.9")    # noqa
-    @validation.query_schema(keypairs.delete_query_schema_v20)
-    @wsgi.response(204)
-    @wsgi.expected_errors(404)
-    def delete(self, req, id):  # noqa
-        self._delete(req, id)
-
-    @wsgi.Controller.api_version("2.10")    # noqa
-    @validation.query_schema(keypairs.delete_query_schema_v275, '2.75')
-    @validation.query_schema(keypairs.delete_query_schema_v210, '2.10', '2.74')
-    @wsgi.response(204)
-    @wsgi.expected_errors(404)
-    def delete(self, req, id):  # noqa
-        # handle optional user-id for admin only
-        user_id = self._get_user_id(req)
         self._delete(req, id, user_id=user_id)
 
     def _delete(self, req, id, user_id=None):
@@ -171,31 +138,21 @@ class KeypairController(wsgi.Controller):
         except exception.KeypairNotFound as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
 
-    def _get_user_id(self, req):
-        if 'user_id' in req.GET.keys():
-            user_id = req.GET.getall('user_id')[0]
-            return user_id
-
-    @wsgi.Controller.api_version("2.10")
+    @validation.query_schema(keypairs.show_query_schema_v20, '2.0', '2.9')
     @validation.query_schema(keypairs.show_query_schema_v210, '2.10', '2.74')
     @validation.query_schema(keypairs.show_query_schema_v275, '2.75')
     @wsgi.expected_errors(404)
     def show(self, req, id):
-        # handle optional user-id for admin only
-        user_id = self._get_user_id(req)
-        return self._show(req, id, key_type=True, user_id=user_id)
+        key_type = False
+        if api_version_request.is_supported(req, '2.2'):
+            key_type = True
 
-    @wsgi.Controller.api_version("2.2", "2.9")  # noqa
-    @validation.query_schema(keypairs.show_query_schema_v20)
-    @wsgi.expected_errors(404)
-    def show(self, req, id):  # noqa
-        return self._show(req, id, key_type=True)
+        user_id = None
+        if api_version_request.is_supported(req, '2.10'):
+            # handle optional user-id for admin only
+            user_id = self._get_user_id(req)
 
-    @wsgi.Controller.api_version("2.1", "2.1")  # noqa
-    @validation.query_schema(keypairs.show_query_schema_v20)
-    @wsgi.expected_errors(404)
-    def show(self, req, id):  # noqa
-        return self._show(req, id)
+        return self._show(req, id, key_type=key_type, user_id=user_id)
 
     def _show(self, req, id, key_type=False, user_id=None):
         """Return data for the given key name."""
@@ -210,33 +167,29 @@ class KeypairController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
         return self._view_builder.show(keypair, key_type=key_type)
 
-    @wsgi.Controller.api_version("2.35")
-    @validation.query_schema(keypairs.index_query_schema_v275, '2.75')
+    @validation.query_schema(keypairs.index_query_schema_v20, '2.0', '2.9')
+    @validation.query_schema(keypairs.index_query_schema_v210, '2.10', '2.34')
     @validation.query_schema(keypairs.index_query_schema_v235, '2.35', '2.74')
-    @wsgi.expected_errors(400)
+    @validation.query_schema(keypairs.index_query_schema_v275, '2.75')
+    @wsgi.expected_errors((), '2.0', '2.9')
+    @wsgi.expected_errors(400, '2.10')
     def index(self, req):
-        user_id = self._get_user_id(req)
-        return self._index(req, key_type=True, user_id=user_id, links=True)
+        key_type = False
+        if api_version_request.is_supported(req, '2.2'):
+            key_type = True
 
-    @wsgi.Controller.api_version("2.10", "2.34")  # noqa
-    @validation.query_schema(keypairs.index_query_schema_v210)
-    @wsgi.expected_errors(())
-    def index(self, req):  # noqa
-        # handle optional user-id for admin only
-        user_id = self._get_user_id(req)
-        return self._index(req, key_type=True, user_id=user_id)
+        user_id = None
+        if api_version_request.is_supported(req, '2.10'):
+            # handle optional user-id for admin only
+            user_id = self._get_user_id(req)
 
-    @wsgi.Controller.api_version("2.2", "2.9")  # noqa
-    @validation.query_schema(keypairs.index_query_schema_v20)
-    @wsgi.expected_errors(())
-    def index(self, req):  # noqa
-        return self._index(req, key_type=True)
+        links = False
+        if api_version_request.is_supported(req, '2.35'):
+            links = True
 
-    @wsgi.Controller.api_version("2.1", "2.1")  # noqa
-    @validation.query_schema(keypairs.index_query_schema_v20)
-    @wsgi.expected_errors(())
-    def index(self, req):  # noqa
-        return self._index(req)
+        return self._index(
+            req, key_type=key_type, user_id=user_id, links=links
+        )
 
     def _index(self, req, key_type=False, user_id=None, links=False):
         """List of keypairs for a user."""
@@ -245,7 +198,7 @@ class KeypairController(wsgi.Controller):
         context.can(kp_policies.POLICY_ROOT % 'index',
                     target={'user_id': user_id})
 
-        if api_version_request.is_supported(req, min_version='2.35'):
+        if api_version_request.is_supported(req, '2.35'):
             limit, marker = common.get_limit_and_marker(req)
         else:
             limit = marker = None

@@ -51,8 +51,8 @@ show_query_v240 = copy.deepcopy(show_query)
 show_query_v240['properties'].update(
     parameter_types.pagination_parameters)
 
-index_query_275 = copy.deepcopy(index_query_v240)
-index_query_275['additionalProperties'] = False
+index_query_v275 = copy.deepcopy(index_query_v240)
+index_query_v275['additionalProperties'] = False
 
-show_query_275 = copy.deepcopy(show_query_v240)
-show_query_275['additionalProperties'] = False
+show_query_v275 = copy.deepcopy(show_query_v240)
+show_query_v275['additionalProperties'] = False

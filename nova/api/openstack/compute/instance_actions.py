@@ -19,8 +19,7 @@ from oslo_utils import timeutils
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas \
-    import instance_actions as schema_instance_actions
+from nova.api.openstack.compute.schemas import instance_actions as schema
 from nova.api.openstack.compute.views \
     import instance_actions as instance_actions_view
 from nova.api.openstack import wsgi
@@ -72,58 +71,46 @@ class InstanceActionsController(wsgi.Controller):
             event['details'] = event_raw['details']
         return event
 
-    @wsgi.Controller.api_version("2.1", "2.20")
     def _get_instance(self, req, context, server_id):
-        return common.get_instance(self.compute_api, context, server_id)
+        if not api_version_request.is_supported(req, min_version="2.21"):
+            return common.get_instance(self.compute_api, context, server_id)
 
-    @wsgi.Controller.api_version("2.21")  # noqa
-    def _get_instance(self, req, context, server_id):  # noqa
         with utils.temporary_mutation(context, read_deleted='yes'):
             return common.get_instance(self.compute_api, context, server_id)
 
-    @wsgi.Controller.api_version("2.1", "2.57")
-    @wsgi.expected_errors(404)
-    @validation.query_schema(schema_instance_actions.list_query)
+    @wsgi.expected_errors(404, "2.1", "2.57")
+    @wsgi.expected_errors((400, 404), "2.58")
+    @validation.query_schema(schema.list_query, "2.1", "2.57")
+    @validation.query_schema(schema.list_query_v258, "2.58", "2.65")
+    @validation.query_schema(schema.list_query_v266, "2.66")
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
         instance = self._get_instance(req, context, server_id)
         context.can(ia_policies.BASE_POLICY_NAME % 'list',
                     target={'project_id': instance.project_id})
-        actions_raw = self.action_api.actions_get(context, instance)
-        actions = [self._format_action(action, ACTION_KEYS)
-                   for action in actions_raw]
-        return {'instanceActions': actions}
 
-    @wsgi.Controller.api_version("2.58")  # noqa
-    @wsgi.expected_errors((400, 404))
-    @validation.query_schema(schema_instance_actions.list_query_v266,
-                             "2.66")
-    @validation.query_schema(schema_instance_actions.list_query_v258,
-                             "2.58", "2.65")
-    def index(self, req, server_id):  # noqa
-        """Returns the list of actions recorded for a given instance."""
-        context = req.environ["nova.context"]
-        instance = self._get_instance(req, context, server_id)
-        context.can(ia_policies.BASE_POLICY_NAME % 'list',
-                    target={'project_id': instance.project_id})
-        search_opts = {}
-        search_opts.update(req.GET)
-        if 'changes-since' in search_opts:
-            search_opts['changes-since'] = timeutils.parse_isotime(
-                search_opts['changes-since'])
+        if api_version_request.is_supported(req, '2.58'):
+            search_opts = {}
+            search_opts.update(req.GET)
+            if 'changes-since' in search_opts:
+                search_opts['changes-since'] = timeutils.parse_isotime(
+                    search_opts['changes-since'])
 
-        if 'changes-before' in search_opts:
-            search_opts['changes-before'] = timeutils.parse_isotime(
-                search_opts['changes-before'])
-            changes_since = search_opts.get('changes-since')
-            if (changes_since and search_opts['changes-before'] <
-                    search_opts['changes-since']):
-                msg = _('The value of changes-since must be less than '
-                        'or equal to changes-before.')
-                raise exc.HTTPBadRequest(explanation=msg)
+            if 'changes-before' in search_opts:
+                search_opts['changes-before'] = timeutils.parse_isotime(
+                    search_opts['changes-before'])
+                changes_since = search_opts.get('changes-since')
+                if (changes_since and search_opts['changes-before'] <
+                        search_opts['changes-since']):
+                    msg = _('The value of changes-since must be less than '
+                            'or equal to changes-before.')
+                    raise exc.HTTPBadRequest(explanation=msg)
 
-        limit, marker = common.get_limit_and_marker(req)
+            limit, marker = common.get_limit_and_marker(req)
+        else:
+            limit, marker, search_opts = None, None, None
+
         try:
             actions_raw = self.action_api.actions_get(context, instance,
                                                       limit=limit,
@@ -131,16 +118,25 @@ class InstanceActionsController(wsgi.Controller):
                                                       filters=search_opts)
         except exception.MarkerNotFound as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-        actions = [self._format_action(action, ACTION_KEYS_V258)
-                   for action in actions_raw]
+
+        if api_version_request.is_supported(req, min_version="2.58"):
+            actions = [self._format_action(action, ACTION_KEYS_V258)
+                       for action in actions_raw]
+        else:
+            actions = [self._format_action(action, ACTION_KEYS)
+                       for action in actions_raw]
         actions_dict = {'instanceActions': actions}
-        actions_links = self._view_builder.get_links(req, server_id, actions)
-        if actions_links:
-            actions_dict['links'] = actions_links
+
+        if api_version_request.is_supported(req, '2.58'):
+            if actions_links := self._view_builder.get_links(
+                req, server_id, actions
+            ):
+                actions_dict['links'] = actions_links
+
         return actions_dict
 
     @wsgi.expected_errors(404)
-    @validation.query_schema(schema_instance_actions.show_query)
+    @validation.query_schema(schema.show_query)
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
@@ -186,8 +182,7 @@ class InstanceActionsController(wsgi.Controller):
             # NOTE(brinzhang): Event details are shown since microversion
             # 2.84.
             show_details = False
-            support_v284 = api_version_request.is_supported(req, '2.84')
-            if support_v284:
+            if api_version_request.is_supported(req, '2.84'):
                 show_details = context.can(
                     ia_policies.BASE_POLICY_NAME % 'events:details',
                     target={'project_id': instance.project_id}, fatal=False)

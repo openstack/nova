@@ -18,10 +18,7 @@ from urllib import parse as urlparse
 from oslo_utils import strutils
 import webob
 
-from nova.api.openstack.api_version_request \
-    import MAX_PROXY_API_SUPPORT_VERSION
-from nova.api.openstack.api_version_request \
-    import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas import quota_sets
 from nova.api.openstack import identity
 from nova.api.openstack import wsgi
@@ -105,24 +102,21 @@ class QuotaSetsController(wsgi.Controller):
         else:
             return {k: v['limit'] for k, v in values.items()}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
-    def show(self, req, id):
-        return self._show(req, id, [])
+    def _get_filtered_quotas(self, req):
+        if api_version_request.is_supported(req, '2.57'):
+            return FILTERED_QUOTAS_2_57
+        elif api_version_request.is_supported(req, '2.36'):
+            return FILTERED_QUOTAS_2_36
+        else:
+            return []
 
-    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
-    @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
-    def show(self, req, id):  # noqa
-        return self._show(req, id, FILTERED_QUOTAS_2_36)
-
-    @wsgi.Controller.api_version('2.57')  # noqa
+    @wsgi.Controller.api_version('2.1')
     @wsgi.expected_errors(400)
     @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     @validation.query_schema(quota_sets.show_query_v275, '2.75')
-    def show(self, req, id):  # noqa
-        return self._show(req, id, FILTERED_QUOTAS_2_57)
+    def show(self, req, id):
+        filtered_quotas = self._get_filtered_quotas(req)
+        return self._show(req, id, filtered_quotas)
 
     def _show(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
@@ -131,29 +125,17 @@ class QuotaSetsController(wsgi.Controller):
 
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
-        return self._format_quota_set(id,
+        return self._format_quota_set(
+            id,
             self._get_quotas(context, id, user_id=user_id),
             filtered_quotas=filtered_quotas)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
     @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
+    @validation.query_schema(quota_sets.show_query_v275, '2.75')
     def detail(self, req, id):
-        return self._detail(req, id, [])
-
-    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
-    @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
-    @validation.query_schema(quota_sets.show_query_v275, '2.75')
-    def detail(self, req, id):  # noqa
-        return self._detail(req, id, FILTERED_QUOTAS_2_36)
-
-    @wsgi.Controller.api_version('2.57')  # noqa
-    @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
-    @validation.query_schema(quota_sets.show_query_v275, '2.75')
-    def detail(self, req, id):  # noqa
-        return self._detail(req, id, FILTERED_QUOTAS_2_57)
+        filtered_quotas = self._get_filtered_quotas(req)
+        return self._detail(req, id, filtered_quotas)
 
     def _detail(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
@@ -166,26 +148,16 @@ class QuotaSetsController(wsgi.Controller):
             self._get_quotas(context, id, user_id=user_id, usages=True),
             filtered_quotas=filtered_quotas)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.Controller.api_version('2.1')
     @wsgi.expected_errors(400)
-    @validation.schema(quota_sets.update)
-    def update(self, req, id, body):
-        return self._update(req, id, body, [])
-
-    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
-    @wsgi.expected_errors(400)
-    @validation.schema(quota_sets.update_v236)
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
-    def update(self, req, id, body):  # noqa
-        return self._update(req, id, body, FILTERED_QUOTAS_2_36)
-
-    @wsgi.Controller.api_version('2.57')  # noqa
-    @wsgi.expected_errors(400)
-    @validation.schema(quota_sets.update_v257)
+    @validation.schema(quota_sets.update, '2.0', '2.35')
+    @validation.schema(quota_sets.update_v236, '2.36', '2.56')
+    @validation.schema(quota_sets.update_v257, '2.57')
     @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     @validation.query_schema(quota_sets.show_query_v275, '2.75')
-    def update(self, req, id, body):  # noqa
-        return self._update(req, id, body, FILTERED_QUOTAS_2_57)
+    def update(self, req, id, body):
+        filtered_quotas = self._get_filtered_quotas(req)
+        return self._update(req, id, body, filtered_quotas)
 
     def _update(self, req, id, body, filtered_quotas):
         context = req.environ['nova.context']
@@ -249,23 +221,12 @@ class QuotaSetsController(wsgi.Controller):
             self._get_quotas(context, id, user_id=user_id),
             filtered_quotas=filtered_quotas)
 
-    @wsgi.Controller.api_version("2.0", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.Controller.api_version('2.0')
     @wsgi.expected_errors(400)
     @validation.query_schema(quota_sets.defaults_query)
     def defaults(self, req, id):
-        return self._defaults(req, id, [])
-
-    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
-    @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.defaults_query)
-    def defaults(self, req, id):  # noqa
-        return self._defaults(req, id, FILTERED_QUOTAS_2_36)
-
-    @wsgi.Controller.api_version('2.57')  # noqa
-    @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.defaults_query)
-    def defaults(self, req, id):  # noqa
-        return self._defaults(req, id, FILTERED_QUOTAS_2_57)
+        filtered_quotas = self._get_filtered_quotas(req)
+        return self._defaults(req, id, filtered_quotas)
 
     def _defaults(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
