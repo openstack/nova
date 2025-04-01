@@ -99,7 +99,7 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
                     )
                 },
                 # PF_PROD_ID + slot 2 will match one PF but not their children
-                # VFs
+                # VFs and will be considered OTU
                 {
                     "vendor_id": fakelibvirt.PCI_VEND_ID,
                     "product_id": fakelibvirt.PF_PROD_ID,
@@ -107,6 +107,7 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
                     "traits": ",".join(
                         [os_traits.HW_NIC_SRIOV, "CUSTOM_PF", "pf-white"]
                     ),
+                    "one_time_use": "true",
                 },
                 # VF_PROD_ID + slot 3 will match two VFs but not their parent
                 # PF
@@ -147,6 +148,7 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
                 ],
                 "0000:81:02.0": [
                     "HW_NIC_SRIOV",
+                    "HW_PCI_ONE_TIME_USE",
                     "CUSTOM_PF",
                     "CUSTOM_PF_WHITE",
                 ],
@@ -1995,3 +1997,170 @@ class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
         self.assert_placement_pci_view(
             "compute1", **compute1_expected_placement_view)
         self.assert_no_pci_healing("compute1")
+
+    def test_one_time_use_workflow(self):
+        # The fake libvirt will emulate on the host:
+        # * two type-PCIs
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=0, num_vfs=0)
+        device_spec = self._to_list_of_json_str(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PCI_PROD_ID,
+                    "one_time_use": "true",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        pci_alias = {
+            "vendor_id": fakelibvirt.PCI_VEND_ID,
+            "product_id": fakelibvirt.PCI_PROD_ID,
+            "name": "a-otu",
+        }
+        self.flags(
+            group="pci",
+            alias=self._to_list_of_json_str([pci_alias]),
+        )
+        extra_spec = {"pci_passthrough:alias": "a-otu:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        rc = "CUSTOM_PCI_%s_%s" % (fakelibvirt.PCI_VEND_ID,
+                                   fakelibvirt.PCI_PROD_ID)
+        addr = "0000:81:00.0"
+        expected_placement_view = {
+            "inventories": {
+                addr: {
+                    rc: {
+                        "total": 1,
+                        "reserved": 0,
+                    },
+                },
+            },
+            "traits": {
+                addr: [
+                    "HW_PCI_ONE_TIME_USE",
+                ],
+            },
+            "usages": {
+                addr: {rc: 0},
+            },
+            "allocations": {},
+        }
+
+        # Initially we expect no usage, no reservation
+        self.assert_placement_pci_view(
+            "compute1", **expected_placement_view)
+        self.assertPCIDeviceCounts('compute1', total=1, free=1)
+
+        # Create a server that uses our device
+        server = self._create_server(flavor_id=flavor_id, networks=[])
+
+        # Now we expect the usage to have gone up, and for the reserved
+        # count on our OTU device to have increased
+        expected_placement_view["usages"][addr][rc] = 1
+        expected_placement_view["inventories"][addr][rc]["reserved"] = 1
+        self.assert_placement_pci_view(
+            "compute1", **expected_placement_view)
+
+        # Delete the server to release the allocation (but not reservation)
+        self._delete_server(server)
+
+        # We expect the usage to have gone back to zero, but the reserved
+        # count is unchanged
+        expected_placement_view["usages"][addr][rc] = 0
+        self.assert_placement_pci_view(
+            "compute1", **expected_placement_view)
+
+        # Create another server that wants our device, but there are no
+        # cleaned devices available. It should fail to schedule because
+        # no host can satisfy the request.
+        server = self._create_server(flavor_id=flavor_id, networks=[],
+                                     expected_state="ERROR")
+        self.assertIn('No valid host', server['fault']['message'])
+        self._delete_server(server)
+
+        # Externally "clean" the device and mark it as unreserved
+        self._reserve_placement_resource('compute1_%s' % addr, rc, 0)
+        expected_placement_view["inventories"][addr][rc]['reserved'] = 0
+        self.assert_placement_pci_view(
+            "compute1", **expected_placement_view)
+
+        # Create a server that uses our device, confirming that after an
+        # external clean it is allocatable again.
+        server = self._create_server(flavor_id=flavor_id, networks=[])
+
+    def test_otu_configured_late(self):
+        # The fake libvirt will emulate on the host:
+        # * two type-PCIs
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=0, num_vfs=0)
+        device_spec = [
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.PCI_PROD_ID,
+            },
+        ]
+        self.flags(
+            group='pci', device_spec=self._to_list_of_json_str(device_spec))
+        pci_alias = {
+            "vendor_id": fakelibvirt.PCI_VEND_ID,
+            "product_id": fakelibvirt.PCI_PROD_ID,
+            "name": "a-otu",
+        }
+        self.flags(
+            group="pci",
+            alias=self._to_list_of_json_str([pci_alias]),
+        )
+        extra_spec = {"pci_passthrough:alias": "a-otu:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        rc = "CUSTOM_PCI_%s_%s" % (fakelibvirt.PCI_VEND_ID,
+                                   fakelibvirt.PCI_PROD_ID)
+        addr = "0000:81:00.0"
+        expected_placement_view = {
+            "inventories": {
+                addr: {
+                    rc: {
+                        "total": 1,
+                        "reserved": 0,
+                    },
+                },
+            },
+            "traits": {
+                addr: [],
+            },
+            "usages": {
+                addr: {rc: 0},
+            },
+            "allocations": {},
+        }
+
+        # Initially we expect no usage, no reservation
+        self.assert_placement_pci_view(
+            "compute1", **expected_placement_view)
+        self.assertPCIDeviceCounts("compute1", total=1, free=1)
+
+        # Create a server that uses our device
+        self._create_server(flavor_id=flavor_id, networks=[])
+
+        # Expect to see the usage go up, but reserved stays at zero
+        expected_placement_view["usages"][addr][rc] = 1
+        self.assert_placement_pci_view(
+            "compute1", **expected_placement_view)
+
+        # Now configure the compute node to treat our device as OTU and restart
+        # the compute service (which will run the placement update)
+        device_spec[0]['one_time_use'] = 'true'
+        self.flags(
+            group="pci", device_spec=self._to_list_of_json_str(device_spec))
+        self.restart_compute_service(hostname="compute1")
+
+        # Now we expect to see the device go reserved and the OTU trait get
+        # added to it.
+        expected_placement_view["inventories"][addr][rc]["reserved"] = 1
+        expected_placement_view["traits"][addr].append("HW_PCI_ONE_TIME_USE")
+        self.assert_placement_pci_view(
+            "compute1", **expected_placement_view)

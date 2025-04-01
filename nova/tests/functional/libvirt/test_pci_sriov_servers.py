@@ -179,13 +179,21 @@ class _PCIServersTestBase(base.ServersTestBase):
                 f"Number of inventories on {real_rp_name} are not as "
                 f"expected. Expected {inv}, actual {rp_inv}"
             )
-            for rc, total in inv.items():
-                self.assertEqual(
-                    total,
-                    rp_inv[rc]["total"])
-                self.assertEqual(
-                    total,
-                    rp_inv[rc]["max_unit"])
+            for rc, inv_assertions in inv.items():
+                if isinstance(inv_assertions, int):
+                    # Simple case where we just specify total to assert
+                    total = inv_assertions
+                    self.assertEqual(
+                        total,
+                        rp_inv[rc]["total"])
+                    self.assertEqual(
+                        total,
+                        rp_inv[rc]["max_unit"])
+                else:
+                    # In this case, inv_assertions is a dict of attributes
+                    # in the inventory
+                    inv_to_assert = {k: rp_inv[rc][k] for k in inv_assertions}
+                    self.assertEqual(inv_to_assert, inv_assertions)
 
             rp_traits = self._get_provider_traits(rp['uuid'])
             self.assertEqual(
