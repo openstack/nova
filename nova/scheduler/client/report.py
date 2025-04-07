@@ -2389,15 +2389,18 @@ class SchedulerReportClient(object):
                 #  left a no-op for backward compatibility.
                 pass
 
-    def invalidate_resource_provider(self, name_or_uuid):
+    def invalidate_resource_provider(self, name_or_uuid, cacheonly=False):
         """Invalidate the cache for a resource provider.
 
         :param name_or_uuid: Name or UUID of the resource provider to look up.
+        :param cacheonly: Only reset the cache but do not remove the provider
+                          from the tree
         """
-        try:
-            self._provider_tree.remove(name_or_uuid)
-        except ValueError:
-            pass
+        if not cacheonly:
+            try:
+                self._provider_tree.remove(name_or_uuid)
+            except ValueError:
+                pass
         self._association_refresh_time.pop(name_or_uuid, None)
 
     def get_provider_by_name(self, context, name):

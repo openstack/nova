@@ -2811,6 +2811,36 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             self.client.get_resource_provider_name,
             self.context, uuids.rp)
 
+    def test_invalidate_full(self):
+        self._init_provider_tree()
+        rp_uuid = self.compute_node.uuid
+        self.client._association_refresh_time[rp_uuid] = time.time()
+
+        # Initially, cache is not stale and our provider exists
+        self.assertFalse(self.client._associations_stale(rp_uuid))
+        self.assertTrue(self.client._provider_tree.exists(rp_uuid))
+
+        # A full invalidation means our cache is stale (i.e. needs update)
+        # and our provider is gone from the tree
+        self.client.invalidate_resource_provider(rp_uuid)
+        self.assertTrue(self.client._associations_stale(rp_uuid))
+        self.assertFalse(self.client._provider_tree.exists(rp_uuid))
+
+    def test_invalidate_cache_only(self):
+        self._init_provider_tree()
+        rp_uuid = self.compute_node.uuid
+        self.client._association_refresh_time[rp_uuid] = time.time()
+
+        # Initially, cache is not stale and our provider exists
+        self.assertFalse(self.client._associations_stale(rp_uuid))
+        self.assertTrue(self.client._provider_tree.exists(rp_uuid))
+
+        # After a cache-only validation, our cache is stale (i.e. needs update)
+        # but the provider still exists in our tree
+        self.client.invalidate_resource_provider(rp_uuid, cacheonly=True)
+        self.assertTrue(self.client._associations_stale(rp_uuid))
+        self.assertTrue(self.client._provider_tree.exists(rp_uuid))
+
 
 class TestAggregates(SchedulerReportClientTestCase):
     def test_get_provider_aggregates_found(self):
