@@ -12,6 +12,8 @@
 
 from unittest import mock
 
+import fixtures
+
 from nova import context
 from nova import objects
 from nova import test
@@ -37,6 +39,11 @@ class TestVolumeDisconnectDuringPreLiveMigrationRollback(base.ServersTestBase):
         super().setUp()
         self.start_compute(hostname='src')
         self.start_compute(hostname='dest')
+        # Flags should indicate no shared storage: (do_cleanup, destroy_disks)
+        self.useFixture(fixtures.MockPatch(
+            'nova.compute.manager.ComputeManager.'
+                '_live_migration_cleanup_flags',
+                new=mock.Mock(return_value=(True, True))))
 
     def test_disconnect_volume_called_during_pre_live_migration_failure(self):
         server = {
@@ -102,5 +109,16 @@ class TestVolumeDisconnectDuringPreLiveMigrationRollback(base.ServersTestBase):
         # FIXME(lyarwood): This is bug #1899835, disconnect_volume shouldn't be
         # called on the destination host without connect_volume first being
         # called and especially using with the connection_info from the source
-        mock_dest_disconnect.assert_called_with(
+        self.assertEqual(2, mock_dest_disconnect.call_count)
+        # First call is from ComputeManager._remove_volume_connection() called
+        # eventually from ComputeManager._rollback_live_migration() on the
+        # source.
+        call1 = mock.call(
             mock.ANY, src_connection_info, mock.ANY, encryption=mock.ANY)
+        # Second call is from LibvirtDriver.destroy() =>
+        # LibvirtDriver.cleanup() on the destination as part of
+        # ComputeManager.rollback_live_migration_at_destination().
+        call2 = mock.call(
+            mock.ANY, src_connection_info, mock.ANY, destroy_secrets=True,
+            force=True)
+        mock_dest_disconnect.assert_has_calls([call1, call2])
