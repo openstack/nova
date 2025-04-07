@@ -3424,9 +3424,12 @@ class TestLiveMigration(BaseTestCase):
             mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(self.rt, '_update'),
             mock.patch.object(self.rt.pci_tracker, 'claim_instance'),
-            mock.patch.object(self.rt, '_update_usage_from_migration')
+            mock.patch.object(self.rt, '_update_usage_from_migration'),
+            mock.patch.object(self.rt,
+                              '_invalidate_pci_in_placement_cached_rps')
         ) as (mock_from_instance, mock_migration_save, mock_instance_save,
-              mock_update, mock_pci_claim_instance, mock_update_usage):
+              mock_update, mock_pci_claim_instance, mock_update_usage,
+              mock_invalidate):
             claim = self.rt.live_migration_claim(ctxt, instance, _NODENAME,
                                                  migration, limits=None,
                                                  allocs=None)
@@ -3441,6 +3444,7 @@ class TestLiveMigration(BaseTestCase):
             mock_pci_claim_instance.assert_not_called()
             mock_update_usage.assert_called_with(ctxt, instance, migration,
                                                  _NODENAME)
+            mock_invalidate.assert_called()
 
 
 class TestUpdateUsageFromMigration(test.NoDBTestCase):
@@ -4349,6 +4353,45 @@ class ResourceTrackerTestCase(test.NoDBTestCase):
 
         self.assertRaises(AssertionError, _test_explict_unfair)
         self.assertRaises(AssertionError, _test_implicit_unfair)
+
+    def test_invalidate_pci_in_placement(self):
+        client = mock.MagicMock()
+        rt = resource_tracker.ResourceTracker(
+            _HOSTNAME, mock.sentinel.driver, client)
+        # NOTE(danms): We want to cover the case where we have allocations
+        # against a compute node, a PCI-in-placement child, and another
+        # provider outside that tree. Further, we use a slightly-unrealistic
+        # PCI-in-placement allocation with multiple RCs just to make sure
+        # that we call invalidate once per *provider* and not once per
+        # RC.
+        fake_allocs = {
+            str(uuids.compute): {
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 512,
+                },
+            },
+            str(uuids.othercompute): {
+                'resources': {
+                    'VCPU': 1,
+                }
+            },
+            str(uuids.pci): {
+                'resources': {
+                    'CUSTOM_PCI_DEAD_BEEF': 1,
+                    'SOME_OTHER_TRAIT': 1,
+                }
+            }
+        }
+        with mock.patch.object(rt, 'provider_tree') as mock_pt:
+            mock_pt.data.side_effect = [
+                mock.MagicMock(traits=[]),
+                ValueError,
+                mock.MagicMock(traits=['COMPUTE_MANAGED_PCI_DEVICE']),
+            ]
+            rt._invalidate_pci_in_placement_cached_rps(fake_allocs)
+        client.invalidate_resource_provider.assert_called_once_with(
+            uuids.pci, cacheonly=True)
 
     def test_set_service_ref(self):
         rt = resource_tracker.ResourceTracker(
