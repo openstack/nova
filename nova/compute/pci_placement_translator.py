@@ -18,6 +18,7 @@ import typing as ty
 import os_resource_classes
 import os_traits
 from oslo_log import log as logging
+from oslo_utils import strutils
 from oslo_utils import uuidutils
 
 from nova.compute import provider_tree
@@ -134,6 +135,7 @@ class PciResourceProvider:
         self.children_devs: ty.List[pci_device.PciDevice] = []
         self.resource_class: ty.Optional[str] = None
         self.traits: ty.Optional[ty.Set[str]] = None
+        self.is_otu = False
 
     @property
     def devs(self) -> ty.List[pci_device.PciDevice]:
@@ -170,6 +172,12 @@ class PciResourceProvider:
                     dev.address for dev in self.children_devs),
             )
 
+        if 'one_time_use' in dev_spec_tags:
+            # Child devices cannot be OTU. Do not even tolerate setting =false
+            raise exception.PlacementPciException(
+                error=('Only type-PCI and type-PF devices may set '
+                       'one_time_use and %s does not qualify') % self.name)
+
         self.children_devs.append(dev)
         self.resource_class = rc
         self.traits = traits
@@ -183,7 +191,17 @@ class PciResourceProvider:
 
         self.parent_dev = dev
         self.resource_class = _get_rc_for_dev(dev, dev_spec_tags)
-        self.traits = _get_traits_for_dev(dev_spec_tags)
+        self.is_otu = strutils.bool_from_string(
+            dev_spec_tags.get("one_time_use", "false"))
+
+        traits = _get_traits_for_dev(dev_spec_tags)
+
+        if self.is_otu:
+            # We always decorate OTU providers with a trait so they can be
+            # easily found
+            traits.add(os_traits.HW_PCI_ONE_TIME_USE)
+
+        self.traits = traits
 
     def remove_child(self, dev: pci_device.PciDevice) -> None:
         # Nothing to do here. The update_provider_tree will handle the
@@ -215,6 +233,39 @@ class PciResourceProvider:
             ]
         )
 
+    def _get_inventories(self):
+        # NOTE(gibi): The rest of the inventory fields (allocation_ratio,
+        # etc.) are defaulted by placement and the default value makes
+        # sense for PCI devices, i.e. no overallocation and PCI can be
+        # allocated one by one. We may set the reserved value to a nonzero
+        # amount on the provider if the operator requests it via the
+        # one_time_use=true flag, but otherwise the operator controls
+        # reserved and nova will not override that value periodically.
+        inventory = {
+            "total": len(self.devs),
+            "max_unit": len(self.devs),
+        }
+
+        self._handle_one_time_use(inventory)
+
+        return {self.resource_class: inventory}
+
+    def _handle_one_time_use(self, inventory: dict):
+        """Modifies the inventory to reserve the OTU device if allocated"""
+
+        def is_allocated(dev: pci_device.PciDevice) -> bool:
+            return 'instance_uuid' in dev and dev.instance_uuid
+
+        if self.parent_dev and self.is_otu and is_allocated(self.parent_dev):
+            # If we are an allocated parent device, and our one-time-use flag
+            # is set, we need to also set our inventory to reserved.
+            # NOTE(danms): VERY IMPORTANT: we never *ever* want to update
+            # reserved to anything other than len(self.devs), and definitely
+            # not if we are not allocated. These devices are intended to go
+            # from unallocated to allocated AND reserved. They may be
+            # unreserved by an external entity, but never nova.
+            inventory['reserved'] = len(self.devs)
+
     def update_provider_tree(
         self,
         provider_tree: provider_tree.ProviderTree,
@@ -245,19 +296,7 @@ class PciResourceProvider:
 
         provider_tree.update_inventory(
             self.name,
-            # NOTE(gibi): The rest of the inventory fields (reserved,
-            # allocation_ratio, etc.) are defaulted by placement and the
-            # default value make sense for PCI devices, i.e. no overallocation
-            # and PCI can be allocated one by one.
-            # Also, this way if the operator sets reserved value in placement
-            # for the PCI inventories directly then nova will not override that
-            # value periodically.
-            {
-                self.resource_class: {
-                    "total": len(self.devs),
-                    "max_unit": len(self.devs),
-                }
-            },
+            self._get_inventories(),
         )
         provider_tree.update_traits(self.name, self.traits)
 

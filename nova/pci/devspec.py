@@ -17,6 +17,7 @@ import re
 import string
 import typing as ty
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -35,6 +36,7 @@ ANY = '*'
 REGEX_ANY = '.*'
 
 LOG = logging.getLogger(__name__)
+CONF = nova.conf.CONF
 
 PCISpecAddressType = ty.Union[ty.Dict[str, str], str]
 
@@ -320,6 +322,15 @@ class PciDeviceSpec(PciAddressSpec):
 
         self._normalize_device_spec_tag("managed")
         self._normalize_device_spec_tag("live_migratable")
+        self._normalize_device_spec_tag("one_time_use")
+
+        if self.tags.get('one_time_use') == 'true':
+            # Validate that one_time_use=true is not set on devices where we
+            # cannot support proper reservation protection.
+            if not CONF.pci.report_in_placement:
+                raise exception.PciConfigInvalidSpec(
+                    reason=_('one_time_use=true requires '
+                             'pci.report_in_placement to be enabled'))
 
         if self._remote_managed:
             if address_obj is None:

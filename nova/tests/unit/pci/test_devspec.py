@@ -688,3 +688,21 @@ class PciDevSpecRemoteManagedTestCase(test.NoDBTestCase):
 
         pci_obj = objects.PciDevice.create(None, pci_dev)
         self.assertFalse(pci.match_pci_obj(pci_obj))
+
+
+class PciDevSpecOTUTestCase(test.NoDBTestCase):
+
+    @mock.patch('os.path.isdir', return_value=True)
+    def test_missing_config(self, mock_isdir):
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "one_time_use": "TrUe"}
+        with mock.patch('builtins.open', side_effect=IOError()):
+            # Without report_in_placement=True, we cannot support OTU
+            self.assertRaisesRegex(exception.PciConfigInvalidSpec,
+                                   "requires pci.report_in_placement",
+                                   devspec.PciDeviceSpec, pci_info)
+            # With proper config, we can
+            self.flags(report_in_placement=True, group='pci')
+            dev = devspec.PciDeviceSpec(pci_info)
+            # Make sure we normalized the flag
+            self.assertEqual('true', dev.tags['one_time_use'])
