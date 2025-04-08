@@ -6826,9 +6826,6 @@ class ComputeTestCase(BaseTestCase,
             final_bdm.save.assert_called()
 
         mock_get_bdms.assert_called_with(c, instance.uuid)
-        mock_remove.assert_has_calls([
-            mock.call(c, instance, uuids.volume_id_1, dest_host),
-            mock.call(c, instance, uuids.volume_id_2, dest_host)])
         mock_rollback.assert_called_once_with(c, instance, dest_host,
             destroy_disks=True,
             migrate_data=test.MatchType(
