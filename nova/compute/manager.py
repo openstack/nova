@@ -9316,43 +9316,56 @@ class ComputeManager(manager.Manager):
                     bdm.attachment_id = attach_ref['id']
                     bdm.save()
 
+            # Retrieve connection_info for the destination. Note that it is not
+            # saved back to the database yet.
             block_device_info = self._get_instance_block_device_info(
                                 context, instance, refresh_conn_info=True,
                                 bdms=bdms)
 
-            # The driver pre_live_migration will plug vifs on the host
-            migrate_data = self.driver.pre_live_migration(context,
-                                           instance,
-                                           block_device_info,
-                                           network_info,
-                                           disk,
-                                           migrate_data)
-            LOG.debug('driver pre_live_migration data is %s', migrate_data)
-            # driver.pre_live_migration is what plugs vifs on the destination
-            # host so now we can set the wait_for_vif_plugged flag in the
-            # migrate_data object which the source compute will use to
-            # determine if it should wait for a 'network-vif-plugged' event
-            # from neutron before starting the actual guest transfer in the
-            # hypervisor
-            using_multiple_port_bindings = (
-                'vifs' in migrate_data and migrate_data.vifs)
-            migrate_data.wait_for_vif_plugged = (
-                CONF.compute.live_migration_wait_for_vif_plug and
-                using_multiple_port_bindings
-            )
+            # The driver pre_live_migration will plug vifs and connect volumes
+            # on the host
+            try:
+                migrate_data = self.driver.pre_live_migration(
+                    context, instance, block_device_info, network_info, disk,
+                    migrate_data)
 
-            # NOTE(tr3buchet): setup networks on destination host
-            self.network_api.setup_networks_on_host(context, instance,
-                                                             self.host)
+                LOG.debug('driver pre_live_migration data is %s', migrate_data)
+                # driver.pre_live_migration is what plugs vifs on the
+                # destination host so now we can set the wait_for_vif_plugged
+                # flag in the migrate_data object which the source compute will
+                # use to determine if it should wait for a
+                # 'network-vif-plugged' event from neutron before starting the
+                # actual guest transfer in the hypervisor
+                using_multiple_port_bindings = (
+                    'vifs' in migrate_data and migrate_data.vifs)
+                migrate_data.wait_for_vif_plugged = (
+                    CONF.compute.live_migration_wait_for_vif_plug and
+                    using_multiple_port_bindings
+                )
 
-            # NOTE(lyarwood): The above call to driver.pre_live_migration
-            # can result in the virt drivers attempting to stash additional
-            # metadata into the connection_info of the underlying bdm.
-            # Ensure this is saved to the database by calling .save() against
-            # the driver BDMs we passed down via block_device_info.
-            for driver_bdm in block_device_info['block_device_mapping']:
-                driver_bdm.save()
+                # NOTE(tr3buchet): setup networks on destination host
+                self.network_api.setup_networks_on_host(context, instance,
+                                                                 self.host)
 
+                # NOTE(lyarwood): The above call to driver.pre_live_migration
+                # can result in the virt drivers attempting to stash additional
+                # metadata into the connection_info of the underlying bdm.
+                # Ensure this is saved to the database by calling .save()
+                # against the driver BDMs we passed down via block_device_info.
+                for driver_bdm in block_device_info['block_device_mapping']:
+                    driver_bdm.save()
+            except Exception:
+                # NOTE(melwitt): Try to disconnect any volumes which may have
+                # been connected during driver pre_live_migration(). By the
+                # time this error is received by the source host, BDM records
+                # in the database will refer only to the source host. Detach
+                # volumes while we still have connection_info about the
+                # destination host.
+                for driver_bdm in block_device_info['block_device_mapping']:
+                    driver_bdm.driver_detach(
+                        context, instance, self.volume_api, self.driver)
+                # Re-raise to perform any remaining rollback actions.
+                raise
         except Exception:
             # If we raise, migrate_data with the updated attachment ids
             # will not be returned to the source host for rollback.
@@ -10321,8 +10334,15 @@ class ComputeManager(manager.Manager):
         # TODO(lyarwood): Turn the following into a lookup method within
         # BlockDeviceMappingList.
         vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
-        self._remove_remote_volume_connections(context, dest, vol_bdms,
-                                               instance)
+
+        if not pre_live_migration:
+            # This will do both a driver detach and a Cinder attachment delete.
+            # If we are in here due to a pre_live_migration failure, BDMs have
+            # already been rolled back to contain info for the source, so don't
+            # try to remove volume connections on the destination.
+            # See ComputeManager.pre_live_migration() for details.
+            self._remove_remote_volume_connections(
+                context, dest, vol_bdms, instance)
         self._rollback_volume_bdms(context, vol_bdms, source_bdms, instance)
 
         self._notify_about_instance_usage(context, instance,
@@ -10469,6 +10489,17 @@ class ComputeManager(manager.Manager):
             #             from remote volumes if necessary
             block_device_info = self._get_instance_block_device_info(context,
                                                                      instance)
+            # NOTE(melwitt): By the time we get here, the instance BDMs have
+            # already been rolled back to contain info for the source during
+            # _rollback_live_migration().
+            # The code above predates the addition of rollback of the instance
+            # BDM records to point at the source. It also predates the addition
+            # of a driver detach call to remove_volume_connection().
+            # Set the list for Cinder volumes to empty to avoid attempting to
+            # disconnect volumes during driver.cleanup() on the destination.
+            bdi_without_volumes = copy.deepcopy(block_device_info)
+            bdi_without_volumes['block_device_mapping'] = []
+
             # free any instance PCI claims done on destination during
             # check_can_live_migrate_destination()
             self.rt.free_pci_device_claims_for_instance(context, instance)
@@ -10478,7 +10509,7 @@ class ComputeManager(manager.Manager):
             # specific resources like vpmem
             with instance.mutated_migration_context():
                 self.driver.rollback_live_migration_at_destination(
-                    context, instance, network_info, block_device_info,
+                    context, instance, network_info, bdi_without_volumes,
                     destroy_disks=destroy_disks, migrate_data=migrate_data)
 
         self._notify_about_instance_usage(

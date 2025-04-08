@@ -13,14 +13,13 @@
 from unittest import mock
 
 import fixtures
+from oslo_serialization import jsonutils
 
 from nova import context
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.libvirt import base
-
-from oslo_serialization import jsonutils
 
 
 class TestVolumeDisconnectDuringPreLiveMigrationRollback(base.ServersTestBase):
@@ -75,13 +74,6 @@ class TestVolumeDisconnectDuringPreLiveMigrationRollback(base.ServersTestBase):
         mock_src_connector.assert_called_once()
         mock_src_connect.assert_called_once()
 
-        # Fetch the connection_info from the src
-        ctxt = context.get_admin_context()
-        bdm = objects.BlockDeviceMapping.get_by_volume_id(
-            ctxt, nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
-            instance_uuid=server['id'])
-        src_connection_info = jsonutils.loads(bdm.connection_info)
-
         with test.nested(
             mock.patch.object(
                 self.computes['dest'].driver, 'get_volume_connector'),
@@ -106,19 +98,106 @@ class TestVolumeDisconnectDuringPreLiveMigrationRollback(base.ServersTestBase):
         # Assert that connect_volume hasn't been called on the dest
         mock_dest_connect.assert_not_called()
 
-        # FIXME(lyarwood): This is bug #1899835, disconnect_volume shouldn't be
-        # called on the destination host without connect_volume first being
-        # called and especially using with the connection_info from the source
-        self.assertEqual(2, mock_dest_disconnect.call_count)
-        # First call is from ComputeManager._remove_volume_connection() called
-        # eventually from ComputeManager._rollback_live_migration() on the
-        # source.
-        call1 = mock.call(
-            mock.ANY, src_connection_info, mock.ANY, encryption=mock.ANY)
-        # Second call is from LibvirtDriver.destroy() =>
-        # LibvirtDriver.cleanup() on the destination as part of
-        # ComputeManager.rollback_live_migration_at_destination().
-        call2 = mock.call(
-            mock.ANY, src_connection_info, mock.ANY, destroy_secrets=True,
-            force=True)
-        mock_dest_disconnect.assert_has_calls([call1, call2])
+        # Assert that disconnect_volume was not called on the destination host
+        self.assertEqual(0, mock_dest_disconnect.call_count)
+
+    def test_pre_live_migration_failed_after_new_attachment_created(self):
+        """Test a scenario where live migration fails during pre_live_migration
+        where the BDM record attachment_id got updated with a new Cinder
+        attachment but the BDM record connection_info was not yet updated.
+
+        In other words, BlockDeviceMapping.attachment_id is pointing at the
+        destination but BlockDeviceMapping.connection_info is still pointing
+        at the source.
+
+        The _disconnect_volume() should run on the destination and with
+        destination connection_info despite the BDM database record still
+        containing source connection_info.
+        """
+        server = {
+            'name': 'test',
+            'imageRef': '',
+            'flavorRef': 1,
+            'networks': 'none',
+            'host': 'src',
+            'block_device_mapping_v2': [{
+                'source_type': 'volume',
+                'destination_type': 'volume',
+                'boot_index': 0,
+                'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
+            }]
+        }
+
+        with test.nested(
+            mock.patch.object(
+                self.computes['src'].driver, 'get_volume_connector'),
+            mock.patch.object(
+                self.computes['src'].driver, '_connect_volume'),
+        ) as (
+            mock_src_connector, mock_src_connect
+        ):
+            server = self.api.post_server({'server': server})
+            server = self._wait_for_state_change(server, 'ACTIVE')
+
+        # Assert that we called the src connector and connect mocks
+        mock_src_connector.assert_called_once()
+        mock_src_connect.assert_called_once()
+
+        # Fetch the connection_info from the src
+        ctxt = context.get_admin_context()
+        bdm = objects.BlockDeviceMapping.get_by_volume_id(
+            ctxt, nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
+            instance_uuid=server['id'])
+        src_connection_info = jsonutils.loads(bdm.connection_info)
+
+        with test.nested(
+            mock.patch.object(
+                self.computes['dest'].driver, 'get_volume_connector'),
+            mock.patch.object(
+                self.computes['dest'].driver, '_connect_volume'),
+            mock.patch.object(
+                self.computes['dest'].driver, '_disconnect_volume'),
+            mock.patch.object(
+                self.computes['dest'].manager.network_api,
+                'setup_networks_on_host',
+                # Fail setup networks during pre_live_migration but have it
+                # succeed during rollback
+                side_effect=[test.TestingException, None], autospec=False),
+        ) as (
+            mock_dest_connector, mock_dest_connect, mock_dest_disconnect,
+            mock_setup_networks
+        ):
+            # Attempt to live migrate and ensure it is marked as error
+            self._live_migrate(server, 'failed')
+
+        # Assert that we called the dest connector and setup networks mocks
+        mock_dest_connector.assert_called_once()
+        mock_setup_networks.assert_called()
+
+        # Assert that connect_volume has been called on the dest
+        mock_dest_connect.assert_called()
+
+        # Assert that disconnect_volume was called on the destination host
+        # and with connection_info for the destination
+        mock_dest_disconnect.assert_called_once()
+        # def _disconnect_volume(self, context, connection_info, instance, ...)
+        dest_connection_info = mock_dest_disconnect.call_args.args[1]
+        volumes_attached = server['os-extended-volumes:volumes_attached']
+        self.assertEqual(1, len(volumes_attached))
+        # The volume_id in the destination connection_info should match the
+        # volume attached to the server
+        self.assertEqual(
+            volumes_attached[0]['id'],
+            dest_connection_info['data']['volume_id'])
+        # The attachment_id should not be the same as the source (new
+        # attachment_id)
+        self.assertNotEqual(
+            src_connection_info['data']['attachment_id'],
+            dest_connection_info['data']['attachment_id'])
+
+        # The connection_info in the database should still be for the source
+        bdm = objects.BlockDeviceMapping.get_by_volume_id(
+            ctxt, nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
+            instance_uuid=server['id'])
+        current_connection_info = jsonutils.loads(bdm.connection_info)
+        self.assertEqual(src_connection_info, current_connection_info)
