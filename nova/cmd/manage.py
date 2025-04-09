@@ -3333,6 +3333,8 @@ class ImagePropertyCommands:
         # fields currently listed by ImageProps. We can't use from_dict to
         # do this as it silently ignores invalid property keys.
         for image_property_name in image_properties.keys():
+            if image_property_name.startswith("trait:"):
+                continue
             if image_property_name not in objects.ImageMetaProps.fields:
                 raise exception.InvalidImagePropertyName(
                     image_property_name=image_property_name)
