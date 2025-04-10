@@ -2,12 +2,6 @@
 OpenStack Nova
 ==============
 
-.. image:: https://governance.openstack.org/tc/badges/nova.svg
-    :target: https://governance.openstack.org/tc/reference/tags/index.html
-
-.. Change things from this point on
-
-
 OpenStack Nova provides a cloud computing fabric controller, supporting a wide
 variety of compute technologies, including: libvirt (KVM, Xen, LXC and more),
 VMware and OpenStack Ironic.
