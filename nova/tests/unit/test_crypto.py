@@ -23,9 +23,9 @@ from unittest import mock
 from castellan.common import exception as castellan_exception
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
+from ssh import key as libssh_key
 from oslo_concurrency import processutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import paramiko
 
 from nova import context as nova_context
 from nova import crypto
@@ -213,9 +213,9 @@ class KeyPairTest(test.NoDBTestCase):
         keyin = io.StringIO()
         keyin.write(self.rsa_prv)
         keyin.seek(0)
-        key = paramiko.RSAKey.from_private_key(keyin)
+        key = libssh_key.import_privkey_base64(str.encode(self.rsa_prv))
 
-        with mock.patch.object(paramiko.RSAKey, 'generate') as mock_generate:
+        with mock.patch.object(libssh_key, 'generate') as mock_generate:
             mock_generate.return_value = key
             (private_key, public_key, fingerprint) = crypto.generate_key_pair()
             self.assertEqual(self.rsa_pub, public_key)

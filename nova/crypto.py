@@ -24,6 +24,7 @@ import binascii
 import hashlib
 import io
 import os
+import tempfile
 import typing as ty
 
 from castellan.common import exception as castellan_exception
@@ -34,10 +35,11 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography import x509
+from ssh import key
+from ssh import keytypes
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import base64 as oslo_base64
-import paramiko
 
 import nova.conf
 from nova import context as nova_context
@@ -99,12 +101,16 @@ def generate_x509_fingerprint(pem_key: ty.Union[bytes, str]) -> str:
 
 
 def generate_key_pair(bits: int = 2048) -> ty.Tuple[str, str, str]:
-    key = paramiko.RSAKey.generate(bits)
-    keyout = io.StringIO()
-    key.write_private_key(keyout)
-    private_key = keyout.getvalue()
-    public_key = '%s %s Generated-by-Nova' % (key.get_name(), key.get_base64())
+    key_type = keytypes.key_type_from_name('ssh-rsa')
+    keypair = key.generate(key_type, bits)
+
+    f = tempfile.NamedTemporaryFile(mode='w+')
+    keypair.export_privkey_file(f.name)
+    private_key = f.read()
+    f.close()
+    public_key = '%s %s Generated-by-Nova' % (str(key_type), keypair.export_pubkey_base64().decode())
     fingerprint = generate_fingerprint(public_key)
+
     return (private_key, public_key, fingerprint)
 
 
