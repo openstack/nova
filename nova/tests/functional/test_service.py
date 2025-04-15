@@ -44,10 +44,6 @@ class ServiceTestCase(test.TestCase,
             api_version='v2.1')).api
         self.start_service('conductor')
         self.scheduler = self.start_service('scheduler')
-        # Our OSAPIFixture does not use a WSGIService, so just use the metadata
-        # server fixture (which uses WSGIService) for testing.
-        self.metadata = self.useFixture(
-            nova_fixtures.OSMetadataServer()).metadata
         # Start one compute service.
         self.start_service('compute')
 
@@ -55,6 +51,7 @@ class ServiceTestCase(test.TestCase,
         """Tests that the cell cache for database transaction context managers
         is cleared after a service reset (example scenario: SIGHUP).
         """
+        self.assertFalse(nova_context.CELL_CACHE)
         server_req = self._build_server()
         server = self.api.post_server({'server': server_req})
         self._wait_for_state_change(server, 'ACTIVE')
@@ -64,20 +61,12 @@ class ServiceTestCase(test.TestCase,
         # Cell cache should be empty after the service reset.
         self.assertEqual({}, nova_context.CELL_CACHE)
 
-        # Now test the WSGI service.
-        server = self.api.post_server({'server': server_req})
-        self._wait_for_state_change(server, 'ACTIVE')
-        # Cell cache should be populated after creating a server.
-        self.assertTrue(nova_context.CELL_CACHE)
-        self.metadata.reset()
-        # Cell cache should be empty after the service reset.
-        self.assertEqual({}, nova_context.CELL_CACHE)
-
     def test_service_start_resets_cell_cache(self):
         """Tests that the cell cache for database transaction context managers
         is cleared upon a service start (example scenario: service start after
         a SIGTERM and the parent process forks child process workers).
         """
+        self.assertFalse(nova_context.CELL_CACHE)
         server_req = self._build_server()
         server = self.api.post_server({'server': server_req})
         self._wait_for_state_change(server, 'ACTIVE')
@@ -94,20 +83,6 @@ class ServiceTestCase(test.TestCase,
         # with a CellTimeout error.
         self.scheduler.start()
         # Cell cache should be empty after the service start.
-        self.assertEqual({}, nova_context.CELL_CACHE)
-
-        # Now test the WSGI service.
-        server = self.api.post_server({'server': server_req})
-        self._wait_for_state_change(server, 'ACTIVE')
-        # Cell cache should be populated after creating a server.
-        self.assertTrue(nova_context.CELL_CACHE)
-        # we need to mock nova.utils.raise_if_old_compute() that is run at
-        # service startup as that will check the global service level which
-        # populates the cell cache
-        with mock.patch("nova.utils.raise_if_old_compute"):
-            self.metadata.stop()
-            self.metadata.start()
-        # Cell cache should be empty after the service reset.
         self.assertEqual({}, nova_context.CELL_CACHE)
 
 
