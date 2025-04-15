@@ -7769,6 +7769,7 @@ class ComputeTestCase(BaseTestCase,
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
         migration.source_node = NODENAME
+        migration.dest_compute = "dest-host"
         mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
         mock_get_inst.return_value = instances
@@ -7796,7 +7797,8 @@ class ComputeTestCase(BaseTestCase,
         mock_get_inst.assert_called_once_with(fake_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
         mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
-        mock_is_inst.assert_called_once_with(fake_context, evacuated_instance)
+        mock_is_inst.assert_called_once_with(
+            fake_context, evacuated_instance, host='dest-host')
         mock_destroy.assert_called_once_with(fake_context, evacuated_instance,
                                              'fake_network_info',
                                              'fake_bdi', False)
@@ -7841,6 +7843,7 @@ class ComputeTestCase(BaseTestCase,
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
         migration.source_node = NODENAME
+        migration.dest_compute = 'dest-host'
         mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
         mock_get_drv.return_value = instances
@@ -7867,7 +7870,7 @@ class ComputeTestCase(BaseTestCase,
         mock_check.assert_called_once_with(fake_context,
                                            {'filename': 'tmpfilename'},
                                            instance=evacuated_instance,
-                                           host=None)
+                                           host='dest-host')
         mock_check_clean.assert_called_once_with(fake_context,
                                                  {'filename': 'tmpfilename'})
         mock_destroy.assert_called_once_with(fake_context, evacuated_instance,
@@ -7913,6 +7916,7 @@ class ComputeTestCase(BaseTestCase,
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
         migration.source_node = NODENAME
+        migration.dest_compute = 'dest-host'
         mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
         mock_get_inst.return_value = instances

@@ -14,7 +14,6 @@ import fixtures
 import threading
 
 from oslo_log import log as logging
-from oslo_messaging import MessagingTimeout
 
 from nova.tests.functional.libvirt import base
 
@@ -128,12 +127,5 @@ class TestComputeStartupInProgressEvacuation(
         # finishes
         contd.set()
 
-        # This is bug 2085975 as the shared storage check fails with exception
-        # and therefore nova defaults to not cleaning up the local disk of the
-        # instance.
-        self.assertEqual(MessagingTimeout, type(rpc_exception))
-        # when host is not passed rpc defaults to instance.host
-        self.assertIsNone(rpc_target_host)
-        # when fixed it should not fail
-        # self.assertIsNone(rpc_exception)
-        # self.assertEqual('compute2', rpc_target_host)
+        self.assertIsNone(rpc_exception)
+        self.assertEqual('compute2', rpc_target_host)
