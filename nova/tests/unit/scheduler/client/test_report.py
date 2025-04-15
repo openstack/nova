@@ -2335,8 +2335,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                          logging_mock.call_args[0][1]['placement_req_id'])
 
     def test_get_sharing_providers(self):
+        self.flags(
+            sharing_providers_max_uuids_per_request=3, group='compute')
+
         resp_mock = mock.Mock(status_code=200)
-        rpjson = [
+        rpjson1 = [
             {
                 'uuid': uuids.sharing1,
                 'name': 'bandwidth_provider',
@@ -2353,20 +2356,54 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 'root_provider_uuid': None,
                 'links': [],
             },
+            {
+                'uuid': uuids.sharing3,
+                'name': 'storage_provider',
+                'generation': 42,
+                'parent_provider_uuid': None,
+                'root_provider_uuid': None,
+                'links': [],
+            }
         ]
-        resp_mock.json.return_value = {'resource_providers': rpjson}
+        rpjson2 = [
+            {
+                'uuid': uuids.sharing4,
+                'name': 'storage_provider',
+                'generation': 42,
+                'parent_provider_uuid': None,
+                'root_provider_uuid': None,
+                'links': [],
+            },
+        ]
+        resp_mock.json.side_effect = [
+            {'resource_providers': rpjson1},
+            {'resource_providers': rpjson2}
+        ]
         self.ks_adap_mock.get.return_value = resp_mock
-
         result = self.client._get_sharing_providers(
-            self.context, [uuids.agg1, uuids.agg2])
+            self.context, [uuids.agg1, uuids.agg2,
+                           uuids.agg3, uuids.agg4])
 
-        expected_url = ('/resource_providers?member_of=in:' +
-                        ','.join((uuids.agg1, uuids.agg2)) +
-                        '&required=MISC_SHARES_VIA_AGGREGATE')
-        self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, microversion='1.18',
-            global_request_id=self.context.global_id)
-        self.assertEqual(rpjson, result)
+        self.ks_adap_mock.get.assert_has_calls(
+            [
+                # Asserting first request with 3 uuids
+                mock.call(
+                    '/resource_providers?member_of=in:' +
+                    ','.join((uuids.agg1, uuids.agg2, uuids.agg3)) +
+                    '&required=MISC_SHARES_VIA_AGGREGATE',
+                    microversion='1.18',
+                    global_request_id=self.context.global_id),
+                mock.call().json(),
+                # Asserting second request with 1 uuid
+                mock.call(
+                    '/resource_providers?member_of=in:' +
+                    uuids.agg4 +
+                    '&required=MISC_SHARES_VIA_AGGREGATE',
+                    microversion='1.18',
+                    global_request_id=self.context.global_id),
+                mock.call().json(),
+            ])
+        self.assertEqual(rpjson1 + rpjson2, result)
 
     def test_get_sharing_providers_emptylist(self):
         self.assertEqual(
