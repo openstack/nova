@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    Running API services (nova-osapi_compute or nova-metadata) with eventlet
+    is removed. Deploy with a WSGI server such as uwsgi or mod_wsgi.
