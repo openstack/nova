@@ -426,28 +426,32 @@ def get_device_name(bdm):
 def get_root_info(instance, virt_type, image_meta, root_bdm,
                   disk_bus, cdrom_bus, root_device_name=None):
 
+    # NOTE(mriedem): In case the image_meta object was constructed from
+    # an empty dict, like in the case of evacuate, we have to first check
+    # if disk_format is set on the ImageMeta object.
+    if is_iso := (image_meta.obj_attr_is_set('disk_format') and
+                  image_meta.disk_format == 'iso'):
+        root_device_bus = cdrom_bus
+        root_device_type = 'cdrom'
+    else:
+        root_device_bus = disk_bus
+        root_device_type = 'disk'
+
     if root_bdm is None:
-        # NOTE(mriedem): In case the image_meta object was constructed from
-        # an empty dict, like in the case of evacuate, we have to first check
-        # if disk_format is set on the ImageMeta object.
-        if (image_meta.obj_attr_is_set('disk_format') and
-                image_meta.disk_format == 'iso'):
-            root_device_bus = cdrom_bus
-            root_device_type = 'cdrom'
-        else:
-            root_device_bus = disk_bus
-            root_device_type = 'disk'
         if not root_device_name:
             root_device_name = find_disk_dev_for_disk_bus({}, root_device_bus)
-
         return {'bus': root_device_bus,
                 'type': root_device_type,
                 'dev': block_device.strip_dev(root_device_name),
                 'boot_index': '1'}
 
-    root_bdm_copy = root_bdm
-    if not get_device_name(root_bdm) and root_device_name:
-        root_bdm_copy = copy.deepcopy(root_bdm)
+    root_bdm_copy = copy.deepcopy(root_bdm)
+
+    if is_iso:
+        root_bdm_copy['disk_bus'] = root_device_bus
+        root_bdm_copy['device_type'] = root_device_type
+
+    if not get_device_name(root_bdm_copy) and root_device_name:
         root_bdm_copy['device_name'] = root_device_name
 
     return get_info_from_bdm(
