@@ -143,6 +143,8 @@ rwlock_re = re.compile(
 six_re = re.compile(r"^(import six(\..*)?|from six(\..*)? import .*)$")
 # Regex for catching the setDaemon method
 set_daemon_re = re.compile(r"\.setDaemon\(")
+eventlet_stdlib_primitives_re = re.compile(
+    r".*(eventlet|greenthread)\.sleep\(.*")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -1099,3 +1101,20 @@ def check_set_daemon(logical_line):
     if res:
         yield (0, "N372: Don't use the setDaemon method. "
                   "Use the daemon attribute instead.")
+
+
+@core.flake8ext
+def check_eventlet_primitives(logical_line, filename):
+    """Check for use of any eventlet primitives where the stdlib equivalent
+    should be used
+
+    N373
+    """
+    msg = (
+        "N373: Use the stdlib concurrency primitive instead of the Eventelt "
+        "specific one")
+
+    match = re.match(eventlet_stdlib_primitives_re, logical_line)
+
+    if match:
+        yield (0, msg)

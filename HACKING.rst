@@ -77,6 +77,8 @@ Nova Specific Commandments
 - [N370] Don't use or import six
 - [N371] You must explicitly import python's mock: ``from unittest import mock``
 - [N372] Don't use the setDaemon method. Use the daemon attribute instead.
+- [N373] Don't use eventlet specific concurrency primitives. Use the one
+  from stdlib instead. E.g. eventlet.sleep => time.sleep
 
 Creating Unit Tests
 -------------------
