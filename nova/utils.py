@@ -27,6 +27,7 @@ import random
 import re
 import shutil
 import tempfile
+import time
 
 import eventlet
 from eventlet import tpool
@@ -80,6 +81,14 @@ _FILE_CACHE = {}
 _SERVICE_TYPES = service_types.ServiceTypes()
 
 DEFAULT_GREEN_POOL = None
+
+# TODO(ksambor) Make this a no-op in threading mode once a
+# threading-compatible service is available.Also, remove all
+# cooperative_yield calls after dropping Eventlet support.
+
+
+def cooperative_yield():
+    time.sleep(0)
 
 
 def _get_default_green_pool():

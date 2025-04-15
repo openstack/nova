@@ -121,6 +121,13 @@ from nova.virt.libvirt.volume import volume as volume_drivers
 
 CONF = nova.conf.CONF
 
+_real_sleep = time.sleep
+
+
+def sleep_zero(*args, **kwargs):
+    return _real_sleep(0)
+
+
 _fake_network_info = fake_network.fake_get_instance_nw_info
 
 # TODO(sean-k-mooney): move the rest of the static data to fake_libvirt_data
@@ -565,7 +572,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
                                               'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig1, wait=wait1, done=done1)
-        eventlet.sleep(0)
+        utils.cooperative_yield()
         # Thread 1 should run before thread 2.
         sig1.wait()
 
@@ -578,13 +585,13 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
                 signal=sig2, wait=wait2, done=done2)
 
         wait2.send()
-        eventlet.sleep(0)
+        utils.cooperative_yield()
         try:
             self.assertFalse(done2.ready())
         finally:
             wait1.send()
         done1.wait()
-        eventlet.sleep(0)
+        utils.cooperative_yield()
         self.assertTrue(done2.ready())
         # Wait on greenthreads to assert they didn't raise exceptions
         # during execution
@@ -603,7 +610,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
                                               'name').cache,
                 _concurrency, 'fname2', None,
                 signal=sig1, wait=wait1, done=done1)
-        eventlet.sleep(0)
+        utils.cooperative_yield()
         # Thread 1 should run before thread 2.
         sig1.wait()
 
@@ -614,20 +621,20 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
                                               'name').cache,
                 _concurrency, 'fname1', None,
                 signal=sig2, wait=wait2, done=done2)
-        eventlet.sleep(0)
+        utils.cooperative_yield()
         # Wait for thread 2 to start.
         sig2.wait()
 
         wait2.send()
         tries = 0
         while not done2.ready() and tries < 10:
-            eventlet.sleep(0)
+            utils.cooperative_yield()
             tries += 1
         try:
             self.assertTrue(done2.ready())
         finally:
             wait1.send()
-            eventlet.sleep(0)
+            utils.cooperative_yield()
         # Wait on greenthreads to assert they didn't raise exceptions
         # during execution
         thr1.wait()
@@ -14117,7 +14124,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_guest.Guest, "migrate_start_postcopy")
     @mock.patch.object(time, "time")
     @mock.patch.object(time, "sleep",
-                       side_effect=lambda x: eventlet.sleep(0))
+                       side_effect=lambda x: sleep_zero())
     @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(libvirt_guest.Guest, "get_job_info")
     @mock.patch.object(objects.Instance, "save")
@@ -15606,8 +15613,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_pre_live_migration_volume_backed_encrypted(self):
         self._test_pre_live_migration_volume_backed(encrypted_volumes=True)
 
-    @mock.patch.object(eventlet.greenthread, 'sleep',
-                       side_effect=eventlet.sleep(0))
+    @mock.patch.object(time, "sleep",
+                       side_effect=lambda x: sleep_zero())
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs',
                        side_effect=processutils.ProcessExecutionError)
     def test_pre_live_migration_plug_vifs_retry_fails(self, mock_plug,
@@ -15631,11 +15638,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_plug.assert_has_calls([mock.call(instance, [])] * 3)
         self.assertEqual(3, mock_plug.call_count)
         # Called 'live_migration_retry_count - 1' times
-        mock_sleep.assert_has_calls([mock.call(1)] * 2)
-        self.assertEqual(2, mock_sleep.call_count)
+        calls_with_1 = [
+            call for call in mock_sleep.call_args_list if call == mock.call(1)]
+        # Assert there are exactly two such calls
+        assert len(calls_with_1) == 2
 
-    @mock.patch.object(eventlet.greenthread, 'sleep',
-                       side_effect=eventlet.sleep(0))
+    @mock.patch.object(time, "sleep",
+                       side_effect=lambda x: sleep_zero())
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs')
     def test_pre_live_migration_plug_vifs_retry_works(self, mock_plug,
                                                       mock_sleep):
@@ -15659,8 +15668,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_plug.assert_has_calls([mock.call(instance, [])] * 3)
         self.assertEqual(3, mock_plug.call_count)
         # Called 2 times because the third 'plug_vifs' call is successful.
-        mock_sleep.assert_has_calls([mock.call(1)] * 2)
-        self.assertEqual(2, mock_sleep.call_count)
+        calls_with_1 = [
+            call for call in mock_sleep.call_args_list if call == mock.call(1)]
+        # Assert there are exactly two such calls
+        assert len(calls_with_1) == 2
 
     def test_pre_live_migration_plug_vifs_with_dest_port_bindings(self):
         """Tests that we use the LibvirtLiveMigrateData.vifs destination host
