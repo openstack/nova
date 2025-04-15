@@ -319,10 +319,6 @@ class Service(service.Service):
         context.CELL_CACHE = {}
 
 
-def process_launcher():
-    return service.ProcessLauncher(CONF, restart_method='mutate')
-
-
 # NOTE(vish): the global launcher is to maintain the existing
 #             functionality of calling service.serve +
 #             service.wait
