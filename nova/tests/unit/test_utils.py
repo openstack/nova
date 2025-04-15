@@ -1398,3 +1398,58 @@ class RunOnceTests(test.NoDBTestCase):
         self.assertRaises(ValueError, f.reset)
         self.assertFalse(f.called)
         mock_clean.assert_called_once_with()
+
+
+class LatchErrorOnRaiseTests(test.NoDBTestCase):
+
+    error = test.TestingException()
+    unrecoverable = ValueError('some error')
+
+    @utils.latch_error_on_raise(retryable=(test.TestingException,))
+    def dummy_test_func(self, error=None):
+        if error:
+            raise error
+        return True
+
+    def setUp(self):
+        super().setUp()
+        self.dummy_test_func.reset()
+
+    @mock.patch.object(utils.LOG, 'exception')
+    def test_wrapped_success(self, fake_logger):
+        self.assertTrue(self.dummy_test_func())
+        fake_logger.assert_not_called()
+        self.assertIsNone(self.dummy_test_func.error)
+
+    @mock.patch.object(utils.LOG, 'exception')
+    def test_wrapped_raises_recoverable(self, fake_logger):
+        expected = LatchErrorOnRaiseTests.error
+        e = self.assertRaises(
+            type(expected), self.dummy_test_func, error=expected)
+        self.assertIs(expected, e)
+        # we just leave recoverable exception flow though the decorator
+        # without catching them so the logger should not be called by the
+        # decorator
+        fake_logger.assert_not_called()
+        self.assertIsNone(self.dummy_test_func.error)
+        self.assertTrue(self.dummy_test_func())
+
+    @mock.patch.object(utils.LOG, 'exception')
+    def test_wrapped_raises_unrecoverable(self, fake_logger):
+        expected = LatchErrorOnRaiseTests.unrecoverable
+        e = self.assertRaises(
+            type(expected), self.dummy_test_func, error=expected)
+        self.assertIs(expected, e)
+        fake_logger.assert_called_once_with(expected)
+        self.assertIsNotNone(self.dummy_test_func.error)
+        self.assertIs(self.dummy_test_func.error, expected)
+
+    @mock.patch.object(utils.LOG, 'exception', new=mock.MagicMock())
+    def test_wrapped_raises_forever(self):
+        expected = LatchErrorOnRaiseTests.unrecoverable
+        first = self.assertRaises(
+            type(expected), self.dummy_test_func, error=expected)
+        self.assertIs(expected, first)
+        second = self.assertRaises(
+            type(expected), self.dummy_test_func, error=expected)
+        self.assertIs(first, second)
