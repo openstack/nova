@@ -446,11 +446,8 @@ class _TestInstanceNUMATopology(object):
         # pcpuset
         self.assertEqual(set(), topo_loaded.cells[0].cpuset)
         self.assertEqual({0, 1}, topo_loaded.cells[0].pcpuset)
-        # but the object version isn't bumped. So when the
-        # data is saved back to the DB it still has the old version 1.4, but
-        # also it has the new pcpuset field from version 1.6. This is bug
-        # https://bugs.launchpad.net/nova/+bug/2097359.
-        self.assertEqual('1.4', topo_loaded.cells[0].VERSION)
+        # and the version is bumped to 1.6
+        self.assertEqual('1.6', topo_loaded.cells[0].VERSION)
 
 
 class TestInstanceNUMATopology(
