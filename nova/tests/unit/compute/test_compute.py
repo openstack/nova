@@ -6675,7 +6675,8 @@ class ComputeTestCase(BaseTestCase,
                                               source_bdms=bdms)
             mock_notify.assert_has_calls([
                 mock.call(c, instance, 'fake-mini',
-                          action='live_migration_post', phase='start'),
+                          action='live_migration_post', phase='start',
+                          best_effort=True),
                 mock.call(c, instance, 'fake-mini',
                           action='live_migration_post', phase='end')])
             self.assertEqual(2, mock_notify.call_count)

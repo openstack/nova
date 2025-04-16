@@ -36,6 +36,7 @@ from nova import context
 from nova import exception
 from nova.image import glance
 from nova.network import model
+from nova.notifications.objects import base as notifications_objects_base
 from nova import objects
 from nova.objects import base
 from nova.objects import block_device as block_device_obj
@@ -472,6 +473,31 @@ class UsageInfoTestCase(test.TestCase):
             glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
+    def test_notify_about_instance_action_best_effort(self):
+        instance = create_instance(self.context)
+        bdms = block_device_obj.block_device_make_list(
+            self.context,
+            [fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume',
+                 'device_name': '/dev/vda',
+                 'instance_uuid': 'f8000000-0000-0000-0000-000000000000',
+                 'destination_type': 'volume',
+                 'boot_index': 0,
+                 'volume_id': 'de8836ac-d75e-11e2-8271-5254009297d6'})])
+        with mock.patch.object(
+            notifications_objects_base.NotificationBase, 'emit',
+            side_effect=Exception()
+        ) as mock_emit:
+            compute_utils.notify_about_instance_action(
+                self.context,
+                instance,
+                host='fake-compute',
+                action='delete',
+                phase='start',
+                bdms=bdms,
+                best_effort=True)
+            mock_emit.assert_called_once()
+
     def test_notify_about_instance_action(self):
         instance = create_instance(self.context)
         bdms = block_device_obj.block_device_make_list(
@@ -872,6 +898,24 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(200, payload['reads'])
         self.assertEqual(200, payload['write_bytes'])
         self.assertEqual(200, payload['writes'])
+
+    def test_notify_about_instance_usage_best_effort(self):
+        instance = create_instance(self.context)
+        # Set some system metadata
+        sys_metadata = {'image_md_key1': 'val1',
+                        'image_md_key2': 'val2',
+                        'other_data': 'meow'}
+        instance.system_metadata.update(sys_metadata)
+        instance.save()
+        extra_usage_info = {'image_name': 'fake_name'}
+        notifier = rpc.get_notifier('compute')
+        with mock.patch.object(
+            notifier, 'info', side_effect=Exception()
+        ) as mock_info:
+            compute_utils.notify_about_instance_usage(
+                notifier, self.context, instance, 'create.start',
+                extra_usage_info=extra_usage_info, best_effort=True)
+            mock_info.assert_called_once()
 
     def test_notify_about_instance_usage(self):
         instance = create_instance(self.context)

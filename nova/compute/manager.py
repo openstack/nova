@@ -2246,11 +2246,12 @@ class ComputeManager(manager.Manager):
 
     def _notify_about_instance_usage(self, context, instance, event_suffix,
                                      network_info=None, extra_usage_info=None,
-                                     fault=None):
+                                     fault=None, best_effort=False):
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, event_suffix,
             network_info=network_info,
-            extra_usage_info=extra_usage_info, fault=fault)
+            extra_usage_info=extra_usage_info, fault=fault,
+            best_effort=best_effort)
 
     def _deallocate_network(self, context, instance,
                             requested_networks=None):
@@ -9348,11 +9349,12 @@ class ComputeManager(manager.Manager):
 
             self._notify_about_instance_usage(ctxt, instance,
                                               "live_migration._post.start",
-                                              network_info=network_info)
+                                              network_info=network_info,
+                                              best_effort=True)
             compute_utils.notify_about_instance_action(
                 ctxt, instance, self.host,
                 action=fields.NotificationAction.LIVE_MIGRATION_POST,
-                phase=fields.NotificationPhase.START)
+                phase=fields.NotificationPhase.START, best_effort=True)
 
             migration = objects.Migration(
                 source_compute=self.host, dest_compute=dest,
