@@ -61,6 +61,37 @@ process ID 8675, you can then run:
 This command triggers the Guru Meditation report to be printed to
 ``/var/log/nova/nova-compute-err.log``.
 
+For WSGI based services like ``nova-api-wsgi`` and ``nova-metadata-wsgi`` using
+signals is not trivial due to the web server's own signal handling. An
+alternative to the signal-based approach that works equally well for
+freestanding and hosted entry points is to use a file-based trigger.
+
+Configure the service to trigger the GMR by the modification time changes of
+a file or directory.
+.. code-block::
+
+   [oslo_reports]
+   file_event_handler=/var/lib/nova
+
+Then the report can be triggered by touching the file or directory. The GMRb
+will be emitted in the same place where the service logs normally.
+.. code-block:: console
+
+    touch /var/lib/nova
+
+Note that some web servers freeze the request handler processes when there is
+no HTTP request to be handled. This prevent the file system monitoring loop to
+detect the change. So after touching the file make a HTTP request to the given
+WSGI application.
+.. code-block:: console
+
+    openstack compute service list
+
+For more details and a complete working example you can check
+`openstack-must-gather`_.
+
+.. _openstack-must-gather: https://github.com/openstack-k8s-operators/openstack-must-gather/pull/34
+
 The report has the following sections:
 
 * Package: Displays information about the package to which the process belongs,
