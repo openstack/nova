@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+     Introduced a new compute configuration option
+     `sharing_providers_max_uuids_per_request` and applied a fix to
+     handle the "Request-Too-Long" error that can occur when querying
+     the placement API with a large number of aggregate UUIDs.

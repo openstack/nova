@@ -783,6 +783,20 @@ Related options:
 
 * ``shutdown_timeout``
 """),
+    cfg.IntOpt('sharing_providers_max_uuids_per_request',
+        default=200,
+        min=1,
+        help="""
+Maximum number of aggregate UUIDs per API request. The default is 200.
+
+In deployments with a large number of aggregates, a 'Request-Too-Long'
+error may be raised by the web server or load balancer. This value
+allows setting the batch size to limit the query length.
+
+Possible values:
+
+* Any positive integer.
+"""),
     cfg.IntOpt('resource_provider_association_refresh',
         default=300,
         min=0,
