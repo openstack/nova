@@ -1,0 +1,6 @@
+fixes:
+  - |
+    Fixed an issue where certain server actions could fail for servers with
+    ephemeral disks due to filesystem label name length limitations
+    (VFAT, XFS, ...). Filesystem label name generation has been fixed for these
+    cases. See https://launchpad.net/bugs/2061701 for more details.
