@@ -18,12 +18,12 @@ images to launch instances.
 
 OpenStack Compute consists of the following areas and their components:
 
-``nova-api`` service
+``nova-api-wsgi`` service
   Accepts and responds to end user compute API calls. The service supports the
   OpenStack Compute API.  It enforces some policies and initiates most
   orchestration activities, such as running an instance.
 
-``nova-api-metadata`` service
+``nova-metadata-wsgi`` service
   Accepts metadata requests from instances. For more information, refer to
   :doc:`/admin/metadata-service`.
 

@@ -29,8 +29,8 @@ Configuration
 
 The service you must configure to enable the ``StaticJSON`` vendordata module
 depends on how guests are accessing vendordata. If using the metadata service,
-configuration applies to either :program:`nova-api` or
-:program:`nova-api-metadata`, depending on the deployment, while if using
+configuration applies to either :program:`nova-api-wsgi` or
+:program:`nova-metadata-wsgi`, depending on the deployment, while if using
 config drives, configuration applies to :program:`nova-compute`. However,
 configuration is otherwise the same and the following options apply:
 
@@ -115,7 +115,7 @@ Configuration
 As with ``StaticJSON``, the service you must configure to enable the
 ``DynamicJSON`` vendordata module depends on how guests are accessing
 vendordata. If using the metadata service, configuration applies to either
-:program:`nova-api` or :program:`nova-api-metadata`, depending on the
+:program:`nova-api-wsgi` or :program:`nova-metadata-wsgi`, depending on the
 deployment, while if using config drives, configuration applies to
 :program:`nova-compute`. However, configuration is otherwise the same and the
 following options apply:

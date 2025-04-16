@@ -291,7 +291,7 @@ Refer to :oslo.config:option:`pci.alias` for syntax information.
 Refer to :ref:`Affinity  <pci-numa-affinity-policy>` for ``numa_policy``
 information.
 
-Once configured, restart the :program:`nova-api` service.
+Once configured, restart the :program:`nova-api-wsgi` service.
 
 
 Configuring a flavor or image

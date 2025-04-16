@@ -28,15 +28,11 @@ responsibilities of services and drivers are:
 
 .. rubric:: Services
 
-:doc:`nova-api-metadata </cli/nova-api-metadata>`
-  A server daemon that serves the Nova Metadata API.
+:doc:`nova-metadata-wsgi </user/wsgi>`
+  A WSGI application that serves the Nova Metadata API.
 
-:doc:`nova-api-os-compute </cli/nova-api-os-compute>`
-  A server daemon that serves the Nova OpenStack Compute API.
-
-:doc:`nova-api </cli/nova-api>`
-  A server daemon that serves the metadata and compute APIs in separate
-  greenthreads.
+:doc:`nova-api-wsgi </user/wsgi>`
+  A WSGI application that serves the Nova OpenStack Compute API.
 
 :doc:`nova-compute </cli/nova-compute>`
   Manages virtual machines. Loads a Service object, and exposes the public

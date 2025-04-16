@@ -52,8 +52,8 @@ following components:
 
 - One or more :program:`nova-novncproxy` service. Supports browser-based noVNC
   clients. For simple deployments, this service typically runs on the same
-  machine as :program:`nova-api` because it operates as a proxy between the
-  public network and the private compute host network.
+  machine as :program:`nova-api-wsgi` because it operates as a proxy between
+  the public network and the private compute host network.
 
 - One or more :program:`nova-compute` services. Hosts the instances for which
   consoles are provided.
@@ -427,8 +427,8 @@ Here's the general flow of actions:
 
 1. The user requests a serial console connection string for an instance
    from the REST API.
-2. The :program:`nova-api` service asks the :program:`nova-compute` service,
-   which manages that instance, to fulfill that request.
+2. The :program:`nova-api-wsgi` service asks the :program:`nova-compute`
+   service, which manages that instance, to fulfill that request.
 3. That connection string gets used by the user to connect to the
    :program:`nova-serialproxy` service.
 4. The :program:`nova-serialproxy` service then proxies the console interaction
