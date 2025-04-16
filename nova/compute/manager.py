@@ -9327,41 +9327,50 @@ class ComputeManager(manager.Manager):
         LOG.info('_post_live_migration() is started..',
                  instance=instance)
 
-        # Cleanup source host post live-migration
-        block_device_info = self._get_instance_block_device_info(
-                            ctxt, instance, bdms=source_bdms)
-        self.driver.post_live_migration(ctxt, instance, block_device_info,
-                                        migrate_data)
+        # NOTE(artom) The ordering and exception handling are important here.
+        # We want to immediately activate the port bindings on the destination
+        # host to minimize network downtime. This happens in
+        # migrate_instance_start(). It's also crucial that we call
+        # _post_live_migration_remove_source_vol_connections() to clean up
+        # source volume connections and prevent potential data leaks. We
+        # therefore activate the port bindings in a try block, and, regardless
+        # of any expcetions during that process, clean up volume connections in
+        # a finally block.
+        try:
+            # NOTE(artom) At this point in time we have not bound the ports to
+            # the destination host yet (this happens in
+            # migrate_instance_start() below). Therefore, the "old" source
+            # network info that's still in the instance info cache is safe to
+            # use here, since it'll be used below during
+            # driver.post_live_migration_at_source() to unplug the VIFs on the
+            # source.
+            network_info = instance.get_network_info()
 
-        # Disconnect volumes from this (the source) host.
-        self._post_live_migration_remove_source_vol_connections(
-            ctxt, instance, source_bdms)
+            self._notify_about_instance_usage(ctxt, instance,
+                                              "live_migration._post.start",
+                                              network_info=network_info)
+            compute_utils.notify_about_instance_action(
+                ctxt, instance, self.host,
+                action=fields.NotificationAction.LIVE_MIGRATION_POST,
+                phase=fields.NotificationPhase.START)
 
-        # NOTE(artom) At this point in time we have not bound the ports to the
-        # destination host yet (this happens in migrate_instance_start()
-        # below). Therefore, the "old" source network info that's still in the
-        # instance info cache is safe to use here, since it'll be used below
-        # during driver.post_live_migration_at_source() to unplug the VIFs on
-        # the source.
-        network_info = instance.get_network_info()
+            migration = objects.Migration(
+                source_compute=self.host, dest_compute=dest,
+            )
+            # For neutron, migrate_instance_start will activate the destination
+            # host port bindings, if there are any created by conductor before
+            # live migration started.
+            self.network_api.migrate_instance_start(ctxt, instance, migration)
+        finally:
+            # Cleanup source host post live-migration
+            block_device_info = self._get_instance_block_device_info(
+                                ctxt, instance, bdms=source_bdms)
+            self.driver.post_live_migration(ctxt, instance, block_device_info,
+                                            migrate_data)
 
-        self._notify_about_instance_usage(ctxt, instance,
-                                          "live_migration._post.start",
-                                          network_info=network_info)
-        compute_utils.notify_about_instance_action(
-            ctxt, instance, self.host,
-            action=fields.NotificationAction.LIVE_MIGRATION_POST,
-            phase=fields.NotificationPhase.START)
-
-        migration = objects.Migration(
-            source_compute=self.host, dest_compute=dest,
-        )
-        # For neutron, migrate_instance_start will activate the destination
-        # host port bindings, if there are any created by conductor before live
-        # migration started.
-        self.network_api.migrate_instance_start(ctxt,
-                                                instance,
-                                                migration)
+            # Disconnect volumes from this (the source) host.
+            self._post_live_migration_remove_source_vol_connections(
+                ctxt, instance, source_bdms)
 
         destroy_vifs = False
         try:
