@@ -1106,23 +1106,30 @@ class OSMetadataServer(fixtures.Fixture):
 
     """
 
+    def __init__(self):
+        self.md_url = None
+
     def setUp(self):
         super(OSMetadataServer, self).setUp()
-        # in order to run these in tests we need to bind only to local
-        # host, and dynamically allocate ports
+
+        # A unique hostname for the wsgi-intercept.
+        hostname = uuidsentinel.metadata_host
+        service_name = 'metadata'
+        endpoint = f'http://{hostname}/'
         conf_overrides = {
-            'metadata_listen': '127.0.0.1',
-            'metadata_listen_port': 0,
-            'debug': True
+            'metadata_listen': hostname,
+            'debug': True,
         }
         self.useFixture(ConfPatcher(**conf_overrides))
 
-        self.metadata = service.WSGIService("metadata")
-        self.metadata.start()
-        self.addCleanup(self.metadata.stop)
-        self.md_url = "http://%s:%s/" % (
-            conf_overrides['metadata_listen'],
-            self.metadata.port)
+        loader = wsgi.Loader().load_app(service_name)
+        app = lambda: loader
+
+        intercept = interceptor.RequestsInterceptor(app, url=endpoint)
+        intercept.install_intercept()
+        self.addCleanup(intercept.uninstall_intercept)
+
+        self.md_url = endpoint
 
 
 class PoisonFunctions(fixtures.Fixture):
