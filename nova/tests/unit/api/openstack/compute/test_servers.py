@@ -8466,8 +8466,74 @@ class ServersViewBuilderTestV296(_ServersViewBuilderTest):
             availability_zone=self.instance.availability_zone)]
 
         req = self.req('/%s/servers' % self.project_id)
-        self.assertRaises(KeyError, self.view_builder.index,
-                          req, self.instances, False)
+        output = self.view_builder.index(req, self.instances, False)
+
+        self.assertEqual(2, len(output['servers']))
+
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuids')
+    def test_list_detail_view_with_missing_request_specs(self, m_rs):
+
+        self.instances = [
+            self.instance,
+            self.create_instance(2, uuids.fake1, 'fake-server'),
+            self.create_instance(3, uuids.fake2, 'fake-server2')
+        ]
+        # First instance's request spec has pinned availability zone
+        # Second instance's request spec has no pinned availability zone
+        m_rs.return_value = [
+            objects.RequestSpec(
+                instance_uuid=self.instance.uuid,
+                availability_zone=self.instance.availability_zone),
+            objects.RequestSpec(
+                instance_uuid=self.instance.uuid,
+                availability_zone=None)
+        ]
+
+        req = self.req('/%s/servers/detail' % self.project_id)
+        output = self.view_builder.detail(req, self.instances, False)
+
+        self.assertEqual(3, len(output['servers']))
+        # first instance has pinned az
+        self.assertEqual('nova',
+                         output['servers'][0]['pinned_availability_zone'])
+        # second or later has no pinned az
+        for s in output['servers'][1:]:
+            self.assertIsNone(s['pinned_availability_zone'])
+
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    def test_show_view_with_missing_request_specs(self, m_rs):
+
+        self.instances = [
+            self.instance,
+            self.create_instance(2, uuids.fake1, 'fake-server'),
+            self.create_instance(3, uuids.fake2, 'fake-server2')
+        ]
+        # First instance's request spec has pinned availability zone
+        # Second instance's request spec has no pinned availability zone
+        m_rs.side_effect = [
+            objects.RequestSpec(
+                instance_uuid=self.instance.uuid,
+                availability_zone=self.instance.availability_zone),
+            objects.RequestSpec(
+                instance_uuid=self.instance.uuid,
+                availability_zone=None),
+            exception.RequestSpecNotFound(instance_uuid='3')
+        ]
+
+        # Instance show with request spec and pinned az
+        req = self.req('/%s/servers/1' % self.project_id)
+        output = self.view_builder.show(req, self.instances[0])
+        self.assertEqual('nova', output['server']['pinned_availability_zone'])
+
+        # Instance show with request spec and no pinned az
+        req = self.req('/%s/servers/2' % self.project_id)
+        output = self.view_builder.show(req, self.instances[1])
+        self.assertIsNone(output['server']['pinned_availability_zone'])
+
+        # Instance show without request spec
+        req = self.req('/%s/servers/3' % self.project_id)
+        output = self.view_builder.show(req, self.instances[2])
+        self.assertIsNone(output['server']['pinned_availability_zone'])
 
 
 class ServersViewBuilderTestV2100(_ServersViewBuilderTest):
