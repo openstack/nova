@@ -15,6 +15,7 @@ from unittest import mock
 from nova.cmd import scheduler
 from nova import config
 from nova import test
+from nova import utils
 
 
 # required because otherwise oslo early parse_args dies
@@ -46,3 +47,20 @@ class TestScheduler(test.NoDBTestCase):
         mock_serve.assert_called_once_with(
             service_create.return_value, workers=4)
         mock_wait.assert_called_once_with()
+
+    @mock.patch('nova.service.Service.create')
+    @mock.patch('nova.service.serve')
+    @mock.patch('nova.service.wait')
+    def test_executors_destroyed_before_fork(
+        self, mock_wait, mock_serve, service_create
+    ):
+        # simulate that the thread pool is initialized before the fork
+        executor = utils.get_scatter_gather_executor()
+        scheduler.main()
+
+        mock_serve.assert_called_once_with(
+            service_create.return_value, workers=mock.ANY)
+        mock_wait.assert_called_once_with()
+        # check that the executor was properly destroyed
+        self.assertFalse(executor.alive)
+        self.assertIsNone(utils.SCATTER_GATHER_EXECUTOR)

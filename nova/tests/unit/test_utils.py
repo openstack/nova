@@ -1453,3 +1453,37 @@ class LatchErrorOnRaiseTests(test.NoDBTestCase):
         second = self.assertRaises(
             type(expected), self.dummy_test_func, error=expected)
         self.assertIs(first, second)
+
+
+class ScatterGatherExecutorTestCase(test.NoDBTestCase):
+    def test_executor_is_named(self):
+        executor = utils.get_scatter_gather_executor()
+        # NOTE(gibi): during test we use a test-case-specific name, outside
+        # of test we use process name specific name instead.
+        self.assertRegex(executor.name,
+            "nova.tests.unit.test_utils.ScatterGatherExecutor.*"
+            "test_executor_is_named.cell_worker")
+
+    @mock.patch.object(
+        utils, 'concurrency_mode_threading', new=mock.Mock(return_value=False))
+    def test_executor_type_eventlet(self):
+        executor = utils.get_scatter_gather_executor()
+
+        self.assertEqual('GreenThreadPoolExecutor', type(executor).__name__)
+
+    @mock.patch.object(
+        utils, 'concurrency_mode_threading', new=mock.Mock(return_value=True))
+    def test_executor_type_and_size_threading(self):
+        self.flags(cell_worker_thread_pool_size=13)
+        executor = utils.get_scatter_gather_executor()
+
+        self.assertEqual('ThreadPoolExecutor', type(executor).__name__)
+        self.assertEqual(13, executor._max_workers)
+
+    def test_executor_destroy(self):
+        executor = utils.get_scatter_gather_executor()
+        self.assertIsNotNone(utils.SCATTER_GATHER_EXECUTOR)
+
+        utils.destroy_scatter_gather_executor()
+        self.assertIsNone(utils.SCATTER_GATHER_EXECUTOR)
+        self.assertFalse(executor.alive)

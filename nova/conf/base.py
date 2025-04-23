@@ -68,6 +68,15 @@ entry.
 The total number of coroutines that can be run via nova's default
 greenthread pool concurrently, defaults to 1000, min value is 100.
 '''),
+    cfg.IntOpt(
+        'cell_worker_thread_pool_size',
+        default=5,
+        min=1,
+        help='''
+The number of tasks that can run concurrently, one for each cell, for
+operations requires cross cell data gathering a.k.a scatter-gather, like
+listing instances across multiple cells.
+'''),
 ]
 
 

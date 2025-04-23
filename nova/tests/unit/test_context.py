@@ -12,8 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import threading
 from unittest import mock
 
+
+import futurist.waiters
 from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -22,7 +25,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova import test
-from nova.tests import fixtures as nova_fixtures
+from nova import utils
 
 
 class ContextTestCase(test.NoDBTestCase):
@@ -345,7 +348,6 @@ class ContextTestCase(test.NoDBTestCase):
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     def test_scatter_gather_cells(self, mock_get_inst, mock_target_cell):
-        self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
         ctxt = context.get_context()
         mapping = objects.CellMapping(database_connection='fake://db',
                                       transport_url='fake://mq',
@@ -362,14 +364,22 @@ class ContextTestCase(test.NoDBTestCase):
             sort_dir='foo')
 
     @mock.patch('nova.context.LOG.warning')
-    @mock.patch('eventlet.timeout.Timeout')
-    @mock.patch('eventlet.queue.LightQueue.get')
-    @mock.patch('nova.objects.InstanceList.get_by_filters')
-    def test_scatter_gather_cells_timeout(self, mock_get_inst,
-                                          mock_get_result, mock_timeout,
-                                          mock_log_warning):
-        # This is needed because we're mocking get_by_filters.
-        self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
+    def test_scatter_gather_cells_timeout(self, mock_log_warning):
+        # Ensure only one task can finish the other will time out
+        work = threading.Semaphore(value=1)
+
+        # ensure that eventually all task finishes to avoid triggering
+        # the leaked thread check at the test case cleanup
+        def cleanup():
+            work.release()
+            utils.SCATTER_GATHER_EXECUTOR.shutdown(wait=True)
+
+        self.addCleanup(cleanup)
+
+        def task(*args, **kwargs):
+            work.acquire()
+            return mock.sentinel.instances
+
         ctxt = context.get_context()
         mapping0 = objects.CellMapping(database_connection='fake://db0',
                                        transport_url='none:///',
@@ -379,25 +389,75 @@ class ContextTestCase(test.NoDBTestCase):
                                        uuid=uuids.cell1)
         mappings = objects.CellMappingList(objects=[mapping0, mapping1])
 
-        # Simulate cell1 not responding.
-        mock_get_result.side_effect = [(mapping0.uuid,
-                                        mock.sentinel.instances),
-                                       exception.CellTimeout()]
+        results = context.scatter_gather_cells(ctxt, mappings, 1, task)
+        self.assertEqual(2, len(results))
+        self.assertEqual(
+            {mock.sentinel.instances, context.did_not_respond_sentinel},
+            set(results.values()))
+        self.assertTrue(mock_log_warning.called)
+
+    @mock.patch('nova.context.LOG.warning')
+    def test_scatter_gather_cells_queued_task_cancelled(self, mock_warning):
+        # ensure that only one task can run at a time so we can simulate
+        # queued tasks
+        utils.SCATTER_GATHER_EXECUTOR = futurist.GreenThreadPoolExecutor(
+            max_workers=1)
+
+        work = threading.Event()
+
+        # ensure that eventually all task finishes, even if the test case fails
+        # early, to avoid triggering the leaked thread check at the test case
+        # cleanup
+        def cleanup():
+            work.set()
+            utils.SCATTER_GATHER_EXECUTOR.shutdown(wait=True)
+
+        self.addCleanup(cleanup)
+
+        def task(*args, **kwargs):
+            work.wait()
+            return mock.sentinel.instances
+
+        ctxt = context.get_context()
+        mapping0 = objects.CellMapping(database_connection='fake://db0',
+                                       transport_url='none:///',
+                                       uuid=objects.CellMapping.CELL0_UUID)
+        mapping1 = objects.CellMapping(database_connection='fake://db1',
+                                       transport_url='fake://mq1',
+                                       uuid=uuids.cell1)
+        mappings = objects.CellMappingList(objects=[mapping0, mapping1])
 
         results = context.scatter_gather_cells(
-            ctxt, mappings, 30, objects.InstanceList.get_by_filters)
+            ctxt, mappings, 1, task)
+
         self.assertEqual(2, len(results))
-        self.assertIn(mock.sentinel.instances, results.values())
-        self.assertIn(context.did_not_respond_sentinel, results.values())
-        mock_timeout.assert_called_once_with(30, exception.CellTimeout)
-        self.assertTrue(mock_log_warning.called)
+        self.assertEqual(
+            [context.did_not_respond_sentinel] * 2, list(results.values()))
+
+        # let the started task eventually finish so the thread leak check at
+        # the test case cleanup is satisfied.
+        work.set()
+        utils.SCATTER_GATHER_EXECUTOR.shutdown(wait=True)
+
+        stats = utils.SCATTER_GATHER_EXECUTOR.statistics
+        # The task that wasn't started is cancelled when the scatter-gather
+        # timed out.
+        self.assertEqual(1, stats.cancelled)
+        # The task that was started is finished after the scatter-gather
+        # timeout
+        self.assertEqual(1, stats.executed)
+
+        mock_warning.assert_has_calls([
+            mock.call(
+                'Timed out waiting for response from cell %s. Left the cell '
+                'worker thread to finish in the background.', mock.ANY),
+            mock.call(
+                'Timed out waiting for response from cell %s.', mock.ANY)])
 
     @mock.patch('nova.context.LOG.exception')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     def test_scatter_gather_cells_exception(self, mock_get_inst,
                                             mock_log_exception):
-        # This is needed because we're mocking get_by_filters.
-        self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
         ctxt = context.get_context()
         mapping0 = objects.CellMapping(database_connection='fake://db0',
                                        transport_url='none:///',
