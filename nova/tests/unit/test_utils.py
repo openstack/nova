@@ -1500,10 +1500,21 @@ class DefaultExecutorTestCase(test.NoDBTestCase):
 
     @mock.patch.object(
         utils, 'concurrency_mode_threading', new=mock.Mock(return_value=False))
-    def test_executor_type_eventlet(self):
+    def test_executor_type_and_size_eventlet(self):
+        self.flags(default_green_pool_size=113)
         executor = utils._get_default_executor()
 
         self.assertEqual('GreenThreadPoolExecutor', type(executor).__name__)
+        self.assertEqual(113, executor._max_workers)
+
+    @mock.patch.object(
+        utils, 'concurrency_mode_threading', new=mock.Mock(return_value=True))
+    def test_executor_type_and_size_threading(self):
+        self.flags(default_thread_pool_size=13)
+        executor = utils._get_default_executor()
+
+        self.assertEqual('ThreadPoolExecutor', type(executor).__name__)
+        self.assertEqual(13, executor._max_workers)
 
     def test_executor_destroy(self):
         executor = utils._get_default_executor()

@@ -1185,11 +1185,11 @@ class IndirectionAPIFixture(fixtures.Fixture):
         self.addCleanup(self.cleanup)
 
 
-class IsolatedGreenPoolFixture(fixtures.Fixture):
-    """isolate each test to a dedicated greenpool.
+class IsolatedExecutorFixture(fixtures.Fixture):
+    """isolate each test to a dedicated executor.
 
-    Replace the default shared greenpool with a pre test greenpool
-    and wait for all greenthreads to finish in test cleanup.
+    Replace the default shared executor with a per test executor
+    and wait for all threads to finish in test cleanup.
     """
 
     def __init__(self, test):
