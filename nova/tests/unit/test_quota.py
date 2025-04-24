@@ -2287,3 +2287,101 @@ class QuotaCountTestCase(test.NoDBTestCase):
         quota._instances_cores_ram_count(mock.sentinel.context,
                                          mock.sentinel.project_id)
         mock_uid_qfd_populated.assert_not_called()
+
+
+class LegacyGroupMemberQuotaTestCase(test.NoDBTestCase):
+    @mock.patch('nova.objects.BuildRequestList.get_by_filters')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    def test_no_cells_no_build_reqs(
+        self, mock_get_cell_mappings, mock_inst_get, mock_build_req_get
+    ):
+        mock_get_cell_mappings.return_value = []
+        group = objects.InstanceGroup()
+        group.members = []
+
+        self.assertEqual(
+            {'user': {'server_group_members': 0}},
+            quota._server_group_count_members_by_user_legacy(
+                mock.sentinel.context, group, mock.sentinel.user_id))
+
+        mock_get_cell_mappings.assert_called_once()
+        mock_inst_get.assert_not_called()
+        mock_build_req_get.assert_called_once_with(
+            mock.sentinel.context,
+            {'deleted': False, 'user_id': mock.sentinel.user_id, 'uuid': []})
+
+    @mock.patch('nova.objects.BuildRequestList.get_by_filters')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    def test_no_cells_just_build_reqs(
+        self, mock_get_cell_mappings, mock_inst_get, mock_build_req_get
+    ):
+        mock_get_cell_mappings.return_value = []
+        br = objects.BuildRequest()
+        br.instance_uuid = uuids.inst1
+        mock_build_req_get.return_value = objects.BuildRequestList(
+            objects=[br])
+        group = objects.InstanceGroup()
+        group.members = []
+
+        self.assertEqual(
+            {'user': {'server_group_members': 1}},
+            quota._server_group_count_members_by_user_legacy(
+                mock.sentinel.context, group, mock.sentinel.user_id))
+
+        mock_get_cell_mappings.assert_called_once()
+        mock_inst_get.assert_not_called()
+        mock_build_req_get.assert_called_once_with(
+            mock.sentinel.context,
+            {'deleted': False, 'user_id': mock.sentinel.user_id, 'uuid': []})
+
+    @mock.patch('nova.objects.BuildRequestList.get_by_filters')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    def test_cells_and_build_reqs(
+        self, mock_get_cell_mappings, mock_inst_get, mock_build_req_get
+    ):
+        cell1 = objects.CellMapping()
+        cell1.name = "cell1"
+        cell1.uuid = uuids.cell1
+        cell2 = objects.CellMapping()
+        cell2.name = "cell2"
+        cell2.uuid = uuids.cell2
+        mock_get_cell_mappings.return_value = objects.CellMappingList(
+            objects=[cell1, cell2])
+
+        br1 = objects.BuildRequest()
+        br1.instance_uuid = uuids.inst1
+        br2 = objects.BuildRequest()
+        br2.instance_uuid = uuids.inst2
+        mock_build_req_get.return_value = objects.BuildRequestList(
+            objects=[br1, br2])
+
+        inst1 = objects.Instance()
+        inst1.uuid = uuids.inst1  # same as br1
+
+        inst3 = objects.Instance()
+        inst3.uuid = uuids.inst3
+
+        mock_inst_get.side_effect = [
+            # cell1
+            objects.InstanceList(objects=[inst1]),
+            # cell2
+            objects.InstanceList(objects=[inst3]),
+        ]
+
+        group = objects.InstanceGroup()
+        group.members = []
+
+        #  as br1 and inst1 counted only once as they are the same
+        self.assertEqual(
+            {'user': {'server_group_members': 3}},
+            quota._server_group_count_members_by_user_legacy(
+                mock.sentinel.context, group, mock.sentinel.user_id))
+
+        mock_get_cell_mappings.assert_called_once()
+        self.assertEqual(2, len(mock_inst_get.mock_calls))
+        mock_build_req_get.assert_called_once_with(
+            mock.sentinel.context,
+            {'deleted': False, 'user_id': mock.sentinel.user_id, 'uuid': []})

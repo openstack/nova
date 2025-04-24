@@ -32,7 +32,6 @@ from nova.limit import local as local_limit
 from nova.limit import placement as placement_limit
 from nova import objects
 from nova.scheduler.client import report
-from nova import utils
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
@@ -1208,38 +1207,31 @@ def _keypair_get_count_by_user(context, user_id):
 
 
 def _server_group_count_members_by_user_legacy(context, group, user_id):
-    # NOTE(melwitt): This is mostly duplicated from
-    # InstanceGroup.count_members_by_user() to query across multiple cells.
-    # We need to be able to pass the correct cell context to
-    # InstanceList.get_by_filters().
-    # NOTE(melwitt): Counting across cells for instances means we will miss
-    # counting resources if a cell is down.
-    cell_mappings = objects.CellMappingList.get_all(context)
-    greenthreads = []
     filters = {'deleted': False, 'user_id': user_id, 'uuid': group.members}
-    for cell_mapping in cell_mappings:
-        with nova_context.target_cell(context, cell_mapping) as cctxt:
-            greenthreads.append(utils.spawn(
-                objects.InstanceList.get_by_filters, cctxt, filters,
-                expected_attrs=[]))
-    instances = objects.InstanceList(objects=[])
-    for greenthread in greenthreads:
-        found = greenthread.wait()
-        instances = instances + found
-    # Count build requests using the same filters to catch group members
-    # that are not yet created in a cell.
-    # NOTE(mriedem): BuildRequestList.get_by_filters is not very efficient for
-    # what we need and we can optimize this with a new query method.
-    build_requests = objects.BuildRequestList.get_by_filters(context, filters)
+
+    def group_member_uuids(cctxt):
+        return {inst.uuid for inst in objects.InstanceList.get_by_filters(
+            cctxt, filters, expected_attrs=[])}
+
     # Ignore any duplicates since build requests and instances can co-exist
     # for a short window of time after the instance is created in a cell but
     # before the build request is deleted.
-    instance_uuids = [inst.uuid for inst in instances]
-    count = len(instances)
+    instance_uuids = set()
+
+    # NOTE(melwitt): Counting across cells for instances means we will miss
+    # counting resources if a cell is down.
+    per_cell = nova_context.scatter_gather_all_cells(
+        context, group_member_uuids)
+    for uuids in per_cell.values():
+        instance_uuids |= uuids
+
+    # Count build requests using the same filters to catch group members
+    # that are not yet created in a cell.
+    build_requests = objects.BuildRequestList.get_by_filters(context, filters)
     for build_request in build_requests:
-        if build_request.instance_uuid not in instance_uuids:
-            count += 1
-    return {'user': {'server_group_members': count}}
+        instance_uuids.add(build_request.instance_uuid)
+
+    return {'user': {'server_group_members': len(instance_uuids)}}
 
 
 def is_qfd_populated(context):
