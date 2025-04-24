@@ -430,9 +430,9 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
 
     for cell_mapping in cell_mappings:
         with target_cell(context, cell_mapping) as cctxt:
-            future = executor.submit(
-                utils.pass_context_wrapper(gather_result),
-                cell_mapping.uuid, fn, cctxt, *args, **kwargs)
+            future = utils.spawn_on(
+                executor,
+                gather_result, cell_mapping.uuid, fn, cctxt, *args, **kwargs)
             tasks[cell_mapping.uuid] = future
 
     futurist.waiters.wait_for_all(tasks.values(), timeout)

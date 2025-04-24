@@ -17,6 +17,7 @@ import hashlib
 import os
 import os.path
 import tempfile
+import threading
 from unittest import mock
 
 import fixtures
@@ -1511,3 +1512,52 @@ class DefaultExecutorTestCase(test.NoDBTestCase):
         utils.destroy_default_green_pool()
         self.assertIsNone(utils.DEFAULT_GREEN_POOL)
         self.assertFalse(executor.alive)
+
+
+class SpawnOnTestCase(test.NoDBTestCase):
+    def test_spawn_on_submits_work(self):
+        executor = utils.get_scatter_gather_executor()
+        task = mock.MagicMock()
+
+        future = utils.spawn_on(executor, task, 13, foo='bar')
+        future.result()
+
+        task.assert_called_once_with(13, foo='bar')
+
+    @mock.patch.object(
+        utils, 'concurrency_mode_threading', new=mock.Mock(return_value=True))
+    @mock.patch.object(utils.LOG, 'warning')
+    def test_spawn_on_warns_on_full_executor(self, mock_warning):
+        # Ensure we have executor for a single task only at a time
+        self.flags(cell_worker_thread_pool_size=1)
+        executor = utils.get_scatter_gather_executor()
+
+        work = threading.Event()
+        started = threading.Event()
+
+        # let the blocked tasks finish after the test case so that the leaked
+        # thread check is not triggered during cleanup
+        self.addCleanup(work.set)
+
+        def task():
+            started.set()
+            work.wait()
+
+        # Start two tasks that will wait, the first will execute the second
+        # will wait in the queue
+        utils.spawn_on(executor, task)
+        utils.spawn_on(executor, task)
+        # wait for the first task to consume the single executor thread
+        started.wait()
+        # start one more task to trigger the fullness check.
+        utils.spawn_on(executor, task)
+
+        # We expect that spawn_on will warn due to the second task being is
+        # waiting in the queue, and no idle worker thread exists.
+        mock_warning.assert_called_once_with(
+            'The %s pool does not have free threads so the task %s will be '
+            'queued. If this happens repeatedly then the size of the pool is '
+            'too small for the load or there are stuck threads filling the '
+            'pool.',
+            'nova.tests.unit.test_utils.SpawnOnTestCase.'
+            'test_spawn_on_warns_on_full_executor.cell_worker', task)

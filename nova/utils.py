@@ -675,7 +675,7 @@ def _serialize_profile_info():
     return trace_info
 
 
-def pass_context_wrapper(func):
+def _pass_context_wrapper(func):
     """Generalised passthrough method
     It will grab the context from the threadlocal store and add it to
     the store on the new thread.  This allows for continuity in logging the
@@ -705,7 +705,7 @@ def pass_context(runner, func, *args, **kwargs):
     runner function
     """
 
-    return runner(pass_context_wrapper(func), *args, **kwargs)
+    return runner(_pass_context_wrapper(func), *args, **kwargs)
 
 
 def spawn(func, *args, **kwargs) -> futurist.Future:
@@ -719,8 +719,36 @@ def spawn(func, *args, **kwargs) -> futurist.Future:
     context when using this method to spawn a new thread.
     """
 
-    return pass_context(
-        _get_default_green_pool().submit, func, *args, **kwargs)
+    return spawn_on(_get_default_green_pool(), func, *args, **kwargs)
+
+
+def _executor_is_full(executor):
+    if concurrency_mode_threading():
+        # TODO(gibi): Move this whole logic to futurist ThreadPoolExecutor
+        # so that we can avoid accessing the internals of the executor
+        with executor._shutdown_lock:
+            idle_workers = len([w for w in executor._workers if w.idle]) > 0
+            queued_tasks = executor._work_queue.qsize() > 0
+            return queued_tasks and not idle_workers
+
+    return False
+
+
+def spawn_on(executor, func, *args, **kwargs) -> futurist.Future:
+    """Passthrough method to run func on a thread in a given executor.
+
+    It will also grab the context from the threadlocal store and add it to
+    the store on the new thread.  This allows for continuity in logging the
+    context when using this method to spawn a new thread.
+    """
+
+    if _executor_is_full(executor):
+        LOG.warning(
+            "The %s pool does not have free threads so the task %s will be "
+            "queued. If this happens repeatedly then the size of the pool is "
+            "too small for the load or there are stuck threads filling the "
+            "pool.", executor.name, func)
+    return pass_context(executor.submit, func, *args, **kwargs)
 
 
 def tpool_execute(func, *args, **kwargs):
