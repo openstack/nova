@@ -20,5 +20,5 @@ class SyncPool(eventlet.GreenPool):
     waits.
     """
 
-    def spawn_n(self, func, *args, **kwargs):
+    def spawn(self, func, *args, **kwargs):
         func(*args, **kwargs)

@@ -2144,7 +2144,7 @@ class ComputeTaskManager:
                         skipped_host(target_ctxt, host, image_ids)
                         continue
 
-                    utils.pass_context(fetch_pool.spawn_n, wrap_cache_images,
+                    utils.pass_context(fetch_pool.spawn, wrap_cache_images,
                                        target_ctxt, host, image_ids)
 
         # Wait until all those things finish

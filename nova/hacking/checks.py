@@ -575,7 +575,7 @@ def check_greenthread_spawns(logical_line, filename):
 
     N340
     """
-    msg = ("N340: Use nova.utils.%(spawn)s() rather than "
+    msg = ("N340: Use nova.utils.spawn() rather than "
            "greenthread.%(spawn)s() and eventlet.%(spawn)s()")
     if "nova/utils.py" in filename or "nova/tests/" in filename:
         return

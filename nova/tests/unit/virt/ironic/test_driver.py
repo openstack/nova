@@ -2606,7 +2606,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
     def setUp(self):
         super(IronicDriverSyncTestCase, self).setUp()
         self.driver.node_cache = {}
-        # Since the code we're testing runs in a spawn_n green thread, ensure
+        # Since the code we're testing runs in a spawn green thread, ensure
         # that the thread completes.
         self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
 

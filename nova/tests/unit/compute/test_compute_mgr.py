@@ -4070,7 +4070,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance = mock.Mock()
         mock_get.return_value = [instance]
         with mock.patch.object(self.compute._sync_power_pool,
-                               'spawn_n') as mock_spawn:
+                               'spawn') as mock_spawn:
             self.compute._sync_power_states(mock.sentinel.context)
             mock_get.assert_called_with(mock.sentinel.context,
                                         self.compute.host, expected_attrs=[],

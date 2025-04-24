@@ -450,9 +450,6 @@ class HackingTestCase(test.NoDBTestCase):
         code = "nova.utils.spawn(func, arg1, kwarg1=kwarg1)"
         self._assert_has_no_errors(code, checks.check_greenthread_spawns)
 
-        code = "nova.utils.spawn_n(func, arg1, kwarg1=kwarg1)"
-        self._assert_has_no_errors(code, checks.check_greenthread_spawns)
-
     def test_config_option_regex_match(self):
         def should_match(code):
             self.assertTrue(checks.cfg_opt_re.match(code))

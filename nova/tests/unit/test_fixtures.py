@@ -278,16 +278,16 @@ class TestIndirectionAPIFixture(testtools.TestCase):
 
 class TestSpawnIsSynchronousFixture(testtools.TestCase):
     def test_spawn_patch(self):
-        orig_spawn = utils.spawn_n
+        orig_spawn = utils.spawn
 
         fix = fixtures.SpawnIsSynchronousFixture()
         self.useFixture(fix)
-        self.assertNotEqual(orig_spawn, utils.spawn_n)
+        self.assertNotEqual(orig_spawn, utils.spawn)
 
     def test_spawn_passes_through(self):
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         tester = mock.MagicMock()
-        utils.spawn_n(tester.function, 'foo', bar='bar')
+        utils.spawn(tester.function, 'foo', bar='bar')
         tester.function.assert_called_once_with('foo', bar='bar')
 
     def test_spawn_return_has_result(self):

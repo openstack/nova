@@ -470,7 +470,7 @@ class HostManager(object):
                 LOG.debug("END:_async_init_instance_info")
 
         # Run this async so that we don't block the scheduler start-up
-        utils.spawn_n(_async_init_instance_info, computes_by_cell)
+        utils.spawn(_async_init_instance_info, computes_by_cell)
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need

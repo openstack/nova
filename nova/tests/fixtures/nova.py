@@ -1210,8 +1210,8 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
             self.greenpool = origi_default_green_pool()
             self.greenpool.name = f"{self.test_case_id}.default"
             return self.greenpool
-        # NOTE(sean-k-mooney): greenpools use eventlet.spawn and
-        # eventlet.spawn_n so we can't stub out all calls to those functions.
+        # NOTE(sean-k-mooney): greenpools use eventlet.spawn so we can't stub
+        # out all calls to those functions.
         # Instead since nova only creates greenthreads directly via nova.utils
         # we stub out the default green pool. This will not capture
         # Greenthreads created via the standard lib threading module.
@@ -1289,7 +1289,7 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
                 'finished.'
                 'They cannot be killed so they may interact with '
                 'other tests if they raise exceptions. '
-                'These greenlets were likely created by spawn_n and'
+                'These greenlets were likely created by spawn and'
                 'and therefore are not expected to return or raise.'
             )
 
@@ -1323,8 +1323,6 @@ class SpawnIsSynchronousFixture(fixtures.Fixture):
 
     def setUp(self):
         super(SpawnIsSynchronousFixture, self).setUp()
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.spawn_n', _FakeFuture))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.utils.spawn', _FakeFuture))
 
@@ -1865,7 +1863,7 @@ class PropagateTestCaseIdToChildEventlets(fixtures.Fixture):
             # propagation
             caller = eventlet.getcurrent()
             # If there is no id set on us that means we were spawned with other
-            # than nova.utils.spawn or spawn_n so the id propagation chain got
+            # than nova.utils.spawn so the id propagation chain got
             # broken. We fall back to self.test_case_id from the fixture which
             # is good enough
             caller_test_case_id = getattr(
@@ -1887,37 +1885,6 @@ class PropagateTestCaseIdToChildEventlets(fixtures.Fixture):
         # our initialization to the child eventlet
         self.useFixture(
             fixtures.MonkeyPatch('nova.utils.spawn', wrapped_spawn))
-
-        # now do the same with spawn_n
-        orig_spawn_n = utils.spawn_n
-
-        def wrapped_spawn_n(func, *args, **kwargs):
-            # This is still runs before the eventlet.spawn so read the id for
-            # propagation
-            caller = eventlet.getcurrent()
-            # If there is no id set on us that means we were spawned with other
-            # than nova.utils.spawn or spawn_n so the id propagation chain got
-            # broken. We fall back to self.test_case_id from the fixture which
-            # is good enough
-            caller_test_case_id = getattr(
-                caller, 'test_case_id', None) or self.test_case_id
-
-            @functools.wraps(func)
-            def test_case_id_wrapper(*args, **kwargs):
-                # This runs after the eventlet.spawn in the new child.
-                # Propagate the id from our caller eventlet
-                current = eventlet.getcurrent()
-                current.test_case_id = caller_test_case_id
-                return func(*args, **kwargs)
-
-            # call the original spawn_n to create the child but with our
-            # new wrapper around its target
-            return orig_spawn_n(test_case_id_wrapper, *args, **kwargs)
-
-        # let's replace nova.utils.spawn_n with the wrapped one that injects
-        # our initialization to the child eventlet
-        self.useFixture(
-            fixtures.MonkeyPatch('nova.utils.spawn_n', wrapped_spawn_n))
 
 
 class ReaderWriterLock(lockutils.ReaderWriterLock):

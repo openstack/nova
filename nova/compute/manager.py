@@ -2401,12 +2401,12 @@ class ComputeManager(manager.Manager):
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't
         # want to tie up RPC workers.
-        utils.spawn_n(_locked_do_build_and_run_instance,
-                      context, instance, image, request_spec,
-                      filter_properties, admin_password, injected_files,
-                      requested_networks, security_groups,
-                      block_device_mapping, node, limits, host_list,
-                      accel_uuids)
+        utils.spawn(_locked_do_build_and_run_instance,
+                    context, instance, image, request_spec,
+                    filter_properties, admin_password, injected_files,
+                    requested_networks, security_groups,
+                    block_device_mapping, node, limits, host_list,
+                    accel_uuids)
 
     def _check_device_tagging(self, requested_networks, block_device_mapping):
         tagging_requested = False
@@ -10983,7 +10983,7 @@ class ComputeManager(manager.Manager):
             else:
                 LOG.debug('Triggering sync for uuid %s', uuid)
                 self._syncs_in_progress[uuid] = True
-                nova.utils.pass_context(self._sync_power_pool.spawn_n,
+                nova.utils.pass_context(self._sync_power_pool.spawn,
                                         _sync,
                                         db_instance)
 
