@@ -29,7 +29,6 @@ import shutil
 import tempfile
 import time
 
-import eventlet
 from eventlet import tpool
 import futurist
 from keystoneauth1 import loading as ks_loading
@@ -92,12 +91,36 @@ def cooperative_yield():
     time.sleep(0)
 
 
+def destroy_default_green_pool():
+    """Closes the executor and resets the global to None to allow forked worker
+    processes to properly init it.
+    """
+    global DEFAULT_GREEN_POOL
+    if DEFAULT_GREEN_POOL:
+        LOG.info(
+            "The default thread pool %s is shutting down",
+            DEFAULT_GREEN_POOL.name)
+        DEFAULT_GREEN_POOL.shutdown()
+        LOG.info(
+            "The default thread pool %s is closed", DEFAULT_GREEN_POOL.name)
+
+    DEFAULT_GREEN_POOL = None
+
+
 def _get_default_green_pool():
     global DEFAULT_GREEN_POOL
-    if DEFAULT_GREEN_POOL is None:
-        DEFAULT_GREEN_POOL = eventlet.greenpool.GreenPool(
+
+    if not DEFAULT_GREEN_POOL:
+        DEFAULT_GREEN_POOL = futurist.GreenThreadPoolExecutor(
             CONF.default_green_pool_size
         )
+
+        pname = multiprocessing.current_process().name
+        executor_name = f"{pname}.default"
+        DEFAULT_GREEN_POOL.name = executor_name
+
+        LOG.info("The default thread pool %s is initialized", executor_name)
+
     return DEFAULT_GREEN_POOL
 
 
@@ -685,7 +708,7 @@ def pass_context(runner, func, *args, **kwargs):
     return runner(pass_context_wrapper(func), *args, **kwargs)
 
 
-def spawn(func, *args, **kwargs):
+def spawn(func, *args, **kwargs) -> futurist.Future:
     """Passthrough method for eventlet.spawn.
 
     This utility exists so that it can be stubbed for testing without
@@ -696,11 +719,12 @@ def spawn(func, *args, **kwargs):
     context when using this method to spawn a new thread.
     """
 
-    return pass_context(_get_default_green_pool().spawn, func, *args, **kwargs)
+    return pass_context(
+        _get_default_green_pool().submit, func, *args, **kwargs)
 
 
 def spawn_n(func, *args, **kwargs):
-    """Passthrough method for eventlet.greenpool.spawn_n.
+    """Passthrough method for eventlet.greenpool.spawn.
 
     This utility exists so that it can be stubbed for testing without
     interfering with the service spawns.
@@ -708,9 +732,12 @@ def spawn_n(func, *args, **kwargs):
     It will also grab the context from the threadlocal store and add it to
     the store on the new thread.  This allows for continuity in logging the
     context when using this method to spawn a new thread.
+
+    Note that this is not different from calling spawn. Both spawn and
+    spawn_n uses the eventlet.spawn.
     """
 
-    pass_context(_get_default_green_pool().spawn_n, func, *args, **kwargs)
+    spawn(func, *args, **kwargs)
 
 
 def tpool_execute(func, *args, **kwargs):

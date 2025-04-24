@@ -11319,7 +11319,7 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_paths, device_names = self._live_migration_copy_disk_paths(
                 context, instance, guest)
 
-        opthread = utils.spawn(self._live_migration_operation,
+        future = utils.spawn(self._live_migration_operation,
                                      context, instance, dest,
                                      block_migration,
                                      migrate_data, guest,
@@ -11328,11 +11328,12 @@ class LibvirtDriver(driver.ComputeDriver):
         finish_event = eventlet.event.Event()
         self.active_migrations[instance.uuid] = deque()
 
-        def thread_finished(thread, event):
+        def thread_finished(_):
             LOG.debug("Migration operation thread notification",
                       instance=instance)
-            event.send()
-        opthread.link(thread_finished, finish_event)
+            finish_event.send()
+
+        future.add_done_callback(thread_finished)
 
         # Let eventlet schedule the new thread right away
         time.sleep(0)

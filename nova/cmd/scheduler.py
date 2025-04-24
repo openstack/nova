@@ -58,6 +58,7 @@ def main():
     # state (i.e. number of workers idle in the pool). A long therm solution
     # would be to use os.spawn instead of os.fork for the workers.
     utils.destroy_scatter_gather_executor()
+    utils.destroy_default_green_pool()
 
     service.serve(server, workers=workers)
     service.wait()
