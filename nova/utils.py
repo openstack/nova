@@ -80,7 +80,7 @@ _FILE_CACHE = {}
 
 _SERVICE_TYPES = service_types.ServiceTypes()
 
-DEFAULT_GREEN_POOL = None
+DEFAULT_EXECUTOR = None
 
 # TODO(ksambor) Make this a no-op in threading mode once a
 # threading-compatible service is available.Also, remove all
@@ -91,37 +91,37 @@ def cooperative_yield():
     time.sleep(0)
 
 
-def destroy_default_green_pool():
+def destroy_default_executor():
     """Closes the executor and resets the global to None to allow forked worker
     processes to properly init it.
     """
-    global DEFAULT_GREEN_POOL
-    if DEFAULT_GREEN_POOL:
+    global DEFAULT_EXECUTOR
+    if DEFAULT_EXECUTOR:
         LOG.info(
             "The default thread pool %s is shutting down",
-            DEFAULT_GREEN_POOL.name)
-        DEFAULT_GREEN_POOL.shutdown()
+            DEFAULT_EXECUTOR.name)
+        DEFAULT_EXECUTOR.shutdown()
         LOG.info(
-            "The default thread pool %s is closed", DEFAULT_GREEN_POOL.name)
+            "The default thread pool %s is closed", DEFAULT_EXECUTOR.name)
 
-    DEFAULT_GREEN_POOL = None
+    DEFAULT_EXECUTOR = None
 
 
-def _get_default_green_pool():
-    global DEFAULT_GREEN_POOL
+def _get_default_executor():
+    global DEFAULT_EXECUTOR
 
-    if not DEFAULT_GREEN_POOL:
-        DEFAULT_GREEN_POOL = futurist.GreenThreadPoolExecutor(
+    if not DEFAULT_EXECUTOR:
+        DEFAULT_EXECUTOR = futurist.GreenThreadPoolExecutor(
             CONF.default_green_pool_size
         )
 
         pname = multiprocessing.current_process().name
         executor_name = f"{pname}.default"
-        DEFAULT_GREEN_POOL.name = executor_name
+        DEFAULT_EXECUTOR.name = executor_name
 
         LOG.info("The default thread pool %s is initialized", executor_name)
 
-    return DEFAULT_GREEN_POOL
+    return DEFAULT_EXECUTOR
 
 
 # NOTE(mikal): this seems to have to stay for now to handle os-brick
@@ -710,7 +710,7 @@ def spawn(func, *args, **kwargs) -> futurist.Future:
     context when using this method to spawn a new thread.
     """
 
-    return spawn_on(_get_default_green_pool(), func, *args, **kwargs)
+    return spawn_on(_get_default_executor(), func, *args, **kwargs)
 
 
 def _executor_is_full(executor):
