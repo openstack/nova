@@ -20,8 +20,16 @@
 
 import os
 
+MONKEY_PATCHED = False
+
+
+def is_patched():
+    return MONKEY_PATCHED
+
 
 def _monkey_patch():
+    if is_patched():
+        return
     # NOTE(mdbooth): Anything imported here will not be monkey patched. It is
     # important to take care not to import anything here which requires monkey
     # patching.
@@ -61,10 +69,13 @@ def _monkey_patch():
                     ', '.join(problems))
 
 
-# NOTE(mdbooth): This workaround is required to avoid breaking sphinx. See
-# separate comment in doc/source/conf.py. It may also be useful for other
-# non-nova utilities. Ideally the requirement for this workaround will be
-# removed as soon as possible, so do not rely on, or extend it.
-if (os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', '').lower()
+def patch():
+    # NOTE(mdbooth): This workaround is required to avoid breaking sphinx. See
+    # separate comment in doc/source/conf.py. It may also be useful for other
+    # non-nova utilities. Ideally the requirement for this workaround will be
+    # removed as soon as possible, so do not rely on, or extend it.
+    if (os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', '').lower()
         not in ('1', 'true', 'yes')):
-    _monkey_patch()
+        _monkey_patch()
+        global MONKEY_PATCHED
+        MONKEY_PATCHED = True
