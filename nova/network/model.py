@@ -489,14 +489,6 @@ class VIF(Model):
                     'ips': ips}
         return []
 
-    @property
-    def has_live_migration_plug_time_event(self):
-        """Returns whether this VIF's network-vif-plugged external event will
-        be sent by Neutron at "plugtime" - in other words, as soon as neutron
-        completes configuring the network backend.
-        """
-        return self.is_hybrid_plug_enabled()
-
     def is_hybrid_plug_enabled(self):
         return self['details'].get(VIF_DETAILS_OVS_HYBRID_PLUG, False)
 
@@ -556,13 +548,6 @@ class NetworkInfo(list):
 
     def json(self):
         return jsonutils.dumps(self)
-
-    def get_live_migration_plug_time_events(self):
-        """Returns a list of external events for any VIFs that have
-        "plug-time" events during live migration.
-        """
-        return [('network-vif-plugged', vif['id'])
-                for vif in self if vif.has_live_migration_plug_time_event]
 
     def has_port_with_allocation(self):
         return any(vif.has_allocation() for vif in self)

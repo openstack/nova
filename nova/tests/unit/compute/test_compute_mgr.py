@@ -11914,17 +11914,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 [], self.compute._get_neutron_events_for_live_migration(
                     self.instance))
 
-        # 3. no plug time events
-        with mock.patch.object(self.instance, 'get_network_info') as nw_info:
-            nw_info.return_value = network_model.NetworkInfo(
-                [network_model.VIF(
-                    uuids.port1, details={
-                        network_model.VIF_DETAILS_OVS_HYBRID_PLUG: False})])
-            self.assertFalse(nw_info.return_value[0].is_hybrid_plug_enabled())
-            self.assertEqual(
-                [], self.compute._get_neutron_events_for_live_migration(
-                    self.instance))
-
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._post_live_migration')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
