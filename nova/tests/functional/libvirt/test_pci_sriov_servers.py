@@ -554,28 +554,33 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             pci_info, expected_managed="yes", device_spec=device_spec
         )
 
-    def test_create_server_with_VF_and_managed_set_to_yes_fails_version(self):
+    def test_start_compute_with_live_migratable_fails_version(self):
         device_spec = [
             {
                 "vendor_id": fakelibvirt.PCI_VEND_ID,
                 "product_id": fakelibvirt.PF_PROD_ID,
-                "physical_network": "physnet4",
             },
             {
                 "vendor_id": fakelibvirt.PCI_VEND_ID,
                 "product_id": fakelibvirt.VF_PROD_ID,
-                "physical_network": "physnet4",
                 "live_migratable": "yes",
             },
         ]
-        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=2)
 
+        self.flags(
+            device_spec=[jsonutils.dumps(x) for x in device_spec],
+            group="pci",
+        )
+        # Try to start the compute with an old libvirt version while configured
+        # a dev_spec with live_migratable flag that requires newer libvirt
+        # version
         exc = self.assertRaises(
             exception.InvalidConfiguration,
-            self._run_create_server_test,
-            pci_info,
-            expected_managed="yes",
-            device_spec=device_spec,
+            self.start_compute,
+            pci_info=pci_info,
+            libvirt_version=None,
+            qemu_version=None,
         )
 
         self.assertIn(
@@ -730,8 +735,9 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         """Live migrate an instance with a PCI VF.
 
         This should fail because it's not possible to live migrate an instance
-        with a PCI passthrough device, even if it's a SR-IOV VF. Until we have
-        the correct version of qemu and libvirt.
+        with a PCI passthrough device, even if it's a SR-IOV VF.
+        Until we have the correct version of qemu and libvirt and the device
+        is marked live_migratable: yes in the device_spec.
         """
 
         # start two compute services
@@ -771,20 +777,62 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
-        server = self._create_lm_server(PCI_DEVICE_SPEC, PCI_ALIAS)
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
+
         src_xml = self._get_xml(self.comp0, server)
         self.assertPCIDeviceCounts(self.comp0, total=1, free=0)
         self.assertPCIDeviceCounts(self.comp1, total=1, free=1)
@@ -793,11 +841,10 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         dst_xml = self._get_xml(self.comp1, server)
         self.assertPCIDeviceCounts(self.comp0, total=1, free=1)
         self.assertPCIDeviceCounts(self.comp1, total=1, free=0)
-        self._assertCompareHostdevs(src_xml, dst_xml)
+        self._assertDeviceAddressesMapped(src_xml, dst_xml)
 
     def test_live_migrate_VF_fails_lm_requested_no_lm_dev(self):
-        """Live migrate an instance with a non migratable PCI VF.
-        We should fail to create the instance because we request a
+        """We should fail to create the instance because we request a
         live migratable PCI device and there is only a non live migratable one.
         """
 
@@ -809,33 +856,70 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
-        # The AssertionError means the server failed to be created
-        # it fails on the assertion in _wait_for_state_change
-        self.assertRaises(
-            AssertionError,
-            self._create_lm_server,
-            PCI_DEVICE_SPEC,
-            PCI_ALIAS,
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
         )
 
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0,
+            flavor_id=flavor_id,
+            networks=networks,
+            expected_state="ERROR",
+        )
+        self.assertIn("No valid host was found.", server["fault"]["message"])
         self.assertPCIDeviceCounts(self.comp0, total=1, free=1)
 
     def test_live_migrate_VF_fails_non_lm_requested(self):
-        """Live migrate an instance with a non migratable PCI VF.
-        We should manage to create the instance but fail to live migrate it.
+        """We should manage to create the instance but fail to live migrate it,
+        because devices are not live migratable.
         """
 
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -846,20 +930,61 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "no",
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "no",
+            },
+        )]
 
-        server = self._create_lm_server(PCI_DEVICE_SPEC, PCI_ALIAS)
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
         self.assertPCIDeviceCounts(self.comp0, total=1, free=0)
         self.assertPCIDeviceCounts(self.comp1, total=1, free=1)
 
@@ -877,10 +1002,9 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assertPCIDeviceCounts(self.comp1, total=1, free=1)
         self._wait_for_state_change(server, 'ACTIVE')
 
-    def test_live_migrate_VF_fails_non_lm_reqeusted_only_lm_dev(self):
-        """Live migrate an instance with a live migratable PCI VF.
-        We requested a non live migratable PCI device and there is only a live
-        migratable one. Instance creation should fail.
+    def test_live_migrate_VF_fails_non_lm_requested_only_lm_dev(self):
+        """We requested a non live migratable PCI device and there is only a
+        live migratable one. Instance creation should fail.
         """
 
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -891,33 +1015,69 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "no",
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "no",
+            },
+        )]
 
-        # The AssertionError means the server failed to be created
-        # it fails on the assertion in _wait_for_state_change
-        self.assertRaises(
-            AssertionError,
-            self._create_lm_server,
-            PCI_DEVICE_SPEC,
-            PCI_ALIAS,
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
         )
 
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0,
+            flavor_id=flavor_id,
+            networks=networks,
+            expected_state="ERROR",
+        )
+        self.assertIn("No valid host was found.", server["fault"]["message"])
         self.assertPCIDeviceCounts(self.comp0, total=1, free=1)
 
     def test_live_migrate_VF_fails_lm_requested_dev_unspecified(self):
-        """Live migrate an instance with a live migratable PCI VF.
-        We requested a live migratable PCI device and there is only a
+        """We requested a live migratable PCI device and there is only a
         device with live migratable not specified. Instance creation should
         fail.
         """
@@ -929,32 +1089,69 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
-        # The AssertionError means the server failed to be created
-        # it fails on the assertion in _wait_for_state_change
-        self.assertRaises(
-            AssertionError,
-            self._create_lm_server,
-            PCI_DEVICE_SPEC,
-            PCI_ALIAS,
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
         )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0,
+            flavor_id=flavor_id,
+            networks=networks,
+            expected_state="ERROR",
+        )
+        self.assertIn("No valid host was found.", server["fault"]["message"])
         self.assertPCIDeviceCounts(self.comp0, total=1, free=1)
 
     def test_live_migrate_VF_fails_non_lm_requested_dev_unspecified(self):
-        """Live migrate an instance with a live migratable PCI VF.
-        We requested a non live migratable PCI device and there is only a
+        """We requested a non live migratable PCI device and there is only a
         device with live migratable not specified. Instance creation should
         fail.
         """
@@ -966,32 +1163,69 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "no",
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "no",
+            },
+        )]
 
-        # The AssertionError means the server failed to be created
-        # it fails on the assertion in _wait_for_state_change
-        self.assertRaises(
-            AssertionError,
-            self._create_lm_server,
-            PCI_DEVICE_SPEC,
-            PCI_ALIAS,
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
         )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0,
+            flavor_id=flavor_id,
+            networks=networks,
+            expected_state="ERROR",
+        )
+        self.assertIn("No valid host was found.", server["fault"]["message"])
         self.assertPCIDeviceCounts(self.comp0, total=1, free=1)
 
     def test_live_migrate_VF_fails_lm_requested_unspecified_lm_dev(self):
-        """Live migrate an instance with a live migratable PCI VF.
-        We have not specify any kind of live migratable PCI device in the
+        """We have not specify any kind of live migratable PCI device in the
         request and we have a migratable device, we should not migrate as
         we could get non migratable device on the target host.
         """
@@ -1004,19 +1238,60 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+            },
+        )]
 
-        server = self._create_lm_server(PCI_DEVICE_SPEC, PCI_ALIAS)
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
         self.assertPCIDeviceCounts(self.comp0, total=1, free=0)
         self.assertPCIDeviceCounts(self.comp1, total=1, free=1)
 
@@ -1034,9 +1309,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self._wait_for_state_change(server, 'ACTIVE')
 
     def test_live_migrate_VF_fails_lm_requested_unspecified_no_lm_dev(self):
-        """Live migrate an instance with a live migratable PCI VF.
-        We have not specify any kind of live migratable PCI device and
-        we have a non migratable device.
+        """We have not specify any kind of live migratable PCI device and
+        we have a non migratable device. So live migration should fail.
         """
 
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -1047,19 +1321,60 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+            },
+        )]
 
-        server = self._create_lm_server(PCI_DEVICE_SPEC, PCI_ALIAS)
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
         self.assertPCIDeviceCounts(self.comp0, total=1, free=0)
         self.assertPCIDeviceCounts(self.comp1, total=1, free=1)
 
@@ -1077,9 +1392,9 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self._wait_for_state_change(server, 'ACTIVE')
 
     def test_live_migrate_VF_fails_lm_requested_unspecif_unspecif_lm_dev(self):
-        """Live migrate an instance with a live migratable PCI VF.
-        We have not specify any kind of live migratable PCI device and
-        we have a non migratable device.
+        """We have not specify any kind of live migratable PCI device and
+        we have a not specified device with live migratable. Migration should
+        fail.
         """
 
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -1089,19 +1404,60 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+            },
+        )]
 
-        server = self._create_lm_server(PCI_DEVICE_SPEC, PCI_ALIAS)
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
         self.assertPCIDeviceCounts(self.comp0, total=1, free=0)
         self.assertPCIDeviceCounts(self.comp1, total=1, free=1)
 
@@ -1136,20 +1492,61 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [3],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
-        server = self._create_lm_server(PCI_DEVICE_SPEC, PCI_ALIAS, num_vfs=3)
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:3"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
         src_xml = self._get_xml(self.comp0, server)
         self.assertPCIDeviceCounts(self.comp0, total=3, free=0)
         self.assertPCIDeviceCounts(self.comp1, total=3, free=3)
@@ -1158,11 +1555,27 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         dst_xml = self._get_xml(self.comp1, server)
         self.assertPCIDeviceCounts(self.comp0, total=3, free=3)
         self.assertPCIDeviceCounts(self.comp1, total=3, free=0)
-        self._assertCompareHostdevs(src_xml, dst_xml)
+        # When multiple devices of the same type are present, their
+        # order in the XML is not guaranteed.
+        # For example, if there are three source devices of the same
+        # type, we provide three destination devices of the same type.
+        # But the matching between source and destination devices
+        # is non-deterministic.
+        # This can lead to cases like:
+        # alias hostdev0  --> src_dev: 1  --> dst_dev: 3
+        # alias hostdev1  --> src_dev: 2  --> dst_dev: 1
+        # alias hostdev2  --> src_dev: 3  --> dst_dev: 2
+
+        # In such situations, we use the _assertDeviceAddressesPresent()
+        # method, which only verifies that a similar device — for
+        # example, one with slot 0x82 — exists in the destination XML,
+        # regardless of order.
+        self._assertDeviceAddressesPresent(src_xml, dst_xml)
 
     def test_live_migrate_VF_fails_dest_no_lm_dev(self):
         """Live migrate an instance with 3 x PCI VF.
-        Source live_migratable, dest non live_migratable.
+        Source dev live_migratable, destination dev non live_migratable.
+        Migration should fails.
         """
 
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -1190,20 +1603,61 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [3],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
-        server = self._create_lm_server(PCI_DEVICE_SPEC, PCI_ALIAS, num_vfs=3)
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:3"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
         self.assertPCIDeviceCounts(self.comp0, total=3, free=0)
         self.assertPCIDeviceCounts(self.comp1, total=3, free=3)
 
@@ -1222,7 +1676,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
     def test_live_migrate_VF_fails_dest_unspecified_lm_dev(self):
         """Live migrate an instance with 3 x PCI VF.
-        Source live_migratable, dest non live_migratable.
+        Source dev live_migratable, destination dev live_migratable
+        unspecified. So migration should fail.
         """
 
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -1249,20 +1704,61 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [3],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
-        server = self._create_lm_server(PCI_DEVICE_SPEC, PCI_ALIAS, num_vfs=3)
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:3"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
         self.assertPCIDeviceCounts(self.comp0, total=3, free=0)
         self.assertPCIDeviceCounts(self.comp1, total=3, free=3)
 
@@ -1280,9 +1776,9 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self._wait_for_state_change(server, 'ACTIVE')
 
     def test_live_migrate_VF_fails_alias_mismatch_dev_prod_id(self):
-        """Live migrate an instance with 3 x PCI VF.
-        Source live_migratable, dest non live_migratable.
-        Incorrect alias
+        """Source dev live_migratable, dest dev live_migratable.
+        However the requested alias is incorrect requesting a product id not
+        available. Instance creation should fail.
         """
 
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -1300,6 +1796,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             {
                 "vendor_id": fakelibvirt.PCI_VEND_ID,
                 "product_id": fakelibvirt.VF_PROD_ID,
+                "live_migratable": "yes",
                 "address": {
                     "domain": "00",
                     "bus": "82",
@@ -1309,28 +1806,65 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": '6666',
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [3],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": "6666",
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
-        # The AssertionError means the server failed to be created
-        # it fails on the assertion in _wait_for_state_change
-        self.assertRaises(
-            AssertionError,
-            self._create_lm_server,
-            PCI_DEVICE_SPEC,
-            PCI_ALIAS,
-            num_vfs=3
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:3"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
         )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0,
+            flavor_id=flavor_id,
+            networks=networks,
+            expected_state="ERROR",
+        )
+        self.assertIn("No valid host was found.", server["fault"]["message"])
         self.assertPCIDeviceCounts(self.comp0, total=3, free=3)
 
     def test_live_migrate_VF_success_2_aliases(self):
@@ -1359,39 +1893,82 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": fakelibvirt.VF_PROD_ID,
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-                {
-                    "vendor_id": fakelibvirt.PCI_VEND_ID,
-                    "product_id": '6666',
-                    "name": "vfs2",
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [1, 2],
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+            {
+                "name": "vfs2",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": "6666",
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
+
+        extra_spec = {
+            "pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1,vfs2:1"
         }
 
-        server = self._create_lm_server(
-            PCI_DEVICE_SPEC, PCI_ALIAS, num_pfs=1, num_vfs=4,
-            product_ids=[fakelibvirt.VF_PROD_ID, "6666"],
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
         )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=4, numa_node=0,
+            product_ids=[fakelibvirt.VF_PROD_ID, "6666"]
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=4, numa_node=1, bus=0x82,
+            product_ids=[fakelibvirt.VF_PROD_ID, "6666"]
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
+
         src_xml = self._get_xml(self.comp0, server)
-        self.assertPCIDeviceCounts(self.comp0, total=8, free=5)
+        self.assertPCIDeviceCounts(self.comp0, total=8, free=6)
         self.assertPCIDeviceCounts(self.comp1, total=8, free=8)
 
         self._live_migrate(server, "completed")
         dst_xml = self._get_xml(self.comp1, server)
         self.assertPCIDeviceCounts(self.comp0, total=8, free=8)
-        self.assertPCIDeviceCounts(self.comp1, total=8, free=5)
-        self._assertCompareHostdevs(src_xml, dst_xml)
+        self.assertPCIDeviceCounts(self.comp1, total=8, free=6)
+        self._assertDeviceAddressesMapped(src_xml, dst_xml)
 
     def test_live_migrate_VF_success_with_pci_in_placement(self):
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -1409,24 +1986,64 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "resource_class": "CUSTOM_A16_16A",
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [1],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "resource_class": "CUSTOM_A16_16A",
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
         self.flags(group="pci", report_in_placement=True)
         self.flags(group='filter_scheduler', pci_in_placement=True)
 
-        server = self._create_lm_server(
-            PCI_DEVICE_SPEC, PCI_ALIAS, num_pfs=1, num_vfs=1,
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
         )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
+
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
@@ -1463,7 +2080,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         dst_xml = self._get_xml(self.comp1, server)
         self.assertPCIDeviceCounts(self.comp0, total=1, free=1)
         self.assertPCIDeviceCounts(self.comp1, total=1, free=0)
-        self._assertCompareHostdevs(src_xml, dst_xml)
+        self._assertDeviceAddressesMapped(src_xml, dst_xml)
 
     def test_live_migrate_VF_success_with_pip_3_dev_2_requested(self):
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -1481,24 +2098,64 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "resource_class": "CUSTOM_A16_16A",
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [2],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "resource_class": "CUSTOM_A16_16A",
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
         self.flags(group="pci", report_in_placement=True)
         self.flags(group='filter_scheduler', pci_in_placement=True)
 
-        server = self._create_lm_server(
-            PCI_DEVICE_SPEC, PCI_ALIAS, num_pfs=1, num_vfs=3,
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:2"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
         )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
+
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 3}},
@@ -1535,7 +2192,22 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         dst_xml = self._get_xml(self.comp1, server)
         self.assertPCIDeviceCounts(self.comp0, total=3, free=3)
         self.assertPCIDeviceCounts(self.comp1, total=3, free=1)
-        self._assertCompareHostdevs(src_xml, dst_xml)
+        # When multiple devices of the same type are present, their
+        # order in the XML is not guaranteed.
+        # For example, if there are three source devices of the same
+        # type, we provide three destination devices of the same type.
+        # But the matching between source and destination devices
+        # is non-deterministic.
+        # This can lead to cases like:
+        # alias hostdev0  --> src_dev: 1  --> dst_dev: 3
+        # alias hostdev1  --> src_dev: 2  --> dst_dev: 1
+        # alias hostdev2  --> src_dev: 3  --> dst_dev: 2
+
+        # In such situations, we use the _assertDeviceAddressesPresent()
+        # method, which only verifies that a similar device — for
+        # example, one with slot 0x82 — exists in the destination XML,
+        # regardless of order.
+        self._assertDeviceAddressesPresent(src_xml, dst_xml)
 
     def test_live_migrate_VF_success_with_pip_2_aliases(self):
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
@@ -1565,30 +2237,72 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )]
 
-        PCI_ALIAS = {
-            "alias": [
-                {
-                    "resource_class": "CUSTOM_A16_16A",
-                    "name": self.VFS_ALIAS_NAME,
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-                {
-                    "resource_class": "CUSTOM_A16_8A",
-                    "name": "vfs2",
-                    "device_type": fields.PciDeviceType.SRIOV_VF,
-                    "live_migratable": "yes",
-                },
-            ],
-            "qty": [2, 2],
-        }
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "resource_class": "CUSTOM_A16_16A",
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+            {
+                "name": "vfs2",
+                "resource_class": "CUSTOM_A16_8A",
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
 
         self.flags(group="pci", report_in_placement=True)
         self.flags(group='filter_scheduler', pci_in_placement=True)
 
-        server = self._create_lm_server(
-            PCI_DEVICE_SPEC, PCI_ALIAS, num_pfs=1, num_vfs=3,
+        extra_spec = {
+            "pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1,vfs2:1"
+        }
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=0,
             product_ids=[fakelibvirt.VF_PROD_ID, "6666"],
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=3, numa_node=1, bus=0x82,
+            product_ids=[fakelibvirt.VF_PROD_ID, "6666"],
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
         )
         self.assert_placement_pci_view(
             self.comp0,
@@ -1598,13 +2312,13 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
             traits={"0000:81:00.0": [], "0000:81:01.0": []},
             usages={
-                "0000:81:00.0": {"CUSTOM_A16_16A": 2},
-                "0000:81:01.0": {"CUSTOM_A16_8A": 2},
+                "0000:81:00.0": {"CUSTOM_A16_16A": 1},
+                "0000:81:01.0": {"CUSTOM_A16_8A": 1},
             },
             allocations={
                 server["id"]: {
-                    "0000:81:00.0": {"CUSTOM_A16_16A": 2},
-                    "0000:81:01.0": {"CUSTOM_A16_8A": 2},
+                    "0000:81:00.0": {"CUSTOM_A16_16A": 1},
+                    "0000:81:01.0": {"CUSTOM_A16_8A": 1},
                 }
             },
         )
@@ -1621,7 +2335,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
         )
         src_xml = self._get_xml(self.comp0, server)
-        self.assertPCIDeviceCounts(self.comp0, total=6, free=2)
+        self.assertPCIDeviceCounts(self.comp0, total=6, free=4)
         self.assertPCIDeviceCounts(self.comp1, total=6, free=6)
 
         self._live_migrate(server, "completed")
@@ -1645,40 +2359,130 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             },
             traits={"0000:82:00.0": [], "0000:82:01.0": []},
             usages={
-                "0000:82:00.0": {"CUSTOM_A16_16A": 2},
-                "0000:82:01.0": {"CUSTOM_A16_8A": 2},
+                "0000:82:00.0": {"CUSTOM_A16_16A": 1},
+                "0000:82:01.0": {"CUSTOM_A16_8A": 1},
             },
             allocations={
                 server["id"]: {
-                    "0000:82:00.0": {"CUSTOM_A16_16A": 2},
-                    "0000:82:01.0": {"CUSTOM_A16_8A": 2},
+                    "0000:82:00.0": {"CUSTOM_A16_16A": 1},
+                    "0000:82:01.0": {"CUSTOM_A16_8A": 1},
                 }
             },
         )
         dst_xml = self._get_xml(self.comp1, server)
         self.assertPCIDeviceCounts(self.comp0, total=6, free=6)
-        self.assertPCIDeviceCounts(self.comp1, total=6, free=2)
-        self._assertCompareHostdevs(src_xml, dst_xml)
+        self.assertPCIDeviceCounts(self.comp1, total=6, free=4)
+        self._assertDeviceAddressesMapped(src_xml, dst_xml)
 
-    def _create_lm_server(
-        self, device_spec, alias, num_pfs=1, num_vfs=1, product_ids=["1515"]
-    ):
+    # The mock below prevents the is_physical_function() method from
+    # accessing the filesystem.
+    @mock.patch.object(nova.pci.utils, "is_physical_function",
+        return_value=True)
+    def test_live_migrate_VF_mixed_mode_success(self, mock_pf):
+        """Live migrate an instance in mixed mode, meaning it has both a port
+        request and an alias request simultaneously.
+        The live migration should succeed.
+        """
 
-        alias_def = [
-            jsonutils.dumps(x)
-            for x in alias["alias"]
-        ]
+        PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "live_migratable": "yes",
+                "address": {
+                    "domain": "00",
+                    "bus": "8[1-2]",
+                    "slot": "00",
+                    "function": "1",
+                },
+            },
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": "8888",
+                'physical_network': 'physnet4',
+                "address": {
+                    "domain": "00",
+                    "bus": "8[3-4]",
+                    "slot": "06",
+                    "function": "1",
+                },
+            },
+        )]
+
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
+
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+        extra_spec.update({'hw:cpu_policy': 'dedicated'})
 
         self.flags(
-        device_spec=device_spec,
-            alias=alias_def,
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
             group='pci'
         )
 
-        flavor_req = ",".join([
-            f"{alias['alias'][index]['name']}:{alias['qty'][index]}"
-            for index in range(0, len(alias["alias"]))
-        ])
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        src_pci_info.add_device(
+            dev_type='PF',
+            prod_id='8888',
+            bus=0x83,
+            slot=0x6,
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:aa',
+        )
+        src_pci_info.add_device(
+            dev_type='VF',
+            prod_id='8888',
+            bus=0x83,
+            slot=0x6,
+            function=1,
+            iommu_group=43,
+            numa_node=0,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:ab',
+            parent=(83, 6, 0)
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        dst_pci_info.add_device(
+            dev_type='PF',
+            prod_id='8888',
+            bus=0x84,
+            slot=0x6,
+            function=0,
+            iommu_group=42,
+            numa_node=1,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:bb',
+        )
+        dst_pci_info.add_device(
+            dev_type='VF',
+            prod_id='8888',
+            bus=0x84,
+            slot=0x6,
+            function=1,
+            iommu_group=43,
+            numa_node=1,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:bc',
+            parent=(84, 6, 0)
+        )
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
@@ -1688,17 +2492,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             qemu_version=versionutils.convert_version_to_int(
                 driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
             ),
-            pci_info=fakelibvirt.HostPCIDevicesInfo(
-                num_pfs=num_pfs, num_vfs=num_vfs, product_ids=product_ids
-            ),
+            pci_info=src_pci_info,
         )
-
-        # Create a server here to ensure it goes to first compute.
-        extra_spec = {
-            "pci_passthrough:alias": f"{flavor_req}"
-        }
-        flavor_id = self._create_flavor(extra_spec=extra_spec)
-        server = self._create_server(flavor_id=flavor_id, networks='none')
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
@@ -1708,13 +2503,691 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             qemu_version=versionutils.convert_version_to_int(
                 driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
             ),
-            pci_info=fakelibvirt.HostPCIDevicesInfo(
-                num_pfs=num_pfs, num_vfs=num_vfs,
-                product_ids=product_ids, bus=0x82
-            ),
+            pci_info=dst_pci_info,
         )
 
-        return server
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        source_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_1})
+
+        networks = [{"port": source_port["port"]["id"]}]
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
+        src_xml = self._get_xml(self.comp0, server)
+        self.assertPCIDeviceCounts(self.comp0, total=2, free=0)
+        self.assertPCIDeviceCounts(self.comp1, total=2, free=2)
+
+        # the instance should be on host NUMA node 0, since that's where our
+        # PCI devices are
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, self.comp0,
+            ).numa_topology
+        )
+        self.assertEqual({0, 1, 2, 3}, host_numa.cells[0].pinned_cpus)
+        self.assertEqual(set(), host_numa.cells[1].pinned_cpus)
+
+        # ensure the binding details sent to "neutron" are correct
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:8888',
+                'pci_slot': '0000:83:06.1',
+                'physical_network': 'physnet4',
+                'pf_mac_address': 'b4:96:91:34:f4:aa',
+                'vf_num': 1
+            },
+            port['binding:profile'],
+        )
+
+        # By mocking threading.Event.wait we prevent the test to wait until the
+        # timeout happens.
+        # We return True signaling that the event is set, i.e. the libvirt
+        # event the caller is waiting for has been received.
+        # Note: This mock behavior cannot be added to the fixture because
+        # many unit tests rely on it for different side effects.
+        with mock.patch("threading.Event.wait", side_effect=[True]):
+            # now live migrate that server
+            self._live_migrate(server, "completed")
+        dst_xml = self._get_xml(self.comp1, server)
+        self.assertPCIDeviceCounts(self.comp0, total=2, free=2)
+        self.assertPCIDeviceCounts(self.comp1, total=2, free=0)
+        self._assertDeviceAddressesMapped(src_xml, dst_xml)
+
+        # the instance should now be on host NUMA node 1, since that's where
+        # our PCI devices are for this second host
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, self.comp1,
+            ).numa_topology
+        )
+        self.assertEqual(set(), host_numa.cells[0].pinned_cpus)
+        self.assertEqual({4, 5, 6, 7}, host_numa.cells[1].pinned_cpus)
+
+        # ensure the binding details sent to "neutron" have been updated
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:8888',
+                'pci_slot': '0000:84:06.1',
+                'physical_network': 'physnet4',
+                'pf_mac_address': 'b4:96:91:34:f4:bb',
+                'vf_num': 1,
+            },
+            port['binding:profile'],
+        )
+
+    # The mock below prevents the is_physical_function() method from
+    # accessing the filesystem.
+    @mock.patch.object(nova.pci.utils, "is_physical_function",
+        return_value=True)
+    def test_live_migrate_VF_mixed_mode_fails_lm_requested_no_lm_dev(
+        self, mock_pf
+    ):
+        """We should fail to create the instance because we request a
+        live migratable PCI device and there is only a non live migratable one.
+        """
+
+        PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "live_migratable": "no",
+                "address": {
+                    "domain": "00",
+                    "bus": "8[1-2]",
+                    "slot": "00",
+                    "function": "1",
+                },
+            },
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": "8888",
+                'physical_network': 'physnet4',
+                "address": {
+                    "domain": "00",
+                    "bus": "8[3-4]",
+                    "slot": "06",
+                    "function": "1",
+                },
+            },
+        )]
+
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
+
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+        extra_spec.update({'hw:cpu_policy': 'dedicated'})
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        src_pci_info.add_device(
+            dev_type='PF',
+            prod_id='8888',
+            bus=0x83,
+            slot=0x6,
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:aa',
+        )
+        src_pci_info.add_device(
+            dev_type='VF',
+            prod_id='8888',
+            bus=0x83,
+            slot=0x6,
+            function=1,
+            iommu_group=43,
+            numa_node=0,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:ab',
+            parent=(83, 6, 0)
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        dst_pci_info.add_device(
+            dev_type='PF',
+            prod_id='8888',
+            bus=0x84,
+            slot=0x6,
+            function=0,
+            iommu_group=42,
+            numa_node=1,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:bb',
+        )
+        dst_pci_info.add_device(
+            dev_type='VF',
+            prod_id='8888',
+            bus=0x84,
+            slot=0x6,
+            function=1,
+            iommu_group=43,
+            numa_node=1,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:bc',
+            parent=(84, 6, 0)
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        source_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_1})
+
+        networks = [{"port": source_port["port"]["id"]}]
+
+        server = self._create_server(
+            host=self.comp0,
+            flavor_id=flavor_id,
+            networks=networks,
+            expected_state="ERROR",
+        )
+        self.assertIn("No valid host was found.", server["fault"]["message"])
+        self.assertPCIDeviceCounts(self.comp0, total=2, free=2)
+
+    # The mock below prevents the is_physical_function() method from
+    # accessing the filesystem.
+    @mock.patch.object(nova.pci.utils, "is_physical_function",
+        return_value=True)
+    def test_live_migrate_VF_mixed_mode_fails_non_lm_requested(self, mock_pf):
+        """We should manage to create the instance but fail to live migrate it,
+        because devices are not live migratable.
+        """
+
+        PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "live_migratable": "no",
+                "address": {
+                    "domain": "00",
+                    "bus": "8[1-2]",
+                    "slot": "00",
+                    "function": "1",
+                },
+            },
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": "8888",
+                'physical_network': 'physnet4',
+                "address": {
+                    "domain": "00",
+                    "bus": "8[3-4]",
+                    "slot": "06",
+                    "function": "1",
+                },
+            },
+        )]
+
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "no",
+            },
+        )]
+
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+        extra_spec.update({'hw:cpu_policy': 'dedicated'})
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        src_pci_info.add_device(
+            dev_type='PF',
+            prod_id='8888',
+            bus=0x83,
+            slot=0x6,
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:aa',
+        )
+        src_pci_info.add_device(
+            dev_type='VF',
+            prod_id='8888',
+            bus=0x83,
+            slot=0x6,
+            function=1,
+            iommu_group=43,
+            numa_node=0,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:ab',
+            parent=(83, 6, 0)
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        dst_pci_info.add_device(
+            dev_type='PF',
+            prod_id='8888',
+            bus=0x84,
+            slot=0x6,
+            function=0,
+            iommu_group=42,
+            numa_node=1,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:bb',
+        )
+        dst_pci_info.add_device(
+            dev_type='VF',
+            prod_id='8888',
+            bus=0x84,
+            slot=0x6,
+            function=1,
+            iommu_group=43,
+            numa_node=1,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:bc',
+            parent=(84, 6, 0)
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        source_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_1})
+
+        networks = [{"port": source_port["port"]["id"]}]
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
+        self.assertPCIDeviceCounts(self.comp0, total=2, free=0)
+        self.assertPCIDeviceCounts(self.comp1, total=2, free=2)
+
+        # the instance should be on host NUMA node 0, since that's where our
+        # PCI devices are
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, self.comp0,
+            ).numa_topology
+        )
+        self.assertEqual({0, 1, 2, 3}, host_numa.cells[0].pinned_cpus)
+        self.assertEqual(set(), host_numa.cells[1].pinned_cpus)
+
+        # ensure the binding details sent to "neutron" are correct
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:8888',
+                'pci_slot': '0000:83:06.1',
+                'physical_network': 'physnet4',
+                'pf_mac_address': 'b4:96:91:34:f4:aa',
+                'vf_num': 1
+            },
+            port['binding:profile'],
+        )
+
+        # By mocking threading.Event.wait we prevent the test to wait until the
+        # timeout happens.
+        # We return True signaling that the event is set, i.e. the libvirt
+        # event the caller is waiting for has been received.
+        # Note: This mock behavior cannot be added to the fixture because
+        # many unit tests rely on it for different side effects.
+        with mock.patch("threading.Event.wait", side_effect=[True]):
+            # now live migrate that server
+            # The OpenStackApiException means the server failed to be migrated
+            exc = self.assertRaises(
+                client.OpenStackApiException,
+                self._live_migrate,
+                server,
+                "completed",
+            )
+        self.assertEqual(500, exc.response.status_code)
+        self.assertIn('NoValidHost', str(exc))
+        self.assertPCIDeviceCounts(self.comp0, total=2, free=0)
+        self.assertPCIDeviceCounts(self.comp1, total=2, free=2)
+        self._wait_for_state_change(server, 'ACTIVE')
+
+    # The mock below prevents the is_physical_function() method from
+    # accessing the filesystem.
+    @mock.patch.object(nova.pci.utils, "is_physical_function",
+        return_value=True)
+    def test_live_migrate_VF_mixed_mode_and_pip_success(self, mock_pf):
+        """Live migrate an instance in mixed mode, meaning it has both a port
+        request and an alias request simultaneously.
+        PCI in placement is enabled.
+        The live migration should succeed.
+        """
+
+        PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "live_migratable": "yes",
+                "address": {
+                    "domain": "00",
+                    "bus": "8[1-2]",
+                    "slot": "00",
+                    "function": "1",
+                },
+                "resource_class": "CUSTOM_A16_16A",
+            },
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": "8888",
+                'physical_network': 'physnet4',
+                "address": {
+                    "domain": "00",
+                    "bus": "8[3-4]",
+                    "slot": "06",
+                    "function": "1",
+                },
+            },
+        )]
+
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "resource_class": "CUSTOM_A16_16A",
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "yes",
+            },
+        )]
+
+        self.flags(group="pci", report_in_placement=True)
+        self.flags(group='filter_scheduler', pci_in_placement=True)
+
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+        extra_spec.update({'hw:cpu_policy': 'dedicated'})
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        src_pci_info.add_device(
+            dev_type='PF',
+            prod_id='8888',
+            bus=0x83,
+            slot=0x6,
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:aa',
+        )
+        src_pci_info.add_device(
+            dev_type='VF',
+            prod_id='8888',
+            bus=0x83,
+            slot=0x6,
+            function=1,
+            iommu_group=43,
+            numa_node=0,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:ab',
+            parent=(83, 6, 0)
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        dst_pci_info.add_device(
+            dev_type='PF',
+            prod_id='8888',
+            bus=0x84,
+            slot=0x6,
+            function=0,
+            iommu_group=42,
+            numa_node=1,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:bb',
+        )
+        dst_pci_info.add_device(
+            dev_type='VF',
+            prod_id='8888',
+            bus=0x84,
+            slot=0x6,
+            function=1,
+            iommu_group=43,
+            numa_node=1,
+            vf_ratio=1,
+            mac_address='b4:96:91:34:f4:bc',
+            parent=(84, 6, 0)
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        source_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_1})
+
+        networks = [{"port": source_port["port"]["id"]}]
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
+        self.assert_placement_pci_view(
+            self.comp0,
+            inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
+            traits={"0000:81:00.0": []},
+            usages={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
+            allocations={server['id']: {
+                "0000:81:00.0": {'CUSTOM_A16_16A': 1}}},
+        )
+        self.assert_placement_pci_view(
+            self.comp1,
+            inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
+            traits={"0000:82:00.0": []},
+            usages={"0000:82:00.0": {'CUSTOM_A16_16A': 0}},
+        )
+        src_xml = self._get_xml(self.comp0, server)
+        self.assertPCIDeviceCounts(self.comp0, total=2, free=0)
+        self.assertPCIDeviceCounts(self.comp1, total=2, free=2)
+
+        # the instance should be on host NUMA node 0, since that's where our
+        # PCI devices are
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, self.comp0,
+            ).numa_topology
+        )
+        self.assertEqual({0, 1, 2, 3}, host_numa.cells[0].pinned_cpus)
+        self.assertEqual(set(), host_numa.cells[1].pinned_cpus)
+
+        # ensure the binding details sent to "neutron" are correct
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:8888',
+                'pci_slot': '0000:83:06.1',
+                'physical_network': 'physnet4',
+                'pf_mac_address': 'b4:96:91:34:f4:aa',
+                'vf_num': 1
+            },
+            port['binding:profile'],
+        )
+
+        # By mocking threading.Event.wait we prevent the test to wait until the
+        # timeout happens.
+        # We return True signaling that the event is set, i.e. the libvirt
+        # event the caller is waiting for has been received.
+        # Note: This mock behavior cannot be added to the fixture because
+        # many unit tests rely on it for different side effects.
+        with mock.patch("threading.Event.wait", side_effect=[True]):
+            # now live migrate that server
+            self._live_migrate(server, "completed")
+        self.assert_placement_pci_view(
+            self.comp0,
+            inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
+            traits={"0000:81:00.0": []},
+            usages={"0000:81:00.0": {'CUSTOM_A16_16A': 0}},
+        )
+        self.assert_placement_pci_view(
+            self.comp1,
+            inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
+            traits={"0000:82:00.0": []},
+            usages={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
+            allocations={server['id']: {
+                "0000:82:00.0": {'CUSTOM_A16_16A': 1}}},
+        )
+        dst_xml = self._get_xml(self.comp1, server)
+        self.assertPCIDeviceCounts(self.comp0, total=2, free=2)
+        self.assertPCIDeviceCounts(self.comp1, total=2, free=0)
+        self._assertDeviceAddressesMapped(src_xml, dst_xml)
+
+        # the instance should now be on host NUMA node 1, since that's where
+        # our PCI devices are for this second host
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, self.comp1,
+            ).numa_topology
+        )
+        self.assertEqual(set(), host_numa.cells[0].pinned_cpus)
+        self.assertEqual({4, 5, 6, 7}, host_numa.cells[1].pinned_cpus)
+
+        # ensure the binding details sent to "neutron" have been updated
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:8888',
+                'pci_slot': '0000:84:06.1',
+                'physical_network': 'physnet4',
+                'pf_mac_address': 'b4:96:91:34:f4:bb',
+                'vf_num': 1,
+            },
+            port['binding:profile'],
+        )
+
+    def _get_xml(self, compute, server):
+        host = self.computes[compute].driver._host
+        guest = host.get_guest(
+            instance.Instance.get_by_uuid(self.ctxt, server["id"])
+        )
+        xml = guest.get_xml_desc()
+        return xml
+
+    def _assertDeviceAddressesPresent(self, xml_src, xml_dst):
+        src_addresses = self._get_hostdev_addresses(xml_src)
+        dst_addresses = self._get_hostdev_addresses(xml_dst)
+
+        self.assertEqual(len(src_addresses), len(dst_addresses))
+
+        for src_addr in src_addresses:
+            # Switch bus to destination one.
+            src_addr["bus"] = hex(int(src_addr["bus"], 16) + 1)
+            self.assertIn(src_addr, dst_addresses)
 
     def _get_hostdev_addresses(self, xml):
         addresses = []
@@ -1733,24 +3206,43 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         return addresses
 
-    def _get_xml(self, compute, server):
-        host = self.computes[compute].driver._host
-        guest = host.get_guest(
-            instance.Instance.get_by_uuid(self.ctxt, server["id"])
-        )
-        xml = guest.get_xml_desc()
-        return xml
+    def _assertDeviceAddressesMapped(self, xml_src, xml_dst):
+        src_map = self._get_hostdev_alias_to_addresses(xml_src)
+        dst_map = self._get_hostdev_alias_to_addresses(xml_dst)
 
-    def _assertCompareHostdevs(self, xml_src, xml_dst):
-        src_addresses = self._get_hostdev_addresses(xml_src)
-        dst_addresses = self._get_hostdev_addresses(xml_dst)
+        self.assertEqual(len(src_map), len(dst_map))
 
-        self.assertEqual(len(src_addresses), len(dst_addresses))
+        for (src_alias, src_addr) in src_map.items():
+            dst_addr = dst_map[src_alias]
 
-        for src_addr in src_addresses:
-            # Switch bus to destination one.
-            src_addr["bus"] = "0x82"
-            self.assertIn(src_addr, dst_addresses)
+            # Add bus addr + 1 to src address and check it match dst_addr
+            src_addr["bus"] = hex(int(src_addr["bus"], 16) + 1)
+            self.assertEqual(src_addr, dst_addr)
+
+    def _get_hostdev_alias_to_addresses(self, xml):
+        alias_addresses_map = {}
+        tree = etree.fromstring(xml)
+        devices = tree.find('./devices')
+        hostdevs = devices.findall('./hostdev')
+
+        for hostdev in hostdevs:
+            if hostdev.get("type") != "pci":
+                continue
+            address = hostdev.find("./source/address")
+            alias = hostdev.find("./alias")
+
+            alias_addresses_map.update(
+                {
+                    alias.get("name"): {
+                        "domain": address.get("domain"),
+                        "bus": address.get("bus"),
+                        "slot": address.get("slot"),
+                        "function": address.get("function"),
+                    }
+                }
+            )
+
+        return alias_addresses_map
 
     def _test_move_operation_with_neutron(self, move_operation,
                                           expect_fail=False):
@@ -2203,7 +3695,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         # By mocking threading.Event.wait we prevent the test to wait until the
         # timeout happens.
-        # We return True signalling that the event is set, i.e. the libvirt
+        # We return True signaling that the event is set, i.e. the libvirt
         # event the caller is waiting for has been received.
         # Note: This mock behavior cannot be added to the fixture because
         # many unit tests rely on it for different side effects.
