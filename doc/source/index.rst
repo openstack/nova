@@ -158,7 +158,7 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
   a successful cells v2 layout.
 
 * :doc:`Running nova-api on wsgi <user/wsgi>`: Considerations for using a real
-  WSGI container instead of the baked-in eventlet web server.
+  WSGI container.
 
 .. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.

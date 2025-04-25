@@ -14,10 +14,9 @@ metadata service supports two sets of APIs - an OpenStack metadata API and an
 EC2-compatible API - and also exposes vendordata and user data. Both the
 OpenStack metadata and EC2-compatible APIs are versioned by date.
 
-The metadata service can be run globally, as part of the :program:`nova-api`
-application, or on a per-cell basis, as part of the standalone
-:program:`nova-api-metadata` application. A detailed comparison is provided in
-the :ref:`cells V2 guide <cells-v2-layout-metadata-api>`.
+The metadata service can be run globally, or on a per-cell basis. A detailed
+comparison is provided in the
+:ref:`cells V2 guide <cells-v2-layout-metadata-api>`.
 
 .. versionchanged:: 19.0.0
 

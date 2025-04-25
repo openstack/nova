@@ -44,7 +44,6 @@ daemonize correctly after starting up.
 .. toctree::
    :maxdepth: 1
 
-   nova-api
    nova-compute
    nova-conductor
    nova-novncproxy
@@ -55,15 +54,12 @@ daemonize correctly after starting up.
 WSGI Services
 -------------
 
-Starting in the Pike release, the preferred way to deploy the nova api is in a
+Starting in the 2025.2 release, the only way to deploy the nova api is in a
 wsgi container (uwsgi or apache/mod_wsgi). These are the wsgi entry points to
-do that.
+do that:
 
-.. toctree::
-   :maxdepth: 1
-
-   nova-api-metadata
-   nova-api-os-compute
+* :doc:`nova-api-wsgi </user/wsgi>`
+* :doc:`nova-metadata-wsgi </user/wsgi>`
 
 Additional Tools
 ----------------

@@ -34,14 +34,14 @@ This means a multi-cell deployment will not be radically different from a
 
 Consider such a deployment. It will consists of the following components:
 
-- The :program:`nova-api` service which provides the external REST API to
+- The :program:`nova-api-wsgi` service which provides the external REST API to
   users.
 
 - The :program:`nova-scheduler` and ``placement`` services which are
   responsible for tracking resources and deciding which compute node instances
   should be on.
 
-- An "API database" that is used primarily by :program:`nova-api` and
+- An "API database" that is used primarily by :program:`nova-api-wsgi` and
   :program:`nova-scheduler` (called *API-level services* below) to track
   location information about instances, as well as a temporary location for
   instances being built but not yet scheduled.
@@ -269,7 +269,7 @@ API database
 ~~~~~~~~~~~~
 
 The API database is the database used for API-level services, such as
-:program:`nova-api` and, in a multi-cell deployment, the superconductor.
+:program:`nova-api-wsgi` and, in a multi-cell deployment, the superconductor.
 The models and migrations related to this database can be found in
 ``nova.db.api``, and the database can be managed using the
 :program:`nova-manage api_db` commands.
@@ -800,7 +800,7 @@ If you have networks that span cells, you might need to run Nova metadata API
 globally. When running globally, it should be configured as an API-level
 service with access to the :oslo.config:option:`api_database.connection`
 information. The nova metadata API service **must not** be run as a standalone
-service, using the :program:`nova-api-metadata` service, in this case.
+service, using the :program:`nova-metadata-wsgi` service, in this case.
 
 .. rubric:: Local per cell
 
@@ -810,9 +810,9 @@ cell boundaries, then you can run Nova metadata API service per cell. If you
 choose to run it per cell, you should also configure each
 :neutron-doc:`neutron-metadata-agent
 <configuration/metadata-agent.html?#DEFAULT.nova_metadata_host>` service to
-point to the corresponding :program:`nova-api-metadata`. The nova metadata API
+point to the corresponding :program:`nova-metadata-wsgi`. The nova metadata API
 service **must** be run as a standalone service, using the
-:program:`nova-api-metadata` service, in this case.
+:program:`nova-metadata-wsgi` service, in this case.
 
 Console proxies
 ~~~~~~~~~~~~~~~
@@ -1024,7 +1024,7 @@ FAQs
   using the ``nova-manage cell_v2 update_cell`` command but the API is still
   trying to use the old settings.
 
-  The cell mappings are cached in the :program:`nova-api` service worker so you
+  The cell mappings are cached in the :program:`nova-api-wsgi` service worker so you
   will need to restart the worker process to rebuild the cache. Note that there
   is another global cache tied to request contexts, which is used in the
   nova-conductor and nova-scheduler services, so you might need to do the same

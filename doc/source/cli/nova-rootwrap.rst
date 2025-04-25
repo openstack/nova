@@ -28,7 +28,7 @@ You also need to let the nova user run :program:`nova-rootwrap` as root in
 
 To make allowed commands node-specific, your packaging should only install
 ``{compute,network}.filters`` respectively on compute and network nodes, i.e.
-:program:`nova-api` nodes should not have any of those files installed.
+:program:`nova-api-wsgi` nodes should not have any of those files installed.
 
 .. note::
 

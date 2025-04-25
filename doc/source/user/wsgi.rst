@@ -1,10 +1,8 @@
 Using WSGI with Nova
 ====================
 
-Though the compute and metadata APIs can be run using independent scripts that
-provide eventlet-based HTTP servers, it is generally considered more performant
-and flexible to run them using a generic HTTP server that supports WSGI_ (such
-as Apache_ or nginx_).
+Since the version 2025.2 the only way to run the compute API and metadata API
+is using a generic HTTP server that supports WSGI_ (such as Apache_ or nginx_).
 
 The nova project provides two automatically generated entry points that
 support this: ``nova-api-wsgi`` and ``nova-metadata-wsgi``. These read
