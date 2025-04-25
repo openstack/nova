@@ -31,7 +31,6 @@ from nova import baserpc
 from nova import conductor
 import nova.conf
 from nova import context
-from nova import debugger
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -242,8 +241,6 @@ class Service(service.Service):
             periodic_enable = CONF.periodic_enable
         if periodic_fuzzy_delay is None:
             periodic_fuzzy_delay = CONF.periodic_fuzzy_delay
-
-        debugger.init()
 
         service_obj = cls(host, binary, topic, manager,
                           report_interval=report_interval,

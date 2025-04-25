@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The remote debugger has been removed from the codebase. If you were using
+    it, you will need to find an alternative solution. The remote debugger was
+    un-maintained and was first introduced in the early days of OpenStack when
+    we used python 2.7. While it was useful at the time, it has not been
+    maintained and updated to work with new versions of python and eventlet.
+    As a result it is being removed until we complete the eventlet removal.

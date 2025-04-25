@@ -23,14 +23,12 @@ from oslo_reports import opts as gmr_opts
 
 from nova.conductor import rpcapi
 import nova.conf
-from nova.conf import remote_debug
 from nova import config
 from nova import objects
 from nova import service
 from nova import version
 
 CONF = nova.conf.CONF
-remote_debug.register_cli_opts(CONF)
 
 
 def main():

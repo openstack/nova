@@ -30,10 +30,6 @@ def _monkey_patch():
     import eventlet
     import sys
 
-    # NOTE(mdbooth): Imports only sys (2019-01-30). Other modules imported at
-    # runtime on execution of debugger.init().
-    from nova import debugger
-
     # Note any modules with known monkey-patching issues which have been
     # imported before monkey patching.
     # urllib3: https://bugs.launchpad.net/nova/+bug/1808951
@@ -41,11 +37,7 @@ def _monkey_patch():
     problems = (set(['urllib3', 'oslo_context.context']) &
                 set(sys.modules.keys()))
 
-    if debugger.enabled():
-        # turn off thread patching to enable the remote debugger
-        eventlet.monkey_patch(thread=False)
-    else:
-        eventlet.monkey_patch()
+    eventlet.monkey_patch()
 
     # NOTE(mdbooth): Log here instead of earlier to avoid loading oslo logging
     # before monkey patching.

@@ -43,10 +43,6 @@ Options
 
     Defaults to ``$OS_USER_ID``.
 
-.. rubric:: Debugger options
-
-.. include:: opts/debugger.rst
-
 Commands
 ========
 

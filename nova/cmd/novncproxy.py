@@ -23,14 +23,12 @@ import sys
 
 from nova.cmd import baseproxy
 import nova.conf
-from nova.conf import remote_debug
 from nova.conf import vnc
 from nova import config
 from nova.console.securityproxy import rfb
 
 
 CONF = nova.conf.CONF
-remote_debug.register_cli_opts(CONF)
 vnc.register_cli_opts(CONF)
 
 
