@@ -16,9 +16,10 @@
 
 import re
 
-from eventlet import greenthread
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ def fake_execute(*cmd_parts, **kwargs):
         "stderr='%(stderr)s'", {'stdout': reply[0], 'stderr': reply[1]})
 
     # Replicate the sleep call in the real function
-    greenthread.sleep(0)
+    utils.cooperative_yield()
     return reply
 
 

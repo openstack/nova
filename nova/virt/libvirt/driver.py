@@ -49,7 +49,6 @@ import uuid
 from castellan import key_manager
 from copy import deepcopy
 import eventlet
-from eventlet import greenthread
 from eventlet import tpool
 from lxml import etree
 from os_brick import encryptors
@@ -4114,7 +4113,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.info("Instance may have been rebooted during soft "
                              "reboot, so return now.", instance=instance)
                     return True
-            greenthread.sleep(1)
+            time.sleep(1)
         return False
 
     def _hard_reboot(self, context, instance, network_info, share_info,
@@ -8401,7 +8400,7 @@ class LibvirtDriver(driver.ComputeDriver):
             except libvirt.libvirtError:
                 total += 1
             # NOTE(gtt116): give other tasks a chance.
-            greenthread.sleep(0)
+            utils.cooperative_yield()
         return total
 
     def _get_supported_vgpu_types(self):
@@ -11516,7 +11515,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                 '%(max_retry)d.',
                                 {'cnt': cnt, 'max_retry': max_retry},
                                 instance=instance)
-                    greenthread.sleep(1)
+                    time.sleep(1)
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
@@ -11832,7 +11831,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # Only use announce_pause after the first attempt to avoid
             # pausing before calling announce_self for the first attempt
             if current_attempt != 1:
-                greenthread.sleep(announce_pause)
+                time.sleep(announce_pause)
 
             LOG.info('Sending announce-self command to QEMU monitor. '
                      'Attempt %(current_attempt)s of %(max_attempts)s',
@@ -12097,7 +12096,7 @@ class LibvirtDriver(driver.ComputeDriver):
                             {'i_name': guest.name, 'thing': thing, 'error': e})
 
             # NOTE(gtt116): give other tasks a chance.
-            greenthread.sleep(0)
+            utils.cooperative_yield()
         return disk_over_committed_size
 
     def get_available_nodes(self, refresh=False):

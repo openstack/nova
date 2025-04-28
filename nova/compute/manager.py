@@ -40,7 +40,6 @@ import typing as ty
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
 import eventlet.event
-from eventlet import greenthread
 import eventlet.semaphore
 import eventlet.timeout
 import futurist
@@ -1824,7 +1823,8 @@ class ComputeManager(manager.Manager):
                             {'vol_id': vol_id,
                              'vol_status': volume_status})
                 break
-            greenthread.sleep(CONF.block_device_allocate_retries_interval)
+            time.sleep(
+                CONF.block_device_allocate_retries_interval)
         raise exception.VolumeNotCreated(volume_id=vol_id,
                                          seconds=int(time.time() - start),
                                          attempts=attempt,
@@ -10849,7 +10849,7 @@ class ComputeManager(manager.Manager):
         """Updates the volume usage cache table with a list of stats."""
         for usage in vol_usages:
             # Allow switching of greenthreads between queries.
-            greenthread.sleep(0)
+            utils.cooperative_yield()
             vol_usage = objects.VolumeUsage(context)
             vol_usage.volume_id = usage['volume']
             vol_usage.instance_uuid = usage['instance'].uuid

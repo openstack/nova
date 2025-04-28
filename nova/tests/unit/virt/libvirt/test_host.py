@@ -35,6 +35,7 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.fixtures import libvirt_data as fake_libvirt_data
+from nova import utils
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import event as libvirtevent
@@ -350,7 +351,7 @@ class HostTestCase(test.NoDBTestCase):
 
         def connect_with_block(*a, **k):
             # enough to allow another connect to run
-            eventlet.sleep(0)
+            utils.cooperative_yield()
             self.connect_calls += 1
             return fakelibvirt.openAuth("qemu:///system",
                                         [[], lambda: 1, None], 0)
@@ -378,7 +379,7 @@ class HostTestCase(test.NoDBTestCase):
 
         def connect_with_block(*a, **k):
             # enough to allow another connect to run
-            eventlet.sleep(0)
+            utils.cooperative_yield()
             self.connect_calls += 1
             return fakelibvirt.openAuth("qemu:///system",
                                         [[], lambda: 1, None], 0)
@@ -397,7 +398,7 @@ class HostTestCase(test.NoDBTestCase):
         thr2 = eventlet.spawn(get_conn_currency, self.host)
 
         # let threads run
-        eventlet.sleep(0)
+        utils.cooperative_yield()
 
         thr1.wait()
         thr2.wait()
