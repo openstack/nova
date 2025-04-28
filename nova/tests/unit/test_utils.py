@@ -1572,3 +1572,114 @@ class SpawnOnTestCase(test.NoDBTestCase):
             'pool.',
             'nova.tests.unit.test_utils.SpawnOnTestCase.'
             'test_spawn_on_warns_on_full_executor.cell_worker', task)
+
+
+class ExecutorStatsTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.work = threading.Event()
+
+    def _task_finishes(self):
+        return
+
+    def _task_fails(self):
+        raise ValueError()
+
+    def _task_running(self):
+        self.work.wait()
+
+    @mock.patch.object(
+        utils, 'concurrency_mode_threading', new=mock.Mock(return_value=False))
+    @mock.patch.object(utils.LOG, 'debug')
+    def test_stats_logged_eventlet(self, mock_debug):
+        # ensure that each task submission triggers stats printing
+        self.flags(thread_pool_statistic_period=0)
+
+        utils.spawn(self._task_finishes).result()
+        utils.spawn(self._task_fails).exception()
+        running = utils.spawn(self._task_running)
+
+        # avoid having a hanging thread leaking from the test case
+        def cleanup():
+            self.work.set()
+            running.result()
+
+        self.addCleanup(cleanup)
+
+        # The stats are printed *before* the work is submitted so we need an
+        # extra task submitted to get the stats from the above task.
+        utils.spawn(self._task_finishes).result()
+        print(mock_debug.mock_calls)
+
+        args = mock_debug.mock_calls[3][1]
+        self.assertEqual(
+            ('State of %s GreenThreadPoolExecutor when submitting a new task: '
+             'workers: %d, max_workers: %d, work queued length: %d, stats: %s',
+             'nova.tests.unit.test_utils.ExecutorStatsTestCase.'
+             'test_stats_logged_eventlet.default', 1, 1000, 0),
+            args[0:5])
+        stats = args[5]
+        self.assertEqual(1, stats.failures)
+        self.assertEqual(2, stats.executed)
+        self.assertEqual(0, stats.cancelled)
+
+    @mock.patch.object(
+        utils, 'concurrency_mode_threading', new=mock.Mock(return_value=True))
+    @mock.patch.object(utils.LOG, 'debug')
+    def test_stats_logged_threading(self, mock_debug):
+        # ensure that each task submission triggers stats printing
+        self.flags(thread_pool_statistic_period=0)
+        # make the tasks sequential to help simulating queued task
+        self.flags(default_thread_pool_size=1)
+
+        utils.spawn(self._task_finishes).result()
+        utils.spawn(self._task_fails).exception()
+        running = utils.spawn(self._task_running)
+
+        # avoid having a hanging thread leaking from the test case
+        def cleanup():
+            self.work.set()
+            running.result()
+
+        self.addCleanup(cleanup)
+
+        # this will be queued as the only worker thread is held up by the
+        # running task
+        utils.spawn(self._task_finishes)
+        # this is also queued so we can cancel it to dequeue it
+        utils.spawn(self._task_finishes).cancel()
+        # The stats are printed *before* the work is submitted so we need an
+        # extra task submitted to get the stats from the above task.
+        utils.spawn(self._task_finishes)
+
+        args = mock_debug.mock_calls[5][1]
+        self.assertEqual(
+            ('State of %s ThreadPoolExecutor when submitting a new task: '
+             'max_workers: %d, workers: %d, idle workers: %d, queued work: %d,'
+             ' stats: %s',
+             'nova.tests.unit.test_utils.ExecutorStatsTestCase.'
+             'test_stats_logged_threading.default',
+             1, 1, 1, 3),
+            args[0:6])
+        stats = args[6]
+        self.assertEqual(1, stats.failures)
+        self.assertEqual(2, stats.executed)
+        self.assertEqual(1, stats.cancelled)
+
+    @mock.patch.object(utils.LOG, 'debug')
+    def test_stats_skipped_if_too_frequent(self, mock_debug):
+        self.flags(thread_pool_statistic_period=10)
+        utils.spawn(self._task_finishes).result()
+        mock_debug.assert_called()
+        mock_debug.reset_mock()
+
+        utils.spawn(self._task_finishes).result()
+        mock_debug.assert_not_called()
+
+    @mock.patch.object(utils.LOG, 'debug')
+    def test_stats_skipped_disabled(self, mock_info):
+        self.flags(thread_pool_statistic_period=-1)
+
+        utils.spawn(self._task_finishes).result()
+        mock_info.assert_not_called()

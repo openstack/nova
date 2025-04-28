@@ -94,6 +94,19 @@ operations requires cross cell data gathering a.k.a scatter-gather, like
 listing instances across multiple cells. This is only used if the service is
 running in native thread mode.
 '''),
+    cfg.IntOpt(
+        'thread_pool_statistic_period',
+        default=-1,
+        min=-1,
+        help='''
+When new work is submitted to any of the thread pools nova logs the
+statistics of the pool (work executed, threads available, work queued, etc).
+This parameter defines how frequently such logging happens from a specific
+pool in seconds. A value of 60 means that statistic will be logged
+from a pool maximum once every 60 seconds. The value 0 means that logging
+happens every time work is submitted to the pool. The value -1 means the
+logging is disabled.
+'''),
 ]
 
 
