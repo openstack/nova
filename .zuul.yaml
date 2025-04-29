@@ -2,12 +2,12 @@
 # for job naming conventions.
 
 - job:
-    name: nova-tox-functional-py39
-    parent: openstack-tox-functional-py39
+    name: nova-tox-functional-py310
+    parent: openstack-tox-functional-py310
     description: |
       Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.9 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py39`` environment.
+      under cPython version 3.10 with Nova specific irrelevant-files list.
+      Uses tox with the ``functional-py310`` environment.
 
       This job also provides a parent for other projects to run the nova
       functional tests on their own changes.
@@ -22,28 +22,6 @@
       - ^nova/locale/.*$
       - ^\.pre-commit-config\.yaml$
       - ^releasenotes/.*$
-    vars:
-      # explicitly stating the work dir makes this job reusable by other
-      # projects
-      zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py39
-    timeout: 3600
-
-- job:
-    name: nova-tox-functional-py310
-    parent: openstack-tox-functional-py310
-    description: |
-      Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.10 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py310`` environment.
-
-      This job also provides a parent for other projects to run the nova
-      functional tests on their own changes.
-    required-projects:
-      # including nova here makes this job reusable by other projects
-      - openstack/nova
-      - openstack/placement
-    irrelevant-files: *functional-irrelevant-files
     vars:
       # explicitly stating the work dir makes this job reusable by other
       # projects
@@ -809,7 +787,6 @@
         - nova-ovs-hybrid-plug
         - nova-tox-validate-backport:
             voting: false
-        - nova-tox-functional-py39
         - nova-tox-functional-py310
         - nova-tox-functional-py312
         - openstack-tox-py312:
@@ -837,7 +814,6 @@
     gate:
       jobs:
         - nova-live-migration
-        - nova-tox-functional-py39
         - nova-tox-functional-py310
         - nova-tox-functional-py312
         - nova-multi-cell
