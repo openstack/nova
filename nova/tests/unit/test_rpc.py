@@ -250,6 +250,29 @@ class TestRPC(test.NoDBTestCase):
                                          access_policy=access_policy)
         self.assertEqual('server', server)
 
+    @mock.patch(
+        'nova.utils.concurrency_mode_threading',
+        new=mock.Mock(return_value=True))
+    @mock.patch.object(rpc, 'TRANSPORT')
+    @mock.patch.object(rpc, 'profiler', None)
+    @mock.patch.object(rpc, 'RequestContextSerializer')
+    @mock.patch.object(messaging, 'get_rpc_server')
+    def test_get_server_threading(self, mock_get, mock_ser, mock_TRANSPORT):
+        ser = mock.Mock()
+        tgt = mock.Mock()
+        ends = mock.Mock()
+        mock_ser.return_value = ser
+        mock_get.return_value = 'server'
+
+        server = rpc.get_server(tgt, ends, serializer='foo')
+
+        mock_ser.assert_called_once_with('foo')
+        access_policy = dispatcher.DefaultRPCAccessPolicy
+        mock_get.assert_called_once_with(mock_TRANSPORT, tgt, ends,
+                                         executor='threading', serializer=ser,
+                                         access_policy=access_policy)
+        self.assertEqual('server', server)
+
     @mock.patch.object(rpc, 'TRANSPORT')
     @mock.patch.object(rpc, 'profiler', mock.Mock())
     @mock.patch.object(rpc, 'ProfilerRequestContextSerializer')

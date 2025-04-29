@@ -29,7 +29,8 @@ def is_patched():
 
 def _monkey_patch():
     if is_patched():
-        return
+        return False
+
     # NOTE(mdbooth): Anything imported here will not be monkey patched. It is
     # important to take care not to import anything here which requires monkey
     # patching.
@@ -68,14 +69,45 @@ def _monkey_patch():
                     "importing and not executing nova code.",
                     ', '.join(problems))
 
+    return True
+
 
 def patch():
-    # NOTE(mdbooth): This workaround is required to avoid breaking sphinx. See
-    # separate comment in doc/source/conf.py. It may also be useful for other
-    # non-nova utilities. Ideally the requirement for this workaround will be
-    # removed as soon as possible, so do not rely on, or extend it.
     if (os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', '').lower()
         not in ('1', 'true', 'yes')):
-        _monkey_patch()
-        global MONKEY_PATCHED
-        MONKEY_PATCHED = True
+
+        if _monkey_patch():
+            global MONKEY_PATCHED
+            MONKEY_PATCHED = True
+
+            import oslo_service.backend as service
+            service.init_backend(service.BackendType.EVENTLET)
+            from oslo_log import log as logging
+            LOG = logging.getLogger(__name__)
+            LOG.info("Service is starting with Eventlet based service backend")
+    else:
+        # We asked not to monkey patch so we will run in native threading mode
+        import oslo_service.backend as service
+        # NOTE(gibi): This will raise if the backend is already initialized
+        # with Eventlet
+        service.init_backend(service.BackendType.THREADING)
+
+        # NOTE(gibi): We were asked not to monkey patch. Let's enforce it by
+        # removing the possibility to monkey_patch accidentally
+        def poison(*args, **kwargs):
+            raise RuntimeError(
+                "The service is started with native threading via "
+                "OS_NOVA_DISABLE_EVENTLET_PATCHING set to '%s', but then the "
+                "service tried to call eventlet.monkey_patch(). This is a "
+                "bug."
+                % os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', ''))
+
+        import eventlet
+        eventlet.monkey_patch = poison
+        eventlet.patcher.monkey_patch = poison
+
+        from oslo_log import log as logging
+        LOG = logging.getLogger(__name__)
+        LOG.warning(
+            "Service is starting with native threading. This is currently "
+            "experimental. Do not use it in production.")
