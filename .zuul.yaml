@@ -427,6 +427,11 @@
             scheduler:
               # Added in Train.
               query_placement_for_image_type_support: True
+            DEFAULT:
+              # Added in Flamingo. Ensures that thread statistics is logged
+              # each time a task is submitted to the executor so that web
+              # can troubleshoot hanging threads easier.
+              thread_pool_statistic_period: 0
           "/$NEUTRON_CORE_PLUGIN_CONF":
             # Needed for QoS port heal allocation testing.
             ovs:
@@ -469,6 +474,7 @@
         # Temporarly disabled due to
         # https://bugs.launchpad.net/nova/+bug/2110545
         NOVA_COMPILE_MDEV_SAMPLES: False
+        'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
