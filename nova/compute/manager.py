@@ -33,6 +33,7 @@ import functools
 import inspect
 import math
 import sys
+import threading
 import time
 import traceback
 import typing as ty
@@ -40,7 +41,6 @@ import typing as ty
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
 import eventlet.event
-import eventlet.semaphore
 import eventlet.timeout
 import futurist
 from keystoneauth1 import exceptions as keystone_exception
@@ -649,12 +649,12 @@ class ComputeManager(manager.Manager):
         self.send_instance_updates = (
             CONF.filter_scheduler.track_instance_changes)
         if CONF.max_concurrent_builds != 0:
-            self._build_semaphore = eventlet.semaphore.Semaphore(
+            self._build_semaphore = threading.Semaphore(
                 CONF.max_concurrent_builds)
         else:
             self._build_semaphore = compute_utils.UnlimitedSemaphore()
         if CONF.max_concurrent_snapshots > 0:
-            self._snapshot_semaphore = eventlet.semaphore.Semaphore(
+            self._snapshot_semaphore = threading.Semaphore(
                 CONF.max_concurrent_snapshots)
         else:
             self._snapshot_semaphore = compute_utils.UnlimitedSemaphore()
@@ -1628,7 +1628,7 @@ class ComputeManager(manager.Manager):
         # user has specified a limit.
         if CONF.compute.max_concurrent_disk_ops != 0:
             compute_utils.disk_ops_semaphore = \
-                eventlet.semaphore.BoundedSemaphore(
+                threading.BoundedSemaphore(
                     CONF.compute.max_concurrent_disk_ops)
 
         if CONF.compute.max_disk_devices_to_attach == 0:

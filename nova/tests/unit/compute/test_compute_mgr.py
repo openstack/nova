@@ -954,7 +954,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     def test_max_concurrent_builds_semaphore_limited(self):
         self.flags(max_concurrent_builds=123)
         self.assertEqual(123,
-                         manager.ComputeManager()._build_semaphore.balance)
+                         manager.ComputeManager()._build_semaphore._value)
 
     def test_max_concurrent_builds_semaphore_unlimited(self):
         self.flags(max_concurrent_builds=0)
@@ -988,7 +988,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     def test_max_concurrent_snapshots_semaphore_limited(self):
         self.flags(max_concurrent_snapshots=123)
         self.assertEqual(123,
-                         manager.ComputeManager()._snapshot_semaphore.balance)
+                         manager.ComputeManager()._snapshot_semaphore._value)
 
     def test_max_concurrent_snapshots_semaphore_unlimited(self):
         self.flags(max_concurrent_snapshots=0)
