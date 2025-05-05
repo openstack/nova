@@ -16,14 +16,13 @@ import contextlib
 import copy
 import datetime
 import fixtures as std_fixtures
+import threading
 import time
 from unittest import mock
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
 import ddt
-from eventlet import event as eventlet_event
-from eventlet import timeout as eventlet_timeout
 from keystoneauth1 import exceptions as keystone_exception
 import netaddr
 from openstack import exceptions as sdk_exc
@@ -5491,12 +5490,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             result,
             self.compute.instance_events._events[uuids.instance]
                                                 [('test-event', None)])
-        self.assertTrue(hasattr(result, 'send'))
+        self.assertTrue(hasattr(result, 'set'))
         lock_name_mock.assert_called_once_with(inst_obj)
 
     @mock.patch('nova.compute.manager.InstanceEvents._lock_name')
     def test_pop_instance_event(self, lock_name_mock):
-        event = eventlet_event.Event()
+        event = manager.ThreadingEventWithResult()
         self.compute.instance_events._events = {
             uuids.instance: {
                 ('network-vif-plugged', None): event,
@@ -5512,7 +5511,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.compute.manager.InstanceEvents._lock_name')
     def test_clear_events_for_instance(self, lock_name_mock):
-        event = eventlet_event.Event()
+        event = manager.ThreadingEventWithResult()
         self.compute.instance_events._events = {
             uuids.instance: {
                 ('test-event', None): event,
@@ -5544,10 +5543,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             result,
             self.compute.instance_events._events[uuids.instance]
                                                 [('test-event', None)])
-        self.assertTrue(hasattr(result, 'send'))
+        self.assertTrue(hasattr(result, 'set'))
 
     def test_process_instance_event(self):
-        event = eventlet_event.Event()
+        event = manager.ThreadingEventWithResult()
         self.compute.instance_events._events = {
             uuids.instance: {
                 ('network-vif-plugged', None): event,
@@ -5557,7 +5556,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         event_obj = objects.InstanceExternalEvent(name='network-vif-plugged',
                                                   tag=None)
         self.compute._process_instance_event(inst_obj, event_obj)
-        self.assertTrue(event.ready())
+        self.assertTrue(event.is_set())
         self.assertEqual(event_obj, event.wait())
         self.assertEqual({}, self.compute.instance_events._events)
 
@@ -6033,8 +6032,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.compute.instance_events.cancel_all_events()
         # call it again to make sure we handle that gracefully
         self.compute.instance_events.cancel_all_events()
-        self.assertTrue(fake_eventlet_event.send.called)
-        event = fake_eventlet_event.send.call_args_list[0][0][0]
+        self.assertTrue(fake_eventlet_event.set.called)
+        event = fake_eventlet_event.set.call_args_list[0][0][0]
         self.assertEqual('network-vif-plugged', event.name)
         self.assertEqual(uuids.portid, event.tag)
         self.assertEqual('failed', event.status)
@@ -8607,9 +8606,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         arq_uuids = [arq['uuid'] for arq in arq_list]
 
         mock_get_arqs.return_value = arq_list
-        mock_wait_inst_ev.side_effect = eventlet_timeout.Timeout
+        mock_wait_inst_ev.side_effect = exception.InstanceEventTimeout
 
-        self.assertRaises(eventlet_timeout.Timeout,
+        self.assertRaises(exception.InstanceEventTimeout,
             self.compute._get_bound_arq_resources,
             self.context, self.instance, arq_uuids)
 
@@ -12032,7 +12031,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.compute.virtapi,
                 'wait_for_instance_event') as wait_for_event:
             wait_for_event.return_value.__enter__.side_effect = (
-                eventlet_timeout.Timeout())
+                exception.InstanceEventTimeout())
             ex = self.assertRaises(
                 exception.MigrationError, self.compute._do_live_migration,
                 self.context, 'dest-host', self.instance, None,
@@ -12070,7 +12069,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.compute.virtapi,
                 'wait_for_instance_event') as wait_for_event:
             wait_for_event.return_value.__enter__.side_effect = (
-                eventlet_timeout.Timeout())
+                exception.InstanceEventTimeout())
             self.compute._do_live_migration(
                 self.context, 'dest-host', self.instance, None,
                 self.migration, migrate_data)
@@ -15112,3 +15111,225 @@ class ComputeManagerBDMUpdateTestCase(test.TestCase):
 
         mock_bdm_destroy.assert_called_once()
         self.instance.get_bdms.assert_called_once()
+
+
+class ThreadingEventWithResultTestCase(test.NoDBTestCase):
+    """Test case for ThreadingEventWithResult class."""
+
+    def test_init(self):
+        event = manager.ThreadingEventWithResult()
+        self.assertEqual(
+            event._result,
+            manager.ThreadingEventWithResult.UNSET_SENTINEL)
+        self.assertFalse(event.is_set())
+
+    def test_set_with_result(self):
+        event = manager.ThreadingEventWithResult()
+        result = "test_result"
+        event.set(result)
+        self.assertEqual(result, event._result)
+        self.assertTrue(event.is_set())
+
+    def test_set_without_result(self):
+        event = manager.ThreadingEventWithResult()
+        event.set()
+        self.assertIsNone(event._result)
+        self.assertTrue(event.is_set())
+
+    def test_wait_with_result(self):
+        event = manager.ThreadingEventWithResult()
+        result = "test_result"
+        event.set(result)
+        self.assertEqual(result, event.wait())
+
+    def test_wait_timeout(self):
+        event = manager.ThreadingEventWithResult()
+        self.assertEqual(event.wait(timeout=0.01),
+                         manager.ThreadingEventWithResult.FAILED_SENTINEL)
+
+    def test_change_result_raises_value_error(self):
+        event = manager.ThreadingEventWithResult()
+        event.set("original_result")
+        with self.assertRaisesRegex(ValueError,
+                                    'Cannot change the result once it is set'):
+            event.set("new_result")
+        with self.assertRaisesRegex(ValueError,
+                                    'Cannot change the result once it is set'):
+            event.set(None)
+
+    def test_set_same_result_again(self):
+        event = manager.ThreadingEventWithResult()
+        result = "test_result"
+        event.set(result)
+        # Setting the same result again should not raise an error
+        event.set(result)
+        self.assertEqual(result, event._result)
+        self.assertTrue(event.is_set())
+
+    def test_multiple_wait_calls(self):
+        event = manager.ThreadingEventWithResult()
+        result = "test_result"
+        event.set(result)
+        self.assertEqual(result, event.wait())
+        self.assertEqual(result, event.wait())
+        self.assertEqual(result, event.wait(timeout=0.01))
+
+    def test_wait_in_another_thread(self):
+        event = manager.ThreadingEventWithResult()
+        result_from_thread = []
+        expected_result = "data from main thread"
+
+        def _wait_for_event():
+            res = event.wait()
+            result_from_thread.append(res)
+
+        waiter_thread = threading.Thread(target=_wait_for_event)
+        waiter_thread.start()
+
+        # Give the waiter thread a moment to start and block on wait()
+        time.sleep(0.05)
+        self.assertTrue(waiter_thread.is_alive())
+        self.assertFalse(event.is_set())
+
+        # Set the event from the main thread, which should unblock the waiter
+        event.set(expected_result)
+
+        # The waiter thread should finish promptly
+        waiter_thread.join(timeout=1)
+        self.assertFalse(
+            waiter_thread.is_alive(),
+            "Waiter thread should have finished.")
+
+        # Verify the result was received correctly
+        self.assertEqual(len(result_from_thread), 1)
+        self.assertEqual(result_from_thread[0], expected_result)
+        self.assertEqual(event._result, expected_result)
+
+    def test_set_race_condition(self):
+        event = manager.ThreadingEventWithResult()
+        outcomes = []
+        num_threads = 20
+        # A barrier synchronizes threads, making a race condition more likely
+        barrier = threading.Barrier(num_threads)
+
+        def _set_in_thread(result_to_set):
+            try:
+                # All threads wait here until all are ready
+                barrier.wait()
+                event.set(result_to_set)
+                outcomes.append("success")
+            except ValueError:
+                outcomes.append("failure")
+            except Exception as e:
+                outcomes.append(e)
+
+        threads = []
+        possible_results = [
+            f"result_from_thread_{i}" for i in range(num_threads)]
+
+        for i in range(num_threads):
+            thread = threading.Thread(
+                target=_set_in_thread,
+                args=(possible_results[i],))
+            threads.append(thread)
+            thread.start()
+
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join()
+
+        # 1. Verify that the event was ultimately set
+        self.assertTrue(event.is_set())
+
+        # 2. Verify its result is one of the candidates
+        self.assertIn(event._result, possible_results)
+
+        # 3. Verify that exactly ONE thread succeeded and the rest failed
+        success_count = outcomes.count("success")
+        failure_count = outcomes.count("failure")
+
+        self.assertEqual(
+            success_count,
+            1, f"Expected 1 success, but got {success_count}.")
+        self.assertEqual(
+            failure_count,
+            num_threads - 1, f"Expected {num_threads - 1} failures.")
+
+
+class TestWaitForInstanceEvents(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        self.instance = mock.Mock()
+        self.event1 = mock.Mock()
+        self.event2 = mock.Mock()
+        self.error_callback = mock.Mock()
+        self.timeout = 1
+
+    def test_all_events_completed(self):
+        self.event1.is_received_early.return_value = False
+        self.event1.wait.return_value = mock.Mock(status='completed')
+        self.event2.is_received_early.return_value = False
+        self.event2.wait.return_value = mock.Mock(status='completed')
+        events = {'event1': self.event1, 'event2': self.event2}
+        manager.ComputeVirtAPI._wait_for_instance_events(
+            self.instance, events, self.error_callback, self.timeout)
+        self.event1.wait.assert_called()
+        self.event2.wait.assert_called()
+        self.error_callback.assert_not_called()
+
+    def test_event_received_early(self):
+        self.event1.is_received_early.return_value = True
+        self.event2.is_received_early.return_value = False
+        self.event2.wait.return_value = mock.Mock(status='completed')
+        events = {'event1': self.event1, 'event2': self.event2}
+        manager.ComputeVirtAPI._wait_for_instance_events(
+            self.instance, events, self.error_callback, self.timeout)
+        self.event1.wait.assert_not_called()
+        self.event2.wait.assert_called()
+        self.error_callback.assert_not_called()
+
+    def test_event_timeout(self):
+        self.event1.is_received_early.return_value = False
+        self.event1.wait.side_effect = exception.InstanceEventTimeout
+        events = {'event1': self.event1}
+        with self.assertRaisesRegex(exception.InstanceEventTimeout, ""):
+            manager.ComputeVirtAPI._wait_for_instance_events(
+                self.instance, events, self.error_callback, self.timeout)
+
+    def test_event_wait_returns_failed_sentinel(self):
+        self.event1.is_received_early.return_value = False
+        self.event1.wait.return_value = mock.Mock(status='completed')
+
+        events = {'event1': self.event1}
+        x = 100
+        with mock.patch('time.monotonic', side_effect=[x, x + 1]):
+            with self.assertRaisesRegex(exception.InstanceEventTimeout, ""):
+                manager.ComputeVirtAPI._wait_for_instance_events(
+                    self.instance, events, self.error_callback, self.timeout)
+
+        self.event1.wait.assert_not_called()
+
+    def test_multiple_events_some_early_some_completed(self):
+        self.event1.is_received_early.return_value = True
+        self.event2.is_received_early.return_value = False
+        self.event2.wait.return_value = mock.Mock(status='completed')
+        self.event3 = mock.Mock()
+        self.event3.is_received_early.return_value = False
+        self.event3.wait.return_value = mock.Mock(status='completed')
+        events = {
+            'event1': self.event1,
+            'event2': self.event2,
+            'event3': self.event3
+        }
+        manager.ComputeVirtAPI._wait_for_instance_events(
+            self.instance, events, self.error_callback, self.timeout)
+        self.event1.wait.assert_not_called()
+        self.event2.wait.assert_called()
+        self.event3.wait.assert_called()
+        self.error_callback.assert_not_called()
+
+    def test_no_events(self):
+        events = {}
+        manager.ComputeVirtAPI._wait_for_instance_events(
+            self.instance, events, self.error_callback, self.timeout)
+        self.error_callback.assert_not_called()

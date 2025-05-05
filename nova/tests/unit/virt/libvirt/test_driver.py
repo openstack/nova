@@ -423,9 +423,9 @@ def get_injection_info(network_info=None, admin_pass=None, files=None):
 
 
 def _concurrency(signal, wait, done, target, is_block_dev=False):
-    signal.send()
+    signal.set()
     wait.wait()
-    done.send()
+    done.set()
 
 
 class FakeVirtDomain(object):
@@ -565,9 +565,9 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         uuid = uuids.fake
 
         backend = imagebackend.Backend(False)
-        wait1 = eventlet.event.Event()
-        done1 = eventlet.event.Event()
-        sig1 = eventlet.event.Event()
+        wait1 = threading.Event()
+        done1 = threading.Event()
+        sig1 = threading.Event()
         thr1 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
                                               'name').cache,
                 _concurrency, 'fname', None,
@@ -576,23 +576,23 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         # Thread 1 should run before thread 2.
         sig1.wait()
 
-        wait2 = eventlet.event.Event()
-        done2 = eventlet.event.Event()
-        sig2 = eventlet.event.Event()
+        wait2 = threading.Event()
+        done2 = threading.Event()
+        sig2 = threading.Event()
         thr2 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
                                               'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig2, wait=wait2, done=done2)
 
-        wait2.send()
+        wait2.set()
         utils.cooperative_yield()
         try:
-            self.assertFalse(done2.ready())
+            self.assertFalse(done2.is_set())
         finally:
-            wait1.send()
+            wait1.set()
         done1.wait()
         utils.cooperative_yield()
-        self.assertTrue(done2.ready())
+        self.assertTrue(done2.is_set())
         # Wait on greenthreads to assert they didn't raise exceptions
         # during execution
         thr1.wait()
@@ -603,9 +603,9 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         uuid = uuids.fake
 
         backend = imagebackend.Backend(False)
-        wait1 = eventlet.event.Event()
-        done1 = eventlet.event.Event()
-        sig1 = eventlet.event.Event()
+        wait1 = threading.Event()
+        done1 = threading.Event()
+        sig1 = threading.Event()
         thr1 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
                                               'name').cache,
                 _concurrency, 'fname2', None,
@@ -614,9 +614,9 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         # Thread 1 should run before thread 2.
         sig1.wait()
 
-        wait2 = eventlet.event.Event()
-        done2 = eventlet.event.Event()
-        sig2 = eventlet.event.Event()
+        wait2 = threading.Event()
+        done2 = threading.Event()
+        sig2 = threading.Event()
         thr2 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
                                               'name').cache,
                 _concurrency, 'fname1', None,
@@ -625,15 +625,15 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         # Wait for thread 2 to start.
         sig2.wait()
 
-        wait2.send()
+        wait2.set()
         tries = 0
-        while not done2.ready() and tries < 10:
+        while not done2.is_set() and tries < 10:
             utils.cooperative_yield()
             tries += 1
         try:
-            self.assertTrue(done2.ready())
+            self.assertTrue(done2.is_set())
         finally:
-            wait1.send()
+            wait1.set()
             utils.cooperative_yield()
         # Wait on greenthreads to assert they didn't raise exceptions
         # during execution
@@ -14158,7 +14158,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr.active_migrations[instance.uuid] = collections.deque()
         dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", True)
         guest = libvirt_guest.Guest(dom)
-        finish_event = eventlet.event.Event()
+        finish_event = threading.Event()
 
         def fake_job_info():
             while True:
@@ -14167,7 +14167,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
                 if type(rec) is str:
                     if rec == "thread-finish":
-                        finish_event.send()
+                        finish_event.set()
                     elif rec == "domain-stop":
                         dom.destroy()
                     elif rec == "force_complete":
@@ -14839,9 +14839,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_copy_disk_path.assert_called_once_with(self.context, instance,
                                                     guest)
 
-        class AnyEventletEvent(object):
+        class AnyEvent(object):
             def __eq__(self, other):
-                return type(other) is eventlet.event.Event
+                return type(other) is threading.Event
 
         mock_thread.assert_called_once_with(
             drvr._live_migration_operation,
@@ -14850,7 +14850,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_monitor.assert_called_once_with(
             self.context, instance, guest, "fakehost",
             fake_post, fake_recover, True,
-            migrate_data, AnyEventletEvent(), disks_to_copy[0])
+            migrate_data, AnyEvent(), disks_to_copy[0])
 
     def test_live_migration_main(self):
         self._test_live_migration_main()
@@ -21062,10 +21062,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     ):
         generated_events = []
 
-        def wait_timeout():
+        def wait_timeout(*args, **kwargs):
             event = mock.MagicMock()
             if neutron_failure == 'timeout':
-                raise eventlet.timeout.Timeout()
+                raise exception.InstanceEventTimeout()
             elif neutron_failure == 'error':
                 event.status = 'failed'
             else:
@@ -21122,7 +21122,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     self.assertEqual(0, event.call_count)
                 elif (neutron_failure == 'error' and
                           not CONF.vif_plugging_is_fatal):
-                    event.wait.assert_called_once_with()
+                    event.wait.assert_called_once()
         else:
             self.assertEqual(0, prepare.call_count)
 

@@ -48,7 +48,6 @@ import uuid
 
 from castellan import key_manager
 from copy import deepcopy
-import eventlet
 from eventlet import tpool
 from lxml import etree
 from os_brick import encryptors
@@ -8252,7 +8251,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         context, xml, instance,
                         pause=pause, power_on=power_on,
                         post_xml_callback=post_xml_callback)
-        except eventlet.timeout.Timeout:
+        except exception.InstanceEventTimeout:
             # We did not receive all expected events from Neutron, a warning
             # has already been logged by wait_for_instance_event, but we need
             # to decide if the issue is fatal.
@@ -11138,7 +11137,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if info.type == libvirt.VIR_DOMAIN_JOB_NONE:
                 # Either still running, or failed or completed,
                 # lets untangle the mess
-                if not finish_event.ready():
+                if not finish_event.is_set():
                     LOG.debug("Operation thread is still running",
                               instance=instance)
                 else:
@@ -11325,14 +11324,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                      migrate_data, guest,
                                      device_names)
 
-        finish_event = eventlet.event.Event()
+        finish_event = threading.Event()
         self.active_migrations[instance.uuid] = deque()
 
         def thread_finished(_):
             LOG.debug("Migration operation thread notification",
                       instance=instance)
-            finish_event.send()
 
+            finish_event.set()
         future.add_done_callback(thread_finished)
 
         # Let eventlet schedule the new thread right away

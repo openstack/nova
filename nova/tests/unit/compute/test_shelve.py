@@ -12,7 +12,6 @@
 
 from unittest import mock
 
-import eventlet
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -448,9 +447,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             mock_bdms, mock_nil):
         instance = self._create_fake_instance_obj()
 
-        mock_get_arqs.side_effect = eventlet.timeout.Timeout()
+        mock_get_arqs.side_effect = exception.InstanceEventTimeout()
 
-        self.assertRaises(eventlet.timeout.Timeout,
+        self.assertRaises(exception.InstanceEventTimeout,
                           self.test_unshelve,
                           accel_uuids=[uuids.fake],
                           instance=instance)
