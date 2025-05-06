@@ -157,8 +157,8 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
   cells allow sharding of your compute environment. Upfront planning is key to
   a successful cells v2 layout.
 
-* :doc:`Running nova-api on wsgi <user/wsgi>`: Considerations for using a real
-  WSGI container.
+* :doc:`Running nova-api on wsgi <admin/wsgi>`: Considerations for deploying
+  under WSGI.
 
 .. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
@@ -168,7 +168,7 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
    user/feature-classification
    user/support-matrix
    admin/cells
-   user/wsgi
+   admin/wsgi
 
 Maintenance
 -----------

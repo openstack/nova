@@ -111,9 +111,8 @@ scopes in order to perform actions with unified limits.
 Configuration
 -------------
 
-To enable unified limits quotas, some Nova configuration of
-the :program:`nova-api-wsgi` and :program:`nova-conductor` services is
-necessary.
+To enable unified limits quotas, some Nova configuration of the Compute API and
+:program:`nova-conductor` services is necessary.
 
 Set the quota driver to the ``nova.quota.UnifiedLimitsDriver``:
 
@@ -417,7 +416,7 @@ the quota limit for that resource will be considered to be unlimited and all
 requests to allocate that resource will be accepted. Any resource not in the
 list will be considered to have 0 quota.
 
-The options should be configured for the :program:`nova-api-wsgi` and
+The options should be configured for the Compute API and
 :program:`nova-conductor` services. The :program:`nova-conductor` service
 performs quota enforcement when :oslo.config:option:`quota.recheck_quota` is
 ``True`` (the default).

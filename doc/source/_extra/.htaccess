@@ -75,9 +75,10 @@ redirectmatch 301 ^/nova/([^/]+)/user/placement.html$ /placement/$1/
 redirectmatch 301 ^/nova/([^/]+)/user/upgrade.html$ /nova/$1/admin/upgrades.html
 redirectmatch 301 ^/nova/([^/]+)/user/user-data.html$ /nova/$1/user/metadata.html
 redirectmatch 301 ^/nova/([^/]+)/user/vendordata.html$ /nova/$1/user/metadata.html
+redirectmatch 301 ^/nova/([^/]+)/user/wsgi.html$ /nova/$1/admin/wsgi.html
 redirectmatch 301 ^/nova/([^/]+)/vendordata.html$ /nova/$1/user/metadata.html
 redirectmatch 301 ^/nova/([^/]+)/vmstates.html$ /nova/$1/reference/vm-states.html
-redirectmatch 301 ^/nova/([^/]+)/wsgi.html$ /nova/$1/user/wsgi.html
+redirectmatch 301 ^/nova/([^/]+)/wsgi.html$ /nova/$1/admin/wsgi.html
 redirectmatch 301 ^/nova/([^/]+)/admin/arch.html$ /nova/$1/admin/architecture.html
 redirectmatch 301 ^/nova/([^/]+)/admin/adv-config.html$ /nova/$1/admin/index.html
 redirectmatch 301 ^/nova/([^/]+)/admin/configuration/schedulers.html$ /nova/$1/admin/scheduling.html

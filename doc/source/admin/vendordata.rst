@@ -29,10 +29,10 @@ Configuration
 
 The service you must configure to enable the ``StaticJSON`` vendordata module
 depends on how guests are accessing vendordata. If using the metadata service,
-configuration applies to either :program:`nova-api-wsgi` or
-:program:`nova-metadata-wsgi`, depending on the deployment, while if using
-config drives, configuration applies to :program:`nova-compute`. However,
-configuration is otherwise the same and the following options apply:
+configuration applies to either the compute API or metadata API depending on
+the deployment, while if using config drives, configuration applies to
+:program:`nova-compute`. However, configuration is otherwise the same and the
+following options apply:
 
 - :oslo.config:option:`api.vendordata_providers`
 - :oslo.config:option:`api.vendordata_jsonfile_path`
@@ -114,11 +114,10 @@ Configuration
 
 As with ``StaticJSON``, the service you must configure to enable the
 ``DynamicJSON`` vendordata module depends on how guests are accessing
-vendordata. If using the metadata service, configuration applies to either
-:program:`nova-api-wsgi` or :program:`nova-metadata-wsgi`, depending on the
-deployment, while if using config drives, configuration applies to
-:program:`nova-compute`. However, configuration is otherwise the same and the
-following options apply:
+vendordata. If using the metadata service, configuration applies to either the
+compute API or metadata API depending on the deployment, while if using config
+drives, configuration applies to :program:`nova-compute`. However,
+configuration is otherwise the same and the following options apply:
 
 - :oslo.config:option:`api.vendordata_providers`
 - :oslo.config:option:`api.vendordata_dynamic_ssl_certfile`
