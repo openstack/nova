@@ -19,6 +19,7 @@ from nova.api.openstack import wsgi_app
 NAME = "osapi_compute"
 
 application = None
-with threading.Lock():
+lock = threading.Lock()
+with lock:
     if application is None:
         application = wsgi_app.init_application(NAME)
