@@ -12,17 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
-
-from keystoneauth1 import exceptions as ks_exc
-
-from nova import exception
-from nova.i18n import _
-from nova import objects
-from nova.scheduler import utils as schedutils
-from nova import service_auth
-from nova import utils
-
 """
    Note on object relationships:
    1 device profile (DP) has D >= 1 request groups (just as a flavor
@@ -51,6 +40,17 @@ from nova import utils
 
    See cyborg/cyborg/objects/device_profile.py for more details.
 """
+
+from oslo_log import log as logging
+
+from keystoneauth1 import exceptions as ks_exc
+
+from nova import exception
+from nova.i18n import _
+from nova import objects
+from nova.scheduler import utils as schedutils
+from nova import service_auth
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 

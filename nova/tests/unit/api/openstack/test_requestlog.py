@@ -13,13 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
-import fixtures as fx
-import testtools
-
-from nova.tests import fixtures
-
 """Test request logging middleware under various conditions.
 
 The request logging middleware is needed when running under something
@@ -32,6 +25,13 @@ equivalent coverage.
 All these tests use GET / to hit an endpoint that doesn't require the
 database setup. We have to do a bit of mocking to make that work.
 """
+
+from unittest import mock
+
+import fixtures as fx
+import testtools
+
+from nova.tests import fixtures
 
 
 class TestRequestLogMiddleware(testtools.TestCase):
