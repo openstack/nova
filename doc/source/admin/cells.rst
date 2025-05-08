@@ -492,7 +492,7 @@ to create your first cell. We can create a new cell record using
    targeted at a specific cell.
 
 You can repeat this step for each cell you wish to add to your deployment. Your
-existing cell database will be re-used - this simply informs the top-level API
+existing cell database will be reused - this simply informs the top-level API
 database about your existing cell databases.
 
 Once you've created your new cell, use :program:`nova-manage cell_v2
