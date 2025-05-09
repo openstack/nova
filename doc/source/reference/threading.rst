@@ -1,8 +1,11 @@
 Threading model
 ===============
 
-All OpenStack services use *green thread* model of threading, implemented
-through using the Python `eventlet <http://eventlet.net/>`_ and
+Eventlet
+--------
+Before the Flamingo release all OpenStack services used the *green thread*
+model of threading, implemented through using the Python
+`eventlet <http://eventlet.net/>`_ and
 `greenlet <http://packages.python.org/greenlet/>`_ libraries.
 
 Green threads use a cooperative model of threading: thread context
@@ -18,7 +21,7 @@ In addition, since there is only one operating system thread, a call that
 blocks that main thread will block the entire process.
 
 Yielding the thread in long-running tasks
------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 If a code path takes a long time to execute and does not contain any methods
 that trigger an eventlet context switch, the long-running thread will block
 any pending threads.
@@ -37,7 +40,7 @@ time module is patched through eventlet.monkey_patch(). To be explicit, we recom
 contributors use ``greenthread.sleep()`` instead of ``time.sleep()``.
 
 MySQL access and eventlet
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 There are some MySQL DB API drivers for oslo.db, like `PyMySQL`_, MySQL-python
 etc. PyMySQL is the default MySQL DB API driver for oslo.db, and it works well with
 eventlet. MySQL-python uses an external C library for accessing the MySQL database.
@@ -54,3 +57,21 @@ a discussion of the `impact on performance`_.
 .. _mailing list thread: https://lists.launchpad.net/openstack/msg08118.html
 .. _impact on performance: https://lists.launchpad.net/openstack/msg08217.html
 .. _PyMySQL: https://wiki.openstack.org/wiki/PyMySQL_evaluation
+
+Native threading
+----------------
+Since the Flamingo release OpenStack started to transition away form
+``eventlet``. During this transition Nova maintains support for running
+services with ``eventlet`` while working to add support for running services
+with ``native threading``.
+
+To support both modes with the same codebase Nova started using the
+`futurist`_ library. In native threading mode ``futurist.ThreadPoolsExecutors``
+are used to run concurrent tasks and both the oslo.service and the
+oslo.messaging libraries are configured to use native threads to execute tasks
+like periodics and RPC message handlers.
+
+.. _futurist: https://docs.openstack.org/futurist/latest/
+
+To see how to configure and tune the native threading mode read the
+:doc:`/admin/concurrency` guide.
