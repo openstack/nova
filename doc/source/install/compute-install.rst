@@ -2,8 +2,7 @@ Install and configure a compute node
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section describes how to install and configure the Compute service on a
-compute node for Ubuntu, openSUSE and SUSE Linux Enterprise,
-and Red Hat Enterprise Linux and CentOS.
+compute node for Ubuntu, Red Hat Enterprise Linux and CentOS Stream.
 
 The service supports several hypervisors to deploy instances or
 virtual machines (VMs). For simplicity, this configuration uses the Quick
@@ -27,4 +26,3 @@ environment with additional compute nodes.
 
    compute-install-ubuntu
    compute-install-rdo
-   compute-install-obs
