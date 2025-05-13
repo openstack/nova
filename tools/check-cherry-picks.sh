@@ -21,8 +21,11 @@ branches+=""
 for hash in $hashes; do
     branch=$(git branch -a --contains "$hash" 2>/dev/null| grep -oE '(master|stable/[a-z0-9.]+|unmaintained/[a-z0-9.]+)')
     if [ $? -ne 0 ]; then
-        echo "Cherry pick hash $hash not on any master, stable or unmaintained branches"
-        exit 1
+        branch=$(git tag --contains "$hash" 2>/dev/null| grep -oE '([0-9.]+-eol)')
+        if [ $? -ne 0 ]; then
+            echo "Cherry pick hash $hash not on any master, stable, unmaintained or EOL'd branches"
+            exit 1
+        fi
     fi
     branches+=" $branch"
     checked=$(($checked + 1))
