@@ -466,7 +466,9 @@
         NOVNC_FROM_PACKAGE: False
         NOVA_USE_UNIFIED_LIMITS: True
         # Added in Caracal.
-        NOVA_COMPILE_MDEV_SAMPLES: True
+        # Temporarly disabled due to
+        # https://bugs.launchpad.net/nova/+bug/2110545
+        NOVA_COMPILE_MDEV_SAMPLES: False
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
