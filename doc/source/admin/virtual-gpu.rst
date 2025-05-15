@@ -365,6 +365,38 @@ Caveats
    Please refer to the `PCI passthrough documentation`_ for proper
    configuration.
 
+* When using recent nVidia GPU architectures like Ampere or newer GPUs which
+  have SR-IOV feature, Nova can't know how many vGPUs can be used by a specific
+  type. You then need to create virtual functions and then provide the list
+  of the virtual functions per GPUs that can be used by setting
+  ``device_addresses``.
+
+  .. versionchanged:: 29.0.0
+
+   By the 2024.2 Caracal release, if you use those hardware, you need to
+   provide a new configuration option named
+   ``max_instances`` in the related mdev type group (eg. ``mdev_nvidia-35``)
+   where the value of that option would be the number of vGPUs that the type
+   can create.
+
+   As an example for the `A40-2Q nVidia GPU type`__ which can create up to 24
+   vGPUs, please provide the below configuration :
+
+   .. __: https://docs.nvidia.com/vgpu/16.0/grid-vgpu-user-guide/index.html#vgpu-types-nvidia-a40
+
+   .. code-block:: ini
+
+      [devices]
+      enabled_mdev_types = nvidia-558
+
+      [mdev_nvidia-558]
+      max_instances = 24
+
+   As a side note, you can see that we don't use ``device_addresses`` in the
+   ``mdev_nvidia-558`` section, as we don't need to tell which exact virtual
+   functions we want to use for that type.
+
+
 * When live-migrating an instance using vGPUs, the libvirt guest domain XML
   isn't updated with the new mediated device UUID to use for the target.
 
