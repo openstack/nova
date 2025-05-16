@@ -1,0 +1,9 @@
+fixes:
+  - |
+    When live migration fails during pre_live_migration on the destination,
+    during rollback Cinder volumes will now be disconnected from the
+    destination locally instead of remotely over RPC from the source. This
+    should ensure that only connection_info for the destination will be used to
+    disconnect volumes from the destination.
+    See `bug #1899835 <https://bugs.launchpad.net/nova/+bug/1899835>`_ for more
+    details.
