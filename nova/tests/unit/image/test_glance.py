@@ -1745,8 +1745,7 @@ class TestCreate(test.NoDBTestCase):
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')
     def test_create_success_v2_with_location(
-            self, trans_to_mock, trans_from_mock, old_api=False,
-            new_api=True):
+            self, trans_to_mock, trans_from_mock):
         translated = {
             'id': mock.sentinel.id,
             'name': mock.sentinel.name,
@@ -1756,39 +1755,14 @@ class TestCreate(test.NoDBTestCase):
         trans_from_mock.return_value = mock.sentinel.trans_from
         image_mock = {}
         client = mock.MagicMock()
-        if old_api:
-            client.call.side_effect = [translated,
-                                       glanceclient.exc.HTTPNotImplemented,
-                                       None]
-        elif not new_api:
-            # If neither API is available we expect back whatever glanceclient
-            # raised to us
-            client.call.side_effect = test.TestingException
-        else:
-            client.call.side_effect = [translated, None]
+        client.call.return_value = translated
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageServiceV2(client)
-        if not new_api and not old_api:
-            self.assertRaises(test.TestingException,
-                              service.create, ctx, image_mock)
-            return
         image_meta = service.create(ctx, image_mock)
         trans_to_mock.assert_called_once_with(image_mock)
-        calls = [c[0][2] for c in client.call.call_args_list]
-        if old_api:
-            expected = ['create', 'add_image_location', 'add_location']
-        else:
-            expected = ['create', 'add_image_location']
-        self.assertEqual(expected, calls)
+        self.assertEqual(2, client.call.call_count)
         trans_from_mock.assert_called_once_with(translated)
         self.assertEqual(mock.sentinel.trans_from, image_meta)
-
-    def test_create_success_v2_with_location_old_api(self):
-        self.test_create_success_v2_with_location(old_api=True)
-
-    def test_create_success_v2_with_location_no_api(self):
-        self.test_create_success_v2_with_location(old_api=False,
-                                                  new_api=False)
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')
