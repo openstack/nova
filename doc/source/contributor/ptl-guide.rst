@@ -68,6 +68,9 @@ After PTG
 
 * Add `RFE bugs`__ if you have action items that are simple to do but without a owner yet.
 
+* Update IRC #openstack-nova channel topic to point to new development-planning
+  etherpad.
+
 .. __: https://bugs.launchpad.net/nova/+bugs?field.tag=rfe
 
 A few weeks before milestone 1
