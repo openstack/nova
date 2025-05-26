@@ -3843,25 +3843,24 @@ hypervisor_os_diagnostics:
   min_version: 2.48
 hypervisor_servers:
   description: |
-    A list of ``server`` objects.
-    This field has become mandatory in microversion 2.75. If no servers is on hypervisor
-    then empty list is returned.
+    A list of ``server`` objects. Before microversion 2.75, this field is only
+    returned if non-empty. From microversion 2.75, this field will always be
+    returned unless the ``with_servers`` query parameter is provided and is
+    set to ``false``.
   in: body
-  required: true
+  required: false
   type: array
   min_version: 2.53
 hypervisor_servers_name:
   description: |
     The server name.
   in: body
-  required: false
   type: string
   min_version: 2.53
 hypervisor_servers_uuid:
   description: |
     The server ID.
   in: body
-  required: false
   type: string
   min_version: 2.53
 hypervisor_service:
