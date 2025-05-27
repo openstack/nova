@@ -1078,3 +1078,16 @@ class HackingTestCase(test.NoDBTestCase):
                     time.sleep(1)
                """
         self._assert_has_no_errors(code, checks.check_eventlet_primitives)
+
+    def test_check_eventlet_yield(self):
+        code = """
+                   time.sleep(0)
+               """
+        errors = [(x + 1, 0, 'N374') for x in range(1)]
+        self._assert_has_errors(
+            code, checks.check_eventlet_yield, expected_errors=errors)
+
+        code = """
+                    time.sleep(1)
+               """
+        self._assert_has_no_errors(code, checks.check_eventlet_yield)
