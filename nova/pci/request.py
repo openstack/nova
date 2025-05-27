@@ -121,6 +121,23 @@ _ALIAS_SCHEMA = {
 }
 
 
+def _validate_aliases(aliases):
+    """Checks the parsed aliases for common mistakes and raise easy to parse
+    error messages
+    """
+    if CONF.filter_scheduler.pci_in_placement:
+        alias_with_multiple_specs = [
+            name for name, spec in aliases.items() if len(spec[1]) > 1]
+        if alias_with_multiple_specs:
+            raise exception.PciInvalidAlias(
+                "The PCI alias(es) %s have multiple specs but "
+                "[filter_scheduler]pci_in_placement is True. The PCI in "
+                "Placement feature only supports one spec per alias. You can "
+                "assign the same resource_class to multiple [pci]device_spec "
+                "matchers to allow using different devices for the same alias."
+                % ",".join(alias_with_multiple_specs))
+
+
 def _get_alias_from_config() -> Alias:
     """Parse and validate PCI aliases from the nova config.
 
@@ -177,6 +194,7 @@ def _get_alias_from_config() -> Alias:
     except Exception as exc:
         raise exception.PciInvalidAlias(reason=str(exc))
 
+    _validate_aliases(aliases)
     return aliases
 
 
