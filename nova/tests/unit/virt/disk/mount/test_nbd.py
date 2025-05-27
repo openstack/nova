@@ -16,13 +16,13 @@
 
 import os
 import tempfile
-import time
 from unittest import mock
 
 import eventlet
 import fixtures
 
 from nova import test
+from nova import utils
 from nova.virt.disk.mount import nbd
 from nova.virt.image import model as imgmodel
 
@@ -304,7 +304,7 @@ class NbdTestCase(test.NoDBTestCase):
             # Ensure that context switch happens before the device is marked
             # as used. This will cause a failure without nbd-allocation-lock
             # in place.
-            time.sleep(0.1)
+            utils.cooperative_yield()
 
             # We always choose the top device in find_unused - remove it now.
             free_devices.pop()
