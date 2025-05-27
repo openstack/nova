@@ -11348,7 +11348,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # cancel migration job.
                 self.live_migration_abort(instance)
             except libvirt.libvirtError:
-                LOG.warning("Error occurred when trying to abort live ",
+                LOG.warning("Error occurred when trying to abort live "
                             "migration job, ignoring it.", instance=instance)
             raise
         finally:
