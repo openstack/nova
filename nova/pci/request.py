@@ -37,7 +37,7 @@
     These two aliases define a device request meaning: vendor_id is "8086" and
     product_id is "0442" or "0443".
     """
-
+import functools
 import typing as ty
 
 import jsonschema
@@ -173,6 +173,7 @@ def _validate_aliases(aliases):
     _validate_required_ids(aliases)
 
 
+@functools.cache
 def get_alias_from_config() -> Alias:
     """Parse and validate PCI aliases from the nova config.
 

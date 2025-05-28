@@ -62,6 +62,7 @@ from nova.db.main import api as db_api
 from nova import exception
 from nova import objects
 from nova.objects import base as objects_base
+from nova.pci import request
 from nova import quota
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
@@ -189,6 +190,10 @@ class TestCase(base.BaseTestCase):
 
         self.useFixture(
             nova_fixtures.PropagateTestCaseIdToChildEventlets(self.id()))
+
+        # Ensure that the pci alias is reset between test cases running in
+        # the same process
+        request.get_alias_from_config.cache_clear()
 
         # How many of which service we've started. {$service-name: $count}
         self._service_fixture_count = collections.defaultdict(int)
@@ -426,6 +431,10 @@ class TestCase(base.BaseTestCase):
         group = kw.pop('group', None)
         for k, v in kw.items():
             CONF.set_override(k, v, group)
+            # loading and validating alias is cached so if it is reconfigured
+            # we need to reset the cache
+            if k == 'alias' and group == 'pci':
+                request.get_alias_from_config.cache_clear()
 
     def reset_flags(self, *k, **kw):
         """Reset flag variables for a test."""
