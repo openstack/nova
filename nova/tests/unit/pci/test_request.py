@@ -342,6 +342,23 @@ class PciRequestTestCase(test.NoDBTestCase):
             "product_id fields set or resource_class field set.",
             str(ex))
 
+    def test_get_alias_from_config_cached(self):
+        alias = jsonutils.dumps({
+            "name": "a5",
+            "vendor_id": "4444",
+            "product_id": "4444",
+        })
+        self.flags(alias=[alias], group='pci')
+
+        origi_loads = jsonutils.loads
+
+        with mock.patch('oslo_serialization.jsonutils.loads') as mock_loads:
+            mock_loads.side_effect = origi_loads
+            request.get_alias_from_config()
+            request.get_alias_from_config()
+
+        mock_loads.assert_called_once()
+
     def _verify_result(self, expected, real):
         exp_real = zip(expected, real)
         for exp, real in exp_real:
