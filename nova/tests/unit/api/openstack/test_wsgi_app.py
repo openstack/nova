@@ -15,6 +15,7 @@ from unittest import mock
 
 import fixtures
 from oslo_config import fixture as config_fixture
+from oslo_serialization import jsonutils
 from oslotest import base
 
 from nova.api.openstack import wsgi_app
@@ -126,6 +127,14 @@ document_root = /tmp
             'disable_compute_service_check_for_ffu', True,
             group='workarounds')
         wsgi_app._setup_service('myhost', 'api')
+
+    def test_setup_service_pci_alias_validation(self):
+        wsgi_app.CONF.set_override(
+            'alias', jsonutils.dumps({'name': 'foo'}),
+            group='pci')
+        self.assertRaises(
+            exception.PciInvalidAlias,
+            wsgi_app._setup_service, 'myhost', 'api')
 
     def test__get_config_files_empty_env(self):
         env = {}

@@ -81,7 +81,7 @@ class PciRequestTestCase(test.NoDBTestCase):
 
     def test_get_alias_from_config_valid(self):
         self.flags(alias=[_fake_alias1], group='pci')
-        result = request._get_alias_from_config()
+        result = request.get_alias_from_config()
         expected_result = (
             'legacy',
             [{
@@ -103,7 +103,7 @@ class PciRequestTestCase(test.NoDBTestCase):
         })
 
         self.flags(alias=[_fake_alias1, _fake_alias], group='pci')
-        result = request._get_alias_from_config()
+        result = request.get_alias_from_config()
         expected_result = (
             'legacy',
             [{
@@ -133,7 +133,7 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.flags(alias=[_fake_alias1, _fake_alias], group='pci')
 
         ex = self.assertRaises(
-            exception.PciInvalidAlias, request._get_alias_from_config)
+            exception.PciInvalidAlias, request.get_alias_from_config)
         self.assertEqual(
             "The PCI alias(es) QuickAssist have multiple specs but "
             "[filter_scheduler]pci_in_placement is True. The PCI in Placement "
@@ -146,7 +146,7 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.flags(alias=[alias], group='pci')
         self.assertRaises(
             exception.PciInvalidAlias,
-            request._get_alias_from_config)
+            request.get_alias_from_config)
 
     def test_get_alias_from_config_invalid_device_type(self):
         fake_alias = jsonutils.dumps({
@@ -215,7 +215,7 @@ class PciRequestTestCase(test.NoDBTestCase):
                 "numa_policy": policy,
             })
             self.flags(alias=[fake_alias], group='pci')
-            aliases = request._get_alias_from_config()
+            aliases = request.get_alias_from_config()
             self.assertIsNotNone(aliases)
             self.assertIn("xxx", aliases)
             self.assertEqual(policy, aliases["xxx"][0])
@@ -228,7 +228,7 @@ class PciRequestTestCase(test.NoDBTestCase):
         })
         self.flags(pci_in_placement=True, group='filter_scheduler')
         self.flags(alias=[fake_alias], group='pci')
-        aliases = request._get_alias_from_config()
+        aliases = request.get_alias_from_config()
         self.assertIsNotNone(aliases)
         self.assertIn("xxx", aliases)
         self.assertEqual(
@@ -256,7 +256,7 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.flags(alias=[fake_alias_a, fake_alias_b], group='pci')
         self.assertRaises(
             exception.PciInvalidAlias,
-            request._get_alias_from_config)
+            request.get_alias_from_config)
 
     def test_get_alias_from_config_conflicting_numa_policy(self):
         """Check behavior when numa_policy conflicts occur."""
@@ -277,7 +277,7 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.flags(alias=[fake_alias_a, fake_alias_b], group='pci')
         self.assertRaises(
             exception.PciInvalidAlias,
-            request._get_alias_from_config)
+            request.get_alias_from_config)
 
     def test_get_alias_from_config_missing_ids(self):
         a1 = jsonutils.dumps({
@@ -304,7 +304,7 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.flags(alias=[a1, a2, a3, a4, a5], group='pci')
 
         ex = self.assertRaises(
-            exception.PciInvalidAlias, request._get_alias_from_config)
+            exception.PciInvalidAlias, request.get_alias_from_config)
         self.assertEqual(
             "The PCI alias(es) a1,a2,a3,a4 does not have vendor_id and "
             "product_id fields set.",
@@ -336,7 +336,7 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.flags(alias=[a1, a2, a3, a4, a5], group='pci')
 
         ex = self.assertRaises(
-            exception.PciInvalidAlias, request._get_alias_from_config)
+            exception.PciInvalidAlias, request.get_alias_from_config)
         self.assertEqual(
             "The PCI alias(es) a1,a2,a3 does not have vendor_id and "
             "product_id fields set or resource_class field set.",
