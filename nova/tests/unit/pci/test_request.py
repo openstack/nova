@@ -226,6 +226,7 @@ class PciRequestTestCase(test.NoDBTestCase):
             "resource_class": "foo",
             "traits": "bar,baz",
         })
+        self.flags(pci_in_placement=True, group='filter_scheduler')
         self.flags(alias=[fake_alias], group='pci')
         aliases = request._get_alias_from_config()
         self.assertIsNotNone(aliases)
@@ -277,6 +278,69 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.assertRaises(
             exception.PciInvalidAlias,
             request._get_alias_from_config)
+
+    def test_get_alias_from_config_missing_ids(self):
+        a1 = jsonutils.dumps({
+            "name": "a1",
+            "product_id": "4444",
+        })
+        a2 = jsonutils.dumps({
+            "name": "a2",
+            "vendor_id": "4444",
+        })
+        a3 = jsonutils.dumps({
+            "name": "a3",
+        })
+        a4 = jsonutils.dumps({
+            "name": "a4",
+            # ignored as PCI in Placement is not enabled
+            "resource_class": "foo",
+        })
+        a5 = jsonutils.dumps({
+            "name": "a5",
+            "vendor_id": "4444",
+            "product_id": "4444",
+        })
+        self.flags(alias=[a1, a2, a3, a4, a5], group='pci')
+
+        ex = self.assertRaises(
+            exception.PciInvalidAlias, request._get_alias_from_config)
+        self.assertEqual(
+            "The PCI alias(es) a1,a2,a3,a4 does not have vendor_id and "
+            "product_id fields set.",
+            str(ex))
+
+    def test_get_alias_from_config_missing_ids_or_rc_pci_in_placement(self):
+        a1 = jsonutils.dumps({
+            "name": "a1",
+            "product_id": "4444",
+        })
+        a2 = jsonutils.dumps({
+            "name": "a2",
+            "vendor_id": "4444",
+        })
+        a3 = jsonutils.dumps({
+            "name": "a3",
+        })
+        a4 = jsonutils.dumps({
+            "name": "a4",
+            "resource_class": "foo",
+        })
+        a5 = jsonutils.dumps({
+            "name": "a5",
+            "vendor_id": "4444",
+            "product_id": "4444",
+        })
+
+        self.flags(pci_in_placement=True, group='filter_scheduler')
+        self.flags(alias=[a1, a2, a3, a4, a5], group='pci')
+
+        ex = self.assertRaises(
+            exception.PciInvalidAlias, request._get_alias_from_config)
+        self.assertEqual(
+            "The PCI alias(es) a1,a2,a3 does not have vendor_id and "
+            "product_id fields set or resource_class field set.",
+            str(ex))
 
     def _verify_result(self, expected, real):
         exp_real = zip(expected, real)
