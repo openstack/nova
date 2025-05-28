@@ -6954,6 +6954,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertRaises(exception.PciDeviceInvalidDeviceName,
                           self.compute.init_host, None)
 
+    def test_init_host_pci_alias_validation_failure(self):
+        # Tests that we fail init_host if the pci.alias is
+        # configured incorrectly.
+        self.flags(
+            alias=[
+                jsonutils.dumps({'name': 'foo'})
+            ],
+            group='pci'
+        )
+        self.assertRaises(
+            exception.PciInvalidAlias, self.compute.init_host, None)
+
     @mock.patch('nova.compute.manager.ComputeManager._instance_update')
     def test_error_out_instance_on_exception_not_implemented_err(self,
                                                         inst_update_mock):
