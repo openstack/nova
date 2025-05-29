@@ -5152,6 +5152,13 @@ class LibvirtDriver(driver.ComputeDriver):
                               {'img_id': img_id, 'e': e},
                               instance=instance)
 
+    @staticmethod
+    def _get_fs_label_ephemeral(index: int) -> str:
+        # Use a consistent naming convention for FS labels. We need to be
+        # mindful of various filesystems label name length limitations.
+        # See for example: https://bugs.launchpad.net/nova/+bug/2061701
+        return f'ephemeral{index}'
+
     # NOTE(sileht): many callers of this method assume that this
     # method doesn't fail if an image already exists but instead
     # think that it will be reused (ie: (live)-migration/resize)
@@ -5267,7 +5274,7 @@ class LibvirtDriver(driver.ComputeDriver):
             created_disks = created_disks or not disk_image.exists()
 
             fn = functools.partial(self._create_ephemeral,
-                                   fs_label='ephemeral0',
+                                   fs_label=self._get_fs_label_ephemeral(0),
                                    os_type=instance.os_type,
                                    is_block_dev=disk_image.is_block_dev,
                                    vm_mode=vm_mode)
@@ -5291,7 +5298,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidBDMFormat(details=msg)
 
             fn = functools.partial(self._create_ephemeral,
-                                   fs_label='ephemeral%d' % idx,
+                                   fs_label=self._get_fs_label_ephemeral(idx),
                                    os_type=instance.os_type,
                                    is_block_dev=disk_image.is_block_dev,
                                    vm_mode=vm_mode)
@@ -11747,7 +11754,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # cached.
                     disk.cache(
                         fetch_func=self._create_ephemeral,
-                        fs_label=cache_name,
+                        fs_label=self._get_fs_label_ephemeral(0),
                         os_type=instance.os_type,
                         filename=cache_name,
                         size=info['virt_disk_size'],

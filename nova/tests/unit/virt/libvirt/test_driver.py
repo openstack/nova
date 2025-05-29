@@ -15202,8 +15202,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                              'ephemeral_foo')
             ]
 
+            # This also asserts that the filesystem label name is generated
+            # correctly as 'ephemeral0' to help prevent regression of the
+            # related bug fix from https://launchpad.net/bugs/2061701
             create_ephemeral_mock.assert_called_once_with(
-                ephemeral_size=1, fs_label='ephemeral_foo',
+                ephemeral_size=1, fs_label='ephemeral0',
                 os_type='linux', target=ephemeral_backing)
 
             fetch_image_mock.assert_called_once_with(
