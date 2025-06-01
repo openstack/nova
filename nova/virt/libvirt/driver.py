@@ -134,12 +134,16 @@ from nova.virt.libvirt.volume import volume
 from nova.virt import netutils
 from nova.volume import cinder
 
-libvirt: ty.Any = None
+try:
+    # This is optional for unit testing but required at runtime. We check for
+    # it during driver init.
+    import libvirt
+except ImportError:
+    libvirt = None
 
 uefi_logged = False
 
 LOG = logging.getLogger(__name__)
-
 CONF = nova.conf.CONF
 
 MAX_CONSOLE_BYTES = 100 * units.Ki
@@ -396,6 +400,12 @@ class AsyncDeviceEventsHandler:
 
 class LibvirtDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
+        if libvirt is None:
+            # the libvirt driver is "customer 0" of the libvirt API: if we
+            # haven't been able to import it, fail early by attempting to
+            # import again
+            __import__('libvirt')
+
         # NOTE(aspiers) Some of these are dynamic, so putting
         # capabilities on the instance rather than on the class.
         # This prevents the risk of one test setting a capability
@@ -443,16 +453,11 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_ephemeral_encryption_luks":
                 self.image_backend.backend().SUPPORTS_LUKS,
         }
-        super(LibvirtDriver, self).__init__(virtapi)
+        super().__init__(virtapi)
 
         if not sys.platform.startswith('linux'):
             raise exception.InternalError(
                 _('The libvirt driver only works on Linux'))
-
-        global libvirt
-        if libvirt is None:
-            libvirt = importutils.import_module('libvirt')
-            libvirt_migrate.libvirt = libvirt
 
         self._host = host.Host(self._uri(), read_only,
                                lifecycle_event_handler=self.emit_event,

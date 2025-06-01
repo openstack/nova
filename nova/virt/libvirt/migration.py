@@ -12,10 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""Utility methods to manage guests migration."""
 
-"""Utility methods to manage guests migration
-
-"""
 from collections import deque
 
 from lxml import etree
@@ -28,14 +26,15 @@ from nova import objects
 from nova.virt import hardware
 from nova.virt.libvirt import config as vconfig
 
+try:
+    # This is optional for unit testing but required at runtime. We check for
+    # it during driver init.
+    import libvirt
+except ImportError:
+    libvirt = None
+
 LOG = logging.getLogger(__name__)
-
 CONF = nova.conf.CONF
-
-# TODO(berrange): hack to avoid a "import libvirt" in this file.
-# Remove this and similar hacks in guest.py, driver.py, host.py
-# etc in Ocata.
-libvirt = None
 
 
 def graphics_listen_addrs(migrate_data):
