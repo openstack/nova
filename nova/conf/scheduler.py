@@ -814,7 +814,9 @@ compute hosts.
 When enabled the scheduler queries Placement about the PCI device
 availability to select destination for a server with PCI request. The scheduler
 also allocates the selected PCI devices in Placement. Note that this logic
-does not replace the PCIPassthroughFilter but extends it.
+does not replace the PCIPassthroughFilter but extends it. Note that this
+config option needs to be set in the configuration of nova-api, nova-scheduler,
+and all nova-conductor services.
 
 * ``[pci] report_in_placement``
 * ``[pci] alias``
