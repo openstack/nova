@@ -206,32 +206,6 @@ class MoveClaim(Claim):
             flavor=self.flavor)
         self.instance.drop_migration_context()
 
-    def _test_pci(self):
-        """Test whether this host can accept this claim's PCI requests. For
-        live migration, only Neutron SRIOV PCI requests are supported. Any
-        other type of PCI device would need to be removed and re-added for live
-        migration to work, and there is currently no support for that. For cold
-        migration, all types of PCI requests are supported, so we just call up
-        to normal Claim's _test_pci().
-        """
-        if not self.migration.is_live_migration:
-            return super(MoveClaim, self)._test_pci()
-
-        if self._pci_requests.requests:
-            for pci_request in self._pci_requests.requests:
-                if (pci_request.source !=
-                        objects.InstancePCIRequest.NEUTRON_PORT):
-                    return (_('Non-VIF related PCI requests are not '
-                              'supported for live migration.'))
-            # TODO(artom) At this point, once we've made sure we only have
-            # NEUTRON_PORT (aka SRIOV) PCI requests, we should check whether
-            # the host can support them, like Claim._test_pci() does. However,
-            # SRIOV live migration is currently being handled separately - see
-            # for example _claim_pci_for_instance_vifs() in the compute
-            # manager. So we do nothing here to avoid stepping on that code's
-            # toes, but ideally MoveClaim would be used for all live migration
-            # resource claims.
-
     def _test_live_migration_page_size(self):
         """Tests that the current page size and the requested page size are the
         same.
