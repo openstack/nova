@@ -32,8 +32,8 @@ from nova.pci import whitelist
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
-MappingType = ty.Dict[str, ty.List['objects.PciDevice']]
-PCIInvType = ty.DefaultDict[str, ty.List['objects.PciDevice']]
+MappingType = dict[str, list['objects.PciDevice']]
+PCIInvType = collections.defaultdict[str, list['objects.PciDevice']]
 
 
 class PciDevTracker(object):
@@ -68,8 +68,8 @@ class PciDevTracker(object):
         :param compute_node: The object.ComputeNode whose PCI devices we're
                              tracking.
         """
-        self.stale: ty.Dict[str, objects.PciDevice] = {}
-        self.to_be_removed_when_freed: ty.Dict[str, objects.PciDevice] = {}
+        self.stale: dict[str, objects.PciDevice] = {}
+        self.to_be_removed_when_freed: dict[str, objects.PciDevice] = {}
         self.node_id: str = compute_node.id
         self.dev_filter = whitelist.Whitelist(CONF.pci.device_spec)
         numa_topology = compute_node.numa_topology
@@ -177,7 +177,7 @@ class PciDevTracker(object):
         self._set_hvdevs(devices)
 
     @staticmethod
-    def _build_device_tree(all_devs: ty.List['objects.PciDevice']) -> None:
+    def _build_device_tree(all_devs: list['objects.PciDevice']) -> None:
         """Build a tree of devices that represents parent-child relationships.
 
         We need to have the relationships set up so that we can easily make
@@ -214,7 +214,7 @@ class PciDevTracker(object):
                 if dev.parent_device:
                     parents[dev.parent_addr].child_devices.append(dev)
 
-    def _set_hvdevs(self, devices: ty.List[ty.Dict[str, ty.Any]]) -> None:
+    def _set_hvdevs(self, devices: list[dict[str, ty.Any]]) -> None:
         exist_addrs = set([dev.address for dev in self.pci_devs])
         new_addrs = set([dev['address'] for dev in devices])
 
@@ -273,7 +273,7 @@ class PciDevTracker(object):
                         self.stats.remove_device(existed)
             else:
                 # Update tracked devices.
-                new_value: ty.Dict[str, ty.Any]
+                new_value: dict[str, ty.Any]
                 new_value = next((dev for dev in devices if
                     dev['address'] == existed.address))
                 new_value['compute_node_id'] = self.node_id
@@ -312,7 +312,7 @@ class PciDevTracker(object):
         context: ctx.RequestContext,
         pci_requests: 'objects.InstancePCIRequests',
         instance_numa_topology: 'objects.InstanceNUMATopology',
-    ) -> ty.List['objects.PciDevice']:
+    ) -> list['objects.PciDevice']:
         instance_cells = None
         if instance_numa_topology:
             instance_cells = instance_numa_topology.cells
@@ -337,7 +337,7 @@ class PciDevTracker(object):
         context: ctx.RequestContext,
         pci_requests: 'objects.InstancePCIRequests',
         instance_numa_topology: 'objects.InstanceNUMATopology',
-    ) -> ty.List['objects.PciDevice']:
+    ) -> list['objects.PciDevice']:
 
         devs = []
 
@@ -350,7 +350,7 @@ class PciDevTracker(object):
         return devs
 
     def _allocate_instance(
-        self, instance: 'objects.Instance', devs: ty.List['objects.PciDevice'],
+        self, instance: 'objects.Instance', devs: list['objects.PciDevice'],
     ) -> None:
         for dev in devs:
             dev.allocate(instance)
@@ -398,7 +398,9 @@ class PciDevTracker(object):
                 pci_mapping.pop(instance_uuid, None)
 
     def _free_device(
-        self, dev: 'objects.PciDevice', instance: 'objects.Instance' = None,
+        self,
+        dev: 'objects.PciDevice',
+        instance: 'objects.Instance | None' = None,
     ) -> None:
         freed_devs = dev.free(instance)
         stale = self.stale.pop(dev.address, None)

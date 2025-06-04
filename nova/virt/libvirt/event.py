@@ -9,7 +9,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import typing as ty
 
 from nova.virt import event
 
@@ -27,7 +26,7 @@ class DeviceEvent(LibvirtEvent):
     def __init__(self,
                  uuid: str,
                  dev: str,
-                 timestamp: ty.Optional[float] = None):
+                 timestamp: float | None = None):
         super().__init__(uuid, timestamp)
         self.dev = dev
 

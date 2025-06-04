@@ -21,7 +21,6 @@ import copy
 import functools
 import sys
 import threading
-import typing as ty
 
 from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
@@ -979,8 +978,8 @@ class ComputeTaskManager:
         flavor: 'objects.Flavor',
         request_spec: 'objects.RequestSpec',
         orig_num_req: int,
-        project_id: ty.Optional[str] = None,
-        user_id: ty.Optional[str] = None
+        project_id: str | None = None,
+        user_id: str | None = None
     ) -> None:
         # A quota "recheck" is a quota check that is performed *after* quota
         # limited resources are consumed. It is meant to address race

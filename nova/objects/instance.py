@@ -13,7 +13,6 @@
 #    under the License.
 
 import contextlib
-import typing as ty
 
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -1282,9 +1281,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
     def get_pci_devices(
         self,
-        source: ty.Optional[int] = None,
-        request_id: ty.Optional[str] = None,
-    ) -> ty.List["objects.PciDevice"]:
+        source: int | None = None,
+        request_id: str | None = None,
+    ) -> list["objects.PciDevice"]:
         """Return the PCI devices allocated to the instance
 
         :param source: Filter by source. It can be

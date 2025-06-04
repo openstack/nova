@@ -17,7 +17,6 @@
 import collections
 import re
 import sys
-import typing as ty
 from urllib import parse
 
 import os_resource_classes as orc
@@ -63,14 +62,14 @@ class ResourceRequest(object):
         Do not call this directly, use the existing static factory methods
         from_*()
         """
-        self._rg_by_id: ty.Dict[str, objects.RequestGroup] = {}
-        self._group_policy: ty.Optional[str] = None
+        self._rg_by_id: dict[str, objects.RequestGroup] = {}
+        self._group_policy: str | None = None
         # Default to the configured limit but _limit can be
         # set to None to indicate "no limit".
         self._limit = CONF.scheduler.max_placement_results
-        self._root_required: ty.Set[str] = set()
-        self._root_forbidden: ty.Set[str] = set()
-        self._same_subtree: ty.List[ty.List[str]] = []
+        self._root_required: set[str] = set()
+        self._root_forbidden: set[str] = set()
+        self._same_subtree: list[list[str]] = []
         self.suffixed_groups_from_flavor = 0
         # TODO(stephenfin): Remove this parameter once we drop support for
         # 'vcpu_pin_set'
@@ -205,7 +204,7 @@ class ResourceRequest(object):
     @classmethod
     def from_request_groups(
         cls,
-        request_groups: ty.List['objects.RequestGroup'],
+        request_groups: list['objects.RequestGroup'],
         request_level_params: 'objects.RequestLevelParams',
         group_policy: str,
     ) -> 'ResourceRequest':
@@ -351,7 +350,8 @@ class ResourceRequest(object):
         if not vpmem_labels:
             # No vpmems required
             return
-        amount_by_rc: ty.DefaultDict[str, int] = collections.defaultdict(int)
+        amount_by_rc: collections.defaultdict[
+            str, int] = collections.defaultdict(int)
         for vpmem_label in vpmem_labels:
             resource_class = orc.normalize_name(
                 "PMEM_NAMESPACE_" + vpmem_label)
@@ -535,7 +535,8 @@ class ResourceRequest(object):
 
         :return: A dict of the form {resource_class: amount}
         """
-        ret: ty.DefaultDict[str, int] = collections.defaultdict(lambda: 0)
+        ret: collections.defaultdict[
+            str, int] = collections.defaultdict(lambda: 0)
         for rg in self._rg_by_id.values():
             for resource_class, amount in rg.resources.items():
                 ret[resource_class] += amount
@@ -579,7 +580,7 @@ class ResourceRequest(object):
 
     @property
     def all_required_traits(self):
-        traits: ty.Set[str] = set()
+        traits: set[str] = set()
         for rr in self._rg_by_id.values():
             traits = traits.union(rr.required_traits)
         return traits

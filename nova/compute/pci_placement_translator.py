@@ -11,9 +11,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import collections
 import copy
-import typing as ty
 
 import os_resource_classes
 import os_traits
@@ -48,7 +48,7 @@ def _is_placement_tracking_enabled() -> bool:
     return CONF.pci.report_in_placement
 
 
-def _normalize_traits(traits: ty.List[str]) -> ty.List[str]:
+def _normalize_traits(traits: list[str]) -> list[str]:
     """Make the trait names acceptable for placement.
 
     It keeps the already valid standard or custom traits but normalizes trait
@@ -66,7 +66,7 @@ def _normalize_traits(traits: ty.List[str]) -> ty.List[str]:
     return list(standard_traits) + custom_traits
 
 
-def get_traits(traits_str: str) -> ty.Set[str]:
+def get_traits(traits_str: str) -> set[str]:
     """Return a normalized set of placement standard and custom traits from
     a string of comma separated trait names.
     """
@@ -77,8 +77,8 @@ def get_traits(traits_str: str) -> ty.Set[str]:
 
 
 def _get_traits_for_dev(
-    dev_spec_tags: ty.Dict[str, str],
-) -> ty.Set[str]:
+    dev_spec_tags: dict[str, str],
+) -> set[str]:
     return get_traits(dev_spec_tags.get("traits", "")) | {
         os_traits.COMPUTE_MANAGED_PCI_DEVICE
     }
@@ -98,7 +98,7 @@ def _normalize_resource_class(rc: str) -> str:
 
 
 def get_resource_class(
-    requested_name: ty.Optional[str], vendor_id: str, product_id: str
+    requested_name: str | None, vendor_id: str, product_id: str
 ) -> str:
     """Return the normalized resource class name based on what is requested
     or if nothing is requested then generated from the vendor_id and product_id
@@ -112,7 +112,7 @@ def get_resource_class(
 
 def _get_rc_for_dev(
     dev: pci_device.PciDevice,
-    dev_spec_tags: ty.Dict[str, str],
+    dev_spec_tags: dict[str, str],
 ) -> str:
     """Return the resource class to represent the device.
 
@@ -132,9 +132,9 @@ class PciResourceProvider:
     def __init__(self, name: str) -> None:
         self.name = name
         self.parent_dev = None
-        self.children_devs: ty.List[pci_device.PciDevice] = []
-        self.resource_class: ty.Optional[str] = None
-        self.traits: ty.Optional[ty.Set[str]] = None
+        self.children_devs: list[pci_device.PciDevice] = []
+        self.resource_class: str | None = None
+        self.traits: set[str] | None = None
         self.is_otu = False
         # This is an adjustment for the total inventory based on normal device
         # due to possibility of devices held in the tracker even though they
@@ -144,7 +144,7 @@ class PciResourceProvider:
         self.adjustment = 0
 
     @property
-    def devs(self) -> ty.List[pci_device.PciDevice]:
+    def devs(self) -> list[pci_device.PciDevice]:
         return [self.parent_dev] if self.parent_dev else self.children_devs
 
     @property
@@ -155,7 +155,7 @@ class PciResourceProvider:
     def to_be_deleted(self):
         return self.total == 0
 
-    def add_child(self, dev, dev_spec_tags: ty.Dict[str, str]) -> None:
+    def add_child(self, dev, dev_spec_tags: dict[str, str]) -> None:
         if self.parent_dev:
             raise exception.PlacementPciDependentDeviceException(
                 parent_dev=dev.address,
@@ -192,7 +192,7 @@ class PciResourceProvider:
         self.resource_class = rc
         self.traits = traits
 
-    def add_parent(self, dev, dev_spec_tags: ty.Dict[str, str]) -> None:
+    def add_parent(self, dev, dev_spec_tags: dict[str, str]) -> None:
         if self.parent_dev or self.children_devs:
             raise exception.PlacementPciDependentDeviceException(
                 parent_dev=dev.address,
@@ -222,7 +222,7 @@ class PciResourceProvider:
         # Nothing to do here. The update_provider_tree we handle full RP
         pass
 
-    def _get_allocations(self) -> ty.Mapping[str, int]:
+    def _get_allocations(self) -> collections.Counter[str]:
         """Return a dict of used resources keyed by consumer UUID.
 
         Note that:
@@ -279,7 +279,7 @@ class PciResourceProvider:
     def _adjust_for_removals_and_held_devices(
         self,
         provider_tree: provider_tree.ProviderTree,
-        rp_rc_usage: ty.Dict[str, ty.Dict[str, int]],
+        rp_rc_usage: dict[str, dict[str, int]],
     ) -> None:
 
         rp_uuid = provider_tree.data(self.name).uuid
@@ -323,7 +323,7 @@ class PciResourceProvider:
         self,
         provider_tree: provider_tree.ProviderTree,
         parent_rp_name: str,
-        rp_rc_usage: ty.Dict[str, ty.Dict[str, int]],
+        rp_rc_usage: dict[str, dict[str, int]],
     ) -> None:
 
         if not provider_tree.exists(self.name):
@@ -362,7 +362,7 @@ class PciResourceProvider:
         self,
         allocations: dict,
         provider_tree: provider_tree.ProviderTree,
-        same_host_instances: ty.List[str],
+        same_host_instances: list[str],
     ) -> bool:
         updated = False
 
@@ -452,9 +452,9 @@ class PlacementView:
     def __init__(
         self,
         hypervisor_hostname: str,
-        instances_under_same_host_resize: ty.List[str],
+        instances_under_same_host_resize: list[str],
     ) -> None:
-        self.rps: ty.Dict[str, PciResourceProvider] = {}
+        self.rps: dict[str, PciResourceProvider] = {}
         self.root_rp_name = hypervisor_hostname
         self.same_host_instances = instances_under_same_host_resize
 
@@ -478,7 +478,7 @@ class PlacementView:
         return self._get_rp_name_for_address(dev.parent_addr)
 
     def _add_dev(
-        self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
+        self, dev: pci_device.PciDevice, dev_spec_tags: dict[str, str]
     ) -> None:
         if dev_spec_tags.get("physical_network"):
             # NOTE(gibi): We ignore devices that has physnet configured as
@@ -533,7 +533,7 @@ class PlacementView:
     def process_dev(
         self,
         dev: pci_device.PciDevice,
-        dev_spec: ty.Optional[devspec.PciDeviceSpec],
+        dev_spec: devspec.PciDeviceSpec | None,
     ) -> None:
         # NOTE(gibi): We never observer dev.status DELETED as when that is set
         # the device is also removed from the PCI tracker. So we can ignore
@@ -610,12 +610,12 @@ class PlacementView:
     @staticmethod
     def get_usage_per_rc_and_rp(
         allocations
-    ) -> ty.Dict[str, ty.Dict[str, int]]:
+    ) -> dict[str, dict[str, int]]:
         """Returns a dict keyed by RP uuid and the value is a dict of
         resource class: usage pairs telling how much total usage the given RP
         has from the given resource class across all the allocations.
         """
-        rp_rc_usage: ty.Dict[str, ty.Dict[str, int]] = (
+        rp_rc_usage: dict[str, dict[str, int]] = (
             collections.defaultdict(lambda: collections.defaultdict(int)))
         for consumer in allocations.values():
             for rp_uuid, alloc in consumer["allocations"].items():
@@ -672,7 +672,7 @@ class PlacementView:
         return updated
 
 
-def ensure_no_dev_spec_with_devname(dev_specs: ty.List[devspec.PciDeviceSpec]):
+def ensure_no_dev_spec_with_devname(dev_specs: list[devspec.PciDeviceSpec]):
     for dev_spec in dev_specs:
         if dev_spec.dev_spec_conf.get("devname"):
             msg = _(
@@ -709,7 +709,7 @@ def update_provider_tree_for_pci(
     nodename: str,
     pci_tracker: pci_manager.PciDevTracker,
     allocations: dict,
-    instances_under_same_host_resize: ty.List[str],
+    instances_under_same_host_resize: list[str],
 ) -> bool:
     """Based on the PciDevice objects in the pci_tracker it calculates what
     inventories and allocations needs to exist in placement and create the

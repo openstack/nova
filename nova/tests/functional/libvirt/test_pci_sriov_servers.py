@@ -15,7 +15,6 @@
 
 import copy
 import pprint
-import typing as ty
 from unittest import mock
 from urllib import parse as urlparse
 
@@ -87,7 +86,7 @@ class PciPlacementHealingFixture(fixtures.Fixture):
             )
         )
 
-    def last_healing(self, hostname: str) -> ty.Optional[ty.Tuple[dict, dict]]:
+    def last_healing(self, hostname: str) -> tuple[dict, dict] | None:
         for h, updated, before, after in self.calls:
             if h == hostname and updated:
                 return before, after

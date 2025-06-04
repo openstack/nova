@@ -38,7 +38,7 @@ _SRIOV_TOTALVFS = "sriov_totalvfs"
 
 
 def pci_device_prop_match(
-    pci_dev: 'stats.Pool', specs: ty.List[ty.Dict[str, str]],
+    pci_dev: 'stats.Pool', specs: list[dict[str, str]],
 ) -> bool:
     """Check if the pci_dev meet spec requirement
 
@@ -53,7 +53,7 @@ def pci_device_prop_match(
 
     """
 
-    def _matching_devices(spec: ty.Dict[str, str]) -> bool:
+    def _matching_devices(spec: dict[str, str]) -> bool:
         for k, v in spec.items():
             pci_dev_v = pci_dev.get(k)
             if isinstance(v, list) and isinstance(pci_dev_v, list):
@@ -87,7 +87,7 @@ def parse_address(address: str) -> ty.Sequence[str]:
     return m.groups()
 
 
-def get_pci_address_fields(pci_addr: str) -> ty.Tuple[str, str, str, str]:
+def get_pci_address_fields(pci_addr: str) -> tuple[str, str, str, str]:
     """Parse a fully-specified PCI device address.
 
     Does not validate that the components are valid hex or wildcard values.
@@ -111,7 +111,7 @@ def get_pci_address(domain: str, bus: str, slot: str, func: str) -> str:
     return '%s:%s:%s.%s' % (domain, bus, slot, func)
 
 
-def get_function_by_ifname(ifname: str) -> ty.Tuple[ty.Optional[str], bool]:
+def get_function_by_ifname(ifname: str) -> tuple[str | None, bool]:
     """Given the device name, returns the PCI address of a device
     and returns True if the address is in a physical function.
     """
@@ -246,14 +246,14 @@ def get_vf_product_id_by_pf_addr(pci_addr: str) -> str:
     return vf_product_id
 
 
-def get_pci_ids_by_pci_addr(pci_addr: str) -> ty.Tuple[str, ...]:
+def get_pci_ids_by_pci_addr(pci_addr: str) -> tuple[str, ...]:
     """Get the product ID and vendor ID for a given PCI device.
 
     :param pci_addr: A string of the form "<domain>:<bus>:<slot>.<function>".
     :return: A list containing a vendor and product ids.
     """
     id_prefix = f"/sys/bus/pci/devices/{pci_addr}"
-    ids: ty.List[str] = []
+    ids: list[str] = []
     for id_name in ("vendor", "product"):
         try:
             with open(os.path.join(id_prefix, id_name)) as f:

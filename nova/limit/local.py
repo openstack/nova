@@ -81,7 +81,7 @@ LEGACY_LIMITS = {
 
 def get_in_use(
     context: 'nova.context.RequestContext', project_id: str
-) -> ty.Dict[str, int]:
+) -> dict[str, int]:
     """Returns in use counts for each resource, for given project.
 
     This sounds simple but many resources can't be counted per project,
@@ -107,8 +107,8 @@ def get_in_use(
 
 
 def always_zero_usage(
-    project_id: str, resource_names: ty.List[str]
-) -> ty.Dict[str, int]:
+    project_id: str, resource_names: list[str]
+) -> dict[str, int]:
     """Called by oslo_limit's enforcer"""
     # Return usage of 0 for API limits. Values in API requests will be used as
     # the deltas.
@@ -196,8 +196,8 @@ def enforce_db_limit(
 
 
 def _convert_keys_to_legacy_name(
-    new_dict: ty.Dict[str, int]
-) -> ty.Dict[str, int]:
+    new_dict: dict[str, int]
+) -> dict[str, int]:
     legacy = {}
     for new_name, old_name in LEGACY_LIMITS.items():
         # defensive in case oslo or keystone doesn't give us an answer
@@ -205,7 +205,7 @@ def _convert_keys_to_legacy_name(
     return legacy
 
 
-def get_legacy_default_limits() -> ty.Dict[str, int]:
+def get_legacy_default_limits() -> dict[str, int]:
     # TODO(johngarbutt): need oslo.limit API for this, it should do caching
     enforcer = limit.Enforcer(lambda: None)
     new_limits = enforcer.get_registered_limits(LEGACY_LIMITS.keys())

@@ -38,7 +38,7 @@ REGEX_ANY = '.*'
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
-PCISpecAddressType = ty.Union[ty.Dict[str, str], str]
+PCISpecAddressType = dict[str, str] | str
 
 
 class PciAddressSpec(metaclass=abc.ABCMeta):
@@ -242,7 +242,7 @@ class WhitelistPciAddress(object):
         else:
             self.pci_address_spec = PhysicalPciAddress(pci_addr)
 
-    def match(self, pci_addr: str, pci_phys_addr: ty.Optional[str]) -> bool:
+    def match(self, pci_addr: str, pci_phys_addr: str | None) -> bool:
         """Match a device to this PciAddress.
 
         Assume this is called with a ``pci_addr`` and ``pci_phys_addr``
@@ -269,7 +269,7 @@ class WhitelistPciAddress(object):
 
 
 class PciDeviceSpec(PciAddressSpec):
-    def __init__(self, dev_spec: ty.Dict[str, str]) -> None:
+    def __init__(self, dev_spec: dict[str, str]) -> None:
         # stored for better error reporting
         self.dev_spec_conf = copy.deepcopy(dev_spec)
         # the non tag fields (i.e. address, devname) will be removed by
@@ -277,7 +277,7 @@ class PciDeviceSpec(PciAddressSpec):
         self.tags = dev_spec
         self._init_dev_details()
 
-    def _address_obj(self) -> ty.Optional[WhitelistPciAddress]:
+    def _address_obj(self) -> WhitelistPciAddress | None:
         address_obj = None
         if self.dev_name:
             address_str, pf = utils.get_function_by_ifname(self.dev_name)
@@ -295,7 +295,7 @@ class PciDeviceSpec(PciAddressSpec):
         self.vendor_id = self.tags.pop("vendor_id", ANY)
         self.product_id = self.tags.pop("product_id", ANY)
         self.dev_name = self.tags.pop("devname", None)
-        self.address: ty.Optional[WhitelistPciAddress] = None
+        self.address: WhitelistPciAddress | None = None
         # Note(moshele): The address attribute can be a string or a dict.
         # For glob syntax or specific pci it is a string and for regex syntax
         # it is a dict. The WhitelistPciAddress class handles both types.
@@ -371,7 +371,7 @@ class PciDeviceSpec(PciAddressSpec):
                          'pf_addr': pf_addr})
 
     def _ensure_remote_managed_dev_vpd_serial(
-        self, dev_dict: ty.Dict[str, ty.Any]) -> bool:
+        self, dev_dict: dict[str, ty.Any]) -> bool:
         """Ensure the presence of a serial number field in PCI VPD.
 
         A card serial number extracted from PCI VPD is required to allow a
@@ -388,8 +388,8 @@ class PciDeviceSpec(PciAddressSpec):
         # an empty string which is not useful for device identification.
         return bool(card_sn)
 
-    def match(self, dev_dict: ty.Dict[str, ty.Any]) -> bool:
-        address_obj: ty.Optional[WhitelistPciAddress] = self._address_obj()
+    def match(self, dev_dict: dict[str, ty.Any]) -> bool:
+        address_obj: WhitelistPciAddress | None = self._address_obj()
         if not address_obj:
             return False
 
@@ -412,7 +412,7 @@ class PciDeviceSpec(PciAddressSpec):
         }
         return self.match(dev_dict)
 
-    def get_tags(self) -> ty.Dict[str, str]:
+    def get_tags(self) -> dict[str, str]:
         return self.tags
 
     def _normalize_device_spec_tag(self, tag):
@@ -426,7 +426,7 @@ class PciDeviceSpec(PciAddressSpec):
                     reason=f"Cannot parse tag '{tag}': " + str(e)
                 )
 
-    def enhanced_pci_device_with_spec_tags(self, dev: ty.Dict[str, ty.Any]):
+    def enhanced_pci_device_with_spec_tags(self, dev: dict[str, ty.Any]):
         spec_tags = ["managed", "live_migratable"]
         for tag in spec_tags:
             tag_value = self.tags.get(tag)

@@ -24,7 +24,6 @@ import binascii
 import hashlib
 import io
 import os
-import typing as ty
 
 from castellan.common import exception as castellan_exception
 from castellan.common.objects import passphrase
@@ -82,7 +81,7 @@ def generate_fingerprint(public_key: str) -> str:
             reason=_('failed to generate fingerprint'))
 
 
-def generate_x509_fingerprint(pem_key: ty.Union[bytes, str]) -> str:
+def generate_x509_fingerprint(pem_key: bytes | str) -> str:
     try:
         if isinstance(pem_key, str):
             pem_key = pem_key.encode('utf-8')
@@ -98,7 +97,7 @@ def generate_x509_fingerprint(pem_key: ty.Union[bytes, str]) -> str:
                      'Error message: %s') % ex)
 
 
-def generate_key_pair(bits: int = 2048) -> ty.Tuple[str, str, str]:
+def generate_key_pair(bits: int = 2048) -> tuple[str, str, str]:
     key = paramiko.RSAKey.generate(bits)
     keyout = io.StringIO()
     key.write_private_key(keyout)
@@ -108,7 +107,7 @@ def generate_key_pair(bits: int = 2048) -> ty.Tuple[str, str, str]:
     return (private_key, public_key, fingerprint)
 
 
-def ssh_encrypt_text(ssh_public_key: str, text: ty.Union[str, bytes]) -> bytes:
+def ssh_encrypt_text(ssh_public_key: str, text: str | bytes) -> bytes:
     """Encrypt text with an ssh public key.
 
     If text is a Unicode string, encode it to UTF-8.
@@ -127,7 +126,7 @@ def ssh_encrypt_text(ssh_public_key: str, text: ty.Union[str, bytes]) -> bytes:
 def generate_winrm_x509_cert(
     user_id: str,
     bits: int = 2048
-) -> ty.Tuple[str, str, str]:
+) -> tuple[str, str, str]:
     """Generate a cert for passwordless auth for user in project."""
     subject = '/CN=%s' % user_id
     upn = '%s@localhost' % user_id
@@ -171,7 +170,7 @@ def _create_x509_openssl_config(conffile: str, upn: str):
 def ensure_vtpm_secret(
     context: nova_context.RequestContext,
     instance: 'objects.Instance',
-) -> ty.Tuple[str, bytes]:
+) -> tuple[str, bytes]:
     """Communicates with the key manager service to retrieve or create a secret
     for an instance's emulated TPM.
 
@@ -280,7 +279,7 @@ def create_encryption_secret(
     context: nova_context.RequestContext,
     instance: 'objects.Instance',
     driver_bdm: 'driver_block_device.DriverBlockDevice',
-    for_detail: ty.Optional[str] = None,
+    for_detail: str | None = None,
 ):
     # Use oslo.serialization to encode some random data as passphrase
     secret = oslo_base64.encode_as_text(
@@ -301,7 +300,7 @@ def create_encryption_secret(
 def get_encryption_secret(
     context: nova_context.RequestContext,
     secret_uuid: str,
-) -> ty.Optional[str]:
+) -> str | None:
     key_mgr = _get_key_manager()
     try:
         key = key_mgr.get(context, secret_uuid)

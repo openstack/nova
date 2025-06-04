@@ -28,7 +28,6 @@ then used by all the other libvirt related classes
 """
 
 import time
-import typing as ty
 
 from lxml import etree
 from oslo_log import log as logging
@@ -236,7 +235,7 @@ class Guest:
         self,
         cfg: vconfig.LibvirtConfigGuestDevice,
         from_persistent_config: bool = False
-    ) -> ty.Optional[vconfig.LibvirtConfigGuestDevice]:
+    ) -> vconfig.LibvirtConfigGuestDevice | None:
         """Lookup a full LibvirtConfigGuestDevice with
         LibvirtConfigGuesDevice generated
         by nova.virt.libvirt.vif.get_config.
@@ -366,7 +365,7 @@ class Guest:
         self,
         device: str,
         from_persistent_config: bool = False
-    ) -> ty.Optional[vconfig.LibvirtConfigGuestDisk]:
+    ) -> vconfig.LibvirtConfigGuestDisk | None:
         """Returns the disk mounted at device
 
         :param device: the name of either the source or the target device
@@ -416,7 +415,7 @@ class Guest:
         self,
         devtype: vconfig.LibvirtConfigGuestDevice = None,
         from_persistent_config: bool = False
-    ) -> ty.List[vconfig.LibvirtConfigGuestDevice]:
+    ) -> list[vconfig.LibvirtConfigGuestDevice]:
         """Returns all devices for a guest
 
         :param devtype: a LibvirtConfigGuestDevice subclass class

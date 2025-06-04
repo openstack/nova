@@ -20,6 +20,7 @@ Driver base-classes:
     types that support that contract
 """
 
+from collections.abc import Mapping
 import dataclasses
 import itertools
 import sys
@@ -190,8 +191,8 @@ def block_device_info_get_mapping(block_device_info):
 
 
 def block_device_info_get_encrypted_disks(
-    block_device_info: ty.Mapping[str, ty.Any],
-) -> ty.List['nova.virt.block_device.DriverBlockDevice']:
+    block_device_info: Mapping[str, ty.Any],
+) -> list['nova.virt.block_device.DriverBlockDevice']:
     block_device_info = block_device_info or {}
 
     # swap is a single device, not a list

@@ -27,6 +27,8 @@ the raw libvirt API. These APIs are then used by all
 the other libvirt related classes
 """
 
+from collections.abc import Callable
+from collections.abc import Mapping
 from collections import defaultdict
 import fnmatch
 import glob
@@ -128,8 +130,9 @@ class Host(object):
         self._read_only = read_only
         self._initial_connection = True
         self._conn_event_handler = conn_event_handler
-        self._conn_event_handler_queue: queue.Queue[ty.Callable] = (
-          queue.Queue())
+        self._conn_event_handler_queue: queue.Queue[
+            Callable[[], None]
+        ] = queue.Queue()
         self._lifecycle_event_handler = lifecycle_event_handler
         self._caps = None
         self._domain_caps = None
@@ -138,7 +141,9 @@ class Host(object):
 
         self._wrapped_conn = None
         self._wrapped_conn_lock = threading.Lock()
-        self._event_queue: ty.Optional[queue.Queue[ty.Callable]] = None
+        self._event_queue: queue.Queue[
+            virtevent.InstanceEvent | Mapping[str, ty.Any]
+        ] | None = None
 
         self._events_delayed = {}
         # Note(toabctl): During a reboot of a domain, STOPPED and
@@ -151,19 +156,19 @@ class Host(object):
         self._libvirt_proxy_classes = self._get_libvirt_proxy_classes(libvirt)
         self._libvirt_proxy = self._wrap_libvirt_proxy(libvirt)
 
-        self._loaders: ty.Optional[ty.List[dict]] = None
+        self._loaders: list[dict] | None = None
 
         # A number of features are conditional on support in the hardware,
         # kernel, QEMU, and/or libvirt. These are determined on demand and
         # memoized by various properties below
-        self._supports_amd_sev: ty.Optional[bool] = None
-        self._supports_amd_sev_es: ty.Optional[bool] = None
-        self._max_sev_guests: ty.Optional[int] = None
-        self._max_sev_es_guests: ty.Optional[int] = None
-        self._supports_uefi: ty.Optional[bool] = None
-        self._supports_secure_boot: ty.Optional[bool] = None
+        self._supports_amd_sev: bool | None = None
+        self._supports_amd_sev_es: bool | None = None
+        self._max_sev_guests: int | None = None
+        self._max_sev_es_guests: int | None = None
+        self._supports_uefi: bool | None = None
+        self._supports_secure_boot: bool | None = None
 
-        self._has_hyperthreading: ty.Optional[bool] = None
+        self._has_hyperthreading: bool | None = None
 
     @staticmethod
     def _get_libvirt_proxy_classes(libvirt_module):
@@ -396,9 +401,7 @@ class Host(object):
             return
         while not self._event_queue.empty():
             try:
-                event_type = ty.Union[
-                    virtevent.InstanceEvent, ty.Mapping[str, ty.Any]]
-                event: event_type = self._event_queue.get(block=False)
+                event: virtevent.InstanceEvent | Mapping[str, ty.Any] = self._event_queue.get(block=False)  # noqa: E501
                 if issubclass(type(event), virtevent.InstanceEvent):
                     # call possibly with delay
                     self._event_emit_delayed(event)
@@ -890,7 +893,7 @@ class Host(object):
         if self._domain_caps:
             return self._domain_caps
 
-        domain_caps: ty.Dict = defaultdict(dict)
+        domain_caps: dict = defaultdict(dict)
         caps = self.get_capabilities()
         virt_type = CONF.libvirt.virt_type
 
@@ -1302,8 +1305,8 @@ class Host(object):
     def _get_pcinet_info(
         self,
         dev: 'libvirt.virNodeDevice',
-        net_devs: ty.List['libvirt.virNodeDevice']
-    ) -> ty.Optional[ty.List[str]]:
+        net_devs: list['libvirt.virNodeDevice']
+    ) -> list[str] | None:
         """Returns a dict of NET device."""
         net_dev = {dev.parent(): dev for dev in net_devs}.get(dev.name(), None)
         if net_dev is None:
@@ -1317,8 +1320,8 @@ class Host(object):
         self,
         vf_device: 'libvirt.virNodeDevice',
         parent_pf_name: str,
-        candidate_devs: ty.List['libvirt.virNodeDevice']
-    ) -> ty.Optional[vconfig.LibvirtConfigNodeDeviceVpdCap]:
+        candidate_devs: list['libvirt.virNodeDevice']
+    ) -> vconfig.LibvirtConfigNodeDeviceVpdCap | None:
         """Returns PCI VPD info of a parent device of a PCI VF.
 
         :param vf_device: a VF device object to use for lookup.
@@ -1341,7 +1344,7 @@ class Host(object):
     @staticmethod
     def _get_vpd_card_serial_number(
         dev: 'libvirt.virNodeDevice',
-    ) -> ty.Optional[ty.List[str]]:
+    ) -> list[str] | None:
         """Returns a card serial number stored in PCI VPD (if present)."""
         xmlstr = dev.XMLDesc(0)
         cfgdev = vconfig.LibvirtConfigNodeDevice()
@@ -1369,19 +1372,19 @@ class Host(object):
         self,
         devname: str,
         dev: 'libvirt.virNodeDevice',
-        net_devs: ty.List['libvirt.virNodeDevice'],
-        vdpa_devs: ty.List['libvirt.virNodeDevice'],
-        pci_devs: ty.List['libvirt.virNodeDevice'],
-    ) -> ty.Dict[str, ty.Union[str, dict]]:
+        net_devs: list['libvirt.virNodeDevice'],
+        vdpa_devs: list['libvirt.virNodeDevice'],
+        pci_devs: list['libvirt.virNodeDevice'],
+    ) -> dict[str, str | dict]:
         """Returns a dict of PCI device."""
 
         def _get_device_type(
             cfgdev: vconfig.LibvirtConfigNodeDevice,
             pci_address: str,
             device: 'libvirt.virNodeDevice',
-            net_devs: ty.List['libvirt.virNodeDevice'],
-            vdpa_devs: ty.List['libvirt.virNodeDevice'],
-        ) -> ty.Dict[str, str]:
+            net_devs: list['libvirt.virNodeDevice'],
+            vdpa_devs: list['libvirt.virNodeDevice'],
+        ) -> dict[str, str]:
             """Get a PCI device's device type.
 
             An assignable PCI device can be a normal PCI device,
@@ -1437,8 +1440,8 @@ class Host(object):
         def _get_vpd_details(
             device_dict: dict,
             device: 'libvirt.virNodeDevice',
-            pci_devs: ty.List['libvirt.virNodeDevice']
-        ) -> ty.Dict[str, ty.Any]:
+            pci_devs: list['libvirt.virNodeDevice']
+        ) -> dict[str, ty.Any]:
             """Get information from PCI VPD (if present).
 
             PCI/PCIe devices may include the optional VPD capability. It may
@@ -1451,7 +1454,7 @@ class Host(object):
             the VPD capability or not may be controlled via a vendor-specific
             firmware setting.
             """
-            vpd_info: ty.Dict[str, ty.Any] = {}
+            vpd_info: dict[str, ty.Any] = {}
             # At the time of writing only the serial number had a clear
             # use-case. However, the set of fields may be extended.
             card_serial_number = self._get_vpd_card_serial_number(device)
@@ -1481,9 +1484,9 @@ class Host(object):
         def _get_sriov_netdev_details(
             device_dict: dict,
             device: 'libvirt.virNodeDevice',
-        ) -> ty.Dict[str, ty.Dict[str, ty.Any]]:
+        ) -> dict[str, dict[str, ty.Any]]:
             """Get SR-IOV related information"""
-            sriov_info: ty.Dict[str, ty.Any] = {}
+            sriov_info: dict[str, ty.Any] = {}
 
             if device_dict.get('dev_type') != fields.PciDeviceType.SRIOV_VF:
                 return sriov_info
@@ -1512,16 +1515,16 @@ class Host(object):
         def _get_device_capabilities(
             device_dict: dict,
             device: 'libvirt.virNodeDevice',
-            pci_devs: ty.List['libvirt.virNodeDevice'],
-            net_devs: ty.List['libvirt.virNodeDevice']
-        ) -> ty.Dict[str, ty.Any]:
+            pci_devs: list['libvirt.virNodeDevice'],
+            net_devs: list['libvirt.virNodeDevice']
+        ) -> dict[str, ty.Any]:
             """Get PCI VF device's additional capabilities.
 
             If a PCI device is a virtual function, this function reads the PCI
             parent's network capabilities (must be always a NIC device) and
             appends this information to the device's dictionary.
             """
-            caps: ty.Dict[str, ty.Any] = {}
+            caps: dict[str, ty.Any] = {}
 
             if device_dict.get('dev_type') == fields.PciDeviceType.SRIOV_VF:
                 pcinet_info = self._get_pcinet_info(device, net_devs)
@@ -1612,28 +1615,28 @@ class Host(object):
         nodedev = self.get_vdpa_nodedev_by_address(pci_address)
         return nodedev.vdpa_capability.dev_path
 
-    def list_pci_devices(self, flags: int = 0) -> ty.List[str]:
+    def list_pci_devices(self, flags: int = 0) -> list[str]:
         """Lookup pci devices.
 
         :returns: a list of strings, names of the virNodeDevice instances
         """
         return self._list_devices("pci", flags=flags)
 
-    def list_mdev_capable_devices(self, flags: int = 0) -> ty.List[str]:
+    def list_mdev_capable_devices(self, flags: int = 0) -> list[str]:
         """Lookup devices supporting mdev capabilities.
 
         :returns: a list of strings, names of the virNodeDevice instances
         """
         return self._list_devices("mdev_types", flags=flags)
 
-    def list_mediated_devices(self, flags: int = 0) -> ty.List[str]:
+    def list_mediated_devices(self, flags: int = 0) -> list[str]:
         """Lookup mediated devices.
 
         :returns: a list of strings, names of the virNodeDevice instances
         """
         return self._list_devices("mdev", flags=flags)
 
-    def _list_devices(self, cap, flags: int = 0) -> ty.List[str]:
+    def _list_devices(self, cap, flags: int = 0) -> list[str]:
         """Lookup devices.
 
         :returns: a list of strings, names of the virNodeDevice instances
@@ -1652,7 +1655,7 @@ class Host(object):
 
     def list_all_devices(
         self, flags: int = 0,
-    ) -> ty.List['libvirt.virNodeDevice']:
+    ) -> list['libvirt.virNodeDevice']:
         """Lookup devices.
 
         :param flags: a bitmask of flags to filter the returned devices.
@@ -1891,7 +1894,7 @@ class Host(object):
         return False
 
     @property
-    def supports_vtpm(self) -> ty.Optional[bool]:
+    def supports_vtpm(self) -> bool | None:
         # we only check the host architecture and the first machine type
         # because vtpm support is independent from cpu architecture
         arch = self.get_capabilities().host.cpu.arch
@@ -1906,7 +1909,7 @@ class Host(object):
         return False
 
     @property
-    def tpm_versions(self) -> ty.Optional[ty.List[str]]:
+    def tpm_versions(self) -> list[str] | None:
         # we only check the host architecture and the first machine type
         # because vtpm support is independent from cpu architecture
         arch = self.get_capabilities().host.cpu.arch
@@ -1924,7 +1927,7 @@ class Host(object):
         return []
 
     @property
-    def tpm_models(self) -> ty.Optional[ty.List[str]]:
+    def tpm_models(self) -> list[str] | None:
         # we only check the host architecture and the first machine type
         # because vtpm support is independent from cpu architecture
         arch = self.get_capabilities().host.cpu.arch
@@ -2027,7 +2030,7 @@ class Host(object):
         return self._supports_amd_sev_es
 
     @property
-    def max_sev_guests(self) -> ty.Optional[int]:
+    def max_sev_guests(self) -> int | None:
         """Determine maximum number of guests with AMD SEV.
         """
         if not self.supports_amd_sev:
@@ -2035,7 +2038,7 @@ class Host(object):
         return self._max_sev_guests
 
     @property
-    def max_sev_es_guests(self) -> ty.Optional[int]:
+    def max_sev_es_guests(self) -> int | None:
         """Determine maximum number of guests with AMD SEV-ES.
         """
         if not self.supports_amd_sev:
@@ -2074,7 +2077,7 @@ class Host(object):
         return self.has_min_version(lv_ver=(7, 9, 0))
 
     @property
-    def loaders(self) -> ty.List[dict]:
+    def loaders(self) -> list[dict]:
         """Retrieve details of loader configuration for the host.
 
         Inspect the firmware metadata files provided by QEMU [1] to retrieve
@@ -2100,7 +2103,7 @@ class Host(object):
         arch: str,
         machine: str,
         has_secure_boot: bool,
-    ) -> ty.Tuple[str, str, bool]:
+    ) -> tuple[str, str, bool]:
         """Get loader for the specified architecture and machine type.
 
         :returns: A the bootloader executable path and the NVRAM

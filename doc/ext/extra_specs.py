@@ -18,7 +18,6 @@ Provides a single directive that can be used to list all extra specs validators
 and, thus, document all extra specs that nova recognizes and supports.
 """
 
-import typing as ty
 
 from docutils import nodes
 from docutils.parsers import rst
@@ -90,7 +89,7 @@ def _indent(text, count=1):
 
 
 def _format_validator_group_help(
-    validators: ty.Dict[str, base.ExtraSpecValidator],
+    validators: dict[str, base.ExtraSpecValidator],
     summary: bool,
 ):
     """Generate reStructuredText snippets for a group of validators."""

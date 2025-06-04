@@ -106,7 +106,7 @@ def get_cpu_shared_set():
     return shared_ids
 
 
-def parse_cpu_spec(spec: str) -> ty.Set[int]:
+def parse_cpu_spec(spec: str) -> set[int]:
     """Parse a CPU set specification.
 
     Each element in the list is either a single CPU number, a range of
@@ -117,8 +117,8 @@ def parse_cpu_spec(spec: str) -> ty.Set[int]:
 
     :returns: a set of CPU indexes
     """
-    cpuset_ids: ty.Set[int] = set()
-    cpuset_reject_ids: ty.Set[int] = set()
+    cpuset_ids: set[int] = set()
+    cpuset_reject_ids: set[int] = set()
     for rule in spec.split(','):
         rule = rule.strip()
         # Handle multi ','
@@ -169,7 +169,7 @@ def parse_cpu_spec(spec: str) -> ty.Set[int]:
 
 
 def format_cpu_spec(
-    cpuset: ty.Set[int],
+    cpuset: set[int],
     allow_ranges: bool = True,
 ) -> str:
     """Format a libvirt CPU range specification.
@@ -189,7 +189,7 @@ def format_cpu_spec(
     # trying to do range negations to minimize the overall
     # spec string length
     if allow_ranges:
-        ranges: ty.List[ty.List[int]] = []
+        ranges: list[list[int]] = []
         previndex = None
         for cpuindex in sorted(cpuset):
             if previndex is None or previndex != (cpuindex - 1):
@@ -535,7 +535,7 @@ def _sort_possible_cpu_topologies(possible, wanttopology):
     # We don't use python's sort(), since we want to
     # preserve the sorting done when populating the
     # 'possible' list originally
-    scores: ty.Dict[int, ty.List['objects.VirtCPUTopology']] = (
+    scores: dict[int, list['objects.VirtCPUTopology']] = (
         collections.defaultdict(list)
     )
     for topology in possible:
@@ -683,7 +683,7 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
     # We build up a data structure that answers the question: 'Given the
     # number of threads I want to pack, give me a list of all the available
     # sibling sets (or groups thereof) that can accommodate it'
-    sibling_sets: ty.Dict[int, ty.List[ty.Set[int]]] = (
+    sibling_sets: dict[int, list[set[int]]] = (
         collections.defaultdict(list)
     )
     for sib in host_cell.free_siblings:
@@ -922,9 +922,9 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
 def _numa_fit_instance_cell(
     host_cell: 'objects.NUMACell',
     instance_cell: 'objects.InstanceNUMACell',
-    limits: ty.Optional['objects.NUMATopologyLimits'] = None,
+    limits: 'objects.NUMATopologyLimits | None' = None,
     cpuset_reserved: int = 0,
-) -> ty.Optional['objects.InstanceNUMACell']:
+) -> 'objects.InstanceNUMACell | None':
     """Ensure an instance cell can fit onto a host cell
 
     Ensure an instance cell can fit onto a host cell and, if so, return
@@ -1114,7 +1114,7 @@ def _get_flavor_image_meta(
     image_meta: 'objects.ImageMeta',
     default: ty.Any = None,
     prefix: str = 'hw',
-) -> ty.Tuple[ty.Any, ty.Any]:
+) -> tuple[ty.Any, ty.Any]:
     """Extract both flavor- and image-based variants of metadata."""
     flavor_key = ':'.join([prefix, key])
     image_key = '_'.join([prefix, key])
@@ -1160,8 +1160,8 @@ def _get_unique_flavor_image_meta(
 def get_mem_encryption_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-    machine_type: ty.Optional[str] = None,
-) -> ty.Optional[MemEncryptionConfig]:
+    machine_type: str | None = None,
+) -> MemEncryptionConfig | None:
     """Return memory encryption context requested either via flavor extra specs
     or image properties (or both).
 
@@ -1374,7 +1374,7 @@ def _check_mem_encryption_machine_type(image_meta, machine_type=None):
 def _get_numa_pagesize_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[int]:
+) -> int | None:
     """Return the requested memory page size
 
     :param flavor: a Flavor object to read extra specs from
@@ -1442,7 +1442,7 @@ def _get_constraint_mappings_from_flavor(flavor, key, func):
 def get_locked_memory_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[bool]:
+) -> bool | None:
     """Validate and return the requested locked memory.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1484,7 +1484,7 @@ def get_locked_memory_constraint(
 def _get_numa_cpu_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[ty.List[ty.Set[int]]]:
+) -> list[set[int]] | None:
     """Validate and return the requested guest NUMA-guest CPU mapping.
 
     Extract the user-provided mapping of guest CPUs to guest NUMA nodes. For
@@ -1516,7 +1516,7 @@ def _get_numa_cpu_constraint(
 def _get_numa_mem_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[ty.List[int]]:
+) -> list[int] | None:
     """Validate and return the requested guest NUMA-guest memory mapping.
 
     Extract the user-provided mapping of guest memory to guest NUMA nodes. For
@@ -1548,7 +1548,7 @@ def _get_numa_mem_constraint(
 def _get_numa_node_count_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[int]:
+) -> int | None:
     """Validate and return the requested NUMA nodes.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1577,7 +1577,7 @@ def _get_numa_node_count_constraint(
 def get_cpu_policy_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> str | None:
     """Validate and return the requested CPU policy.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1628,7 +1628,7 @@ def get_cpu_policy_constraint(
 def get_cpu_thread_policy_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> str | None:
     """Validate and return the requested CPU thread policy.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1669,8 +1669,8 @@ def get_cpu_thread_policy_constraint(
 def _get_numa_topology_auto(
     nodes: int,
     flavor: 'objects.Flavor',
-    vcpus: ty.Set[int],
-    pcpus: ty.Set[int],
+    vcpus: set[int],
+    pcpus: set[int],
 ) -> 'objects.InstanceNUMATopology':
     """Generate a NUMA topology automatically based on CPUs and memory.
 
@@ -1702,10 +1702,10 @@ def _get_numa_topology_auto(
 def _get_numa_topology_manual(
     nodes: int,
     flavor: 'objects.Flavor',
-    vcpus: ty.Set[int],
-    pcpus: ty.Set[int],
-    cpu_list: ty.List[ty.Set[int]],
-    mem_list: ty.List[int],
+    vcpus: set[int],
+    pcpus: set[int],
+    cpu_list: list[set[int]],
+    mem_list: list[int],
 ) -> 'objects.InstanceNUMATopology':
     """Generate a NUMA topology based on user-provided NUMA topology hints.
 
@@ -1763,7 +1763,7 @@ def is_realtime_enabled(flavor):
 
 def _get_vcpu_pcpu_resources(
     flavor: 'objects.Flavor',
-) -> ty.Tuple[int, int]:
+) -> tuple[int, int]:
     requested_vcpu = 0
     requested_pcpu = 0
 
@@ -1787,7 +1787,7 @@ def _get_vcpu_pcpu_resources(
 def _get_hyperthreading_trait(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> str | None:
     for key, val in flavor.get('extra_specs', {}).items():
         if re.match('trait([1-9][0-9]*)?:%s' % os_traits.HW_CPU_HYPERTHREADING,
                     key):
@@ -1803,7 +1803,7 @@ def _get_hyperthreading_trait(
 # NOTE(stephenfin): This must be public as it's used elsewhere
 def get_dedicated_cpu_constraint(
     flavor: 'objects.Flavor',
-) -> ty.Optional[ty.Set[int]]:
+) -> set[int] | None:
     """Validate and return the requested dedicated CPU mask.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1835,7 +1835,7 @@ def get_dedicated_cpu_constraint(
 def get_realtime_cpu_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[ty.Set[int]]:
+) -> set[int] | None:
     """Validate and return the requested realtime CPU mask.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1881,7 +1881,7 @@ def get_realtime_cpu_constraint(
 # NOTE(stephenfin): This must be public as it's used elsewhere
 def get_emulator_thread_policy_constraint(
     flavor: 'objects.Flavor',
-) -> ty.Optional[str]:
+) -> str | None:
     """Validate and return the requested emulator threads policy.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1931,7 +1931,7 @@ def get_pci_numa_policy_constraint(
 def get_pmu_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[bool]:
+) -> bool | None:
     """Validate and return the requested vPMU configuration.
 
     This one's a little different since we don't return False in the default
@@ -2085,7 +2085,7 @@ def get_packed_virtqueue_constraint(
 def get_vtpm_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[VTPMConfig]:
+) -> VTPMConfig | None:
     """Validate and return the requested vTPM configuration.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -2125,7 +2125,7 @@ def get_vtpm_constraint(
 
 def get_tpm_secret_security_constraint(
     flavor: 'objects.Flavor',
-) -> ty.Optional[str]:
+) -> str | None:
     # NOTE(melwitt): An image property for TPM secret security is intentionally
     # not provided because server rebuild is blocked in the API. If a user were
     # to create a server with a given TPM secret security policy via an image
@@ -2140,7 +2140,7 @@ def get_tpm_secret_security_constraint(
 def get_secure_boot_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> str | None:
     """Validate and return the requested secure boot policy.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -2406,7 +2406,7 @@ def numa_get_constraints(flavor, image_meta):
 
 def _numa_cells_support_network_metadata(
     host_topology: 'objects.NUMATopology',
-    chosen_host_cells: ty.List['objects.NUMACell'],
+    chosen_host_cells: list['objects.NUMACell'],
     network_metadata: 'objects.NetworkMetadata',
 ) -> bool:
     """Determine whether the cells can accept the network requests.
@@ -2424,7 +2424,7 @@ def _numa_cells_support_network_metadata(
     if not network_metadata:
         return True
 
-    required_physnets: ty.Set[str] = set()
+    required_physnets: set[str] = set()
     if 'physnets' in network_metadata:
         # use set() to avoid modifying the original data structure
         required_physnets = set(network_metadata.physnets)
@@ -2509,10 +2509,10 @@ def _numa_cells_support_network_metadata(
 def numa_fit_instance_to_host(
     host_topology: 'objects.NUMATopology',
     instance_topology: 'objects.InstanceNUMATopology',
-    provider_mapping: ty.Optional[ty.Dict[str, ty.List[str]]],
-    limits: ty.Optional['objects.NUMATopologyLimits'] = None,
-    pci_requests: ty.Optional['objects.InstancePCIRequests'] = None,
-    pci_stats: ty.Optional[stats.PciDeviceStats] = None,
+    provider_mapping: dict[str, list[str]] | None,
+    limits: 'objects.NUMATopologyLimits | None' = None,
+    pci_requests: 'objects.InstancePCIRequests | None' = None,
+    pci_stats: stats.PciDeviceStats | None = None,
 ):
     """Fit the instance topology onto the host topology.
 
@@ -2602,7 +2602,7 @@ def numa_fit_instance_to_host(
         if pci_stats:
             # Create dict with numa cell id as key
             # and total number of free pci devices as value.
-            total_pci_in_cell: ty.Dict[int, int] = {}
+            total_pci_in_cell: dict[int, int] = {}
             for pool in pci_stats.pools:
                 if pool['numa_node'] in list(total_pci_in_cell):
                     total_pci_in_cell[pool['numa_node']] += pool['count']
@@ -2630,8 +2630,8 @@ def numa_fit_instance_to_host(
     fit_cache = set()
     for host_cell_perm in itertools.permutations(
             host_cells, len(instance_topology)):
-        chosen_instance_cells: ty.List['objects.InstanceNUMACell'] = []
-        chosen_host_cells: ty.List['objects.NUMACell'] = []
+        chosen_instance_cells: list['objects.InstanceNUMACell'] = []
+        chosen_host_cells: list['objects.NUMACell'] = []
         for host_cell, instance_cell in zip(
                 host_cell_perm, instance_topology.cells):
 
@@ -2714,7 +2714,7 @@ def numa_get_reserved_huge_pages():
         return {}
 
     try:
-        bucket: ty.Dict[int, ty.Dict[int, int]] = collections.defaultdict(dict)
+        bucket: dict[int, dict[int, int]] = collections.defaultdict(dict)
         for cfg in CONF.reserved_huge_pages:
             try:
                 pagesize = int(cfg['size'])
@@ -2864,7 +2864,7 @@ def get_vpmems(flavor):
 def get_maxphysaddr_mode(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> str | None:
     """Return maxphysaddr mode.
 
     :param flavor: a flavor object to read extra specs from
@@ -2944,7 +2944,7 @@ def get_ephemeral_encryption_constraint(
 def get_ephemeral_encryption_format(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> str | None:
     """Get the ephemeral encryption format.
 
     :param flavor: an objects.Flavor object
@@ -2995,7 +2995,7 @@ def check_shares_supported(context, instance):
 def get_sound_model(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> str | None:
     """Get the sound device model, if any.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -3019,7 +3019,7 @@ def get_sound_model(
 def get_usb_model(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> str | None:
     """Get the USB controller model, if any.
 
     :param flavor: ``nova.objects.Flavor`` instance

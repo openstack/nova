@@ -11,7 +11,6 @@
 #    under the License.
 
 from dataclasses import dataclass
-import typing as ty
 
 from oslo_log import log as logging
 
@@ -60,7 +59,7 @@ class Core:
         return str(self.ident)
 
     @property
-    def governor(self) -> ty.Optional[str]:
+    def governor(self) -> str | None:
         try:
             return core.get_governor(self.ident)
         # NOTE(sbauza): cpufreq/scaling_governor is not enabled for some OS
@@ -91,7 +90,7 @@ class API(object):
         """
         return Core(i)
 
-    def power_up(self, cpus: ty.Set[int]) -> None:
+    def power_up(self, cpus: set[int]) -> None:
         if not CONF.libvirt.cpu_power_management:
             return
         cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()
@@ -123,7 +122,7 @@ class API(object):
             pcpus = pcpus.union(pins)
         self.power_up(pcpus)
 
-    def _power_down(self, cpus: ty.Set[int]) -> None:
+    def _power_down(self, cpus: set[int]) -> None:
         if not CONF.libvirt.cpu_power_management:
             return
         cpu_dedicated_set = hardware.get_cpu_dedicated_set_nozero() or set()

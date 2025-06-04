@@ -44,8 +44,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova import utils
-import typing as ty
-
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -728,7 +726,7 @@ class InstanceHelperMixin:
             {'createImage': {'name': snapshot_name}}
         )
 
-    def _attach_volumes(self, server, vol_ids: ty.List[str]):
+    def _attach_volumes(self, server, vol_ids: list[str]):
         # attach volumes to server
         # these attachments are done by nova api, that means
         # nova know about these attachments and so they are valid ones.

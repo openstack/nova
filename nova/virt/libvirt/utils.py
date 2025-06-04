@@ -18,10 +18,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections.abc import Callable
 import grp
 import os
 import pwd
 import re
+import subprocess
 import tempfile
 import typing as ty
 import uuid
@@ -105,7 +107,7 @@ CPU_TRAITS_MAPPING = {
 }
 
 
-def make_reverse_cpu_traits_mapping() -> ty.Dict[str, str]:
+def make_reverse_cpu_traits_mapping() -> dict[str, str]:
     traits_cpu_mapping = dict()
     for k, v in CPU_TRAITS_MAPPING.items():
         if isinstance(v, tuple):
@@ -131,9 +133,9 @@ class EncryptionOptions(ty.TypedDict):
 def create_image(
     path: str,
     disk_format: str,
-    disk_size: ty.Optional[ty.Union[str, int]],
-    backing_file: ty.Optional[str] = None,
-    encryption: ty.Optional[EncryptionOptions] = None,
+    disk_size: str | int | None,
+    backing_file: str | None = None,
+    encryption: EncryptionOptions | None = None,
     safe: bool = False,
 ) -> None:
     """Disk image creation with qemu-img
@@ -262,7 +264,7 @@ def create_image(
 
 
 def create_ploop_image(
-    disk_format: str, path: str, size: ty.Union[int, str], fs_type: str,
+    disk_format: str, path: str, size: int | str, fs_type: str,
 ) -> None:
     """Create ploop image
 
@@ -284,7 +286,7 @@ def create_ploop_image(
     nova.privsep.libvirt.ploop_init(size, disk_format, fs_type, disk_path)
 
 
-def get_disk_size(path: str, format: ty.Optional[str] = None) -> int:
+def get_disk_size(path: str, format: str | None = None) -> int:
     """Get the (virtual) size of a disk image
 
     :param path: Path to the disk image
@@ -297,8 +299,8 @@ def get_disk_size(path: str, format: ty.Optional[str] = None) -> int:
 
 
 def get_disk_backing_file(
-    path: str, basename: bool = True, format: ty.Optional[str] = None,
-) -> ty.Optional[str]:
+    path: str, basename: bool = True, format: str | None = None,
+) -> str | None:
     """Get the backing file of a disk image
 
     :param path: Path to the disk image
@@ -314,10 +316,10 @@ def get_disk_backing_file(
 def copy_image(
     src: str,
     dest: str,
-    host: ty.Optional[str] = None,
+    host: str | None = None,
     receive: bool = False,
-    on_execute: ty.Optional[ty.Callable] = None,
-    on_completion: ty.Optional[ty.Callable] = None,
+    on_execute: Callable[[subprocess.Popen], None] | None = None,
+    on_completion: Callable[[subprocess.Popen], None] | None = None,
     compression: bool = True,
 ) -> None:
     """Copy a disk image to an existing directory
@@ -352,7 +354,7 @@ def copy_image(
 
 
 def chown_for_id_maps(
-    path: str, id_maps: ty.List[vconfig.LibvirtConfigGuestIDMap],
+    path: str, id_maps: list[vconfig.LibvirtConfigGuestIDMap],
 ) -> None:
     """Change ownership of file or directory for an id mapped
     environment
@@ -411,7 +413,7 @@ def file_open(*args, **kwargs):
     return open(*args, **kwargs)
 
 
-def find_disk(guest: libvirt_guest.Guest) -> ty.Tuple[str, ty.Optional[str]]:
+def find_disk(guest: libvirt_guest.Guest) -> tuple[str, str | None]:
     """Find root device path for instance
 
     May be file or device
@@ -448,7 +450,7 @@ def find_disk(guest: libvirt_guest.Guest) -> ty.Tuple[str, ty.Optional[str]]:
     return disk_path, disk_format
 
 
-def get_disk_type_from_path(path: str) -> ty.Optional[str]:
+def get_disk_type_from_path(path: str) -> str | None:
     """Retrieve disk type (raw, qcow2, lvm, ploop) for given file."""
     if path.startswith('/dev'):
         return 'lvm'
@@ -462,7 +464,7 @@ def get_disk_type_from_path(path: str) -> ty.Optional[str]:
     return None
 
 
-def get_fs_info(path: str) -> ty.Dict[str, int]:
+def get_fs_info(path: str) -> dict[str, int]:
     """Get free/used/total space info for a filesystem
 
     :param path: Any dirent on the filesystem
@@ -483,7 +485,7 @@ def fetch_image(
     context: nova_context.RequestContext,
     target: str,
     image_id: str,
-    trusted_certs: ty.Optional['objects.TrustedCerts'] = None,
+    trusted_certs: 'objects.TrustedCerts | None' = None,
 ) -> None:
     """Grab image.
 
@@ -499,7 +501,7 @@ def fetch_raw_image(
     context: nova_context.RequestContext,
     target: str,
     image_id: str,
-    trusted_certs: ty.Optional['objects.TrustedCerts'] = None,
+    trusted_certs: 'objects.TrustedCerts | None' = None,
 ) -> None:
     """Grab initrd or kernel image.
 
@@ -533,7 +535,7 @@ def get_instance_path(
 
 def get_instance_path_at_destination(
     instance: 'objects.Instance',
-    migrate_data: ty.Optional['objects.LibvirtLiveMigrateData'] = None,
+    migrate_data: 'objects.LibvirtLiveMigrateData | None' = None,
 ) -> str:
     """Get the instance path on destination node while live migration.
 
@@ -581,7 +583,7 @@ def get_arch(image_meta: 'objects.ImageMeta') -> str:
     return obj_fields.Architecture.from_host()
 
 
-def is_mounted(mount_path: str, source: ty.Optional[str] = None) -> bool:
+def is_mounted(mount_path: str, source: str | None = None) -> bool:
     """Check if the given source is mounted at given destination point."""
     if not os.path.ismount(mount_path):
         return False
@@ -598,12 +600,12 @@ def is_valid_hostname(hostname: str) -> bool:
     return bool(re.match(r"^[\w\-\.:]+$", hostname))
 
 
-def version_to_string(version: ty.Tuple[int, int, int]) -> str:
+def version_to_string(version: tuple[int, int, int]) -> str:
     """Returns string version based on tuple"""
     return '.'.join([str(x) for x in version])
 
 
-def cpu_features_to_traits(features: ty.Set[str]) -> ty.Dict[str, bool]:
+def cpu_features_to_traits(features: set[str]) -> dict[str, bool]:
     """Returns this driver's CPU traits dict where keys are trait names from
     CPU_TRAITS_MAPPING, values are boolean indicates whether the trait should
     be set in the provider tree.
@@ -636,7 +638,7 @@ def get_cpu_model_from_arch(arch: str) -> str:
     return mode
 
 
-def get_machine_type(image_meta: 'objects.ImageMeta') -> ty.Optional[str]:
+def get_machine_type(image_meta: 'objects.ImageMeta') -> str | None:
     """The guest machine type can be set as an image metadata property, or
     otherwise based on architecture-specific defaults. If no defaults are
     found then None will be returned. This will ultimately lead to QEMU using
@@ -649,7 +651,7 @@ def get_machine_type(image_meta: 'objects.ImageMeta') -> ty.Optional[str]:
     return get_default_machine_type(get_arch(image_meta))
 
 
-def get_default_machine_type(arch: str) -> ty.Optional[str]:
+def get_default_machine_type(arch: str) -> str | None:
     # NOTE(lyarwood): Values defined in [libvirt]/hw_machine_type take
     # precedence here if available for the provided arch.
     for mapping in CONF.libvirt.hw_machine_type or {}:
@@ -694,7 +696,7 @@ def mdev_name2uuid(mdev_name: str) -> str:
     return str(uuid.UUID(mdev_uuid))
 
 
-def mdev_uuid2name(mdev_uuid: str, parent: ty.Optional[str] = None) -> str:
+def mdev_uuid2name(mdev_uuid: str, parent: str | None = None) -> str:
     """Convert an mdev uuid (of the form 8-4-4-4-12) and optionally its parent
     device to a name (of the form mdev_<uuid_with_underscores>[_<pciid>]).
 
@@ -708,7 +710,7 @@ def mdev_uuid2name(mdev_uuid: str, parent: ty.Optional[str] = None) -> str:
     return name
 
 
-def get_flags_by_flavor_specs(flavor: 'objects.Flavor') -> ty.Set[str]:
+def get_flags_by_flavor_specs(flavor: 'objects.Flavor') -> set[str]:
     req_spec = objects.RequestSpec(flavor=flavor)
     resource_request = scheduler_utils.ResourceRequest.from_request_spec(
         req_spec)
@@ -725,8 +727,8 @@ def save_and_migrate_vtpm_dir(
     inst_base_resize: str,
     inst_base: str,
     dest: str,
-    on_execute: ty.Callable,
-    on_completion: ty.Callable,
+    on_execute: Callable[[subprocess.Popen], None] | None = None,
+    on_completion: Callable[[subprocess.Popen], None] | None = None,
 ) -> None:
     """Save vTPM data to instance directory and migrate to the destination.
 

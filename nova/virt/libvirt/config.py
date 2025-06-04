@@ -24,7 +24,6 @@ helpers for populating up config object instances.
 """
 
 import time
-import typing as ty
 
 from collections import OrderedDict
 from lxml import etree
@@ -104,7 +103,7 @@ class LibvirtConfigObject(object):
         return xml_str
 
     @classmethod
-    def parse_on_off_str(self, value: ty.Optional[str]) -> bool:
+    def parse_on_off_str(self, value: str | None) -> bool:
         if value is not None and value not in ('on', 'off'):
             msg = _(
                 "Element should contain either 'on' or 'off'; "

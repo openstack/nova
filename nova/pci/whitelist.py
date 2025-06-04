@@ -33,7 +33,7 @@ class Whitelist(object):
     assignable.
     """
 
-    def __init__(self, whitelist_spec: ty.Optional[str] = None) -> None:
+    def __init__(self, whitelist_spec: str | None = None) -> None:
         """White list constructor
 
         For example, the following json string specifies that devices whose
@@ -55,7 +55,7 @@ class Whitelist(object):
     @staticmethod
     def _parse_white_list_from_config(
         whitelists: str,
-    ) -> ty.List[devspec.PciDeviceSpec]:
+    ) -> list[devspec.PciDeviceSpec]:
         """Parse and validate the pci whitelist from the nova config."""
         specs = []
         for jsonspec in whitelists:
@@ -83,8 +83,8 @@ class Whitelist(object):
         return specs
 
     def device_assignable(
-        self, dev: ty.Dict[str, ty.Any]
-    ) -> ty.Optional[devspec.PciDeviceSpec]:
+        self, dev: dict[str, ty.Any]
+    ) -> devspec.PciDeviceSpec | None:
         """Check if a device is part of pci device_spec (whitelist) and so
         can be assigned to a guest.
         If yes return the spec, else return None
@@ -99,7 +99,7 @@ class Whitelist(object):
 
     def get_devspec(
         self, pci_dev: 'objects.PciDevice',
-    ) -> ty.Optional[devspec.PciDeviceSpec]:
+    ) -> devspec.PciDeviceSpec | None:
         for spec in self.specs:
             if spec.match_pci_obj(pci_dev):
                 return spec

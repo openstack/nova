@@ -489,7 +489,7 @@ class RequestSpec(base.NovaObject):
         return filt_props
 
     @staticmethod
-    def _rc_from_request(spec: ty.Dict[str, ty.Any]) -> str:
+    def _rc_from_request(spec: dict[str, ty.Any]) -> str:
         return pci_placement_translator.get_resource_class(
             spec.get("resource_class"),
             spec.get("vendor_id"),
@@ -497,7 +497,7 @@ class RequestSpec(base.NovaObject):
         )
 
     @staticmethod
-    def _traits_from_request(spec: ty.Dict[str, ty.Any]) -> ty.Set[str]:
+    def _traits_from_request(spec: dict[str, ty.Any]) -> set[str]:
         return pci_placement_translator.get_traits(spec.get("traits", ""))
 
     def generate_request_groups_from_pci_requests(self):

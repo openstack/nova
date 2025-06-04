@@ -15,7 +15,6 @@
 """Validators for all extra specs known by nova."""
 
 import re
-import typing as ty
 
 from oslo_log import log as logging
 from stevedore import extension
@@ -25,8 +24,8 @@ from nova import exception
 
 LOG = logging.getLogger(__name__)
 
-VALIDATORS: ty.Dict[str, base.ExtraSpecValidator] = {}
-NAMESPACES: ty.Set[str] = set()
+VALIDATORS: dict[str, base.ExtraSpecValidator] = {}
+NAMESPACES: set[str] = set()
 
 
 def validate(name: str, value: str):

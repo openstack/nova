@@ -14,12 +14,12 @@
 #    under the License.
 
 import collections
+import collections.abc
 import contextlib
 import copy
 import functools
 import random
 import time
-import typing as ty
 
 from keystoneauth1 import exceptions as ks_exc
 import os_resource_classes as orc
@@ -233,7 +233,7 @@ class SchedulerReportClient(object):
         # provider and inventory information
         self._provider_tree: provider_tree.ProviderTree = None
         # Track the last time we updated providers' aggregates and traits
-        self._association_refresh_time: ty.Dict[str, float] = {}
+        self._association_refresh_time: dict[str, float] = {}
         self._client = self._create_client()
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
@@ -1064,8 +1064,8 @@ class SchedulerReportClient(object):
         self,
         context: nova_context.RequestContext,
         rp_uuid: str,
-        traits: ty.Iterable[str],
-        generation: ty.Optional[int] = None
+        traits: collections.abc.Iterable[str],
+        generation: int | None = None
     ):
         """Replace a provider's traits with those specified.
 
@@ -1699,7 +1699,7 @@ class SchedulerReportClient(object):
         self,
         context: nova_context.RequestContext,
         consumer_uuid: str,
-        resources: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]],
+        resources: dict[str, dict[str, dict[str, int]]],
     ) -> None:
         """Adds certain resources to the current allocation of the
         consumer.
@@ -1750,7 +1750,7 @@ class SchedulerReportClient(object):
         self,
         context: nova_context.RequestContext,
         consumer_uuid: str,
-        resources: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]],
+        resources: dict[str, dict[str, dict[str, int]]],
     ) -> bool:
 
         current_allocs = self.get_allocs_for_consumer(context, consumer_uuid)
@@ -1790,7 +1790,7 @@ class SchedulerReportClient(object):
         self,
         context: nova_context.RequestContext,
         consumer_uuid: str,
-        resources: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]]
+        resources: dict[str, dict[str, dict[str, int]]]
     ) -> None:
         """Removes certain resources from the current allocation of the
         consumer.
@@ -1840,7 +1840,7 @@ class SchedulerReportClient(object):
         self,
         context: nova_context.RequestContext,
         consumer_uuid: str,
-        resources: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]]
+        resources: dict[str, dict[str, dict[str, int]]]
     ) -> bool:
         if not resources:
             # Nothing to remove so do not query or update allocation in
@@ -2613,7 +2613,7 @@ class SchedulerReportClient(object):
             pcpus = usages['usages'].get(orc.PCPU, 0)
             return vcpus + pcpus
 
-        total_counts: ty.Dict[str, ty.Dict[str, int]] = {'project': {}}
+        total_counts: dict[str, dict[str, int]] = {'project': {}}
         # First query counts across all users of a project
         LOG.debug('Getting usages for project_id %s from placement',
                   project_id)

@@ -25,9 +25,9 @@ from nova import exception
 class ExtraSpecValidator:
     name: str
     description: str
-    value: ty.Dict[str, ty.Any]
+    value: dict[str, ty.Any]
     deprecated: bool = False
-    parameters: ty.List[ty.Dict[str, ty.Any]] = dataclasses.field(
+    parameters: list[dict[str, ty.Any]] = dataclasses.field(
         default_factory=list
     )
 

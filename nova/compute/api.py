@@ -20,6 +20,7 @@
 networking and storage of VMs, and compute hosts on which they run)."""
 
 import collections
+from collections.abc import Mapping
 import functools
 import re
 import typing as ty
@@ -1629,7 +1630,7 @@ class API:
     def _update_ephemeral_encryption_bdms(
         self,
         flavor: 'objects.Flavor',
-        image_meta_dict: ty.Dict[str, ty.Any],
+        image_meta_dict: dict[str, ty.Any],
         block_device_mapping: 'objects.BlockDeviceMappingList',
     ) -> None:
         """Update local BlockDeviceMappings when ephemeral encryption requested
@@ -5030,7 +5031,7 @@ class API:
         self,
         context: nova_context.RequestContext,
         instance: objects.Instance,
-        volume: ty.Mapping[str, ty.Any],
+        volume: Mapping[str, ty.Any],
     ):
         """Avoid duplicate volume attachments.
 

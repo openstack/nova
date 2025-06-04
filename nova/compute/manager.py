@@ -26,6 +26,7 @@ terminating it.
 
 import base64
 import binascii
+from collections.abc import Callable, Iterator
 import contextlib
 import copy
 import functools
@@ -35,7 +36,6 @@ import sys
 import threading
 import time
 import traceback
-import typing as ty
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
@@ -263,12 +263,12 @@ class ThreadingEventWithResult(threading.Event):
 
 # Each collection of events is a dict of eventlet Events keyed by a tuple of
 # event name and associated tag
-_InstanceEvents = ty.Dict[ty.Tuple[str, str], ThreadingEventWithResult]
+_InstanceEvents = dict[tuple[str, str], ThreadingEventWithResult]
 
 
 class InstanceEvents(object):
     def __init__(self):
-        self._events: ty.Optional[ty.Dict[str, _InstanceEvents]] = {}
+        self._events: dict[str, _InstanceEvents] | None = {}
 
     @staticmethod
     def _lock_name(instance) -> str:
@@ -483,7 +483,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
     def _wait_for_instance_events(
         instance: 'objects.Instance',
         events: dict,
-        error_callback: ty.Callable,
+        error_callback: Callable[[str, 'objects.Instance'], bool],
         timeout: int,
     ) -> None:
         deadline = time.monotonic() + timeout
@@ -723,7 +723,7 @@ class ComputeManager(manager.Manager):
             self.host, self.driver, reportclient=self.reportclient)
 
     @contextlib.contextmanager
-    def syncs_in_progress(self) -> ty.Iterator[set[str]]:
+    def syncs_in_progress(self) -> Iterator[set[str]]:
         with self._syncs_in_progress_lock:
             yield self._syncs_in_progress
 
@@ -3349,7 +3349,7 @@ class ComputeManager(manager.Manager):
             raise original_exception
 
     def _get_multiattach_volume_lock_names_bdms(
-        self, bdms: objects.BlockDeviceMappingList) -> ty.List[str]:
+        self, bdms: objects.BlockDeviceMappingList) -> list[str]:
         """Get the lock names for multiattach volumes.
 
         :param bdms: BlockDeviceMappingList object
@@ -8639,7 +8639,7 @@ class ComputeManager(manager.Manager):
         context: nova.context.RequestContext,
         instance: 'objects.Instance',
         port_id: str,
-        port_allocation: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]],
+        port_allocation: dict[str, dict[str, dict[str, int]]],
     ) -> None:
 
         if not port_allocation:
@@ -8691,7 +8691,7 @@ class ComputeManager(manager.Manager):
         context: nova.context.RequestContext,
         instance: 'objects.Instance',
         pci_reqs: 'objects.InstancePCIRequests',
-    ) -> ty.Optional['objects.PciDevice']:
+    ) -> 'objects.PciDevice | None':
         """Claim PCI devices if there are PCI requests
 
         :param context: nova.context.RequestContext
@@ -8728,10 +8728,12 @@ class ComputeManager(manager.Manager):
         context: nova.context.RequestContext,
         instance: 'objects.Instance',
         pci_reqs: 'objects.InstancePCIRequests',
-        request_groups: ty.List['objects.RequestGroup'],
+        request_groups: list['objects.RequestGroup'],
         request_level_params: 'objects.RequestLevelParams',
-    ) -> ty.Tuple[ty.Optional[ty.Dict[str, ty.List[str]]],
-                  ty.Optional[ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]]]]:
+    ) -> tuple[
+        dict[str, list[str]] | None,
+        dict[str, dict[str, dict[str, int]]] | None
+    ]:
         """Allocate resources for the request in placement
 
         :param context: nova.context.RequestContext

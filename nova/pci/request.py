@@ -24,7 +24,7 @@
         |   "numa_policy": "legacy"
         |   }'
 
-    Aliases with the same name, device_type and numa_policy are ORed::
+Aliases with the same name, device_type and numa_policy are ORed::
 
         | [pci]
         | alias = '{
@@ -34,11 +34,11 @@
         |   "device_type": "type-PCI",
         |   }'
 
-    These two aliases define a device request meaning: vendor_id is "8086" and
-    product_id is "0442" or "0443".
-    """
+These two aliases define a device request meaning: vendor_id is "8086" and
+product_id is "0442" or "0443".
+"""
+
 import functools
-import typing as ty
 
 import jsonschema
 from oslo_log import log as logging
@@ -55,7 +55,7 @@ from nova.objects import fields as obj_fields
 from nova.pci import utils
 from oslo_utils import strutils
 
-Alias = ty.Dict[str, ty.Tuple[str, ty.List[ty.Dict[str, str]]]]
+Alias = dict[str, tuple[str, list[dict[str, str]]]]
 
 PCI_NET_TAG = 'physical_network'
 PCI_TRUSTED_TAG = 'trusted'
@@ -235,12 +235,12 @@ def get_alias_from_config() -> Alias:
 
 
 def _translate_alias_to_requests(
-    alias_spec: str, affinity_policy: ty.Optional[str] = None,
-) -> ty.List['objects.InstancePCIRequest']:
+    alias_spec: str, affinity_policy: str | None = None,
+) -> list['objects.InstancePCIRequest']:
     """Generate complete pci requests from pci aliases in extra_spec."""
     pci_aliases = get_alias_from_config()
 
-    pci_requests: ty.List[objects.InstancePCIRequest] = []
+    pci_requests: list[objects.InstancePCIRequest] = []
     for name, count in [spec.split(':') for spec in alias_spec.split(',')]:
         name = name.strip()
         if name not in pci_aliases:
@@ -267,7 +267,7 @@ def get_instance_pci_request_from_vif(
     context: ctx.RequestContext,
     instance: 'objects.Instance',
     vif: network_model.VIF,
-) -> ty.Optional['objects.InstancePCIRequest']:
+) -> 'objects.InstancePCIRequest | None':
     """Given an Instance, return the PCI request associated
     to the PCI device related to the given VIF (if any) on the
     compute node the instance is currently running.
@@ -322,7 +322,7 @@ def get_instance_pci_request_from_vif(
 
 
 def get_pci_requests_from_flavor(
-    flavor: 'objects.Flavor', affinity_policy: ty.Optional[str] = None,
+    flavor: 'objects.Flavor', affinity_policy: str | None = None,
 ) -> 'objects.InstancePCIRequests':
     """Validate and return PCI requests.
 
@@ -369,7 +369,7 @@ def get_pci_requests_from_flavor(
     :raises: exception.PciInvalidAlias if the configuration contains invalid
         aliases.
     """
-    pci_requests: ty.List[objects.InstancePCIRequest] = []
+    pci_requests: list[objects.InstancePCIRequest] = []
     if ('extra_specs' in flavor and
             'pci_passthrough:alias' in flavor['extra_specs']):
         pci_requests = _translate_alias_to_requests(

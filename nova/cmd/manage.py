@@ -758,8 +758,13 @@ class CellV2Commands(object):
             return CONF.database.connection
         return database_connection
 
-    def _non_unique_transport_url_database_connection_checker(self, ctxt,
-                            cell_mapping, transport_url, database_connection):
+    def _non_unique_transport_url_database_connection_checker(
+        self,
+        ctxt: context.RequestContext,
+        cell_mapping: 'objects.CellMapping | None',
+        transport_url: str | None,
+        database_connection: str | None,
+    ) -> bool:
         for cell in objects.CellMappingList.get_all(ctxt):
             if cell_mapping and cell.uuid == cell_mapping.uuid:
                 # If we're looking for a specific cell, then don't check
@@ -1585,9 +1590,9 @@ class PlacementCommands(object):
     @staticmethod
     def _get_resource_request_from_ports(
         ctxt: context.RequestContext,
-        ports: ty.List[ty.Dict[str, ty.Any]]
-    ) -> ty.Tuple[
-            ty.Dict[str, ty.List['objects.RequestGroup']],
+        ports: list[dict[str, ty.Any]]
+    ) -> tuple[
+            dict[str, list['objects.RequestGroup']],
             'objects.RequestLevelParams']:
         """Collect RequestGroups and RequestLevelParams for all ports
 
@@ -1634,10 +1639,10 @@ class PlacementCommands(object):
     def _get_port_binding_profile_allocation(
         ctxt: context.RequestContext,
         neutron: neutron_api.ClientWrapper,
-        port: ty.Dict[str, ty.Any],
-        request_groups: ty.List['objects.RequestGroup'],
-        resource_provider_mapping: ty.Dict[str, ty.List[str]],
-    ) -> ty.Dict[str, str]:
+        port: dict[str, ty.Any],
+        request_groups: list['objects.RequestGroup'],
+        resource_provider_mapping: dict[str, list[str]],
+    ) -> dict[str, str]:
         """Generate the value of the allocation key of the port binding profile
         based on the provider mapping returned from placement
 

@@ -13,7 +13,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import collections
+import collections.abc
 import copy
 import typing as ty
 
@@ -36,7 +38,7 @@ LOG = logging.getLogger(__name__)
 # TODO(stephenfin): We might want to use TypedDict here. Refer to
 # https://mypy.readthedocs.io/en/latest/kinds_of_types.html#typeddict for
 # more information.
-Pool = ty.Dict[str, ty.Any]
+Pool = dict[str, ty.Any]
 
 
 class PciDeviceStats(object):
@@ -81,8 +83,8 @@ class PciDeviceStats(object):
     def __init__(
         self,
         numa_topology: 'objects.NUMATopology',
-        stats: 'objects.PciDevicePoolList' = None,
-        dev_filter: ty.Optional[whitelist.Whitelist] = None,
+        stats: 'objects.PciDevicePoolList | None' = None,
+        dev_filter: whitelist.Whitelist | None = None,
     ) -> None:
         self.numa_topology = numa_topology
         self.pools = (
@@ -93,12 +95,12 @@ class PciDeviceStats(object):
             CONF.pci.device_spec)
 
     def _equal_properties(
-        self, dev: Pool, entry: Pool, matching_keys: ty.List[str],
+        self, dev: Pool, entry: Pool, matching_keys: list[str],
     ) -> bool:
         return all(dev.get(prop) == entry.get(prop)
                    for prop in matching_keys)
 
-    def _find_pool(self, dev_pool: Pool) -> ty.Optional[Pool]:
+    def _find_pool(self, dev_pool: Pool) -> Pool | None:
         """Return the first pool that matches dev."""
         for pool in self.pools:
             pool_keys = pool.copy()
@@ -137,7 +139,7 @@ class PciDeviceStats(object):
 
     def _create_pool_keys_from_dev(
         self, dev: 'objects.PciDevice',
-    ) -> ty.Optional[Pool]:
+    ) -> Pool | None:
         """Create a stats pool dict that this dev is supposed to be part of
 
         Note that this pool dict contains the stats pool's keys and their
@@ -181,7 +183,7 @@ class PciDeviceStats(object):
 
     def _get_pool_with_device_type_mismatch(
         self, dev: 'objects.PciDevice',
-    ) -> ty.Optional[ty.Tuple[Pool, 'objects.PciDevice']]:
+    ) -> tuple[Pool, 'objects.PciDevice'] | None:
         """Check for device type mismatch in the pools for a given device.
 
         Return (pool, device) if device type does not match or a single None
@@ -223,7 +225,7 @@ class PciDeviceStats(object):
 
     @staticmethod
     def _decrease_pool_count(
-        pool_list: ty.List[Pool], pool: Pool, count: int = 1,
+        pool_list: list[Pool], pool: Pool, count: int = 1,
     ) -> int:
         """Decrement pool's size by count.
 
@@ -248,15 +250,15 @@ class PciDeviceStats(object):
             pool['devices'].remove(dev)
             self._decrease_pool_count(self.pools, pool)
 
-    def get_free_devs(self) -> ty.List['objects.PciDevice']:
-        free_devs: ty.List[objects.PciDevice] = []
+    def get_free_devs(self) -> list['objects.PciDevice']:
+        free_devs: list[objects.PciDevice] = []
         for pool in self.pools:
             free_devs.extend(pool['devices'])
         return free_devs
 
     def _allocate_devs(
         self, pool: Pool, num: int, request_id: str
-    ) -> ty.List["objects.PciDevice"]:
+    ) -> list["objects.PciDevice"]:
         alloc_devices = []
         for _ in range(num):
             pci_dev = pool['devices'].pop()
@@ -268,10 +270,10 @@ class PciDeviceStats(object):
     def consume_requests(
         self,
         pci_requests: 'objects.InstancePCIRequests',
-        numa_cells: ty.Optional[ty.List['objects.InstanceNUMACell']] = None,
-    ) -> ty.Optional[ty.List['objects.PciDevice']]:
+        numa_cells: list['objects.InstanceNUMACell'] | None = None,
+    ) -> list['objects.PciDevice'] | None:
 
-        alloc_devices: ty.List[objects.PciDevice] = []
+        alloc_devices: list[objects.PciDevice] = []
 
         for request in pci_requests:
             count = request.count
@@ -360,8 +362,8 @@ class PciDeviceStats(object):
                 return
 
     def _filter_pools_for_spec(
-        self, pools: ty.List[Pool], request: 'objects.InstancePCIRequest',
-    ) -> ty.List[Pool]:
+        self, pools: list[Pool], request: 'objects.InstancePCIRequest',
+    ) -> list[Pool]:
         """Filter out pools that don't match the request's device spec.
 
         Exclude pools that do not match the specified ``vendor_id``,
@@ -390,10 +392,10 @@ class PciDeviceStats(object):
 
     def _filter_pools_for_numa_cells(
         self,
-        pools: ty.List[Pool],
+        pools: list[Pool],
         request: 'objects.InstancePCIRequest',
-        numa_cells: ty.Optional[ty.List['objects.InstanceNUMACell']],
-    ) -> ty.List[Pool]:
+        numa_cells: list['objects.InstanceNUMACell'] | None,
+    ) -> list[Pool]:
         """Filter out pools with the wrong NUMA affinity, if required.
 
         Exclude pools that do not have *suitable* PCI NUMA affinity.
@@ -473,9 +475,9 @@ class PciDeviceStats(object):
 
     def _filter_pools_for_socket_affinity(
         self,
-        pools: ty.List[Pool],
-        numa_cells: ty.List['objects.InstanceNUMACell'],
-    ) -> ty.List[Pool]:
+        pools: list[Pool],
+        numa_cells: list['objects.InstanceNUMACell'],
+    ) -> list[Pool]:
         host_cells = self.numa_topology.cells
         # bail early if we don't have socket information for all host_cells.
         # This could happen if we're running on an weird older system with
@@ -509,8 +511,8 @@ class PciDeviceStats(object):
         ]
 
     def _filter_pools_for_unrequested_pfs(
-        self, pools: ty.List[Pool], request: 'objects.InstancePCIRequest',
-    ) -> ty.List[Pool]:
+        self, pools: list[Pool], request: 'objects.InstancePCIRequest',
+    ) -> list[Pool]:
         """Filter out pools with PFs, unless these are required.
 
         This is necessary in cases where PFs and VFs have the same product_id
@@ -534,9 +536,9 @@ class PciDeviceStats(object):
 
     def _filter_pools_for_unrequested_vdpa_devices(
         self,
-        pools: ty.List[Pool],
+        pools: list[Pool],
         request: 'objects.InstancePCIRequest',
-    ) -> ty.List[Pool]:
+    ) -> list[Pool]:
         """Filter out pools with VDPA devices, unless these are required.
 
         This is necessary as vdpa devices require special handling and
@@ -559,8 +561,8 @@ class PciDeviceStats(object):
         return pools
 
     def _filter_pools_for_unrequested_remote_managed_devices(
-        self, pools: ty.List[Pool], request: 'objects.InstancePCIRequest',
-    ) -> ty.List[Pool]:
+        self, pools: list[Pool], request: 'objects.InstancePCIRequest',
+    ) -> list[Pool]:
         """Filter out pools with remote_managed devices, unless requested.
 
         Remote-managed devices are not usable for legacy SR-IOV or hardware
@@ -581,10 +583,10 @@ class PciDeviceStats(object):
 
     def _filter_pools_based_on_placement_allocation(
         self,
-        pools: ty.List[Pool],
+        pools: list[Pool],
         request: 'objects.InstancePCIRequest',
-        rp_uuids: ty.List[str],
-    ) -> ty.List[Pool]:
+        rp_uuids: list[str],
+    ) -> list[Pool]:
         if not rp_uuids:
             # If there is no placement allocation then we don't need to filter
             # by it. This could happen if the instance only has neutron port
@@ -620,8 +622,8 @@ class PciDeviceStats(object):
         return matching_pools
 
     def _filter_pools_for_live_migratable_devices(
-        self, pools: ty.List[Pool], request: 'objects.InstancePCIRequest',
-    ) -> ty.List[Pool]:
+        self, pools: list[Pool], request: 'objects.InstancePCIRequest',
+    ) -> list[Pool]:
         """Filter out pools with non live_migratable devices.
 
         :param pools: A list of PCI device pool dicts
@@ -653,11 +655,11 @@ class PciDeviceStats(object):
 
     def _filter_pools(
         self,
-        pools: ty.List[Pool],
+        pools: list[Pool],
         request: 'objects.InstancePCIRequest',
-        numa_cells: ty.Optional[ty.List['objects.InstanceNUMACell']],
-        rp_uuids: ty.List[str],
-    ) -> ty.Optional[ty.List[Pool]]:
+        numa_cells: list['objects.InstanceNUMACell'] | None,
+        rp_uuids: list[str],
+    ) -> list[Pool] | None:
         """Determine if an individual PCI request can be met.
 
         Filter pools, which are collections of devices with similar traits, to
@@ -789,9 +791,9 @@ class PciDeviceStats(object):
 
     def support_requests(
         self,
-        requests: ty.List['objects.InstancePCIRequest'],
-        provider_mapping: ty.Optional[ty.Dict[str, ty.List[str]]],
-        numa_cells: ty.Optional[ty.List['objects.InstanceNUMACell']] = None,
+        requests: list['objects.InstancePCIRequest'],
+        provider_mapping: dict[str, list[str]] | None,
+        numa_cells: list['objects.InstanceNUMACell'] | None = None,
     ) -> bool:
         """Determine if the PCI requests can be met.
 
@@ -833,10 +835,10 @@ class PciDeviceStats(object):
 
     def _apply_request(
         self,
-        pools: ty.List[Pool],
+        pools: list[Pool],
         request: 'objects.InstancePCIRequest',
-        rp_uuids: ty.List[str],
-        numa_cells: ty.Optional[ty.List['objects.InstanceNUMACell']] = None,
+        rp_uuids: list[str],
+        numa_cells: list['objects.InstanceNUMACell'] | None = None,
     ) -> bool:
         """Apply an individual PCI request.
 
@@ -895,9 +897,9 @@ class PciDeviceStats(object):
 
     def _get_rp_uuids_for_request(
         self,
-        provider_mapping: ty.Optional[ty.Dict[str, ty.List[str]]],
+        provider_mapping: dict[str, list[str]] | None,
         request: 'objects.InstancePCIRequest'
-    ) -> ty.List[str]:
+    ) -> list[str]:
         """Return the list of RP uuids that are fulfilling the request.
 
         An RP will be in the list as many times as many devices needs to
@@ -937,9 +939,9 @@ class PciDeviceStats(object):
 
     def apply_requests(
         self,
-        requests: ty.List['objects.InstancePCIRequest'],
-        provider_mapping: ty.Optional[ty.Dict[str, ty.List[str]]],
-        numa_cells: ty.Optional[ty.List['objects.InstanceNUMACell']] = None,
+        requests: list['objects.InstancePCIRequest'],
+        provider_mapping: dict[str, list[str]] | None,
+        numa_cells: list['objects.InstanceNUMACell'] | None = None,
     ) -> None:
         """Apply PCI requests to the PCI stats.
 
@@ -970,8 +972,8 @@ class PciDeviceStats(object):
             if not self._apply_request(self.pools, r, rp_uuids, numa_cells):
                 raise exception.PciDeviceRequestFailed(requests=requests)
 
-    def __iter__(self) -> ty.Iterator[Pool]:
-        pools: ty.List[Pool] = []
+    def __iter__(self) -> collections.abc.Iterator[Pool]:
+        pools: list[Pool] = []
         for pool in self.pools:
             pool = copy.deepcopy(pool)
             # 'devices' shouldn't be part of stats
@@ -1045,7 +1047,7 @@ class PciDeviceStats(object):
                 pool['rp_uuid'] = next(iter(pool_rps))
 
     @staticmethod
-    def _assert_one_pool_per_rp_uuid(pools: ty.List[Pool]) -> bool:
+    def _assert_one_pool_per_rp_uuid(pools: list[Pool]) -> bool:
         """Asserts that each pool has a unique rp_uuid if any
 
         :param pools: A list of Pool objects.

@@ -54,12 +54,12 @@ def convert_image(source, dest, in_format, out_format, instances_path,
 def unprivileged_convert_image(
     source: str,
     dest: str,
-    in_format: ty.Optional[str],
+    in_format: str | None,
     out_format: str,
     instances_path: str,
     compress: bool,
-    src_encryption: ty.Optional[EncryptionOptions] = None,
-    dest_encryption: ty.Optional[EncryptionOptions] = None,
+    src_encryption: EncryptionOptions | None = None,
+    dest_encryption: EncryptionOptions | None = None,
 ) -> None:
     """Disk image conversion with qemu-img
 
@@ -126,7 +126,7 @@ def unprivileged_convert_image(
 
     src_secret_file = None
     dest_secret_file = None
-    encryption_opts: ty.List[str] = []
+    encryption_opts: list[str] = []
     with contextlib.ExitStack() as stack:
         if src_encryption:
             src_secret_file = stack.enter_context(

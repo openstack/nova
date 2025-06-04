@@ -17,7 +17,6 @@ import os
 import sys
 import textwrap
 import time
-import typing as ty
 from unittest import mock
 
 import fixtures
@@ -1126,7 +1125,7 @@ class NodeDevice(object):
     def name(self) -> str:
         return self._name
 
-    def listCaps(self) -> ty.List[str]:
+    def listCaps(self) -> list[str]:
         return [self.name().split('_')[0]]
 
 

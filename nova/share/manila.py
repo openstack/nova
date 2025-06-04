@@ -16,7 +16,6 @@ Handles all requests relating to shares + manila.
 
 from dataclasses import dataclass
 import functools
-from typing import Optional
 
 from openstack import exceptions as sdk_exc
 from oslo_log import log as logging
@@ -53,18 +52,18 @@ def _manilaclient(context, admin=False):
 class Share():
     id: str
     size: int
-    availability_zone: Optional[str]
+    availability_zone: str | None
     created_at: str
     status: str
-    name: Optional[str]
-    description: Optional[str]
+    name: str | None
+    description: str | None
     project_id: str
-    snapshot_id: Optional[str]
-    share_network_id: Optional[str]
+    snapshot_id: str | None
+    share_network_id: str | None
     share_proto: str
     export_location: str
     metadata: dict
-    share_type: Optional[str]
+    share_type: str | None
     is_public: bool
 
     @classmethod
@@ -95,7 +94,7 @@ class Access():
     state: str
     access_type: str
     access_to: str
-    access_key: Optional[str]
+    access_key: str | None
 
     @classmethod
     def from_manila_access(cls, manila_access):

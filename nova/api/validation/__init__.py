@@ -58,8 +58,8 @@ class Schemas:
     def add_schema(
         self,
         schema: tuple[dict[str, object]],
-        min_version: ty.Optional[str],
-        max_version: ty.Optional[str],
+        min_version: str | None,
+        max_version: str | None,
     ) -> None:
         # we'd like to use bisect.insort but that doesn't accept a 'key' arg
         # until Python 3.10, so we need to sort after insertion instead :(
@@ -76,9 +76,7 @@ class Schemas:
 
     def validate_schemas(self) -> None:
         """Ensure there are no overlapping schemas."""
-        prev_max_version: ty.Optional[
-            api_version_request.APIVersionRequest
-        ] = None
+        prev_max_version: api_version_request.APIVersionRequest | None = None
 
         for schema, min_version, max_version in self._schemas:
             if prev_max_version:
@@ -91,7 +89,7 @@ class Schemas:
 
             prev_max_version = max_version
 
-    def __call__(self, req: wsgi.Request) -> ty.Optional[dict[str, object]]:
+    def __call__(self, req: wsgi.Request) -> dict[str, object] | None:
         ver = req.api_version_request
 
         for schema, min_version, max_version in self._schemas:
@@ -187,9 +185,9 @@ def _schema_validation_helper(
 # response headers. As things stand, we're going to need five separate
 # decorators.
 def schema(
-    request_body_schema: ty.Dict[str, ty.Any],
-    min_version: ty.Optional[str] = None,
-    max_version: ty.Optional[str] = None,
+    request_body_schema: dict[str, ty.Any],
+    min_version: str | None = None,
+    max_version: str | None = None,
 ):
     """Register a schema to validate request body.
 
@@ -229,9 +227,9 @@ def schema(
 
 
 def response_body_schema(
-    response_body_schema: ty.Dict[str, ty.Any],
-    min_version: ty.Optional[str] = None,
-    max_version: ty.Optional[str] = None,
+    response_body_schema: dict[str, ty.Any],
+    min_version: str | None = None,
+    max_version: str | None = None,
 ):
     """Register a schema to validate response body.
 

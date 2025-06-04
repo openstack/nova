@@ -645,14 +645,14 @@ class API:
 
         # it is a dict of network dicts as returned by the neutron client keyed
         # by network UUID
-        networks: ty.Dict[str, ty.Dict] = {}
+        networks: dict[str, dict] = {}
         for port_id in ports:
             # A port_id is optional in the NetworkRequest object so check here
             # in case the caller forgot to filter the list.
             if port_id is None:
                 continue
 
-            port_req_body: ty.Dict[str, ty.Any] = {
+            port_req_body: dict[str, ty.Any] = {
                 'port': {
                     constants.BINDING_HOST_ID: None,
                 }
@@ -1120,8 +1120,8 @@ class API:
         self,
         context: nova_context.RequestContext,
         port_id: str,
-        resource_provider_mapping: ty.Dict[str, ty.List[str]],
-    ) -> ty.Union[None, str, ty.Dict[str, str]]:
+        resource_provider_mapping: dict[str, list[str]],
+    ) -> None | str | dict[str, str]:
         """Calculate the value of the allocation key of the binding:profile
         based on the allocated resources.
 
@@ -1579,7 +1579,7 @@ class API:
 
         client = get_client(context, admin=True)
 
-        bindings_by_port_id: ty.Dict[str, ty.Any] = {}
+        bindings_by_port_id: dict[str, ty.Any] = {}
         for vif in network_info:
             # Now bind each port to the destination host and keep track of each
             # port that is bound to the resulting binding so we can rollback in
@@ -1650,7 +1650,7 @@ class API:
         need to do the necessary plumbing in order to set a VF up for packet
         forwarding.
         """
-        vf_profile: ty.Dict[str, ty.Union[str, int]] = {}
+        vf_profile: dict[str, str | int] = {}
 
         pf_mac = pci_dev.sriov_cap.get('pf_mac_address')
         vf_num = pci_dev.sriov_cap.get('vf_num')
@@ -1919,7 +1919,7 @@ class API:
         # only
         neutron_admin = get_client(context, admin=True)
         neutron = get_client(context)
-        port_allocation: ty.Dict = {}
+        port_allocation: dict = {}
         try:
             # NOTE(gibi): we need to read the port resource information from
             # neutron here as we might delete the port below
@@ -2652,8 +2652,8 @@ class API:
         self,
         context: nova_context.RequestContext,
         instance_uuid: str
-    ) -> ty.Tuple[
-            ty.List['objects.RequestGroup'], 'objects.RequestLevelParams']:
+    ) -> tuple[
+            list['objects.RequestGroup'], 'objects.RequestLevelParams']:
         """Collect resource requests from the ports associated to the instance
 
         :param context: nova request context
@@ -3945,7 +3945,7 @@ class API:
         self,
         context: nova.context.RequestContext,
         network_id: str,
-    ) -> ty.List[str]:
+    ) -> list[str]:
         """Query the segmentation ids for the given network.
 
         :param context: The request context.
@@ -3976,7 +3976,7 @@ class API:
         self,
         context: nova.context.RequestContext,
         subnet_id: str,
-    ) -> ty.Optional[str]:
+    ) -> str | None:
         """Query the segmentation id for the given subnet.
 
         :param context: The request context.

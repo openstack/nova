@@ -11,7 +11,6 @@
 #    under the License.
 
 import os
-import typing as ty
 
 from oslo_log import log as logging
 
@@ -27,7 +26,7 @@ AVAILABLE_PATH = '/sys/devices/system/cpu/present'
 CPU_PATH_TEMPLATE = '/sys/devices/system/cpu/cpu%(core)s'
 
 
-def get_available_cores() -> ty.Set[int]:
+def get_available_cores() -> set[int]:
     cores = filesystem.read_sys(AVAILABLE_PATH)
     return hardware.parse_cpu_spec(cores) if cores else set()
 

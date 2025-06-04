@@ -15,7 +15,6 @@
 #    under the License.
 
 import functools
-import typing as ty
 
 import microversion_parse
 from oslo_log import log as logging
@@ -228,10 +227,10 @@ class WSGICodes:
     """
 
     def __init__(self) -> None:
-        self._codes: list[tuple[int, ty.Optional[str], ty.Optional[str]]] = []
+        self._codes: list[tuple[int, str | None, str | None]] = []
 
     def add_code(
-        self, code: tuple[int, ty.Optional[str], ty.Optional[str]]
+        self, code: tuple[int, str | None, str | None]
     ) -> None:
         self._codes.append(code)
 
@@ -251,8 +250,8 @@ class WSGICodes:
 
 def response(
     code: int,
-    min_version: ty.Optional[str] = None,
-    max_version: ty.Optional[str] = None,
+    min_version: str | None = None,
+    max_version: str | None = None,
 ):
     """Attaches response code to a method.
 
@@ -697,8 +696,8 @@ def removed(version: str, reason: str):
 
 
 def api_version(
-    min_version: ty.Optional[str] = None,
-    max_version: ty.Optional[str] = None,
+    min_version: str | None = None,
+    max_version: str | None = None,
 ):
     """Mark an API as supporting lower and upper version bounds.
 
@@ -737,9 +736,9 @@ def api_version(
 
 
 def expected_errors(
-    errors: ty.Union[int, tuple[int, ...]],
-    min_version: ty.Optional[str] = None,
-    max_version: ty.Optional[str] = None,
+    errors: int | tuple[int, ...],
+    min_version: str | None = None,
+    max_version: str | None = None,
 ):
     """Decorator for v2.1 API methods which specifies expected exceptions.
 

@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import typing as ty
-
 import os_resource_classes as orc
 from oslo_limit import exception as limit_exceptions
 from oslo_limit import limit
@@ -42,7 +40,7 @@ LEGACY_LIMITS = {
 
 def _get_placement_usages(
     context: 'nova.context.RequestContext', project_id: str
-) -> ty.Dict[str, int]:
+) -> dict[str, int]:
     return report.report_client_singleton().get_usages_counts_for_limits(
         context, project_id)
 
@@ -50,8 +48,8 @@ def _get_placement_usages(
 def _get_usage(
     context: 'nova.context.RequestContext',
     project_id: str,
-    resource_names: ty.List[str],
-) -> ty.Dict[str, int]:
+    resource_names: list[str],
+) -> dict[str, int]:
     """Called by oslo_limit's enforcer"""
     if not limit_utils.use_unified_limits():
         raise NotImplementedError("Unified limits support is disabled")
@@ -120,7 +118,7 @@ def _get_usage(
 
 def _get_deltas_by_flavor(
     flavor: 'objects.Flavor', is_bfv: bool, count: int
-) -> ty.Dict[str, int]:
+) -> dict[str, int]:
     if flavor is None:
         raise ValueError("flavor")
     if count < 0:
@@ -156,8 +154,8 @@ def enforce_num_instances_and_flavor(
     is_bfvm: bool,
     min_count: int,
     max_count: int,
-    enforcer: ty.Optional[limit.Enforcer] = None,
-    delta_updates: ty.Optional[ty.Dict[str, int]] = None,
+    enforcer: limit.Enforcer | None = None,
+    delta_updates: dict[str, int] | None = None,
 ) -> int:
     """Return max instances possible, else raise TooManyInstances exception."""
     if not limit_utils.use_unified_limits():

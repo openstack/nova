@@ -19,7 +19,6 @@
 """VIF drivers for libvirt."""
 
 import os
-import typing as ty
 
 import os_vif
 from os_vif import exception as osv_exception
@@ -509,7 +508,7 @@ class LibvirtGenericVIFDriver(object):
             raise exception.InternalError(
                 _('Unsupported VIF port profile type %s') % profile_name)
 
-    def _get_vdpa_dev_path(self, pci_address: ty.Text) -> ty.Text:
+    def _get_vdpa_dev_path(self, pci_address: str) -> str:
         if self.host is not None:
             return self.host.get_vdpa_device_path(pci_address)
         # TODO(sean-k-mooney) this should never be raised remove when host

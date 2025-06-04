@@ -12,7 +12,6 @@
 
 import itertools
 import re
-import typing as ty
 
 from nova.compute import vm_states
 from nova import context as nova_context
@@ -49,7 +48,7 @@ ALLOWED_UPDATE_VM_STATES = [
 def get_machine_type(
     context: 'nova_context.RequestContext',
     instance_uuid: str,
-) -> ty.Optional[str]:
+) -> str | None:
     """Get the registered machine type of an instance
 
     :param context: Request context.
@@ -137,7 +136,7 @@ def update_machine_type(
     instance_uuid: str,
     machine_type: str,
     force: bool = False,
-) -> ty.Tuple[str, str]:
+) -> tuple[str, str]:
     """Set or update the stored machine type of an instance
 
     :param instance_uuid: Instance UUID to update.
@@ -183,7 +182,7 @@ def update_machine_type(
 
 def _get_instances_without_mtype(
     context: 'nova_context.RequestContext',
-) -> ty.List[objects.instance.Instance]:
+) -> list[objects.instance.Instance]:
     """Fetch a list of instance UUIDs from the DB without hw_machine_type set
 
     :param meta: 'sqlalchemy.MetaData' pointing to a given cell DB
@@ -201,8 +200,8 @@ def _get_instances_without_mtype(
 
 def get_instances_without_type(
     context: 'nova_context.RequestContext',
-    cell_uuid: ty.Optional[str] = None,
-) -> ty.List[objects.instance.Instance]:
+    cell_uuid: str | None = None,
+) -> list[objects.instance.Instance]:
     """Find instances without hw_machine_type set, optionally within a cell.
 
     :param context: Request context
