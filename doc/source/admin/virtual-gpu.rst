@@ -373,7 +373,7 @@ Caveats
 
   .. versionchanged:: 29.0.0
 
-   By the 2024.2 Caracal release, if you use those hardware, you need to
+   By the 2024.1 Caracal release, if you use those hardware, you need to
    provide a new configuration option named
    ``max_instances`` in the related mdev type group (eg. ``mdev_nvidia-35``)
    where the value of that option would be the number of vGPUs that the type
@@ -402,7 +402,7 @@ Caveats
 
   .. versionchanged:: 29.0.0
 
-   In the 2024.2 Caracal release, Nova now `supports vGPU live-migrations`_. In
+   In the 2024.1 Caracal release, Nova now `supports vGPU live-migrations`_. In
    order to do this, both the source and target compute service need to have
    minimum versions of libvirt-8.6.0, QEMU-8.1.0 and Linux kernel 5.18.0. You
    need to ensure that either you use only single common vGPU type between two
