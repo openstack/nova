@@ -58,7 +58,7 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_accept_content_type(self):
         # Test Accept header specifying JSON returns JSON content.
-        url = ('/v2/%s/images/cedef40a-ed67-4d10-800e-17455edce175' %
+        url = ('/v2.1/%s/images/cedef40a-ed67-4d10-800e-17455edce175' %
                fakes.FAKE_PROJECT_ID)
         req = fakes.HTTPRequest.blank(url)
         req.accept = "application/xml;q=0.8, application/json"
@@ -128,7 +128,6 @@ class UrlmapTest(test.NoDBTestCase):
         for url, exp_script_name, exp_path_info in data:
             req = fakes.HTTPRequest.blank(url)
             req.get_response(app)
-            # The app uses /v2 as the base URL :(
-            exp_script_name = '/v2' + exp_script_name
+            exp_script_name = '/v2.1' + exp_script_name
             self.assertEqual(exp_script_name, req.environ['SCRIPT_NAME'])
             self.assertEqual(exp_path_info, req.environ['PATH_INFO'])

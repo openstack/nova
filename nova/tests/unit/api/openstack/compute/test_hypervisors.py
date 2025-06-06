@@ -751,8 +751,8 @@ class HypervisorsTestV233(HypervisorsTestV228):
     api_version = '2.33'
 
     def test_index_pagination(self):
-        req = self._get_request(True,
-                                '/v2/1234/os-hypervisors?limit=1&marker=1')
+        req = self._get_request(
+            True, '/v2.1/os-hypervisors?limit=1&marker=1')
         result = self.controller.index(req)
         expected = {
             'hypervisors': [
@@ -762,7 +762,8 @@ class HypervisorsTestV233(HypervisorsTestV228):
                  'status': 'enabled'}
             ],
             'hypervisors_links': [
-                {'href': 'http://localhost/v2/os-hypervisors?limit=1&marker=2',
+                {'href': 'http://localhost/v2.1/os-hypervisors'
+                         '?limit=1&marker=2',
                  'rel': 'next'}
             ]
         }
@@ -770,27 +771,23 @@ class HypervisorsTestV233(HypervisorsTestV228):
         self.assertEqual(expected, result)
 
     def test_index_pagination_with_invalid_marker(self):
-        req = self._get_request(True,
-                                '/v2/1234/os-hypervisors?marker=99999')
+        req = self._get_request(True, '/v2.1/os-hypervisors?marker=99999')
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.index, req)
 
     def test_index_pagination_with_invalid_non_int_limit(self):
-        req = self._get_request(True,
-                                '/v2/1234/os-hypervisors?limit=-9')
+        req = self._get_request(True, '/v2.1/os-hypervisors?limit=-9')
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
     def test_index_pagination_with_invalid_string_limit(self):
-        req = self._get_request(True,
-                                '/v2/1234/os-hypervisors?limit=abc')
+        req = self._get_request(True, '/v2.1/os-hypervisors?limit=abc')
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
     def test_index_duplicate_query_parameters_with_invalid_string_limit(self):
         req = self._get_request(
-            True,
-            '/v2/1234/os-hypervisors/?limit=1&limit=abc')
+            True, '/v2.1/os-hypervisors/?limit=1&limit=abc')
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
@@ -823,20 +820,21 @@ class HypervisorsTestV233(HypervisorsTestV228):
                  'status': 'enabled'}
             ],
             'hypervisors_links': [
-                {'href': 'http://localhost/v2/os-hypervisors?limit=1&marker=2',
+                {'href': 'http://localhost/v2.1/os-hypervisors'
+                         '?limit=1&marker=2',
                  'rel': 'next'}
             ]
         }
         req = self._get_request(
-            True, '/v2/1234/os-hypervisors?limit=1&marker=1&additional=3')
+            True, '/v2.1/os-hypervisors?limit=1&marker=1&additional=3')
         result = self.controller.index(req)
         self.assertEqual(expected, result)
 
     def test_detail_pagination(self):
         req = self._get_request(
-            True, '/v2/1234/os-hypervisors/detail?limit=1&marker=1')
+            True, '/v2.1/os-hypervisors/detail?limit=1&marker=1')
         result = self.controller.detail(req)
-        link = 'http://localhost/v2/os-hypervisors/detail?limit=1&marker=2'
+        link = 'http://localhost/v2.1/os-hypervisors/detail?limit=1&marker=2'
         expected = {
             'hypervisors': [
                 {'cpu_info': {'arch': 'x86_64',
@@ -874,21 +872,20 @@ class HypervisorsTestV233(HypervisorsTestV228):
         self.assertEqual(expected, result)
 
     def test_detail_pagination_with_invalid_marker(self):
-        req = self._get_request(True,
-                                '/v2/1234/os-hypervisors/detail?marker=99999')
+        req = self._get_request(
+            True, '/v2.1/os-hypervisors/detail?marker=99999')
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.detail, req)
 
     def test_detail_pagination_with_invalid_string_limit(self):
-        req = self._get_request(True,
-                                '/v2/1234/os-hypervisors/detail?limit=abc')
+        req = self._get_request(
+            True, '/v2.1/os-hypervisors/detail?limit=abc')
         self.assertRaises(exception.ValidationError,
                           self.controller.detail, req)
 
     def test_detail_duplicate_query_parameters_with_invalid_string_limit(self):
         req = self._get_request(
-            True,
-            '/v2/1234/os-hypervisors/detail?limit=1&limit=abc')
+            True, '/v2.1/os-hypervisors/detail?limit=1&limit=abc')
         self.assertRaises(exception.ValidationError,
                           self.controller.detail, req)
 
@@ -938,7 +935,7 @@ class HypervisorsTestV233(HypervisorsTestV228):
             self.assertEqual(expected, result['hypervisors'])
 
     def test_detail_pagination_with_additional_filter(self):
-        link = 'http://localhost/v2/os-hypervisors/detail?limit=1&marker=2'
+        link = 'http://localhost/v2.1/os-hypervisors/detail?limit=1&marker=2'
         expected = {
             'hypervisors': [
                 {'cpu_info': {'arch': 'x86_64',
@@ -975,7 +972,7 @@ class HypervisorsTestV233(HypervisorsTestV228):
                 'rel': 'next'}]
         }
         req = self._get_request(
-            True, '/v2/1234/os-hypervisors/detail?limit=1&marker=1&unknown=2')
+            True, '/v2.1/os-hypervisors/detail?limit=1&marker=1&unknown=2')
         result = self.controller.detail(req)
         self.assertEqual(expected, result)
 
@@ -1277,7 +1274,8 @@ class HypervisorsTestV253(HypervisorsTestV252):
             url='/os-hypervisors/detail?limit=1&marker=%s' %
                 TEST_HYPERS_OBJ[0].uuid)
         result = self.controller.detail(req)
-        link = ('http://localhost/v2/os-hypervisors/detail?limit=1&marker=%s' %
+        link = ('http://localhost/v2.1/os-hypervisors/detail'
+                '?limit=1&marker=%s' %
                 TEST_HYPERS_OBJ[1].uuid)
         expected = {
             'hypervisors': [self.DETAIL_HYPERS_DICTS[1]],
@@ -1295,7 +1293,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
 
     def test_detail_pagination_with_additional_filter(self):
         req = self._get_request(
-            True, '/v2/1234/os-hypervisors/detail?limit=1&marker=9&unknown=2')
+            True, '/v2.1/os-hypervisors/detail?limit=1&marker=9&unknown=2')
         self.assertRaises(exception.ValidationError,
                           self.controller.detail, req)
 
@@ -1324,7 +1322,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             url='/os-hypervisors?limit=1&marker=%s' %
                 TEST_HYPERS_OBJ[0].uuid)
         result = self.controller.index(req)
-        link = ('http://localhost/v2/os-hypervisors?limit=1&marker=%s' %
+        link = ('http://localhost/v2.1/os-hypervisors?limit=1&marker=%s' %
                 TEST_HYPERS_OBJ[1].uuid)
         expected = {
             'hypervisors': [{
@@ -1347,7 +1345,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
 
     def test_index_pagination_with_additional_filter(self):
         req = self._get_request(
-            True, '/v2/1234/os-hypervisors/?limit=1&marker=9&unknown=2')
+            True, '/v2.1/os-hypervisors/?limit=1&marker=9&unknown=2')
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 

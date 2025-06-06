@@ -19,7 +19,7 @@ from nova.tests.unit.api.openstack import fakes
 
 
 class FlavorDisabledTestV21(test.NoDBTestCase):
-    base_url = '/v2/%s/flavors' % fakes.FAKE_PROJECT_ID
+    base_url = '/v2.1/flavors'
     content_type = 'application/json'
     prefix = "OS-FLV-DISABLED:"
 

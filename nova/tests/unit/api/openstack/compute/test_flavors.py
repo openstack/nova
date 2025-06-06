@@ -45,11 +45,8 @@ def return_flavor_not_found(context, flavor_id, read_deleted=None):
 
 
 class FlavorsTestV21(test.TestCase):
-    _prefix = "/v2/%s" % fakes.FAKE_PROJECT_ID
     Controller = flavors_v21.FlavorsController
     fake_request = fakes.HTTPRequestV21
-    _rspv = "v2/%s" % fakes.FAKE_PROJECT_ID
-    _fake = "/%s" % fakes.FAKE_PROJECT_ID
     microversion = '2.1'
     # Flag to tell the test if a description should be expected in a response.
     expect_description = False
@@ -65,7 +62,7 @@ class FlavorsTestV21(test.TestCase):
 
     def _build_request(self, url):
         return self.fake_request.blank(
-            self._prefix + url, version=self.microversion)
+            '/v2.1' + url, version=self.microversion)
 
     def _set_expected_body(self, expected, flavor):
         expected['OS-FLV-EXT-DATA:ephemeral'] = flavor.ephemeral_gb
@@ -98,13 +95,11 @@ class FlavorsTestV21(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/" + self._rspv +
-                             "/flavors/1",
+                        "href": "http://localhost/v2.1/flavors/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost" + self._fake +
-                             "/flavors/1",
+                        "href": "http://localhost/flavors/1",
                     },
                 ],
             },
@@ -130,13 +125,11 @@ class FlavorsTestV21(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://zoo.com:42/" + self._rspv +
-                             "/flavors/1",
+                        "href": "http://zoo.com:42/v2.1/flavors/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://zoo.com:42" + self._fake +
-                             "/flavors/1",
+                        "href": "http://zoo.com:42/flavors/1",
                     },
                 ],
             },
@@ -155,13 +148,11 @@ class FlavorsTestV21(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/" + self._rspv +
-                                 "/flavors/1",
+                            "href": "http://localhost/v2.1/flavors/1",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost" + self._fake +
-                                 "/flavors/1",
+                            "href": "http://localhost/flavors/1",
                         },
                     ],
                 },
@@ -171,13 +162,11 @@ class FlavorsTestV21(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/" + self._rspv +
-                                 "/flavors/2",
+                            "href": "http://localhost/v2.1/flavors/2",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost" + self._fake +
-                                 "/flavors/2",
+                            "href": "http://localhost/flavors/2",
                         },
                     ],
                 },
@@ -202,20 +191,17 @@ class FlavorsTestV21(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/" + self._rspv +
-                                 "/flavors/2",
+                            "href": "http://localhost/v2.1/flavors/2",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost" + self._fake +
-                                 "/flavors/2",
+                            "href": "http://localhost/flavors/2",
                         },
                     ],
                 },
             ],
             'flavors_links': [
-                {'href': 'http://localhost/' + self._rspv +
-                    '/flavors?limit=1&marker=2',
+                {'href': 'http://localhost/v2.1/flavors?limit=1&marker=2',
                  'rel': 'next'}
             ]
         }
@@ -248,13 +234,11 @@ class FlavorsTestV21(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/" + self._rspv +
-                             "/flavors/1",
+                        "href": "http://localhost/v2.1/flavors/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost" + self._fake +
-                             "/flavors/1",
+                        "href": "http://localhost/flavors/1",
                     },
                 ],
             },
@@ -265,7 +249,7 @@ class FlavorsTestV21(test.TestCase):
         self.assertEqual(response_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/' + self._rspv + '/flavors/detail', href_parts.path)
+        self.assertEqual('/v2.1/flavors/detail', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['1'], 'marker': ['1']},
                         matchers.DictMatches(params))
@@ -283,13 +267,11 @@ class FlavorsTestV21(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/" + self._rspv +
-                             "/flavors/1",
+                        "href": "http://localhost/v2.1/flavors/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost" + self._fake +
-                             "/flavors/1",
+                        "href": "http://localhost/flavors/1",
                     },
                 ],
             },
@@ -299,13 +281,11 @@ class FlavorsTestV21(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/" + self._rspv +
-                             "/flavors/2",
+                        "href": "http://localhost/v2.1/flavors/2",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost" + self._fake +
-                             "/flavors/2",
+                        "href": "http://localhost/flavors/2",
                     },
                 ],
             }
@@ -318,7 +298,7 @@ class FlavorsTestV21(test.TestCase):
         self.assertEqual(response_links[0]['rel'], 'next')
 
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/' + self._rspv + '/flavors', href_parts.path)
+        self.assertEqual('/v2.1/flavors', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['2'], 'marker': ['2']},
                         matchers.DictMatches(params))
@@ -339,13 +319,11 @@ class FlavorsTestV21(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": ("http://localhost/v2/%s/flavors/1" %
-                                 fakes.FAKE_PROJECT_ID),
+                        "href": "http://localhost/v2.1/flavors/1",
                     },
                     {
                         "rel": "bookmark",
-                        "href": ("http://localhost/%s/flavors/1" %
-                                 fakes.FAKE_PROJECT_ID),
+                        "href": "http://localhost/flavors/1",
                     }
                 ]
            }
@@ -357,8 +335,7 @@ class FlavorsTestV21(test.TestCase):
         self.assertEqual(response_list, expected_flavors)
         self.assertEqual(response_links[0]['rel'], 'next')
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/v2/%s/flavors' % fakes.FAKE_PROJECT_ID,
-                         href_parts.path)
+        self.assertEqual('/v2.1/flavors', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['2'], 'marker': ['1']},
                         matchers.DictMatches(params))
@@ -379,13 +356,11 @@ class FlavorsTestV21(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/" + self._rspv +
-                                 "/flavors/1",
+                            "href": "http://localhost/v2.1/flavors/1",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost" + self._fake +
-                                 "/flavors/1",
+                            "href": "http://localhost/flavors/1",
                         },
                     ],
                 },
@@ -400,13 +375,11 @@ class FlavorsTestV21(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/" + self._rspv +
-                                 "/flavors/2",
+                            "href": "http://localhost/v2.1/flavors/2",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost" + self._fake +
-                                 "/flavors/2",
+                            "href": "http://localhost/flavors/2",
                         },
                     ],
                 },
@@ -436,13 +409,11 @@ class FlavorsTestV21(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/" + self._rspv +
-                                 "/flavors/2",
+                            "href": "http://localhost/v2.1/flavors/2",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost" + self._fake +
-                                 "/flavors/2",
+                            "href": "http://localhost/flavors/2",
                         },
                     ],
                 },
@@ -471,13 +442,11 @@ class FlavorsTestV21(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/" + self._rspv +
-                                 "/flavors/2",
+                            "href": "http://localhost/v2.1/flavors/2",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost" + self._fake +
-                                 "/flavors/2",
+                            "href": "http://localhost/flavors/2",
                         },
                     ],
                 },
@@ -513,13 +482,11 @@ class FlavorsTestV21(test.TestCase):
                     "links": [
                         {
                             "rel": "self",
-                            "href": "http://localhost/" + self._rspv +
-                                 "/flavors/2",
+                            "href": "http://localhost/v2.1/flavors/2",
                         },
                         {
                             "rel": "bookmark",
-                            "href": "http://localhost" + self._fake +
-                                 "/flavors/2",
+                            "href": "http://localhost/flavors/2",
                         },
                     ],
                 },
@@ -569,13 +536,11 @@ class FlavorsTestV21(test.TestCase):
             "links": [
                 {
                     "rel": "self",
-                    "href": "http://localhost/" + self._rspv +
-                         "/flavors/2",
+                    "href": "http://localhost/v2.1/flavors/2",
                 },
                 {
                     "rel": "bookmark",
-                    "href": "http://localhost" + self._fake +
-                         "/flavors/2",
+                    "href": "http://localhost/flavors/2",
                 },
             ],
         }]
@@ -633,13 +598,11 @@ class FlavorsTestV21(test.TestCase):
             "links": [
                 {
                     "rel": "self",
-                    "href": "http://localhost/" + self._rspv +
-                            "/flavors/2",
+                    "href": "http://localhost/v2.1/flavors/2",
                  },
                  {
                     "rel": "bookmark",
-                    "href": "http://localhost" + self._fake +
-                            "/flavors/2",
+                    "href": "http://localhost/flavors/2",
                   },
             ],
         }]
@@ -817,11 +780,10 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
 
     def test_list_flavors_with_additional_filter_old_version(self):
         req = self.fake_request.blank(
-            '/%s/flavors?limit=1&marker=1&additional=something' %
-            fakes.FAKE_PROJECT_ID, version='2.74')
+            '/flavors?limit=1&marker=1&additional=something',
+            version='2.74')
         self._test_list_flavors_with_allowed_filter(
-            '/%s/flavors?limit=1&marker=1&additional=something' %
-            fakes.FAKE_PROJECT_ID, req=req)
+            '/flavors?limit=1&marker=1&additional=something', req=req)
 
     def test_list_detail_flavors_with_additional_filter_old_version(self):
         expected = {
@@ -835,11 +797,10 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
             "swap": fakes.FLAVORS['2'].swap
         }
         req = self.fake_request.blank(
-            '/%s/flavors?limit=1&marker=1&additional=something' %
-            fakes.FAKE_PROJECT_ID, version='2.74')
+            '/flavors?limit=1&marker=1&additional=something', version='2.74')
         self._test_list_flavors_with_allowed_filter(
-            '/%s/flavors/detail?limit=1&marker=1&additional=something' %
-            fakes.FAKE_PROJECT_ID, expected, req=req)
+            '/flavors/detail?limit=1&marker=1&additional=something',
+            expected, req=req)
 
     def _test_list_flavors_with_additional_filter(self, url):
         controller_list = self.controller.index
@@ -903,14 +864,13 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
 class DisabledFlavorsWithRealDBTestV21(test.TestCase):
     """Tests that disabled flavors should not be shown nor listed."""
     Controller = flavors_v21.FlavorsController
-    _prefix = "/v2"
     fake_request = fakes.HTTPRequestV21
 
     def setUp(self):
         super(DisabledFlavorsWithRealDBTestV21, self).setUp()
 
         # Add a new disabled type to the list of flavors
-        self.req = self.fake_request.blank(self._prefix + '/flavors')
+        self.req = self.fake_request.blank('/v2.1/flavors')
         self.context = self.req.environ['nova.context']
         self.admin_context = context.get_admin_context()
 

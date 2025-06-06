@@ -64,7 +64,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         kwargs = {}
         if version:
             kwargs['version'] = version
-        req_url = '/v2/%s/flavors/%s' % (fakes.FAKE_PROJECT_ID, url)
+        req_url = '/v2.1/flavors/%s' % url
         return fakes.HTTPRequest.blank(
             req_url, use_admin_context=use_admin_context, **kwargs,
         )

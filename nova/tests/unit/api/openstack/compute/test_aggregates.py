@@ -109,9 +109,9 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     def _set_up(self):
         self.controller = aggregates_v21.AggregateController()
-        self.req = fakes.HTTPRequest.blank('/v2/os-aggregates',
+        self.req = fakes.HTTPRequest.blank('/v2.1/os-aggregates',
                                            use_admin_context=True)
-        self.user_req = fakes.HTTPRequest.blank('/v2/os-aggregates')
+        self.user_req = fakes.HTTPRequest.blank('/v2.1/os-aggregates')
         self.context = self.req.environ['nova.context']
 
     def setUp(self):
@@ -752,7 +752,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     def test_images_with_invalid_id(self):
         body = {'cache': [{'id': uuidsentinel.cache}]}
-        req = fakes.HTTPRequest.blank('/v2/os-aggregates',
+        req = fakes.HTTPRequest.blank('/v2.1/os-aggregates',
                                       use_admin_context=True,
                                       version='2.81')
         self.assertRaises(exc.HTTPBadRequest, self.controller.images,
@@ -761,7 +761,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
     def test_images_with_duplicate_id(self):
         body = {"cache": [{"id": "faae1bd3-c848-41d6-b4dd-97d5b8be8b7e"},
                           {"id": "faae1bd3-c848-41d6-b4dd-97d5b8be8b7e"}]}
-        req = fakes.HTTPRequest.blank('/v2/os-aggregates',
+        req = fakes.HTTPRequest.blank('/v2.1/os-aggregates',
                                       use_admin_context=True,
                                       version='2.81')
         self.assertRaises(exc.HTTPBadRequest, self.controller.images,
@@ -772,7 +772,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                           {"id": "290de658-cf55-4cce-b025-9a1a9f93676a"},
                           {"id": "896f7f54-4e4e-4c21-a2b7-47cff4e99ab0"},
                           {"id": "d982bb82-04a0-4e9b-b40e-470f20a7b5d1"}]}
-        req = fakes.HTTPRequest.blank('/v2/os-aggregates',
+        req = fakes.HTTPRequest.blank('/v2.1/os-aggregates',
                                       use_admin_context=True,
                                       version='2.81')
         context = req.environ['nova.context']

@@ -924,10 +924,10 @@ class UriTestCase(APIValidationTestCase):
 
     def test_validate_uri(self):
         self.post(
-            body={'foo': 'http://localhost:8774/v2/servers'},
+            body={'foo': 'http://localhost:8774/v2.1/servers'},
             req=FakeRequest())
         self.post(
-            body={'foo': 'http://[::1]:8774/v2/servers'},
+            body={'foo': 'http://[::1]:8774/v2.1/servers'},
             req=FakeRequest())
 
     def test_validate_uri_null(self):
@@ -936,13 +936,13 @@ class UriTestCase(APIValidationTestCase):
     def test_validate_uri_fails(self):
         base_detail = ("Invalid input for field/attribute foo. Value: {0}. "
                        "'{0}' is not a 'uri'")
-        invalid_uri = 'http://localhost:8774/v2/servers##'
+        invalid_uri = 'http://localhost:8774/v2.1/servers##'
         self.check_validation_error(self.post,
                                     body={'foo': invalid_uri},
                                     expected_detail=base_detail.format(
                                         invalid_uri))
 
-        invalid_uri = 'http://[fdf8:01]:8774/v2/servers'
+        invalid_uri = 'http://[fdf8:01]:8774/v2.1/servers'
         self.check_validation_error(self.post,
                                     body={'foo': invalid_uri},
                                     expected_detail=base_detail.format(

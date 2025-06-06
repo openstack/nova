@@ -20,7 +20,7 @@ from nova.tests.unit.api.openstack import fakes
 
 
 class FlavorExtraDataTestV21(test.NoDBTestCase):
-    base_url = '/v2/%s/flavors' % fakes.FAKE_PROJECT_ID
+    base_url = '/v2.1/%s/flavors' % fakes.FAKE_PROJECT_ID
 
     def setUp(self):
         super(FlavorExtraDataTestV21, self).setUp()

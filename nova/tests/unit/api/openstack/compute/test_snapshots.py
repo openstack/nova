@@ -116,8 +116,7 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         self.assertEqual(102, resp_snapshot['id'])
 
     def test_snapshot_detail_offset_and_limit(self):
-        path = ('/v2/%s/os-snapshots/detail?offset=1&limit=1' %
-                fakes.FAKE_PROJECT_ID)
+        path = '/v2.1/os-snapshots/detail?offset=1&limit=1'
         req = fakes.HTTPRequest.blank(path)
         resp_dict = self.controller.detail(req)
         self.assertIn('snapshots', resp_dict)
@@ -134,8 +133,7 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         self.assertEqual(3, len(resp_snapshots))
 
     def test_snapshot_index_offset_and_limit(self):
-        path = ('/v2/%s/os-snapshots?offset=1&limit=1' %
-                fakes.FAKE_PROJECT_ID)
+        path = '/v2.1/os-snapshots?offset=1&limit=1'
         req = fakes.HTTPRequest.blank(path)
         resp_dict = self.controller.index(req)
         self.assertIn('snapshots', resp_dict)

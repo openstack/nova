@@ -16,16 +16,14 @@
 
 import webob.exc
 
-from nova.api.openstack.compute import certificates \
-        as certificates_v21
+from nova.api.openstack.compute import certificates
 from nova import context
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
 class CertificatesTestV21(test.NoDBTestCase):
-    certificates = certificates_v21
-    url = '/v2/%s/os-certificates' % fakes.FAKE_PROJECT_ID
+    base_path = '/v2.1/os-certificates'
     certificate_show_extension = 'os_compute_api:os-certificates:show'
     certificate_create_extension = \
         'os_compute_api:os-certificates:create'
@@ -33,7 +31,7 @@ class CertificatesTestV21(test.NoDBTestCase):
     def setUp(self):
         super(CertificatesTestV21, self).setUp()
         self.context = context.RequestContext('fake', fakes.FAKE_PROJECT_ID)
-        self.controller = self.certificates.CertificatesController()
+        self.controller = certificates.CertificatesController()
         self.req = fakes.HTTPRequest.blank('')
 
     def test_certificates_show_root(self):

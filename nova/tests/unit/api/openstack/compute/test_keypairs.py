@@ -76,7 +76,7 @@ def db_key_pair_create_duplicate(context):
 
 
 class KeypairsTestV21(test.TestCase):
-    base_url = '/v2/%s' % fakes.FAKE_PROJECT_ID
+    base_url = '/v2.1'
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
     def _setup_app_and_controller(self):
@@ -414,7 +414,7 @@ class KeypairsTestV210(KeypairsTestV22):
 
 
 class KeypairsTestV235(test.TestCase):
-    base_url = '/v2/%s' % fakes.FAKE_PROJECT_ID
+    base_url = '/v2.1'
     wsgi_api_version = '2.35'
 
     def _setup_app_and_controller(self):

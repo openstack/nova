@@ -128,7 +128,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     api_version = "2.1"
     FlavorAccessController = flavor_access.FlavorAccessController
     FlavorActionController = flavor_access.FlavorActionController
-    _prefix = "/v2/%s" % fakes.FAKE_PROJECT_ID
+    _prefix = "/v2.1"
     validation_ex = exception.ValidationError
 
     def setUp(self):
