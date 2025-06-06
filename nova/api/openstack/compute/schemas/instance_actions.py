@@ -60,6 +60,9 @@ index_response = {
                     'action': {'type': 'string'},
                     'instance_uuid': {'type': 'string', 'format': 'uuid'},
                     'message': {'type': ['null', 'string']},
+                    # NOTE(stephenfin): While this will always be set for
+                    # API-initiated actions, it will not be set for e.g.
+                    # `nova-manage`-initiated actions
                     'project_id': {
                         'type': ['null', 'string'],
                         'pattern': '^[a-zA-Z0-9-]*$',
@@ -68,6 +71,8 @@ index_response = {
                     },
                     'request_id': {'type': 'string'},
                     'start_time': {'type': 'string', 'format': 'date-time'},
+                    # NOTE(stephenfin): As with project_id, this can be null
+                    # under select circumstances.
                     'user_id': {
                         'type': ['null', 'string'],
                         'pattern': '^[a-zA-Z0-9-]*$',

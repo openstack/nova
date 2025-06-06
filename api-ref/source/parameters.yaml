@@ -5893,6 +5893,7 @@ project_id_server:
 project_id_server_action:
   description: |
     The ID of the project which initiated the server action.
+    This can be ``null`` for ``nova-manage``-initiated actions.
   in: body
   required: true
   type: string
@@ -7395,6 +7396,7 @@ user_id_migration_2_80:
 user_id_server_action:
   description: |
     The ID of the user which initiated the server action.
+    This can be ``null`` for ``nova-manage``-initiated actions.
   in: body
   required: true
   type: string
