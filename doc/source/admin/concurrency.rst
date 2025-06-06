@@ -24,8 +24,8 @@ threading mode at service startup via setting the environment variable
 
 .. note::
 
-   Since nova 32.0.0 (2025.2 Flamingo) the nova-scheduler can be switched to
-   native threading mode.
+   Since nova 32.0.0 (2025.2 Flamingo) the nova-scheduler, nova-metadata, and
+   nova-api can be switched to native threading mode.
 
 
 Tunables for the native threading mode

@@ -475,6 +475,8 @@
         # https://bugs.launchpad.net/nova/+bug/2110545
         NOVA_COMPILE_MDEV_SAMPLES: False
         'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
