@@ -102,8 +102,17 @@ class Schemas:
         return None
 
 
-def _schema_validation_helper(schema, target, min_version, max_version,
-                              args, kwargs, is_body=True):
+def _schema_validation_helper(
+    schema,
+    target,
+    min_version,
+    max_version,
+    args,
+    kwargs,
+    *,
+    relax_additional_properties=False,
+    is_body=True,
+):
     """A helper method to execute JSON-Schema Validation.
 
     This method checks the request version whether matches the specified max
@@ -115,17 +124,20 @@ def _schema_validation_helper(schema, target, min_version, max_version,
     :param schema: A dict, the JSON-Schema is used to validate the target.
     :param target: A dict, the target is validated by the JSON-Schema.
     :param min_version: A string of two numerals. X.Y indicating the minimum
-                        version of the JSON-Schema to validate against.
+        version of the JSON-Schema to validate against.
     :param max_version: A string of two numerals. X.Y indicating the maximum
-                        version of the JSON-Schema to validate against.
+        version of the JSON-Schema to validate against.
     :param args: Positional arguments which passed into original method.
     :param kwargs: Keyword arguments which passed into original method.
+    :param relax_additional_properties: Whether to enable soft
+        additionalProperties validation. This is only enabled for request
+        validation.
     :param is_body: A boolean. Indicating whether the target is HTTP request
-                    body or not.
+        body or not.
     :returns: A boolean. `True` if and only if the version range matches the
-              request AND the schema is successfully validated. `False` if the
-              version range does not match the request and no validation is
-              performed.
+        request AND the schema is successfully validated. `False` if the
+        version range does not match the request and no validation is
+        performed.
     :raises: ValidationError, when the validation fails.
     """
     min_ver = api_version_request.APIVersionRequest(min_version)
@@ -144,6 +156,8 @@ def _schema_validation_helper(schema, target, min_version, max_version,
         legacy_v2 = args[1].is_legacy_v2()
 
     if legacy_v2:
+        relax_additional_properties = relax_additional_properties and legacy_v2
+
         # NOTE: For v2.0 compatible API, here should work like
         #    client  | schema min_version | schema
         # -----------+--------------------+--------
@@ -152,7 +166,8 @@ def _schema_validation_helper(schema, target, min_version, max_version,
         #  legacy_v2 | 2.1+               | don't
         if min_version is None or min_version == '2.0':
             schema_validator = validators._SchemaValidator(
-                schema, legacy_v2, is_body)
+                schema, relax_additional_properties, is_body
+            )
             schema_validator.validate(target)
             return True
     elif ver.matches(min_ver, max_ver):
@@ -160,8 +175,7 @@ def _schema_validation_helper(schema, target, min_version, max_version,
         # the version range specified. Note that if both min
         # and max are not specified the validator will always
         # be run.
-        schema_validator = validators._SchemaValidator(
-            schema, legacy_v2, is_body)
+        schema_validator = validators._SchemaValidator(schema, False, is_body)
         schema_validator.validate(target)
         return True
 
@@ -197,7 +211,8 @@ def schema(
                 min_version,
                 max_version,
                 args,
-                kwargs
+                kwargs,
+                relax_additional_properties=True,
             )
             return func(*args, **kwargs)
 
@@ -349,10 +364,16 @@ def query_schema(request_query_schema, min_version=None,
                 msg = _('Query string is not UTF-8 encoded')
                 raise exception.ValidationError(msg)
 
-            if _schema_validation_helper(request_query_schema,
-                                         query_dict,
-                                         min_version, max_version,
-                                         args, kwargs, is_body=False):
+            if _schema_validation_helper(
+                request_query_schema,
+                query_dict,
+                min_version,
+                max_version,
+                args,
+                kwargs,
+                relax_additional_properties=True,
+                is_body=False,
+            ):
                 # NOTE(alex_xu): The additional query parameters were stripped
                 # out when `additionalProperties=True`. This is for backward
                 # compatible with v2.1 API and legacy v2 API. But it makes the

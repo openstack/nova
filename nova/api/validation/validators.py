@@ -193,6 +193,10 @@ def _validate_az_name(instance):
     raise exception.InvalidName(reason=regex.reason)
 
 
+# NOTE(stephenfin): Be careful with this method: it doesn't work with oneOf. If
+# you have multiple schemas, this method will delete properties that are not
+# allowed against earlier subschemas even if they're allowed (or even required)
+# by later subschemas.
 def _soft_validate_additional_properties(validator,
                                          additional_properties_value,
                                          instance,
