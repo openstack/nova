@@ -16,6 +16,7 @@
 import copy
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas import quota_classes
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -76,23 +77,27 @@ class QuotaClassSetsController(wsgi.Controller):
 
         return dict(quota_class_set=result)
 
-    @wsgi.Controller.api_version('2.1', '2.49')
+    def _get_filtered_quotas(self, req):
+        if api_version_request.is_supported(req, '2.57'):
+            return FILTERED_QUOTAS_2_57
+        elif api_version_request.is_supported(req, '2.50'):
+            return FILTERED_QUOTAS_2_50
+        else:
+            return []
+
     @wsgi.expected_errors(())
     @validation.query_schema(quota_classes.show_query)
     def show(self, req, id):
-        return self._show(req, id, exclude_server_groups=True)
+        filtered_quotas = self._get_filtered_quotas(req)
 
-    @wsgi.Controller.api_version('2.50', '2.56')  # noqa
-    @wsgi.expected_errors(())
-    @validation.query_schema(quota_classes.show_query)
-    def show(self, req, id):  # noqa
-        return self._show(req, id, FILTERED_QUOTAS_2_50)
+        exclude_server_groups = True
+        if api_version_request.is_supported(req, '2.50'):
+            exclude_server_groups = False
 
-    @wsgi.Controller.api_version('2.57')  # noqa
-    @wsgi.expected_errors(())
-    @validation.query_schema(quota_classes.show_query)
-    def show(self, req, id):  # noqa
-        return self._show(req, id, FILTERED_QUOTAS_2_57)
+        return self._show(
+            req, id, filtered_quotas=filtered_quotas,
+            exclude_server_groups=exclude_server_groups,
+        )
 
     def _show(self, req, id, filtered_quotas=None,
               exclude_server_groups=False):
@@ -102,23 +107,21 @@ class QuotaClassSetsController(wsgi.Controller):
         return self._format_quota_set(id, values, filtered_quotas,
                                       exclude_server_groups)
 
-    @wsgi.Controller.api_version("2.1", "2.49")  # noqa
     @wsgi.expected_errors(400)
-    @validation.schema(quota_classes.update)
+    @validation.schema(quota_classes.update, '2.1', '2.49')
+    @validation.schema(quota_classes.update_v250, '2.50', '2.56')
+    @validation.schema(quota_classes.update_v257, '2.57')
     def update(self, req, id, body):
-        return self._update(req, id, body, exclude_server_groups=True)
+        filtered_quotas = self._get_filtered_quotas(req)
 
-    @wsgi.Controller.api_version("2.50", "2.56")  # noqa
-    @wsgi.expected_errors(400)
-    @validation.schema(quota_classes.update_v250)
-    def update(self, req, id, body):  # noqa
-        return self._update(req, id, body, FILTERED_QUOTAS_2_50)
+        exclude_server_groups = True
+        if api_version_request.is_supported(req, '2.50'):
+            exclude_server_groups = False
 
-    @wsgi.Controller.api_version("2.57")  # noqa
-    @wsgi.expected_errors(400)
-    @validation.schema(quota_classes.update_v257)
-    def update(self, req, id, body):  # noqa
-        return self._update(req, id, body, FILTERED_QUOTAS_2_57)
+        return self._update(
+            req, id, body, filtered_quotas=filtered_quotas,
+            exclude_server_groups=exclude_server_groups,
+        )
 
     def _update(self, req, id, body, filtered_quotas=None,
                 exclude_server_groups=False):

@@ -21,6 +21,7 @@ import iso8601
 from oslo_utils import timeutils
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import simple_tenant_usage as schema
 from nova.api.openstack.compute.views import usages as usages_view
@@ -178,7 +179,7 @@ class SimpleTenantUsageController(wsgi.Controller):
 
             info['ended_at'] = (
                 timeutils.normalize_time(instance.terminated_at) if
-                    instance.terminated_at else None)
+                instance.terminated_at else None)
 
             if info['ended_at']:
                 info['state'] = 'terminated'
@@ -261,35 +262,17 @@ class SimpleTenantUsageController(wsgi.Controller):
         detailed = env.get('detailed', ['0'])[0] == '1'
         return (period_start, period_stop, detailed)
 
-    @wsgi.Controller.api_version("2.40")
-    @validation.query_schema(schema.index_query_275, '2.75')
+    @validation.query_schema(schema.index_query, '2.1', '2.39')
     @validation.query_schema(schema.index_query_v240, '2.40', '2.74')
+    @validation.query_schema(schema.index_query_v275, '2.75')
     @wsgi.expected_errors(400)
     def index(self, req):
         """Retrieve tenant_usage for all tenants."""
-        return self._index(req, links=True)
+        links = False
+        if api_version_request.is_supported(req, '2.40'):
+            links = True
 
-    @wsgi.Controller.api_version("2.1", "2.39")  # noqa
-    @validation.query_schema(schema.index_query)
-    @wsgi.expected_errors(400)
-    def index(self, req):  # noqa
-        """Retrieve tenant_usage for all tenants."""
-        return self._index(req)
-
-    @wsgi.Controller.api_version("2.40")
-    @validation.query_schema(schema.show_query_275, '2.75')
-    @validation.query_schema(schema.show_query_v240, '2.40', '2.74')
-    @wsgi.expected_errors(400)
-    def show(self, req, id):
-        """Retrieve tenant_usage for a specified tenant."""
-        return self._show(req, id, links=True)
-
-    @wsgi.Controller.api_version("2.1", "2.39")  # noqa
-    @validation.query_schema(schema.show_query)
-    @wsgi.expected_errors(400)
-    def show(self, req, id):  # noqa
-        """Retrieve tenant_usage for a specified tenant."""
-        return self._show(req, id)
+        return self._index(req, links=links)
 
     def _index(self, req, links=False):
         context = req.environ['nova.context']
@@ -326,6 +309,18 @@ class SimpleTenantUsageController(wsgi.Controller):
                 tenant_usages['tenant_usages_links'] = usages_links
 
         return tenant_usages
+
+    @validation.query_schema(schema.show_query, '2.1', '2.39')
+    @validation.query_schema(schema.show_query_v240, '2.40', '2.74')
+    @validation.query_schema(schema.show_query_v275, '2.75')
+    @wsgi.expected_errors(400)
+    def show(self, req, id):
+        """Retrieve tenant_usage for a specified tenant."""
+        links = False
+        if api_version_request.is_supported(req, '2.40'):
+            links = True
+
+        return self._show(req, id, links=links)
 
     def _show(self, req, id, links=False):
         tenant_id = id

@@ -53,7 +53,7 @@ service_update_v211 = {
 # be specified in the body. If status=='disabled', then 'disabled_reason' is
 # also checked in the body but is not required. Requesting status='enabled' and
 # including a 'disabled_reason' results in a 400, but this is checked in code.
-service_update_v2_53 = {
+service_update_v253 = {
     'type': 'object',
     'properties': {
         'status': {
