@@ -32,15 +32,6 @@ Install and configure components
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 
-   * In the ``[DEFAULT]`` section, enable only the compute and metadata APIs:
-
-     .. path /etc/nova/nova.conf
-     .. code-block:: ini
-
-        [DEFAULT]
-        # ...
-        enabled_apis = osapi_compute,metadata
-
    * In the ``[DEFAULT]`` section, set the ``compute_driver``:
 
      .. path /etc/nova/nova.conf
