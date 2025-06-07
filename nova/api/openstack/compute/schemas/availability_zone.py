@@ -63,10 +63,7 @@ detail_response['properties']['availabilityZoneInfo']['items']['properties']['ho
                         'active': {'type': 'boolean'},
                         'available': {'type': 'boolean'},
                         'updated_at': {
-                            'oneOf': [
-                                {'type': 'null'},
-                                {'type': 'string', 'format': 'date-time'},
-                            ],
+                            'type': ['string', 'null'], 'format': 'date-time',
                         },
                     },
                     'required': ['active', 'available', 'updated_at'],

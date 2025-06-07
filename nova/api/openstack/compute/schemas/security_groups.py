@@ -49,16 +49,8 @@ create_rules = {
         'security_group_rule': {
             'type': 'object',
             'properties': {
-                'group_id': {
-                    'oneOf': [
-                        {'type': 'null'},
-                        {'type': 'string', 'format': 'uuid'},
-                    ],
-                },
-                'parent_group_id': {
-                    'type': 'string',
-                    'format': 'uuid',
-                },
+                'group_id': {'type': ['string', 'null'], 'format': 'uuid'},
+                'parent_group_id': {'type': 'string', 'format': 'uuid'},
                 # NOTE(stephenfin): We never validated these and we're not
                 # going to add that validation now.
                 'to_port': {},

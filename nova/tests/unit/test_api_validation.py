@@ -27,40 +27,23 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
-query_schema = {
-    'type': 'object',
-    'properties': {
-        'foo': parameter_types.single_param({'type': 'string',
-                                             'format': 'uuid'}),
-        'foos': parameter_types.multi_params({'type': 'string'})
-    },
-    'patternProperties': {
-        "^_": parameter_types.multi_params({'type': 'string'})},
-    'additionalProperties': True
-}
-
-
 class FakeQueryParametersController(object):
-
-    @validation.query_schema(query_schema, '2.3')
-    def get(self, req):
-        return list(set(req.GET.keys()))
-
-
-class RegexFormatFakeController(object):
 
     schema = {
         'type': 'object',
         'properties': {
-            'foo': {
-                'format': 'regex',
-            },
+            'foo': parameter_types.single_param({'type': 'string',
+                                                 'format': 'uuid'}),
+            'foos': parameter_types.multi_params({'type': 'string'})
         },
+        'patternProperties': {
+            "^_": parameter_types.multi_params({'type': 'string'})},
+        'additionalProperties': True
     }
 
-    @validation.schema(request_body_schema=schema)
-    def post(self, req, body):
-        return 'Validation succeeded.'
+    @validation.query_schema(schema, '2.3')
+    def get(self, req):
+        return list(set(req.GET.keys()))
 
 
 class FakeRequest(object):
@@ -130,7 +113,7 @@ class APIValidationTestCase(test.NoDBTestCase):
         self.post = None
 
         if self.post_schema is not None:
-            @validation.schema(request_body_schema=self.post_schema)
+            @validation.schema(self.post_schema)
             def post(req, body):
                 return 'Validation succeeded.'
 
@@ -146,7 +129,7 @@ class APIValidationTestCase(test.NoDBTestCase):
             if isinstance(expected_detail, list):
                 self.assertIn(ex.kwargs['detail'], expected_detail,
                               'Exception details did not match expected')
-            elif not re.match(expected_detail, ex.kwargs['detail']):
+            elif expected_detail not in ex.kwargs['detail']:
                 self.assertEqual(expected_detail, ex.kwargs['detail'],
                                  'Exception details did not match expected')
         except Exception as ex:
@@ -205,8 +188,14 @@ class MicroversionsSchemaTestCase(APIValidationTestCase):
     def test_validate_v2compatible_request(self):
         req = FakeRequest()
         req.legacy_v2 = True
-        self.assertEqual(self.post(body={'foo': 'bar'}, req=req),
-                         'Validation succeeded.')
+
+        # success
+        self.post(body={'foo': 'bar'}, req=req)
+
+    def test_validate_v2compatible_request_fails(self):
+        req = FakeRequest()
+        req.legacy_v2 = True
+
         detail = ("Invalid input for field/attribute foo. Value: 1. "
                   "1 is not of type 'string'")
         self.check_validation_error(self.post, body={'foo': 1},
@@ -214,8 +203,12 @@ class MicroversionsSchemaTestCase(APIValidationTestCase):
 
     def test_validate_v21_request(self):
         req = FakeRequest()
-        self.assertEqual(self.post(body={'foo': 1}, req=req),
-                         'Validation succeeded.')
+
+        self.post(body={'foo': 1}, req=req)
+
+    def test_validate_v21_request_fails(self):
+        req = FakeRequest()
+
         detail = ("Invalid input for field/attribute foo. Value: bar. "
                   "'bar' is not of type 'integer'")
         self.check_validation_error(self.post, body={'foo': 'bar'},
@@ -237,8 +230,11 @@ class MicroversionsSchemaTestCase(APIValidationTestCase):
 
         req = FakeRequest()
         req.legacy_v2 = True
-        self.assertEqual('Validation succeeded.',
-                         post(body={'foo': 1}, req=req))
+
+        # success
+        post(body={'foo': 1}, req=req)
+
+        # failure
         detail = ("Invalid input for field/attribute foo. Value: bar. "
                   "'bar' is not of type 'integer'")
         self.check_validation_error(post, body={'foo': 'bar'},
@@ -325,10 +321,8 @@ class RequiredDisableTestCase(APIValidationTestCase):
     }
 
     def test_validate_required_disable(self):
-        self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'abc': 1}, req=FakeRequest()),
-                         'Validation succeeded.')
+        self.post(body={'foo': 1}, req=FakeRequest())
+        self.post(body={'abc': 1}, req=FakeRequest())
 
 
 class RequiredEnableTestCase(APIValidationTestCase):
@@ -344,8 +338,7 @@ class RequiredEnableTestCase(APIValidationTestCase):
     }
 
     def test_validate_required_enable(self):
-        self.assertEqual(self.post(body={'foo': 1},
-                                   req=FakeRequest()), 'Validation succeeded.')
+        self.post(body={'foo': 1}, req=FakeRequest())
 
     def test_validate_required_enable_fails(self):
         detail = "'foo' is a required property"
@@ -366,11 +359,8 @@ class AdditionalPropertiesEnableTestCase(APIValidationTestCase):
     }
 
     def test_validate_additionalProperties_enable(self):
-        self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'foo': 1, 'ext': 1},
-                                   req=FakeRequest()),
-                         'Validation succeeded.')
+        self.post(body={'foo': 1}, req=FakeRequest())
+        self.post(body={'foo': 1, 'ext': 1}, req=FakeRequest())
 
 
 class AdditionalPropertiesDisableTestCase(APIValidationTestCase):
@@ -387,8 +377,7 @@ class AdditionalPropertiesDisableTestCase(APIValidationTestCase):
     }
 
     def test_validate_additionalProperties_disable(self):
-        self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
-                         'Validation succeeded.')
+        self.post(body={'foo': 1}, req=FakeRequest())
 
     def test_validate_additionalProperties_disable_fails(self):
         detail = "Additional properties are not allowed ('ext' was unexpected)"
@@ -408,8 +397,7 @@ class PatternPropertiesTestCase(APIValidationTestCase):
     }
 
     def test_validate_patternProperties(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'bar'}, req=FakeRequest()))
+        self.post(body={'foo': 'bar'}, req=FakeRequest())
 
     def test_validate_patternProperties_fails(self):
         details = [
@@ -428,7 +416,7 @@ class PatternPropertiesTestCase(APIValidationTestCase):
 
         details = [
             ("'0123456789a' does not match any of the regexes: "
-                  "'^[a-zA-Z0-9]{1,10}$'"),
+             "'^[a-zA-Z0-9]{1,10}$'"),
             ("Additional properties are not allowed ('0123456789a' was"
              " unexpected)")
         ]
@@ -455,12 +443,9 @@ class StringTestCase(APIValidationTestCase):
     }
 
     def test_validate_string(self):
-        self.assertEqual(self.post(body={'foo': 'abc'}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'foo': '0'}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'foo': ''}, req=FakeRequest()),
-                         'Validation succeeded.')
+        self.post(body={'foo': 'abc'}, req=FakeRequest())
+        self.post(body={'foo': '0'}, req=FakeRequest())
+        self.post(body={'foo': ''}, req=FakeRequest())
 
     def test_validate_string_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: 1."
@@ -493,11 +478,8 @@ class StringLengthTestCase(APIValidationTestCase):
     }
 
     def test_validate_string_length(self):
-        self.assertEqual(self.post(body={'foo': '0'}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'foo': '0123456789'},
-                                   req=FakeRequest()),
-                         'Validation succeeded.')
+        self.post(body={'foo': '0'}, req=FakeRequest())
+        self.post(body={'foo': '0123456789'}, req=FakeRequest())
 
     def test_validate_string_length_fails(self):
         detail = [
@@ -528,13 +510,9 @@ class IntegerTestCase(APIValidationTestCase):
     }
 
     def test_validate_integer(self):
-        self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'foo': '1'}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'foo': '0123456789'},
-                                   req=FakeRequest()),
-                         'Validation succeeded.')
+        self.post(body={'foo': 1}, req=FakeRequest())
+        self.post(body={'foo': '1'}, req=FakeRequest())
+        self.post(body={'foo': '0123456789'}, req=FakeRequest())
 
     def test_validate_integer_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: abc."
@@ -578,31 +556,28 @@ class IntegerRangeTestCase(APIValidationTestCase):
     }
 
     def test_validate_integer_range(self):
-        self.assertEqual(self.post(body={'foo': 1}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'foo': 10}, req=FakeRequest()),
-                         'Validation succeeded.')
-        self.assertEqual(self.post(body={'foo': '1'}, req=FakeRequest()),
-                         'Validation succeeded.')
+        self.post(body={'foo': 1}, req=FakeRequest())
+        self.post(body={'foo': 10}, req=FakeRequest())
+        self.post(body={'foo': '1'}, req=FakeRequest())
 
     def test_validate_integer_range_fails(self):
-        detail = ("Invalid input for field/attribute foo. Value: 0."
-                  " 0(.0)? is less than the minimum of 1")
+        detail = ("Invalid input for field/attribute foo. Value: 0. "
+                  "0 is less than the minimum of 1")
         self.check_validation_error(self.post, body={'foo': 0},
                                     expected_detail=detail)
 
-        detail = ("Invalid input for field/attribute foo. Value: 11."
-                  " 11(.0)? is greater than the maximum of 10")
+        detail = ("Invalid input for field/attribute foo. Value: 11. "
+                  "11 is greater than the maximum of 10")
         self.check_validation_error(self.post, body={'foo': 11},
                                     expected_detail=detail)
 
-        detail = ("Invalid input for field/attribute foo. Value: 0."
-                  " 0(.0)? is less than the minimum of 1")
+        detail = ("Invalid input for field/attribute foo. Value: 0. "
+                  "0 is less than the minimum of 1")
         self.check_validation_error(self.post, body={'foo': '0'},
                                     expected_detail=detail)
 
-        detail = ("Invalid input for field/attribute foo. Value: 11."
-                  " 11(.0)? is greater than the maximum of 10")
+        detail = ("Invalid input for field/attribute foo. Value: 11. "
+                  "11 is greater than the maximum of 10")
         self.check_validation_error(self.post, body={'foo': '11'},
                                     expected_detail=detail)
 
@@ -617,18 +592,12 @@ class BooleanTestCase(APIValidationTestCase):
     }
 
     def test_validate_boolean(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': True}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': False}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'True'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'False'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '1'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '0'}, req=FakeRequest()))
+        self.post(body={'foo': True}, req=FakeRequest())
+        self.post(body={'foo': False}, req=FakeRequest())
+        self.post(body={'foo': 'True'}, req=FakeRequest())
+        self.post(body={'foo': 'False'}, req=FakeRequest())
+        self.post(body={'foo': '1'}, req=FakeRequest())
+        self.post(body={'foo': '0'}, req=FakeRequest())
 
     def test_validate_boolean_fails(self):
         enum_boolean = ("[True, 'True', 'TRUE', 'true', '1', 'ON', 'On',"
@@ -657,16 +626,10 @@ class FQDNTestCase(APIValidationTestCase):
     }
 
     def test_validate_fqdn(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'localhost'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'localhost.localdomain.com'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'my-host'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'my_host'}, req=FakeRequest()))
+        self.post(body={'foo': 'localhost'}, req=FakeRequest())
+        self.post(body={'foo': 'localhost.localdomain.com'}, req=FakeRequest())
+        self.post(body={'foo': 'my-host'}, req=FakeRequest())
+        self.post(body={'foo': 'my_host'}, req=FakeRequest())
 
     def test_validate_fqdn_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: True."
@@ -695,19 +658,11 @@ class NameTestCase(APIValidationTestCase):
     }
 
     def test_validate_name(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'm1.small'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'my server'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'a'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': u'\u0434'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': u'\u0434\u2006\ufffd'},
-                                   req=FakeRequest()))
+        self.post(body={'foo': 'm1.small'}, req=FakeRequest())
+        self.post(body={'foo': 'my server'}, req=FakeRequest())
+        self.post(body={'foo': 'a'}, req=FakeRequest())
+        self.post(body={'foo': u'\u0434'}, req=FakeRequest())
+        self.post(body={'foo': u'\u0434\u2006\ufffd'}, req=FakeRequest())
 
     def test_validate_name_fails(self):
         error = ("An invalid 'name' value was provided. The name must be: "
@@ -723,7 +678,7 @@ class NameTestCase(APIValidationTestCase):
 
         for item in should_fail:
             self.check_validation_error(self.post, body={'foo': item},
-                                    expected_detail=error)
+                                        expected_detail=error)
 
         # four-byte unicode, if supported by this python build
         try:
@@ -743,32 +698,16 @@ class NameWithLeadingTrailingSpacesTestCase(APIValidationTestCase):
     }
 
     def test_validate_name(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'm1.small'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'my server'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'a'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': u'\u0434'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': u'\u0434\u2006\ufffd'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '  abc  '},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'abc  abc  abc'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '  abc  abc  abc  '},
-                                   req=FakeRequest()))
+        self.post(body={'foo': 'm1.small'}, req=FakeRequest())
+        self.post(body={'foo': 'my server'}, req=FakeRequest())
+        self.post(body={'foo': 'a'}, req=FakeRequest())
+        self.post(body={'foo': u'\u0434'}, req=FakeRequest())
+        self.post(body={'foo': u'\u0434\u2006\ufffd'}, req=FakeRequest())
+        self.post(body={'foo': '  abc  '}, req=FakeRequest())
+        self.post(body={'foo': 'abc  abc  abc'}, req=FakeRequest())
+        self.post(body={'foo': '  abc  abc  abc  '}, req=FakeRequest())
         # leading unicode space
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '\xa0abc'},
-                                   req=FakeRequest()))
+        self.post(body={'foo': '\xa0abc'}, req=FakeRequest())
 
     def test_validate_name_fails(self):
         error = ("An invalid 'name' value was provided. The name must be: "
@@ -782,7 +721,7 @@ class NameWithLeadingTrailingSpacesTestCase(APIValidationTestCase):
 
         for item in should_fail:
             self.check_validation_error(self.post, body={'foo': item},
-                                    expected_detail=error)
+                                        expected_detail=error)
 
         # four-byte unicode, if supported by this python build
         try:
@@ -802,15 +741,9 @@ class NoneTypeTestCase(APIValidationTestCase):
     }
 
     def test_validate_none(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'None'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': None},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': {}},
-                                   req=FakeRequest()))
+        self.post(body={'foo': 'None'}, req=FakeRequest())
+        self.post(body={'foo': None}, req=FakeRequest())
+        self.post(body={'foo': {}}, req=FakeRequest())
 
     def test_validate_none_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: ."
@@ -835,12 +768,8 @@ class NameOrNoneTestCase(APIValidationTestCase):
     }
 
     def test_valid(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': None},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '1'},
-                                   req=FakeRequest()))
+        self.post(body={'foo': None}, req=FakeRequest())
+        self.post(body={'foo': '1'}, req=FakeRequest())
 
     def test_validate_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: 1234. 1234 "
@@ -872,10 +801,8 @@ class TcpUdpPortTestCase(APIValidationTestCase):
     }
 
     def test_validate_tcp_udp_port(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 1024}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '1024'}, req=FakeRequest()))
+        self.post(body={'foo': 1024}, req=FakeRequest())
+        self.post(body={'foo': '1024'}, req=FakeRequest())
 
     def test_validate_tcp_udp_port_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: True."
@@ -884,7 +811,7 @@ class TcpUdpPortTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: 65536."
-                  " 65536(.0)? is greater than the maximum of 65535")
+                  " 65536 is greater than the maximum of 65535")
         self.check_validation_error(self.post, body={'foo': 65536},
                                     expected_detail=detail)
 
@@ -895,18 +822,17 @@ class CidrFormatTestCase(APIValidationTestCase):
         'type': 'object',
         'properties': {
             'foo': {
-                'type': 'string',
+                'type': ['string', 'null'],
                 'format': 'cidr',
             },
         },
     }
 
     def test_validate_cidr(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(
-                         body={'foo': '192.168.10.0/24'},
-                         req=FakeRequest()
-                         ))
+        self.post(body={'foo': '192.168.10.0/24'}, req=FakeRequest())
+
+    def test_validate_cidr_null(self):
+        self.post(body={'foo': None}, req=FakeRequest())
 
     def test_validate_cidr_fails(self):
         detail = ("Invalid input for field/attribute foo."
@@ -939,18 +865,17 @@ class DatetimeTestCase(APIValidationTestCase):
         'type': 'object',
         'properties': {
             'foo': {
-                'type': 'string',
+                'type': ['string', 'null'],
                 'format': 'date-time',
             },
         },
     }
 
     def test_validate_datetime(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(
-                            body={'foo': '2014-01-14T01:00:00Z'},
-                            req=FakeRequest()
-                         ))
+        self.post(body={'foo': '2014-01-14T01:00:00Z'}, req=FakeRequest())
+
+    def test_validate_datetime_null(self):
+        self.post(body={'foo': None}, req=FakeRequest())
 
     def test_validate_datetime_fails(self):
         detail = ("Invalid input for field/attribute foo."
@@ -977,24 +902,27 @@ class UuidTestCase(APIValidationTestCase):
         'type': 'object',
         'properties': {
             'foo': {
-                'type': 'string',
+                'type': ['string', 'null'],
                 'format': 'uuid',
             },
         },
     }
 
     def test_validate_uuid(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(
-                         body={'foo': '70a599e0-31e7-49b7-b260-868f441e862b'},
-                             req=FakeRequest()
-                         ))
+        self.post(
+            body={'foo': '70a599e0-31e7-49b7-b260-868f441e862b'},
+            req=FakeRequest()
+        )
+
+    def test_validate_uuid_null(self):
+        self.post(body={'foo': None}, req=FakeRequest())
 
     def test_validate_uuid_fails(self):
         detail = ("Invalid input for field/attribute foo."
                   " Value: 70a599e031e749b7b260868f441e862."
                   " '70a599e031e749b7b260868f441e862' is not a 'uuid'")
-        self.check_validation_error(self.post,
+        self.check_validation_error(
+            self.post,
             body={'foo': '70a599e031e749b7b260868f441e862'},
             expected_detail=detail)
 
@@ -1015,23 +943,22 @@ class UriTestCase(APIValidationTestCase):
         'type': 'object',
         'properties': {
             'foo': {
-                'type': 'string',
+                'type': ['string', 'null'],
                 'format': 'uri',
             },
         },
     }
 
     def test_validate_uri(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(
-                         body={'foo': 'http://localhost:8774/v2/servers'},
-                         req=FakeRequest()
-                         ))
-        self.assertEqual('Validation succeeded.',
-                         self.post(
-                         body={'foo': 'http://[::1]:8774/v2/servers'},
-                         req=FakeRequest()
-                         ))
+        self.post(
+            body={'foo': 'http://localhost:8774/v2/servers'},
+            req=FakeRequest())
+        self.post(
+            body={'foo': 'http://[::1]:8774/v2/servers'},
+            req=FakeRequest())
+
+    def test_validate_uri_null(self):
+        self.post(body={'foo': None}, req=FakeRequest())
 
     def test_validate_uri_fails(self):
         base_detail = ("Invalid input for field/attribute foo. Value: {0}. "
@@ -1067,18 +994,17 @@ class Ipv4TestCase(APIValidationTestCase):
         'type': 'object',
         'properties': {
             'foo': {
-                'type': 'string',
+                'type': ['string', 'null'],
                 'format': 'ipv4',
             },
         },
     }
 
     def test_validate_ipv4(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(
-                         body={'foo': '192.168.0.100'},
-                         req=FakeRequest()
-                         ))
+        self.post(body={'foo': '192.168.0.100'}, req=FakeRequest())
+
+    def test_validate_ipv4_null(self):
+        self.post(body={'foo': None}, req=FakeRequest())
 
     def test_validate_ipv4_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: abc."
@@ -1105,18 +1031,17 @@ class Ipv6TestCase(APIValidationTestCase):
         'type': 'object',
         'properties': {
             'foo': {
-                'type': 'string',
+                'type': ['string', 'null'],
                 'format': 'ipv6',
             },
         },
     }
 
     def test_validate_ipv6(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(
-                         body={'foo': '2001:db8::1234:0:0:9abc'},
-                         req=FakeRequest()
-                         ))
+        self.post(body={'foo': '2001:db8::1234:0:0:9abc'}, req=FakeRequest())
+
+    def test_validate_ipv6_null(self):
+        self.post(body={'foo': None}, req=FakeRequest())
 
     def test_validate_ipv6_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: abc."
@@ -1127,7 +1052,7 @@ class Ipv6TestCase(APIValidationTestCase):
         detail = ("Invalid input for field/attribute foo. Value: localhost."
                   " 'localhost' is not a 'ipv6'")
         self.check_validation_error(self.post, body={'foo': 'localhost'},
-                                        expected_detail=detail)
+                                    expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo."
                   " Value: 192.168.0.100. '192.168.0.100' is not a 'ipv6'")
@@ -1141,17 +1066,18 @@ class Base64TestCase(APIValidationTestCase):
         'type': 'object',
         'properties': {
             'foo': {
-               'type': 'string',
+                'type': ['string', 'null'],
                 'format': 'base64',
             },
         },
     }
 
     def test_validate_base64(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'aGVsbG8gd29ybGQ='},
-                                   req=FakeRequest()))
         # 'aGVsbG8gd29ybGQ=' is the base64 code of 'hello world'
+        self.post(body={'foo': 'aGVsbG8gd29ybGQ='}, req=FakeRequest())
+
+    def test_validate_base64_null(self):
+        self.post(body={'foo': None}, req=FakeRequest())
 
     def test_validate_base64_fails(self):
         value = 'A random string'
@@ -1163,20 +1089,26 @@ class Base64TestCase(APIValidationTestCase):
 
 class RegexFormatTestCase(APIValidationTestCase):
 
-    def setUp(self):
-        super(RegexFormatTestCase, self).setUp()
-        self.controller = RegexFormatFakeController()
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': {
+                'type': ['string', 'null'],
+                'format': 'regex',
+            },
+        },
+    }
 
     def test_validate_regex(self):
-        req = fakes.HTTPRequest.blank("")
-        self.assertEqual('Validation succeeded.',
-                         self.controller.post(req, body={'foo': u'Myserver'}))
+        self.post(body={'foo': 'Myserver'}, req=FakeRequest())
+
+    def test_validate_regex_null(self):
+        self.post(body={'foo': None}, req=FakeRequest())
 
     def test_validate_regex_fails(self):
-        value = 1
-        req = fakes.HTTPRequest.blank("")
+        value = '['
         detail = ("Invalid input for field/attribute foo. "
-                  "Value: %s. %s is not a 'regex'") % (value, value)
-        self.check_validation_error(self.controller.post, req=req,
+                  "Value: %s. %r is not a 'regex'") % (value, value)
+        self.check_validation_error(self.post,
                                     body={'foo': value},
                                     expected_detail=detail)
