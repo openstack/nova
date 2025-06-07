@@ -74,7 +74,7 @@ class ImagesController(wsgi.Controller):
 
         return filters
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
     def show(self, req, id):
@@ -93,7 +93,7 @@ class ImagesController(wsgi.Controller):
 
         return self._view_builder.show(req, image)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((403, 404))
     @wsgi.response(204)
     def delete(self, req, id):
@@ -114,7 +114,7 @@ class ImagesController(wsgi.Controller):
             explanation = _("You are not allowed to delete the image.")
             raise webob.exc.HTTPForbidden(explanation=explanation)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
     @validation.query_schema(schema.index_query)
     def index(self, req):
@@ -134,7 +134,7 @@ class ImagesController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return self._view_builder.index(req, images)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(400)
     @validation.query_schema(schema.detail_query)
     def detail(self, req):

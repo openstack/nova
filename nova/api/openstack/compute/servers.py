@@ -1502,7 +1502,7 @@ class ServersController(wsgi.Controller):
                 state_error, 'stop', id
             )
 
-    @wsgi.Controller.api_version("2.17")
+    @wsgi.api_version("2.17")
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('trigger_crash_dump')

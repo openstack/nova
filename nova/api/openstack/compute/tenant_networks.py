@@ -74,7 +74,7 @@ class TenantNetworkController(wsgi.Controller):
                                           project_id=project_id)
         return self.network_api.get_all(ctx)
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
     def index(self, req):
@@ -87,7 +87,7 @@ class TenantNetworkController(wsgi.Controller):
         networks.extend(self._default_networks)
         return {'networks': [network_dict(n) for n in networks]}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
     def show(self, req, id):

@@ -60,7 +60,7 @@ class ServerTagsController(wsgi.Controller):
                                                                   server_id)
         return instance
 
-    @wsgi.Controller.api_version("2.26")
+    @wsgi.api_version("2.26")
     @wsgi.response(204)
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
@@ -81,7 +81,7 @@ class ServerTagsController(wsgi.Controller):
                    % {'server_id': server_id, 'tag': id})
             raise webob.exc.HTTPNotFound(explanation=msg)
 
-    @wsgi.Controller.api_version("2.26")
+    @wsgi.api_version("2.26")
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
@@ -98,7 +98,7 @@ class ServerTagsController(wsgi.Controller):
 
         return {'tags': _get_tags_names(tags)}
 
-    @wsgi.Controller.api_version("2.26")
+    @wsgi.api_version("2.26")
     @wsgi.expected_errors((400, 404, 409))
     @validation.schema(schema.update)
     def update(self, req, server_id, id, body):
@@ -151,7 +151,7 @@ class ServerTagsController(wsgi.Controller):
             req, server_id, id)
         return response
 
-    @wsgi.Controller.api_version("2.26")
+    @wsgi.api_version("2.26")
     @wsgi.expected_errors((404, 409))
     @validation.schema(schema.update_all)
     def update_all(self, req, server_id, body):
@@ -176,7 +176,7 @@ class ServerTagsController(wsgi.Controller):
 
         return {'tags': _get_tags_names(tags)}
 
-    @wsgi.Controller.api_version("2.26")
+    @wsgi.api_version("2.26")
     @wsgi.response(204)
     @wsgi.expected_errors((404, 409))
     def delete(self, req, server_id, id):
@@ -201,7 +201,7 @@ class ServerTagsController(wsgi.Controller):
         notifications_base.send_instance_update_notification(
             context, instance, service="nova-api")
 
-    @wsgi.Controller.api_version("2.26")
+    @wsgi.api_version("2.26")
     @wsgi.response(204)
     @wsgi.expected_errors((404, 409))
     def delete_all(self, req, server_id):

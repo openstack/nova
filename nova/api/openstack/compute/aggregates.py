@@ -287,7 +287,7 @@ class AggregateController(wsgi.Controller):
                     (show_uuid or key != 'uuid')):
                 yield key, getattr(aggregate, key)
 
-    @wsgi.Controller.api_version('2.81')
+    @wsgi.api_version('2.81')
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404))
     @validation.schema(aggregate_images.aggregate_images)

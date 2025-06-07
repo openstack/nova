@@ -65,7 +65,7 @@ class ServerMigrationsController(wsgi.Controller):
         super(ServerMigrationsController, self).__init__()
         self.compute_api = compute.API()
 
-    @wsgi.Controller.api_version("2.22")
+    @wsgi.api_version("2.22")
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('force_complete')
@@ -91,7 +91,7 @@ class ServerMigrationsController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(
                 state_error, 'force_complete', server_id)
 
-    @wsgi.Controller.api_version("2.23")
+    @wsgi.api_version("2.23")
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.index_query)
     def index(self, req, server_id):
@@ -114,7 +114,7 @@ class ServerMigrationsController(wsgi.Controller):
             output(migration, include_uuid, include_user_project)
             for migration in migrations]}
 
-    @wsgi.Controller.api_version("2.23")
+    @wsgi.api_version("2.23")
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
     def show(self, req, server_id, id):
@@ -153,7 +153,7 @@ class ServerMigrationsController(wsgi.Controller):
         return {'migration': output(migration, include_uuid,
                                     include_user_project)}
 
-    @wsgi.Controller.api_version("2.24")
+    @wsgi.api_version("2.24")
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))
     def delete(self, req, server_id, id):

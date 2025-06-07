@@ -240,9 +240,9 @@ Adding a new API method
 
 In the controller class::
 
-    @wsgi.Controller.api_version("2.4")
+    @wsgi.api_version("2.4")
     def my_api_method(self, req, id):
-        ....
+        ...
 
 This method would only be available if the caller had specified an
 ``OpenStack-API-Version`` of >= ``2.4``. If they had specified a
@@ -254,35 +254,13 @@ Removing an API method
 
 In the controller class::
 
-    @wsgi.Controller.api_version("2.1", "2.4")
+    @wsgi.api_version("2.1", "2.4")
     def my_api_method(self, req, id):
-        ....
+        ...
 
 This method would only be available if the caller had specified an
 ``OpenStack-API-Version`` of <= ``2.4``. If ``2.5`` or later
 is specified the server will respond with ``HTTP/404``.
-
-Changing a method's behavior
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In the controller class::
-
-    @wsgi.Controller.api_version("2.1", "2.3")
-    def my_api_method(self, req, id):
-        .... method_1 ...
-
-    @wsgi.Controller.api_version("2.4")  # noqa
-    def my_api_method(self, req, id):
-        .... method_2 ...
-
-If a caller specified ``2.1``, ``2.2`` or ``2.3`` (or received the
-default of ``2.1``) they would see the result from ``method_1``,
-``2.4`` or later ``method_2``.
-
-It is vital that the two methods have the same name, so the second of
-them will need ``# noqa`` to avoid failing flake8's ``F811`` rule. The
-two methods may be different in any kind of semantics (schema
-validation, return values, response codes, etc)
 
 A change in schema only
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -291,26 +269,23 @@ If there is no change to the method, only to the schema that is used for
 validation, you can add a version range to the ``validation.schema``
 decorator::
 
-    @wsgi.Controller.api_version("2.1")
+    @wsgi.api_version("2.1")
     @validation.schema(dummy_schema.dummy, "2.3", "2.8")
     @validation.schema(dummy_schema.dummy2, "2.9")
     def update(self, req, id, body):
-        ....
+        ...
 
 This method will be available from version ``2.1``, validated according to
 ``dummy_schema.dummy`` from ``2.3`` to ``2.8``, and validated according to
 ``dummy_schema.dummy2`` from ``2.9`` onward.
 
+Other API method changes
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-When not using decorators
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-When you don't want to use the ``@api_version`` decorator on a method
-or you want to change behavior within a method (say it leads to
-simpler or simply a lot less code) you can directly test for the
-requested version with a method as long as you have access to the api
-request object (commonly called ``req``). Every API method has an
-api_version_request object attached to the req object and that can be
+When you want to change more than the API request or response schema, you can
+directly test for the requested version with a method as long as you have
+access to the api request object (commonly called ``req``). Every API method
+has an api_version_request object attached to the req object and that can be
 used to modify behavior based on its value::
 
     def index(self, req):

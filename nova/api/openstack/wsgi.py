@@ -24,8 +24,7 @@ from oslo_utils import encodeutils
 from oslo_utils import strutils
 import webob
 
-from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack import versioned_method
+from nova.api.openstack import api_version_request
 from nova.api import wsgi
 from nova import exception
 from nova import i18n
@@ -59,9 +58,6 @@ _METHODS_WITH_BODY = [
 # support is fully merged. It does not affect the V2 API.
 DEFAULT_API_VERSION = "2.1"
 
-# name of attribute to keep version method information
-VER_METHOD_ATTR = 'versioned_methods'
-
 # Names of headers used by clients to request a specific version
 # of the REST API
 API_VERSION_REQUEST_HEADER = 'OpenStack-API-Version'
@@ -81,7 +77,7 @@ class Request(wsgi.Request):
     def __init__(self, *args, **kwargs):
         super(Request, self).__init__(*args, **kwargs)
         if not hasattr(self, 'api_version_request'):
-            self.api_version_request = api_version.APIVersionRequest()
+            self.api_version_request = api_version_request.APIVersionRequest()
 
     def best_match_content_type(self):
         """Determine the requested response content-type."""
@@ -158,25 +154,25 @@ class Request(wsgi.Request):
             legacy_headers=[LEGACY_API_VERSION_REQUEST_HEADER])
 
         if hdr_string is None:
-            self.api_version_request = api_version.APIVersionRequest(
-                api_version.DEFAULT_API_VERSION)
+            self.api_version_request = api_version_request.APIVersionRequest(
+                api_version_request.DEFAULT_API_VERSION)
         elif hdr_string == 'latest':
             # 'latest' is a special keyword which is equivalent to
             # requesting the maximum version of the API supported
-            self.api_version_request = api_version.max_api_version()
+            self.api_version_request = api_version_request.max_api_version()
         else:
-            self.api_version_request = api_version.APIVersionRequest(
+            self.api_version_request = api_version_request.APIVersionRequest(
                 hdr_string)
 
             # Check that the version requested is within the global
             # minimum/maximum of supported API versions
             if not self.api_version_request.matches(
-                    api_version.min_api_version(),
-                    api_version.max_api_version()):
+                    api_version_request.min_api_version(),
+                    api_version_request.max_api_version()):
                 raise exception.InvalidGlobalAPIVersion(
                     req_ver=self.api_version_request.get_string(),
-                    min_ver=api_version.min_api_version().get_string(),
-                    max_ver=api_version.max_api_version().get_string())
+                    min_ver=api_version_request.min_api_version().get_string(),
+                    max_ver=api_version_request.max_api_version().get_string())
 
     def set_legacy_v2(self):
         self.environ[ENV_LEGACY_V2] = True
@@ -243,8 +239,8 @@ class WSGICodes:
         ver = req.api_version_request
 
         for code, min_version, max_version in self._codes:
-            min_ver = api_version.APIVersionRequest(min_version)
-            max_ver = api_version.APIVersionRequest(max_version)
+            min_ver = api_version_request.APIVersionRequest(min_version)
+            max_ver = api_version_request.APIVersionRequest(max_version)
             if ver.matches(min_ver, max_ver):
                 return code
 
@@ -700,6 +696,46 @@ def removed(version: str, reason: str):
     return decorator
 
 
+def api_version(
+    min_version: ty.Optional[str] = None,
+    max_version: ty.Optional[str] = None,
+):
+    """Mark an API as supporting lower and upper version bounds.
+
+    :param min_version: A string of two numerals. X.Y indicating the minimum
+        version of the JSON-Schema to validate against.
+    :param max_version: A string of two numerals. X.Y indicating the maximum
+        version of the JSON-Schema against to.
+    """
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapped(*args, **kwargs):
+            min_ver = api_version_request.APIVersionRequest(min_version)
+            max_ver = api_version_request.APIVersionRequest(max_version)
+
+            # The request object is always the second argument.
+            # However numerous unittests pass in the request object
+            # via kwargs instead so we handle that as well.
+            # TODO(cyeoh): cleanup unittests so we don't have to
+            # to do this
+            if 'req' in kwargs:
+                ver = kwargs['req'].api_version_request
+            else:
+                ver = args[1].api_version_request
+
+            if not ver.matches(min_ver, max_ver):
+                raise exception.VersionNotFoundForAPIMethod(version=ver)
+
+            return f(*args, **kwargs)
+
+        wrapped.min_version = min_version
+        wrapped.max_version = max_version
+
+        return wrapped
+
+    return decorator
+
+
 def expected_errors(
     errors: ty.Union[int, tuple[int, ...]],
     min_version: ty.Optional[str] = None,
@@ -714,8 +750,8 @@ def expected_errors(
     def decorator(f):
         @functools.wraps(f)
         def wrapped(*args, **kwargs):
-            min_ver = api_version.APIVersionRequest(min_version)
-            max_ver = api_version.APIVersionRequest(max_version)
+            min_ver = api_version_request.APIVersionRequest(min_version)
+            max_ver = api_version_request.APIVersionRequest(max_version)
 
             # The request object is always the second argument.
             # However numerous unittests pass in the request object
@@ -791,36 +827,22 @@ class ControllerMetaclass(type):
 
     def __new__(mcs, name, bases, cls_dict):
         """Adds the wsgi_actions dictionary to the class."""
-
         # Find all actions
         actions = {}
-        versioned_methods = None
+
         # start with wsgi actions from base classes
         for base in bases:
             actions.update(getattr(base, 'wsgi_actions', {}))
 
-            if base.__name__ == "Controller":
-                # NOTE(cyeoh): This resets the VER_METHOD_ATTR attribute
-                # between API controller class creations. This allows us
-                # to use a class decorator on the API methods that doesn't
-                # require naming explicitly what method is being versioned as
-                # it can be implicit based on the method decorated. It is a bit
-                # ugly.
-                if VER_METHOD_ATTR in base.__dict__:
-                    versioned_methods = getattr(base, VER_METHOD_ATTR)
-                    delattr(base, VER_METHOD_ATTR)
-
         for key, value in cls_dict.items():
             if not callable(value):
                 continue
+
             if getattr(value, 'wsgi_action', None):
                 actions[value.wsgi_action] = key
 
         # Add the actions to the class dict
         cls_dict['wsgi_actions'] = actions
-        if versioned_methods:
-            cls_dict[VER_METHOD_ATTR] = versioned_methods
-
         return super(ControllerMetaclass, mcs).__new__(mcs, name, bases,
                                                        cls_dict)
 
@@ -837,103 +859,6 @@ class Controller(metaclass=ControllerMetaclass):
         else:
             self._view_builder = None
 
-    def __getattribute__(self, key):
-
-        def version_select(*args, **kwargs):
-            """Look for the method which matches the name supplied and version
-            constraints and calls it with the supplied arguments.
-
-            @return: Returns the result of the method called
-            @raises: VersionNotFoundForAPIMethod if there is no method which
-                 matches the name and version constraints
-            """
-
-            # The first arg to all versioned methods is always the request
-            # object. The version for the request is attached to the
-            # request object
-            if len(args) == 0:
-                ver = kwargs['req'].api_version_request
-            else:
-                ver = args[0].api_version_request
-
-            func_list = self.versioned_methods[key]
-            for func in func_list:
-                if ver.matches(func.start_version, func.end_version):
-                    # Update the version_select wrapper function so
-                    # other decorator attributes like wsgi.response
-                    # are still respected.
-                    functools.update_wrapper(version_select, func.func)
-                    return func.func(self, *args, **kwargs)
-
-            # No version match
-            raise exception.VersionNotFoundForAPIMethod(version=ver)
-
-        try:
-            version_meth_dict = object.__getattribute__(self, VER_METHOD_ATTR)
-        except AttributeError:
-            # No versioning on this class
-            return object.__getattribute__(self, key)
-
-        if version_meth_dict and \
-          key in object.__getattribute__(self, VER_METHOD_ATTR):
-            return version_select
-
-        return object.__getattribute__(self, key)
-
-    # NOTE(cyeoh): This decorator MUST appear first (the outermost
-    # decorator) on an API method for it to work correctly
-    @classmethod
-    def api_version(cls, min_ver, max_ver=None):
-        """Decorator for versioning api methods.
-
-        Add the decorator to any method which takes a request object
-        as the first parameter and belongs to a class which inherits from
-        wsgi.Controller.
-
-        @min_ver: string representing minimum version
-        @max_ver: optional string representing maximum version
-        """
-
-        def decorator(f):
-            obj_min_ver = api_version.APIVersionRequest(min_ver)
-            if max_ver:
-                obj_max_ver = api_version.APIVersionRequest(max_ver)
-            else:
-                obj_max_ver = api_version.APIVersionRequest()
-
-            # Add to list of versioned methods registered
-            func_name = f.__name__
-            new_func = versioned_method.VersionedMethod(
-                func_name, obj_min_ver, obj_max_ver, f)
-
-            func_dict = getattr(cls, VER_METHOD_ATTR, {})
-            if not func_dict:
-                setattr(cls, VER_METHOD_ATTR, func_dict)
-
-            func_list = func_dict.get(func_name, [])
-            if not func_list:
-                func_dict[func_name] = func_list
-            func_list.append(new_func)
-            # Ensure the list is sorted by minimum version (reversed)
-            # so later when we work through the list in order we find
-            # the method which has the latest version which supports
-            # the version requested.
-            is_intersect = Controller.check_for_versions_intersection(
-                func_list)
-
-            if is_intersect:
-                raise exception.ApiVersionsIntersect(
-                    name=new_func.name,
-                    min_ver=new_func.start_version,
-                    max_ver=new_func.end_version,
-                )
-
-            func_list.sort(key=lambda f: f.start_version, reverse=True)
-
-            return f
-
-        return decorator
-
     @staticmethod
     def is_valid_body(body, entity_name):
         if not (body and entity_name in body):
@@ -947,36 +872,6 @@ class Controller(metaclass=ControllerMetaclass):
                 return False
 
         return is_dict(body[entity_name])
-
-    @staticmethod
-    def check_for_versions_intersection(func_list):
-        """Determines whether function list contains version intervals
-        intersections or not. General algorithm:
-
-        https://en.wikipedia.org/wiki/Intersection_algorithm
-
-        :param func_list: list of VersionedMethod objects
-        :return: boolean
-        """
-        pairs = []
-        counter = 0
-
-        for f in func_list:
-            pairs.append((f.start_version, 1, f))
-            pairs.append((f.end_version, -1, f))
-
-        def compare(x):
-            return x[0]
-
-        pairs.sort(key=compare)
-
-        for p in pairs:
-            counter += p[1]
-
-            if counter > 1:
-                return True
-
-        return False
 
 
 class Fault(webob.exc.HTTPException):

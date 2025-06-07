@@ -37,7 +37,7 @@ class RemoteConsolesController(wsgi.Controller):
                          'serial': self.compute_api.get_serial_console,
                          'mks': self.compute_api.get_mks_console}
 
-    @wsgi.Controller.api_version("2.1", "2.5")
+    @wsgi.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getVNCConsole')
     @validation.schema(schema.get_vnc_console)
@@ -69,7 +69,7 @@ class RemoteConsolesController(wsgi.Controller):
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    @wsgi.Controller.api_version("2.1", "2.5")
+    @wsgi.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getSPICEConsole')
     @validation.schema(schema.get_spice_console)
@@ -98,7 +98,7 @@ class RemoteConsolesController(wsgi.Controller):
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    @wsgi.Controller.api_version("2.1", "2.5")
+    @wsgi.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getRDPConsole')
     @wsgi.removed('29.0.0', _rdp_console_removal_reason)
@@ -109,7 +109,7 @@ class RemoteConsolesController(wsgi.Controller):
         """
         raise webob.exc.HTTPBadRequest()
 
-    @wsgi.Controller.api_version("2.1", "2.5")
+    @wsgi.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('os-getSerialConsole')
     @validation.schema(schema.get_serial_console)
@@ -140,7 +140,7 @@ class RemoteConsolesController(wsgi.Controller):
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    @wsgi.Controller.api_version("2.6")
+    @wsgi.api_version("2.6")
     @wsgi.expected_errors((400, 404, 409, 501))
     @validation.schema(schema.create_v26, "2.6", "2.7")
     @validation.schema(schema.create_v28, "2.8", "2.98")

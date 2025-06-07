@@ -25,7 +25,7 @@ class ServerTopologyController(wsgi.Controller):
         super(ServerTopologyController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @wsgi.Controller.api_version("2.78")
+    @wsgi.api_version("2.78")
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.query_params_v21)
     def index(self, req, server_id):
