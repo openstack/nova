@@ -146,8 +146,7 @@ class ServersController(wsgi.Controller):
 
     @staticmethod
     def _is_cell_down_supported(req, search_opts):
-        cell_down_support = api_version_request.is_supported(
-            req, min_version='2.69')
+        cell_down_support = api_version_request.is_supported(req, '2.69')
 
         if cell_down_support:
             # NOTE(tssurya): Minimal constructs would be returned from the down
@@ -200,7 +199,7 @@ class ServersController(wsgi.Controller):
             states = common.task_and_vm_state_from_status(statuses)
             vm_state, task_state = states
             if not vm_state and not task_state:
-                if api_version_request.is_supported(req, min_version='2.38'):
+                if api_version_request.is_supported(req, '2.38'):
                     msg = _('Invalid status value')
                     raise exc.HTTPBadRequest(explanation=msg)
 
@@ -264,7 +263,7 @@ class ServersController(wsgi.Controller):
                 msg = _("Only administrators may list deleted instances")
                 raise exc.HTTPForbidden(explanation=msg)
 
-        if api_version_request.is_supported(req, min_version='2.26'):
+        if api_version_request.is_supported(req, '2.26'):
             for tag_filter in TAG_SEARCH_FILTERS:
                 if tag_filter in search_opts:
                     search_opts[tag_filter] = search_opts[
@@ -301,7 +300,7 @@ class ServersController(wsgi.Controller):
         limit, marker = common.get_limit_and_marker(req)
         sort_keys, sort_dirs = common.get_sort_params(req.params)
         blacklist = schema.SERVER_LIST_IGNORE_SORT_KEY
-        if api_version_request.is_supported(req, min_version='2.73'):
+        if api_version_request.is_supported(req, '2.73'):
             blacklist = schema.SERVER_LIST_IGNORE_SORT_KEY_V273
         sort_keys, sort_dirs = remove_invalid_sort_keys(
             context, sort_keys, sort_dirs, blacklist, ('host', 'node'))
@@ -462,10 +461,8 @@ class ServersController(wsgi.Controller):
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
-        cell_down_support = api_version_request.is_supported(
-            req, min_version='2.69')
-        show_server_groups = api_version_request.is_supported(
-            req, min_version='2.71')
+        cell_down_support = api_version_request.is_supported(req, '2.69')
+        show_server_groups = api_version_request.is_supported(req, '2.71')
 
         instance = self._get_server(
             context, req, id, is_detail=True,
@@ -687,10 +684,10 @@ class ServersController(wsgi.Controller):
         password = self._get_server_admin_password(server_dict)
         name = common.normalize_name(server_dict['name'])
         description = name
-        if api_version_request.is_supported(req, min_version='2.19'):
+        if api_version_request.is_supported(req, '2.19'):
             description = server_dict.get('description')
         hostname = None
-        if api_version_request.is_supported(req, min_version='2.90'):
+        if api_version_request.is_supported(req, '2.90'):
             hostname = server_dict.get('hostname')
 
         # Arguments to be passed to instance create function
@@ -731,7 +728,7 @@ class ServersController(wsgi.Controller):
 
         availability_zone = server_dict.pop("availability_zone", None)
 
-        if api_version_request.is_supported(req, min_version='2.52'):
+        if api_version_request.is_supported(req, '2.52'):
             create_kwargs['tags'] = server_dict.get('tags')
 
         helpers.translate_attributes(helpers.CREATE,
@@ -763,7 +760,7 @@ class ServersController(wsgi.Controller):
             availability_zone = self._validate_host_availability_zone(
                 context, availability_zone, host)
 
-        if api_version_request.is_supported(req, min_version='2.74'):
+        if api_version_request.is_supported(req, '2.74'):
             self._process_hosts_for_create(context, target, server_dict,
                                            create_kwargs, host, node)
 
@@ -919,8 +916,7 @@ class ServersController(wsgi.Controller):
         ctxt.can(server_policies.SERVERS % 'update',
                  target={'user_id': instance.user_id,
                          'project_id': instance.project_id})
-        show_server_groups = api_version_request.is_supported(
-             req, min_version='2.71')
+        show_server_groups = api_version_request.is_supported(req, '2.71')
 
         server = body['server']
 
@@ -943,8 +939,7 @@ class ServersController(wsgi.Controller):
 
             # NOTE(gmann): Starting from microversion 2.75, PUT and Rebuild
             # API response will show all attributes like GET /servers API.
-            show_all_attributes = api_version_request.is_supported(
-                req, min_version='2.75')
+            show_all_attributes = api_version_request.is_supported(req, '2.75')
             extend_address = show_all_attributes
             show_AZ = show_all_attributes
             show_config_drive = show_all_attributes
@@ -1222,22 +1217,21 @@ class ServersController(wsgi.Controller):
         helpers.translate_attributes(helpers.REBUILD, rebuild_dict, kwargs)
 
         if (
-            api_version_request.is_supported(req, min_version='2.54') and
+            api_version_request.is_supported(req, '2.54') and
             'key_name' in rebuild_dict
         ):
             kwargs['key_name'] = rebuild_dict.get('key_name')
 
         # If user_data is not specified, we don't include it in kwargs because
         # we don't want to overwrite the existing user_data.
-        include_user_data = api_version_request.is_supported(
-            req, min_version='2.57')
+        include_user_data = api_version_request.is_supported(req, '2.57')
         if include_user_data and 'user_data' in rebuild_dict:
             kwargs['user_data'] = rebuild_dict['user_data']
 
         # Skip policy check for 'rebuild:trusted_certs' if no trusted
         # certificate IDs were provided.
         if (
-            api_version_request.is_supported(req, min_version='2.63') and
+            api_version_request.is_supported(req, '2.63') and
             # Note that this is different from server create since with
             # rebuild a user can unset/reset the trusted certs by
             # specifying trusted_image_certificates=None, similar to
@@ -1250,12 +1244,12 @@ class ServersController(wsgi.Controller):
                         target=target)
 
         if (
-            api_version_request.is_supported(req, min_version='2.90') and
+            api_version_request.is_supported(req, '2.90') and
             'hostname' in rebuild_dict
         ):
             kwargs['hostname'] = rebuild_dict['hostname']
 
-        if api_version_request.is_supported(req, min_version='2.93'):
+        if api_version_request.is_supported(req, '2.93'):
             kwargs['reimage_boot_volume'] = True
 
         for request_attribute, instance_attribute in attr_map.items():
@@ -1307,15 +1301,12 @@ class ServersController(wsgi.Controller):
 
         # NOTE(liuyulong): set the new key_name for the API response.
         # from microversion 2.54 onwards.
-        show_keypair = api_version_request.is_supported(
-                           req, min_version='2.54')
-        show_server_groups = api_version_request.is_supported(
-                           req, min_version='2.71')
+        show_keypair = api_version_request.is_supported(req, '2.54')
+        show_server_groups = api_version_request.is_supported(req, '2.71')
 
         # NOTE(gmann): Starting from microversion 2.75, PUT and Rebuild
         # API response will show all attributes like GET /servers API.
-        show_all_attributes = api_version_request.is_supported(
-            req, min_version='2.75')
+        show_all_attributes = api_version_request.is_supported(req, '2.75')
         extend_address = show_all_attributes
         show_AZ = show_all_attributes
         show_config_drive = show_all_attributes
@@ -1379,9 +1370,7 @@ class ServersController(wsgi.Controller):
         metadata = entity.get('metadata', {})
 
         # Starting from microversion 2.39 we don't check quotas on createImage
-        if api_version_request.is_supported(
-                req, max_version=
-                api_version_request.MAX_IMAGE_META_PROXY_API_VERSION):
+        if not api_version_request.is_supported(req, '2.39'):
             common.check_img_metadata_properties_quota(context, metadata)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -1443,20 +1432,20 @@ class ServersController(wsgi.Controller):
         # probably not trivial.
         opt_list = ('reservation_id', 'name', 'status', 'image', 'flavor',
                     'ip', 'changes-since', 'all_tenants')
-        if api_version_request.is_supported(req, min_version='2.5'):
+        if api_version_request.is_supported(req, '2.5'):
             opt_list += ('ip6',)
-        if api_version_request.is_supported(req, min_version='2.26'):
+        if api_version_request.is_supported(req, '2.26'):
             opt_list += TAG_SEARCH_FILTERS
-        if api_version_request.is_supported(req, min_version='2.66'):
+        if api_version_request.is_supported(req, '2.66'):
             opt_list += ('changes-before',)
-        if api_version_request.is_supported(req, min_version='2.73'):
+        if api_version_request.is_supported(req, '2.73'):
             opt_list += ('locked',)
-        if api_version_request.is_supported(req, min_version='2.83'):
+        if api_version_request.is_supported(req, '2.83'):
             opt_list += ('availability_zone', 'config_drive', 'key_name',
                          'created_at', 'launched_at', 'terminated_at',
                          'power_state', 'task_state', 'vm_state', 'progress',
                          'user_id',)
-        if api_version_request.is_supported(req, min_version='2.90'):
+        if api_version_request.is_supported(req, '2.90'):
             opt_list += ('hostname',)
         return opt_list
 

@@ -127,40 +127,9 @@ class APIVersionRequestTests(test.NoDBTestCase):
         self.assertRaises(ValueError,
                           api_version_request.APIVersionRequest().get_string)
 
-    def test_is_supported_min_version(self):
+    def test_is_supported(self):
         req = fakes.HTTPRequest.blank(self.base_path, version='2.5')
 
-        self.assertTrue(api_version_request.is_supported(
-            req, min_version='2.4'))
-        self.assertTrue(api_version_request.is_supported(
-            req, min_version='2.5'))
-        self.assertFalse(api_version_request.is_supported(
-            req, min_version='2.6'))
-
-    def test_is_supported_max_version(self):
-        req = fakes.HTTPRequest.blank(self.base_path, version='2.5')
-
-        self.assertFalse(api_version_request.is_supported(
-            req, max_version='2.4'))
-        self.assertTrue(api_version_request.is_supported(
-            req, max_version='2.5'))
-        self.assertTrue(api_version_request.is_supported(
-            req, max_version='2.6'))
-
-    def test_is_supported_min_and_max_version(self):
-        req = fakes.HTTPRequest.blank(self.base_path, version='2.5')
-
-        self.assertFalse(api_version_request.is_supported(
-            req, min_version='2.3', max_version='2.4'))
-        self.assertTrue(api_version_request.is_supported(
-            req, min_version='2.3', max_version='2.5'))
-        self.assertTrue(api_version_request.is_supported(
-            req, min_version='2.3', max_version='2.7'))
-        self.assertTrue(api_version_request.is_supported(
-            req, min_version='2.5', max_version='2.7'))
-        self.assertFalse(api_version_request.is_supported(
-            req, min_version='2.6', max_version='2.7'))
-        self.assertTrue(api_version_request.is_supported(
-            req, min_version='2.5', max_version='2.5'))
-        self.assertFalse(api_version_request.is_supported(
-            req, min_version='2.10', max_version='2.1'))
+        self.assertTrue(api_version_request.is_supported(req, '2.4'))
+        self.assertTrue(api_version_request.is_supported(req, '2.5'))
+        self.assertFalse(api_version_request.is_supported(req, '2.6'))

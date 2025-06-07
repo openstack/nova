@@ -94,7 +94,7 @@ class ServerGroupController(wsgi.Controller):
         server_group = {}
         server_group['id'] = group.uuid
         server_group['name'] = group.name
-        if api_version_request.is_supported(req, min_version='2.64'):
+        if api_version_request.is_supported(req, '2.64'):
             server_group['policy'] = group.policy
             server_group['rules'] = group.rules
         else:
@@ -109,7 +109,7 @@ class ServerGroupController(wsgi.Controller):
         server_group['members'] = members
         # Add project id information to the response data for
         # API version v2.13
-        if api_version_request.is_supported(req, min_version="2.13"):
+        if api_version_request.is_supported(req, "2.13"):
             server_group['project_id'] = group.project_id
             server_group['user_id'] = group.user_id
         return server_group

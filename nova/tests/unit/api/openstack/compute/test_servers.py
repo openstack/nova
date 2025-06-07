@@ -8104,10 +8104,9 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
         self.view_builder = views.servers.ViewBuilder()
         self.ctxt = context.RequestContext('fake', self.project_id)
 
-        def fake_is_supported(req, min_version="2.1", max_version="2.69"):
-            return (fakes.api_version.APIVersionRequest(max_version) >=
-                    req.api_version_request >=
-                    fakes.api_version.APIVersionRequest(min_version))
+        def fake_is_supported(req, version="2.1"):
+            return (req.api_version_request >=
+                    fakes.api_version.APIVersionRequest(version))
         self.stub_out('nova.api.openstack.api_version_request.is_supported',
                       fake_is_supported)
 
