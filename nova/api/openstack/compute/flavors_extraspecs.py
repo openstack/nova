@@ -27,6 +27,7 @@ from nova.policies import flavor_extra_specs as fes_policies
 from nova import utils
 
 
+@validation.validated
 class FlavorExtraSpecsController(wsgi.Controller):
     """The flavor extra specs API controller for the OpenStack API."""
 

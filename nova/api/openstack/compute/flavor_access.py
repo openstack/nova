@@ -37,6 +37,7 @@ def _marshall_flavor_access(flavor):
     return {'flavor_access': rval}
 
 
+@validation.validated
 class FlavorAccessController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
 
@@ -58,6 +59,7 @@ class FlavorAccessController(wsgi.Controller):
         return _marshall_flavor_access(flavor)
 
 
+@validation.validated
 class FlavorActionController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
 

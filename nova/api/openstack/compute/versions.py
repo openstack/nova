@@ -74,6 +74,7 @@ VERSIONS = {
 }
 
 
+@validation.validated
 class Versions(wsgi.Resource):
 
     # The root version API isn't under the microversion control.
@@ -108,6 +109,7 @@ class Versions(wsgi.Resource):
         return args
 
 
+@validation.validated
 class VersionsV2(wsgi.Resource):
 
     def __init__(self):

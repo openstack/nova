@@ -24,6 +24,7 @@ from nova import exception
 from nova.policies import pause_server as ps_policies
 
 
+@validation.validated
 class PauseServerController(wsgi.Controller):
     def __init__(self):
         super(PauseServerController, self).__init__()

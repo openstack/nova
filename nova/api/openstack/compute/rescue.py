@@ -30,6 +30,7 @@ from nova import utils
 CONF = nova.conf.CONF
 
 
+@validation.validated
 class RescueController(wsgi.Controller):
     def __init__(self):
         super(RescueController, self).__init__()

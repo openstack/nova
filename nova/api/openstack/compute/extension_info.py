@@ -852,6 +852,7 @@ EXTENSION_LIST_LEGACY_V2_COMPATIBLE = sorted(
     EXTENSION_LIST_LEGACY_V2_COMPATIBLE, key=lambda x: x['alias'])
 
 
+@validation.validated
 class ExtensionInfoController(wsgi.Controller):
 
     @wsgi.expected_errors(())

@@ -40,6 +40,7 @@ def _no_ironic_proxy(cmd):
     raise webob.exc.HTTPBadRequest(explanation=msg % {'cmd': cmd})
 
 
+@validation.validated
 class BareMetalNodeController(wsgi.Controller):
     """The Bare-Metal Node API controller for the OpenStack API."""
 

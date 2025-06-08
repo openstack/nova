@@ -24,6 +24,7 @@ from nova.i18n import _
 from nova.policies import admin_password as ap_policies
 
 
+@validation.validated
 class AdminPasswordController(wsgi.Controller):
 
     def __init__(self):

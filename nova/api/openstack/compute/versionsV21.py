@@ -22,6 +22,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 
 
+@validation.validated
 class VersionsController(wsgi.Controller):
 
     @wsgi.expected_errors(404)

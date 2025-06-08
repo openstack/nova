@@ -27,6 +27,7 @@ from nova import exception
 from nova.policies import console_output as co_policies
 
 
+@validation.validated
 class ConsoleOutputController(wsgi.Controller):
     def __init__(self):
         super(ConsoleOutputController, self).__init__()

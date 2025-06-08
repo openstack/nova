@@ -25,6 +25,7 @@ from nova import exception
 from nova.policies import create_backup as cb_policies
 
 
+@validation.validated
 class CreateBackupController(wsgi.Controller):
     def __init__(self):
         super(CreateBackupController, self).__init__()

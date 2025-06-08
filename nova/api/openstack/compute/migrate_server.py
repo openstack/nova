@@ -31,6 +31,7 @@ from nova.policies import migrate_server as ms_policies
 LOG = logging.getLogger(__name__)
 
 
+@validation.validated
 class MigrateServerController(wsgi.Controller):
     def __init__(self):
         super(MigrateServerController, self).__init__()

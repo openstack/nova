@@ -25,6 +25,7 @@ CONF = nova.conf.CONF
 ATTRIBUTE_NAME = "availability_zone"
 
 
+@validation.validated
 class AvailabilityZoneController(wsgi.Controller):
     """The Availability Zone API controller for the OpenStack API."""
 

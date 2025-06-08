@@ -34,6 +34,7 @@ def _translate_floating_ip_pools_view(pools):
     }
 
 
+@validation.validated
 class FloatingIPPoolsController(wsgi.Controller):
     """The Floating IP Pool API controller for the OpenStack API."""
 
