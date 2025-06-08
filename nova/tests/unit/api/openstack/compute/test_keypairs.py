@@ -76,7 +76,6 @@ def db_key_pair_create_duplicate(context):
 
 class KeypairsTestV21(test.TestCase):
     base_url = '/v2/%s' % fakes.FAKE_PROJECT_ID
-    validation_error = exception.ValidationError
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
     def _setup_app_and_controller(self):
@@ -113,24 +112,12 @@ class KeypairsTestV21(test.TestCase):
         self.assertGreater(len(res_dict['keypair']['private_key']), 0)
         self._assert_keypair_type(res_dict)
 
-    def _test_keypair_create_bad_request_case(
-        self, body, exception, error_msg=None
-    ):
-        if error_msg:
-            self.assertRaisesRegex(exception, error_msg,
-                                   self.controller.create,
-                                   self.req, body=body)
-        else:
-            self.assertRaises(exception,
-                              self.controller.create, self.req, body=body)
-
     def test_keypair_create_with_empty_name(self):
         body = {'keypair': {'name': ''}}
-        self._test_keypair_create_bad_request_case(
-            body,
-            self.validation_error,
-            '(is too short)|'  # jsonschema < 4.23.0
-            '(should be non-empty)')  # jsonschema >= 4.23.0
+        self.assertRaisesRegex(
+            exception.ValidationError,
+            '(is too short)|(should be non-empty)',  # jsonschema < / >= 4.23.0
+            self.controller.create, self.req, body=body)
 
     def test_keypair_create_with_name_too_long(self):
         body = {
@@ -138,9 +125,9 @@ class KeypairsTestV21(test.TestCase):
                 'name': 'a' * 256
             }
         }
-        self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error,
-                                                   'is too long')
+        self.assertRaisesRegex(
+            exception.ValidationError, 'is too long',
+            self.controller.create, self.req, body=body)
 
     def test_keypair_create_with_name_leading_trailing_spaces(self):
         body = {
@@ -149,9 +136,9 @@ class KeypairsTestV21(test.TestCase):
             }
         }
         expected_msg = 'Can not start or end with whitespace.'
-        self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error,
-                                                   expected_msg)
+        self.assertRaisesRegex(
+            exception.ValidationError, expected_msg,
+            self.controller.create, self.req, body=body)
 
     def test_keypair_create_with_name_leading_trailing_spaces_compat_mode(
             self):
@@ -166,10 +153,10 @@ class KeypairsTestV21(test.TestCase):
                 'name': 'test/keypair'
             }
         }
-        expected_msg = 'Only expected characters'
-        self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error,
-                                                   expected_msg)
+        expected_msg = 'Invalid input for field/attribute name.'
+        self.assertRaisesRegex(
+            exception.ValidationError, expected_msg,
+            self.controller.create, self.req, body=body)
 
     def test_keypair_create_with_special_characters(self):
         body = {
@@ -177,10 +164,10 @@ class KeypairsTestV21(test.TestCase):
                 'name': keypair_name_2_92_compatible
             }
         }
-        expected_msg = 'Only expected characters'
-        self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error,
-                                                   expected_msg)
+        expected_msg = 'Invalid input for field/attribute name.'
+        self.assertRaisesRegex(
+            exception.ValidationError, expected_msg,
+            self.controller.create, self.req, body=body)
 
     def test_keypair_import_bad_key(self):
         body = {
@@ -189,15 +176,16 @@ class KeypairsTestV21(test.TestCase):
                 'public_key': 'ssh-what negative',
             },
         }
-        self._test_keypair_create_bad_request_case(body,
-                                                   webob.exc.HTTPBadRequest)
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, self.controller.create, self.req,
+            body=body)
 
     def test_keypair_create_with_invalid_keypair_body(self):
         body = {'alpha': {'name': 'create_test'}}
         expected_msg = "'keypair' is a required property"
-        self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error,
-                                                   expected_msg)
+        self.assertRaisesRegex(
+            exception.ValidationError, expected_msg,
+            self.controller.create, self.req, body=body)
 
     def test_keypair_import(self):
         body = {
