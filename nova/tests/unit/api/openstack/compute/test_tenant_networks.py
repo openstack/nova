@@ -48,11 +48,9 @@ DEFAULT_NETWORK = [
 NETWORKS_WITH_DEFAULT_NET = copy.deepcopy(NETWORKS)
 NETWORKS_WITH_DEFAULT_NET.extend(DEFAULT_NETWORK)
 
-DEFAULT_TENANT_ID = CONF.api.neutron_default_tenant_id
-
 
 def fake_network_api_get_all(context):
-    if context.project_id == DEFAULT_TENANT_ID:
+    if context.project_id == CONF.api.neutron_default_project_id:
         return DEFAULT_NETWORK
     else:
         return NETWORKS

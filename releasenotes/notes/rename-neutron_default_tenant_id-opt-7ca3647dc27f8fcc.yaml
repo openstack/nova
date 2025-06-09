@@ -1,0 +1,26 @@
+---
+upgrade:
+  - |
+    The ``[api] neutron_default_tenant_id`` option has been renamed to
+    ``[api] neutron_default_project_id`` and the legacy ``[DEFAULT]
+    neutron_default_tenant_id`` alias removed.
+  - |
+    The following aliases for ``[api]`` options have been removed. They have
+    been deprecated since the 15.0.0 (Ocata) release.
+
+    - ``[DEFAULT] config_drive_skip_versions``
+    - ``[DEFAULT] vendordata_providers``
+    - ``[DEFAULT] vendordata_dynamic_targets``
+    - ``[DEFAULT] vendordata_dynamic_ssl_certfile``
+    - ``[DEFAULT] vendordata_dynamic_connect_timeout``
+    - ``[DEFAULT] vendordata_dynamic_read_timeout``
+    - ``[DEFAULT] metadata_cache_expiration``
+    - ``[DEFAULT] dhcp_domain``
+    - ``[DEFAULT] vendordata_jsonfile_path``
+    - ``[DEFAULT] max_limit``
+    - ``[DEFAULT] compute_link_prefix``
+    - ``[DEFAULT] glance_link_prefix``
+    - ``[DEFAULT] use_neutron_default_nets``
+    - ``[DEFAULT] enable_instance_password``
+
+    In all cases, the replacement is the same option in the ``[api]`` group.
