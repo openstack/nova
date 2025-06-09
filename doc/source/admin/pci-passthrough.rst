@@ -531,7 +531,8 @@ Examples:
   [pci]
   device_spec = { "vendor_id": "10de", "product_id": "25b6", "address": "0000:25:00.4", "resource_class": "CUSTOM_A16_16A", "managed": "no" }
   device_spec = { "vendor_id": "10de", "product_id": "25b6", "address": "0000:25:00.5", "resource_class": "CUSTOM_A16_8A", "managed": "no" }
-  alias = { "device_type": "type-VF", resource_class: "CUSTOM_A16_16A", "name": "A16_16A" }
+  alias = { "device_type": "type-VF", "resource_class": "CUSTOM_A16_16A", "name": "A16_16A" }
+  alias = { "device_type": "type-VF", "resource_class": "CUSTOM_A16_8A", "name": "A16_8A" }
 
 
 Configuring Live Migration for PCI devices
