@@ -39,7 +39,6 @@ class NUMALiveMigrationBase(
     """Base for all the test classes here. Gives us the NUMATopologyFilter and
     small helper methods.
     """
-    api_major_version = 'v2.1'
     microversion = 'latest'
     ADDITIONAL_FILTERS = ['NUMATopologyFilter']
     ADMIN_API = True
@@ -436,8 +435,6 @@ class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
     live migration to go through (if forced through the API, thus bypassing the
     scheduler).
     """
-
-    api_major_version = 'v2.1'
     # NOTE(artom) After 2.67 we can no longer bypass the scheduler for live
     # migration, which we need to do here to force the live migration to a host
     # that's already full.
@@ -585,7 +582,6 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
     destination host (even if the scheduler was bypassed by forcing in the
     API).
     """
-    api_major_version = 'v2.1'
     # NOTE(artom) We're trying to test the new NUMA live migration claims, not
     # the scheduler, so we use microversion 2.67, which is the last one where
     # we can still bypass the scheduler and force a live migration to a host.

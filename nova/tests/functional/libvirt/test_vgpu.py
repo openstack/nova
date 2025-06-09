@@ -36,9 +36,7 @@ LOG = logging.getLogger(__name__)
 
 
 class VGPUTestBase(base.ServersTestBase):
-
     # We want to target some hosts for some created instances
-    api_major_version = 'v2.1'
     microversion = 'latest'
     ADMIN_API = True
 

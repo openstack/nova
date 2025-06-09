@@ -20,8 +20,6 @@ from nova.tests.functional.libvirt import base
 class Bug2007968RegressionTest(base.ServersTestBase):
     """Regression test for bug 2007968
     """
-
-    api_major_version = 'v2.1'
     microversion = 'latest'
 
     def setUp(self):

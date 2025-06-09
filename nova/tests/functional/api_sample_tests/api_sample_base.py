@@ -56,7 +56,6 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
                            api_samples_test_base.ApiSampleTestBase):
     SUPPORTS_CELLS = False
 
-    api_major_version = 'v2'
     # any additional fixtures needed for this scenario
     _additional_fixtures = []
     sample_dir = None

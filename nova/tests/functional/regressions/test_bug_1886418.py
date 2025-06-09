@@ -14,7 +14,6 @@ from nova.tests.functional import integrated_helpers
 
 
 class TestServices(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2.1'
     microversion = 'latest'
 
     def setUp(self):

@@ -25,7 +25,7 @@ from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 
 
-class InstanceActionsTestV2(integrated_helpers._IntegratedTestBase):
+class InstanceActionsTest(integrated_helpers._IntegratedTestBase):
     """Tests Instance Actions API"""
 
     def test_get_instance_actions(self):
@@ -41,11 +41,7 @@ class InstanceActionsTestV2(integrated_helpers._IntegratedTestBase):
                           server['id'])
 
 
-class InstanceActionsTestV21(InstanceActionsTestV2):
-    api_major_version = 'v2.1'
-
-
-class InstanceActionsTestV221(InstanceActionsTestV21):
+class InstanceActionsTestV221(InstanceActionsTest):
     microversion = '2.21'
 
     def setUp(self):
@@ -75,7 +71,8 @@ class HypervisorError(Exception):
 
 
 class InstanceActionEventFaultsTestCase(
-    test.TestCase, integrated_helpers.InstanceHelperMixin):
+    test.TestCase, integrated_helpers.InstanceHelperMixin
+):
     """Tests for the instance action event details reporting from the API"""
 
     def setUp(self):

@@ -35,7 +35,6 @@ class ServersPreSchedulingTestCase(test.TestCase,
     an in memory database for persistence. It does not allow requests to get
     past scheduling.
     """
-    api_major_version = 'v2.1'
 
     def setUp(self):
         super(ServersPreSchedulingTestCase, self).setUp()

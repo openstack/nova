@@ -30,7 +30,6 @@ class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase):
     # Set variables used in the parent class.
     REQUIRES_LOCKING = False
     ADMIN_API = True
-    api_major_version = 'v2.1'
     microversion = '2.11'  # Need at least 2.11 for the force-down API
 
     def test_resize_then_evacuate(self):

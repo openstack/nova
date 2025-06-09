@@ -25,7 +25,6 @@ CONF = nova.conf.CONF
 
 
 class AggregatesTest(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2'
     ADMIN_API = True
 
     def _add_hosts_to_aggregate(self):
@@ -54,7 +53,6 @@ class AggregatesTest(integrated_helpers._IntegratedTestBase):
 
 
 class AggregatesV281Test(AggregatesTest):
-    api_major_version = 'v2.1'
     microversion = '2.81'
 
     def setUp(self):

@@ -19,7 +19,6 @@ from nova.tests.functional import integrated_helpers
 
 
 class FlavorExtraSpecsTest(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2'
 
     def setUp(self):
         super(FlavorExtraSpecsTest, self).setUp()
@@ -71,7 +70,6 @@ class FlavorExtraSpecsTest(integrated_helpers._IntegratedTestBase):
 
 
 class FlavorExtraSpecsV286Test(FlavorExtraSpecsTest):
-    api_major_version = 'v2.1'
     microversion = '2.86'
 
     def test_create_invalid_spec(self):

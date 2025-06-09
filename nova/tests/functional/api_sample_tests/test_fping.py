@@ -20,7 +20,6 @@ from nova.tests.functional import api_samples_test_base
 
 
 class FpingSampleJsonTests(api_samples_test_base.ApiSampleTestBase):
-    api_major_version = 'v2'
 
     def test_get_fping(self):
         ex = self.assertRaises(api_client.OpenStackApiException,

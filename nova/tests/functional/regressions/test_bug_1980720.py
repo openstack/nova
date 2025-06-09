@@ -22,10 +22,8 @@ from unittest import mock
 
 
 class LibvirtDriverTests(
-    base.ServersTestBase,
-    integrated_helpers.InstanceHelperMixin
+    base.ServersTestBase, integrated_helpers.InstanceHelperMixin
 ):
-    api_major_version = 'v2.1'
     microversion = 'latest'
 
     def setUp(self):

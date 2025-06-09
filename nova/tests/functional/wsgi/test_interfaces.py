@@ -25,7 +25,6 @@ class InterfaceFullstack(integrated_helpers._IntegratedTestBase):
 
     os-interface API specifies a port ID created by Neutron.
     """
-    api_major_version = 'v2.1'
 
     def test_detach_interface_negative_invalid_state(self):
         # Create server with network

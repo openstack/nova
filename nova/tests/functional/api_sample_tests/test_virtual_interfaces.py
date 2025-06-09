@@ -19,7 +19,6 @@ from nova.tests.functional import api_samples_test_base
 
 
 class VirtualInterfacesJsonTest(api_samples_test_base.ApiSampleTestBase):
-    api_major_version = 'v2'
 
     def test_vifs_list(self):
         uuid = uuids.instance_1
