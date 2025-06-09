@@ -993,14 +993,13 @@ class OSAPIFixture(fixtures.Fixture):
     """
 
     def __init__(
-        self, api_version='v2', project_id=PROJECT_ID,
+        self, api_version='v2.1', project_id=PROJECT_ID,
         use_project_id_in_urls=False, stub_keystone=True,
     ):
         """Constructor
 
         :param api_version: the API version that we're interested in
-        using. Currently this expects 'v2' or 'v2.1' as possible
-        options.
+            using. Currently this expects 'v2' or 'v2.1' as possible options.
         :param project_id: the project id to use on the API.
         :param use_project_id_in_urls: If True, act like the "endpoint" in the
             "service catalog" has the legacy format including the project_id.
