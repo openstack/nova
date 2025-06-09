@@ -12,9 +12,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import ddt
-import fixtures
-import webob
 
 from nova.api.openstack import api_version_request as avr
 from nova.tests.functional.api_sample_tests import api_sample_base
@@ -38,15 +37,6 @@ class VersionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     # its tests alone is enough.
     scenarios = []
     max_api_version = {'max_api_version': avr.max_api_version().get_string()}
-
-    def setUp(self):
-        super(VersionsSampleJsonTest, self).setUp()
-        # Version documents are supposed to be available without auth, so make
-        # the auth middleware "fail" authentication.
-        self.useFixture(fixtures.MockPatch(
-            # [api]auth_strategy is set to noauth2 by the ConfFixture
-            'nova.api.openstack.auth.NoAuthMiddlewareBase.base_call',
-            return_value=webob.Response(status=401)))
 
     def _get(self, url):
         return self._do_get(

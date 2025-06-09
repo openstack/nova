@@ -37,7 +37,6 @@ configuration file, for example:
    [service_user]
    send_service_user_token = true
    auth_url = $AUTH_URL
-   auth_strategy = keystone
    auth_type = password
    project_domain_name = $PROJECT_DOMAIN_NAME
    project_name = service

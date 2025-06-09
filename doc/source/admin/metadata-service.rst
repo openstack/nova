@@ -101,8 +101,7 @@ following to a :file:`nova-api.conf` file:
 .. note::
 
     This does not include configuration options that are not metadata-specific
-    but are nonetheless required, such as
-    :oslo.config:option:`api.auth_strategy`.
+    but are nonetheless required.
 
 Configuring the application to use the ``DynamicJSON`` vendordata provider is
 more involved and is not covered here.
@@ -138,8 +137,7 @@ file:
 .. note::
 
     This does not include configuration options that are not metadata-specific
-    but are nonetheless required, such as
-    :oslo.config:option:`api.auth_strategy`.
+    but are nonetheless required.
 
 For information about configuring the neutron side of the metadata service,
 refer to the :neutron-doc:`neutron configuration guide

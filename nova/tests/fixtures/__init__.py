@@ -10,8 +10,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from .api_paste import ApiPasteNoProjectId  # noqa: F401, H304
-from .api_paste import ApiPasteV21Fixture  # noqa: F401, H304
 from .cast_as_call import CastAsCallFixture  # noqa: F401, H304
 from .cinder import CinderFixture  # noqa: F401, H304
 from .conf import ConfFixture  # noqa: F401, H304, F403

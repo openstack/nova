@@ -18,7 +18,6 @@ import testscenarios
 
 import nova.conf
 from nova.tests import fixtures
-from nova.tests.fixtures import api_paste as api_paste_fixture
 from nova.tests.functional import api_samples_test_base
 
 CONF = nova.conf.CONF
@@ -71,17 +70,14 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
 
     scenarios = [
         # test v2 with the v2.1 compatibility stack
-        ('v2', {
-            'api_major_version': 'v2'}),
+        ('v2', {'api_major_version': 'v2'}),
         # test v2.1 base microversion
-        ('v2_1', {
-            'api_major_version': 'v2.1'}),
+        ('v2_1', {'api_major_version': 'v2.1'}),
         # test v2.18 code without project id
-        ('v2_1_noproject_id', {
-            'api_major_version': 'v2.1',
-            'USE_PROJECT_ID': False,
-            '_additional_fixtures': [
-                api_paste_fixture.ApiPasteNoProjectId]})
+        (
+            'v2_1_noproject_id',
+            {'api_major_version': 'v2.1', 'USE_PROJECT_ID': False},
+        ),
     ]
 
     def setUp(self):
