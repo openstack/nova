@@ -16,6 +16,7 @@
 from unittest import mock
 
 import webob
+import webob.exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import remote_consoles \
@@ -352,12 +353,8 @@ class ConsolesExtensionTestV26(test.NoDBTestCase):
                                              'spice-html5')
 
     def test_create_rdp_console_bad_request(self):
-        mock_handler = mock.MagicMock()
-        mock_handler.return_value = {'url': "http://fake"}
-        self.controller.handlers['rdp'] = mock_handler
-
         body = {'remote_console': {'protocol': 'rdp', 'type': 'rdp-html5'}}
-        self.assertRaises(exception.ValidationError, self.controller.create,
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, fakes.FAKE_UUID, body=body)
 
     def test_create_serial_console(self):

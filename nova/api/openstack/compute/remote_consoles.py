@@ -157,13 +157,21 @@ class RemoteConsolesController(wsgi.Controller):
                     target={'project_id': instance.project_id})
         protocol = body['remote_console']['protocol']
         console_type = body['remote_console']['type']
+
+        # handle removed console types
+        if protocol in ('rdp',):
+            raise webob.exc.HTTPBadRequest(
+                'Unavailable console type %s.' % protocol
+            )
+
         try:
-            handler = self.handlers.get(protocol)
+            # this should never fail in the real world since our schema
+            # prevents unsupported types getting through
+            handler = self.handlers[protocol]
             output = handler(context, instance, console_type)
             return {'remote_console': {'protocol': protocol,
                                        'type': console_type,
                                        'url': output['url']}}
-
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
@@ -174,5 +182,5 @@ class RemoteConsolesController(wsgi.Controller):
                 exception.ImageSerialPortNumberExceedFlavorValue,
                 exception.SocketPortRangeExhaustedException) as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-        except NotImplementedError:
+        except (NotImplementedError, KeyError):
             common.raise_feature_not_supported()
