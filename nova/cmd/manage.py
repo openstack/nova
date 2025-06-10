@@ -1002,7 +1002,7 @@ class CellV2Commands(object):
                         'Host %(host)s is already mapped to cell %(uuid)s'
                         ) % {'host': host_mapping.host,
                              'uuid': host_mapping.cell_mapping.uuid})
-                # Re-using the existing UUID in case there is already a mapping
+                # Reusing the existing UUID in case there is already a mapping
                 # NOTE(sbauza): There could be possibly multiple CellMappings
                 # if the operator provides another configuration file and moves
                 # the hosts to another cell v2, but that's not really something

@@ -241,7 +241,7 @@ FAQs
 
 - Can upgrade checks be backported?
 
-  Sometimes upgrade checks can be backported to aid in pre-empting bugs on
+  Sometimes upgrade checks can be backported to aid in preempting bugs on
   stable branches. For example, a check was added for `bug 1759316`__ in Rocky
   which was also backported to stable/queens in case anyone upgrading from Pike
   to Queens would hit the same issue. Backportable checks are generally only

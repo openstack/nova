@@ -692,7 +692,7 @@ class SchedulerManager(manager.Manager):
                         # the future based on information in the provider
                         # summaries, we'll just try to claim resources using
                         # the first allocation_request
-                        # NOTE(gibi): we are using, and re-using, allocation
+                        # NOTE(gibi): we are using, and reusing, allocation
                         # candidates for alternatives here. This is OK as
                         # these candidates are not yet allocated in placement
                         # and we don't know if an alternate will ever be used.

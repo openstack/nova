@@ -131,7 +131,7 @@ class NbdMount(api.Mount):
     def flush_dev(self):
         """flush NBD block device buffer."""
         # Perform an explicit BLKFLSBUF to support older qemu-nbd(s).
-        # Without this flush, when a nbd device gets re-used the
+        # Without this flush, when a nbd device gets reused the
         # qemu-nbd intermittently hangs.
         if self.device:
             nova.privsep.fs.blockdev_flush(self.device)
