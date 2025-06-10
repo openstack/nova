@@ -6625,7 +6625,7 @@ server_topology_nodes_cpu_siblings:
 
       compute:server:topology:host:index
   in: body
-  required: false
+  required: true
   type: list
 server_topology_nodes_host_node:
   description: |
@@ -6643,13 +6643,13 @@ server_topology_nodes_memory_mb:
   description: |
     The amount of memory assigned to this NUMA node in MB.
   in: body
-  required: false
+  required: true
   type: integer
 server_topology_nodes_vcpu_set:
   description: |
     A list of IDs of the virtual CPU assigned to this NUMA node.
   in: body
-  required: false
+  required: true
   type: list
 server_topology_pagesize_kb:
   description: |
