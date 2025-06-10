@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 update = {
@@ -55,3 +57,84 @@ startup_query = {}
 shutdown_query = {}
 reboot_query = {}
 show_query = {}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'hosts': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'host_name': {'type': 'string'},
+                    # TODO(stephenfin): This should be an enum
+                    'service': {'type': 'string'},
+                    'zone': {'type': 'string'},
+                },
+                'required': ['host_name', 'service', 'zone'],
+                'additionalProperties': False,
+            },
+        },
+    },
+    'required': ['hosts'],
+    'additionalProperties': False,
+}
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'host': {
+            'type': 'array',
+            'items': {
+                'type': 'object',
+                'properties': {
+                    'resource': {
+                        'type': 'object',
+                        'properties': {
+                            'cpu': {'type': 'integer'},
+                            'disk_gb': {'type': 'integer'},
+                            'host': {'type': 'string'},
+                            'memory_mb': {'type': 'integer'},
+                            'project': {'type': 'string'},
+                        },
+                        'required': [
+                            'cpu', 'disk_gb', 'host', 'memory_mb', 'project'
+                        ],
+                        'additionalProperties': False,
+                    },
+                },
+                'required': ['resource'],
+                'additionalProperties': False,
+            },
+        },
+    },
+    'required': ['host'],
+    'additionalProperties': False,
+}
+
+update_response = {
+    'type': 'object',
+    'properties': {
+        'host': {'type': 'string'},
+        'maintenance_mode': {'enum': ['on_maintenance', 'off_maintenance']},
+        'status': {'enum': ['enabled', 'disabled']},
+    },
+    'required': ['host'],
+    'additionalProperties': False,
+}
+
+_power_action_response = {
+    'type': 'object',
+    'properties': {
+        'host': {'type': 'string'},
+        # NOTE(stephenfin): This is virt driver specific and the API is
+        # deprecated, so this is left empty
+        'power_action': {},
+    },
+    'required': ['host', 'power_action'],
+    'additionalProperties': False,
+}
+
+startup_response = copy.deepcopy(_power_action_response)
+shutdown_response = copy.deepcopy(_power_action_response)
+reboot_response = copy.deepcopy(_power_action_response)

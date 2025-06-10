@@ -19,7 +19,7 @@ from oslo_log import log as logging
 import webob.exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import hosts
+from nova.api.openstack.compute.schemas import hosts as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -31,6 +31,7 @@ from nova.policies import hosts as hosts_policies
 LOG = logging.getLogger(__name__)
 
 
+@validation.validated
 class HostController(wsgi.Controller):
     """The Hosts API controller for the OpenStack API."""
 
@@ -39,8 +40,9 @@ class HostController(wsgi.Controller):
         self.api = compute.HostAPI()
 
     @wsgi.api_version("2.1", "2.42")
-    @validation.query_schema(hosts.index_query)
     @wsgi.expected_errors(())
+    @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         """Returns a dict in the format
 
@@ -90,7 +92,8 @@ class HostController(wsgi.Controller):
 
     @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
-    @validation.schema(hosts.update)
+    @validation.schema(schema.update)
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, id, body):
         """Return booleanized version of body dict.
 
@@ -182,7 +185,8 @@ class HostController(wsgi.Controller):
 
     @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
-    @validation.query_schema(hosts.startup_query)
+    @validation.query_schema(schema.startup_query)
+    @validation.response_body_schema(schema.startup_response)
     def startup(self, req, id):
         context = req.environ['nova.context']
         context.can(hosts_policies.POLICY_NAME % 'start',
@@ -191,7 +195,8 @@ class HostController(wsgi.Controller):
 
     @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
-    @validation.query_schema(hosts.shutdown_query)
+    @validation.query_schema(schema.shutdown_query)
+    @validation.response_body_schema(schema.shutdown_response)
     def shutdown(self, req, id):
         context = req.environ['nova.context']
         context.can(hosts_policies.POLICY_NAME % 'shutdown',
@@ -200,7 +205,8 @@ class HostController(wsgi.Controller):
 
     @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
-    @validation.query_schema(hosts.reboot_query)
+    @validation.query_schema(schema.reboot_query)
+    @validation.response_body_schema(schema.reboot_response)
     def reboot(self, req, id):
         context = req.environ['nova.context']
         context.can(hosts_policies.POLICY_NAME % 'reboot',
@@ -258,7 +264,8 @@ class HostController(wsgi.Controller):
 
     @wsgi.api_version("2.1", "2.42")
     @wsgi.expected_errors(404)
-    @validation.query_schema(hosts.show_query)
+    @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         """Shows the physical/usage resource given by hosts.
 
