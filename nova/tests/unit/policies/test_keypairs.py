@@ -33,7 +33,7 @@ FAKE_KEYPAIR = objects.KeyPair(
     private_key='ssh-rsa foo',
     public_key='ssh-rsa foo',
     type='ssh',
-    updated_at=datetime.datetime(2024, 10, 29, 13, 42, 2),
+    updated_at=None,
     user_id=uuids.user_alt_id,
 )
 

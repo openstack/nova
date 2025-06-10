@@ -165,23 +165,18 @@ show_response = {
             'type': 'object',
             'properties': {
                 'created_at': {'type': 'string', 'format': 'date-time'},
-                'deleted': {'type': 'boolean'},
-                'deleted_at': {
-                    'oneOf': [
-                        {'type': 'string', 'format': 'date-time'},
-                        {'type': 'null'},
-                    ],
-                },
+                # NOTE(stephenfin): While we expose these soft delete fields,
+                # we don't provide a mechanism to show actual soft deleted
+                # entries. As such, they're never populated.
+                'deleted': {'type': 'boolean', 'const': False},
+                'deleted_at': {'type': 'null'},
                 'fingerprint': {'type': 'string'},
                 'id': {'type': 'integer'},
                 'name': parameter_types.keypair_name_special_chars,
                 'public_key': {'type': 'string'},
-                'updated_at': {
-                    'oneOf': [
-                        {'type': 'string', 'format': 'date-time'},
-                        {'type': 'null'},
-                    ],
-                },
+                # NOTE(stephenfin): There is no way to update an existing
+                # keypair, so this is never populated.
+                'updated_at': {'type': 'null'},
                 'user_id': parameter_types.user_id,
             },
             'required': [

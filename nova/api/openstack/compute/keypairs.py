@@ -197,6 +197,8 @@ class KeypairController(wsgi.Controller):
         if api_version_request.is_supported(req, '2.35'):
             links = True
 
+        # TODO(stephenfin): Remove deleted, deleted_at, and updated_at from
+        # response in future microversion.
         return self._index(
             req, key_type=key_type, user_id=user_id, links=links
         )
