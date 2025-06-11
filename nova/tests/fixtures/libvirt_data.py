@@ -1687,6 +1687,7 @@ DOMCAPABILITIES_X86_64_TEMPLATE = """
   </cpu>
   <devices>
 %(devices)s
+%(tpm)s
   </devices>
 %(features)s
 </domainCapabilities>

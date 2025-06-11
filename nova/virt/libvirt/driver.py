@@ -1300,28 +1300,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 "'kvm'; found '%s'.")
             raise exception.InvalidConfiguration(msg % CONF.libvirt.virt_type)
 
-        vtpm_support = self._host.supports_vtpm
-        if vtpm_support is not None:
-            # libvirt >= 8.0.0 presents availability of vTPM support and swtpm
-            # in domain capabilities
-            if not vtpm_support:
-                msg = _(
-                    "vTPM support is configured but it's not supported by "
-                    "libvirt.")
-                raise exception.InvalidConfiguration(msg)
-        else:
-            # These executables need to be installed for libvirt to make use of
-            # emulated TPM.
-            # NOTE(stephenfin): This checks using the PATH of the user running
-            # nova-compute rather than the libvirtd service, meaning it's an
-            # imperfect check but the best we can do
-            if not all(shutil.which(cmd) for cmd in (
-                    'swtpm_ioctl', 'swtpm_setup', 'swtpm')):
-                msg = _(
-                    "vTPM support is configured but some (or all) of "
-                    "the 'swtpm', 'swtpm_setup' and 'swtpm_ioctl' binaries "
-                    "could not be found on PATH.")
-                raise exception.InvalidConfiguration(msg)
+        if not self._host.supports_vtpm:
+            msg = _(
+                "vTPM support is configured but it's not supported by "
+                "libvirt.")
+            raise exception.InvalidConfiguration(msg)
 
         # The user and group must be valid on this host for cold migration and
         # resize to function.
@@ -13621,24 +13604,12 @@ class LibvirtDriver(driver.ComputeDriver):
             }
 
         tpm_models = self._host.tpm_models
+        tr = {
+            ot.COMPUTE_SECURITY_TPM_TIS: 'tpm-tis' in tpm_models,
+            ot.COMPUTE_SECURITY_TPM_CRB: 'tpm-crb' in tpm_models,
+        }
+
         tpm_versions = self._host.tpm_versions
-        # libvirt < 8.6 does not provide supported versions in domain
-        # capabilities
-
-        tr = {}
-        if tpm_models is None:
-            # TODO(tkajinam): Remove this fallback once libvirt>=8.0.0 is
-            # required.
-            tr.update({
-                ot.COMPUTE_SECURITY_TPM_TIS: True,
-                ot.COMPUTE_SECURITY_TPM_CRB: True,
-            })
-        else:
-            tr.update({
-                ot.COMPUTE_SECURITY_TPM_TIS: 'tpm-tis' in tpm_models,
-                ot.COMPUTE_SECURITY_TPM_CRB: 'tpm-crb' in tpm_models,
-            })
-
         if tpm_versions is None:
             # TODO(tkajinam): Remove this fallback once libvirt>=8.6.0 is
             # required.
