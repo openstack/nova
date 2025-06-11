@@ -222,6 +222,9 @@ class HypervisorsController(wsgi.Controller):
     @validation.query_schema(schema.index_query, '2.1', '2.32')
     @validation.query_schema(schema.index_query_v233, '2.33', '2.52')
     @validation.query_schema(schema.index_query_v253, '2.53')
+    @validation.response_body_schema(schema.index_response, '2.1', '2.32')
+    @validation.response_body_schema(schema.index_response_v233, '2.33', '2.52')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v253, '2.53')
     def index(self, req):
         """List hypervisors.
 
@@ -415,6 +418,7 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.api_version('2.1', '2.52')
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.search_query)
+    @validation.response_body_schema(schema.search_response, '2.1', '2.52')
     def search(self, req, id):
         """Prior to microversion 2.53 you could search for hypervisors by a
         hostname pattern on a dedicated route. Starting with 2.53, searching
@@ -454,6 +458,7 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.api_version('2.1', '2.52')
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.servers_query)
+    @validation.response_body_schema(schema.servers_response, '2.1', '2.52')
     def servers(self, req, id):
         """Prior to microversion 2.53 you could search for hypervisors by a
         hostname pattern and include servers on those hosts in the response on
@@ -471,8 +476,8 @@ class HypervisorsController(wsgi.Controller):
         hypervisors = []
         for compute_node in compute_nodes:
             try:
-                instances = self.host_api.instance_get_all_by_host(context,
-                    compute_node.host)
+                instances = self.host_api.instance_get_all_by_host(
+                    context, compute_node.host)
             except exception.HostMappingNotFound as e:
                 raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
