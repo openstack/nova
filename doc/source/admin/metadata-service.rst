@@ -70,8 +70,6 @@ Configuration
 The :program:`nova-api` application accepts the following metadata
 service-related options:
 
-- :oslo.config:option:`enabled_apis`
-- :oslo.config:option:`enabled_ssl_apis`
 - :oslo.config:option:`neutron.service_metadata_proxy`
 - :oslo.config:option:`neutron.metadata_proxy_shared_secret`
 - :oslo.config:option:`api.metadata_cache_expiration`
@@ -89,13 +87,6 @@ metadata API, without SSL, using the ``StaticJSON`` vendordata provider, add the
 following to a :file:`nova-api.conf` file:
 
 .. code-block:: ini
-
-    [DEFAULT]
-    enabled_apis = osapi_compute,metadata
-    enabled_ssl_apis =
-    metadata_listen = 0.0.0.0
-    metadata_listen_port = 0
-    metadata_workers = 4
 
     [neutron]
     service_metadata_proxy = True
@@ -135,11 +126,6 @@ the metadata API, without SSL, add the following to a :file:`nova-api.conf`
 file:
 
 .. code-block:: ini
-
-    [DEFAULT]
-    metadata_listen = 0.0.0.0
-    metadata_listen_port = 0
-    metadata_workers = 4
 
     [neutron]
     service_metadata_proxy = True

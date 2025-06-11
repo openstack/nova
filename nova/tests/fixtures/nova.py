@@ -1021,8 +1021,6 @@ class OSAPIFixture(fixtures.Fixture):
         service_name = 'osapi_compute'
         endpoint = 'http://%s:%s/' % (hostname, port)
         conf_overrides = {
-            'osapi_compute_listen': hostname,
-            'osapi_compute_listen_port': port,
             'debug': True,
         }
         self.useFixture(ConfPatcher(**conf_overrides))
@@ -1118,7 +1116,6 @@ class OSMetadataServer(fixtures.Fixture):
         service_name = 'metadata'
         endpoint = f'http://{hostname}/'
         conf_overrides = {
-            'metadata_listen': hostname,
             'debug': True,
         }
         self.useFixture(ConfPatcher(**conf_overrides))
