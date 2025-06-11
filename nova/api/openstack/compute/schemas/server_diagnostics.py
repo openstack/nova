@@ -37,17 +37,12 @@ index_response_v248 = {
             'items': {
                 'type': 'object',
                 'properties': {
-                    'id': {
-                        'type': ['integer', 'null'],
-                    },
-                    'time': {
-                        'type': ['integer', 'null'],
-                    },
-                    'utilisation': {
-                        'type': ['integer', 'null'],
-                    },
+                    'id': {'type': ['integer', 'null']},
+                    'time': {'type': ['integer', 'null']},
+                    'utilisation': {'type': ['integer', 'null']},
                 },
                 'required': ['id', 'time', 'utilisation'],
+                'additionalProperties': False,
             },
         },
         'disk_details': {
@@ -68,6 +63,7 @@ index_response_v248 = {
                     'write_bytes',
                     'write_requests',
                 ],
+                'additionalProperties': False,
             },
         },
         'driver': {
@@ -88,6 +84,7 @@ index_response_v248 = {
                 'used': {'type': ['integer', 'null']},
             },
             'required': ['maximum', 'used'],
+            'additionalProperties': False,
         },
         'nic_details': {
             'type': 'array',
@@ -119,6 +116,7 @@ index_response_v248 = {
                     'tx_packets',
                     'tx_rate',
                 ],
+                'additionalProperties': False,
             },
         },
         'num_cpus': {'type': ['integer', 'null']},
@@ -152,4 +150,5 @@ index_response_v248 = {
         'state',
         'uptime',
     ],
+    'additionalProperties': False,
 }
