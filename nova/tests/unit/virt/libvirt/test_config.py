@@ -4247,7 +4247,7 @@ class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
 
         xml = balloon.to_xml()
         expected_xml = """
-        <memballoon model='virtio'>
+        <memballoon model='virtio' autodeflate='on' freePageReporting='on'>
             <stats period='11'/>
         </memballoon>"""
 
@@ -4259,7 +4259,8 @@ class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
 
         xml = balloon.to_xml()
         expected_xml = """
-        <memballoon model='virtio' />"""
+        <memballoon model='virtio' autodeflate='on'
+                   freePageReporting='on' />"""
 
         self.assertXmlEqual(expected_xml, xml)
 
@@ -4272,7 +4273,7 @@ class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
 
         xml = balloon.to_xml()
         expected_xml = """
-            <memballoon model='virtio'>
+            <memballoon model='virtio' autodeflate='on' freePageReporting='on'>
               <driver iommu="on" />
             </memballoon>"""
 

@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The libvirt driver now automatically enables ``autodeflate`` and
+    ``freePageReporting`` features for virtio memory balloon devices.
+    The ``autodeflate`` feature allows the QEMU virtio memory balloon
+    to release memory at the last moment before a guest process is
+    killed by the Out of Memory killer. The ``freePageReporting``
+    feature enables the memory balloon to return unused pages back
+    to the hypervisor for use by other guests or processes, improving
+    overall memory efficiency on the compute host.
