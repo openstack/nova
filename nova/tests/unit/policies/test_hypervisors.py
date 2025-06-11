@@ -10,9 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 from unittest import mock
 
 from nova.api.openstack.compute import hypervisors
+from nova import objects
 from nova.policies import base as base_policy
 from nova.policies import hypervisors as hv_policies
 from nova.tests.unit.api.openstack import fakes
@@ -33,8 +35,43 @@ class HypervisorsPolicyTest(base.BasePolicyTest):
         self.req = fakes.HTTPRequest.blank('')
         self.controller._get_compute_nodes_by_name_pattern = mock.MagicMock()
         self.controller.host_api.compute_node_get_all = mock.MagicMock()
-        self.controller.host_api.service_get_by_compute_host = mock.MagicMock()
-        self.controller.host_api.compute_node_get = mock.MagicMock()
+        self.controller.host_api.service_get_by_compute_host = mock.MagicMock(
+            return_value=objects.Service(
+                id=123,
+                binary='nova-compute',
+                created_at=datetime.datetime(2012, 9, 18, 2, 46, 27),
+                disabled=False,
+                disabled_reason=None,
+                forced_down=False,
+                host='foo',
+                last_seen_up=None,
+            )
+        )
+        self.controller.host_api.compute_node_get = mock.MagicMock(
+            return_value=objects.ComputeNode(
+                id=123,
+                cpu_info='{}',
+                current_workload=1,
+                disk_available_least=10,
+                free_disk_gb=50,
+                free_ram_mb=512,
+                host='foo',
+                host_ip='1.2.3.4',
+                hypervisor_hostname='foo',
+                hypervisor_type='libvirt',
+                hypervisor_version='123',
+                local_gb=1000,
+                local_gb_used=10,
+                memory_mb=8192,
+                memory_mb_used=1024,
+                running_vms=1,
+                vcpus=16,
+                vcpus_used=8,
+            ),
+        )
+        self.controller.host_api.get_host_uptime = mock.MagicMock(
+            return_value=None
+        )
 
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to perform hypervisors
@@ -59,26 +96,26 @@ class HypervisorsPolicyTest(base.BasePolicyTest):
         rule_name = hv_policies.BASE_POLICY_NAME % 'show'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.show,
-                                self.req, 11111)
+                                self.req, '123')
 
     @mock.patch('nova.compute.api.HostAPI.get_host_uptime')
     def test_uptime_hypervisors_policy(self, mock_uptime):
         rule_name = hv_policies.BASE_POLICY_NAME % 'uptime'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.uptime,
-                                self.req, 11111)
+                                self.req, '123')
 
     def test_search_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'search'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.search,
-                                self.req, 11111)
+                                self.req, '123')
 
     def test_servers_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'servers'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.servers,
-                                self.req, 11111)
+                                self.req, '123')
 
     @mock.patch('nova.compute.api.HostAPI.compute_node_statistics')
     def test_statistics_hypervisors_policy(self, mock_statistics):

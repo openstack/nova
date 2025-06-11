@@ -104,6 +104,95 @@ _hypervisor_response_v253['properties'].update({
     'servers': copy.deepcopy(_servers_response),
 })
 
+_hypervisor_detail_response = copy.deepcopy(_hypervisor_response)
+_hypervisor_detail_response['properties'].update({
+    'cpu_info': {'type': 'string'},
+    'current_workload': {'type': 'integer'},
+    'disk_available_least': {'type': 'integer'},
+    'free_disk_gb': {'type': 'integer'},
+    'free_ram_mb': {'type': 'integer'},
+    'host_ip': {'type': 'string'},
+    'hypervisor_type': {'type': 'string'},
+    'hypervisor_version': {'type': ['string', 'integer']},
+    'local_gb': {'type': 'integer'},
+    'local_gb_used': {'type': 'integer'},
+    'memory_mb': {'type': 'integer'},
+    'memory_mb_used': {'type': 'integer'},
+    'running_vms': {'type': 'integer'},
+    'service': {
+        'type': 'object',
+        'properties': {
+            'disabled_reason': {'type': ['null', 'string']},
+            'host': {'type': 'string'},
+            'id': {'type': 'integer'},
+        },
+        'required': ['disabled_reason', 'host', 'id'],
+    },
+    'vcpus': {'type': 'integer'},
+    'vcpus_used': {'type': 'integer'},
+})
+_hypervisor_detail_response['required'].extend([
+    'cpu_info',
+    'current_workload',
+    'free_disk_gb',
+    'free_ram_mb',
+    'local_gb',
+    'local_gb_used',
+    'memory_mb',
+    'memory_mb_used',
+    'running_vms',
+    'service',
+    'vcpus',
+    'vcpus_used',
+])
+
+_hypervisor_detail_response_v227 = copy.deepcopy(_hypervisor_detail_response)
+_hypervisor_detail_response_v227['properties'].update({
+    'cpu_info': {
+        # NOTE(stephenfin): This is virt-driver specific hence no schema
+        'type': 'object',
+        'properties': {},
+        'required': [],
+        'additionalProperties': True,
+    },
+})
+
+_hypervisor_detail_response_v253 = copy.deepcopy(
+    _hypervisor_detail_response_v227
+)
+_hypervisor_detail_response_v253['properties'].update(
+    _hypervisor_response_v253['properties']
+)
+_hypervisor_detail_response_v253['properties']['service'][
+    'properties'
+].update({
+    'id': {'type': 'string', 'format': 'uuid'},
+})
+
+_hypervisor_detail_response_v288 = copy.deepcopy(
+    _hypervisor_detail_response_v253
+)
+for field in {
+    'cpu_info',
+    'current_workload',
+    'free_disk_gb',
+    'free_ram_mb',
+    'local_gb',
+    'local_gb_used',
+    'memory_mb',
+    'memory_mb_used',
+    'running_vms',
+    'vcpus',
+    'vcpus_used',
+}:
+    del _hypervisor_detail_response_v288['properties'][field]
+    _hypervisor_detail_response_v288['required'].remove(field)
+
+_hypervisor_detail_response_v288['properties'].update({
+    'uptime': {'type': ['string', 'null']}
+})
+_hypervisor_detail_response_v288['required'].append('uptime')
+
 index_response = {
     'type': 'object',
     'properties': {
@@ -137,3 +226,82 @@ servers_response = copy.deepcopy(index_response)
 servers_response['properties']['hypervisors']['items']['properties'].update({
     'servers': copy.deepcopy(_servers_response),
 })
+
+detail_response = copy.deepcopy(index_response)
+detail_response['properties']['hypervisors'][
+    'items'
+] = _hypervisor_detail_response
+
+# v2.27 changes the 'cpu_info' field from a stringified object to a real object
+detail_response_v227 = copy.deepcopy(detail_response)
+detail_response_v227['properties']['hypervisors'][
+    'items'
+] = _hypervisor_detail_response_v227
+
+# v2.33 adds the hypervisors_links field
+detail_response_v233 = copy.deepcopy(detail_response_v227)
+detail_response_v233['properties'].update({
+    'hypervisors_links': response_types.collection_links,
+})
+
+# v2.53 adds the 'servers' field but only if a user requests it via the
+# 'with_servers' query arg. It also changes the 'id' field to a UUID. Note that
+# v2.75 makes the 'servers' property always present even if empty, but that's
+# not something we can capture with jsonschema so we don't try
+detail_response_v253 = copy.deepcopy(detail_response_v233)
+detail_response_v253['properties']['hypervisors'][
+    'items'
+] = _hypervisor_detail_response_v253
+
+# v2.88 drops a whole lot of fields that were now duplicated in placement. It
+# also adds the uptime field into the response rather than a separate API
+detail_response_v288 = copy.deepcopy(detail_response_v253)
+detail_response_v288['properties']['hypervisors'][
+    'items'
+] = _hypervisor_detail_response_v288
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'hypervisor': copy.deepcopy(_hypervisor_detail_response),
+    },
+    'required': ['hypervisor'],
+    'additionalProperties': False,
+}
+
+show_response_v227 = copy.deepcopy(show_response)
+show_response_v227['properties']['hypervisor'] = copy.deepcopy(
+    _hypervisor_detail_response_v227
+)
+
+show_response_v253 = copy.deepcopy(show_response_v227)
+show_response_v253['properties']['hypervisor'] = copy.deepcopy(
+    _hypervisor_detail_response_v253
+)
+
+show_response_v288 = copy.deepcopy(show_response_v253)
+show_response_v288['properties']['hypervisor'] = copy.deepcopy(
+    _hypervisor_detail_response_v288
+)
+
+uptime_response = {
+    'type': 'object',
+    'properties': {
+        'hypervisor': copy.deepcopy(_hypervisor_response),
+    },
+    'required': ['hypervisor'],
+    'additionalProperties': False,
+}
+uptime_response['properties']['hypervisor']['properties'].update({
+    'uptime': {'type': ['string', 'null']}
+})
+uptime_response['properties']['hypervisor']['required'].append('uptime')
+
+uptime_response_v253 = copy.deepcopy(uptime_response)
+uptime_response_v253['properties']['hypervisor'] = copy.deepcopy(
+    _hypervisor_response_v253
+)
+uptime_response_v253['properties']['hypervisor']['properties'].update({
+    'uptime': {'type': ['string', 'null']}
+})
+uptime_response_v253['properties']['hypervisor']['required'].append('uptime')
