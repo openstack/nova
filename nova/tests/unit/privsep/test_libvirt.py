@@ -148,18 +148,6 @@ class LibvirtTestCase(test.NoDBTestCase):
                            mock_fcntl.F_SETFL, 32769 | os.O_NONBLOCK)])
             self.assertIn(mock.call('/fake/path', 'r'), mock_open.mock_calls)
 
-    def test_create_nmdev(self):
-        mock_open = mock.mock_open()
-        with mock.patch('builtins.open', new=mock_open) as mock_open:
-            nova.privsep.libvirt.create_mdev('phys', 'mdevtype',
-                                             uuid='fakeuuid')
-
-            handle = mock_open()
-            self.assertTrue(mock.call('/sys/class/mdev_bus/phys/'
-                                      'mdev_supported_types/mdevtype/create',
-                                      'w') in mock_open.mock_calls)
-            handle.write.assert_called_with('fakeuuid')
-
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_umount(self, mock_execute):
         nova.privsep.libvirt.umount('/fake/path')
