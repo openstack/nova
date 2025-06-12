@@ -49,7 +49,11 @@ class MultipleSpecPerAliasWithPCIInPlacementTest(
             flavor_id=flavor_id,
             networks=[],
         )
-        # This is bug 2102038 as nova does not handle the internal ValueError
-        # and therefore returns HTTP 500 instead of returning 400 Bad Request
-        # with a message pointing to the unsupported alias config.
-        self.assertEqual(500, exc.response.status_code)
+        self.assertEqual(400, exc.response.status_code)
+        self.assertIn(
+            "The PCI alias(es) a-vf have multiple specs but "
+            "[filter_scheduler]pci_in_placement is True. The PCI in Placement "
+            "feature only supports one spec per alias. You can assign the "
+            "same resource_class to multiple [pci]device_spec matchers to "
+            "allow using different devices for the same alias.",
+            exc.response.text)
