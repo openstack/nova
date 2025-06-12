@@ -21,6 +21,17 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
 
 
+fake_snapshot = {
+    'created_at': '2024-11-26T18:20:21.000000',
+    'display_name': 'foo',
+    'display_description': None,
+    'id': uuids.snapshot_id,
+    'status': 'available',
+    'volume_id': uuids.volume_id,
+    'volume_size': 1,
+}
+
+
 class SnapshotsPolicyTest(base.BasePolicyTest):
     """Test Snapshots APIs policies with all possible context.
 
@@ -66,6 +77,7 @@ class SnapshotsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.volume.cinder.API.get_all_snapshots')
     def test_list_snapshots_policy(self, mock_get):
+        mock_get.return_value = []
         rule_name = "os_compute_api:os-volumes:snapshots:list"
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name, self.snapshot_ctlr.index,
@@ -73,6 +85,7 @@ class SnapshotsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.volume.cinder.API.get_all_snapshots')
     def test_list_detail_snapshots_policy(self, mock_get):
+        mock_get.return_value = []
         rule_name = "os_compute_api:os-volumes:snapshots:detail"
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name, self.snapshot_ctlr.detail,
@@ -80,6 +93,7 @@ class SnapshotsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.volume.cinder.API.get_snapshot')
     def test_show_snapshot_policy(self, mock_get):
+        mock_get.return_value = fake_snapshot
         rule_name = "os_compute_api:os-volumes:snapshots:show"
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name, self.snapshot_ctlr.show,
@@ -87,6 +101,7 @@ class SnapshotsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.volume.cinder.API.create_snapshot')
     def test_create_snapshot_policy(self, mock_create):
+        mock_create.return_value = fake_snapshot
         rule_name = "os_compute_api:os-volumes:snapshots:create"
         body = {"snapshot": {"volume_id": uuids.fake_id}}
         self.common_policy_auth(self.project_member_authorized_contexts,

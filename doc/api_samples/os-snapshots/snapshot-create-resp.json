@@ -1,9 +1,9 @@
 {
     "snapshot": {
-        "createdAt": "2013-02-25T16:27:54.680544",
+        "createdAt": "2025-06-12T14:56:30.215430",
         "displayDescription": "Daily backup",
         "displayName": "snap-001",
-        "id": 100,
+        "id": "fe06e9f2-e6b0-47d1-a63e-c0a15ad51994",
         "size": 100,
         "status": "available",
         "volumeId": "521752a6-acf6-4b2d-bc7a-119f9148cd8c"

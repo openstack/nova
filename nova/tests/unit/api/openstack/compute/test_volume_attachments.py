@@ -98,7 +98,6 @@ def fake_bdm_get_by_volume_and_instance(cls, ctxt, volume_id, instance_uuid):
 
 
 class VolumeAttachTestsV21(test.NoDBTestCase):
-    validation_error = exception.ValidationError
     microversion = '2.1'
     _prefix = '/servers/id/os-volume_attachments'
 
@@ -367,7 +366,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                 'volumeId': 'TESTVOLUME',
             }
         }
-        self.assertRaises(self.validation_error, self.controller.create,
+        self.assertRaises(exception.ValidationError, self.controller.create,
                           self.req, FAKE_UUID, body=body)
 
     @mock.patch.object(compute_api.API, 'attach_volume',
@@ -397,7 +396,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             }
         }
 
-        self.assertRaises(self.validation_error, self.controller.create,
+        self.assertRaises(exception.ValidationError, self.controller.create,
                           self.req, FAKE_UUID, body=body)
 
     def test_attach_volume_with_extra_arg(self):
@@ -407,7 +406,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                 'device': '/dev/fake',
                 'extra': 'extra_arg'}}
 
-        self.assertRaises(self.validation_error, self.controller.create,
+        self.assertRaises(exception.ValidationError, self.controller.create,
                           self.req, FAKE_UUID, body=body)
 
     @mock.patch.object(compute_api.API, 'attach_volume')
@@ -490,7 +489,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
     def test_swap_volume_without_volumeId(self):
         body = {'volumeAttachment': {'device': '/dev/fake'}}
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self._test_swap,
                           self.controller,
                           body=body)
@@ -499,7 +498,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                      'device': '/dev/fake'}}
 
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self._test_swap,
                           self.controller,
                           body=body)
@@ -587,7 +586,6 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
 
 class VolumeAttachTestsV249(test.NoDBTestCase):
-    validation_error = exception.ValidationError
 
     def setUp(self):
         super().setUp()
@@ -617,7 +615,7 @@ class VolumeAttachTestsV249(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError, self.controller.create,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.compute.api.API.attach_volume')
+    @mock.patch('nova.compute.api.API.attach_volume', return_value='/dev/fake')
     @mock.patch('nova.compute.api.API.get', fake_get_instance)
     def test_tagged_volume_attach_valid_tag(self, _):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
@@ -722,7 +720,7 @@ class VolumeAttachTestsV275(VolumeAttachTestsV21):
     def test_list_with_additional_filter(self):
         req = self._build_request(
             '?limit=1&additional=something')
-        self.assertRaises(self.validation_error, self.controller.index,
+        self.assertRaises(exception.ValidationError, self.controller.index,
                           req, FAKE_UUID)
 
 
@@ -907,7 +905,7 @@ class VolumeAttachTestsV285(VolumeAttachTestsV279):
                                      'device': '/dev/fake0',
                                      'notathing': 'foo'}}
 
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self._test_swap,
                           self.controller,
                           body=body)
@@ -1256,7 +1254,7 @@ class VolumeAttachTestsV289(VolumeAttachTestsV285):
                 'volumeId': FAKE_UUID_A,
                 'tag': None,
                 'delete_on_termination': False,
-                'attachment_id': None,
+                'attachment_id': uuids.attachment_id,
                 'bdm_uuid': uuids.bdm,
             }
         }

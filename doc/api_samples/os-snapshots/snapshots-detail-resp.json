@@ -1,31 +1,31 @@
 {
     "snapshots": [
         {
-            "createdAt": "2013-02-25T16:27:54.671372",
+            "createdAt": "2025-06-12T14:56:30.070910",
             "displayDescription": "Default description",
             "displayName": "Default name",
-            "id": 100,
+            "id": "02d9627d-9e4d-42d7-aff2-3b23a0caf990",
             "size": 100,
             "status": "available",
-            "volumeId": 12
+            "volumeId": "a41718ce-4f74-46cf-acb4-6ebfc435ad6e"
         },
         {
-            "createdAt": "2013-02-25T16:27:54.671378",
+            "createdAt": "2025-06-12T14:56:30.070925",
             "displayDescription": "Default description",
             "displayName": "Default name",
-            "id": 101,
+            "id": "9780ef6b-6820-478b-8d01-c972e683a8aa",
             "size": 100,
             "status": "available",
-            "volumeId": 12
+            "volumeId": "a41718ce-4f74-46cf-acb4-6ebfc435ad6e"
         },
         {
-            "createdAt": "2013-02-25T16:27:54.671381",
+            "createdAt": "2025-06-12T14:56:30.070934",
             "displayDescription": "Default description",
             "displayName": "Default name",
-            "id": 102,
+            "id": "29b0f3f1-6cd7-4c65-b431-882cf54f158c",
             "size": 100,
             "status": "available",
-            "volumeId": 12
+            "volumeId": "a41718ce-4f74-46cf-acb4-6ebfc435ad6e"
         }
     ]
 }

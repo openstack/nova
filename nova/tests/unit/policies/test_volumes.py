@@ -81,20 +81,42 @@ class VolumesPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.volume.cinder.API.get')
     def test_show_volume_policy(self, mock_get):
+        mock_get.return_value = {
+            'attach_status': 'detached',
+            'availability_zone': 'nova',
+            'created_at': '2024-11-26T18:20:21.000000',
+            'display_name': 'foo',
+            'display_description': None,
+            'id': uuids.volume_id,
+            'size': 1,
+            'snapshot_id': None,
+            'status': 'available',
+            'volume_type_id': uuids.volume_type_id,
+        }
         rule_name = "os_compute_api:os-volumes:show"
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name, self.controller.show,
                                 self.req, uuids.fake_id)
 
-    @mock.patch('nova.api.openstack.compute.volumes.'
-        '_translate_volume_detail_view')
     @mock.patch('nova.volume.cinder.API.create')
-    def test_create_volumes_policy(self, mock_create, mock_view):
+    def test_create_volumes_policy(self, mock_create):
+        mock_create.return_value = {
+            'attach_status': 'detached',
+            'availability_zone': 'nova',
+            'created_at': '2024-11-26T18:20:21.000000',
+            'display_name': 'foo',
+            'display_description': None,
+            'id': uuids.volume_id,
+            'size': 1,
+            'snapshot_id': None,
+            'status': 'available',
+            'volume_type_id': uuids.volume_type_id,
+        }
         rule_name = "os_compute_api:os-volumes:create"
         body = {"volume": {"size": 100,
                "display_name": "Volume Test Name",
                "display_description": "Volume Test Desc",
-               "availability_zone": "zone1:host1"}}
+               "availability_zone": "dublin"}}
         self.common_policy_auth(self.project_member_authorized_contexts,
                                 rule_name, self.controller.create,
                                 self.req, body=body)

@@ -8,7 +8,7 @@
                 "volumeId": "%(uuid)s"
             }
         ],
-        "availabilityZone": "zone1:host1",
+        "availabilityZone": "dublin",
         "createdAt": "%(strtime)s",
         "displayDescription": "%(volume_desc)s",
         "displayName": "%(volume_name)s",
@@ -17,6 +17,6 @@
         "size": 100,
         "snapshotId": null,
         "status": "in-use",
-        "volumeType": "Backup"
+        "volumeType": "vol_type_name"
     }
 }

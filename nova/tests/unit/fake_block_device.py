@@ -40,6 +40,7 @@ class FakeDbBlockDeviceDict(block_device.BlockDeviceDict):
         bdm_dict = bdm_dict or {}
         db_id = bdm_dict.pop('id', 1)
         db_uuid = bdm_dict.pop('uuid', uuids.bdm)
+        db_attachment_id = bdm_dict.get('attachment_id', None)
         instance_uuid = bdm_dict.pop('instance_uuid', uuids.fake)
 
         super(FakeDbBlockDeviceDict, self).__init__(bdm_dict=bdm_dict,
@@ -50,7 +51,7 @@ class FakeDbBlockDeviceDict(block_device.BlockDeviceDict):
         if not anon:
             fake_db_fields['id'] = db_id
             fake_db_fields['uuid'] = db_uuid
-            fake_db_fields['attachment_id'] = None
+            fake_db_fields['attachment_id'] = db_attachment_id
             fake_db_fields['created_at'] = timeutils.utcnow()
             fake_db_fields['updated_at'] = timeutils.utcnow()
         self.update(fake_db_fields)

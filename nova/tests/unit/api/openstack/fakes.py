@@ -43,10 +43,8 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit.objects import test_keypair
 from nova import utils
 
-
 CONF = nova.conf.CONF
 QUOTAS = quota.QUOTAS
-
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_PROJECT_ID = '6a6a9c9eee154e9cb8cec487b98d36ab'
@@ -575,36 +573,40 @@ def stub_instance_obj(ctxt, *args, **kwargs):
 
 
 def stub_volume(id, **kwargs):
+    # volumes IDs should be UUIDs
+    assert uuidutils.is_uuid_like(id), f'expected UUID, got {id}'
     volume = {
         'id': id,
         'user_id': 'fakeuser',
         'project_id': 'fakeproject',
         'host': 'fakehost',
-        'size': 1,
-        'availability_zone': 'fakeaz',
-        'status': 'fakestatus',
+        'size': 100,
+        'availability_zone': 'dublin',
+        'status': 'in-use',
         'attach_status': 'attached',
         'name': 'vol name',
-        'display_name': 'displayname',
-        'display_description': 'displaydesc',
-        'created_at': datetime.datetime(1999, 1, 1, 1, 1, 1),
+        'display_name': 'Volume Name',
+        'display_description': 'Volume Description',
+        'created_at': datetime.datetime(2008, 12, 1, 11, 1, 55),
         'snapshot_id': None,
         'volume_type_id': 'fakevoltype',
         'volume_metadata': [],
         'volume_type': {'name': 'vol_type_name'},
         'multiattach': False,
-        'attachments': {'fakeuuid': {'mountpoint': '/'},
-                        'fakeuuid2': {'mountpoint': '/dev/sdb'}
-                        }
-              }
-
+        'attachments': {
+            uuids.server: {
+                'mountpoint': '/',
+                'attachment_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f803',
+            }
+        }
+    }
     volume.update(kwargs)
     return volume
 
 
 def stub_volume_create(self, context, size, name, description, snapshot,
                        **param):
-    vol = stub_volume('1')
+    vol = stub_volume(uuids.volume)
     vol['size'] = size
     vol['display_name'] = name
     vol['display_description'] = description
@@ -612,8 +614,12 @@ def stub_volume_create(self, context, size, name, description, snapshot,
         vol['snapshot_id'] = snapshot['id']
     except (KeyError, TypeError):
         vol['snapshot_id'] = None
-    vol['availability_zone'] = param.get('availability_zone', 'fakeaz')
+    vol['availability_zone'] = param.get('availability_zone', 'dublin')
     return vol
+
+
+def stub_volume_delete(self, context, id):
+    assert uuidutils.is_uuid_like(id)
 
 
 def stub_volume_update(self, context, *args, **param):
@@ -625,9 +631,10 @@ def stub_volume_get(self, context, volume_id):
 
 
 def stub_volume_get_all(context, search_opts=None):
-    return [stub_volume(100, project_id='fake'),
-            stub_volume(101, project_id='superfake'),
-            stub_volume(102, project_id='superduperfake')]
+    return [
+        stub_volume(
+            uuids.volume_a, project_id='ccbab0871dac4d598a4142f0583d94b2'),
+    ]
 
 
 def stub_volume_check_attach(self, context, *args, **param):
@@ -635,24 +642,31 @@ def stub_volume_check_attach(self, context, *args, **param):
 
 
 def stub_snapshot(id, **kwargs):
+    # snapshot IDs should be UUIDs
+    assert uuidutils.is_uuid_like(id), f'expected UUID, got {id}'
+
+    if 'volume_id' in kwargs:
+        assert uuidutils.is_uuid_like(kwargs['volume_id'])
+
     snapshot = {
         'id': id,
-        'volume_id': 12,
+        'volume_id': uuids.volume,
         'status': 'available',
         'volume_size': 100,
         'created_at': timeutils.utcnow(),
         'display_name': 'Default name',
         'display_description': 'Default description',
         'project_id': 'fake'
-        }
+    }
 
     snapshot.update(kwargs)
     return snapshot
 
 
 def stub_snapshot_create(self, context, volume_id, name, description):
-    return stub_snapshot(100, volume_id=volume_id, display_name=name,
-                         display_description=description)
+    return stub_snapshot(
+        uuids.snapshot, volume_id=volume_id, display_name=name,
+        display_description=description)
 
 
 def stub_compute_volume_snapshot_create(self, context, volume_id, create_info):
@@ -660,9 +674,9 @@ def stub_compute_volume_snapshot_create(self, context, volume_id, create_info):
                          'volumeId': volume_id}}
 
 
-def stub_snapshot_delete(self, context, snapshot_id):
-    if snapshot_id == '-1':
-        raise exc.SnapshotNotFound(snapshot_id=snapshot_id)
+def stub_snapshot_delete(self, context, id):
+    # snapshot IDs should be UUIDs
+    assert uuidutils.is_uuid_like(id), f'expected UUID, got {id}'
 
 
 def stub_compute_volume_snapshot_delete(self, context, volume_id, snapshot_id,
@@ -670,16 +684,14 @@ def stub_compute_volume_snapshot_delete(self, context, volume_id, snapshot_id,
     pass
 
 
-def stub_snapshot_get(self, context, snapshot_id):
-    if snapshot_id == '-1':
-        raise exc.SnapshotNotFound(snapshot_id=snapshot_id)
-    return stub_snapshot(snapshot_id)
+def stub_snapshot_get(self, context, id):
+    return stub_snapshot(id)
 
 
 def stub_snapshot_get_all(self, context):
-    return [stub_snapshot(100, project_id='fake'),
-            stub_snapshot(101, project_id='superfake'),
-            stub_snapshot(102, project_id='superduperfake')]
+    return [stub_snapshot(uuids.snapshot_a, project_id='fake'),
+            stub_snapshot(uuids.snapshot_b, project_id='superfake'),
+            stub_snapshot(uuids.snapshot_c, project_id='superduperfake')]
 
 
 def stub_bdm_get_all_by_instance_uuids(context, instance_uuids,
