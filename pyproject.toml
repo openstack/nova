@@ -1,3 +1,9 @@
 [build-system]
 requires = ["pbr>=6.0.0", "setuptools>=64.0.0"]
 build-backend = "pbr.build"
+
+[tool.autopep8]
+aggressive = 3
+in-place = true
+recursive = true
+
