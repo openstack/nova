@@ -69,6 +69,22 @@ class HypervisorsPolicyTest(base.BasePolicyTest):
                 vcpus_used=8,
             ),
         )
+        self.controller.host_api.compute_node_statistics = mock.MagicMock(
+            return_value={
+                'count': 0,
+                'current_workload': 0,
+                'disk_available_least': 0,
+                'free_disk_gb': 0,
+                'free_ram_mb': 0,
+                'local_gb': 0,
+                'local_gb_used': 0,
+                'memory_mb': 0,
+                'memory_mb_used': 0,
+                'running_vms': 0,
+                'vcpus': 0,
+                'vcpus_used': 0,
+            }
+        )
         self.controller.host_api.get_host_uptime = mock.MagicMock(
             return_value=None
         )
@@ -117,8 +133,7 @@ class HypervisorsPolicyTest(base.BasePolicyTest):
                                 rule_name, self.controller.servers,
                                 self.req, '123')
 
-    @mock.patch('nova.compute.api.HostAPI.compute_node_statistics')
-    def test_statistics_hypervisors_policy(self, mock_statistics):
+    def test_statistics_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'statistics'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.statistics,

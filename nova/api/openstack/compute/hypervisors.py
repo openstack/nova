@@ -37,6 +37,7 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 
+@validation.validated
 class HypervisorsController(wsgi.Controller):
     """The Hypervisors API controller for the OpenStack API."""
 
@@ -516,6 +517,7 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.api_version('2.1', '2.87')
     @wsgi.expected_errors(())
     @validation.query_schema(schema.statistics_query)
+    @validation.response_body_schema(schema.statistics_response, '2.1', '2.87')
     def statistics(self, req):
         """Prior to microversion 2.88, you could get statistics for the
         hypervisor. Most of these are now accessible from placement and the few
@@ -524,4 +526,4 @@ class HypervisorsController(wsgi.Controller):
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME % 'statistics', target={})
         stats = self.host_api.compute_node_statistics(context)
-        return dict(hypervisor_statistics=stats)
+        return {'hypervisor_statistics': stats}

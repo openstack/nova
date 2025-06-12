@@ -305,3 +305,43 @@ uptime_response_v253['properties']['hypervisor']['properties'].update({
     'uptime': {'type': ['string', 'null']}
 })
 uptime_response_v253['properties']['hypervisor']['required'].append('uptime')
+
+statistics_response = {
+    'type': 'object',
+    'properties': {
+        'hypervisor_statistics': {
+            'type': 'object',
+            'properties': {
+                'count': {'type': 'integer'},
+                'current_workload': {'type': 'integer'},
+                'disk_available_least': {'type': 'integer'},
+                'free_disk_gb': {'type': 'integer'},
+                'free_ram_mb': {'type': 'integer'},
+                'local_gb': {'type': 'integer'},
+                'local_gb_used': {'type': 'integer'},
+                'memory_mb': {'type': 'integer'},
+                'memory_mb_used': {'type': 'integer'},
+                'running_vms': {'type': 'integer'},
+                'vcpus': {'type': 'integer'},
+                'vcpus_used': {'type': 'integer'},
+            },
+            'required': [
+                'count',
+                'current_workload',
+                'disk_available_least',
+                'free_disk_gb',
+                'free_ram_mb',
+                'local_gb',
+                'local_gb_used',
+                'memory_mb',
+                'memory_mb_used',
+                'running_vms',
+                'vcpus',
+                'vcpus_used',
+            ],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['hypervisor_statistics'],
+    'additionalProperties': False,
+}
