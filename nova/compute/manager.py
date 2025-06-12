@@ -1620,6 +1620,10 @@ class ComputeManager(manager.Manager):
             # if the configuration is wrong.
             whitelist.Whitelist(CONF.pci.device_spec)
 
+        # NOTE(gibi): validate the [pci]alias config early to avoid late
+        # failures at instance lifecycle operations due to config errors.
+        pci_req_module.get_alias_from_config()
+
         nova.conf.neutron.register_dynamic_opts(CONF)
         # Even if only libvirt uses them, make it available for all drivers
         nova.conf.devices.register_dynamic_opts(CONF)
