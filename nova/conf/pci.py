@@ -69,7 +69,8 @@ Possible Values:
     alias = {
       "name": "A16_16A",
       "device_type": "type-VF",
-      "resource_class": "CUSTOM_A16_16A",
+      "resource_class": "GPU_VF",
+      "traits": "blue, big"
     }
 
   Valid key values are :
@@ -107,6 +108,8 @@ Possible Values:
     in the alias is matched against the ``resource_class`` defined in the
     ``[pci]device_spec``. This field can only be used only if
     ``[filter_scheduler]pci_in_placement`` is enabled.
+    Either the product_id and vendor_id or the resource_class field must be
+    provided in each alias.
 
   ``traits``
     An optional comma separated list of Placement trait names requested to be

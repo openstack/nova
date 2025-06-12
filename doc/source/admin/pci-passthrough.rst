@@ -500,7 +500,9 @@ configuration option supports requesting devices by Placement resource class
 name via the ``resource_class`` field and also support requesting traits to
 be present on the selected devices via the ``traits`` field in the alias. If
 the ``resource_class`` field is not specified in the alias then it is defaulted
-by nova to ``CUSTOM_PCI_<vendor_id>_<product_id>``.
+by nova to ``CUSTOM_PCI_<vendor_id>_<product_id>``. Either the ``product_id``
+and ``vendor_id`` or the ``resource_class`` field must be provided in each
+alias.
 
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_
 
