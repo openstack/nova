@@ -104,50 +104,64 @@ _hypervisor_response_v253['properties'].update({
     'servers': copy.deepcopy(_servers_response),
 })
 
-_hypervisor_detail_response = copy.deepcopy(_hypervisor_response)
-_hypervisor_detail_response['properties'].update({
-    'cpu_info': {'type': 'string'},
-    'current_workload': {'type': 'integer'},
-    'disk_available_least': {'type': 'integer'},
-    'free_disk_gb': {'type': 'integer'},
-    'free_ram_mb': {'type': 'integer'},
-    'host_ip': {'type': 'string'},
-    'hypervisor_type': {'type': 'string'},
-    'hypervisor_version': {'type': ['string', 'integer']},
-    'local_gb': {'type': 'integer'},
-    'local_gb_used': {'type': 'integer'},
-    'memory_mb': {'type': 'integer'},
-    'memory_mb_used': {'type': 'integer'},
-    'running_vms': {'type': 'integer'},
-    'service': {
-        'type': 'object',
-        'properties': {
-            'disabled_reason': {'type': ['null', 'string']},
-            'host': {'type': 'string'},
-            'id': {'type': 'integer'},
+_hypervisor_detail_response = {
+    'type': 'object',
+    'properties': {
+        'cpu_info': {'type': 'string'},
+        'current_workload': {'type': ['null', 'integer']},
+        'disk_available_least': {'type': ['null', 'integer']},
+        'free_disk_gb': {'type': ['null', 'integer']},
+        'free_ram_mb': {'type': ['null', 'integer']},
+        'host_ip': {'type': ['null', 'string']},
+        'hypervisor_hostname': {'type': 'string'},
+        'hypervisor_type': {'type': 'string'},
+        'hypervisor_version': {'type': ['string', 'integer']},
+        'id': {'type': 'integer'},
+        'local_gb': {'type': 'integer'},
+        'local_gb_used': {'type': 'integer'},
+        'memory_mb': {'type': 'integer'},
+        'memory_mb_used': {'type': 'integer'},
+        'running_vms': {'type': ['null', 'integer']},
+        'service': {
+            'type': 'object',
+            'properties': {
+                'disabled_reason': {'type': ['null', 'string']},
+                'host': {'type': 'string'},
+                'id': {'type': 'integer'},
+            },
+            'required': ['disabled_reason', 'host', 'id'],
         },
-        'required': ['disabled_reason', 'host', 'id'],
+        'state': {'enum': ['up', 'down']},
+        'status': {'enum': ['enabled', 'disabled']},
+        'vcpus': {'type': 'integer'},
+        'vcpus_used': {'type': 'integer'},
     },
-    'vcpus': {'type': 'integer'},
-    'vcpus_used': {'type': 'integer'},
-})
-_hypervisor_detail_response['required'].extend([
-    'cpu_info',
-    'current_workload',
-    'free_disk_gb',
-    'free_ram_mb',
-    'local_gb',
-    'local_gb_used',
-    'memory_mb',
-    'memory_mb_used',
-    'running_vms',
-    'service',
-    'vcpus',
-    'vcpus_used',
-])
+    'required': [
+        'cpu_info',
+        'current_workload',
+        'free_disk_gb',
+        'free_ram_mb',
+        'host_ip',
+        'hypervisor_hostname',
+        'hypervisor_type',
+        'hypervisor_version',
+        'id',
+        'local_gb',
+        'local_gb_used',
+        'memory_mb',
+        'memory_mb_used',
+        'running_vms',
+        'service',
+        'state',
+        'status',
+        'vcpus',
+        'vcpus_used',
+    ],
+    'additionalProperties': False,
+}
 
-_hypervisor_detail_response_v227 = copy.deepcopy(_hypervisor_detail_response)
-_hypervisor_detail_response_v227['properties'].update({
+_hypervisor_detail_response_v228 = copy.deepcopy(_hypervisor_detail_response)
+_hypervisor_detail_response_v228['properties'].update({
     'cpu_info': {
         # NOTE(stephenfin): This is virt-driver specific hence no schema
         'type': 'object',
@@ -158,11 +172,12 @@ _hypervisor_detail_response_v227['properties'].update({
 })
 
 _hypervisor_detail_response_v253 = copy.deepcopy(
-    _hypervisor_detail_response_v227
+    _hypervisor_detail_response_v228
 )
-_hypervisor_detail_response_v253['properties'].update(
-    _hypervisor_response_v253['properties']
-)
+_hypervisor_detail_response_v253['properties'].update({
+    'id': {'type': 'string', 'format': 'uuid'},
+    'servers': copy.deepcopy(_servers_response),
+})
 _hypervisor_detail_response_v253['properties']['service'][
     'properties'
 ].update({
@@ -213,8 +228,10 @@ index_response_v233['properties'].update({
 
 # v2.53 adds the 'servers' field but only if a user requests it via the
 # 'with_servers' query arg. It also changes the 'id' field to a UUID. Note that
-# v2.75 makes the 'servers' property always present even if empty, but that's
-# not something we can capture with jsonschema so we don't try
+# v2.75 makes the 'servers' property always present even if empty *unless* the
+# 'with_servers' query parameter is 'false'. This dependency between a query
+# parameter and a response parameter is not something we can capture with
+# jsonschema and we can't update 'required' as a result
 index_response_v253 = copy.deepcopy(index_response_v233)
 index_response_v253['properties']['hypervisors']['items'] = (
     _hypervisor_response_v253
@@ -232,22 +249,24 @@ detail_response['properties']['hypervisors'][
     'items'
 ] = _hypervisor_detail_response
 
-# v2.27 changes the 'cpu_info' field from a stringified object to a real object
-detail_response_v227 = copy.deepcopy(detail_response)
-detail_response_v227['properties']['hypervisors'][
+# v2.28 changes the 'cpu_info' field from a stringified object to a real object
+detail_response_v228 = copy.deepcopy(detail_response)
+detail_response_v228['properties']['hypervisors'][
     'items'
-] = _hypervisor_detail_response_v227
+] = _hypervisor_detail_response_v228
 
 # v2.33 adds the hypervisors_links field
-detail_response_v233 = copy.deepcopy(detail_response_v227)
+detail_response_v233 = copy.deepcopy(detail_response_v228)
 detail_response_v233['properties'].update({
     'hypervisors_links': response_types.collection_links,
 })
 
 # v2.53 adds the 'servers' field but only if a user requests it via the
 # 'with_servers' query arg. It also changes the 'id' field to a UUID. Note that
-# v2.75 makes the 'servers' property always present even if empty, but that's
-# not something we can capture with jsonschema so we don't try
+# v2.75 makes the 'servers' property always present even if empty *unless* the
+# 'with_servers' query parameter is 'false'. This dependency between a query
+# parameter and a response parameter is not something we can capture with
+# jsonschema and we can't update 'required' as a result
 detail_response_v253 = copy.deepcopy(detail_response_v233)
 detail_response_v253['properties']['hypervisors'][
     'items'
@@ -269,12 +288,12 @@ show_response = {
     'additionalProperties': False,
 }
 
-show_response_v227 = copy.deepcopy(show_response)
-show_response_v227['properties']['hypervisor'] = copy.deepcopy(
-    _hypervisor_detail_response_v227
+show_response_v228 = copy.deepcopy(show_response)
+show_response_v228['properties']['hypervisor'] = copy.deepcopy(
+    _hypervisor_detail_response_v228
 )
 
-show_response_v253 = copy.deepcopy(show_response_v227)
+show_response_v253 = copy.deepcopy(show_response_v228)
 show_response_v253['properties']['hypervisor'] = copy.deepcopy(
     _hypervisor_detail_response_v253
 )
@@ -313,15 +332,15 @@ statistics_response = {
             'type': 'object',
             'properties': {
                 'count': {'type': 'integer'},
-                'current_workload': {'type': 'integer'},
-                'disk_available_least': {'type': 'integer'},
-                'free_disk_gb': {'type': 'integer'},
-                'free_ram_mb': {'type': 'integer'},
+                'current_workload': {'type': ['null', 'integer']},
+                'disk_available_least': {'type': ['null', 'integer']},
+                'free_disk_gb': {'type': ['null', 'integer']},
+                'free_ram_mb': {'type': ['null', 'integer']},
                 'local_gb': {'type': 'integer'},
                 'local_gb_used': {'type': 'integer'},
                 'memory_mb': {'type': 'integer'},
                 'memory_mb_used': {'type': 'integer'},
-                'running_vms': {'type': 'integer'},
+                'running_vms': {'type': ['null', 'integer']},
                 'vcpus': {'type': 'integer'},
                 'vcpus_used': {'type': 'integer'},
             },
