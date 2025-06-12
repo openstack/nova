@@ -3,41 +3,61 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # whitespace
       - id: trailing-whitespace
       - id: mixed-line-ending
         args: ['--fix', 'lf']
         exclude: '.*\.(svg)$'
+      # file format and permissions
       - id: fix-byte-order-marker
       - id: check-executables-have-shebangs
-      - id: check-merge-conflict
-      - id: debug-statements
-        # nova/cmd/manage.py imports pdb on purpose.
-        exclude: 'nova/cmd/manage.py'
+      - id: check-shebang-scripts-are-executable
       - id: check-json
         files: .*\.json$
       - id: check-yaml
         files: .*\.(yaml|yml)$
+      # git
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+        exclude: '^doc/api_samples/.*|^nova/tests/.*'
+      # python
+      - id: debug-statements
+        # nova/cmd/manage.py imports pdb on purpose.
+        exclude: 'nova/cmd/manage.py'
+      - id: check-docstring-first
+        exclude: 'nova/virt/ironic/ironic_states.py'
+
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:
       - id: remove-tabs
         exclude: '.*\.(svg)$'
+
+  - repo: https://github.com/hhatto/autopep8
+    rev: v2.3.2
+    hooks:
+      - id: autopep8
+        files: '^.*\.py$'
+
+  # run hacking after autopep8 so that if it can fix
+  # it it will. note it will still fail in ci because
+  # fixing an issue changes the code and that should
+  # not happen in ci.
   - repo: https://opendev.org/openstack/hacking
     rev: 7.0.0
     hooks:
       - id: hacking
         additional_dependencies: []
         exclude: '^(doc|releasenotes|tools)/.*$'
-  - repo: https://github.com/hhatto/autopep8
-    rev: v2.3.2
-    hooks:
-      - id: autopep8
-        files: '^.*\.py$'
+
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
       - id: codespell
         args: ['--ignore-words=doc/dictionary.txt']
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.15.0
     hooks:
@@ -72,6 +92,7 @@ repos:
             | nova/virt/libvirt/host.py
             | nova/virt/libvirt/utils.py
           )
+
   - repo: https://github.com/sphinx-contrib/sphinx-lint
     rev: v1.0.0
     hooks:
