@@ -16,6 +16,7 @@ from oslo_serialization import jsonutils
 
 from nova import context
 from nova import objects
+from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional.libvirt import base
 from nova.virt import block_device as driver_block_device
@@ -46,6 +47,8 @@ class TestLibvirtROMultiattachMigrate(
         self.start_compute()
 
     def test_ro_multiattach_swap_volume(self):
+        # NOTE(sean-k-mooney): This test is emulating calling swap volume
+        # directly instead of using cinder volume migrate or retype.
         server_id = self._create_server(networks='none')['id']
         self.api.post_server_volume(
             server_id,
@@ -58,47 +61,13 @@ class TestLibvirtROMultiattachMigrate(
         self._wait_for_volume_attach(
             server_id, self.cinder.MULTIATTACH_RO_SWAP_OLD_VOL)
 
-        # Swap between the old and new volumes
-        self.api.put_server_volume(
-            server_id,
-            self.cinder.MULTIATTACH_RO_SWAP_OLD_VOL,
+        # NOTE(sean-k-mooney): because of bug 212187 directly using
+        # swap volume is not supported and should fail.
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.put_server_volume,
+            server_id, self.cinder.MULTIATTACH_RO_SWAP_OLD_VOL,
             self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL)
-
-        # Wait until the old volume is detached and new volume is attached
-        self._wait_for_volume_detach(
-            server_id, self.cinder.MULTIATTACH_RO_SWAP_OLD_VOL)
-        self._wait_for_volume_attach(
-            server_id, self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL)
-
-        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
-            context.get_admin_context(),
-            self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL,
-            server_id)
-        connection_info = jsonutils.loads(bdm.connection_info)
-
-        # Assert that only the new volume UUID is referenced within the stashed
-        # connection_info and returned by driver_block_device.get_volume_id
-        self.assertIn('volume_id', connection_info.get('data'))
-        self.assertEqual(
-            self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL,
-            connection_info['data']['volume_id'])
-        self.assertIn('volume_id', connection_info)
-        self.assertEqual(
-            self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL,
-            connection_info['volume_id'])
-        self.assertIn('serial', connection_info)
-        self.assertEqual(
-            self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL,
-            connection_info.get('serial'))
-        self.assertEqual(
-            self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL,
-            driver_block_device.get_volume_id(connection_info))
-
-        # Assert that the new volume can be detached from the instance
-        self.api.delete_server_volume(
-            server_id, self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL)
-        self._wait_for_volume_detach(
-            server_id, self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL)
+        self.assertIn("this api should only be called by Cinder", str(ex))
 
     def test_ro_multiattach_migrate_volume(self):
         server_id = self._create_server(networks='none')['id']
