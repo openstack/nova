@@ -1567,8 +1567,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         # alias hostdev2  --> src_dev: 3  --> dst_dev: 2
 
         # In such situations, we use the _assertDeviceAddressesPresent()
-        # method, which only verifies that a similar device — for
-        # example, one with slot 0x82 — exists in the destination XML,
+        # method, which only verifies that a similar device - for
+        # example, one with slot 0x82 - exists in the destination XML,
         # regardless of order.
         self._assertDeviceAddressesPresent(src_xml, dst_xml)
 
@@ -2204,8 +2204,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         # alias hostdev2  --> src_dev: 3  --> dst_dev: 2
 
         # In such situations, we use the _assertDeviceAddressesPresent()
-        # method, which only verifies that a similar device — for
-        # example, one with slot 0x82 — exists in the destination XML,
+        # method, which only verifies that a similar device - for
+        # example, one with slot 0x82 - exists in the destination XML,
         # regardless of order.
         self._assertDeviceAddressesPresent(src_xml, dst_xml)
 

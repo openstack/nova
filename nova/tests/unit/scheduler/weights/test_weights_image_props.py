@@ -73,7 +73,7 @@ class ImagePropertiesWeigherTestCase(test.NoDBTestCase):
         host_values = [
             # host1 has no instances
             ('host1', 'node1', {'instances': {}}),
-            #  host2 has one instance with os_distro=win and hw_machine_type=pc
+            # host2 has one instance with os_distro=win and hw_machine_type=pc
             ('host2', 'node2', {'instances': {uuids.inst1: objects.Instance(
                                                         uuid=uuids.inst1)}}),
             # host3 has two instances

@@ -637,16 +637,16 @@ class PciDeviceStats(object):
         # If it is not set, we skip the next code block and no filtering
         # is applied to the pools.
         if all(spec.get("live_migratable") == 'true' for spec in request.spec):
-            #  if all specs require live migratable devices, then we need to
-            #  reduce the pools by the ones that support them.
+            # if all specs require live migratable devices, then we need to
+            # reduce the pools by the ones that support them.
             pools = [pool for pool in pools if pool.get("live_migratable") and
                      pool['live_migratable'] == 'true']
         elif all(
             spec.get("live_migratable") == "false" for spec in request.spec
         ):
-            #  If the request asks to NOT support live-migratable devices, then
-            #  we don't provide the ones that support them.
-            #  We want to exclude the devices that don't have this value yet.
+            # If the request asks to NOT support live-migratable devices, then
+            # we don't provide the ones that support them.
+            # We want to exclude the devices that don't have this value yet.
             pools = [pool for pool in pools if pool.get("live_migratable") and
                      pool['live_migratable'] == 'false']
         return pools

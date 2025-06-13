@@ -609,14 +609,14 @@ As an example, let's consider the case where this option is set to:
 
     ``os_distro=1, hw_machine_type=-1``
 
-If an instance would boot with an image having ``os_distro=windows`` and
+If an instance would boot with an image having ``os_distro=windows`` and
 ``hw_machine_type=q35``, the final host weight will be:
 
     ``(nb_inst(``os_distro=windows``)  * 1.0) +
       (nb_inst(``hw_machine_type=q35``) * -1)``
 
 where nb_inst(``prop=value``) would give me the number of instances having
-an image where ``prop`` is set to ``value`` (eg. the number of instances
+an image where ``prop`` is set to ``value`` (eg. the number of instances
 running with ``os_distro=windows``)
 
 Possible values:
