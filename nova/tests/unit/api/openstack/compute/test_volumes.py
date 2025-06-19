@@ -146,7 +146,7 @@ class BootFromVolumeTest(test.TestCase):
         req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
         res = req.get_response(fakes.wsgi_app_v21())
-        self.assertEqual(400, res.status_int)
+        self.assertEqual(202, res.status_int)
 
 
 class VolumeApiTestV21(test.NoDBTestCase):
