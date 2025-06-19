@@ -9251,12 +9251,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             image_meta)
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
-        no_exist = True
+        mem_balloon = None
         for device in cfg.devices:
             if device.root_name == 'memballoon':
-                no_exist = False
+                mem_balloon = device
                 break
-        self.assertTrue(no_exist)
+        self.assertIsNotNone(mem_balloon)
+        self.assertEqual('none', mem_balloon.model)
 
     def test_get_guest_memory_balloon_config_period_value(self):
         self.flags(mem_stats_period_seconds=21, group='libvirt')
