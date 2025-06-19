@@ -123,6 +123,31 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual('/dev/vda',
                          self._block_device_mapping_seen[0]['device_name'])
 
+    def test_create_root_volume_bdm_v2_reproducer_2114951(self):
+        """Ambiguous regexp prevent using device_filename
+        like 'mkwinimage-cdrom'.
+        The regexp matches a single character in the range between _ (index 95)
+        and r (index 114) (case sensitive)
+        """
+        body = dict(server=dict(
+                name='test_server', imageRef=uuids.image,
+                flavorRef=2, min_count=1, max_count=1,
+                block_device_mapping_v2=[dict(
+                        source_type='volume',
+                        uuid='1',
+                        device_name='mkwinimage-cdrom',
+                        boot_index=0,
+                        delete_on_termination=False,
+                        )]
+                ))
+        req = fakes.HTTPRequest.blank('/v2/%s/os-volumes_boot' %
+                                      fakes.FAKE_PROJECT_ID)
+        req.method = 'POST'
+        req.body = jsonutils.dump_as_bytes(body)
+        req.headers['content-type'] = 'application/json'
+        res = req.get_response(fakes.wsgi_app_v21())
+        self.assertEqual(400, res.status_int)
+
 
 class VolumeApiTestV21(test.NoDBTestCase):
     def setUp(self):
