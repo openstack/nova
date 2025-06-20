@@ -1131,10 +1131,6 @@ class LibvirtConfigGuestDevice(LibvirtConfigObject):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestDevice, self).__init__(**kwargs)
 
-    @property
-    def uses_virtio(self):
-        return False
-
 
 class LibvirtConfigGuestVTPM(LibvirtConfigGuestDevice):
 
@@ -1176,7 +1172,6 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.driver_cache = None
         self.driver_discard = None
         self.driver_io = None
-        self.driver_iommu = False
         self.source_path = None
         self.source_protocol = None
         self.source_name = None
@@ -1273,17 +1268,13 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if len(iotune) > 0:
             dev.append(iotune)
 
-    @property
-    def uses_virtio(self):
-        return 'virtio' == self.target_bus
-
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
 
         dev.set("type", self.source_type)
         dev.set("device", self.source_device)
         if any((self.driver_name, self.driver_format, self.driver_cache,
-                self.driver_discard, self.driver_iommu)):
+                self.driver_discard)):
             drv = etree.Element("driver")
             if self.driver_name is not None:
                 drv.set("name", self.driver_name)
@@ -1295,8 +1286,6 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 drv.set("discard", self.driver_discard)
             if self.driver_io is not None:
                 drv.set("io", self.driver_io)
-            if self.driver_iommu:
-                drv.set("iommu", "on")
             dev.append(drv)
 
         if self.alias:
@@ -1397,7 +1386,6 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 self.driver_cache = c.get('cache')
                 self.driver_discard = c.get('discard')
                 self.driver_io = c.get('io')
-                self.driver_iommu = c.get('iommu', '') == "on"
             elif c.tag == 'source':
                 if self.source_type == 'file':
                     self.source_path = c.get('file')
@@ -1891,7 +1879,6 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.filtername = None
         self.filterparams = []
         self.driver_name = None
-        self.driver_iommu = False
         self.driver_packed = False
         self.vhostuser_mode = None
         self.vhostuser_path = None
@@ -1929,10 +1916,6 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                 self.target_dev == other.target_dev) and
             self.vhostuser_path == other.vhostuser_path)
 
-    @property
-    def uses_virtio(self):
-        return 'virtio' == self.model
-
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
 
@@ -1945,7 +1928,6 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
 
         drv_elem = None
         if (self.driver_name or
-                self.driver_iommu or
                 self.driver_packed or
                 self.net_type == "vhostuser"):
 
@@ -1953,8 +1935,6 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             if self.driver_name and self.net_type != "vhostuser":
                 # For vhostuser interface we should not set the driver name.
                 drv_elem.set("name", self.driver_name)
-            if self.driver_iommu:
-                drv_elem.set("iommu", "on")
             if self.driver_packed:
                 drv_elem.set("packed", "on")
 
@@ -2073,7 +2053,6 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                 self.model = c.get('type')
             elif c.tag == 'driver':
                 self.driver_name = c.get('name')
-                self.driver_iommu = (c.get('iommu', '') == 'on')
                 self.driver_packed = (c.get('packed', '') == 'on')
                 self.vhost_queues = c.get('queues')
                 self.vhost_rx_queue_size = c.get('rx_queue_size')
@@ -2168,15 +2147,12 @@ class LibvirtConfigGuestInput(LibvirtConfigGuestDevice):
 
         self.type = "tablet"
         self.bus = "usb"
-        self.driver_iommu = False
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInput, self).format_dom()
 
         dev.set("type", self.type)
         dev.set("bus", self.bus)
-        if self.driver_iommu:
-            dev.append(etree.Element('driver', iommu="on"))
 
         return dev
 
@@ -2262,11 +2238,6 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
         self.type = 'virtio'
         self.vram = None
         self.heads = None
-        self.driver_iommu = False
-
-    @property
-    def uses_virtio(self):
-        return 'virtio' == self.type
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestVideo, self).format_dom()
@@ -2282,9 +2253,6 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
 
         dev.append(model)
 
-        if self.driver_iommu:
-            dev.append(etree.Element("driver", iommu="on"))
-
         return dev
 
 
@@ -2295,11 +2263,6 @@ class LibvirtConfigMemoryBalloon(LibvirtConfigGuestDevice):
             **kwargs)
         self.model = None
         self.period = None
-        self.driver_iommu = False
-
-    @property
-    def uses_virtio(self):
-        return 'virtio' == self.model
 
     def format_dom(self):
         dev = super(LibvirtConfigMemoryBalloon, self).format_dom()
@@ -2308,8 +2271,6 @@ class LibvirtConfigMemoryBalloon(LibvirtConfigGuestDevice):
         dev.set('freePageReporting', 'on')
         if self.period is not None:
             dev.append(etree.Element('stats', period=str(self.period)))
-        if self.driver_iommu:
-            dev.append(etree.Element('driver', iommu='on'))
         return dev
 
 
@@ -2322,13 +2283,6 @@ class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
         self.type = None
         self.index = None
         self.model = None
-        self.driver_iommu = False
-
-    @property
-    def uses_virtio(self):
-        model_is_virtio = 'virtio-scsi' == self.model
-        type_is_virtio = 'virtio-serial' == self.type
-        return model_is_virtio or type_is_virtio
 
     def format_dom(self):
         controller = super(LibvirtConfigGuestController, self).format_dom()
@@ -2339,9 +2293,6 @@ class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
 
         if self.model:
             controller.set("model", str(self.model))
-
-        if self.driver_iommu:
-            controller.append(etree.Element("driver", iommu="on"))
 
         return controller
 
@@ -3832,19 +3783,14 @@ class LibvirtConfigNodeDeviceVpdCap(LibvirtConfigObject):
 class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
 
     def __init__(self, **kwargs):
-        super(LibvirtConfigGuestRng, self).__init__(root_name="rng",
-                                                      **kwargs)
+        super(LibvirtConfigGuestRng, self).__init__(
+            root_name="rng", **kwargs)
 
         self.device_model = 'virtio'
         self.model = 'random'
         self.backend = None
         self.rate_period = None
         self.rate_bytes = None
-        self.driver_iommu = False
-
-    @property
-    def uses_virtio(self):
-        return 'virtio' == self.device_model
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestRng, self).format_dom()
@@ -3861,9 +3807,6 @@ class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
             dev.append(rate)
 
         dev.append(backend)
-
-        if self.driver_iommu:
-            dev.append(etree.Element('driver', iommu="on"))
 
         return dev
 

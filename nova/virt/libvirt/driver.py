@@ -2329,14 +2329,9 @@ class LibvirtDriver(driver.ComputeDriver):
             provider = encryptors.LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP[provider]
         return provider == encryptors.LUKS
 
-    def _get_volume_config(self, instance, connection_info, disk_info):
+    def _get_volume_config(self, connection_info, disk_info):
         vol_driver = self._get_volume_driver(connection_info)
         conf = vol_driver.get_config(connection_info, disk_info)
-
-        if self._get_mem_encryption_config(
-                instance.flavor, instance.image_meta):
-            designer.set_driver_iommu_for_device(conf)
-
         self._set_cache_mode(conf)
         return conf
 
@@ -2497,7 +2492,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if disk_info['bus'] == 'scsi':
             disk_info['unit'] = self._get_scsi_controller_next_unit(guest)
 
-        conf = self._get_volume_config(instance, connection_info, disk_info)
+        conf = self._get_volume_config(connection_info, disk_info)
 
         self._check_discard_for_attach_volume(conf, instance)
 
@@ -2618,8 +2613,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # this to the BDM here as the upper compute swap_volume method will
         # eventually do this for us.
         self._connect_volume(context, new_connection_info, instance)
-        conf = self._get_volume_config(
-            instance, new_connection_info, disk_info)
+        conf = self._get_volume_config(new_connection_info, disk_info)
 
         try:
             self._swap_volume(guest, disk_dev, conf, resize_to)
@@ -3207,9 +3201,6 @@ class LibvirtDriver(driver.ComputeDriver):
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
                                          instance.flavor,
                                          CONF.libvirt.virt_type)
-
-        if self._get_mem_encryption_config(instance.flavor, image_meta):
-            designer.set_driver_iommu_for_device(cfg)
 
         try:
             state = guest.get_power_state(self._host)
@@ -6304,7 +6295,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     info['unit'] = disk_mapping['unit']
                     disk_mapping['unit'] += 1
-            cfg = self._get_volume_config(instance, connection_info, info)
+            cfg = self._get_volume_config(connection_info, info)
             devices.append(cfg)
             vol['connection_info'] = connection_info
             vol.save()
@@ -7065,11 +7056,6 @@ class LibvirtDriver(driver.ComputeDriver):
         rng_device.backend = rng_path
         guest.add_device(rng_device)
 
-    def _add_virtio_serial_controller(self, guest, instance):
-        virtio_controller = vconfig.LibvirtConfigGuestController()
-        virtio_controller.type = 'virtio-serial'
-        guest.add_device(virtio_controller)
-
     def _add_vtpm_device(
         self,
         guest: vconfig.LibvirtConfigGuest,
@@ -7122,14 +7108,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def _set_qemu_guest_agent(self, guest, flavor, instance, image_meta):
         # Enable qga only if the 'hw_qemu_guest_agent' is equal to yes
         if image_meta.properties.get('hw_qemu_guest_agent', False):
-            # a virtio-serial controller is required for qga. If it is not
-            # created explicitly, libvirt will do it by itself. But in case
-            # of AMD SEV, any virtio device should use iommu driver, and
-            # libvirt does not know about it. That is why the controller
-            # should be created manually.
-            if self._get_mem_encryption_config(flavor, image_meta):
-                self._add_virtio_serial_controller(guest, instance)
-
             LOG.debug("Qemu guest agent is enabled through image "
                       "metadata", instance=instance)
             self._add_qga_device(guest, instance)
@@ -7968,10 +7946,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 })
 
     def _guest_configure_sev_mem_encryption(self, guest, model):
-        designer.set_driver_iommu_for_all_devices(guest)
-        self._guest_add_sev_launch_security(guest, model)
-
-    def _guest_add_sev_launch_security(self, guest, model):
         launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
         # NOTE(tkajinam): Default policy is for SEV
         if model == fields.MemEncryptionModel.AMD_SEV_ES:
