@@ -1,0 +1,108 @@
+---
+features:
+  - |
+    The Nova policies introduce ``manager`` default roles provided by
+    keystone. A ``project_manager`` denoted by someone with the ``manager``
+    role on a project. It is intended to perform more privileged operations
+    than ``project_member`` on its project resources. To avoid any change in
+    ``admin`` permissions, Nova use ``PROJECT_MANAGER_OR_ADMIN`` as default.
+
+    Currently, nova supports:
+
+    * ``admin``
+    * ``project_manager``
+    * ``project_member``
+    * ``project_reader``
+
+    Currently, scope checks and new defaults are enabled by default. It is
+    recommended to use new defaults but if your deployment need more time
+    then you can disable them by switching the below config option in
+    ``nova.conf`` file.:
+
+      [oslo_policy]
+      enforce_new_defaults=False
+      enforce_scope=False
+
+    Please refer `Policy New Defaults`_ for detail about policy new defaults.
+
+    In this release, the below APIs policy are default to
+    ``PROJECT_MANAGER_OR_ADMIN``:
+
+    - ``os_compute_api:os-migrate-server:migrate`` ("Cold migrate a server
+      without specifying a host")
+    - ``os_compute_api:os-migrate-server:migrate_live`` (live migrate server
+      without specifying host)
+    - ``os_compute_api:os-migrations:index`` (List migrations without host
+      info)
+    - ``os_compute_api:servers:migrations:index`` (Lists in-progress live
+      migrations for a given server without host info)
+    - ``os_compute_api:servers:migrations:force_complete`` (Force an
+      in-progress live migration for a given server)
+    - ``os_compute_api:servers:migrations:delete`` (Delete(Abort) an
+      in-progress live migration)
+
+    To introduced ``project_manager`` in migration APIs, we need to add a few
+    new policies.
+
+    * Live migrate:
+
+      - Existing policy is used when live migrate server without specifying
+        host:
+
+        - ``os_compute_api:os-migrate-server:migrate_live`` (live migrate
+          server without specifying host)
+        - Default: ``PROJECT_MANAGER_OR_ADMIN``
+      - New policy is used when live migrate server to a specific host:
+
+        - ``os_compute_api:os-migrate-server:migrate_live:host`` (live migrate
+          server to a specific host)
+        - Default: ``ADMIN``
+
+    * List server migration:
+
+      - Existing policy is used to list live migrations without host info:
+
+        - ``os_compute_api:servers:migrations:index`` (Lists in-progress live
+           migrations for a given server)
+        - Default: ``PROJECT_MANAGER_OR_ADMIN``
+      - New policy is used to host info in live migrations list:
+
+        - ``os_compute_api:servers:migrations:index:host`` (Lists in-progress
+          live migrations for a given server with host info)
+        - Default: ``ADMIN``
+
+    * List migration:
+
+      - Existing policy is used to list live migrations without host info:
+
+        - ``os_compute_api:os-migrations:index`` (List migrations without
+          host info)
+        - Default: ``PROJECT_MANAGER_OR_ADMIN``
+      - New policy is used to host info in live migrations list:
+
+        - ``os_compute_api:os-migrations:index:all_projects`` (List migrations
+          for all or cross projects)
+        - Default: ``ADMIN``
+        - ``os_compute_api:os-migrations:index:host`` (List migrations
+          with host info)
+        - Default: ``ADMIN``
+upgrade:
+  - |
+    New policies are added to the live migration APIs with the same default.
+    If you are using default policy, then no action is needed, but if you have
+    overridden the existing live migration policies in your deployment, you
+    must include the new policy with the same permissions.
+
+    - Existing policy:
+
+      - ``os_compute_api:os-migrate-server:migrate_live``
+      - ``os_compute_api:servers:migrations::index``
+      - ``os_compute_api:os-migrations:index``
+    - New policy:
+
+      - ``os_compute_api:os-migrate-server:migrate_live:host``
+      - ``os_compute_api:servers:migrations:index:host``
+      - ``os_compute_api:os-migrations:index:all_projects``
+      - ``os_compute_api:os-migrations:index:host``
+
+    .. _Policy New Defaults: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html

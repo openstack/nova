@@ -304,9 +304,10 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         super(RealRolePolicyTestCase, self).setUp()
         self.policy = self.useFixture(nova_fixtures.RealPolicyFixture())
         self.non_admin_context = context.RequestContext(
-            'fake', 'fake', roles=['member', 'reader'])
+            'fake', 'fake', roles=['manager', 'member', 'reader'])
         self.admin_context = context.RequestContext(
-            'fake', 'fake', True, roles=['admin', 'member', 'reader'])
+            'fake', 'fake', True, roles=[
+            'admin', 'manager', 'member', 'reader'])
         self.target = {}
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 
@@ -321,8 +322,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             "os_compute_api:servers:allow_all_filters",
             "os_compute_api:servers:show:host_status",
             "os_compute_api:servers:show:host_status:unknown-only",
-            "os_compute_api:servers:migrations:force_complete",
-            "os_compute_api:servers:migrations:delete",
             "os_compute_api:os-admin-actions:inject_network_info",
             "os_compute_api:os-admin-actions:reset_state",
             "os_compute_api:os-aggregates:index",
@@ -349,9 +348,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             "os_compute_api:os-hosts:start",
             "os_compute_api:os-instance-actions:events",
             "os_compute_api:os-lock-server:unlock:unlock_override",
-            "os_compute_api:os-migrate-server:migrate",
             "os_compute_api:os-migrate-server:migrate:host",
-            "os_compute_api:os-migrate-server:migrate_live",
+            "os_compute_api:os-migrate-server:migrate_live:host",
             "os_compute_api:os-quota-sets:update",
             "os_compute_api:os-quota-sets:delete",
             "os_compute_api:os-server-diagnostics",
@@ -370,10 +368,11 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             "os_compute_api:servers:create:zero_disk_flavor",
             "os_compute_api:os-baremetal-nodes:list",
             "os_compute_api:os-baremetal-nodes:show",
-            "os_compute_api:servers:migrations:index",
+            "os_compute_api:servers:migrations:index:host",
             "os_compute_api:servers:migrations:show",
             "os_compute_api:os-simple-tenant-usage:list",
-            "os_compute_api:os-migrations:index",
+            "os_compute_api:os-migrations:index:all_projects",
+            "os_compute_api:os-migrations:index:host",
             "os_compute_api:os-services:list",
             "os_compute_api:os-instance-actions:events:details",
             "os_compute_api:os-instance-usage-audit-log:list",
@@ -426,6 +425,9 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             "os_compute_api:servers:delete",
             "os_compute_api:servers:detail",
             "os_compute_api:servers:index",
+            "os_compute_api:servers:migrations:force_complete",
+            "os_compute_api:servers:migrations:delete",
+            "os_compute_api:servers:migrations:index",
             "os_compute_api:servers:reboot",
             "os_compute_api:servers:rebuild",
             "os_compute_api:servers:rebuild:trusted_certs",
@@ -448,6 +450,9 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             "os_compute_api:os-floating-ips:remove",
             "os_compute_api:os-floating-ips:create",
             "os_compute_api:os-floating-ips:delete",
+            "os_compute_api:os-migrate-server:migrate",
+            "os_compute_api:os-migrate-server:migrate_live",
+            "os_compute_api:os-migrations:index",
             "os_compute_api:os-multinic:add",
             "os_compute_api:os-multinic:remove",
             "os_compute_api:os-rescue",
@@ -558,8 +563,10 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         # admin_only, non_admin, admin_or_user, empty_rule
         special_rules = ('admin_api', 'admin_or_owner', 'context_is_admin',
                          'os_compute_api:os-quota-class-sets:show',
-                         'project_admin_api', 'project_member_api',
-                         'project_reader_api', 'project_member_or_admin',
+                         'project_admin_api', 'project_manager_api',
+                         'project_member_api', 'project_reader_api',
+                         'project_manager_or_admin',
+                         'project_member_or_admin',
                          'project_reader_or_admin')
         result = set(rules.keys()) - set(self.admin_only_rules +
             self.admin_or_owner_rules +

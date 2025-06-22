@@ -20,6 +20,20 @@ from nova.policies import base
 
 POLICY_ROOT = 'os_compute_api:servers:migrations:%s'
 
+DEPRECATED_REASON = """\
+Nova introduces one new policy to list live migrations. The original policy
+is not deprecated and used to list the in-progress live migration without
+host info. A new policy is added to list live migration with host info.
+If you have overridden the original policy in your deployment, you must
+also update the new policy to keep the same permissions.
+"""
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    POLICY_ROOT % 'index',
+    base.ADMIN,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='32.0.0'
+)
 
 servers_migrations_policies = [
     policy.DocumentedRuleDefault(
@@ -36,7 +50,7 @@ servers_migrations_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'force_complete',
-        check_str=base.ADMIN,
+        check_str=base.PROJECT_MANAGER_OR_ADMIN,
         description="Force an in-progress live migration for a given server "
         "to complete",
         operations=[
@@ -49,7 +63,7 @@ servers_migrations_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.ADMIN,
+        check_str=base.PROJECT_MANAGER_OR_ADMIN,
         description="Delete(Abort) an in-progress live migration",
         operations=[
             {
@@ -58,10 +72,20 @@ servers_migrations_policies = [
             }
         ],
         scope_types=['project']),
+
+    # NOTE(gmaan): You might see this policy as deprecated in the new policy
+    # 'index:host' but it is not deprecated and still be used to list the live
+    # migration without host info. By adding this existing policy in new
+    # policy deprecated field, oslo.policy will handle the policy overridden
+    # case. In that case, oslo.policy will pick the existing policy overridden
+    # value from policy.yaml file and apply the same to the new policy. This
+    # way existing deployment (for default as well as custom policy case) will
+    # not break.
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.ADMIN,
-        description="Lists in-progress live migrations for a given server",
+        check_str=base.PROJECT_MANAGER_OR_ADMIN,
+        description="Lists in-progress live migrations for a given server "
+        "without host info.",
         operations=[
             {
                 'method': 'GET',
@@ -69,6 +93,24 @@ servers_migrations_policies = [
             }
         ],
         scope_types=['project']),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'index:host',
+        check_str=base.ADMIN,
+        description="Lists in-progress live migrations for a given server "
+        "with host info.",
+        operations=[
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}/migrations'
+            }
+        ],
+        scope_types=['project'],
+        # TODO(gmaan): We can remove this after the next SLURP release
+        # (after 2026.1 release). We need to keep this deprecated rule
+        # for the case where operator has overridden the old policy
+        # 'index' in policy.yaml. For details, refer to the above
+        # comment in the 'index' policy rule.
+        deprecated_rule=DEPRECATED_POLICY),
 ]
 
 

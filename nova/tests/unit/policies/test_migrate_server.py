@@ -54,10 +54,14 @@ class MigrateServerPolicyTest(base.BasePolicyTest):
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
+        self.project_manager_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_manager_context]
+
     @mock.patch('nova.compute.api.API.resize')
     def test_migrate_server_policy(self, mock_resize):
         rule_name = ms_policies.POLICY_ROOT % 'migrate'
-        self.common_policy_auth(self.project_admin_authorized_contexts,
+        self.common_policy_auth(self.project_manager_authorized_contexts,
                                 rule_name, self.controller._migrate,
                                 self.req, self.instance.uuid,
                                 body={'migrate': None})
@@ -76,6 +80,19 @@ class MigrateServerPolicyTest(base.BasePolicyTest):
     def test_migrate_live_server_policy(self, mock_live_migrate):
         rule_name = ms_policies.POLICY_ROOT % 'migrate_live'
         body = {'os-migrateLive': {
+                 'host': None,
+                 'block_migration': "False",
+                 'disk_over_commit': "False"}
+               }
+        self.common_policy_auth(self.project_manager_authorized_contexts,
+                                rule_name, self.controller._migrate_live,
+                                self.req, self.instance.uuid,
+                                body=body)
+
+    @mock.patch('nova.compute.api.API.live_migrate')
+    def test_migrate_live_server_host_policy(self, mock_live_migrate):
+        rule_name = ms_policies.POLICY_ROOT % 'migrate_live:host'
+        body = {'os-migrateLive': {
                  'host': 'hostname',
                  'block_migration': "False",
                  'disk_over_commit': "False"}
@@ -92,6 +109,18 @@ class MigrateServerNoLegacyNoScopeTest(MigrateServerPolicyTest):
     """
 
     without_deprecated_rules = True
+    rules_without_deprecation = {
+        ms_policies.POLICY_ROOT % 'migrate':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+        ms_policies.POLICY_ROOT % 'migrate_live':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+    }
+
+    def setUp(self):
+        super(MigrateServerNoLegacyNoScopeTest, self).setUp()
+
+        self.project_manager_authorized_contexts = (
+            self.project_manager_or_admin_with_no_scope_no_legacy)
 
 
 class MigrateServerScopeTypePolicyTest(MigrateServerPolicyTest):
@@ -111,6 +140,9 @@ class MigrateServerScopeTypePolicyTest(MigrateServerPolicyTest):
         # With scope enabled, system admin is not allowed.
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context]
+        self.project_manager_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_manager_context]
 
 
 class MigrateServerScopeTypeNoLegacyPolicyTest(
@@ -119,6 +151,17 @@ class MigrateServerScopeTypeNoLegacyPolicyTest(
     and no more deprecated rules.
     """
     without_deprecated_rules = True
+    rules_without_deprecation = {
+        ms_policies.POLICY_ROOT % 'migrate':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+        ms_policies.POLICY_ROOT % 'migrate_live':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+    }
+
+    def setUp(self):
+        super(MigrateServerScopeTypeNoLegacyPolicyTest, self).setUp()
+        self.project_manager_authorized_contexts = (
+            self.project_manager_or_admin_with_scope_no_legacy)
 
 
 class MigrateServerOverridePolicyTest(
@@ -134,12 +177,14 @@ class MigrateServerOverridePolicyTest(
         rule_migrate = ms_policies.POLICY_ROOT % 'migrate'
         rule_migrate_host = ms_policies.POLICY_ROOT % 'migrate:host'
         rule_live_migrate = ms_policies.POLICY_ROOT % 'migrate_live'
+        rule_live_migrate_host = ms_policies.POLICY_ROOT % 'migrate_live:host'
         # NOTE(gmann): override the rule to project member and verify it
         # work as policy is system and project scoped.
         self.policy.set_rules({
             rule_migrate: base_policy.PROJECT_MEMBER,
             rule_migrate_host: base_policy.PROJECT_MEMBER,
-            rule_live_migrate: base_policy.PROJECT_MEMBER},
+            rule_live_migrate: base_policy.PROJECT_MEMBER,
+            rule_live_migrate_host: base_policy.PROJECT_MEMBER},
             overwrite=False)
 
         # Check that project member role as override above
@@ -147,3 +192,6 @@ class MigrateServerOverridePolicyTest(
         self.project_admin_authorized_contexts = [
             self.project_admin_context, self.project_manager_context,
             self.project_member_context]
+
+        self.project_manager_authorized_contexts = (
+            self.project_admin_authorized_contexts)

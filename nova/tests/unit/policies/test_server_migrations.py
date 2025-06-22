@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 from unittest import mock
 
 import fixtures
@@ -18,6 +19,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova.api.openstack.compute import server_migrations
 from nova.compute import vm_states
 from nova import objects
+from nova.objects import base as obj_base
 from nova.policies import base as base_policy
 from nova.policies import servers_migrations as policies
 from nova.tests.unit.api.openstack import fakes
@@ -50,13 +52,93 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
+        self.project_manager_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_manager_context]
 
     @mock.patch('nova.compute.api.API.get_migrations_in_progress_by_instance')
     def test_list_server_migrations_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'index'
-        self.common_policy_auth(self.project_admin_authorized_contexts,
+        self.common_policy_auth(self.project_manager_authorized_contexts,
                                 rule_name, self.controller.index,
                                 self.req, self.instance.uuid)
+
+    @mock.patch('nova.compute.api.API.get_migrations_in_progress_by_instance')
+    def test_list_server_migrations_host_policy(self, mock_get):
+        fake_migrations = [
+            {
+                'id': 1234,
+                'source_node': 'node1',
+                'dest_node': 'node2',
+                'dest_compute_id': 123,
+                'source_compute': 'compute1',
+                'dest_compute': 'compute2',
+                'dest_host': '1.2.3.4',
+                'status': 'running',
+                'instance_uuid': self.instance.uuid,
+                'old_instance_type_id': 1,
+                'new_instance_type_id': 2,
+                'migration_type': 'live-migration',
+                'hidden': False,
+                'memory_total': 123456,
+                'memory_processed': 12345,
+                'memory_remaining': 111111,
+                'disk_total': 234567,
+                'disk_processed': 23456,
+                'disk_remaining': 211111,
+                'created_at': datetime.datetime(2025, 1, 1),
+                'updated_at': datetime.datetime(2025, 1, 1),
+                'deleted_at': None,
+                'deleted': False,
+                'uuid': uuids.migration1,
+                'cross_cell_move': False,
+                'user_id': None,
+                'project_id': None
+            },
+        ]
+
+        mock_get.return_value = obj_base.obj_make_list(
+            'fake-context',
+            objects.MigrationList(),
+            objects.Migration,
+            fake_migrations)
+
+        rule = policies.POLICY_ROOT % 'index'
+        # Migration 'index' policy is checked before 'index:host'
+        # policy so we have to allow it for everyone otherwise it
+        # will fail first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        rule_name = policies.POLICY_ROOT % 'index:host'
+        authorize_res, unauthorize_res = self.common_policy_auth(
+            self.project_admin_authorized_contexts,
+            rule_name, self.controller.index, self.req,
+            self.instance.uuid, fatal=False)
+        # NOTE(gmaan): Check host info is returned only in authorized
+        # context response.
+        for resp in authorize_res:
+            self.assertIn('compute2', resp['migrations'][0]['dest_compute'])
+            self.assertIn('1.2.3.4', resp['migrations'][0]['dest_host'])
+            self.assertIn('node2', resp['migrations'][0]['dest_node'])
+            self.assertIn('compute1', resp['migrations'][0]['source_compute'])
+            self.assertIn('node1', resp['migrations'][0]['source_node'])
+        for resp in unauthorize_res:
+            self.assertIsNone(resp['migrations'][0]['dest_compute'])
+            self.assertIsNone(resp['migrations'][0]['dest_host'])
+            self.assertIsNone(resp['migrations'][0]['dest_node'])
+            self.assertIsNone(resp['migrations'][0]['source_compute'])
+            self.assertIsNone(resp['migrations'][0]['source_node'])
+
+    def test_list_server_migrations_check_primary_policy(self):
+        rule = policies.POLICY_ROOT % 'index'
+        # Migration 'index' policy is the primary policy and checked before
+        # 'index:host' policy so if 'index' policy is not allowed and even
+        # 'index:host' policy is allowed then server migration list will be
+        # denied.
+        self.policy.set_rules({rule: "!"}, overwrite=False)
+        self.common_policy_auth(
+            set([]),
+            rule, self.controller.index, self.req,
+            self.instance.uuid)
 
     @mock.patch('nova.api.openstack.compute.server_migrations.output')
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
@@ -73,14 +155,14 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.API.live_migrate_abort')
     def test_delete_server_migrations_policy(self, mock_delete):
         rule_name = policies.POLICY_ROOT % 'delete'
-        self.common_policy_auth(self.project_admin_authorized_contexts,
+        self.common_policy_auth(self.project_manager_authorized_contexts,
                                 rule_name, self.controller.delete,
                                 self.req, self.instance.uuid, 11111)
 
     @mock.patch('nova.compute.api.API.live_migrate_force_complete')
     def test_force_delete_server_migrations_policy(self, mock_force):
         rule_name = policies.POLICY_ROOT % 'force_complete'
-        self.common_policy_auth(self.project_admin_authorized_contexts,
+        self.common_policy_auth(self.project_manager_authorized_contexts,
                                 rule_name, self.controller._force_complete,
                                 self.req, self.instance.uuid, 11111,
                                 body={"force_complete": None})
@@ -92,6 +174,19 @@ class ServerMigrationsNoLegacyNoScopeTest(ServerMigrationsPolicyTest):
     """
 
     without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.POLICY_ROOT % 'force_complete':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+        policies.POLICY_ROOT % 'delete':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+        policies.POLICY_ROOT % 'index':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+    }
+
+    def setUp(self):
+        super(ServerMigrationsNoLegacyNoScopeTest, self).setUp()
+        self.project_manager_authorized_contexts = (
+            self.project_manager_or_admin_with_no_scope_no_legacy)
 
 
 class ServerMigrationsScopeTypePolicyTest(ServerMigrationsPolicyTest):
@@ -110,6 +205,9 @@ class ServerMigrationsScopeTypePolicyTest(ServerMigrationsPolicyTest):
         # With scope enabled, system admin is not allowed.
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context]
+        self.project_manager_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_manager_context]
 
 
 class ServerMigrationsScopeTypeNoLegacyPolicyTest(
@@ -118,6 +216,19 @@ class ServerMigrationsScopeTypeNoLegacyPolicyTest(
     and no more deprecated rules.
     """
     without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.POLICY_ROOT % 'force_complete':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+        policies.POLICY_ROOT % 'delete':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+        policies.POLICY_ROOT % 'index':
+            base_policy.PROJECT_MANAGER_OR_ADMIN,
+    }
+
+    def setUp(self):
+        super(ServerMigrationsScopeTypeNoLegacyPolicyTest, self).setUp()
+        self.project_manager_authorized_contexts = (
+            self.project_manager_or_admin_with_scope_no_legacy)
 
 
 class ServerMigrationsOverridePolicyTest(
@@ -132,6 +243,7 @@ class ServerMigrationsOverridePolicyTest(
         super(ServerMigrationsOverridePolicyTest, self).setUp()
         rule_show = policies.POLICY_ROOT % 'show'
         rule_list = policies.POLICY_ROOT % 'index'
+        rule_list_host = policies.POLICY_ROOT % 'index:host'
         rule_force = policies.POLICY_ROOT % 'force_complete'
         rule_delete = policies.POLICY_ROOT % 'delete'
         # NOTE(gmann): override the rule to project member and verify it
@@ -139,6 +251,7 @@ class ServerMigrationsOverridePolicyTest(
         self.policy.set_rules({
             rule_show: base_policy.PROJECT_READER,
             rule_list: base_policy.PROJECT_READER,
+            rule_list_host: base_policy.PROJECT_READER,
             rule_force: base_policy.PROJECT_READER,
             rule_delete: base_policy.PROJECT_READER},
             overwrite=False)
@@ -148,3 +261,5 @@ class ServerMigrationsOverridePolicyTest(
         self.project_admin_authorized_contexts = [
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context]
+        self.project_manager_authorized_contexts = (
+            self.project_admin_authorized_contexts)
