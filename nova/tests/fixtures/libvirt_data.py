@@ -229,7 +229,7 @@ FAKE_KVM_GUEST = """
         <model type='virtio'/>
         <source bridge='virbr0'/>
       </interface>
-      <memballoon model='virtio'>
+      <memballoon model='virtio' autodeflate='on' freePageReporting='on'>
         <stats period='11'/>
       </memballoon>
       <input type="mouse" bus="virtio"/>
