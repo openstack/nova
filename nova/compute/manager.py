@@ -2338,6 +2338,11 @@ class ComputeManager(manager.Manager):
     def _build_succeeded(self, node):
         self.rt.build_succeeded(node)
 
+    # NOTE(gibi): The normal RPC handler decorators are here but please note
+    # that build_and_run_instance immediately spawns and returns. So any
+    # error from the real work is not propagated back to these decorators.
+    # All those error needs to be handled by _locked_do_build_and_run_instance
+    # and _do_build_and_run_instance
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
