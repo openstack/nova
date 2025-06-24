@@ -19,9 +19,9 @@ from oslo_serialization import jsonutils
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
+from nova.api.openstack.compute.views import ips as views_ips
 from nova import availability_zones as avail_zone
 from nova.compute import api as compute
 from nova.compute import vm_states
@@ -69,8 +69,8 @@ class ViewBuilder(common.ViewBuilder):
     def __init__(self):
         """Initialize view builder."""
         super(ViewBuilder, self).__init__()
-        self._address_builder = views_addresses.ViewBuilder()
         self._image_builder = views_images.ViewBuilder()
+        self._ips_builder = views_ips.ViewBuilder()
         self._flavor_builder = views_flavors.ViewBuilder()
         self.compute_api = compute.API()
 
@@ -614,7 +614,7 @@ class ViewBuilder(common.ViewBuilder):
         context = request.environ["nova.context"]
         networks = common.get_networks_for_instance(context, instance)
 
-        return self._address_builder.index(
+        return self._ips_builder.index(
             request, networks, extend_address,
         )["addresses"]
 
