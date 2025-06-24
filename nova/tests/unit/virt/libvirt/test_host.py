@@ -2175,24 +2175,24 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
 
     def test_tpool_list_pci_devices(self):
         self._add_fake_host_devices()
-        devs = self.host.list_pci_devices()
-        self.assertEqual(8, len(devs))
-        for dev in devs:
-            self.assertIsInstance(dev, tpool.Proxy)
+        dev_names = self.host.list_pci_devices()
+        self.assertEqual(8, len(dev_names))
+        for name in dev_names:
+            self.assertIsInstance(name, str)
 
     def test_tpool_list_mdev_capable_devices(self):
         self._add_fake_host_devices()
-        devs = self.host.list_mdev_capable_devices()
-        self.assertEqual(3, len(devs))
-        for dev in devs:
-            self.assertIsInstance(dev, tpool.Proxy)
+        dev_names = self.host.list_mdev_capable_devices()
+        self.assertEqual(3, len(dev_names))
+        for name in dev_names:
+            self.assertIsInstance(name, str)
 
     def test_tpool_list_mediated_devices(self):
         self._add_fake_host_devices()
-        devs = self.host.list_mediated_devices()
-        self.assertEqual(1, len(devs))
-        for dev in devs:
-            self.assertIsInstance(dev, tpool.Proxy)
+        dev_names = self.host.list_mediated_devices()
+        self.assertEqual(1, len(dev_names))
+        for name in dev_names:
+            self.assertIsInstance(name, str)
 
 
 class LoadersTestCase(test.NoDBTestCase):
