@@ -178,16 +178,16 @@ show_response = {
         'server_group': copy.deepcopy(_server_group_response),
     },
     'required': ['server_group'],
-    'additionalProperties': True,
+    'additionalProperties': False,
 }
 
 show_response_v213 = copy.deepcopy(show_response)
 show_response_v213['properties']['server_group'] = _server_group_response_v213
 
-show_response_v215 = copy.deepcopy(show_response)
+show_response_v215 = copy.deepcopy(show_response_v213)
 show_response_v215['properties']['server_group'] = _server_group_response_v215
 
-show_response_v264 = copy.deepcopy(show_response_v213)
+show_response_v264 = copy.deepcopy(show_response_v215)
 show_response_v264['properties']['server_group'] = _server_group_response_v264
 
 delete_response = {'type': 'null'}
@@ -201,7 +201,7 @@ index_response = {
         },
     },
     'required': ['server_groups'],
-    'additionalProperties': True,
+    'additionalProperties': False,
 }
 
 index_response_v213 = copy.deepcopy(index_response)
@@ -218,7 +218,6 @@ index_response_v264 = copy.deepcopy(index_response_v215)
 index_response_v264['properties']['server_groups'][
     'items'
 ] = _server_group_response_v264
-
 
 create_response = copy.deepcopy(show_response)
 
