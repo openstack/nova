@@ -12,6 +12,23 @@
 
 """Common field types for validating API responses."""
 
+import copy
+
+
+metadata = {
+    'type': 'object',
+    'patternProperties': {
+        '^[a-zA-Z0-9-_:. ]{1,255}$': {
+            'type': 'string', 'maxLength': 255,
+        }
+    },
+    'additionalProperties': False,
+}
+
+meta = copy.deepcopy(metadata)
+meta['minProperties'] = 1
+meta['maxProperties'] = 1
+
 links = {
     'type': 'array',
     'items': {
