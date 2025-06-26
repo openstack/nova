@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 get_vnc_console = {
     'type': 'object',
     'properties': {
@@ -177,7 +179,31 @@ get_spice_console_response = {
             'properties': {
                 'type': {
                     'type': 'string',
-                    'enum': ['spice-html5'],
+                    'const': 'spice-html5',
+                    'description': '',
+                },
+                'url': {
+                    'type': 'string',
+                    'format': 'uri',
+                    'description': '',
+                },
+            },
+            'required': ['type', 'url'],
+            'additionalProperties': False,
+        },
+    },
+    'additionalProperties': False,
+}
+
+get_rdp_console_response = {
+    'type': 'object',
+    'properties': {
+        'console': {
+            'type': 'object',
+            'properties': {
+                'type': {
+                    'type': 'string',
+                    'const': 'rdp',
                     'description': '',
                 },
                 'url': {
@@ -202,7 +228,7 @@ get_serial_console_response = {
             'properties': {
                 'type': {
                     'type': 'string',
-                    'enum': ['serial'],
+                    'const': 'serial',
                     'description': '',
                 },
                 'url': {
@@ -218,3 +244,43 @@ get_serial_console_response = {
     'required': ['console'],
     'additionalProperties': False,
 }
+
+create_response = {
+    'type': 'object',
+    'properties': {
+        'remote_console': {
+            'type': 'object',
+            'properties': {
+                'protocol': {
+                    'type': 'string',
+                    'enum': ['vnc', 'spice', 'serial'],
+                },
+                'type': {
+                    'type': 'string',
+                    'enum': ['novnc', 'xvpvnc', 'spice-html5', 'serial'],
+                },
+                'url': {
+                    'type': 'string',
+                    'format': 'uri',
+                },
+            },
+            'required': ['protocol', 'type'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['remote_console'],
+    'additionalProperties': False,
+}
+
+create_response_v28 = copy.deepcopy(create_response)
+create_response_v28['properties']['remote_console']['properties'][
+    'protocol'
+]['enum'].append('mks')
+create_response_v28['properties']['remote_console']['properties'][
+    'type'
+]['enum'].append('webmks')
+
+create_response_v299 = copy.deepcopy(create_response_v28)
+create_response_v299['properties']['remote_console']['properties'][
+    'type'
+]['enum'].append('spice-direct')
