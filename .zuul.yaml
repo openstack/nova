@@ -52,6 +52,26 @@
     timeout: 3600
 
 - job:
+    name: nova-tox-py312-threading
+    parent: openstack-tox-py312
+    description: |
+      Run tox-based unit tests for the OpenStack Nova project
+      under cPython version 3.12 with eventlet disabled.
+      Uses tox with the ``py312-threading`` environment.
+
+    required-projects:
+      # including nova here makes this job reusable by other projects and
+      # allow depends-on placement to work with our placement fixture
+      - openstack/nova
+      - openstack/placement
+    vars:
+      # explicitly stating the work dir makes this job reusable by other
+      # projects
+      zuul_work_dir: src/opendev.org/openstack/nova
+      bindep_profile: test py312
+      tox_envlist: py312-threading
+
+- job:
     name: nova-tox-validate-backport
     parent: openstack-tox
     description: |
@@ -820,6 +840,8 @@
             voting: false
         - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *nova-base-irrelevant-files
+            voting: false
+        - nova-tox-py312-threading:
             voting: false
     gate:
       jobs:
