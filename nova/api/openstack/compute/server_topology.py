@@ -19,6 +19,7 @@ from nova.compute import api as compute
 from nova.policies import server_topology as st_policies
 
 
+@validation.validated
 class ServerTopologyController(wsgi.Controller):
 
     def __init__(self, *args, **kwargs):
@@ -28,6 +29,7 @@ class ServerTopologyController(wsgi.Controller):
     @wsgi.api_version("2.78")
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.query_params_v21)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         instance = common.get_instance(self.compute_api, context, server_id,
