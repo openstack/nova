@@ -1196,9 +1196,18 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
         self.test_case_id = test
 
     def _setUp(self):
-        self.greenpool = eventlet.greenpool.GreenPool()
+        # Just safety that the previous testcase cleaned up after itself
+        assert utils.SCATTER_GATHER_EXECUTOR is None
+        assert utils.DEFAULT_GREEN_POOL is None
+
+        origi_get_scatter_gather = utils.get_scatter_gather_executor
+        origi_default_green_pool = utils._get_default_green_pool
+
+        self.greenpool = None
+        self.scatter_gather_executor = None
 
         def _get_default_green_pool():
+            self.greenpool = origi_default_green_pool()
             return self.greenpool
         # NOTE(sean-k-mooney): greenpools use eventlet.spawn and
         # eventlet.spawn_n so we can't stub out all calls to those functions.
@@ -1207,40 +1216,87 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
         # Greenthreads created via the standard lib threading module.
         self.useFixture(fixtures.MonkeyPatch(
             'nova.utils._get_default_green_pool', _get_default_green_pool))
-        self.addCleanup(self.do_cleanup)
+        self.addCleanup(self.do_cleanup_default)
 
-    def do_cleanup(self):
-        running = self.greenpool.running()
-        if running:
+        def _get_scatter_gather_executor():
+            self.scatter_gather_executor = origi_get_scatter_gather()
+            self.scatter_gather_executor.name = (
+                f"{self.test_case_id}.cell_worker")
+            return self.scatter_gather_executor
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils.get_scatter_gather_executor',
+            _get_scatter_gather_executor))
+
+        self.addCleanup(self.do_cleanup_scatter_gather)
+
+    def do_cleanup_scatter_gather(self):
+        utils.SCATTER_GATHER_EXECUTOR = None
+        executor = self.scatter_gather_executor
+        # NOTE(gibi): we cannot rely on utils.concurrency_mode_threading
+        # as that might have been mocked during the test when the executor
+        # was created, but during cleanup the mock is already removed.
+        threading = isinstance(executor, futurist.ThreadPoolExecutor)
+        if executor and executor.alive:
+            executor.shutdown(wait=False)
+
+            if threading:
+                # NOTE(gibi): This is optimistic, but we need specific examples
+                # where self.executor.shutdown(wait=True) hangs to figure out
+                # what we can do here.
+                pass
+            else:
+                # kill all greenthreads in the pool before raising to prevent
+                # them from interfering with other tests.
+                for gt in list(executor._pool.coroutines_running):
+                    if isinstance(gt, eventlet.greenthread.GreenThread):
+                        gt.kill()
+
+            executor.shutdown(wait=True)
+
+            if threading:
+                # NOTE(gibi):If shutdown(wait=True) returns then nothing is
+                # leaked, so nothing to do here.
+                pass
+            else:
+                self._raise_on_green_pool(executor._pool)
+
+    def _raise_on_green_pool(self, pool):
+        if any(
+                isinstance(gt, eventlet.greenthread.GreenThread)
+                for gt in pool.coroutines_running
+        ):
+            raise RuntimeError(
+                f'detected leaked greenthreads in {self.test_case_id}')
+        elif (len(pool.coroutines_running) > 0 and
+              strutils.bool_from_string(os.getenv(
+                  "NOVA_RAISE_ON_GREENLET_LEAK", "0")
+              )):
+            raise RuntimeError(
+                f'detected leaked greenlets in {self.test_case_id}')
+        else:
+            self.addDetail(
+                'IsolatedGreenPoolFixture',
+                'no leaked greenthreads detected in '
+                f'{self.test_case_id} '
+                'but some greenlets were running when the test'
+                'finished.'
+                'They cannot be killed so they may interact with '
+                'other tests if they raise exceptions. '
+                'These greenlets were likely created by spawn_n and'
+                'and therefore are not expected to return or raise.'
+            )
+
+    def do_cleanup_default(self):
+        if self.greenpool and self.greenpool.running:
             # kill all greenthreads in the pool before raising to prevent
             # them from interfering with other tests.
             for gt in list(self.greenpool.coroutines_running):
                 if isinstance(gt, eventlet.greenthread.GreenThread):
                     gt.kill()
             # reset the global greenpool just in case.
-            utils.DEFAULT_GREEN_POOL = eventlet.greenpool.GreenPool()
-            if any(
-                isinstance(gt, eventlet.greenthread.GreenThread)
-                for gt in self.greenpool.coroutines_running
-            ):
-                raise RuntimeError(
-                    f'detected leaked greenthreads in {self.test_case_id}')
-            elif (len(self.greenpool.coroutines_running) > 0 and
-                  strutils.bool_from_string(os.getenv(
-                    "NOVA_RAISE_ON_GREENLET_LEAK", "0")
-            )):
-                raise RuntimeError(
-                    f'detected leaked greenlets in {self.test_case_id}')
-            else:
-                self.addDetail(
-                    'IsolatedGreenPoolFixture',
-                    f'no leaked greenthreads detected in {self.test_case_id} '
-                    'but some greenlets were running when the test finished.'
-                    'They cannot be killed so they may interact with '
-                    'other tests if they raise exceptions. '
-                    'These greenlets were likely created by spawn_n and'
-                    'and therefore are not expected to return or raise.'
-                )
+            utils.DEFAULT_GREEN_POOL = None
+            self._raise_on_green_pool(self.greenpool)
 
 
 class _FakeGreenThread(object):
@@ -1278,25 +1334,6 @@ class SpawnIsSynchronousFixture(fixtures.Fixture):
             'nova.utils.spawn_n', _FakeGreenThread))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.utils.spawn', _FakeGreenThread))
-
-
-class _FakeExecutor(futurist.SynchronousExecutor):
-    def __init__(self, *args, **kwargs):
-        # Ignore kwargs (example: max_workers) that SynchronousExecutor
-        # does not support.
-        super(_FakeExecutor, self).__init__()
-
-
-class SynchronousThreadPoolExecutorFixture(fixtures.Fixture):
-    """Make GreenThreadPoolExecutor synchronous.
-
-    Replace the GreenThreadPoolExecutor with the SynchronousExecutor.
-    """
-
-    def setUp(self):
-        super(SynchronousThreadPoolExecutorFixture, self).setUp()
-        self.useFixture(fixtures.MonkeyPatch(
-            'futurist.GreenThreadPoolExecutor', _FakeExecutor))
 
 
 class BannedDBSchemaOperations(fixtures.Fixture):
@@ -2082,7 +2119,7 @@ class GreenThreadPoolShutdownWait(fixtures.Fixture):
         real_shutdown = futurist.GreenThreadPoolExecutor.shutdown
         self.useFixture(fixtures.MockPatch(
             'futurist.GreenThreadPoolExecutor.shutdown',
-            lambda self, wait: real_shutdown(self, wait=True)))
+            lambda self, wait=True: real_shutdown(self, wait=True)))
 
 
 class UnifiedLimitsFixture(fixtures.Fixture):

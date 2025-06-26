@@ -16,12 +16,12 @@
 #    under the License.
 
 """Utilities and helper functions."""
-
 import contextlib
 import datetime
 import functools
 import hashlib
 import inspect
+import multiprocessing
 import os
 import random
 import re
@@ -31,6 +31,7 @@ import time
 
 import eventlet
 from eventlet import tpool
+import futurist
 from keystoneauth1 import loading as ks_loading
 import netaddr
 from openstack import connection
@@ -651,6 +652,28 @@ def _serialize_profile_info():
     return trace_info
 
 
+def pass_context_wrapper(func):
+    """Generalised passthrough method
+    It will grab the context from the threadlocal store and add it to
+    the store on the new thread.  This allows for continuity in logging the
+    context when using the returned method is executed on a new thread.
+    """
+    _context = common_context.get_current()
+    profiler_info = _serialize_profile_info()
+
+    @functools.wraps(func)
+    def context_wrapper(*args, **kwargs):
+        # NOTE: If update_store is not called after spawning a thread, it won't
+        # be available for the logger to pull from threadlocal storage.
+        if _context is not None:
+            _context.update_store()
+        if profiler_info and profiler:
+            profiler.init(**profiler_info)
+        return func(*args, **kwargs)
+
+    return context_wrapper
+
+
 def pass_context(runner, func, *args, **kwargs):
     """Generalised passthrough method
     It will grab the context from the threadlocal store and add it to
@@ -658,20 +681,8 @@ def pass_context(runner, func, *args, **kwargs):
     context when using this method to spawn a new thread through the
     runner function
     """
-    _context = common_context.get_current()
-    profiler_info = _serialize_profile_info()
 
-    @functools.wraps(func)
-    def context_wrapper(*args, **kwargs):
-        # NOTE: If update_store is not called after spawn it won't be
-        # available for the logger to pull from threadlocal storage.
-        if _context is not None:
-            _context.update_store()
-        if profiler_info and profiler:
-            profiler.init(**profiler_info)
-        return func(*args, **kwargs)
-
-    return runner(context_wrapper, *args, **kwargs)
+    return runner(pass_context_wrapper(func), *args, **kwargs)
 
 
 def spawn(func, *args, **kwargs):
@@ -1242,3 +1253,52 @@ def latch_error_on_raise(retryable=(_SentinelException,)):
         wrapper.reset = functools.partial(reset, wrapper)
         return wrapper
     return outer_wrapper
+
+
+def concurrency_mode_threading():
+    """Returns true if the service is running in threading mode, false if
+    running in Eventlet mode
+    """
+    from nova import monkey_patch
+    return not monkey_patch.is_patched()
+
+
+SCATTER_GATHER_EXECUTOR = None
+
+
+def get_scatter_gather_executor():
+    """Returns the executor used for scatter/gather operations."""
+    global SCATTER_GATHER_EXECUTOR
+
+    if not SCATTER_GATHER_EXECUTOR:
+        if concurrency_mode_threading():
+            SCATTER_GATHER_EXECUTOR = futurist.ThreadPoolExecutor(
+                CONF.cell_worker_thread_pool_size)
+        else:
+            SCATTER_GATHER_EXECUTOR = futurist.GreenThreadPoolExecutor()
+
+        pname = multiprocessing.current_process().name
+        executor_name = f"{pname}.cell_worker"
+        SCATTER_GATHER_EXECUTOR.name = executor_name
+
+        LOG.info("The cell worker thread pool %s is initialized",
+                 executor_name)
+
+    return SCATTER_GATHER_EXECUTOR
+
+
+def destroy_scatter_gather_executor():
+    """Closes the executor and resets the global to None to allow forked worker
+    processes to properly init it.
+    """
+    global SCATTER_GATHER_EXECUTOR
+    if SCATTER_GATHER_EXECUTOR:
+        LOG.info(
+            "The cell worker thread pool %s is shutting down",
+            SCATTER_GATHER_EXECUTOR.name)
+        SCATTER_GATHER_EXECUTOR.shutdown()
+        LOG.info(
+            "The cell worker thread pool %s is closed",
+            SCATTER_GATHER_EXECUTOR.name)
+
+    SCATTER_GATHER_EXECUTOR = None

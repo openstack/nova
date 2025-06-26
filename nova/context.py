@@ -20,8 +20,7 @@
 from contextlib import contextmanager
 import copy
 
-import eventlet.queue
-import eventlet.timeout
+import futurist.waiters
 from keystoneauth1.access import service_catalog as ksa_service_catalog
 from keystoneauth1 import plugin
 from oslo_context import context
@@ -413,8 +412,7 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
               be returned if the call to a cell raised an exception. The
               exception will be logged.
     """
-    greenthreads = []
-    queue = eventlet.queue.LightQueue()
+    tasks = {}
     results = {}
 
     def gather_result(cell_uuid, fn, *args, **kwargs):
@@ -425,34 +423,44 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
             if not isinstance(e, exception.NovaException):
                 LOG.exception('Error gathering result from cell %s', cell_uuid)
             result = e
-        # The queue is already synchronized.
-        queue.put((cell_uuid, result))
+
+        return result
+
+    executor = utils.get_scatter_gather_executor()
 
     for cell_mapping in cell_mappings:
         with target_cell(context, cell_mapping) as cctxt:
-            greenthreads.append((cell_mapping.uuid,
-                                 utils.spawn(gather_result, cell_mapping.uuid,
-                                             fn, cctxt, *args, **kwargs)))
+            future = executor.submit(
+                utils.pass_context_wrapper(gather_result),
+                cell_mapping.uuid, fn, cctxt, *args, **kwargs)
+            tasks[cell_mapping.uuid] = future
 
-    with eventlet.timeout.Timeout(timeout, exception.CellTimeout):
-        try:
-            while len(results) != len(greenthreads):
-                cell_uuid, result = queue.get()
-                results[cell_uuid] = result
-        except exception.CellTimeout:
-            # NOTE(melwitt): We'll fill in did_not_respond_sentinels at the
-            # same time we kill/wait for the green threads.
-            pass
+    futurist.waiters.wait_for_all(tasks.values(), timeout)
 
-    # Kill the green threads still pending and wait on those we know are done.
-    for cell_uuid, greenthread in greenthreads:
-        if cell_uuid not in results:
-            greenthread.kill()
+    for cell_uuid, future in tasks.items():
+        if not future.done():
             results[cell_uuid] = did_not_respond_sentinel
-            LOG.warning('Timed out waiting for response from cell %s',
+            cancelled = future.cancel()
+            if cancelled:
+                if utils.concurrency_mode_threading():
+                    LOG.warning(
+                        'Timed out waiting for response from cell %s. '
+                        'The cell worker thread did not start and is now '
+                        'cancelled. The cell_worker_thread_pool_size is too '
+                        'small for the load or there are stuck worker threads '
+                        'filling the pool.',
                         cell_uuid)
+                else:
+                    LOG.warning(
+                        'Timed out waiting for response from cell %s.',
+                        cell_uuid)
+            else:
+                LOG.warning(
+                    'Timed out waiting for response from cell %s. Left the '
+                    'cell worker thread to finish in the background.',
+                    cell_uuid)
         else:
-            greenthread.wait()
+            results[cell_uuid] = future.result()
 
     return results
 
