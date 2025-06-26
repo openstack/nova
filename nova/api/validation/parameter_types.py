@@ -308,7 +308,7 @@ keypair_name_special_chars = {
     ]
 }
 
-keypair_name_special_chars_292 = {
+keypair_name_special_chars_v292 = {
     'allOf': [
         name,
         {

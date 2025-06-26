@@ -29,7 +29,7 @@ fake_keypair = {
     'id': 123,
     'name': 'foo-keypair',
     'type': 'ssh',
-    'user_id': 'fake-user',
+    'user_id': '6aa30431-e604-43f3-b75e-10a4276b3247',
     'fingerprint': 'fake-fingerprint',
     'public_key': 'fake\npublic\nkey',
 }
