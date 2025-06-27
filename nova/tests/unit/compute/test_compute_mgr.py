@@ -9577,14 +9577,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_succeeded.assert_not_called()
 
     @mock.patch.object(manager.ComputeManager, '_do_build_and_run_instance')
-    @mock.patch(
-        'nova.exception_wrapper._emit_versioned_exception_notification',
-        new=mock.Mock())
-    @mock.patch(
-        'nova.exception_wrapper._emit_legacy_exception_notification',
-        new=mock.Mock())
-    @mock.patch(
-        'nova.compute.utils.add_instance_fault_from_exc', new=mock.Mock())
     @mock.patch.object(manager.ComputeManager, '_build_failed')
     @mock.patch.object(manager.ComputeManager, '_build_succeeded')
     def test_build_exceptions_reported(
@@ -9594,10 +9586,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         instance = objects.Instance(uuid=uuids.instance,
                                     task_state=None)
         for i in range(0, 10):
-            self.assertRaises(test.TestingException,
-                              self.compute.build_and_run_instance,
-                              self.context, instance, None,
-                              None, None, [])
+            self.compute.build_and_run_instance(
+                self.context, instance, None, None, None, [])
 
         self.assertEqual(10, mock_failed.call_count)
         mock_succeeded.assert_not_called()

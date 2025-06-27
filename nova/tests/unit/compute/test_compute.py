@@ -14504,10 +14504,12 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
         ]
 
         self.assertRaises(exception.Base64Exception,
-                self.compute.build_and_run_instance,
-                self.context, self.instance, {}, {}, {}, [],
-                          block_device_mapping=[],
-                          injected_files=injected_files)
+            self.compute._do_build_and_run_instance,
+            self.context, self.instance, {}, {}, {},
+            block_device_mapping=[], injected_files=injected_files,
+            admin_password=None, requested_networks=None,
+            security_groups=None, node=None, limits=None, host_list=None,
+            accel_uuids=[])
 
 
 class CheckConfigDriveTestCase(test.NoDBTestCase):

@@ -1301,7 +1301,12 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
 
 class _FakeGreenThread(object):
     def __init__(self, func, *args, **kwargs):
-        self._result = func(*args, **kwargs)
+        try:
+            self._result = func(*args, **kwargs)
+            self.raised = False
+        except Exception as e:
+            self.raised = True
+            self._result = e
 
     def cancel(self, *args, **kwargs):
         # This method doesn't make sense for a synchronous call, it's just
@@ -1322,6 +1327,9 @@ class _FakeGreenThread(object):
         pass
 
     def wait(self):
+        if self.raised:
+            raise self._result
+
         return self._result
 
 
