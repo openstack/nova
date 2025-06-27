@@ -8,20 +8,22 @@
 Enables all users to perform an action on a server. Specify the action
 in the request body.
 
-You can associate a fixed or floating IP address with a server,
-or disassociate a fixed or floating IP address from a server.
+There are many actions available for a server:
 
-You can create an image from a server, create a backup of a server,
-and force-delete a server before deferred cleanup.
-You can lock, pause, reboot, rebuild, rescue, resize, resume, confirm
-the resize of, revert a pending resize for, shelve, shelf-offload,
-unshelve, start, stop, unlock, unpause, and unrescue a server. You can
-also change the password of the server and add a security group to or
-remove a security group from a server. You can also trigger a crash dump
-into a server since Mitaka release.
+* You can associate and disassociate a fixed or floating IP address with
+  or from a server
+* You can create an image from a server
+* You can create a backup of a server
+* You can force-delete a server before deferred cleanup
+* You can lock, pause, reboot, rebuild, rescue, resize, resume, confirm
+  the resize of, revert a pending resize for, shelve, shelf-offload,
+  unshelve, start, stop, unlock, unpause, and unrescue a server
+* You can change the password of the server
+* You can add a security group to or remove a security group from a server
+* You can trigger a crash dump into a server
+* You can get a graphical or serial console for a server
 
-You can get an serial, SPICE, or VNC console for a server.
-
+...among others.
 
 Add (Associate) Floating Ip (addFloatingIp Action) (DEPRECATED)
 ================================================================
