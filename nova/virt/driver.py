@@ -701,7 +701,7 @@ class ComputeDriver(object):
 
         :return: Has a big overlap to the return value of the older interface
             :func:`get_diagnostics`
-        :rtype: nova.virt.diagnostics.Diagnostics
+        :rtype: nova.objects.diagnostics.Diagnostics
         """
         raise NotImplementedError()
 

@@ -10,14 +10,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
 import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.api.openstack.compute import server_diagnostics
 from nova.compute import vm_states
+from nova import objects
 from nova.policies import base as base_policy
 from nova.policies import server_diagnostics as policies
 from nova.tests.unit.api.openstack import fakes
@@ -38,14 +37,34 @@ class ServerDiagnosticsPolicyTest(base.BasePolicyTest):
         super(ServerDiagnosticsPolicyTest, self).setUp()
         self.controller = server_diagnostics.ServerDiagnosticsController()
         self.req = fakes.HTTPRequest.blank('', version='2.48')
-        self.controller.compute_api.get_instance_diagnostics = mock.MagicMock()
-        self.mock_get = self.useFixture(
+
+        self.mock_get_instance = self.useFixture(
             fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
         self.instance = fake_instance.fake_instance_obj(
                 self.project_member_context, project_id=self.project_id,
                 id=1, uuid=uuids.fake_id, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
-        self.mock_get.return_value = self.instance
+        self.mock_get_instance.return_value = self.instance
+
+        self.mock_get_diagnostics = self.useFixture(
+            fixtures.MockPatch('nova.compute.api.API.get_instance_diagnostics')
+        ).mock
+        self.diagnostics = objects.Diagnostics(
+            config_drive=False,
+            state='running',
+            driver='libvirt',
+            uptime=5,
+            hypervisor='hypervisor',
+            # hypervisor_os is unset
+            cpu_details=[],
+            nic_details=[],
+            disk_details=[],
+            num_cpus=4,
+            num_disks=1,
+            num_nics=1,
+            memory_details=objects.MemoryDiagnostics(maximum=8192, used=3072),
+        )
+        self.mock_get_diagnostics.return_value = self.diagnostics
 
         # With legacy rule, any admin is able get server diagnostics.
         self.project_admin_authorized_contexts = [
