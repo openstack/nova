@@ -181,8 +181,8 @@ class KeypairController(wsgi.Controller):
     @validation.response_body_schema(schema.index_response, '2.0', '2.1')
     @validation.response_body_schema(schema.index_response_v22, '2.2', '2.34')
     @validation.response_body_schema(schema.index_response_v235, '2.35')
-    @wsgi.expected_errors((), '2.0', '2.9')
-    @wsgi.expected_errors(400, '2.10')
+    @wsgi.expected_errors((), '2.0', '2.34')
+    @wsgi.expected_errors(400, '2.35')
     def index(self, req):
         key_type = False
         if api_version_request.is_supported(req, '2.2'):
