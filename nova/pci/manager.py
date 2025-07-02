@@ -15,6 +15,7 @@
 #    under the License.
 
 import collections
+import copy
 import typing as ty
 
 from oslo_config import cfg
@@ -97,7 +98,8 @@ class PciDevTracker(object):
                 self.stats.add_device(dev)
 
     def save(self, context: ctx.RequestContext) -> None:
-        for dev in self.pci_devs:
+        devs = copy.copy(self.pci_devs.objects)
+        for dev in devs:
             if dev.obj_what_changed():
                 with dev.obj_alternate_context(context):
                     dev.save()

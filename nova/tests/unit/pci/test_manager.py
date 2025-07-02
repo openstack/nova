@@ -747,18 +747,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         dev2.remove()
         self.tracker.save(self.fake_context)
 
-        # This is https://bugs.launchpad.net/nova/+bug/2115729 as
-        # only one half of the removed devices are destroyed.
-        self.assertEqual(len(self.tracker.pci_devs), 2)
-        self.assertEqual(self.destroy_called, 1)
-        # a subsequent save will destroy half of the remaining removed devices
-        self.tracker.save(self.fake_context)
         self.assertEqual(len(self.tracker.pci_devs), 1)
         self.assertEqual(self.destroy_called, 2)
-        # after the fix we should see that a single save causes all the
-        # removed devices destroyed
-        # self.assertEqual(len(self.tracker.pci_devs), 1)
-        # self.assertEqual(self.destroy_called, 2)
 
     def test_clean_usage(self):
         inst_2 = copy.copy(self.inst)
