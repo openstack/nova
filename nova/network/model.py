@@ -577,7 +577,7 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
     def __init__(self, async_method, *args, **kwargs):
         super(NetworkInfoAsyncWrapper, self).__init__()
 
-        self._gt = utils.spawn(async_method, *args, **kwargs)
+        self._future = utils.spawn(async_method, *args, **kwargs)
         methods = ['json', 'fixed_ips', 'floating_ips']
         for method in methods:
             fn = getattr(self, method)
@@ -612,16 +612,16 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
 
     def wait(self, do_raise=True):
         """Wait for asynchronous call to finish."""
-        if self._gt is not None:
+        if self._future is not None:
             try:
                 # NOTE(comstud): This looks funky, but this object is
                 # subclassed from list.  In other words, 'self' is really
                 # just a list with a bunch of extra methods.  So this
                 # line just replaces the current list (which should be
                 # empty) with the result.
-                self[:] = self._gt.wait()
+                self[:] = self._future.result()
             except Exception:
                 if do_raise:
                     raise
             finally:
-                self._gt = None
+                self._future = None

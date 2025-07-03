@@ -1208,6 +1208,7 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
 
         def _get_default_green_pool():
             self.greenpool = origi_default_green_pool()
+            self.greenpool.name = f"{self.test_case_id}.default"
             return self.greenpool
         # NOTE(sean-k-mooney): greenpools use eventlet.spawn and
         # eventlet.spawn_n so we can't stub out all calls to those functions.
@@ -1216,7 +1217,7 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
         # Greenthreads created via the standard lib threading module.
         self.useFixture(fixtures.MonkeyPatch(
             'nova.utils._get_default_green_pool', _get_default_green_pool))
-        self.addCleanup(self.do_cleanup_default)
+        self.addCleanup(lambda: self.do_cleanup_executor(self.greenpool))
 
         def _get_scatter_gather_executor():
             self.scatter_gather_executor = origi_get_scatter_gather()
@@ -1228,11 +1229,16 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
             'nova.utils.get_scatter_gather_executor',
             _get_scatter_gather_executor))
 
-        self.addCleanup(self.do_cleanup_scatter_gather)
+        self.addCleanup(
+            lambda: self.do_cleanup_executor(self.scatter_gather_executor))
 
-    def do_cleanup_scatter_gather(self):
+        self.addCleanup(self.reset_globals)
+
+    def reset_globals(self):
         utils.SCATTER_GATHER_EXECUTOR = None
-        executor = self.scatter_gather_executor
+        utils.DEFAULT_GREEN_POOL = None
+
+    def do_cleanup_executor(self, executor):
         # NOTE(gibi): we cannot rely on utils.concurrency_mode_threading
         # as that might have been mocked during the test when the executor
         # was created, but during cleanup the mock is already removed.
@@ -1287,19 +1293,8 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
                 'and therefore are not expected to return or raise.'
             )
 
-    def do_cleanup_default(self):
-        if self.greenpool and self.greenpool.running:
-            # kill all greenthreads in the pool before raising to prevent
-            # them from interfering with other tests.
-            for gt in list(self.greenpool.coroutines_running):
-                if isinstance(gt, eventlet.greenthread.GreenThread):
-                    gt.kill()
-            # reset the global greenpool just in case.
-            utils.DEFAULT_GREEN_POOL = None
-            self._raise_on_green_pool(self.greenpool)
 
-
-class _FakeGreenThread(object):
+class _FakeFuture(object):
     def __init__(self, func, *args, **kwargs):
         try:
             self._result = func(*args, **kwargs)
@@ -1313,20 +1308,10 @@ class _FakeGreenThread(object):
         # defined to satisfy the interface.
         pass
 
-    def kill(self, *args, **kwargs):
-        # This method doesn't make sense for a synchronous call, it's just
-        # defined to satisfy the interface.
-        pass
+    def add_done_callback(self, func):
+        func(self)
 
-    def link(self, func, *args, **kwargs):
-        func(self, *args, **kwargs)
-
-    def unlink(self, func, *args, **kwargs):
-        # This method doesn't make sense for a synchronous call, it's just
-        # defined to satisfy the interface.
-        pass
-
-    def wait(self):
+    def result(self):
         if self.raised:
             raise self._result
 
@@ -1334,14 +1319,14 @@ class _FakeGreenThread(object):
 
 
 class SpawnIsSynchronousFixture(fixtures.Fixture):
-    """Patch and restore the spawn_n utility method to be synchronous"""
+    """Patch and restore the spawn_* utility methods to be synchronous"""
 
     def setUp(self):
         super(SpawnIsSynchronousFixture, self).setUp()
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.spawn_n', _FakeGreenThread))
+            'nova.utils.spawn_n', _FakeFuture))
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.spawn', _FakeGreenThread))
+            'nova.utils.spawn', _FakeFuture))
 
 
 class BannedDBSchemaOperations(fixtures.Fixture):

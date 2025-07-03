@@ -55,7 +55,8 @@ class TestScheduler(test.NoDBTestCase):
         self, mock_wait, mock_serve, service_create
     ):
         # simulate that the thread pool is initialized before the fork
-        executor = utils.get_scatter_gather_executor()
+        executor = utils._get_default_green_pool()
+        sc_executor = utils.get_scatter_gather_executor()
         scheduler.main()
 
         mock_serve.assert_called_once_with(
@@ -63,4 +64,6 @@ class TestScheduler(test.NoDBTestCase):
         mock_wait.assert_called_once_with()
         # check that the executor was properly destroyed
         self.assertFalse(executor.alive)
+        self.assertIsNone(utils.DEFAULT_GREEN_POOL)
+        self.assertFalse(sc_executor.alive)
         self.assertIsNone(utils.SCATTER_GATHER_EXECUTOR)
