@@ -33,10 +33,10 @@ LINKS = {
 VERSIONS = {
     "v2.0": {
         "id": "v2.0",
-        "status": "SUPPORTED",
+        "status": "DEPRECATED",
         "version": "",
         "min_version": "",
-        "updated": "2011-01-21T11:33:21Z",
+        "updated": "2025-07-04T12:00:00Z",
         "links": [
             {
                 "rel": "describedby",

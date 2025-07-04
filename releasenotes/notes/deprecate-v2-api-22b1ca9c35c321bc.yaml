@@ -1,0 +1,9 @@
+---
+deprecations:
+  - |
+    The legacy v2 API is now deprecated for removal, and the status in the root
+    version document (``/``) has been changed from ``SUPPORTED`` to
+    ``DEPRECATED``. This will cause some clients like keystoneauth to ignore
+    the endpoint by default. Users are encouraged to switch the v2.1 API, which
+    is functionally identical to the v2 API when using the ``2.1`` API
+    microversion.

@@ -64,7 +64,7 @@ links and MIME types to available versions.
                     "type": "application/vnd.openstack.compute+json;version=2"
                 }
             ],
-            "status": "SUPPORTED"
+            "status": "DEPRECATED"
         },
         {
             "id": "v2.1",
