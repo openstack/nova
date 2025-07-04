@@ -755,13 +755,12 @@ class SafeTruncateTestCase(test.NoDBTestCase):
         self.assertEqual(254, len(byte_message))
 
 
-class SpawnNTestCase(test.NoDBTestCase):
+class SpawnTestCase(test.NoDBTestCase):
     def setUp(self):
-        super(SpawnNTestCase, self).setUp()
+        super(SpawnTestCase, self).setUp()
         self.useFixture(context_fixture.ClearRequestContext())
-        self.spawn_name = 'spawn_n'
 
-    def test_spawn_n_no_context(self):
+    def test_spawn_no_context(self):
         self.assertIsNone(common_context.get_current())
 
         def _fake_spawn(func, *args, **kwargs):
@@ -773,10 +772,10 @@ class SpawnNTestCase(test.NoDBTestCase):
             pass
         pool = utils._get_default_green_pool()
         with mock.patch.object(pool, "submit", _fake_spawn):
-            getattr(utils, self.spawn_name)(fake, 'test')
+            getattr(utils, "spawn")(fake, 'test')
         self.assertIsNone(common_context.get_current())
 
-    def test_spawn_n_context(self):
+    def test_spawn_context(self):
         self.assertIsNone(common_context.get_current())
         ctxt = context.RequestContext('user', 'project')
 
@@ -791,10 +790,10 @@ class SpawnNTestCase(test.NoDBTestCase):
 
         pool = utils._get_default_green_pool()
         with mock.patch.object(pool, "submit", _fake_spawn):
-            getattr(utils, self.spawn_name)(fake, ctxt, kwarg1='test')
+            getattr(utils, "spawn")(fake, ctxt, kwarg1='test')
         self.assertEqual(ctxt, common_context.get_current())
 
-    def test_spawn_n_context_different_from_passed(self):
+    def test_spawn_context_different_from_passed(self):
         self.assertIsNone(common_context.get_current())
         ctxt = context.RequestContext('user', 'project')
         ctxt_passed = context.RequestContext('user', 'project',
@@ -812,14 +811,8 @@ class SpawnNTestCase(test.NoDBTestCase):
 
         pool = utils._get_default_green_pool()
         with mock.patch.object(pool, "submit", _fake_spawn):
-            getattr(utils, self.spawn_name)(fake, ctxt_passed, kwarg1='test')
+            getattr(utils, "spawn")(fake, ctxt_passed, kwarg1='test')
         self.assertEqual(ctxt, common_context.get_current())
-
-
-class SpawnTestCase(SpawnNTestCase):
-    def setUp(self):
-        super(SpawnTestCase, self).setUp()
-        self.spawn_name = 'spawn'
 
 
 class UT8TestCase(test.NoDBTestCase):

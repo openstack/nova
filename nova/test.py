@@ -326,7 +326,7 @@ class TestCase(base.BaseTestCase):
         # all other tests.
         scheduler_utils.reset_globals()
 
-        # Wait for bare greenlets spawn_n()'ed from a GreenThreadPoolExecutor
+        # Wait for bare greenlets spawn()'ed from a GreenThreadPoolExecutor
         # to finish before moving on from the test. When greenlets from a
         # previous test remain running, they may attempt to access structures
         # (like the database) that have already been torn down and can cause

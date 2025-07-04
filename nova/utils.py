@@ -723,23 +723,6 @@ def spawn(func, *args, **kwargs) -> futurist.Future:
         _get_default_green_pool().submit, func, *args, **kwargs)
 
 
-def spawn_n(func, *args, **kwargs):
-    """Passthrough method for eventlet.greenpool.spawn.
-
-    This utility exists so that it can be stubbed for testing without
-    interfering with the service spawns.
-
-    It will also grab the context from the threadlocal store and add it to
-    the store on the new thread.  This allows for continuity in logging the
-    context when using this method to spawn a new thread.
-
-    Note that this is not different from calling spawn. Both spawn and
-    spawn_n uses the eventlet.spawn.
-    """
-
-    spawn(func, *args, **kwargs)
-
-
 def tpool_execute(func, *args, **kwargs):
     """Run func in a native thread"""
     return pass_context(tpool.execute, func, *args, **kwargs)
