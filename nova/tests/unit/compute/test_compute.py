@@ -1344,7 +1344,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.compute.volume_snapshot_create, self.context,
                 self.instance_object, 'fake_id', {})
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(NotImplementedError,
                 self.compute.volume_snapshot_create, self.context,
@@ -1366,7 +1366,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.compute.volume_snapshot_delete, self.context,
                 self.instance_object, uuids.volume, uuids.snapshot, {})
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(NotImplementedError,
                 self.compute.volume_snapshot_delete, self.context,
@@ -4396,7 +4396,7 @@ class ComputeTestCase(BaseTestCase,
                           self.compute.get_console_output, self.context,
                           instance, 0)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(NotImplementedError,
                           self.compute.get_console_output, self.context,
@@ -4419,7 +4419,7 @@ class ComputeTestCase(BaseTestCase,
                           self.compute.get_console_output, self.context,
                           instance, 0)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.InstanceNotFound,
                           self.compute.get_console_output, self.context,
@@ -4532,7 +4532,7 @@ class ComputeTestCase(BaseTestCase,
                           self.compute.get_vnc_console,
                           self.context, 'invalid', instance=instance)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
@@ -4553,7 +4553,7 @@ class ComputeTestCase(BaseTestCase,
                           self.compute.get_vnc_console,
                           self.context, None, instance=instance)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
@@ -4573,7 +4573,7 @@ class ComputeTestCase(BaseTestCase,
                           self.compute.get_vnc_console,
                           self.context, 'novnc', instance=instance)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(NotImplementedError,
                           self.compute.get_vnc_console,
@@ -4616,7 +4616,7 @@ class ComputeTestCase(BaseTestCase,
                           self.compute.get_spice_console,
                           self.context, 'invalid', instance=instance)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_spice_console,
@@ -4638,7 +4638,7 @@ class ComputeTestCase(BaseTestCase,
                           self.compute.get_spice_console,
                           self.context, 'spice-html5', instance=instance)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(NotImplementedError,
                           self.compute.get_spice_console,
@@ -4658,7 +4658,7 @@ class ComputeTestCase(BaseTestCase,
                           self.compute.get_spice_console,
                           self.context, None, instance=instance)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_spice_console,
@@ -4678,7 +4678,7 @@ class ComputeTestCase(BaseTestCase,
         self.stub_out("nova.virt.fake.FakeDriver.get_vnc_console",
                        fake_driver_get_console)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.InstanceNotReady,
                 self.compute.get_vnc_console, self.context, 'novnc',
@@ -4696,7 +4696,7 @@ class ComputeTestCase(BaseTestCase,
         self.stub_out("nova.virt.fake.FakeDriver.get_spice_console",
                        fake_driver_get_console)
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.InstanceNotReady,
                 self.compute.get_spice_console, self.context, 'spice-html5',
@@ -4707,7 +4707,7 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj(
                 params={'vm_state': vm_states.BUILDING})
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeUnavailable,
                 self.compute.get_vnc_console, self.context, 'novnc',
@@ -4718,7 +4718,7 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj(
                 params={'vm_state': vm_states.BUILDING})
 
-        self.compute = utils.ExceptionHelper(self.compute)
+        self.compute = test_utils.ExceptionHelper(self.compute)
 
         self.assertRaises(exception.ConsoleTypeUnavailable,
                 self.compute.get_spice_console, self.context, 'spice-html5',

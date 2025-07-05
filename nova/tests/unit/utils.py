@@ -14,10 +14,13 @@
 
 import collections
 import errno
+import functools
 import platform
 import socket
 import sys
 from unittest import mock
+
+import oslo_messaging as messaging
 
 from nova.compute import flavors
 import nova.conf
@@ -368,3 +371,23 @@ def assert_legacy_instance_delete_notification_by_uuid(
             assert call[0][1].db_connection is not None
         else:
             assert call[0][1].db_connection is None
+
+
+class ExceptionHelper(object):
+    """Class to wrap another and translate the ClientExceptions raised by its
+    function calls to the actual ones.
+    """
+
+    def __init__(self, target):
+        self._target = target
+
+    def __getattr__(self, name):
+        func = getattr(self._target, name)
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except messaging.ExpectedException as e:
+                raise e.exc_info[1]
+        return wrapper
