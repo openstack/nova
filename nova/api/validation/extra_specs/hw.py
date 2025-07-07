@@ -539,6 +539,19 @@ feature_flag_validators = [
             'description': 'Whether to enable packed virtqueue',
         },
     ),
+    base.ExtraSpecValidator(
+        name='hw:sound_model',
+        description=(
+            'The model of the attached sound device. '
+            'Only supported by the libvirt virt driver. '
+            'If unset, no sound device is attached.'
+        ),
+        value={
+            'type': str,
+            'description': 'A sound model',
+            'enum': fields.SoundModelType.ALL,
+        },
+    ),
 ]
 
 ephemeral_encryption_validators = [

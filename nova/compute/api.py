@@ -122,8 +122,9 @@ SUPPORT_VNIC_TYPE_REMOTE_MANAGED = 61
 MIN_COMPUTE_VDPA_ATTACH_DETACH = 62
 MIN_COMPUTE_VDPA_HOTPLUG_LIVE_MIGRATION = 63
 
-
 SUPPORT_SHARES = 67
+
+MIN_COMPUTE_SOUND_MODEL_TRAITS = 69
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -1048,6 +1049,12 @@ class API:
         self._validate_flavor_image(context, image_id, image,
                                     flavor, root_bdm,
                                     validate_numa=validate_numa)
+
+        # Do we support adding a sound device?
+        image_meta = objects.ImageMeta.from_dict(image)
+        sound_model = hardware.get_sound_model(flavor, image_meta)
+        if sound_model and (min_comp_ver < MIN_COMPUTE_SOUND_MODEL_TRAITS):
+            raise exception.SoundModelRequestOldCompute()
 
     def _check_support_vnic_accelerator(
             self, context, requested_networks, min_comp_ver):

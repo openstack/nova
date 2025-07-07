@@ -724,3 +724,25 @@ class TestRequestFilter(test.NoDBTestCase):
              ot.COMPUTE_EPHEMERAL_ENCRYPTION_LUKS},
             reqspec.root_required)
         self.assertEqual(set(), reqspec.root_forbidden)
+
+    def test_virtio_sound_filter(self):
+        # First ensure that virtio_sound_filter is included
+        self.assertIn(request_filter.virtio_sound_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        # Request filter puts the trait into the request spec
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(
+                extra_specs={
+                    'hw:sound_model': 'virtio'
+                }),
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps()))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+        self.assertTrue(
+            request_filter.virtio_sound_filter(self.context, reqspec))
+        self.assertEqual(
+            {ot.COMPUTE_SOUND_MODEL_VIRTIO},
+            reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)

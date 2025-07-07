@@ -1004,6 +1004,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertPublicAPISignatures(baseinst, inst)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_sound_model_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_storage_bus_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_video_model_traits')
@@ -1011,12 +1012,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host, "has_min_version")
     def test_static_traits(
         self, mock_version, mock_vif_traits, mock_video_traits,
-        mock_storage_traits, mock_cpu_traits,
+        mock_storage_traits, mock_cpu_traits, mock_sound_traits
     ):
         """Ensure driver capabilities are correctly retrieved and cached."""
 
         # we don't mock out calls to os_traits intentionally, so we need to
         # return valid traits here
+        mock_sound_traits.return_value = {
+            'COMPUTE_SOUND_MODEL_AC97': True,
+            'COMPUTE_SOUND_MODEL_ES1370': True,
+            'COMPUTE_SOUND_MODEL_ICH6': True,
+            'COMPUTE_SOUND_MODEL_ICH9': True,
+            'COMPUTE_SOUND_MODEL_PCSPK': True,
+            'COMPUTE_SOUND_MODEL_SB16': True,
+            'COMPUTE_SOUND_MODEL_USB': True,
+            'COMPUTE_SOUND_MODEL_VIRTIO': True,
+        }
         mock_cpu_traits.return_value = {'HW_CPU_HYPERTHREADING': True}
         mock_storage_traits.return_value = {'COMPUTE_STORAGE_BUS_VIRTIO': True}
         mock_video_traits.return_value = {'COMPUTE_GRAPHICS_MODEL_VGA': True}
@@ -1035,6 +1046,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_SECURITY_TPM_TIS': False,
             'COMPUTE_SECURITY_TPM_CRB': False,
             'COMPUTE_STORAGE_BUS_VIRTIO': True,
+            'COMPUTE_SOUND_MODEL_AC97': True,
+            'COMPUTE_SOUND_MODEL_ES1370': True,
+            'COMPUTE_SOUND_MODEL_ICH6': True,
+            'COMPUTE_SOUND_MODEL_ICH9': True,
+            'COMPUTE_SOUND_MODEL_PCSPK': True,
+            'COMPUTE_SOUND_MODEL_SB16': True,
+            'COMPUTE_SOUND_MODEL_USB': True,
+            'COMPUTE_SOUND_MODEL_VIRTIO': True,
             'COMPUTE_VIOMMU_MODEL_AUTO': True,
             'COMPUTE_VIOMMU_MODEL_INTEL': True,
             'COMPUTE_VIOMMU_MODEL_SMMUV3': True,
@@ -1049,7 +1068,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(expected, static_traits)
         for mock_traits in (
             mock_vif_traits, mock_video_traits, mock_storage_traits,
-            mock_cpu_traits,
+            mock_cpu_traits, mock_sound_traits
         ):
             mock_traits.assert_called_once_with()
             mock_traits.reset_mock()
@@ -1061,20 +1080,31 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(expected, static_traits)
         for mock_traits in (
             mock_vif_traits, mock_video_traits, mock_storage_traits,
-            mock_cpu_traits,
+            mock_cpu_traits, mock_sound_traits
         ):
             mock_traits.assert_not_called()
 
     @mock.patch.object(libvirt_driver.LOG, 'debug')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_sound_model_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_storage_bus_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_video_model_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_vif_model_traits')
     def test_static_traits_invalid_trait(
         self, mock_vif_traits, mock_video_traits, mock_storage_traits,
-        mock_cpu_traits, mock_log,
+        mock_cpu_traits, mock_sound_traits, mock_log,
     ):
         """Ensure driver capabilities are correctly retrieved and cached."""
+        mock_sound_traits.return_value = {
+            'COMPUTE_SOUND_MODEL_AC97': True,
+            'COMPUTE_SOUND_MODEL_ES1370': True,
+            'COMPUTE_SOUND_MODEL_ICH6': True,
+            'COMPUTE_SOUND_MODEL_ICH9': True,
+            'COMPUTE_SOUND_MODEL_PCSPK': True,
+            'COMPUTE_SOUND_MODEL_SB16': True,
+            'COMPUTE_SOUND_MODEL_USB': True,
+            'COMPUTE_SOUND_MODEL_VIRTIO': True,
+        }
         mock_cpu_traits.return_value = {'foo': True}
         mock_storage_traits.return_value = {'bar': True}
         mock_video_traits.return_value = {'baz': True}
@@ -1088,6 +1118,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_SECURITY_TPM_2_0': False,
             'COMPUTE_SECURITY_TPM_TIS': False,
             'COMPUTE_SECURITY_TPM_CRB': False,
+            'COMPUTE_SOUND_MODEL_AC97': True,
+            'COMPUTE_SOUND_MODEL_ES1370': True,
+            'COMPUTE_SOUND_MODEL_ICH6': True,
+            'COMPUTE_SOUND_MODEL_ICH9': True,
+            'COMPUTE_SOUND_MODEL_PCSPK': True,
+            'COMPUTE_SOUND_MODEL_SB16': True,
+            'COMPUTE_SOUND_MODEL_USB': True,
+            'COMPUTE_SOUND_MODEL_VIRTIO': True,
             'COMPUTE_VIOMMU_MODEL_AUTO': True,
             'COMPUTE_VIOMMU_MODEL_INTEL': True,
             'COMPUTE_VIOMMU_MODEL_SMMUV3': True,
@@ -1244,6 +1282,47 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 version_arg_found = True
                 break
         self.assertFalse(version_arg_found)
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    def test_libvirt_has_virtio_sound_but_not_qemu(self, mock_version):
+        def _fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
+            if lv_ver:
+                return True
+            return False
+
+        mock_version.side_effect = _fake_has_min_version
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        static_traits = drvr.static_traits
+        self.assertFalse(
+            static_traits.get('COMPUTE_SOUND_MODEL_VIRTIO'))
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    def test_libvirt_no_virtio_sound(self, mock_version):
+        def _fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
+            if lv_ver:
+                return False
+            return False
+
+        mock_version.side_effect = _fake_has_min_version
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        static_traits = drvr.static_traits
+        self.assertFalse(
+            static_traits.get('COMPUTE_SOUND_MODEL_VIRTIO'))
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    def test_libvirt_has_virtio_sound(self, mock_version):
+        def _fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
+            if lv_ver:
+                return True
+            return True
+
+        mock_version.side_effect = _fake_has_min_version
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        static_traits = drvr.static_traits
+        self.assertTrue(static_traits.get('COMPUTE_SOUND_MODEL_VIRTIO'))
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_register_all_undefined_instance_details',
@@ -7159,6 +7238,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[7].version, '2.0')
         self.assertEqual(cfg.devices[7].model, 'tpm-crb')
         self.assertEqual(cfg.devices[7].secret_uuid, uuids.vtpm)
+
+    def test_get_guest_config_with_sound_model(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            'disk_format': 'raw',
+            'properties': {
+                'hw_sound_model': 'sb16',
+            },
+        })
+
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance, image_meta)
+        cfg = drvr._get_guest_config(instance, [], image_meta, disk_info)
+        self.assertEqual(10, len(cfg.devices))
+        self.assertIsInstance(
+            cfg.devices[0], vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(
+            cfg.devices[1], vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(
+            cfg.devices[2], vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(
+            cfg.devices[3], vconfig.LibvirtConfigGuestSound)
+        self.assertIsInstance(
+            cfg.devices[4], vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(
+            cfg.devices[5], vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(
+            cfg.devices[6], vconfig.LibvirtConfigGuestInput)
+        self.assertIsInstance(
+            cfg.devices[7], vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(
+            cfg.devices[8], vconfig.LibvirtConfigGuestUSBHostController)
+        self.assertIsInstance(
+            cfg.devices[9], vconfig.LibvirtConfigMemoryBalloon)
 
     def test_get_guest_config_with_video_driver_vram(self):
         self.flags(enabled=False, group='vnc')
