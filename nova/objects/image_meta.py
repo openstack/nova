@@ -198,14 +198,18 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.37: Added 'hw_ephemeral_encryption_secret_uuid' field
     # Version 1.38: Added 'hw_firmware_stateless' field
     # Version 1.39: Added igb value to 'hw_vif_model' enum
+    # Version 1.40: Added 'hw_sound_model' field
+
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.39'
+    VERSION = '1.40'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 40):
+            primitive.pop('hw_sound_model', None)
         if target_version < (1, 39):
             base.raise_on_too_new_values(
                 target_version, primitive,
@@ -493,6 +497,9 @@ class ImageMetaProps(base.NovaObject):
 
         # Control bits for the physical memory address bit of Libvirt guests.
         'hw_maxphysaddr_bits': fields.IntegerField(),
+
+        # Name of sound device model to use.
+        'hw_sound_model': fields.SoundModelField(),
 
         # if true download using bittorrent
         'img_bittorrent': fields.FlexibleBooleanField(),

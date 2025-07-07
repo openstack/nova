@@ -133,7 +133,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.13: Added 'hw_virtio_packed_ring' field
     # Version 1.14: Added 'hw_firmware_stateless' field
     # Version 1.15: Added igb value to 'hw_vif_model' enum
-    VERSION = '1.15'
+    # Version 1.16: Added 'hw_sound_model' field
+    VERSION = '1.16'
 
     # NOTE(efried): This logic currently relies on all of the fields of
     # ImageMetaProps being initialized with no arguments. See the docstring.
