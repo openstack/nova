@@ -869,6 +869,21 @@ class SoundModelType(BaseNovaEnum):
     ALL = (SB16, ES1370, PCSPK, AC97, ICH6, ICH9, USB, VIRTIO,)
 
 
+class USBControllerModelType(BaseNovaEnum):
+    # NOTE(mikal): qemu itself (and therefore libvirt) supports a lot more
+    # USB controllers than this, but they're all very old and don't support
+    # USB3. So while we could turn them on, it would be like adding in IDE
+    # disk bus emulation -- the performance isn't great and its been a very
+    # long time since an operating system was released which genuinely couldn't
+    # use something better.
+
+    NONE = 'none'
+    NEC_XHCI = 'nec-xhci'
+    QEMU_XHCI = 'qemu-xhci'
+
+    ALL = (NONE, NEC_XHCI, QEMU_XHCI)
+
+
 class NotificationPriority(BaseNovaEnum):
     AUDIT = 'audit'
     CRITICAL = 'critical'
@@ -1409,6 +1424,10 @@ class PointerModelField(BaseEnumField):
 
 class SoundModelField(BaseEnumField):
     AUTO_TYPE = SoundModelType()
+
+
+class USBControllerModelField(BaseEnumField):
+    AUTO_TYPE = USBControllerModelType()
 
 
 class NotificationPriorityField(BaseEnumField):
