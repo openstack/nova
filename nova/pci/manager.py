@@ -68,6 +68,7 @@ class PciDevTracker(object):
                              tracking.
         """
         self.stale: ty.Dict[str, objects.PciDevice] = {}
+        self.to_be_removed_when_freed: ty.Dict[str, objects.PciDevice] = {}
         self.node_id: str = compute_node.id
         self.dev_filter = whitelist.Whitelist(CONF.pci.device_spec)
         numa_topology = compute_node.numa_topology
@@ -254,6 +255,12 @@ class PciDevTracker(object):
                     # device to a second vm. To prevent this bug we skip
                     # deleting the device from the db in this iteration and
                     # will try again on the next sync.
+                    # NOTE(gibi): We keep a list of these devices in memory
+                    # so that when the VM using the device is deleted then
+                    # the tracker can not just free the device but also
+                    # mark them for removal. This will prevent a bug where
+                    # such a freed device is re-allocated before removed.
+                    self.to_be_removed_when_freed[existed.address] = existed
                     continue
                 else:
                     # Note(yjiang5): no need to update stats if an assigned
@@ -395,8 +402,15 @@ class PciDevTracker(object):
         stale = self.stale.pop(dev.address, None)
         if stale:
             dev.update_device(stale)
-        for dev in freed_devs:
-            self.stats.add_device(dev)
+
+        to_be_removed = self.to_be_removed_when_freed.pop(dev.address, None)
+        if to_be_removed:
+            dev.remove()
+            if dev in self.stats.get_free_devs():
+                self.stats.remove_device(dev)
+        else:
+            for dev in freed_devs:
+                self.stats.add_device(dev)
 
     def free_instance_allocations(
         self, context: ctx.RequestContext, instance: 'objects.Instance',
