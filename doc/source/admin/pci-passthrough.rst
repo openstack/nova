@@ -70,9 +70,14 @@ capabilities.
    based PCI requests. This support is disable by default.
 
 .. versionchanged:: 31.0.0 (2025.1 Epoxy):
-   Add managed tag to define if the PCI device is managed by libvirt.
-   This is required to support SR-IOV devices using the new kernel variant
-   driver interface.
+
+   * Add managed tag to define if the PCI device is managed (attached/detached
+     from the host) by libvirt. This is required to support SR-IOV devices
+     using the new kernel variant driver interface.
+   * Add a live_migratable tag to define whether a PCI device supports live
+     migration.
+   * Add a live_migratable tag to alias definitions to allow requesting either
+     a live-migratable or non-live-migratable device.
 
 Enabling PCI passthrough
 ------------------------
@@ -527,6 +532,53 @@ Examples:
   device_spec = { "vendor_id": "10de", "product_id": "25b6", "address": "0000:25:00.5", "resource_class": "CUSTOM_A16_8A", "managed": "no" }
   alias = { "device_type": "type-VF", resource_class: "CUSTOM_A16_16A", "name": "A16_16A" }
 
+
+Configuring Live Migration for PCI devices
+------------------------------------------
+
+Live migration of instances with PCI devices requires specific configuration
+at both the device and alias levels to ensure that the migration can succeed.
+This section explains how to configure PCI passthrough to support live
+migration.
+
+Configuring PCI Device Specification
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Administrators must explicitly define whether a PCI device support live
+migration.
+This is done by adding the ``live_migratable`` attribute to the device
+specification in the :oslo.config:option:`pci.device_spec` configuration.
+
+.. note::
+
+    Of course, this requires hardware support, as well as proper system
+    and hypervisor configuration.
+
+Example Configuration:
+
+.. code-block:: ini
+
+   [pci]
+   dev_spec = {'vendor_id': '8086', 'product_id': '1515', 'live_migratable': 'yes'}
+   dev_spec = {'vendor_id': '8086', 'product_id': '1516', 'live_migratable': 'no'}
+
+Configuring PCI Aliases for Users
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+PCI devices can be requested through flavor exta_specs.. To request a live
+migratable PCI device, the PCI alias definition in
+the :oslo.config:option:`pci.alias` configuration must include
+the ``live_migratable`` key.
+
+Example Configuration:
+
+.. code-block:: ini
+
+   [pci]
+   alias = {'name': 'vf_live', 'vendor_id': '8086', 'product_id': '1515', 'device_type': 'type-VF', 'live_migratable': 'yes'}
+   alias = {'name': 'vf_no_migrate', 'vendor_id': '8086', 'product_id': '1516', 'device_type': 'type-VF', 'live_migratable': 'no'}
+
+
 Virtual IOMMU support
 ---------------------
 
@@ -583,3 +635,24 @@ For the viommu attributes:
   ``aw_bits`` is driver attribute defined in `Libvirt IOMMU Domain`_.
 
 .. _`Libvirt IOMMU Domain`: https://libvirt.org/formatdomain.html#iommu-devices
+
+Known Issues
+------------
+
+A known issue exists where the ``live_migratable`` flag is ignored for
+devices that include the ``physical_network`` tag.
+As a result, instances using such devices do not behave as non-live
+migratable, and instead, they continue to migrate using the legacy VIF
+unplug/live migrate/VIF plug procedure.
+
+Example configuration where the live_migratable flag is ignored:
+
+.. code-block:: ini
+
+   [pci]
+   device_spec = { "vendor_id":"8086", "product_id":"10ca", "address": "0000:06:", "physical_network": "physnet2", "live_migratable": false}
+
+A fix for this issue is planned in a follow-up for the **Epoxy** release.
+The upstream bug report is `here`__.
+
+.. __: https://bugs.launchpad.net/nova/+bug/2102161
