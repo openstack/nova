@@ -1294,37 +1294,24 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
             )
 
 
-class _FakeFuture(object):
-    def __init__(self, func, *args, **kwargs):
-        try:
-            self._result = func(*args, **kwargs)
-            self.raised = False
-        except Exception as e:
-            self.raised = True
-            self._result = e
-
-    def cancel(self, *args, **kwargs):
-        # This method doesn't make sense for a synchronous call, it's just
-        # defined to satisfy the interface.
-        pass
-
-    def add_done_callback(self, func):
-        func(self)
-
-    def result(self):
-        if self.raised:
-            raise self._result
-
-        return self._result
-
-
 class SpawnIsSynchronousFixture(fixtures.Fixture):
     """Patch and restore the spawn_* utility methods to be synchronous"""
 
     def setUp(self):
         super(SpawnIsSynchronousFixture, self).setUp()
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.spawn', _FakeFuture))
+        executor = futurist.SynchronousExecutor()
+        self.addCleanup(executor.shutdown)
+
+        def spawn(*args, **kwargs):
+            return executor.submit(*args, **kwargs)
+
+        # Just ignore the first arg that is the original executor instance
+        # and use our test internal synchronous executor.
+        def spawn_on(_, *args, **kwargs):
+            return executor.submit(*args, **kwargs)
+
+        self.useFixture(fixtures.MonkeyPatch('nova.utils.spawn', spawn))
+        self.useFixture(fixtures.MonkeyPatch('nova.utils.spawn_on', spawn_on))
 
 
 class BannedDBSchemaOperations(fixtures.Fixture):
