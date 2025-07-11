@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2025-03-18 12:55+0000\n"
+"POT-Creation-Date: 2025-07-04 18:13+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -57,11 +57,6 @@ msgstr "%(path)s není ve sdíleném úložišti: %(reason)s"
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "Hypervizor %(type)s nepodporuje zařízení PCI"
-
-#, python-format
-msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
-msgstr ""
-"Hodnota %(worker_name)s ve %(workers)s je neplatná, musí být větší než 0"
 
 #, python-format
 msgid "%s does not support disk hotplug."
@@ -2012,9 +2007,6 @@ msgstr "Úkol %(task_name)s není spuštěn na hostiteli %(host)s"
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI adresa %(address)s je ve špatném formátu."
 
-msgid "The backlog must be more than 0"
-msgstr "parametr backlog musí být větší než 0."
-
 #, python-format
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr "Rozsah portů konzole %(min_port)d-%(max_port)d je vyčerpán."
@@ -2172,23 +2164,11 @@ msgid "Unable to determine disk prefix for %s"
 msgstr "Nelze zjistit předponu disku pro %s"
 
 #, python-format
-msgid "Unable to find ca_file : %s"
-msgstr "Nelze najít soubor certifikační autority : %s"
-
-#, python-format
-msgid "Unable to find cert_file : %s"
-msgstr "Nelze najít soubor certifikátu  : %s"
-
-#, python-format
 msgid "Unable to find host for Instance %s"
 msgstr "Nelze najít hostitele pro instanci %s"
 
 msgid "Unable to find iSCSI Target"
 msgstr "Nelze najít cíl ISCSI"
-
-#, python-format
-msgid "Unable to find key_file : %s"
-msgstr "Nelze najít soubor s klíčem : %s"
 
 msgid "Unable to find volume"
 msgstr "Nelze najít svazek"
@@ -2409,13 +2389,6 @@ msgstr ""
 
 msgid "When resizing, instances must change flavor!"
 msgstr "Při změně velikosti musí instance změnit konfiguraci!"
-
-msgid ""
-"When running server in SSL mode, you must specify both a cert_file and "
-"key_file option value in your configuration file"
-msgstr ""
-"Při provozování serveru v režimu SSL musíte zadat konfigurační volby "
-"cert_file a key_file ve vašem souboru s nastavení"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"

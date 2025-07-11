@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2025-03-18 12:55+0000\n"
+"POT-Creation-Date: 2025-07-04 18:13+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -60,10 +60,6 @@ msgstr "%(total)i 列與查詢 %(meth)s 相符，已移轉 %(done)i"
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s Hypervisor 不支援 PCI 裝置"
-
-#, python-format
-msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
-msgstr "%(workers)s 的 %(worker_name)s 值無效，必須大於 0"
 
 #, python-format
 msgid "%s does not support disk hotplug."
@@ -1561,8 +1557,8 @@ msgstr "任何映像檔位置均不可存取"
 
 #, python-format
 msgid ""
-"No live migration URI configured and no default available for \"%(virt_type)s"
-"\" hypervisor virtualization type."
+"No live migration URI configured and no default available for "
+"\"%(virt_type)s\" hypervisor virtualization type."
 msgstr ""
 "未配置任何即時移轉 URI，且 \"%(virt_type)s\" Hypervisor 虛擬化類型無法使用任"
 "何預設值。"
@@ -2070,9 +2066,6 @@ msgstr "作業 %(task_name)s 未在主機 %(host)s 上執行"
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI 位址 %(address)s 的格式不正確。"
 
-msgid "The backlog must be more than 0"
-msgstr "待辦事項必須大於 0"
-
 #, python-format
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr "主控台埠範圍 %(min_port)d-%(max_port)d 已耗盡。"
@@ -2236,23 +2229,11 @@ msgid "Unable to determine disk prefix for %s"
 msgstr "無法判定 %s 的磁碟字首"
 
 #, python-format
-msgid "Unable to find ca_file : %s"
-msgstr "找不到 ca_file：%s"
-
-#, python-format
-msgid "Unable to find cert_file : %s"
-msgstr "找不到 cert_file：%s"
-
-#, python-format
 msgid "Unable to find host for Instance %s"
 msgstr "找不到實例 %s 的主機"
 
 msgid "Unable to find iSCSI Target"
 msgstr "找不到 iSCSI 目標"
-
-#, python-format
-msgid "Unable to find key_file : %s"
-msgstr "找不到 key_file：%s"
 
 msgid "Unable to find volume"
 msgstr "找不到磁區"
@@ -2458,12 +2439,6 @@ msgstr "由磁區設定區塊大小，但現行 libVirt Hypervisor '%s' 不支�
 
 msgid "When resizing, instances must change flavor!"
 msgstr "重新調整大小時，實例必須變更特性！"
-
-msgid ""
-"When running server in SSL mode, you must specify both a cert_file and "
-"key_file option value in your configuration file"
-msgstr ""
-"在 SSL 模式下執行伺服器時，必須在配置檔中指定 cert_file 及 key_file 選項值"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"

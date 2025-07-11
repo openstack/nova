@@ -17,7 +17,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2025-03-18 12:55+0000\n"
+"POT-Creation-Date: 2025-07-04 18:13+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -70,11 +70,6 @@ msgstr ""
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s Hypervisor unterstützt PCI Gerät nicht"
-
-#, python-format
-msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
-msgstr ""
-"Wert %(worker_name)s von %(workers)s ist ungültig; muss größer als 0 sein"
 
 #, python-format
 msgid "%s does not support disk hotplug."
@@ -1748,8 +1743,8 @@ msgstr "Es sind keine Imagepositionen verfügbar."
 
 #, python-format
 msgid ""
-"No live migration URI configured and no default available for \"%(virt_type)s"
-"\" hypervisor virtualization type."
+"No live migration URI configured and no default available for "
+"\"%(virt_type)s\" hypervisor virtualization type."
 msgstr ""
 "Keine URI für Livemigration konfiguriert und kein Standardwert für den "
 "Hypervisorvirtualisierungstyp \"%(virt_type)s\" verfügbar."
@@ -2304,9 +2299,6 @@ msgstr "Task %(task_name)s wird nicht auf Host %(host)s ausgeführt"
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "Die PCI-Adresse %(address)s hat ein falsches Format."
 
-msgid "The backlog must be more than 0"
-msgstr "Das Backlog muss größer 0 sein"
-
 #, python-format
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr "Der Konsolenportbereich %(min_port)d-%(max_port)d ist ausgeschöpft."
@@ -2493,23 +2485,11 @@ msgid "Unable to determine disk prefix for %s"
 msgstr "Plattenpräfix für %s kann nicht bestimmt werden"
 
 #, python-format
-msgid "Unable to find ca_file : %s"
-msgstr "'ca_file' konnte nicht gefunden werden: %s"
-
-#, python-format
-msgid "Unable to find cert_file : %s"
-msgstr "'cert_file' konnte nicht gefunden werden: %s"
-
-#, python-format
 msgid "Unable to find host for Instance %s"
 msgstr "Host für Instanz %s kann nicht gefunden werden"
 
 msgid "Unable to find iSCSI Target"
 msgstr "iSCSI-Ziel konnte nicht gefunden worden"
-
-#, python-format
-msgid "Unable to find key_file : %s"
-msgstr "'key_file' konnte nicht gefunden werden: %s"
 
 msgid "Unable to find volume"
 msgstr "Datenträger kann nicht gefunden werden"
@@ -2754,14 +2734,6 @@ msgstr "Datenträgertyp %(id_or_name)s wurde nicht gefunden."
 
 msgid "When resizing, instances must change flavor!"
 msgstr "Beim Ändern der Größe muss die Version der Instanzen geändert werden!"
-
-msgid ""
-"When running server in SSL mode, you must specify both a cert_file and "
-"key_file option value in your configuration file"
-msgstr ""
-"Wenn der Server im SSL-Modus läuft, müssen Sie sowohl für die 'cert_file'- "
-"als auch für die 'key_file'-Option in Ihrer Konfigurationsdatei einen Wert "
-"angeben"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"

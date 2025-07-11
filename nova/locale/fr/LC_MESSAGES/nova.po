@@ -28,7 +28,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2025-03-18 12:55+0000\n"
+"POT-Creation-Date: 2025-07-04 18:13+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -78,12 +78,6 @@ msgstr "%(total)i lignes correspondent à la requête %(meth)s, %(done)i migrée
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "L'hyperviseur %(type)s ne supporte pas les périphériques PCI"
-
-#, python-format
-msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
-msgstr ""
-"La valeur %(worker_name)s de %(workers)s est invalide, elle doit être "
-"supérieure à 0"
 
 #, python-format
 msgid "%s does not support disk hotplug."
@@ -1737,12 +1731,12 @@ msgstr "Aucun emplacement d'image n'est accessible"
 
 #, python-format
 msgid ""
-"No live migration URI configured and no default available for \"%(virt_type)s"
-"\" hypervisor virtualization type."
+"No live migration URI configured and no default available for "
+"\"%(virt_type)s\" hypervisor virtualization type."
 msgstr ""
 "Aucun URI de migration à chaud n'est configuré et aucune valeur par défaut "
-"n'est disponible pour le type de virtualisation d'hyperviseur \"%(virt_type)s"
-"\"."
+"n'est disponible pour le type de virtualisation d'hyperviseur "
+"\"%(virt_type)s\"."
 
 msgid "No more floating IPs available."
 msgstr "Plus d'adresses IP flottantes disponibles."
@@ -1992,8 +1986,8 @@ msgid ""
 "Quota exceeded for %(overs)s: Requested %(req)s, but already used %(used)s "
 "of %(allowed)s %(overs)s"
 msgstr ""
-"Quota dépassé pour %(overs)s : demandé %(req)s, mais %(used)s déjà utilisés"
-"%(allowed)s %(overs)s"
+"Quota dépassé pour %(overs)s : demandé %(req)s, mais %(used)s déjà "
+"utilisés%(allowed)s %(overs)s"
 
 #, python-format
 msgid "Quota exceeded for resources: %(overs)s"
@@ -2283,9 +2277,6 @@ msgstr ""
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "L'adresse PCI %(address)s a un format incorrect."
 
-msgid "The backlog must be more than 0"
-msgstr "Le backlog doit être supérieur à 0"
-
 #, python-format
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr "L'intervalle de ports console %(min_port)d-%(max_port)d est épuisé."
@@ -2402,8 +2393,8 @@ msgid ""
 "This service is older (v%(thisver)i) than the minimum (v%(minver)i) version "
 "of the rest of the deployment. Unable to continue."
 msgstr ""
-"Ce service est plus ancien  (v%(thisver)i) que la version minimale (v"
-"%(minver)i) du reste du déploiement. Impossible de continuer."
+"Ce service est plus ancien  (v%(thisver)i) que la version minimale "
+"(v%(minver)i) du reste du déploiement. Impossible de continuer."
 
 msgid "Timeout waiting for response from cell"
 msgstr "Dépassement du délai d'attente pour la réponse de la cellule"
@@ -2463,23 +2454,11 @@ msgid "Unable to determine disk prefix for %s"
 msgstr "Impossible de déterminer le préfixe du disque pour %s"
 
 #, python-format
-msgid "Unable to find ca_file : %s"
-msgstr "Impossible de trouver ca_file : %s"
-
-#, python-format
-msgid "Unable to find cert_file : %s"
-msgstr "Impossible de trouver cert_file : %s"
-
-#, python-format
 msgid "Unable to find host for Instance %s"
 msgstr "Impossible de trouver l'hôte pour l'instance %s"
 
 msgid "Unable to find iSCSI Target"
 msgstr "Cible iSCSI introuvable"
-
-#, python-format
-msgid "Unable to find key_file : %s"
-msgstr "Impossible de trouver key_file : %s"
 
 msgid "Unable to find volume"
 msgstr "Volume introuvable"
@@ -2702,13 +2681,6 @@ msgstr ""
 
 msgid "When resizing, instances must change flavor!"
 msgstr "Lors du redimensionnement, les instances doivent changer la version !"
-
-msgid ""
-"When running server in SSL mode, you must specify both a cert_file and "
-"key_file option value in your configuration file"
-msgstr ""
-"Lors de l'exécution du serveur en mode SSL, vous devez spécifier une valeur "
-"d'option cert_file et key_file dans votre fichier de configuration"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"

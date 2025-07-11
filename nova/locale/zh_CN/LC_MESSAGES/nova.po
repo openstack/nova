@@ -37,7 +37,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2025-03-18 12:55+0000\n"
+"POT-Creation-Date: 2025-07-04 18:13+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -88,10 +88,6 @@ msgstr "%(total)i 行与查询 %(meth)s 匹配，%(done)i 已迁移"
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s监测器不支持PCI设备"
-
-#, python-format
-msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
-msgstr "工作线程%(worker_name)s的数量%(workers)s非法，必须大于0"
 
 #, python-format
 msgid "%s does not support disk hotplug."
@@ -1641,8 +1637,8 @@ msgstr "没有镜像位置可以访问"
 
 #, python-format
 msgid ""
-"No live migration URI configured and no default available for \"%(virt_type)s"
-"\" hypervisor virtualization type."
+"No live migration URI configured and no default available for "
+"\"%(virt_type)s\" hypervisor virtualization type."
 msgstr ""
 "未配置任何实时迁移 URI，并且未提供对应 “%(virt_type)s” hypervisor 虚拟化类型"
 "的缺省值。"
@@ -2174,9 +2170,6 @@ msgstr "任务 %(task_name)s 未在主机 %(host)s 上运行"
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI地址%(address)s格式不正确。"
 
-msgid "The backlog must be more than 0"
-msgstr "backlog必须大于0"
-
 #, python-format
 msgid "The console port range %(min_port)d-%(max_port)d is exhausted."
 msgstr "控制台端口范围%(min_port)d-%(max_port)d已经耗尽。"
@@ -2354,23 +2347,11 @@ msgid "Unable to determine disk prefix for %s"
 msgstr "无法为 %s 确定磁盘前缀"
 
 #, python-format
-msgid "Unable to find ca_file : %s"
-msgstr "找不到 ca_file：%s"
-
-#, python-format
-msgid "Unable to find cert_file : %s"
-msgstr "找不到 cert_file：%s"
-
-#, python-format
 msgid "Unable to find host for Instance %s"
 msgstr "无法找到实例 %s 的宿主机"
 
 msgid "Unable to find iSCSI Target"
 msgstr "找不到 iSCSI 目标"
-
-#, python-format
-msgid "Unable to find key_file : %s"
-msgstr "找不到 key_file：%s"
 
 msgid "Unable to find volume"
 msgstr "找不到卷"
@@ -2586,13 +2567,6 @@ msgstr "卷设置块大小，但是当前libvirt监测器 '%s'不支持定制化
 
 msgid "When resizing, instances must change flavor!"
 msgstr "调整大小时，实例必须更换云主机类型！"
-
-msgid ""
-"When running server in SSL mode, you must specify both a cert_file and "
-"key_file option value in your configuration file"
-msgstr ""
-"以 SSL 方式运行服务器时，必须在配置文件中同时指定 cert_file 和 key_file 选项"
-"值"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"
