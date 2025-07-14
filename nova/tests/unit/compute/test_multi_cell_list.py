@@ -145,27 +145,45 @@ class TestUtils(test.NoDBTestCase):
             for thing in data:
                 yield thing
 
+        lister = TestLister([], [], [])
         self.assertEqual([1, 2, 3],
-                         list(multi_cell_list.query_wrapper(
+                         list(lister.query_wrapper(
                              None, test, [1, 2, 3])))
 
-    def test_query_wrapper_timeout(self):
+    @mock.patch('time.monotonic')
+    def test_query_wrapper_timeout(self, mock_monotonic):
+        # This fake query function will return more data that we have "time"
+        # to process
         def test(ctx):
-            raise exception.CellTimeout
+            return [multi_cell_list.RecordWrapper(ctx, None, 1)] * 10
 
-        self.assertEqual([context.did_not_respond_sentinel],
-                         [x._db_record for x in
-                          multi_cell_list.query_wrapper(
-                              mock.MagicMock(), test)])
+        # Return 0 for the start time, 1s later for the first query,
+        # then 1000s (more than the timeout) for the subsequent queries.
+        times = [0, 1]
+
+        def fake_monotonic():
+            try:
+                return times.pop(0)
+            except IndexError:
+                return 1000
+
+        mock_monotonic.side_effect = fake_monotonic
+
+        # Do the query and expect to get one result before the timeout
+        lister = TestLister([], [], [])
+        result = lister.query_wrapper(mock.MagicMock(), test)
+        self.assertEqual([1, context.did_not_respond_sentinel],
+                         [x._db_record for x in result])
 
     def test_query_wrapper_fail(self):
         def tester(ctx):
             raise test.TestingException
 
+        lister = TestLister([], [], [])
         self.assertIsInstance(
             # query_wrapper is a generator so we convert to a list and
             # check the type on the first and only result
-            [x._db_record for x in multi_cell_list.query_wrapper(
+            [x._db_record for x in lister.query_wrapper(
                 mock.MagicMock(), tester)][0],
             test.TestingException)
 
