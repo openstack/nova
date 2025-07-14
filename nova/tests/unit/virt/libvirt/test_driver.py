@@ -29908,7 +29908,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             "/var/lib/nova/instances/%s/snap.img" % instance.uuid)
         mock_execute.assert_called_once_with(
             'qemu-img', 'rebase',
-            '-b', '/var/lib/nova/instances/%s/snap.img' % instance.uuid,
+            '-b', 'snap.img',
             '-F', 'fake_fmt',
             '/var/lib/nova/instances/%s/disk1_file' % instance.uuid)
 
