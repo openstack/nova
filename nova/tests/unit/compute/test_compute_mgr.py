@@ -4069,13 +4069,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     def test_sync_power_states(self, mock_get):
         instance = mock.Mock()
         mock_get.return_value = [instance]
-        with mock.patch.object(self.compute._sync_power_pool,
-                               'spawn') as mock_spawn:
+        with mock.patch('nova.utils.spawn_on') as mock_spawn:
             self.compute._sync_power_states(mock.sentinel.context)
             mock_get.assert_called_with(mock.sentinel.context,
                                         self.compute.host, expected_attrs=[],
                                         use_slave=True)
-            mock_spawn.assert_called_once_with(mock.ANY, instance)
+            mock_spawn.assert_called_once_with(
+                self.compute._sync_power_executor, mock.ANY, instance)
 
     @mock.patch('nova.objects.InstanceList.get_by_host', new=mock.Mock())
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -11615,15 +11615,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual(driver_console.get_connection_info.return_value,
                          console)
 
-    @mock.patch('nova.utils.pass_context')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_do_live_migration')
-    def _test_max_concurrent_live(self, mock_lm, mock_pass_context):
-        # pass_context wraps the function, which doesn't work with a mock
-        # So we simply mock it too
-        def _mock_pass_context(runner, func, *args, **kwargs):
-            return runner(func, *args, **kwargs)
-        mock_pass_context.side_effect = _mock_pass_context
+    def _test_max_concurrent_live(self, mock_lm):
 
         @mock.patch('nova.objects.Migration.save')
         def _do_it(mock_mig_save):
@@ -11638,11 +11632,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertEqual('queued', migration.status)
             migration.save.assert_called_once_with()
 
-        with mock.patch.object(self.compute,
-                               '_live_migration_executor') as mock_exc:
-            for i in (1, 2, 3):
+        with mock.patch('nova.utils.spawn_on') as mock_spawn:
+            for _ in (1, 2, 3):
                 _do_it()
-        self.assertEqual(3, mock_exc.submit.call_count)
+        self.assertEqual(3, mock_spawn.call_count)
 
     def test_max_concurrent_live_limited(self):
         self.flags(max_concurrent_live_migrations=2)
@@ -11652,17 +11645,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.flags(max_concurrent_live_migrations=0)
         self._test_max_concurrent_live()
 
-    @mock.patch('futurist.GreenThreadPoolExecutor')
-    def test_max_concurrent_live_semaphore_limited(self, mock_executor):
+    def test_max_concurrent_live_semaphore_limited(self):
         self.flags(max_concurrent_live_migrations=123)
-        manager.ComputeManager()
-        mock_executor.assert_called_once_with(max_workers=123)
+        mgr = manager.ComputeManager()
+        self.assertEqual(123, mgr._live_migration_executor._max_workers)
 
-    @mock.patch('futurist.GreenThreadPoolExecutor')
-    def test_max_concurrent_live_semaphore_unlimited(self, mock_executor):
+    def test_max_concurrent_live_semaphore_unlimited(self):
         self.flags(max_concurrent_live_migrations=0)
-        manager.ComputeManager()
-        mock_executor.assert_called_once_with()
+        mgr = manager.ComputeManager()
+        self.assertEqual(1000, mgr._live_migration_executor._max_workers)
 
     @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
@@ -12091,9 +12082,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     def test_live_migration_submit_failed(self, mock_notify, mock_exc):
         migration = objects.Migration(self.context, uuid=uuids.migration)
         migration.save = mock.MagicMock()
-        with mock.patch.object(
-                self.compute._live_migration_executor, 'submit') as mock_sub:
-            mock_sub.side_effect = RuntimeError
+        with mock.patch('nova.utils.spawn_on') as mock_spawn:
+            mock_spawn.side_effect = RuntimeError
             self.assertRaises(exception.LiveMigrationNotSubmitted,
                               self.compute.live_migration, self.context,
                               'fake', self.instance, True, migration, {})

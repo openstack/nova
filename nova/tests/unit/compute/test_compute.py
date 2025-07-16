@@ -72,7 +72,6 @@ from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
 from nova.tests.fixtures import cyborg as cyborg_fixture
-from nova.tests.unit.compute import eventlet_utils
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_diagnostics
@@ -160,7 +159,7 @@ class BaseTestCase(test.TestCase):
         self.compute.driver._set_nodes([NODENAME, NODENAME2])
 
         # execute power syncing synchronously for testing:
-        self.compute._sync_power_pool = eventlet_utils.SyncPool()
+        self.compute._sync_power_pool = futurist.SynchronousExecutor()
 
         # override tracker with a version that doesn't need the database:
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,
@@ -8568,6 +8567,8 @@ class ComputeTestCase(BaseTestCase,
             exception.InstanceNotFound(instance_id=uuids.instance)
 
         self.compute._sync_power_states(ctxt)
+        # wait for sync to finish
+        self.compute._sync_power_executor.shutdown(wait=True)
 
         mock_get.assert_has_calls([mock.call(mock.ANY), mock.call(mock.ANY),
                                    mock.call(mock.ANY)])

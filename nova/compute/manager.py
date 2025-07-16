@@ -643,8 +643,8 @@ class ComputeManager(manager.Manager):
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.query_client = query.SchedulerQueryClient()
         self.instance_events = InstanceEvents()
-        self._sync_power_pool = eventlet.GreenPool(
-            size=CONF.sync_power_state_pool_size)
+        self._sync_power_executor = futurist.GreenThreadPoolExecutor(
+            max_workers=CONF.sync_power_state_pool_size)
         self._syncs_in_progress = {}
         self.send_instance_updates = (
             CONF.filter_scheduler.track_instance_changes)
@@ -9660,8 +9660,8 @@ class ComputeManager(manager.Manager):
         # in order to be able to track and abort it in the future.
         self._waiting_live_migrations[instance.uuid] = (None, None)
         try:
-            future = nova.utils.pass_context(
-                self._live_migration_executor.submit,
+            future = nova.utils.spawn_on(
+                self._live_migration_executor,
                 self._do_live_migration, context, dest, instance,
                 block_migration, migration, migrate_data)
             self._waiting_live_migrations[instance.uuid] = (migration, future)
@@ -10983,9 +10983,8 @@ class ComputeManager(manager.Manager):
             else:
                 LOG.debug('Triggering sync for uuid %s', uuid)
                 self._syncs_in_progress[uuid] = True
-                nova.utils.pass_context(self._sync_power_pool.spawn,
-                                        _sync,
-                                        db_instance)
+                nova.utils.spawn_on(
+                    self._sync_power_executor, _sync, db_instance)
 
     def _query_driver_power_state_and_sync(self, context, db_instance):
         if db_instance.task_state is not None:
