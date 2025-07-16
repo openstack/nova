@@ -59,8 +59,9 @@ class LockServerPolicyTest(base.BasePolicyTest):
         # unlock the server.
         self.project_action_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context]
 
         # By default, legacy rule are enable and scope check is disabled.
         # system admin, legacy admin, and project admin is able to override
@@ -191,7 +192,8 @@ class LockServerOverridePolicyTest(LockServerScopeTypeNoLegacyPolicyTest):
         # to PROJECT_MEMBER so testing it with both admin as well
         # as project member as allowed context.
         self.project_admin_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context]
 
     def test_unlock_override_server_policy(self):
         rule = ls_policies.POLICY_ROOT % 'unlock:unlock_override'

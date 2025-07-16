@@ -101,8 +101,9 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         # able create/delete/update the volume attachment.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context]
 
         # With legacy rule and no scope checks, all admin, project members
         # project reader or other project role(because legacy rule allow
@@ -291,20 +292,24 @@ class VolumesPolicyTest(base.BasePolicyTest):
         # error.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
             self.other_project_reader_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
             self.other_project_reader_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
 
@@ -422,16 +427,18 @@ class VolumesNoLegacyNoScopePolicyTest(VolumesPolicyTest):
         # to operate on volume and snapshot.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.system_member_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.system_member_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
             self.other_project_reader_context,
             self.system_member_context, self.system_reader_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
 
@@ -454,14 +461,20 @@ class VolumesScopeTypePolicyTest(VolumesPolicyTest):
         # operate on volume and snapshot.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
-            self.project_foo_context, self.other_project_reader_context,
+            self.project_manager_context,
+            self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_reader_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
-            self.project_foo_context, self.other_project_reader_context,
+            self.project_manager_context,
+            self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_reader_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
 
@@ -503,12 +516,17 @@ class VolumesScopeTypeNoLegacyPolicyTest(VolumesScopeTypePolicyTest):
         # and snapshot.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
+            self.project_manager_context,
             self.project_member_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
+            self.project_manager_context,
+            self.project_member_context,
+            self.project_reader_context,
+            self.other_project_manager_context,
             self.other_project_reader_context,
             self.other_project_member_context
         ]

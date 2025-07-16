@@ -48,8 +48,9 @@ class ServerPasswordPolicyTest(base.BasePolicyTest):
         # the server Password.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context]
         # and they can get their own server password.
         self.project_reader_authorized_contexts = (
             self.project_member_authorized_contexts)

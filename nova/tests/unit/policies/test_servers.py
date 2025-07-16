@@ -141,8 +141,9 @@ class ServersPolicyTest(base.BasePolicyTest):
         # Users that can take action on *our* project resources
         self.project_action_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
         ])
 
         # Users that can read *our* project resources
@@ -1414,6 +1415,7 @@ class ServersScopeTypePolicyTest(ServersPolicyTest):
         self.reduce_set('project_action_authorized',
                         set([self.legacy_admin_context,
                              self.project_admin_context,
+                             self.project_manager_context,
                              self.project_member_context,
                              self.project_reader_context,
                              self.project_foo_context]))

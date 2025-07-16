@@ -78,12 +78,13 @@ class BasePolicyTest(test.TestCase):
         # all context are with implied roles.
         self.legacy_admin_context = nova_context.RequestContext(
                 user_id="legacy_admin", project_id=self.admin_project_id,
-                roles=['admin', 'member', 'reader'])
+                roles=['admin', 'manager', 'member', 'reader'])
 
         # system scoped users
         self.system_admin_context = nova_context.RequestContext(
                 user_id="admin",
-                roles=['admin', 'member', 'reader'], system_scope='all')
+                roles=['admin', 'manager', 'member', 'reader'],
+                system_scope='all')
 
         self.system_member_context = nova_context.RequestContext(
                 user_id="member",
@@ -98,7 +99,11 @@ class BasePolicyTest(test.TestCase):
         # project scoped users
         self.project_admin_context = nova_context.RequestContext(
                 user_id="project_admin", project_id=self.project_id,
-                roles=['admin', 'member', 'reader'])
+                roles=['admin', 'manager', 'member', 'reader'])
+
+        self.project_manager_context = nova_context.RequestContext(
+                user_id="project_manager", project_id=self.project_id,
+                roles=['manager', 'member', 'reader'])
 
         self.project_member_context = nova_context.RequestContext(
                 user_id="project_member", project_id=self.project_id,
@@ -111,6 +116,11 @@ class BasePolicyTest(test.TestCase):
         self.project_foo_context = nova_context.RequestContext(
                 user_id="project_foo", project_id=self.project_id,
                 roles=['foo'])
+
+        self.other_project_manager_context = nova_context.RequestContext(
+                user_id="other_project_manager",
+                project_id=self.project_id_other,
+                roles=['manager', 'member', 'reader'])
 
         self.other_project_member_context = nova_context.RequestContext(
                 user_id="other_project_member",
@@ -126,16 +136,20 @@ class BasePolicyTest(test.TestCase):
             self.legacy_admin_context, self.system_admin_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.other_project_member_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.other_project_manager_context,
+            self.other_project_member_context,
             self.project_foo_context, self.other_project_reader_context
         ])
 
         # All the project contexts for easy access.
         self.all_project_contexts = set([
             self.legacy_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
+            self.other_project_manager_context,
             self.other_project_member_context,
             self.other_project_reader_context,
         ])
@@ -151,36 +165,38 @@ class BasePolicyTest(test.TestCase):
         # will have access.
         self.project_member_or_admin_with_no_scope_no_legacy = set([
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context,
         ])
         # With scope enable and legacy rule, only project scoped admin
         # and any role in that project will have access.
         self.project_m_r_or_admin_with_scope_and_legacy = set([
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
-            self.project_foo_context
+            self.project_manager_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context
         ])
         # With scope enable and no legacy rule, only project scoped admin
         # and project members have access. No other role in that project
         # or system scoped token will have access.
         self.project_member_or_admin_with_scope_no_legacy = set([
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context
+            self.project_manager_context, self.project_member_context
         ])
         # With scope disable and no legacy rule, any admin,
         # project members, and project reader have access. No other
         # role in that project will have access.
         self.project_reader_or_admin_with_no_scope_no_legacy = set([
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context
         ])
         # With scope enable and no legacy rule, only project scoped admin,
         # project members, and project reader have access. No other role
         # in that project or system scoped token will have access.
         self.project_reader_or_admin_with_scope_no_legacy = set([
             self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context
+            self.project_manager_context, self.project_member_context,
+            self.project_reader_context
         ])
 
         if self.without_deprecated_rules:
@@ -193,10 +209,14 @@ class BasePolicyTest(test.TestCase):
                     "rule:project_reader_api or rule:context_is_admin",
                 "project_admin_api":
                     "role:admin and project_id:%(project_id)s",
+                "project_manager_api":
+                    "role:manager and project_id:%(project_id)s",
                 "project_member_api":
                     "role:member and project_id:%(project_id)s",
                 "project_reader_api":
                     "role:reader and project_id:%(project_id)s",
+                "project_manager_or_admin":
+                    "rule:project_manager_api or rule:context_is_admin",
                 "project_member_or_admin":
                     "rule:project_member_api or rule:context_is_admin",
                 "project_reader_or_admin":

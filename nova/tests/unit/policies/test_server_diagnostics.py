@@ -133,4 +133,5 @@ class ServerDiagnosticsOverridePolicyTest(
         # Check that project member role as override above
         # is able to get server diagnostics.
         self.project_admin_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context]

@@ -57,8 +57,9 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
         # operations on server tags.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context]
         self.project_reader_authorized_contexts = (
             self.project_member_authorized_contexts)
 
