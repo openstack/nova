@@ -75,7 +75,8 @@ greenthread pool concurrently, defaults to 1000, min value is 100.
         help='''
 The number of tasks that can run concurrently, one for each cell, for
 operations requires cross cell data gathering a.k.a scatter-gather, like
-listing instances across multiple cells.
+listing instances across multiple cells. This is only used if the service is
+running in native thread mode.
 '''),
 ]
 

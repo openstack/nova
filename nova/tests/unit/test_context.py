@@ -389,6 +389,8 @@ class ContextTestCase(test.NoDBTestCase):
                                        uuid=uuids.cell1)
         mappings = objects.CellMappingList(objects=[mapping0, mapping1])
 
+        # We call scatter gather with a short (1s) timeout, dispatching two
+        # tasks where the second will wait forever on our work semaphore above.
         results = context.scatter_gather_cells(ctxt, mappings, 1, task)
         self.assertEqual(2, len(results))
         self.assertEqual(
@@ -427,6 +429,8 @@ class ContextTestCase(test.NoDBTestCase):
                                        uuid=uuids.cell1)
         mappings = objects.CellMappingList(objects=[mapping0, mapping1])
 
+        # We call scatter gather with a short (1s) timeout, dispatching two
+        # tasks that will wait forever on our work event above.
         results = context.scatter_gather_cells(
             ctxt, mappings, 1, task)
 
