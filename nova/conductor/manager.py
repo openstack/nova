@@ -17,11 +17,11 @@
 import collections
 import contextlib
 import copy
-import eventlet
 import functools
 import sys
 import typing as ty
 
+import futurist
 from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -2072,7 +2072,7 @@ class ComputeTaskManager:
 
         clock = timeutils.StopWatch()
         threads = CONF.image_cache.precache_concurrency
-        fetch_pool = eventlet.GreenPool(size=threads)
+        fetch_executor = futurist.GreenThreadPoolExecutor(max_workers=threads)
 
         hosts_by_cell = {}
         cells_by_uuid = {}
@@ -2143,12 +2143,11 @@ class ComputeTaskManager:
                             {'host': host})
                         skipped_host(target_ctxt, host, image_ids)
                         continue
-
-                    utils.pass_context(fetch_pool.spawn, wrap_cache_images,
-                                       target_ctxt, host, image_ids)
+                    utils.spawn_on(fetch_executor, wrap_cache_images,
+                                   target_ctxt, host, image_ids)
 
         # Wait until all those things finish
-        fetch_pool.waitall()
+        fetch_executor.shutdown(wait=True)
 
         overall_stats = {'cached': 0, 'existing': 0, 'error': 0,
                          'unsupported': 0}
