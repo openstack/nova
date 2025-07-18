@@ -675,12 +675,14 @@ def _serialize_profile_info():
     return trace_info
 
 
-def _pass_context_wrapper(func):
+def _pass_context(runner, func, *args, **kwargs):
     """Generalised passthrough method
     It will grab the context from the threadlocal store and add it to
-    the store on the new thread.  This allows for continuity in logging the
-    context when using the returned method is executed on a new thread.
+    the store on the runner.  This allows for continuity in logging the
+    context when using this method to spawn a new thread through the
+    runner function
     """
+
     _context = common_context.get_current()
     profiler_info = _serialize_profile_info()
 
@@ -694,18 +696,7 @@ def _pass_context_wrapper(func):
             profiler.init(**profiler_info)
         return func(*args, **kwargs)
 
-    return context_wrapper
-
-
-def pass_context(runner, func, *args, **kwargs):
-    """Generalised passthrough method
-    It will grab the context from the threadlocal store and add it to
-    the store on the runner.  This allows for continuity in logging the
-    context when using this method to spawn a new thread through the
-    runner function
-    """
-
-    return runner(_pass_context_wrapper(func), *args, **kwargs)
+    return runner(context_wrapper, *args, **kwargs)
 
 
 def spawn(func, *args, **kwargs) -> futurist.Future:
@@ -748,12 +739,12 @@ def spawn_on(executor, func, *args, **kwargs) -> futurist.Future:
             "queued. If this happens repeatedly then the size of the pool is "
             "too small for the load or there are stuck threads filling the "
             "pool.", executor.name, func)
-    return pass_context(executor.submit, func, *args, **kwargs)
+    return _pass_context(executor.submit, func, *args, **kwargs)
 
 
 def tpool_execute(func, *args, **kwargs):
     """Run func in a native thread"""
-    return pass_context(tpool.execute, func, *args, **kwargs)
+    return _pass_context(tpool.execute, func, *args, **kwargs)
 
 
 def is_none_string(val):
