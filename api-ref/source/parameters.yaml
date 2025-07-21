@@ -2089,11 +2089,11 @@ code:
   description: |
     The HTTP response code for the event. The following codes are currently used:
 
-      * 200 - successfully submitted event
-      * 400 - the request is missing required parameter
-      * 404 - the instance specified by ``server_uuid`` was not found
-      * 422 - no host was found for the server specified by ``server_uuid``,
-         so there is no route to this server.
+    * 200 - successfully submitted event
+    * 400 - the request is missing required parameter
+    * 404 - the instance specified by ``server_uuid`` was not found
+    * 422 - no host was found for the server specified by ``server_uuid``,
+       so there is no route to this server.
   in: body
   required: true
   type: string
@@ -2737,6 +2737,7 @@ event_name:
     - ``volume-extended`` (since microversion ``2.51``)
     - ``power-update`` (since microversion ``2.76``)
     - ``accelerator-request-bound`` (since microversion ``2.82``)
+    - ``volume-reimaged`` (since microversion ``2.93``)
 
   in: body
   required: true

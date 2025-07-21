@@ -14,7 +14,7 @@
 
 from oslo_log import log as logging
 
-from nova.api.openstack.compute.schemas import server_external_events
+from nova.api.openstack.compute.schemas import server_external_events as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
@@ -30,6 +30,7 @@ TAG_REQUIRED = ('volume-extended', 'power-update',
                 'accelerator-request-bound')
 
 
+@validation.validated
 class ServerExternalEventsController(wsgi.Controller):
 
     def __init__(self):
@@ -66,11 +67,16 @@ class ServerExternalEventsController(wsgi.Controller):
 
     @wsgi.expected_errors(403)
     @wsgi.response(200)
-    @validation.schema(server_external_events.create, '2.0', '2.50')
-    @validation.schema(server_external_events.create_v251, '2.51', '2.75')
-    @validation.schema(server_external_events.create_v276, '2.76', '2.81')
-    @validation.schema(server_external_events.create_v282, '2.82', '2.92')
-    @validation.schema(server_external_events.create_v293, '2.93')
+    @validation.schema(schema.create, '2.0', '2.50')
+    @validation.schema(schema.create_v251, '2.51', '2.75')
+    @validation.schema(schema.create_v276, '2.76', '2.81')
+    @validation.schema(schema.create_v282, '2.82', '2.92')
+    @validation.schema(schema.create_v293, '2.93')
+    @validation.response_body_schema(schema.create_response, '2.0', '2.50')
+    @validation.response_body_schema(schema.create_response_v251, '2.51', '2.75')  # noqa: E501
+    @validation.response_body_schema(schema.create_response_v276, '2.76', '2.81')  # noqa: E501
+    @validation.response_body_schema(schema.create_response_v282, '2.82', '2.92')  # noqa: E501
+    @validation.response_body_schema(schema.create_response_v293, '2.93')
     def create(self, req, body):
         """Creates a new instance event."""
         context = req.environ['nova.context']
