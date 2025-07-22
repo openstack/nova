@@ -295,12 +295,15 @@ class Guest(object):
             yield VCPUInfo(
                 id=vcpu[0], cpu=vcpu[3], state=vcpu[1], time=vcpu[2])
 
-    def delete_configuration(self, keep_vtpm=False):
+    def delete_configuration(self, keep_vtpm=False, keep_nvram=False):
         """Undefines a domain from hypervisor.
 
         :param keep_vtpm: If true, the vTPM data will be preserved. Otherwise,
             it will be deleted. Defaults to false (that is, deleting the vTPM
             data).
+        :param keep_nvram: If true, the NVRAM data will be preserved.
+            Otherwise, it will be deleted. Defaults to false (that is, deleting
+            the NVRAM data).
 
         Calling this with `keep_vtpm` set to True should, eventually, be
         followed up with a call where it is set to False (after re-defining
@@ -312,9 +315,12 @@ class Guest(object):
         """
         try:
             flags = libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE
-            flags |= libvirt.VIR_DOMAIN_UNDEFINE_NVRAM
             if keep_vtpm:
                 flags |= libvirt.VIR_DOMAIN_UNDEFINE_KEEP_TPM
+            if keep_nvram:
+                flags |= libvirt.VIR_DOMAIN_UNDEFINE_KEEP_NVRAM
+            else:
+                flags |= libvirt.VIR_DOMAIN_UNDEFINE_NVRAM
             self._domain.undefineFlags(flags)
         except libvirt.libvirtError:
             LOG.debug("Error from libvirt during undefineFlags for guest "
