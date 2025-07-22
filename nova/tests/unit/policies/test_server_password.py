@@ -57,6 +57,8 @@ class ServerPasswordPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.api.metadata.password.extract_password')
     def test_index_server_password_policy(self, mock_pass):
+        mock_pass.return_value = 'passw0rd'
+
         rule_name = policies.BASE_POLICY_NAME % 'show'
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name,
