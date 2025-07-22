@@ -138,6 +138,13 @@ class GuestTestCase(test.NoDBTestCase):
             fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
             fakelibvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
 
+    def test_delete_configuration_with_keep_vtpm_true(self):
+        self.guest.delete_configuration(keep_vtpm=True)
+        self.domain.undefineFlags.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_NVRAM |
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_KEEP_TPM)
+
     def test_delete_configuration_exception(self):
         self.domain.undefineFlags.side_effect = fakelibvirt.libvirtError(
             'oops')
