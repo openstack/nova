@@ -83,6 +83,7 @@ def _should_enable_custom_max_server_rules(context, rules):
     return True
 
 
+@validation.validated
 class ServerGroupController(wsgi.Controller):
     """The Server group API controller for the OpenStack API."""
 
@@ -116,6 +117,10 @@ class ServerGroupController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response, '2.1', '2.12')
+    @validation.response_body_schema(schema.show_response_v213, '2.13', '2.14')
+    @validation.response_body_schema(schema.show_response_v215, '2.15', '2.63')
+    @validation.response_body_schema(schema.show_response_v264, '2.64')
     def show(self, req, id):
         """Return data about the given server group."""
         context = req.environ['nova.context']
@@ -129,6 +134,7 @@ class ServerGroupController(wsgi.Controller):
 
     @wsgi.response(204)
     @wsgi.expected_errors(404)
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         """Delete a server group."""
         context = req.environ['nova.context']
@@ -146,6 +152,10 @@ class ServerGroupController(wsgi.Controller):
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query, '2.0', '2.74')
     @validation.query_schema(schema.index_query_v275, '2.75')
+    @validation.response_body_schema(schema.index_response, '2.1', '2.12')
+    @validation.response_body_schema(schema.index_response_v213, '2.13', '2.14')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v215, '2.15', '2.63')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v264, '2.64')
     def index(self, req):
         """Returns a list of server groups."""
         context = req.environ['nova.context']
@@ -180,6 +190,10 @@ class ServerGroupController(wsgi.Controller):
     @validation.schema(schema.create, "2.0", "2.14")
     @validation.schema(schema.create_v215, "2.15", "2.63")
     @validation.schema(schema.create_v264, "2.64")
+    @validation.response_body_schema(schema.create_response, '2.1', '2.12')
+    @validation.response_body_schema(schema.create_response_v213, '2.13', '2.14')  # noqa: E501
+    @validation.response_body_schema(schema.create_response_v215, '2.15', '2.63')  # noqa: E501
+    @validation.response_body_schema(schema.create_response_v264, '2.64')
     def create(self, req, body):
         """Creates a new server group."""
         context = req.environ['nova.context']
