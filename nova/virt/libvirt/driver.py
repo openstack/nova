@@ -265,6 +265,9 @@ MIN_VIRTIO_SOUND_QEMU_VERSION = (8, 2, 0)
 # Minimum version of Qemu that supports multifd migration with post-copy
 MIN_MULTIFD_WITH_POSTCOPY_QEMU_VERSION = (10, 1, 0)
 
+# Minimum version to preserve vTPM data
+MIN_VERSION_INT_FOR_KEEP_TPM = (8, 9, 0)
+
 REGISTER_IMAGE_PROPERTY_DEFAULTS = [
     'hw_machine_type',
     'hw_cdrom_bus',
@@ -577,6 +580,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # distinguish between cores on the source and destination hosts.
         # See also nova.virt.libvirt.cpu.api.API.core().
         self.cpu_api = libvirt_cpu.API()
+
+        # Cache the availability of the VIR_DOMAIN_UNDEFINE_KEEP_TPM flag in
+        # this libvirt version. This is set in init_host.
+        self._may_keep_vtpm = False
 
     def _discover_vpmems(self, vpmem_conf=None):
         """Discover vpmems on host and configuration.
@@ -898,6 +905,12 @@ class LibvirtDriver(driver.ComputeDriver):
         self._check_cpu_compatibility()
 
         self._check_vtpm_support()
+
+        # Cache the availability of the VIR_DOMAIN_UNDEFINE_KEEP_TPM flag in
+        # this libvirt version.
+        self._may_keep_vtpm = self._host.has_min_version(
+            MIN_VERSION_INT_FOR_KEEP_TPM,
+        )
 
         self._check_multipath()
 
@@ -1635,11 +1648,32 @@ class LibvirtDriver(driver.ComputeDriver):
         self.cleanup(context, instance, network_info, block_device_info,
                      destroy_disks, destroy_secrets=destroy_secrets)
 
-    def _undefine_domain(self, instance):
+    def _delete_guest_configuration(self, guest, keep_vtpm):
+        """Wrapper around guest.delete_configuration which incorporates version
+        checks for the additional arguments.
+
+        :param guest: The domain to undefine.
+        :param keep_vtpm: If set, the vTPM data (if any) is not deleted during
+            undefine.
+
+            This flag may be ignored if libvirt is too old to support
+            preserving vTPM data (see bug #2118888).
+        """
+        if keep_vtpm and not self._may_keep_vtpm:
+            LOG.warning(
+                "Temporary undefine operation is deleting vTPM contents. "
+                "Please upgrade libvirt to >= 8.9.0 to avoid this.",
+                instance=guest.uuid,
+            )
+            keep_vtpm = False
+
+        guest.delete_configuration(keep_vtpm=keep_vtpm)
+
+    def _undefine_domain(self, instance, keep_vtpm=False):
         try:
             guest = self._host.get_guest(instance)
             try:
-                guest.delete_configuration()
+                self._delete_guest_configuration(guest, keep_vtpm=keep_vtpm)
             except libvirt.libvirtError as e:
                 with excutils.save_and_reraise_exception() as ctxt:
                     errcode = e.get_error_code()
@@ -1802,7 +1836,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._cleanup_ephemeral_encryption_secrets(
                     context, instance, block_device_info)
 
-        self._undefine_domain(instance)
+        self._undefine_domain(instance, keep_vtpm=not cleanup_instance_disks)
 
     def _cleanup_ephemeral_encryption_secrets(
         self, context, instance, block_device_info
@@ -2377,7 +2411,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # undefine it. If any part of this block fails, the domain is
             # re-defined regardless.
             if guest.has_persistent_configuration():
-                guest.delete_configuration()
+                self._delete_guest_configuration(guest, keep_vtpm=True)
 
             try:
                 dev.copy(conf.to_xml(), reuse_ext=True)
@@ -3506,7 +3540,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
             if guest.has_persistent_configuration():
-                guest.delete_configuration()
+                self._delete_guest_configuration(guest, keep_vtpm=True)
 
             # NOTE (rmk): Establish a temporary mirror of our root disk and
             #             issue an abort once we have a complete copy.
