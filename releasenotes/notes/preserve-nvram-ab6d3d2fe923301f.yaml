@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    NVRAM variable store is preserved during stop/start, hard reboot, and live
+    migration by passing the corresponding flag to libvirt.
+
+    See https://bugs.launchpad.net/nova/+bug/1633447 for more details.

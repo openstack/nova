@@ -1625,7 +1625,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.cleanup(context, instance, network_info, block_device_info,
                      destroy_disks, destroy_secrets=destroy_secrets)
 
-    def _delete_guest_configuration(self, guest, keep_vtpm):
+    def _delete_guest_configuration(self, guest, keep_vtpm, keep_nvram):
         """Wrapper around guest.delete_configuration which incorporates version
         checks for the additional arguments.
 
@@ -1644,13 +1644,14 @@ class LibvirtDriver(driver.ComputeDriver):
             )
             keep_vtpm = False
 
-        guest.delete_configuration(keep_vtpm=keep_vtpm)
+        guest.delete_configuration(keep_vtpm=keep_vtpm, keep_nvram=keep_nvram)
 
-    def _undefine_domain(self, instance, keep_vtpm=False):
+    def _undefine_domain(self, instance, keep_vtpm=False, keep_nvram=False):
         try:
             guest = self._host.get_guest(instance)
             try:
-                self._delete_guest_configuration(guest, keep_vtpm=keep_vtpm)
+                self._delete_guest_configuration(guest, keep_vtpm=keep_vtpm,
+                                                 keep_nvram=keep_nvram)
             except libvirt.libvirtError as e:
                 with excutils.save_and_reraise_exception() as ctxt:
                     errcode = e.get_error_code()
@@ -1737,9 +1738,10 @@ class LibvirtDriver(driver.ComputeDriver):
         :param destroy_vifs: if plugged vifs should be unplugged
         :param cleanup_instance_dir: If the instance dir should be removed
         :param cleanup_instance_disks: If the instance disks should be removed.
-            Also removes ephemeral encryption secrets, if present.
-        :param destroy_secrets: If the cinder volume encryption libvirt secrets
-                   should be deleted.
+            Also removes ephemeral encryption secrets, if present, as well as
+            vTPM and NVRAM data.
+        :param destroy_secrets: If the cinder volume encryption secrets should
+            be deleted.
         """
         # zero the data on backend pmem device
         vpmems = self._get_vpmems(instance)
@@ -1813,7 +1815,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._cleanup_ephemeral_encryption_secrets(
                     context, instance, block_device_info)
 
-        self._undefine_domain(instance, keep_vtpm=not cleanup_instance_disks)
+        self._undefine_domain(instance, keep_vtpm=not cleanup_instance_disks,
+                              keep_nvram=not cleanup_instance_disks)
 
     def _cleanup_ephemeral_encryption_secrets(
         self, context, instance, block_device_info
@@ -2388,7 +2391,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # undefine it. If any part of this block fails, the domain is
             # re-defined regardless.
             if guest.has_persistent_configuration():
-                self._delete_guest_configuration(guest, keep_vtpm=True)
+                self._delete_guest_configuration(guest, keep_vtpm=True,
+                                                 keep_nvram=True)
 
             try:
                 dev.copy(conf.to_xml(), reuse_ext=True)
@@ -3517,7 +3521,8 @@ class LibvirtDriver(driver.ComputeDriver):
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
             if guest.has_persistent_configuration():
-                self._delete_guest_configuration(guest, keep_vtpm=True)
+                self._delete_guest_configuration(guest, keep_vtpm=True,
+                                                 keep_nvram=True)
 
             # NOTE (rmk): Establish a temporary mirror of our root disk and
             #             issue an abort once we have a complete copy.
