@@ -111,9 +111,14 @@ def _get_default_executor():
     global DEFAULT_EXECUTOR
 
     if not DEFAULT_EXECUTOR:
-        DEFAULT_EXECUTOR = futurist.GreenThreadPoolExecutor(
-            CONF.default_green_pool_size
-        )
+        if concurrency_mode_threading():
+            DEFAULT_EXECUTOR = futurist.ThreadPoolExecutor(
+                CONF.default_thread_pool_size
+            )
+        else:
+            DEFAULT_EXECUTOR = futurist.GreenThreadPoolExecutor(
+                CONF.default_green_pool_size
+            )
 
         pname = multiprocessing.current_process().name
         executor_name = f"{pname}.default"

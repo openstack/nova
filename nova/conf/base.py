@@ -62,11 +62,27 @@ entry.
         help='Explicitly specify the temporary working directory.'),
     cfg.IntOpt(
         'default_green_pool_size',
+        deprecated_for_removal=True,
+        deprecated_since='32.0.0',
+        deprecated_reason="""
+This option is only used if the service is running in Eventlet mode. When
+that mode is removed this config option will be removed too.
+""",
         default=1000,
         min=100,
         help='''
 The total number of coroutines that can be run via nova's default
-greenthread pool concurrently, defaults to 1000, min value is 100.
+greenthread pool concurrently, defaults to 1000, min value is 100. It is only
+used if the service is running in Eventlet mode.
+'''),
+    cfg.IntOpt(
+        'default_thread_pool_size',
+        default=10,
+        min=1,
+        help='''
+The total number of threads that can be run via nova's default
+thread pool concurrently. It is only used if the service is running in
+native threading mode.
 '''),
     cfg.IntOpt(
         'cell_worker_thread_pool_size',
