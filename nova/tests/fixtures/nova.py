@@ -1198,26 +1198,26 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
     def _setUp(self):
         # Just safety that the previous testcase cleaned up after itself
         assert utils.SCATTER_GATHER_EXECUTOR is None
-        assert utils.DEFAULT_GREEN_POOL is None
+        assert utils.DEFAULT_EXECUTOR is None
 
         origi_get_scatter_gather = utils.get_scatter_gather_executor
-        origi_default_green_pool = utils._get_default_green_pool
+        origi_default_executor = utils._get_default_executor
 
-        self.greenpool = None
+        self.executor = None
         self.scatter_gather_executor = None
 
-        def _get_default_green_pool():
-            self.greenpool = origi_default_green_pool()
-            self.greenpool.name = f"{self.test_case_id}.default"
-            return self.greenpool
+        def _get_default_executor():
+            self.executor = origi_default_executor()
+            self.executor.name = f"{self.test_case_id}.default"
+            return self.executor
         # NOTE(sean-k-mooney): greenpools use eventlet.spawn so we can't stub
         # out all calls to those functions.
         # Instead since nova only creates greenthreads directly via nova.utils
         # we stub out the default green pool. This will not capture
         # Greenthreads created via the standard lib threading module.
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils._get_default_green_pool', _get_default_green_pool))
-        self.addCleanup(lambda: self.do_cleanup_executor(self.greenpool))
+            'nova.utils._get_default_executor', _get_default_executor))
+        self.addCleanup(lambda: self.do_cleanup_executor(self.executor))
 
         def _get_scatter_gather_executor():
             self.scatter_gather_executor = origi_get_scatter_gather()
@@ -1236,7 +1236,7 @@ class IsolatedGreenPoolFixture(fixtures.Fixture):
 
     def reset_globals(self):
         utils.SCATTER_GATHER_EXECUTOR = None
-        utils.DEFAULT_GREEN_POOL = None
+        utils.DEFAULT_EXECUTOR = None
 
     def do_cleanup_executor(self, executor):
         # NOTE(gibi): we cannot rely on utils.concurrency_mode_threading

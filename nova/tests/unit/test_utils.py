@@ -771,8 +771,8 @@ class SpawnTestCase(test.NoDBTestCase):
 
         def fake(arg):
             pass
-        pool = utils._get_default_green_pool()
-        with mock.patch.object(pool, "submit", _fake_spawn):
+        executor = utils._get_default_executor()
+        with mock.patch.object(executor, "submit", _fake_spawn):
             getattr(utils, "spawn")(fake, 'test')
         self.assertIsNone(common_context.get_current())
 
@@ -789,8 +789,8 @@ class SpawnTestCase(test.NoDBTestCase):
         def fake(context, kwarg1=None):
             pass
 
-        pool = utils._get_default_green_pool()
-        with mock.patch.object(pool, "submit", _fake_spawn):
+        executor = utils._get_default_executor()
+        with mock.patch.object(executor, "submit", _fake_spawn):
             getattr(utils, "spawn")(fake, ctxt, kwarg1='test')
         self.assertEqual(ctxt, common_context.get_current())
 
@@ -810,8 +810,8 @@ class SpawnTestCase(test.NoDBTestCase):
         def fake(context, kwarg1=None):
             pass
 
-        pool = utils._get_default_green_pool()
-        with mock.patch.object(pool, "submit", _fake_spawn):
+        executor = utils._get_default_executor()
+        with mock.patch.object(executor, "submit", _fake_spawn):
             getattr(utils, "spawn")(fake, ctxt_passed, kwarg1='test')
         self.assertEqual(ctxt, common_context.get_current())
 
@@ -1488,7 +1488,7 @@ class ScatterGatherExecutorTestCase(test.NoDBTestCase):
 
 class DefaultExecutorTestCase(test.NoDBTestCase):
     def test_executor_is_named(self):
-        executor = utils._get_default_green_pool()
+        executor = utils._get_default_executor()
         # NOTE(gibi): The executor is name both in normal run and in the test
         # env. During testing we use a test-case-specific name, outside
         # of test we use process name specific name instead. The test case
@@ -1501,16 +1501,16 @@ class DefaultExecutorTestCase(test.NoDBTestCase):
     @mock.patch.object(
         utils, 'concurrency_mode_threading', new=mock.Mock(return_value=False))
     def test_executor_type_eventlet(self):
-        executor = utils._get_default_green_pool()
+        executor = utils._get_default_executor()
 
         self.assertEqual('GreenThreadPoolExecutor', type(executor).__name__)
 
     def test_executor_destroy(self):
-        executor = utils._get_default_green_pool()
-        self.assertIsNotNone(utils.DEFAULT_GREEN_POOL)
+        executor = utils._get_default_executor()
+        self.assertIsNotNone(utils.DEFAULT_EXECUTOR)
 
-        utils.destroy_default_green_pool()
-        self.assertIsNone(utils.DEFAULT_GREEN_POOL)
+        utils.destroy_default_executor()
+        self.assertIsNone(utils.DEFAULT_EXECUTOR)
         self.assertFalse(executor.alive)
 
 
