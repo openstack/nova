@@ -604,6 +604,34 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           self.driver.list_instances)
         self.assertFalse(mock_inst_by_uuid.called)
 
+    @mock.patch.object(ironic_driver.IronicDriver, 'list_instance_uuids')
+    def test_get_num_instances(self, mock_list_instance_uuids):
+        mock_list_instance_uuids.return_value = ['uuid1', 'uuid2', 'uuid3']
+
+        result = self.driver.get_num_instances()
+
+        self.assertEqual(result, 3)
+        mock_list_instance_uuids.assert_called_once_with()
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_cache')
+    def test_get_num_instances_fail(self, mock_cache):
+        mock_cache.side_effect = exception.VirtDriverNotReady
+        self.assertRaises(exception.VirtDriverNotReady,
+                          self.driver.get_num_instances)
+
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_num_instances_no_db_call(self, mock_inst_by_uuid):
+        nodes = {}
+        for i in range(2):
+            node_uuid = uuidutils.generate_uuid()
+            nodes[node_uuid] = ironic_utils.get_test_node(
+                id=node_uuid,
+                instance_id=uuidutils.generate_uuid(),
+                fields=('instance_id',))
+        self.driver.node_cache = nodes
+        self.driver.get_num_instances()
+        mock_inst_by_uuid.assert_not_called()
+
     def test_list_instance_uuids(self):
         num_nodes = 2
         nodes = {}

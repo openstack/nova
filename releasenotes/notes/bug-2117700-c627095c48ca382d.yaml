@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    The ironic virt driver now overrides ``get_num_instances`` to use the
+    node cache instead of the default implementation which calls
+    ``list_instances`` and loads each instance via a database call. This
+    improves the performance of the ``sync_power_states`` periodic task
+    for deployments with a large number of baremetal nodes. See
+    `bug 2117700`_ for details.
+
+    .. _bug 2117700: https://bugs.launchpad.net/nova/+bug/2117700
