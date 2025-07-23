@@ -855,6 +855,20 @@ class PointerModelType(BaseNovaEnum):
     ALL = (USBTABLET,)
 
 
+class SoundModelType(BaseNovaEnum):
+
+    SB16 = 'sb16'
+    ES1370 = 'es1370'
+    PCSPK = 'pcspk'
+    AC97 = 'ac97'
+    ICH6 = 'ich6'
+    ICH9 = 'ich9'
+    USB = 'usb'
+    VIRTIO = 'virtio'
+
+    ALL = (SB16, ES1370, PCSPK, AC97, ICH6, ICH9, USB, VIRTIO,)
+
+
 class NotificationPriority(BaseNovaEnum):
     AUDIT = 'audit'
     CRITICAL = 'critical'
@@ -1391,6 +1405,10 @@ class HypervisorDriverField(BaseEnumField):
 
 class PointerModelField(BaseEnumField):
     AUTO_TYPE = PointerModelType()
+
+
+class SoundModelField(BaseEnumField):
+    AUTO_TYPE = SoundModelType()
 
 
 class NotificationPriorityField(BaseEnumField):

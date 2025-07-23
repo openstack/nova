@@ -558,6 +558,17 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertNotIn('hw_tpm_model', primitive['nova_object.data'])
         self.assertNotIn('hw_tpm_version', primitive['nova_object.data'])
 
+    def test_obj_make_compatible_sound_model(self):
+        """Test that checks if we pop hw_sound_model."""
+        obj = objects.ImageMetaProps(
+            hw_sound_model='sb16',
+        )
+        primitive = obj.obj_to_primitive()
+        self.assertIn('hw_sound_model', primitive['nova_object.data'])
+
+        primitive = obj.obj_to_primitive('1.27')
+        self.assertNotIn('hw_sound_model', primitive['nova_object.data'])
+
     def test_obj_make_compatible_socket_policy(self):
         obj = objects.ImageMetaProps(
             hw_pci_numa_affinity_policy=fields.PCINUMAAffinityPolicy.SOCKET)
