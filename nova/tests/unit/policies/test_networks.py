@@ -53,6 +53,7 @@ class NetworksPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.network.neutron.API.get_all')
     def test_list_networks_policy(self, mock_get):
+        mock_get.return_value = []
         rule_name = "os_compute_api:os-networks:list"
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name, self.controller.index,
@@ -60,6 +61,7 @@ class NetworksPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.network.neutron.API.get')
     def test_show_network_policy(self, mock_get):
+        mock_get.return_value = {'id': uuids.network_id, 'name': 'foo'}
         rule_name = "os_compute_api:os-networks:show"
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name, self.controller.show,
