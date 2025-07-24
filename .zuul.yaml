@@ -715,10 +715,6 @@
             irrelevant-files: *nova-base-irrelevant-files
         - os-vif-ovs:
             irrelevant-files: *nova-base-irrelevant-files
-        - devstack-platform-fedora-latest:
-            irrelevant-files: *nova-base-irrelevant-files
-        - devstack-platform-fedora-latest-virt-preview:
-            irrelevant-files: *nova-base-irrelevant-files
         - devstack-plugin-ceph-compute-local-ephemeral:
             irrelevant-files: *nova-base-irrelevant-files
         - devstack-tobiko-nova:
