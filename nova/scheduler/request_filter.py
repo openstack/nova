@@ -444,6 +444,27 @@ def ephemeral_encryption_filter(
     return True
 
 
+@trace_request_filter
+def virtio_sound_filter(
+    ctxt: nova_context.RequestContext,
+    request_spec: 'objects.RequestSpec'
+) -> bool:
+    """Filter out hosts which do not support virtio sound devices
+
+    This filter will only retain compute node resource providers that support
+    virtio sound devices.
+    """
+    # Skip if the instance does not request a virtio sound device
+    model = hardware.get_sound_model(request_spec.flavor, request_spec.image)
+    if model != objects.fields.SoundModelType.VIRTIO:
+        LOG.debug('virtio_sound_filter skipped')
+        return False
+
+    request_spec.root_required.add(os_traits.COMPUTE_SOUND_MODEL_VIRTIO)
+    LOG.debug('virtio_sound_filter added trait COMPUTE_SOUND_MODEL_VIRTIO')
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
@@ -456,6 +477,7 @@ ALL_REQUEST_FILTERS = [
     routed_networks_filter,
     remote_managed_ports_filter,
     ephemeral_encryption_filter,
+    virtio_sound_filter
 ]
 
 

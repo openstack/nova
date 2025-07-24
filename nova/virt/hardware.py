@@ -2916,3 +2916,27 @@ def check_shares_supported(context, instance):
         )
     ):
         raise exception.ForbiddenSharesNotConfiguredCorrectly()
+
+
+def get_sound_model(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
+    """Get the sound device model, if any.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: nova.exception.FlavorImageConflict if a value is specified in both
+        the flavor and the image, but the values do not match
+    :raises: nova.exception.Invalid if a value or combination of values is
+        invalid
+    :returns: A string containing the device model, else None.
+    """
+    model = _get_unique_flavor_image_meta('sound_model', flavor, image_meta)
+    if model and model not in fields.SoundModelType.ALL:
+        raise exception.Invalid(
+            "Invalid sound device model %(model)r. Allowed values: %(valid)s."
+            % {'model': model, 'valid': ', '.join(fields.SoundModelType.ALL)}
+        )
+
+    return model

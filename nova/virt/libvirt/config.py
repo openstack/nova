@@ -4036,3 +4036,15 @@ class LibvirtConfigGuestMetaNovaIp(LibvirtConfigObject):
         meta.set("address", str(self.address))
         meta.set("ipVersion", str(self.ip_version))
         return meta
+
+
+class LibvirtConfigGuestSound(LibvirtConfigObject):
+
+    def __init__(self, model):
+        super(LibvirtConfigGuestSound, self).__init__(root_name='sound')
+        self.model = model
+
+    def format_dom(self):
+        meta = self._new_node('sound')
+        meta.set('model', str(self.model))
+        return meta
