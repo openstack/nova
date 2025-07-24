@@ -26,11 +26,13 @@ It was removed in the 18.0.0 (Rocky) release.
 """
 
 
+@validation.validated
 class FixedIPController(wsgi.Controller):
 
     @wsgi.expected_errors((410))
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         raise exc.HTTPGone()
 
@@ -38,6 +40,7 @@ class FixedIPController(wsgi.Controller):
     @wsgi.action('reserve')
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.reserve)
+    @validation.response_body_schema(schema.reserve_response)
     def reserve(self, req, id, body):
         raise exc.HTTPGone()
 
@@ -45,5 +48,6 @@ class FixedIPController(wsgi.Controller):
     @wsgi.action('unreserve')
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.unreserve)
+    @validation.response_body_schema(schema.unreserve_response)
     def unreserve(self, req, id, body):
         raise exc.HTTPGone()

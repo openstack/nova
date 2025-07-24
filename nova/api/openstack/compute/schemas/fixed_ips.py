@@ -17,3 +17,7 @@ reserve = {}
 unreserve = {}
 
 show_query = {}
+
+show_response = {}
+reserve_response = {}
+unreserve_response = {}

@@ -25,13 +25,15 @@ It was removed in the 21.0.0 (Ussuri) release.
 """
 
 
+@validation.validated
 class NetworkAssociateActionController(wsgi.Controller):
     """Network Association API Controller."""
 
     @wsgi.action("disassociate_host")
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
-    @validation.schema(schema.disassociate)
+    @validation.schema(schema.disassociate_host)
+    @validation.response_body_schema(schema.disassociate_host_response)
     def _disassociate_host_only(self, req, id, body):
         raise exc.HTTPGone()
 
@@ -39,6 +41,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.disassociate_project)
+    @validation.response_body_schema(schema.disassociate_project_response)
     def _disassociate_project_only(self, req, id, body):
         raise exc.HTTPGone()
 
@@ -46,5 +49,6 @@ class NetworkAssociateActionController(wsgi.Controller):
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.schema(schema.associate_host)
+    @validation.response_body_schema(schema.associate_host_response)
     def _associate_host(self, req, id, body):
         raise exc.HTTPGone()

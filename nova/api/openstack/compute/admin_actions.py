@@ -42,6 +42,7 @@ class AdminActionsController(wsgi.Controller):
     @wsgi.action('resetNetwork')
     @wsgi.removed('23.0.0', _removal_reason)
     @validation.schema(schema.reset_network)
+    @validation.response_body_schema(schema.reset_network_response)
     def _reset_network(self, req, id, body):
         """(Removed) Permit admins to reset networking on a server."""
         raise exc.HTTPGone()

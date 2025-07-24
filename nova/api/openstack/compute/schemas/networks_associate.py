@@ -13,6 +13,10 @@
 # NOTE(stephenfin): These schemas are intentionally empty since these actions
 # have been removed
 
-disassociate = {}
+disassociate_host = {}
 disassociate_project = {}
 associate_host = {}
+
+disassociate_host_response = {}
+disassociate_project_response = {}
+associate_host_response = {}

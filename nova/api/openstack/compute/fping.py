@@ -28,16 +28,19 @@ It was removed in the 18.0.0 (Rocky) release.
 """
 
 
+@validation.validated
 class FpingController(wsgi.Controller):
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         raise exc.HTTPGone()
 
     @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         raise exc.HTTPGone()

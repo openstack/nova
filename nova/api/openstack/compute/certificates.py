@@ -26,12 +26,14 @@ It was removed in the 16.0.0 (Pike) release.
 """
 
 
+@validation.validated
 class CertificatesController(wsgi.Controller):
     """The x509 Certificates API controller for the OpenStack API."""
 
     @wsgi.expected_errors(410)
     @wsgi.removed('16.0.0', _removal_reason)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         """Return certificate information."""
         raise webob.exc.HTTPGone()
@@ -39,6 +41,7 @@ class CertificatesController(wsgi.Controller):
     @wsgi.expected_errors((410))
     @wsgi.removed('16.0.0', _removal_reason)
     @validation.schema(schema.create)
+    @validation.response_body_schema(schema.create_response)
     def create(self, req, body=None):
         """Create a certificate."""
         raise webob.exc.HTTPGone()

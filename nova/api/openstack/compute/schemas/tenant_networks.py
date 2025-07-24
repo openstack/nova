@@ -17,3 +17,6 @@ create = {}
 
 index_query = {}
 show_query = {}
+
+delete_response = {}
+create_response = {}

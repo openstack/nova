@@ -17,3 +17,7 @@ create = {}
 update = {}
 
 index_query = {}
+
+create_response = {}
+index_response = {}
+update_response = {}
