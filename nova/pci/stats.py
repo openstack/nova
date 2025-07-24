@@ -81,7 +81,7 @@ class PciDeviceStats(object):
     def __init__(
         self,
         numa_topology: 'objects.NUMATopology',
-        stats: 'objects.PCIDevicePoolList' = None,
+        stats: 'objects.PciDevicePoolList' = None,
         dev_filter: ty.Optional[whitelist.Whitelist] = None,
     ) -> None:
         self.numa_topology = numa_topology
