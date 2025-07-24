@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Implemented parallel live migrations for libvirt driver, which can be
+    enabled by defining ``[libvirt] live_migration_parallel_connections``
+    to a value higher than 1.  By default parallel migrations are not used to
+    preserve existing behavior. Also note that QEMU prior to 10.1.0 was not
+    able to support multifd with postcopy migrations, so enabling these two
+    features together on older QEMU versions is disallowed.

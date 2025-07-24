@@ -262,6 +262,9 @@ MIN_VFIO_PCI_VARIANT_QEMU_VERSION = (8, 2, 2)
 MIN_VIRTIO_SOUND_LIBVIRT_VERSION = (10, 4, 0)
 MIN_VIRTIO_SOUND_QEMU_VERSION = (8, 2, 0)
 
+# Minimum version of Qemu that supports multifd migration with post-copy
+MIN_MULTIFD_WITH_POSTCOPY_QEMU_VERSION = (10, 1, 0)
+
 REGISTER_IMAGE_PROPERTY_DEFAULTS = [
     'hw_machine_type',
     'hw_cdrom_bus',
@@ -814,6 +817,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InternalError(
                     _('Nova requires QEMU version %s or greater.') %
                     libvirt_utils.version_to_string(MIN_QEMU_VERSION))
+        if (CONF.libvirt.virt_type in ("qemu", "kvm") and
+                CONF.libvirt.live_migration_parallel_connections > 1 and
+                CONF.libvirt.live_migration_permit_post_copy is True):
+            if not self._host.has_min_version(
+                    hv_ver=MIN_MULTIFD_WITH_POSTCOPY_QEMU_VERSION):
+                raise exception.InternalError(
+                    _('Nova requires QEMU version %s or greater to use '
+                      'live migration parallel connections with post-copy.') %
+                    libvirt_utils.version_to_string(
+                        MIN_MULTIFD_WITH_POSTCOPY_QEMU_VERSION))
 
         if CONF.libvirt.virt_type == 'parallels':
             if not self._host.has_min_version(hv_ver=MIN_VIRTUOZZO_VERSION):
@@ -1354,6 +1367,11 @@ class LibvirtDriver(driver.ComputeDriver):
             migration_flags |= libvirt.VIR_MIGRATE_AUTO_CONVERGE
         return migration_flags
 
+    def _handle_live_migration_parallel(self, migration_flags):
+        if CONF.libvirt.live_migration_parallel_connections > 1:
+            migration_flags |= libvirt.VIR_MIGRATE_PARALLEL
+        return migration_flags
+
     def _parse_migration_flags(self):
         (live_migration_flags,
             block_migration_flags) = self._prepare_migration_flags()
@@ -1376,6 +1394,11 @@ class LibvirtDriver(driver.ComputeDriver):
         live_migration_flags = self._handle_live_migration_auto_converge(
             live_migration_flags)
         block_migration_flags = self._handle_live_migration_auto_converge(
+            block_migration_flags)
+
+        live_migration_flags = self._handle_live_migration_parallel(
+            live_migration_flags)
+        block_migration_flags = self._handle_live_migration_parallel(
             block_migration_flags)
 
         self._live_migration_flags = live_migration_flags
@@ -11173,12 +11196,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 serial_ports = list(self._get_serial_ports_from_guest(guest))
 
             LOG.debug("About to invoke the migrate API", instance=instance)
-            guest.migrate(self._live_migration_uri(dest),
-                          migrate_uri=migrate_uri,
-                          flags=migration_flags,
-                          migrate_disks=device_names,
-                          destination_xml=new_xml_str,
-                          bandwidth=CONF.libvirt.live_migration_bandwidth)
+            guest.migrate(
+                self._live_migration_uri(dest),
+                migrate_uri=migrate_uri,
+                flags=migration_flags,
+                migrate_disks=device_names,
+                destination_xml=new_xml_str,
+                bandwidth=CONF.libvirt.live_migration_bandwidth,
+                parallel=CONF.libvirt.live_migration_parallel_connections)
             LOG.debug("Migrate API has completed", instance=instance)
 
             for hostname, port in serial_ports:
