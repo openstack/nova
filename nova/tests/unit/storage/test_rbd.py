@@ -454,6 +454,7 @@ class RbdTestCase(test.NoDBTestCase):
     @mock.patch.object(rbd_utils, 'RADOSClient')
     @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
     def test_cleanup_volumes_pending_resize(self, mock_proxy, mock_client):
+        self.flags(rbd_destroy_volume_retry_interval=0.1, group='libvirt')
         self.mock_rbd.ImageBusy = FakeException
         self.mock_rbd.ImageHasSnapshots = FakeException
         instance = objects.Instance(id=1, uuid=uuids.instance,
