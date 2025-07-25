@@ -2102,6 +2102,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_guest.set_user_password.assert_called_once_with("root", "123")
 
+    @mock.patch("time.sleep", new=mock.Mock())
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
     def test_qemu_announce_self(self, mock_get_guest):
         # Enable the workaround, configure to call announce_self 3 times
