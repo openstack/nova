@@ -3355,6 +3355,8 @@ class IronicDriverConsoleTestCase(test.NoDBTestCase):
         # mock retries configs to avoid sleeps and make tests run quicker
         CONF.set_default('api_max_retries', default=1, group='ironic')
         CONF.set_default('api_retry_interval', default=0, group='ironic')
+        CONF.set_default(
+            'serial_console_state_timeout', default=1, group='ironic')
 
         self.stub_out('nova.virt.ironic.driver.IronicDriver.'
                       '_validate_instance_and_node',
