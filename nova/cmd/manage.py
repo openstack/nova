@@ -3266,9 +3266,10 @@ class ImagePropertyCommands():
         # Return the dict so we can update the instance system_metadata
         return image_properties
 
-    def _update_image_properties(self, instance, image_properties):
+    def _update_image_properties(self, ctxt, instance, image_properties):
         """Update instance image properties
 
+        :param ctxt: nova.context.RequestContext
         :param instance: The instance to update
         :param image_properties: List of image properties and values to update
         """
@@ -3292,8 +3293,13 @@ class ImagePropertyCommands():
         for image_property, value in image_properties.items():
             instance.system_metadata[f'image_{image_property}'] = value
 
+        request_spec = objects.RequestSpec.get_by_instance_uuid(
+            ctxt, instance.uuid)
+        request_spec.image = instance.image_meta
+
         # Save and return 0
         instance.save()
+        request_spec.save()
         return 0
 
     @action_description(_(
@@ -3328,7 +3334,7 @@ class ImagePropertyCommands():
                 instance = objects.Instance.get_by_uuid(
                     cctxt, instance_uuid, expected_attrs=['system_metadata'])
                 return self._update_image_properties(
-                    instance, image_properties)
+                    ctxt, instance, image_properties)
         except ValueError as e:
             print(str(e))
             return 6
