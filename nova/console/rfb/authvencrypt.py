@@ -143,13 +143,16 @@ class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
             client_cert = None
 
         try:
-            wrapped_sock = ssl.wrap_socket(
-                compute_sock,
+            ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_ctx.load_cert_chain(
                 keyfile=client_key,
-                certfile=client_cert,
-                server_side=False,
-                cert_reqs=ssl.CERT_REQUIRED,
-                ca_certs=CONF.vnc.vencrypt_ca_certs)
+                certfile=client_cert)
+            ssl_ctx.load_verify_locations(cafile=CONF.vnc.vencrypt_ca_certs)
+            ssl_ctx.verify_mode = ssl.CERT_REQUIRED
+            ssl_ctx.check_hostname = False
+            wrapped_sock = ssl_ctx.wrap_socket(
+                compute_sock,
+                server_side=False)
 
             LOG.info("VeNCrypt security handshake accepted")
             return wrapped_sock

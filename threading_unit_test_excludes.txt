@@ -1,6 +1,3 @@
-nova.tests.unit.console.rfb.test_authvencrypt.RFBAuthSchemeVeNCryptTestCase.test_security_handshake_fails_on_ssl_failure
-nova.tests.unit.console.rfb.test_authvencrypt.RFBAuthSchemeVeNCryptTestCase.test_security_handshake_without_x509
-nova.tests.unit.console.rfb.test_authvencrypt.RFBAuthSchemeVeNCryptTestCase.test_security_handshake_with_x509
 nova.tests.unit.test_context.ContextTestCase.test_scatter_gather_cells_queued_task_cancelled
 
 # To be classified
