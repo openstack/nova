@@ -199,15 +199,19 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.38: Added 'hw_firmware_stateless' field
     # Version 1.39: Added igb value to 'hw_vif_model' enum
     # Version 1.40: Added 'hw_sound_model' field
+    # Version 1.41: Added 'hw_usb_model' and 'hw_redirected_usb_ports' fields
 
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.40'
+    VERSION = '1.41'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 41):
+            primitive.pop('hw_usb_model', None)
+            primitive.pop('hw_redirected_usb_ports', None)
         if target_version < (1, 40):
             primitive.pop('hw_sound_model', None)
         if target_version < (1, 39):
@@ -500,6 +504,12 @@ class ImageMetaProps(base.NovaObject):
 
         # Name of sound device model to use.
         'hw_sound_model': fields.SoundModelField(),
+
+        # Name of the USB Controller model to use.
+        'hw_usb_model': fields.USBControllerModelField(),
+
+        # Number of USB redirection ports to add to the guest.
+        'hw_redirected_usb_ports': fields.IntegerField(),
 
         # if true download using bittorrent
         'img_bittorrent': fields.FlexibleBooleanField(),
