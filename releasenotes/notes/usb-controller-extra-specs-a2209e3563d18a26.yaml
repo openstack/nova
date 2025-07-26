@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    The ``hw:usb_model`` flavor extra spec and the matching ``hw_usb_model``
+    image property were added to allow the configuration of a USB controller
+    within an instance. This is useful with the new spice-direct console
+    type which supports passing through USB devices from the client to the
+    instance, such as a smart card reader. There is also an additional
+    ``hw:redirected_usb_ports`` / ``hw_redirected_usb_ports`` pair which
+    controls how many ports the USB controller has. This number will
+    vary based on the USB controller selected. The default remains no
+    USB controller, but when using the libvirt hypervisor driver you can
+    now also select from ``qemu_xhci`` and ``nec_xhci``.

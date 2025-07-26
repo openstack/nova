@@ -2940,3 +2940,66 @@ def get_sound_model(
         )
 
     return model
+
+
+def get_usb_model(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
+    """Get the USB controller model, if any.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: nova.exception.FlavorImageConflict if a value is specified in both
+        the flavor and the image, but the values do not match
+    :raises: nova.exception.Invalid if a value or combination of values is
+        invalid
+    :returns: A string containing the USB controller model, else None.
+    """
+    model = _get_unique_flavor_image_meta('usb_model', flavor, image_meta)
+    if model and model not in fields.USBControllerModelType.ALL:
+        raise exception.Invalid(
+            'Invalid USB controller model %(model)r. '
+            'Allowed values: %(valid)s.'
+            % {
+                'model': model,
+                'valid': ', '.join(fields.USBControllerModelType.ALL)
+            })
+
+    return model
+
+
+def get_redirected_usb_ports(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> int:
+    """Get the number of redirected USB ports, if any.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: nova.exception.FlavorImageConflict if a value is specified in both
+        the flavor and the image, but the values do not match
+    :raises: nova.exception.Invalid if a value or combination of values is
+        invalid
+    :returns: An integer number of ports, else 0.
+    """
+    count = _get_unique_flavor_image_meta(
+        'redirected_usb_ports', flavor, image_meta)
+    if not count:
+        count = 0
+    else:
+        try:
+            count = int(count)
+        except ValueError:
+            raise exception.Invalid('"%s" is not a valid integer.' % count)
+
+    if count < 0:
+        raise exception.Invalid(
+            'You cannot have a negative number of USB ports.')
+    elif count > 15:
+        # NOTE(mikal): XHCI controllers only support up to 15 ports. This isn't
+        # documented in the libvirt domain XML documentation at the moment, but
+        # is at https://www.kraxel.org/blog/2018/08/qemu-usb-tips/.
+        raise exception.Invalid('Nova only supports up to 15 USB ports.')
+
+    return count
