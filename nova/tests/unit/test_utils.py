@@ -232,6 +232,22 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         project_id = '9b9e3c847e904b0686e8ffb20e4c6381'
         self.assertEqual('', utils.generate_hostid(None, project_id))
 
+    @mock.patch('nova.utils.concurrency_mode_threading', return_value=False)
+    def test_tpool_wrap_eventlet(self, mock_concurrency_mode):
+        mock_target = mock.MagicMock()
+        target = utils.tpool_wrap(mock_target)
+
+        self.assertEqual(target._obj, mock_target)
+        mock_concurrency_mode.assert_called_once_with()
+
+    @mock.patch('nova.utils.concurrency_mode_threading', return_value=True)
+    def test_tpool_wrap_threading(self, mock_concurrency_mode):
+        mock_target = mock.MagicMock()
+        target = utils.tpool_wrap(mock_target)
+
+        self.assertEqual(target, mock_target)
+        mock_concurrency_mode.assert_called_once_with()
+
 
 class TestCachedFile(test.NoDBTestCase):
     @mock.patch('os.path.getmtime', return_value=1)

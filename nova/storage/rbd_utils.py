@@ -16,8 +16,6 @@
 
 import urllib
 
-from eventlet import tpool
-
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -28,6 +26,7 @@ from oslo_utils import excutils
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova import utils
 
 try:
     import rados
@@ -52,7 +51,7 @@ class RbdProxy(object):
     """
 
     def __init__(self):
-        self._rbd = tpool.Proxy(rbd.RBD())
+        self._rbd = utils.tpool_wrap(rbd.RBD())
 
     def __getattr__(self, attr):
         return getattr(self._rbd, attr)
@@ -72,9 +71,8 @@ class RBDVolumeProxy(object):
                  read_only=False):
         client, ioctx = driver._connect_to_rados(pool)
         try:
-            self.volume = tpool.Proxy(rbd.Image(ioctx, name,
-                                                snapshot=snapshot,
-                                                read_only=read_only))
+            self.volume = utils.tpool_wrap(
+                rbd.Image(ioctx, name, snapshot=snapshot, read_only=read_only))
         except rbd.ImageNotFound:
             with excutils.save_and_reraise_exception():
                 LOG.debug("rbd image %s does not exist", name)
