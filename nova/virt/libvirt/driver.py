@@ -48,7 +48,6 @@ import uuid
 
 from castellan import key_manager
 from copy import deepcopy
-from eventlet import tpool
 from lxml import etree
 from os_brick import encryptors
 from os_brick.encryptors import luks as luks_encryptor
@@ -192,24 +191,6 @@ VOLUME_DRIVERS = {
     'lightos': 'nova.virt.libvirt.volume.lightos.LibvirtLightOSVolumeDriver',
 }
 
-
-def patch_tpool_proxy():
-    """eventlet.tpool.Proxy doesn't work with old-style class in __str__()
-    or __repr__() calls. See bug #962840 for details.
-    We perform a monkey patch to replace those two instance methods.
-    """
-
-    def str_method(self):
-        return str(self._obj)
-
-    def repr_method(self):
-        return repr(self._obj)
-
-    tpool.Proxy.__str__ = str_method
-    tpool.Proxy.__repr__ = repr_method
-
-
-patch_tpool_proxy()
 
 # For information about when MIN_{LIBVIRT,QEMU}_VERSION and
 # NEXT_MIN_{LIBVIRT,QEMU}_VERSION can be changed, consult the following:

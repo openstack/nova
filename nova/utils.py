@@ -1290,11 +1290,11 @@ def _log_executor_stats(executor):
             executor._delayed_work.unfinished_tasks, stats)
 
 
-def tpool_wrap(target):
+def tpool_wrap(target, autowrap=()):
     """Wrap the target into an eventlet Tpool Proxy object if running
     in eventlet mode. In threading mode no wrapping is applied.
     """
     if concurrency_mode_threading():
         return target
     else:
-        return tpool.Proxy(target)
+        return tpool.Proxy(target, autowrap=autowrap)

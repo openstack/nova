@@ -2298,6 +2298,13 @@ class TestLibvirtSEVESSupported(TestLibvirtSEV):
 
 class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
     def setUp(self):
+        if utils.concurrency_mode_threading():
+            self.skipTest(
+                "In threading mode nova does not use eventlet.tpool.Proxy to "
+                "wrap the libvirt calls. This test asserts that such calls "
+                "are returning Proxy objects. So these test cases are not "
+                "valid.")
+
         super(LibvirtTpoolProxyTestCase, self).setUp()
 
         self.useFixture(nova_fixtures.LibvirtFixture())
