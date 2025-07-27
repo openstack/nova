@@ -727,3 +727,23 @@ class ProviderTree(object):
         with self.lock:
             provider = self._find_with_lock(name_or_uuid)
             return provider.update_resources(resources)
+
+    def __getstate__(self):
+        """Define how pickle and therefore deepcopy works.
+
+        Threading lock cannot be pickled so this code will ignore the field
+        during pickling. The __setstate__ call will restore the shared named
+        lock for the object.
+        """
+        state = self.__dict__.copy()
+        del state["lock"]
+        return state
+
+    def __setstate__(self, state):
+        """Define how to unpickle and therefore deepcopy works.
+
+        Threading lock cannot be pickled so __getstate__ is ignored it. Here we
+        add the same named lock to the new copy.
+        """
+        state["lock"] = lockutils.internal_lock(_LOCK_NAME)
+        self.__dict__.update(state)
