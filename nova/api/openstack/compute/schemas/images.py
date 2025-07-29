@@ -189,7 +189,7 @@ show_response = {
     'properties': {
         'image': copy.deepcopy(_image_response),
     },
-    'required': [],
+    'required': ['image'],
     'additionalProperties': False,
 }
 
@@ -213,7 +213,7 @@ index_response = {
         },
         'images_links': response_types.collection_links,
     },
-    'required': [],
+    'required': ['images'],
     'additionalProperties': False,
 }
 
