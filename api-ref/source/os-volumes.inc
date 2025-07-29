@@ -279,7 +279,7 @@ Response
 
 **Example List Snapshots**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-snapshots/snapshots-list-resp.json
    :language: javascript
 
 Create Snapshot
@@ -306,7 +306,7 @@ Request
 
 **Example Create Snapshot**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-snapshots/snapshot-create-req.json
    :language: javascript
 
 Response
@@ -325,7 +325,7 @@ Response
 
 **Example Create Snapshot**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-snapshots/snapshot-create-resp.json
    :language: javascript
 
 List Snapshots With Details
@@ -365,7 +365,7 @@ Response
 
 **Example List Snapshots With Details**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-detail-resp.json
+.. literalinclude:: ../../doc/api_samples/os-snapshots/snapshots-detail-resp.json
    :language: javascript
 
 Show Snapshot Details
@@ -404,7 +404,7 @@ Response
 
 **Example Show Snapshot Details**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-snapshots/snapshots-show-resp.json
    :language: javascript
 
 Delete Snapshot

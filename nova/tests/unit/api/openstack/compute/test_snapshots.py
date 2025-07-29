@@ -17,7 +17,7 @@ from unittest import mock
 
 import webob
 
-from nova.api.openstack.compute import volumes as volumes_v21
+from nova.api.openstack.compute import snapshots
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -27,11 +27,9 @@ FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
 class SnapshotApiTestV21(test.NoDBTestCase):
-    controller = volumes_v21.SnapshotController()
-    validation_error = exception.ValidationError
 
     def setUp(self):
-        super(SnapshotApiTestV21, self).setUp()
+        super().setUp()
         fakes.stub_out_networking(self)
         self.stub_out("nova.volume.cinder.API.create_snapshot",
                       fakes.stub_snapshot_create)
@@ -44,6 +42,7 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         self.stub_out("nova.volume.cinder.API.get_all_snapshots",
                       fakes.stub_snapshot_get_all)
         self.stub_out("nova.volume.cinder.API.get", fakes.stub_volume_get)
+        self.controller = snapshots.SnapshotController()
         self.req = fakes.HTTPRequest.blank('')
 
     def _test_snapshot_create(self, force):
@@ -70,8 +69,25 @@ class SnapshotApiTestV21(test.NoDBTestCase):
     def test_snapshot_create_invalid_force_param(self):
         body = {'snapshot': {'volume_id': '1',
                              'force': '**&&^^%%$$##@@'}}
-        self.assertRaises(self.validation_error,
+        self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=body)
+
+    def test_create_no_body(self):
+        self.assertRaises(
+            exception.ValidationError,
+            self.controller.create, self.req, body=None)
+
+    def test_create_missing_volume(self):
+        body = {'foo': {'a': 'b'}}
+        self.assertRaises(
+            exception.ValidationError,
+            self.controller.create, self.req, body=body)
+
+    def test_create_malformed_entity(self):
+        body = {'snapshot': 'string'}
+        self.assertRaises(
+            exception.ValidationError,
+            self.controller.create, self.req, body=body)
 
     def test_snapshot_delete(self):
         snapshot_id = '123'
@@ -80,7 +96,7 @@ class SnapshotApiTestV21(test.NoDBTestCase):
 
         # NOTE: on v2.1, http status code is set as wsgi_codes of API
         # method instead of status_int in a response object.
-        if isinstance(self.controller, volumes_v21.SnapshotController):
+        if isinstance(self.controller, snapshots.SnapshotController):
             status_int = delete.wsgi_codes(self.req)
         else:
             status_int = result.status_int
@@ -224,8 +240,8 @@ class SnapshotApiTestV21(test.NoDBTestCase):
 class TestSnapshotAPIDeprecation(test.NoDBTestCase):
 
     def setUp(self):
-        super(TestSnapshotAPIDeprecation, self).setUp()
-        self.controller = volumes_v21.SnapshotController()
+        super().setUp()
+        self.controller = snapshots.SnapshotController()
         self.req = fakes.HTTPRequest.blank('', version='2.36')
 
     def test_all_apis_return_not_found(self):
