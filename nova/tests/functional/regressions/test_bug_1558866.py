@@ -44,7 +44,7 @@ class TestServerGet(test.TestCase):
                  'is_public': False,
                  'container_format': 'raw',
                  'disk_format': 'raw',
-                 'size': '25165824',
+                 'size': 25165824,
                  'properties': {'kernel_id': 'nokernel',
                                 'ramdisk_id': 'nokernel',
                                 'architecture': 'x64'}}

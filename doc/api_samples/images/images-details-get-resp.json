@@ -1,7 +1,7 @@
 {
     "images": [
         {
-            "OS-EXT-IMG-SIZE:size": "25165824",
+            "OS-EXT-IMG-SIZE:size": 25165824,
             "created": "2011-01-01T01:02:03Z",
             "id": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
             "links": [
@@ -32,7 +32,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "58145823",
+            "OS-EXT-IMG-SIZE:size": 58145823,
             "created": "2011-01-01T01:02:03Z",
             "id": "a2459075-d96c-40d5-893e-577ff92e721c",
             "links": [
@@ -62,7 +62,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "83594576",
+            "OS-EXT-IMG-SIZE:size": 83594576,
             "created": "2011-01-01T01:02:03Z",
             "id": "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
             "links": [
@@ -93,7 +93,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "84035174",
+            "OS-EXT-IMG-SIZE:size": 84035174,
             "created": "2011-01-01T01:02:03Z",
             "id": "cedef40a-ed67-4d10-800e-17455edce175",
             "links": [
@@ -123,7 +123,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "26360814",
+            "OS-EXT-IMG-SIZE:size": 26360814,
             "created": "2011-01-01T01:02:03Z",
             "id": "c905cedb-7281-47e4-8a62-f26bc5fc4c77",
             "links": [
@@ -154,7 +154,7 @@
         },
         {
             "OS-DCF:diskConfig": "MANUAL",
-            "OS-EXT-IMG-SIZE:size": "49163826",
+            "OS-EXT-IMG-SIZE:size": 49163826,
             "created": "2011-01-01T01:02:03Z",
             "id": "a440c04b-79fa-479c-bed1-0b816eaec379",
             "links": [
@@ -187,7 +187,7 @@
         },
         {
             "OS-DCF:diskConfig": "AUTO",
-            "OS-EXT-IMG-SIZE:size": "74185822",
+            "OS-EXT-IMG-SIZE:size": 74185822,
             "created": "2011-01-01T01:02:03Z",
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
@@ -219,7 +219,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "25165824",
+            "OS-EXT-IMG-SIZE:size": 25165824,
             "created": "2011-01-01T01:02:03Z",
             "id": "95fad737-9325-4855-b37e-20a62268ec88",
             "links": [
@@ -248,7 +248,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "25165824",
+            "OS-EXT-IMG-SIZE:size": 25165824,
             "created": "2011-01-01T01:02:03Z",
             "id": "535426d4-5d75-44f4-9591-a2123d23c33f",
             "links": [
@@ -277,7 +277,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "25165824",
+            "OS-EXT-IMG-SIZE:size": 25165824,
             "created": "2011-01-01T01:02:03Z",
             "id": "5f7d4f5b-3781-4a4e-9046-a2a800e807e5",
             "links": [
@@ -307,7 +307,7 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "25165824",
+            "OS-EXT-IMG-SIZE:size": 25165824,
             "created": "2011-01-01T01:02:03Z",
             "id": "261b52ed-f693-4147-8f3b-d25df5efd968",
             "links": [

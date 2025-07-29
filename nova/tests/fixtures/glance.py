@@ -30,7 +30,9 @@ class GlanceFixture(fixtures.Fixture):
 
     # NOTE(justinsb): The OpenStack API can't upload an image?
     # So, make sure we've got one..
-    timestamp = datetime.datetime(2011, 1, 1, 1, 2, 3)
+    timestamp = datetime.datetime(
+        2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+    )
 
     image1 = {
         'id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
@@ -43,7 +45,7 @@ class GlanceFixture(fixtures.Fixture):
         'is_public': False,
         'container_format': 'raw',
         'disk_format': 'raw',
-        'size': '25165824',
+        'size': 25165824,
         'min_ram': 0,
         'min_disk': 0,
         'protected': False,
@@ -67,7 +69,7 @@ class GlanceFixture(fixtures.Fixture):
         'is_public': True,
         'container_format': 'ami',
         'disk_format': 'ami',
-        'size': '58145823',
+        'size': 58145823,
         'min_ram': 0,
         'min_disk': 0,
         'protected': False,
@@ -90,7 +92,7 @@ class GlanceFixture(fixtures.Fixture):
         'is_public': True,
         'container_format': 'bare',
         'disk_format': 'raw',
-        'size': '83594576',
+        'size': 83594576,
         'min_ram': 0,
         'min_disk': 0,
         'protected': False,
@@ -114,7 +116,7 @@ class GlanceFixture(fixtures.Fixture):
         'is_public': True,
         'container_format': 'ami',
         'disk_format': 'ami',
-        'size': '84035174',
+        'size': 84035174,
         'min_ram': 0,
         'min_disk': 0,
         'protected': False,
@@ -137,7 +139,7 @@ class GlanceFixture(fixtures.Fixture):
         'is_public': True,
         'container_format': 'ami',
         'disk_format': 'ami',
-        'size': '26360814',
+        'size': 26360814,
         'min_ram': 0,
         'min_disk': 0,
         'protected': False,
@@ -160,7 +162,7 @@ class GlanceFixture(fixtures.Fixture):
         'is_public': False,
         'container_format': 'ova',
         'disk_format': 'vhd',
-        'size': '49163826',
+        'size': 49163826,
         'min_ram': 0,
         'min_disk': 0,
         'protected': False,
@@ -185,7 +187,7 @@ class GlanceFixture(fixtures.Fixture):
         'is_public': False,
         'container_format': 'ova',
         'disk_format': 'vhd',
-        'size': '74185822',
+        'size': 74185822,
         'min_ram': 0,
         'min_disk': 0,
         'protected': False,
@@ -309,7 +311,7 @@ class GlanceFixture(fixtures.Fixture):
         # by the caller. This is needed to avoid a KeyError in the
         # image-size API.
         if 'size' not in image_meta:
-            image_meta['size'] = None
+            image_meta['size'] = 74185822
 
         # Similarly, Glance provides the status on the image once it's created
         # and this is checked in the compute API when booting a server from
@@ -324,6 +326,13 @@ class GlanceFixture(fixtures.Fixture):
             # resource in glance but we have to fake this out for the images
             # proxy API by throwing it into the generic "properties" dict.
             image_meta.get('properties', {})['owner'] = context.project_id
+
+        # Glance would always populate these fields, so we need to ensure we do
+        # the same
+        if not image_meta.get('created_at'):
+            image_meta['created_at'] = self.timestamp
+        if not image_meta.get('updated_at'):
+            image_meta['updated_at'] = self.timestamp
 
         self.images[image_id] = image_meta
 

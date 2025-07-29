@@ -12,6 +12,8 @@
 
 import datetime
 
+from oslo_utils import uuidutils
+
 # nova.image.glance._translate_from_glance() returns datetime
 # objects, not strings.
 NOW_DATE = datetime.datetime(2010, 10, 11, 10, 30, 22)
@@ -22,24 +24,21 @@ def get_image_fixtures():
 
     Returns a set of dicts representing images/snapshots of varying statuses
     that would be returned from a call to
-    `glanceclient.client.Client.images.list`. The IDs of the images returned
-    start at 123 and go to 131, with the following brief summary of image
-    attributes:
+    `glanceclient.client.Client.images.list`. The IDs of the images are random,
+    with the following brief summary of image attributes:
 
-    |      ID          Type            Status          Notes
+    |      #         Type            Status          Notes
     |      ----------------------------------------------------------
-    |      123         Public image    active
-    |      124         Snapshot        queued
-    |      125         Snapshot        saving
-    |      126         Snapshot        active
-    |      127         Snapshot        killed
-    |      128         Snapshot        deleted
-    |      129         Snapshot        pending_delete
-    |      130         Public image    active          Has no name
+    |      0         Public image    active
+    |      1         Snapshot        queued
+    |      2         Snapshot        saving
+    |      3         Snapshot        active
+    |      4         Snapshot        killed
+    |      5         Snapshot        deleted
+    |      6         Snapshot        pending_delete
+    |      7         Public image    active          Has no name
 
     """
-
-    image_id = 123
 
     fixtures = []
 
@@ -49,10 +48,10 @@ def get_image_fixtures():
         fixtures.append(kwargs)
 
     # Public image
+    image_id = uuidutils.generate_uuid()
     add_fixture(id=str(image_id), name='public image', is_public=True,
                 status='active', properties={'key1': 'value1'},
                 min_ram="128", min_disk="10", size=25165824)
-    image_id += 1
 
     # Snapshot for User 1
     uuid = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'
@@ -62,17 +61,18 @@ def get_image_fixtures():
         deleted = False if status != 'deleted' else True
         deleted_at = NOW_DATE if deleted else None
 
+        image_id = uuidutils.generate_uuid()
         add_fixture(id=str(image_id), name='%s snapshot' % status,
                     is_public=False, status=status,
                     properties=snapshot_properties, size=25165824,
                     deleted=deleted, deleted_at=deleted_at)
-        image_id += 1
 
     # Image without a name
+    image_id = uuidutils.generate_uuid()
     add_fixture(id=str(image_id), is_public=True, status='active',
                 properties={}, size=25165824)
     # Image for permission tests
-    image_id += 1
+    image_id = uuidutils.generate_uuid()
     add_fixture(id=str(image_id), is_public=True, status='active',
                 properties={}, owner='authorized_fake', size=25165824)
 

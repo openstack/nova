@@ -34,7 +34,9 @@ class TestNonBootableImageMeta(integrated_helpers._IntegratedTestBase):
         super().setUp()
 
         # Add an image to the Glance fixture with cinder_encryption_key set
-        timestamp = datetime.datetime(2011, 1, 1, 1, 2, 3)
+        timestamp = datetime.datetime(
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+        )
         cinder_encrypted_image = {
             'id': uuids.cinder_encrypted_image_uuid,
             'name': 'cinder_encryption_key_image',
@@ -46,7 +48,7 @@ class TestNonBootableImageMeta(integrated_helpers._IntegratedTestBase):
             'is_public': False,
             'container_format': 'ova',
             'disk_format': 'vhd',
-            'size': '74185822',
+            'size': 74185822,
             'min_ram': 0,
             'min_disk': 0,
             'protected': False,
