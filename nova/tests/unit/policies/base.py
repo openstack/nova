@@ -74,6 +74,7 @@ class BasePolicyTest(test.TestCase):
         self.admin_project_id = uuids.admin_project_id
         self.project_id = uuids.project_id
         self.project_id_other = uuids.project_id_other
+        self.project_id_unused = uuids.project_id_random
 
         # all context are with implied roles.
         self.legacy_admin_context = nova_context.RequestContext(

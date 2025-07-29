@@ -19,7 +19,7 @@ from oslo_utils import strutils
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.schemas import quota_sets
+from nova.api.openstack.compute.schemas import quota_sets as schema
 from nova.api.openstack import identity
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -31,32 +31,35 @@ from nova import objects
 from nova.policies import quota_sets as qs_policies
 from nova import quota
 
-
 CONF = nova.conf.CONF
 QUOTAS = quota.QUOTAS
 
-FILTERED_QUOTAS_2_36 = ["fixed_ips", "floating_ips",
-                        "security_group_rules", "security_groups"]
+FILTERED_QUOTAS_v236 = [
+    'fixed_ips', 'floating_ips', 'security_group_rules', 'security_groups'
+]
 
-FILTERED_QUOTAS_2_57 = list(FILTERED_QUOTAS_2_36)
-FILTERED_QUOTAS_2_57.extend(['injected_files', 'injected_file_content_bytes',
-                             'injected_file_path_bytes'])
+FILTERED_QUOTAS_v257 = list(FILTERED_QUOTAS_v236)
+FILTERED_QUOTAS_v257.extend([
+    'injected_files',
+    'injected_file_content_bytes',
+    'injected_file_path_bytes'
+])
 
 
+@validation.validated
 class QuotaSetsController(wsgi.Controller):
 
     def _format_quota_set(self, project_id, quota_set, filtered_quotas):
         """Convert the quota object to a result dict."""
+        result = {}
         if project_id:
-            result = dict(id=str(project_id))
-        else:
-            result = {}
+            result['id'] = str(project_id)
 
         for resource in QUOTAS.resources:
-            if (resource not in filtered_quotas and
-                    resource in quota_set):
+            if resource not in filtered_quotas and resource in quota_set:
                 result[resource] = quota_set[resource]
-        return dict(quota_set=result)
+
+        return {'quota_set': result}
 
     def _validate_quota_limit(self, resource, limit, minimum, maximum):
         def conv_inf(value):
@@ -68,6 +71,7 @@ class QuotaSetsController(wsgi.Controller):
                      "reserved %(minimum)s.") %
                    {'limit': limit, 'resource': resource, 'minimum': minimum})
             raise webob.exc.HTTPBadRequest(explanation=msg)
+
         if conv_inf(limit) > conv_inf(maximum):
             msg = (_("Quota limit %(limit)s for %(resource)s must be "
                      "less than or equal to %(maximum)s.") %
@@ -104,60 +108,59 @@ class QuotaSetsController(wsgi.Controller):
 
     def _get_filtered_quotas(self, req):
         if api_version_request.is_supported(req, '2.57'):
-            return FILTERED_QUOTAS_2_57
+            return FILTERED_QUOTAS_v257
         elif api_version_request.is_supported(req, '2.36'):
-            return FILTERED_QUOTAS_2_36
+            return FILTERED_QUOTAS_v236
         else:
             return []
 
     @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
-    @validation.query_schema(quota_sets.show_query_v275, '2.75')
+    @validation.query_schema(schema.show_query, '2.0', '2.74')
+    @validation.query_schema(schema.show_query_v275, '2.75')
+    @validation.response_body_schema(schema.show_response, '2.0', '2.35')
+    @validation.response_body_schema(schema.show_response_v236, '2.36', '2.56')
+    @validation.response_body_schema(schema.show_response_v257, '2.57')
     def show(self, req, id):
-        filtered_quotas = self._get_filtered_quotas(req)
-        return self._show(req, id, filtered_quotas)
-
-    def _show(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'show', {'project_id': id})
         identity.verify_project_id(context, id)
 
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
+        filtered_quotas = self._get_filtered_quotas(req)
         return self._format_quota_set(
             id,
             self._get_quotas(context, id, user_id=user_id),
             filtered_quotas=filtered_quotas)
 
     @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
-    @validation.query_schema(quota_sets.show_query_v275, '2.75')
+    @validation.query_schema(schema.detail_query, '2.0', '2.74')
+    @validation.query_schema(schema.detail_query_v275, '2.75')
+    @validation.response_body_schema(schema.detail_response, '2.0', '2.35')
+    @validation.response_body_schema(schema.detail_response_v236, '2.36', '2.56')  # noqa: E501
+    @validation.response_body_schema(schema.detail_response_v257, '2.57')
     def detail(self, req, id):
-        filtered_quotas = self._get_filtered_quotas(req)
-        return self._detail(req, id, filtered_quotas)
-
-    def _detail(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'detail', {'project_id': id})
         identity.verify_project_id(context, id)
 
         user_id = req.GET.get('user_id', None)
+        filtered_quotas = self._get_filtered_quotas(req)
         return self._format_quota_set(
             id,
             self._get_quotas(context, id, user_id=user_id, usages=True),
             filtered_quotas=filtered_quotas)
 
     @wsgi.expected_errors(400)
-    @validation.schema(quota_sets.update, '2.0', '2.35')
-    @validation.schema(quota_sets.update_v236, '2.36', '2.56')
-    @validation.schema(quota_sets.update_v257, '2.57')
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
-    @validation.query_schema(quota_sets.show_query_v275, '2.75')
+    @validation.schema(schema.update, '2.0', '2.35')
+    @validation.schema(schema.update_v236, '2.36', '2.56')
+    @validation.schema(schema.update_v257, '2.57')
+    @validation.query_schema(schema.update_query, '2.0', '2.74')
+    @validation.query_schema(schema.update_query_v275, '2.75')
+    @validation.response_body_schema(schema.update_response, '2.0', '2.35')
+    @validation.response_body_schema(schema.update_response_v236, '2.36', '2.56')  # noqa: E501
+    @validation.response_body_schema(schema.update_response_v257, '2.57')
     def update(self, req, id, body):
-        filtered_quotas = self._get_filtered_quotas(req)
-        return self._update(req, id, body, filtered_quotas)
-
-    def _update(self, req, id, body, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'update', {'project_id': id})
         identity.verify_project_id(context, id)
@@ -165,6 +168,7 @@ class QuotaSetsController(wsgi.Controller):
         project_id = id
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
+        filtered_quotas = self._get_filtered_quotas(req)
 
         quota_set = body['quota_set']
 
@@ -221,27 +225,28 @@ class QuotaSetsController(wsgi.Controller):
 
     @wsgi.api_version('2.0')
     @wsgi.expected_errors(400)
-    @validation.query_schema(quota_sets.defaults_query)
+    @validation.query_schema(schema.defaults_query)
+    @validation.response_body_schema(schema.defaults_response, '2.0', '2.35')
+    @validation.response_body_schema(schema.defaults_response_v236, '2.36', '2.56')  # noqa: E501
+    @validation.response_body_schema(schema.defaults_response_v257, '2.57')
     def defaults(self, req, id):
-        filtered_quotas = self._get_filtered_quotas(req)
-        return self._defaults(req, id, filtered_quotas)
-
-    def _defaults(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'defaults', {'project_id': id})
         identity.verify_project_id(context, id)
 
         values = QUOTAS.get_defaults(context)
-        return self._format_quota_set(id, values,
-            filtered_quotas=filtered_quotas)
+        filtered_quotas = self._get_filtered_quotas(req)
+        return self._format_quota_set(
+            id, values, filtered_quotas=filtered_quotas)
 
     # TODO(oomichi): Here should be 204(No Content) instead of 202 by v2.1
     # +microversions because the resource quota-set has been deleted completely
     # when returning a response.
     @wsgi.expected_errors(())
-    @validation.query_schema(quota_sets.show_query_v275, '2.75')
-    @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     @wsgi.response(202)
+    @validation.query_schema(schema.delete_query, '2.0', '2.74')
+    @validation.query_schema(schema.delete_query_v275, '2.75')
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, id):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'delete', {'project_id': id})

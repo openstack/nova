@@ -20,7 +20,7 @@ update = {
     'properties': {
         'quota_class_set': {
             'type': 'object',
-            'properties': quota_sets.quota_resources,
+            'properties': quota_sets._quota_resources,
             'additionalProperties': False,
         },
     },
