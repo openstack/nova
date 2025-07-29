@@ -15,7 +15,6 @@
 import collections
 from unittest import mock
 
-import eventlet.timeout
 import os_traits
 from oslo_utils.fixture import uuidsentinel as uuids
 
@@ -102,7 +101,7 @@ class FakeCompute(object):
             self, context, rp_uuid, traits, generation=None):
         self.provider_traits[rp_uuid] = traits
 
-    def _event_waiter(self):
+    def _event_waiter(self, *args, **kwargs):
         event = mock.MagicMock()
         event.status = 'completed'
         return event
@@ -151,13 +150,13 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         for event in self.compute._events:
             self.assertEqual('instance', event.instance)
             self.assertIn((event.name, event.tag), events.keys())
-            event.wait.assert_called_once_with()
+            event.wait.assert_called_once()
         mock_log.debug.assert_called_once_with(
             'Instance event wait completed in %i seconds for %s',
             mock.ANY, 'event1,event2', instance=event.instance)
 
     def test_wait_for_instance_event_failed(self):
-        def _failer():
+        def _failer(*args, **kwargs):
             event = mock.MagicMock()
             event.status = 'failed'
             return event
@@ -171,7 +170,7 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         self.assertRaises(exception.NovaException, do_test)
 
     def test_wait_for_instance_event_failed_callback(self):
-        def _failer():
+        def _failer(*args, **kwargs):
             event = mock.MagicMock()
             event.status = 'failed'
             return event
@@ -198,14 +197,17 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         mock_log = mock.Mock()
 
         @mock.patch.object(compute_manager, 'LOG', new=mock_log)
-        @mock.patch.object(self.virtapi._compute, '_event_waiter',
-                           side_effect=eventlet.timeout.Timeout())
+        @mock.patch.object(
+            self.virtapi._compute,
+            '_event_waiter',
+            return_value=compute_manager.
+                ThreadingEventWithResult.FAILED_SENTINEL)
         def do_test(mock_waiter):
             with self.virtapi.wait_for_instance_event(
                     instance, [('foo', 'bar')]):
                 pass
 
-        self.assertRaises(eventlet.timeout.Timeout, do_test)
+        self.assertRaises(exception.InstanceEventTimeout, do_test)
         mock_log.warning.assert_called_once_with(
             'Timeout waiting for %(events)s for instance with vm_state '
             '%(vm_state)s and task_state %(task_state)s. '
@@ -238,7 +240,7 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                 event = mock.Mock(status="completed")
                 return event
             else:
-                raise eventlet.timeout.Timeout()
+                return compute_manager.ThreadingEventWithResult.FAILED_SENTINEL
 
         @mock.patch.object(compute_manager, 'LOG', new=mock_log)
         @mock.patch.object(self.virtapi._compute, '_event_waiter',
@@ -248,7 +250,7 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                     instance, [('foo', 'bar'), ('missing', 'event')]):
                 pass
 
-        self.assertRaises(eventlet.timeout.Timeout, do_test)
+        self.assertRaises(exception.InstanceEventTimeout, do_test)
         mock_log.warning.assert_called_once_with(
             'Timeout waiting for %(events)s for instance with vm_state '
             '%(vm_state)s and task_state %(task_state)s. '
@@ -282,7 +284,7 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                 event = mock.Mock(status="completed")
                 return event
             else:
-                raise eventlet.timeout.Timeout()
+                return compute_manager.ThreadingEventWithResult.FAILED_SENTINEL
 
         def fake_prepare_for_instance_event(instance, name, tag):
             m = mock.MagicMock()
@@ -292,9 +294,9 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
             m.event_name = '%s-%s' % (name, tag)
             m.wait.side_effect = fake_event_waiter
             if name == 'received-but-not-waited':
-                m.ready.return_value = True
+                m.is_set.return_value = True
             if name == 'missing-but-not-waited':
-                m.ready.return_value = False
+                m.is_set.return_value = False
             return m
 
         self.virtapi._compute.instance_events.prepare_for_instance_event.\
@@ -314,7 +316,7 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
             ):
                 self.virtapi.exit_wait_early([('early', 'event')])
 
-        self.assertRaises(eventlet.timeout.Timeout, do_test)
+        self.assertRaises(exception.InstanceEventTimeout, do_test)
         mock_log.warning.assert_called_once_with(
             'Timeout waiting for %(events)s for instance with vm_state '
             '%(vm_state)s and task_state %(task_state)s. '
@@ -353,7 +355,7 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         self.assertEqual(2, len(self.compute._events))
         for event in self.compute._events:
             if event.tag == 'bar':
-                event.wait.assert_called_once_with()
+                event.wait.assert_called_once()
             else:
                 event.wait.assert_not_called()
 

@@ -40,8 +40,6 @@ import typing as ty
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
-import eventlet.event
-import eventlet.timeout
 import futurist
 from keystoneauth1 import exceptions as keystone_exception
 from openstack import exceptions as sdk_exc
@@ -239,9 +237,34 @@ def delete_image_on_error(function):
     return decorated_function
 
 
+class ThreadingEventWithResult(threading.Event):
+
+    UNSET_SENTINEL = object()
+    FAILED_SENTINEL = object()
+
+    def __init__(self):
+        super().__init__()
+        self._result = self.UNSET_SENTINEL
+        self._lock = threading.Lock()
+
+    def set(self, result=None):
+        with self._lock:
+            if super().is_set() and result != self._result:
+                raise ValueError('Cannot change the result once it is set')
+            self._result = result
+            super().set()
+
+    def wait(self, timeout=None):
+        succeeded = super().wait(timeout)
+        if succeeded:
+            return self._result
+        else:
+            return self.FAILED_SENTINEL
+
+
 # Each collection of events is a dict of eventlet Events keyed by a tuple of
 # event name and associated tag
-_InstanceEvents = ty.Dict[ty.Tuple[str, str], eventlet.event.Event]
+_InstanceEvents = ty.Dict[ty.Tuple[str, str], ThreadingEventWithResult]
 
 
 class InstanceEvents(object):
@@ -257,12 +280,12 @@ class InstanceEvents(object):
         instance: 'objects.Instance',
         name: str,
         tag: str,
-    ) -> eventlet.event.Event:
+    ) -> ThreadingEventWithResult:
         """Prepare to receive an event for an instance.
 
         This will register an event for the given instance that we will
         wait on later. This should be called before initiating whatever
-        action will trigger the event. The resulting eventlet.event.Event
+        action will trigger the event. The resulting ThreadingEventWithResult
         object should be wait()'d on to ensure completion.
 
         :param instance: the instance for which the event will be generated
@@ -280,7 +303,7 @@ class InstanceEvents(object):
 
             instance_events = self._events.setdefault(instance.uuid, {})
             return instance_events.setdefault((name, tag),
-                                              eventlet.event.Event())
+                                              ThreadingEventWithResult())
         LOG.debug('Preparing to wait for external event %(name)s-%(tag)s',
                   {'name': name, 'tag': tag}, instance=instance)
         return _create_or_get_event()
@@ -294,7 +317,7 @@ class InstanceEvents(object):
         :param instance: the instance for which the event was generated
         :param event: the nova.objects.external_event.InstanceExternalEvent
                       that describes the event
-        :returns: the eventlet.event.Event object on which the waiters
+        :returns: the ThreadingEventWithResult object on which the waiters
                   are blocked
         """
         no_events_sentinel = object()
@@ -344,7 +367,7 @@ class InstanceEvents(object):
         and return them (indexed by event name).
 
         :param instance: the instance for which events should be purged
-        :returns: a dictionary of {event_name: eventlet.event.Event}
+        :returns: a dictionary of {event_name: ThreadingEventWithResult}
         """
         @utils.synchronized(self._lock_name(instance))
         def _clear_events():
@@ -378,7 +401,7 @@ class InstanceEvents(object):
                     instance_uuid=instance_uuid,
                     name=name, status='failed',
                     tag=tag, data={})
-                eventlet_event.send(event)
+                eventlet_event.set(event)
 
 
 class ComputeVirtAPI(virtapi.VirtAPI):
@@ -414,7 +437,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         TIMED_OUT = "timed out"
         RECEIVED_NOT_PROCESSED = "received but not processed"
 
-        def __init__(self, name: str, event: eventlet.event.Event) -> None:
+        def __init__(self, name: str, event: ThreadingEventWithResult) -> None:
             self.name = name
             self.event = event
             self.status = self.EXPECTED
@@ -427,19 +450,17 @@ class ComputeVirtAPI(virtapi.VirtAPI):
             return self.status == self.RECEIVED_EARLY
 
         def _update_status_no_wait(self):
-            if self.status == self.EXPECTED and self.event.ready():
+            if self.status == self.EXPECTED and self.event.is_set():
                 self.status = self.RECEIVED_NOT_PROCESSED
 
-        def wait(self) -> 'objects.InstanceExternalEvent':
+        def wait(self, timeout) -> 'objects.InstanceExternalEvent':
             self.status = self.WAITING
-            try:
-                with timeutils.StopWatch() as sw:
-                    instance_event = self.event.wait()
-            except eventlet.timeout.Timeout:
+            with timeutils.StopWatch() as sw:
+                instance_event = self.event.wait(timeout)
+            if instance_event is ThreadingEventWithResult.FAILED_SENTINEL:
                 self.status = self.TIMED_OUT
                 self.wait_time = sw.elapsed()
-
-                raise
+                raise exception.InstanceEventTimeout()
 
             self.status = self.RECEIVED
             self.wait_time = sw.elapsed()
@@ -464,14 +485,18 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         instance: 'objects.Instance',
         events: dict,
         error_callback: ty.Callable,
+        timeout: int,
     ) -> None:
+        deadline = time.monotonic() + timeout
         for event_name, event in events.items():
             if event.is_received_early():
                 continue
-            else:
-                actual_event = event.wait()
-                if actual_event.status == 'completed':
-                    continue
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0:
+                raise exception.InstanceEventTimeout()
+            actual_event = event.wait(timeout=remaining_time)
+            if actual_event.status == 'completed':
+                continue
             # If we get here, we have an event that was not completed,
             # nor skipped via exit_wait_early(). Decide whether to
             # keep waiting by calling the error_callback() hook.
@@ -488,12 +513,12 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         provided event_names, yield, and then wait for all the scheduled
         events to complete.
 
-        Note that this uses an eventlet.timeout.Timeout to bound the
+        Note that this uses an InstanceEventTimeout to bound the
         operation, so callers should be prepared to catch that
         failure and handle that situation appropriately.
 
         If the event is not received by the specified timeout deadline,
-        eventlet.timeout.Timeout is raised.
+        InstanceEventTimeout is raised.
 
         If the event is received but did not have a 'completed'
         status, a NovaException is raised.  If an error_callback is
@@ -556,10 +581,9 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         sw = timeutils.StopWatch()
         sw.start()
         try:
-            with eventlet.timeout.Timeout(deadline):
-                self._wait_for_instance_events(
-                    instance, events, error_callback)
-        except eventlet.timeout.Timeout:
+            self._wait_for_instance_events(
+                    instance, events, error_callback, timeout=deadline)
+        except exception.InstanceEventTimeout:
             LOG.warning(
                 'Timeout waiting for %(events)s for instance with '
                 'vm_state %(vm_state)s and task_state %(task_state)s. '
@@ -2830,7 +2854,7 @@ class ComputeManager(manager.Manager):
                     arqs, requested_networks)
                 LOG.debug("ARQs for spec:%s, ARQs for network:%s",
                     spec_arqs, network_arqs)
-        except (Exception, eventlet.timeout.Timeout) as exc:
+        except (Exception, exception.InstanceEventTimeout) as exc:
             LOG.exception(exc)
             # ARQs created for instance or ports.
             # The port binding isn't done yet.
@@ -3724,7 +3748,7 @@ class ComputeManager(manager.Manager):
                 try:
                     accel_info = self._get_bound_arq_resources(
                         context, instance, accel_uuids or [])
-                except (Exception, eventlet.timeout.Timeout) as exc:
+                except (Exception, exception.InstanceEventTimeout) as exc:
                     LOG.exception(exc)
                     self._build_resources_cleanup(instance, network_info)
                     msg = _('Failure getting accelerator resources.')
@@ -7681,7 +7705,7 @@ class ComputeManager(manager.Manager):
                 try:
                     accel_info = self._get_bound_arq_resources(
                         context, instance, accel_uuids)
-                except (Exception, eventlet.timeout.Timeout) as exc:
+                except (Exception, exception.InstanceEventTimeout) as exc:
                     LOG.exception('Failure getting accelerator requests '
                                   'with the exception: %s', exc,
                                   instance=instance)
@@ -9542,7 +9566,7 @@ class ComputeManager(manager.Manager):
                 self._cleanup_pre_live_migration(
                     context, dest, instance, migration, migrate_data,
                     source_bdms)
-        except eventlet.timeout.Timeout:
+        except exception.InstanceEventTimeout:
             # We only get here if wait_for_vif_plugged is True which means
             # live_migration_wait_for_vif_plug=True on the destination host.
             msg = (
@@ -11535,7 +11559,7 @@ class ComputeManager(manager.Manager):
         if _event:
             LOG.debug('Processing event %(event)s',
                       {'event': event.key}, instance=instance)
-            _event.send(event)
+            _event.set(event)
         else:
             # If it's a network-vif-unplugged event and the instance is being
             # deleted or live migrated then we don't need to make this a

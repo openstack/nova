@@ -82,7 +82,7 @@ class ThreadController(object):
         # The last epoch we waited at
         self.last_epoch = 0
 
-        self.start_event = eventlet.event.Event()
+        self.start_event = threading.Event()
         self.running = False
         self.complete = False
 
@@ -107,7 +107,7 @@ class ThreadController(object):
     def _ensure_running(self):
         if not self.running:
             self.running = True
-            self.start_event.send()
+            self.start_event.set()
 
     def waitpoint(self, name):
         """Called by the test thread. Wait at a waitpoint called name"""
