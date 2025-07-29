@@ -737,7 +737,7 @@ def spawn_on(executor, func, *args, **kwargs) -> futurist.Future:
     the store on the new thread.  This allows for continuity in logging the
     context when using this method to spawn a new thread.
     """
-
+    _log_executor_stats(executor)
     if _executor_is_full(executor):
         LOG.warning(
             "The %s pool does not have free threads so the task %s will be "
@@ -1336,3 +1336,36 @@ def destroy_scatter_gather_executor():
             SCATTER_GATHER_EXECUTOR.name)
 
     SCATTER_GATHER_EXECUTOR = None
+
+
+def _log_executor_stats(executor):
+    if CONF.thread_pool_statistic_period < 0:
+        return
+
+    last_stats = getattr(executor, "last_stats", None)
+    name = getattr(executor, "name", "unknown")
+
+    allowed_stat_age = time.monotonic() - CONF.thread_pool_statistic_period
+    if last_stats and last_stats > allowed_stat_age:
+        return
+
+    executor.last_stats = time.monotonic()
+
+    stats: futurist.ExecutorStatistics = executor.statistics
+
+    if isinstance(executor, futurist.ThreadPoolExecutor):
+        LOG.debug(
+            "State of %s ThreadPoolExecutor when submitting a new task: "
+            "max_workers: %d, workers: %d, idle workers: %d, queued work: %d, "
+            "stats: %s",
+            name,
+            executor._max_workers, len(executor._workers),
+            len([w for w in executor._workers if w.idle]),
+            executor._work_queue.qsize(), stats)
+    elif isinstance(executor, futurist.GreenThreadPoolExecutor):
+        LOG.debug(
+            "State of %s GreenThreadPoolExecutor when submitting a new task: "
+            "workers: %d, max_workers: %d, work queued length: %d, stats: %s",
+            name,
+            len(executor._pool.coroutines_running), executor._pool.size,
+            executor._delayed_work.unfinished_tasks, stats)
