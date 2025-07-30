@@ -1,35 +1,26 @@
 ---
 features:
   - |
-    The Nova policies introduce ``manager`` default roles provided by
-    keystone. A ``project_manager`` denoted by someone with the ``manager``
-    role on a project. It is intended to perform more privileged operations
-    than ``project_member`` on its project resources. To avoid any change in
-    ``admin`` permissions, Nova use ``PROJECT_MANAGER_OR_ADMIN`` as default.
-
-    Currently, nova supports:
+    Nova now supports a new default role ``manager``. This role is part of the
+    standard role hierarchy supported by keystone. A new persona, the
+    ``project_manager``, is denoted by someone with the ``manager`` role on a
+    specific project. The ``project_manager`` persona  is intended to perform
+    more privileged operations than a ``project_member`` while granting less
+    access than the global admin role. This brings the total set of personas
+    currently supported by Nova to:
 
     * ``admin``
     * ``project_manager``
     * ``project_member``
     * ``project_reader``
 
-    Currently, scope checks and new defaults are enabled by default. It is
-    recommended to use new defaults but if your deployment need more time
-    then you can disable them by switching the below config option in
-    ``nova.conf`` file.:
-
-      [oslo_policy]
-      enforce_new_defaults=False
-      enforce_scope=False
-
-    Please refer `Policy New Defaults`_ for detail about policy new defaults.
-
-    In this release, the below APIs policy are default to
+    To avoid any change in ``admin`` permissions, Nova uses
+    ``PROJECT_MANAGER_OR_ADMIN`` as a default where manager access is granted.
+    In this release, the below APIs policy are newly defaulted to
     ``PROJECT_MANAGER_OR_ADMIN``:
 
-    - ``os_compute_api:os-migrate-server:migrate`` ("Cold migrate a server
-      without specifying a host")
+    - ``os_compute_api:os-migrate-server:migrate`` (Cold migrate a server
+      without specifying a host)
     - ``os_compute_api:os-migrate-server:migrate_live`` (live migrate server
       without specifying host)
     - ``os_compute_api:os-migrations:index`` (List migrations without host
@@ -41,17 +32,18 @@ features:
     - ``os_compute_api:servers:migrations:delete`` (Delete(Abort) an
       in-progress live migration)
 
-    To introduced ``project_manager`` in migration APIs, we need to add a few
-    new policies.
+    In addition, a number of new, more granular policies are introduced to
+    allow us to use the ``project_manager`` persona in migration APIs:
 
-    * Live migrate:
+    * Live migration:
 
-      - Existing policy is used when live migrate server without specifying
+      - Existing policy is used when live migrating server without specifying
         host:
 
         - ``os_compute_api:os-migrate-server:migrate_live`` (live migrate
           server without specifying host)
         - Default: ``PROJECT_MANAGER_OR_ADMIN``
+
       - New policy is used when live migrate server to a specific host:
 
         - ``os_compute_api:os-migrate-server:migrate_live:host`` (live migrate
@@ -65,6 +57,7 @@ features:
         - ``os_compute_api:servers:migrations:index`` (Lists in-progress live
            migrations for a given server)
         - Default: ``PROJECT_MANAGER_OR_ADMIN``
+
       - New policy is used to host info in live migrations list:
 
         - ``os_compute_api:servers:migrations:index:host`` (Lists in-progress
@@ -78,6 +71,7 @@ features:
         - ``os_compute_api:os-migrations:index`` (List migrations without
           host info)
         - Default: ``PROJECT_MANAGER_OR_ADMIN``
+
       - New policy is used to host info in live migrations list:
 
         - ``os_compute_api:os-migrations:index:all_projects`` (List migrations
@@ -86,6 +80,18 @@ features:
         - ``os_compute_api:os-migrations:index:host`` (List migrations
           with host info)
         - Default: ``ADMIN``
+
+    Scope checks and new defaults are enabled by default and it is recommended
+    to use new defaults. However, if your deployment needs more time then you
+    can disable them by switching the below config option in ``nova.conf`` file.:
+
+      [oslo_policy]
+      enforce_new_defaults=False
+      enforce_scope=False
+
+    Please refer `Policy New Defaults`_ for detail about policy new defaults.
+
+    .. _Policy New Defaults: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html
 upgrade:
   - |
     New policies are added to the live migration APIs with the same default.
@@ -98,11 +104,10 @@ upgrade:
       - ``os_compute_api:os-migrate-server:migrate_live``
       - ``os_compute_api:servers:migrations::index``
       - ``os_compute_api:os-migrations:index``
+
     - New policy:
 
       - ``os_compute_api:os-migrate-server:migrate_live:host``
       - ``os_compute_api:servers:migrations:index:host``
       - ``os_compute_api:os-migrations:index:all_projects``
       - ``os_compute_api:os-migrations:index:host``
-
-    .. _Policy New Defaults: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html
