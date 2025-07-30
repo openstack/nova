@@ -38,7 +38,8 @@ class MigrationsController(wsgi.Controller):
         self.compute_api = compute.API()
 
     def _output(self, req, migrations_obj, add_link=False,
-                add_uuid=False, add_user_project=False):
+                add_uuid=False, add_user_project=False,
+                add_host=True):
         """Returns the desired output of the API from an object.
 
         From a MigrationsList's object this method returns a list of
@@ -71,6 +72,25 @@ class MigrationsController(wsgi.Controller):
                     del obj['user_id']
                 if 'project_id' in obj:
                     del obj['project_id']
+            # TODO(gmaan): This API (and list/show server migrations) does not
+            # return the 'server_host', which is strange and not consistent
+            # with the info returned for the destination host. This needs to
+            # be fixed with microversion bump. When we do that, there are some
+            # more improvement can be done in this and list/show server
+            # migrations API. It makes sense to do all those improvements
+            # in a single microversion:
+            # - Non-admin user can get their own project migrations if the
+            # policy does not permit listing all projects migrations (for more
+            # details, refer to the comment in _index() method).
+            # - Check the comments in the file
+            # api/openstack/compute/server_migrations.py for more possible
+            # improvement in the list server migration API.
+            if not add_host:
+                obj['dest_compute'] = None
+                obj['dest_host'] = None
+                obj['dest_node'] = None
+                obj['source_compute'] = None
+                obj['source_node'] = None
             # NOTE(Shaohe Feng) above version 2.23, add migration_type for all
             # kinds of migration, but we only add links just for in-progress
             # live-migration.
@@ -93,6 +113,19 @@ class MigrationsController(wsgi.Controller):
         context.can(migrations_policies.POLICY_ROOT % 'index')
         search_opts = {}
         search_opts.update(req.GET)
+        project_id = search_opts.get('project_id')
+        # TODO(gmaan): If the user request all or cross project migrations
+        # (passing other project id or not passing project id itself) then
+        # policy needs to permit the same otherwise it will raise 403 error.
+        # This behavior can be improved by returning their own project
+        # migrations if the policy does not permit to list all or cross
+        # project migrations but that will be API behavior change and
+        # needs to be done with microversion bump.
+        if not project_id or project_id != context.project_id:
+            context.can(migrations_policies.POLICY_ROOT % 'index:all_projects')
+        add_host = context.can(migrations_policies.POLICY_ROOT % 'index:host',
+                               fatal=False)
+
         if 'changes-since' in search_opts:
             if allow_changes_since:
                 search_opts['changes-since'] = timeutils.parse_isotime(
@@ -133,10 +166,9 @@ class MigrationsController(wsgi.Controller):
         else:
             migrations = self.compute_api.get_migrations(
                 context, search_opts)
-
         add_user_project = api_version_request.is_supported(req, '2.80')
         migrations = self._output(req, migrations, add_link,
-                                  add_uuid, add_user_project)
+                                  add_uuid, add_user_project, add_host)
         migrations_dict = {'migrations': migrations}
 
         if next_link:

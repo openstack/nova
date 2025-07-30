@@ -38,24 +38,26 @@ DEPRECATED_ADMIN_OR_OWNER_POLICY = policy.DeprecatedRule(
 )
 
 ADMIN = 'rule:context_is_admin'
+PROJECT_MEMBER = 'rule:project_manager_api'
 PROJECT_MEMBER = 'rule:project_member_api'
 PROJECT_READER = 'rule:project_reader_api'
+PROJECT_MANAGER_OR_ADMIN = 'rule:project_manager_or_admin'
 PROJECT_MEMBER_OR_ADMIN = 'rule:project_member_or_admin'
 PROJECT_READER_OR_ADMIN = 'rule:project_reader_or_admin'
 
 # NOTE(gmann): Below is the mapping of new roles with legacy roles::
 
-# Legacy Rule        |    New Rules              |Operation       |scope_type|
-# -------------------+---------------------------+----------------+-----------
-# RULE_ADMIN_API     |-> ADMIN                   |Global resource | [project]
-#                    |                           |Write & Read    |
-# -------------------+---------------------------+----------------+-----------
-#                    |-> ADMIN                   |Project admin   | [project]
-#                    |                           |level operation |
-# RULE_ADMIN_OR_OWNER|-> PROJECT_MEMBER_OR_ADMIN |Project resource| [project]
-#                    |                           |Write           |
-#                    |-> PROJECT_READER_OR_ADMIN |Project resource| [project]
-#                    |                           |Read            |
+# Legacy Rule        |    New Rules               |Operation       |scope_type|
+# -------------------+----------------------------+----------------+-----------
+# RULE_ADMIN_API     |-> ADMIN                    |Global resource | [project]
+#                    |-> PROJECT_MANAGER_OR_ADMIN |Write & Read    |
+# -------------------+----------------------------+----------------+-----------
+#                    |-> ADMIN                    |Project admin   | [project]
+#                    |                            |level operation |
+# RULE_ADMIN_OR_OWNER|-> PROJECT_MEMBER_OR_ADMIN  |Project resource| [project]
+#                    |                            |Write           |
+#                    |-> PROJECT_READER_OR_ADMIN  |Project resource| [project]
+#                    |                            |Read            |
 
 # NOTE(johngarbutt) The base rules here affect so many APIs the list
 # of related API operations has not been populated. It would be
@@ -90,6 +92,11 @@ rules = [
         deprecated_reason=DEPRECATED_REASON,
         deprecated_since='21.0.0'),
     policy.RuleDefault(
+        "project_manager_api",
+        "role:manager and project_id:%(project_id)s",
+        "Default rule for Project level management APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_POLICY),
+    policy.RuleDefault(
         "project_member_api",
         "role:member and project_id:%(project_id)s",
         "Default rule for Project level non admin APIs.",
@@ -99,6 +106,11 @@ rules = [
         "role:reader and project_id:%(project_id)s",
         "Default rule for Project level read only APIs.",
         deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY),
+    policy.RuleDefault(
+        "project_manager_or_admin",
+        "rule:project_manager_api or rule:context_is_admin",
+        "Default rule for Project Manager or admin APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_POLICY),
     policy.RuleDefault(
         "project_member_or_admin",
         "rule:project_member_api or rule:context_is_admin",

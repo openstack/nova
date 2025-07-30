@@ -26,17 +26,29 @@ from nova.i18n import _
 from nova.policies import servers_migrations as sm_policies
 
 
-def output(migration, include_uuid=False, include_user_project=False):
+def output(
+    migration,
+    include_uuid=False,
+    include_user_project=False,
+    include_host=True,
+):
     """Returns the desired output of the API from an object.
 
     From a Migrations's object this method returns the primitive
     object with the only necessary and expected fields.
     """
+    # TODO(gmaan): We have a separate policy to show the host related info.
+    # For backward compatibility, we always return the host fields in response
+    # but policy controls the value. To be consistent to other APIs, if the
+    # policy does not permit then we should not include these fields in
+    # response but that needs to be done with a new microversion. There
+    # are more related improvements to be done in list migrations APIs,
+    # refer to the comments in api/openstack/compute/migrations.py.
     result = {
         "created_at": migration.created_at,
-        "dest_compute": migration.dest_compute,
-        "dest_host": migration.dest_host,
-        "dest_node": migration.dest_node,
+        "dest_compute": None,
+        "dest_host": None,
+        "dest_node": None,
         "disk_processed_bytes": migration.disk_processed,
         "disk_remaining_bytes": migration.disk_remaining,
         "disk_total_bytes": migration.disk_total,
@@ -45,8 +57,8 @@ def output(migration, include_uuid=False, include_user_project=False):
         "memory_remaining_bytes": migration.memory_remaining,
         "memory_total_bytes": migration.memory_total,
         "server_uuid": migration.instance_uuid,
-        "source_compute": migration.source_compute,
-        "source_node": migration.source_node,
+        "source_compute": None,
+        "source_node": None,
         "status": migration.status,
         "updated_at": migration.updated_at
     }
@@ -55,6 +67,19 @@ def output(migration, include_uuid=False, include_user_project=False):
     if include_user_project:
         result['user_id'] = migration.user_id
         result['project_id'] = migration.project_id
+    # TODO(gmaan): This API (and list os-migrations) does not
+    # return the 'server_host', which is strange and not consistent with
+    # the info returned for the destination host. This needs to be fixed
+    # with microversion bump. There are more related improvements to be
+    # done in list migrations APIs, refer to the comments in
+    # api/openstack/compute/migrations.py
+    if include_host:
+        result['dest_compute'] = migration.dest_compute
+        result['dest_host'] = migration.dest_host
+        result['dest_node'] = migration.dest_node
+        result['source_compute'] = migration.source_compute
+        result['source_node'] = migration.source_node
+
     return result
 
 
@@ -103,6 +128,9 @@ class ServerMigrationsController(wsgi.Controller):
 
         context.can(sm_policies.POLICY_ROOT % 'index',
                     target={'project_id': instance.project_id})
+        include_host = context.can(sm_policies.POLICY_ROOT % 'index:host',
+                     fatal=False,
+                     target={'project_id': instance.project_id})
 
         migrations = self.compute_api.get_migrations_in_progress_by_instance(
                 context, server_id, 'live-migration')
@@ -111,7 +139,7 @@ class ServerMigrationsController(wsgi.Controller):
 
         include_user_project = api_version_request.is_supported(req, '2.80')
         return {'migrations': [
-            output(migration, include_uuid, include_user_project)
+            output(migration, include_uuid, include_user_project, include_host)
             for migration in migrations]}
 
     @wsgi.api_version("2.23")

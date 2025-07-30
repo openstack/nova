@@ -168,16 +168,32 @@ class BasePolicyTest(test.TestCase):
             self.project_admin_context, self.project_manager_context,
             self.project_member_context,
         ])
-        # With scope enable and legacy rule, only project scoped admin
-        # and any role in that project will have access.
+        # With scope disable and no legacy rule, any admin,
+        # project managers have access. No other role in that project
+        # will have access.
+        self.project_manager_or_admin_with_no_scope_no_legacy = set([
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_manager_context,
+        ])
+        # With scope enable and legacy rule, only admin with a project
+        # scope token and any role in that project will have access.
         self.project_m_r_or_admin_with_scope_and_legacy = set([
             self.legacy_admin_context, self.project_admin_context,
             self.project_manager_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context
         ])
-        # With scope enable and no legacy rule, only project scoped admin
-        # and project members have access. No other role in that project
-        # or system scoped token will have access.
+        # With scope enable and no legacy rule, only admin with a
+        # project scope token and project managers have access. No
+        # other role in that project or system scoped token will
+        # have access.
+        self.project_manager_or_admin_with_scope_no_legacy = set([
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_manager_context
+        ])
+        # With scope enable and no legacy rule, only admin with a
+        # project scope token and project members have access. No
+        # other role in that project or system scoped token will
+        # have access.
         self.project_member_or_admin_with_scope_no_legacy = set([
             self.legacy_admin_context, self.project_admin_context,
             self.project_manager_context, self.project_member_context
@@ -190,9 +206,10 @@ class BasePolicyTest(test.TestCase):
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context
         ])
-        # With scope enable and no legacy rule, only project scoped admin,
-        # project members, and project reader have access. No other role
-        # in that project or system scoped token will have access.
+        # With scope enable and no legacy rule, only admin with a
+        # project scope token, project members, and project reader
+        # have access. No other role in that project or system scoped
+        # token will have access.
         self.project_reader_or_admin_with_scope_no_legacy = set([
             self.legacy_admin_context, self.project_admin_context,
             self.project_manager_context, self.project_member_context,
@@ -280,6 +297,7 @@ class BasePolicyTest(test.TestCase):
         # At this time, we can call ensure_return() to assert the func's
         # response to ensure that changes are right.
         fatal = kwarg.pop('fatal', True)
+        fatal_auth = kwarg.pop('fatal_auth', True)
         authorized_response = []
         unauthorize_response = []
 
@@ -321,7 +339,7 @@ class BasePolicyTest(test.TestCase):
             req.environ['nova.context'] = context
             args1 = copy.deepcopy(arg)
             kwargs1 = copy.deepcopy(kwarg)
-            if not fatal:
+            if not (fatal and fatal_auth):
                 authorized_response.append(
                     ensure_return(req, *args1, **kwargs1))
             else:

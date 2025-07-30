@@ -108,10 +108,14 @@ class MigrateServerController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id,
                                        expected_attrs=['numa_topology'])
 
-        context.can(ms_policies.POLICY_ROOT % 'migrate_live',
-                    target={'project_id': instance.project_id})
-
         host = body["os-migrateLive"]["host"]
+        if host:
+            context.can(ms_policies.POLICY_ROOT % 'migrate_live:host',
+                        target={'project_id': instance.project_id})
+        else:
+            context.can(ms_policies.POLICY_ROOT % 'migrate_live',
+                        target={'project_id': instance.project_id})
+
         block_migration = body["os-migrateLive"]["block_migration"]
         force = None
         async_ = api_version_request.is_supported(req, '2.34')
