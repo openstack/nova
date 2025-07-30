@@ -14,12 +14,18 @@ import io
 import os
 from unittest import mock
 
+import fixtures
+
 from nova import exception
 from nova import filesystem
 from nova import test
 
 
 class TestFSCommon(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.useFixture(fixtures.MockPatch("time.sleep", mock.Mock()))
 
     def test_read_sys(self):
         open_mock = mock.mock_open(read_data='bar')
