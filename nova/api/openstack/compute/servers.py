@@ -875,7 +875,7 @@ class ServersController(wsgi.Controller):
         if server_dict.get('return_reservation_id', False):
             return wsgi.ResponseObject({'reservation_id': resv_id})
 
-        server = self._view_builder.create(req, instances[0])
+        server = self._view_builder.create(req, body, instances[0])
 
         if CONF.api.enable_instance_password:
             server['server']['adminPass'] = password
@@ -915,7 +915,6 @@ class ServersController(wsgi.Controller):
         ctxt.can(server_policies.SERVERS % 'update',
                  target={'user_id': instance.user_id,
                          'project_id': instance.project_id})
-        show_server_groups = api_version_request.is_supported(req, '2.71')
 
         server = body['server']
 
@@ -936,6 +935,7 @@ class ServersController(wsgi.Controller):
             instance = self.compute_api.update_instance(
                 ctxt, instance, update_dict)
 
+            show_server_groups = api_version_request.is_supported(req, '2.71')
             # NOTE(gmann): Starting from microversion 2.75, PUT and Rebuild
             # API response will show all attributes like GET /servers API.
             show_all_attributes = api_version_request.is_supported(req, '2.75')
