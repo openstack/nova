@@ -219,11 +219,11 @@ access within the requested project.
 
 ``project_manager`` is denoted by someone with the manager role on a project.
 It is intended to be used in project-level management APIs and perform more
-privileged operations than ``project_member`` on its project resources. It
+privileged operations on its project resources than ``project_member``. It
 inherits all the permissions of a ``project_member`` and ``project_reader``.
-For example, ``project_manager`` can migrate (cold or live) their server
-without specifying the host. Further, the ``project_manager`` will be able
-to list their own project migrations.
+For example, a ``project_manager`` can migrate (cold or live) their servers
+without specifying the host. Further, a ``project_manager`` will be able
+to list migrations related to their own project.
 
 ``project_manager`` persona in Nova policy rule (it is defined as
 ``project_manager_api`` in policy yaml) looks like:
