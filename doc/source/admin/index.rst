@@ -105,6 +105,9 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
 * :doc:`Running nova-api on wsgi </user/wsgi>`: Considerations for using a real
   WSGI container instead of the baked-in eventlet web server.
 
+* :doc:`Nova service concurrency </admin/concurrency>`: Considerations on how
+  to use and tune Nova services in threading mode.
+
 .. toctree::
    :maxdepth: 2
 
@@ -113,6 +116,7 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
    default-ports
    availability-zones
    configuration/index
+   concurrency
 
 
 Basic configuration
