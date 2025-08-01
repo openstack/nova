@@ -4048,3 +4048,19 @@ class LibvirtConfigGuestSound(LibvirtConfigObject):
         meta = self._new_node('sound')
         meta.set('model', str(self.model))
         return meta
+
+
+class LibvirtConfigGuestUSBRedirect(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestUSBRedirect,
+              self).__init__(root_name='redirdev')
+
+        self.type = 'spicevmc'
+        self.bus = 'usb'
+
+    def format_dom(self):
+        meta = self._new_node('redirdev')
+        meta.set('type', str(self.type))
+        meta.set('bus', str(self.bus))
+        return meta

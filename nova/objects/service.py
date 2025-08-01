@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 69
+SERVICE_VERSION = 70
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -239,6 +239,9 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '6.4'},
     # Version 69: Compute RPC v6.4:
     # Compute manager supports sound model traits
+    {'compute_rpc': '6.4'},
+    # Version 70: Compute RPC v6.4:
+    # Compute manager supports USB controller model traits
     {'compute_rpc': '6.4'},
 )
 

@@ -125,6 +125,7 @@ MIN_COMPUTE_VDPA_HOTPLUG_LIVE_MIGRATION = 63
 SUPPORT_SHARES = 67
 
 MIN_COMPUTE_SOUND_MODEL_TRAITS = 69
+MIN_COMPUTE_USB_MODEL_TRAITS = 70
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or

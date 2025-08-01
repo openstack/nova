@@ -22,6 +22,7 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova import test
+from nova.virt.hardware import get_redirected_usb_ports
 
 
 class TestValidateExtraSpecKeys(test.NoDBTestCase):
@@ -292,3 +293,73 @@ class TestCreateFlavor(test.TestCase):
         self.assertRaises(
             exception.FlavorIdExists,
             flavors.create, 'flavor2', 64, 1, 120, flavorid='flavorid')
+
+
+class RedirectedUSBPortsFlavorTests(test.TestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.image_meta = objects.ImageMeta.from_dict(
+            {
+                'status': 'active',
+                'container_format': 'bare',
+                'min_ram': 0,
+                'updated_at': '2014-12-12T11:16:36.000000',
+                'min_disk': 0,
+                'owner': '2d8b9502858c406ebee60f0849486222',
+                'protected': 'yes',
+                'properties': {
+                    'os_type': 'Linux',
+                    'hw_video_model': 'vga',
+                    'hw_video_ram': '512',
+                    'hw_qemu_guest_agent': 'yes',
+                    'hw_scsi_model': 'virtio-scsi',
+                },
+                'size': 213581824,
+                'name': 'f16-x86_64-openstack-sda',
+                'checksum': '755122332caeb9f661d5c978adb8b45f',
+                'created_at': '2014-12-10T16:23:14.000000',
+                'disk_format': 'qcow2',
+                'id': 'c8b1790e-a07d-4971-b137-44f2432936cd',
+            }
+        )
+
+    def test_redirected_usb_ports_flavor_specs_integer(self):
+        self.assertEqual(
+            1, get_redirected_usb_ports(
+            {
+                'extra_specs': {
+                    'hw:redirected_usb_ports': 1
+                }
+            },
+        self.image_meta))
+
+    def test_redirected_usb_ports_flavor_specs_integer_as_string(self):
+        self.assertEqual(
+            1, get_redirected_usb_ports(
+            {
+                'extra_specs': {
+                    'hw:redirected_usb_ports': '1'
+                }
+            },
+            self.image_meta))
+
+    def test_redirected_usb_ports_flavor_specs_integer_is_negative(self):
+        self.assertRaises(exception.Invalid,
+            get_redirected_usb_ports,
+            {
+                'extra_specs': {
+                    'hw:redirected_usb_ports': -1
+                }
+            },
+            self.image_meta)
+
+    def test_redirected_usb_ports_flavor_specs_non_integer(self):
+        self.assertRaises(exception.Invalid,
+            get_redirected_usb_ports,
+            {
+                'extra_specs': {
+                    'hw:redirected_usb_ports': 'banana'
+                }
+            },
+            self.image_meta)

@@ -569,6 +569,21 @@ class TestImageMetaProps(test.NoDBTestCase):
         primitive = obj.obj_to_primitive('1.27')
         self.assertNotIn('hw_sound_model', primitive['nova_object.data'])
 
+    def test_obj_make_compatible_usb_model_and_redirected_ports(self):
+        """Check if we pop hw_usb_model and hw_redirected_usb_ports."""
+        obj = objects.ImageMetaProps(
+            hw_usb_model='qemu-xhci',
+            hw_redirected_usb_ports=3
+        )
+        primitive = obj.obj_to_primitive()
+        self.assertIn('hw_usb_model', primitive['nova_object.data'])
+        self.assertIn('hw_redirected_usb_ports', primitive['nova_object.data'])
+
+        primitive = obj.obj_to_primitive('1.27')
+        self.assertNotIn('hw_usb_model', primitive['nova_object.data'])
+        self.assertNotIn(
+            'hw_redirected_usb_ports', primitive['nova_object.data'])
+
     def test_obj_make_compatible_socket_policy(self):
         obj = objects.ImageMetaProps(
             hw_pci_numa_affinity_policy=fields.PCINUMAAffinityPolicy.SOCKET)

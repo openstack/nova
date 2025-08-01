@@ -552,6 +552,33 @@ feature_flag_validators = [
             'enum': fields.SoundModelType.ALL,
         },
     ),
+    base.ExtraSpecValidator(
+        name='hw:usb_model',
+        description=(
+            'The model of the attached USB controller device. '
+            'Only supported by the libvirt virt driver. '
+            'If unset, no USB controller device is attached.'
+        ),
+        value={
+            'type': str,
+            'description': 'A USB controller model',
+            'enum': fields.USBControllerModelType.ALL,
+        },
+    ),
+    base.ExtraSpecValidator(
+        name='hw:redirected_usb_ports',
+        description=(
+            'The number of redirected USB ports to add to the virtual '
+            'machine. Only supported by the libvirt virt driver. If unset, '
+            'no redirected USB ports are added. The maximum value is 15.'
+        ),
+        value={
+            'type': int,
+            'description': 'The number of USB redirection devices to add',
+            'min': 0,
+            'max': 15
+        },
+    ),
 ]
 
 ephemeral_encryption_validators = [

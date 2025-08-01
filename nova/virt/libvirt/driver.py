@@ -6901,6 +6901,18 @@ class LibvirtDriver(driver.ComputeDriver):
         sound_device = vconfig.LibvirtConfigGuestSound(sound_model)
         guest.add_device(sound_device)
 
+    def _add_redirected_usb_ports(
+        self,
+        guest: vconfig.LibvirtConfigGuest,
+        flavor: 'objects.Flavor',
+        instance: 'objects.Instance',
+        image_meta: 'objects.ImageMeta',
+    ) -> None:
+        """Add redirected USB ports, if requested."""
+        count = hardware.get_redirected_usb_ports(flavor, image_meta)
+        for i in range(count):
+            guest.add_device(vconfig.LibvirtConfigGuestUSBRedirect())
+
     def _set_qemu_guest_agent(self, guest, flavor, instance, image_meta):
         # Enable qga only if the 'hw_qemu_guest_agent' is equal to yes
         if image_meta.properties.get('hw_qemu_guest_agent', False):
@@ -7414,7 +7426,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return False
 
-    def _guest_add_usb_root_controller(self, guest, image_meta):
+    def _guest_add_usb_root_controller(self, guest, flavor, image_meta):
         """Add USB root controller, if necessary.
 
         Note that these are added by default on x86-64. We add the controller
@@ -7423,9 +7435,11 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         usbhost = vconfig.LibvirtConfigGuestUSBHostController()
         usbhost.index = 0
+
         # an unset model means autodetect, while 'none' means don't add a
         # controller (x86 gets one by default)
         usbhost.model = None
+        specified_model = hardware.get_usb_model(flavor, image_meta)
         if not self._guest_needs_usb(guest, image_meta):
             archs = (
                 fields.Architecture.PPC,
@@ -7438,6 +7452,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # xml, where 'none' adds it but then disables it causing
                 # libvirt errors and the instances not being able to build
                 usbhost.model = None
+            elif specified_model:
+                usbhost.model = specified_model
             else:
                 usbhost.model = 'none'
         guest.add_device(usbhost)
@@ -7602,7 +7618,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if self._guest_needs_pcie(guest):
             self._guest_add_pcie_root_ports(guest)
 
-        self._guest_add_usb_root_controller(guest, image_meta)
+        self._guest_add_usb_root_controller(guest, flavor, image_meta)
+        self._add_redirected_usb_ports(guest, flavor, instance, image_meta)
 
         self._guest_add_pci_devices(guest, instance)
 

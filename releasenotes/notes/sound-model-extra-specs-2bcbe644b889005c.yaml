@@ -1,11 +1,12 @@
 ---
 features:
   - |
-    The `hw:sound_model` flavor extra spec and the matching `hw_sound_model`
-    image property were added to allow the configuration of a sound device
-    within an instance. This is useful with the new spice-direct console
-    type. The default remains no sound device, but when using the libvirt
-    hypervisor driver you can select from `sb16`, `es1370`, `pcspk`, `ac97`,
-    `ich6`, `ich9`, `usb`, and `virtio`. For most use-cases `usb` is
-    likely to be the best choice unless you have at least libvirt 8.2.0 and
-    libvirt 10.4.0.
+    The ``hw:sound_model`` flavor extra spec and the matching
+    ``hw_sound_model`` image property were added to allow the
+    configuration of a sound device within an instance. This is useful
+    with the new spice-direct console type. The default remains no sound
+    device, but when using the libvirt hypervisor driver you can select
+    from ``sb16``, ``es1370``, ``pcspk``, ``ac97``, ``ich6``, ``ich9``,
+    ``usb``, and ``virtio``. For most use-cases ``usb`` is likely to be
+    the best choice unless you have at least libvirt 8.2.0 and libvirt
+    10.4.0.
