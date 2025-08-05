@@ -18,9 +18,9 @@ from unittest import mock
 from cinderclient import api_versions as cinder_api_versions
 from cinderclient import exceptions as cinder_exception
 from cinderclient.v3 import limits as cinder_limits
+from keystoneauth1 import exceptions as keystone_exception
 from keystoneauth1 import loading as ks_loading
 from keystoneauth1 import session
-from keystoneclient import exceptions as keystone_exception
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
