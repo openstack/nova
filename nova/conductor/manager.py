@@ -19,9 +19,9 @@ import contextlib
 import copy
 import functools
 import sys
+import threading
 import typing as ty
 
-import futurist
 from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -2062,7 +2062,7 @@ class ComputeTaskManager:
                           the host list
         :param image_id: The IDs of the image to cache
         """
-
+        local_lock = threading.Lock()
         # TODO(mriedem): Consider including the list of images in the
         # notification payload.
         compute_utils.notify_about_aggregate_action(
@@ -2072,7 +2072,7 @@ class ComputeTaskManager:
 
         clock = timeutils.StopWatch()
         threads = CONF.image_cache.precache_concurrency
-        fetch_executor = futurist.GreenThreadPoolExecutor(max_workers=threads)
+        fetch_executor = utils.create_executor(threads)
 
         hosts_by_cell = {}
         cells_by_uuid = {}
@@ -2099,24 +2099,24 @@ class ComputeTaskManager:
         }
 
         def host_completed(context, host, result):
-            for image_id, status in result.items():
-                cached, existing, error, unsupported = stats[image_id]
-                if status == 'error':
-                    failed_images[image_id] += 1
-                    error += 1
-                elif status == 'cached':
-                    cached += 1
-                elif status == 'existing':
-                    existing += 1
-                elif status == 'unsupported':
-                    unsupported += 1
-                stats[image_id] = (cached, existing, error, unsupported)
+            with local_lock:
+                for image_id, status in result.items():
+                    cached, existing, error, unsupported = stats[image_id]
+                    if status == 'error':
+                        failed_images[image_id] += 1
+                        error += 1
+                    elif status == 'cached':
+                        cached += 1
+                    elif status == 'existing':
+                        existing += 1
+                    elif status == 'unsupported':
+                        unsupported += 1
+                    stats[image_id] = (cached, existing, error, unsupported)
 
             host_stats['completed'] += 1
-            compute_utils.notify_about_aggregate_cache(context, aggregate,
-                                                       host, result,
-                                                       host_stats['completed'],
-                                                       host_stats['total'])
+            compute_utils.notify_about_aggregate_cache(
+                context, aggregate, host, result,
+                host_stats['completed'], host_stats['total'])
 
         def wrap_cache_images(ctxt, host, image_ids):
             result = self.compute_rpcapi.cache_images(

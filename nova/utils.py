@@ -104,19 +104,23 @@ def destroy_default_executor():
     DEFAULT_EXECUTOR = None
 
 
+def create_executor(max_workers):
+    if concurrency_mode_threading():
+        executor = futurist.ThreadPoolExecutor(max_workers)
+    else:
+        executor = futurist.GreenThreadPoolExecutor(max_workers)
+    return executor
+
+
 def _get_default_executor():
     global DEFAULT_EXECUTOR
 
     if not DEFAULT_EXECUTOR:
-        if concurrency_mode_threading():
-            DEFAULT_EXECUTOR = futurist.ThreadPoolExecutor(
-                CONF.default_thread_pool_size
+        max_workers = (
+            CONF.default_thread_pool_size if concurrency_mode_threading()
+            else CONF.default_green_pool_size
             )
-        else:
-            DEFAULT_EXECUTOR = futurist.GreenThreadPoolExecutor(
-                CONF.default_green_pool_size
-            )
-
+        DEFAULT_EXECUTOR = create_executor(max_workers)
         pname = multiprocessing.current_process().name
         executor_name = f"{pname}.default"
         DEFAULT_EXECUTOR.name = executor_name
@@ -1183,11 +1187,11 @@ def get_scatter_gather_executor():
     global SCATTER_GATHER_EXECUTOR
 
     if not SCATTER_GATHER_EXECUTOR:
-        if concurrency_mode_threading():
-            SCATTER_GATHER_EXECUTOR = futurist.ThreadPoolExecutor(
-                CONF.cell_worker_thread_pool_size)
-        else:
-            SCATTER_GATHER_EXECUTOR = futurist.GreenThreadPoolExecutor()
+        max_workers = (
+            CONF.cell_worker_thread_pool_size
+            if concurrency_mode_threading() else 1000
+            )
+        SCATTER_GATHER_EXECUTOR = create_executor(max_workers)
 
         pname = multiprocessing.current_process().name
         executor_name = f"{pname}.cell_worker"
