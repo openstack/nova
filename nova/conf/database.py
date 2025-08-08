@@ -50,7 +50,7 @@ api_db_opts = copy.deepcopy(oslo_db_opts.database_opts)
 # We don't support the experimental use of database reconnect on connection
 # lost, so remove the config option that would suggest we do
 main_db_opts = [opt for opt in main_db_opts if opt.name != 'use_db_reconnect']
-api_db_opts = [opt for opt in main_db_opts if opt.name != 'use_db_reconnect']
+api_db_opts = [opt for opt in api_db_opts if opt.name != 'use_db_reconnect']
 
 
 def register_opts(conf):
