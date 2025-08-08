@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    When an instance booted from local storage is unshelved,
+    the image ID published to the libvirt domain metadata was
+    the ID for the temporary Glance image generated to store
+    the instance state, instead of the original image as intended.
+    Since the temporary image is removed after the instance is
+    unshelved, this results in an invalid image ID being stored
+    in the libvirt domain metadata. This issue has now been fixed.
+    Affected instances will need to be shutdown, restarted, cold
+    migrated or shelved-and-unshelved to update the metadata.

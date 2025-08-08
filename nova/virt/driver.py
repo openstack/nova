@@ -394,7 +394,14 @@ class ComputeDriver(object):
             flavor=flavor,
             image=image,
             root_type = 'image' if instance.image_ref else 'volume',
-            root_id = instance.image_ref,
+            # NOTE(callumdickinson): Once an image-backed instance has
+            # been shelved, instance.image_ref changes to the ID of the
+            # temporary image storing the root volume while shelved.
+            # Prefer base_image_ref from the system metadata, if available,
+            # to ensure that the ID of the original image the instance was
+            # booted from is used for the driver metadata.
+            root_id=system_meta.get('image_base_image_ref',
+                                    instance.image_ref),
             creation_time = time.time(),
             network_info=network_info
         )
