@@ -49,6 +49,7 @@ LOG = logging.getLogger(__name__)
 @dataclasses.dataclass
 class FlavorMeta:
     name: str
+    flavorid: str
     memory_mb: int
     vcpus: int
     root_gb: int
@@ -376,6 +377,7 @@ class ComputeDriver(object):
         )
         flavor = FlavorMeta(
             name=instance.flavor.name,
+            flavorid=instance.flavor.flavorid,
             memory_mb=instance.flavor.memory_mb,
             vcpus=instance.flavor.vcpus,
             ephemeral_gb=instance.flavor.ephemeral_gb,
