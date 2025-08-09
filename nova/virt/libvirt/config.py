@@ -3760,6 +3760,7 @@ class LibvirtConfigGuestMetaNovaInstance(LibvirtConfigObject):
 
         self.package = None
         self.flavor = None
+        self.image = None
         self.name = None
         self.creationTime = None
         self.owner = None
@@ -3781,6 +3782,8 @@ class LibvirtConfigGuestMetaNovaInstance(LibvirtConfigObject):
             meta.append(self._text_node("creationTime", timestr))
         if self.flavor is not None:
             meta.append(self.flavor.format_dom())
+        if self.image is not None:
+            meta.append(self.image.format_dom())
         if self.owner is not None:
             meta.append(self.owner.format_dom())
 
@@ -3847,6 +3850,56 @@ class LibvirtConfigGuestMetaNovaFlavorExtraSpecs(LibvirtConfigObject):
             for key, value in self.extra_specs.items():
                 node = self._text_node("extraSpec", value)
                 node.set("name", key)
+                meta.append(node)
+        return meta
+
+
+class LibvirtConfigGuestMetaImage(LibvirtConfigObject):
+
+    def __init__(self):
+        super().__init__(root_name="image",
+                         ns_prefix="nova",
+                         ns_uri=NOVA_NS)
+        self.uuid = None
+        self.image_meta = None
+        # NOTE(callumdickinson): Based on the values of SM_INHERITABLE_KEYS.
+        self.attrs = [
+            ("container_format", "containerFormat"),
+            ("disk_format", "diskFormat"),
+            ("min_disk", "minDisk"),
+            ("min_ram", "minRam")]
+
+    def format_dom(self):
+        meta = super().format_dom()
+        # uuid can be empty for instances booted from volume.
+        meta.set("uuid", self.uuid or "")
+        if self.image_meta is not None:
+            for attr, node_key in self.attrs:
+                value = getattr(self.image_meta, attr)
+                if value is not None:
+                    node = self._text_node(node_key, value)
+                    meta.append(node)
+        properties_meta = LibvirtConfigGuestMetaImageProperties()
+        if self.image_meta is not None:
+            properties_meta.properties = self.image_meta.properties
+        meta.append(properties_meta.format_dom())
+        return meta
+
+
+class LibvirtConfigGuestMetaImageProperties(LibvirtConfigObject):
+
+    def __init__(self):
+        super().__init__(root_name="properties",
+                         ns_prefix="nova",
+                         ns_uri=NOVA_NS)
+        self.properties = None
+
+    def format_dom(self):
+        meta = super().format_dom()
+        if self.properties is not None:
+            for attr, value in self.properties.items():
+                node = self._text_node("property", value)
+                node.set("name", attr)
                 meta.append(node)
         return meta
 

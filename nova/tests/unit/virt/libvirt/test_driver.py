@@ -665,7 +665,8 @@ class FakeNodeDevice(object):
         return self.xml
 
 
-def _create_test_instance():
+def _create_test_instance(image_ref='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                          system_metadata=None):
     flavor = objects.Flavor(memory_mb=2048,
                             swap=0,
                             vcpu_weight=None,
@@ -677,6 +678,9 @@ def _create_test_instance():
                             flavorid=u'1',
                             vcpus=2,
                             extra_specs={})
+    if system_metadata is None:
+        system_metadata = {'image_base_image_ref': image_ref,
+                           'image_disk_format': 'raw'}
     return {
         'id': 1,
         'uuid': uuids.instance,
@@ -687,13 +691,10 @@ def _create_test_instance():
         'vcpus': 2,
         'project_id': 'fake',
         'bridge': 'br101',
-        'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+        'image_ref': image_ref,
         'root_gb': 10,
         'ephemeral_gb': 20,
-        'system_metadata': {
-            'image_base_image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            'image_disk_format': 'raw'
-        },
+        'system_metadata': system_metadata,
         'instance_type_id': flavor.id,
         'flavor': flavor,
         'new_flavor': None,
@@ -2944,6 +2945,104 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(test_instance["system_metadata"][
                             "image_base_image_ref"],
                          meta.rootid)
+
+    def test_get_guest_config_meta_from_image(self):
+        image_id = '85daefce-4e20-4d2b-a4f3-11d3765f2a8f'
+        instance = _create_test_instance(
+            image_ref=image_id,
+            system_metadata={
+                'image_base_image_ref': image_id,
+                'image_container_format': 'bare',
+                'image_disk_format': 'raw',
+                'image_min_disk': 10,
+                'image_min_ram': 0,
+                'image_os_type': 'linux'})
+        instance['info_cache'] = self.test_instance['info_cache']
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        idm = drvr.get_instance_driver_metadata(
+            objects.Instance(**instance),
+            _fake_network_info(self, num_networks=0))
+        meta = drvr._get_guest_config_meta(idm)
+
+        self.assertEqual(meta.image.uuid, image_id)
+        image_meta = meta.image.image_meta
+        self.assertEqual(image_meta.container_format, 'bare')
+        self.assertEqual(image_meta.disk_format, 'raw')
+        self.assertEqual(image_meta.min_disk, 10)
+        self.assertEqual(image_meta.min_ram, 0)
+        self.assertEqual(dict(image_meta.properties), {'os_type': 'linux'})
+
+    def test_get_guest_config_meta_from_image_unshelved(self):
+        instance = _create_test_instance(
+            image_ref='e3e66d4e-43ba-4e3b-8a1d-46cb78a0b527',
+            system_metadata={
+                'image_base_image_ref': (
+                    '155d900f-4e14-4e4c-a73d-069cbf4541e6'),
+                'container_format': 'bare',
+                'disk_format': 'raw',
+                'min_disk': 1,
+                'min_ram': 0,
+                'image_os_type': 'linux'})
+        instance['vm_state'] = 'shelved_offloaded'
+        instance['info_cache'] = self.test_instance['info_cache']
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        idm = drvr.get_instance_driver_metadata(
+            objects.Instance(**instance),
+            _fake_network_info(self, num_networks=0))
+        meta = drvr._get_guest_config_meta(idm)
+
+        self.assertEqual(meta.image.uuid,
+                         '155d900f-4e14-4e4c-a73d-069cbf4541e6')
+        image_meta = meta.image.image_meta
+        self.assertEqual(image_meta.container_format, 'bare')
+        self.assertEqual(image_meta.disk_format, 'raw')
+        self.assertEqual(image_meta.min_disk, 1)
+        self.assertEqual(image_meta.min_ram, 0)
+        self.assertEqual(dict(image_meta.properties), {'os_type': 'linux'})
+
+    def test_get_guest_config_meta_from_volume_image(self):
+        instance = _create_test_instance(
+            image_ref='',
+            system_metadata={
+                'image_base_image_ref': '',
+                'image_container_format': 'bare',
+                'image_disk_format': 'raw',
+                'image_min_disk': 10,
+                'image_min_ram': 0,
+                'image_os_type': 'linux'})
+        instance['info_cache'] = self.test_instance['info_cache']
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        idm = drvr.get_instance_driver_metadata(
+            objects.Instance(**instance),
+            _fake_network_info(self, num_networks=0))
+        meta = drvr._get_guest_config_meta(idm)
+
+        self.assertEqual(meta.image.uuid, '')
+        image_meta = meta.image.image_meta
+        self.assertEqual(image_meta.container_format, 'bare')
+        self.assertEqual(image_meta.disk_format, 'raw')
+        self.assertEqual(image_meta.min_disk, 10)
+        self.assertEqual(image_meta.min_ram, 0)
+        self.assertEqual(dict(image_meta.properties), {'os_type': 'linux'})
+
+    def test_get_guest_config_meta_from_volume_no_image(self):
+        instance = _create_test_instance(
+            image_ref='',
+            system_metadata={'image_base_image_ref': ''})
+        instance['info_cache'] = self.test_instance['info_cache']
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        idm = drvr.get_instance_driver_metadata(
+            objects.Instance(**instance),
+            _fake_network_info(self, num_networks=0))
+        meta = drvr._get_guest_config_meta(idm)
+
+        self.assertEqual(meta.image.uuid, '')
+        image_meta = meta.image.image_meta
+        self.assertIsNone(image_meta.container_format)
+        self.assertIsNone(image_meta.disk_format)
+        self.assertIsNone(image_meta.min_disk)
+        self.assertIsNone(image_meta.min_ram)
+        self.assertEqual(dict(image_meta.properties), {})
 
     @mock.patch.object(time, "time")
     def test_get_guest_config(self, time_mock):
