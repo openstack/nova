@@ -34,8 +34,8 @@ Guests access the service at ``169.254.169.254`` or at ``fe80::a9fe:a9fe``.
 The networking service,
 neutron, is responsible for intercepting these requests and adding HTTP headers
 which uniquely identify the source of the request before forwarding it to the
-metadata API server. For the Open vSwitch and Linux Bridge backends provided
-with neutron, the flow looks something like so:
+metadata API server.
+For neutron backends such as Open vSwitch, the flow looks something like so:
 
 #. Instance sends a HTTP request for metadata to ``169.254.169.254``.
 

@@ -485,6 +485,9 @@ class LibvirtGenericVIFDriver(object):
             # Delegating creation to os-vif, create an ethernet-type VIF
             # and let os-vif do the actual wiring up
             self._set_config_VIFGeneric(instance, vif, conf)
+        # TODO(sean-k-mooney): this else should not be needed anymore.
+        # this fallback path was for when libvirt plugged the port into ovs
+        # but now we delegate to os-vif to do that.
         else:
             conf.net_type = "bridge"
             conf.source_dev = vif.bridge_name

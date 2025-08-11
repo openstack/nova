@@ -1,0 +1,25 @@
+---
+upgrade:
+  - |
+    Linux bridge VIF support has been removed from Nova. The ``VIF_TYPE_BRIDGE``
+    VIF type is no longer supported by the libvirt virt driver.
+
+    Operators using Neutron's Linux bridge mechanism driver must migrate their
+    deployments to a supported backend such as Open vSwitch (OVS) or OVN before
+    upgrading Nova. Note that neutron removed support for the Linux bridge in
+    2025.1 (epoxy).
+
+    **Impact:**
+
+    * Instances with ``binding:vif_type=bridge`` ports will fail to start on
+      upgraded compute nodes with a clear error message.
+    * Existing instances using Linux bridge VIFs cannot be managed by upgraded
+      compute nodes until migrated to supported VIF types.
+
+    **Required Actions:**
+
+    * Migrate workloads from Neutron Linux bridge backend to a supported backend
+      before upgrading Nova compute nodes.
+    * Update Neutron configuration to use supported mechanism drivers (OVS, OVN,
+      SR-IOV, etc.).
+    * Remove any Nova-specific Linux bridge configuration options.

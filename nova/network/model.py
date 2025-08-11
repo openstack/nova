@@ -28,6 +28,7 @@ VIF_TYPE_OVS = 'ovs'
 VIF_TYPE_IVS = 'ivs'
 VIF_TYPE_DVS = 'dvs'
 VIF_TYPE_IOVISOR = 'iovisor'
+# NOTE: No longer supported by Nova libvirt driver
 VIF_TYPE_BRIDGE = 'bridge'
 VIF_TYPE_802_QBG = '802.1qbg'
 VIF_TYPE_802_QBH = '802.1qbh'

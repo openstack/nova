@@ -414,7 +414,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
 
         self.assertEqual(550, osv_obj.mtu)
 
-    def test_nova_to_osvif_vif_linux_bridge(self):
+    def test_nova_to_osvif_vif_linux_bridge_unsupported(self):
         vif = model.VIF(
             id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
             type=model.VIF_TYPE_BRIDGE,
@@ -428,24 +428,9 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             }
         )
 
-        actual = os_vif_util.nova_to_osvif_vif(vif)
-
-        expect = osv_objects.vif.VIFBridge(
-            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
-            active=False,
-            address="22:52:25:62:e2:aa",
-            has_traffic_filtering=True,
-            plugin="linux_bridge",
-            preserve_on_delete=False,
-            vif_name="nicdc065497-3c",
-            network=osv_objects.network.Network(
-                id="b82c1929-051e-481d-8110-4669916c7915",
-                bridge_interface=None,
-                label="Demo Net",
-                subnets=osv_objects.subnet.SubnetList(
-                    objects=[])))
-
-        self.assertObjEqual(expect, actual)
+        self.assertRaises(exception.NovaException,
+                          os_vif_util.nova_to_osvif_vif,
+                          vif)
 
     def test_nova_to_osvif_vif_agilio_ovs_fallthrough(self):
         vif = model.VIF(

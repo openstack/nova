@@ -368,11 +368,11 @@ class VIFTests(test.NoDBTestCase):
         self.assertNotEqual(vif1, vif2)
 
         vif1 = model.VIF(type='ovs')
-        vif2 = model.VIF(type='linuxbridge')
+        vif2 = model.VIF(type='noop')
         self.assertNotEqual(vif1, vif2)
 
         vif1 = model.VIF(devname='ovs1234')
-        vif2 = model.VIF(devname='linuxbridge1234')
+        vif2 = model.VIF(devname='nicbridge1234')
         self.assertNotEqual(vif1, vif2)
 
         vif1 = model.VIF(qbh_params=1)
