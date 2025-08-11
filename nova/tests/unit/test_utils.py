@@ -14,9 +14,6 @@
 
 import datetime
 import hashlib
-import os
-import os.path
-import tempfile
 import threading
 from unittest import mock
 
@@ -146,14 +143,6 @@ class GenericUtilsTestCase(test.NoDBTestCase):
                          if c in 'abcdefghijklmnopqrstuvwxyz'])
         self.assertTrue([c for c in password
                          if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'])
-
-    @mock.patch('nova.privsep.path.chown')
-    def test_temporary_chown(self, mock_chown):
-        with tempfile.NamedTemporaryFile() as f:
-            with utils.temporary_chown(f.name, owner_uid=2):
-                mock_chown.assert_called_once_with(f.name, uid=2)
-                mock_chown.reset_mock()
-            mock_chown.assert_called_once_with(f.name, uid=os.getuid())
 
     def test_get_shortened_ipv6(self):
         self.assertEqual("abcd:ef01:2345:6789:abcd:ef01:c0a8:fefe",
@@ -814,27 +803,6 @@ class SpawnTestCase(test.NoDBTestCase):
         with mock.patch.object(executor, "submit", _fake_spawn):
             getattr(utils, "spawn")(fake, ctxt_passed, kwarg1='test')
         self.assertEqual(ctxt, common_context.get_current())
-
-
-class UT8TestCase(test.NoDBTestCase):
-    def test_none_value(self):
-        self.assertIsInstance(utils.utf8(None), type(None))
-
-    def test_bytes_value(self):
-        some_value = b"fake data"
-        return_value = utils.utf8(some_value)
-        # check that type of returned value doesn't changed
-        self.assertIsInstance(return_value, type(some_value))
-        self.assertEqual(some_value, return_value)
-
-    def test_not_text_type(self):
-        return_value = utils.utf8(1)
-        self.assertEqual(b"1", return_value)
-        self.assertIsInstance(return_value, bytes)
-
-    def test_text_type_with_encoding(self):
-        some_value = 'test\u2026config'
-        self.assertEqual(some_value, utils.utf8(some_value).decode("utf-8"))
 
 
 class TestObjectCallHelpers(test.NoDBTestCase):

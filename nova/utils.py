@@ -43,7 +43,6 @@ from oslo_context import context as common_context
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import encodeutils
-from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
@@ -290,23 +289,6 @@ def generate_password(length=None, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
     return ''.join(password)
 
 
-# TODO(sfinucan): Replace this with the equivalent from oslo.utils
-def utf8(value):
-    """Try to turn a string into utf-8 if possible.
-
-    The original code was copied from the utf8 function in
-    http://github.com/facebook/tornado/blob/master/tornado/escape.py
-
-    """
-    if value is None or isinstance(value, bytes):
-        return value
-
-    if not isinstance(value, str):
-        value = str(value)
-
-    return value.encode('utf-8')
-
-
 def parse_server_string(server_str):
     """Parses the given server_string and returns a tuple of host and port.
     If it's not a combination of host part and port, the port element
@@ -373,21 +355,6 @@ def format_remote_path(host, path):
         return path
 
     return "%s:%s" % (safe_ip_format(host), path)
-
-
-def make_dev_path(dev, partition=None, base='/dev'):
-    """Return a path to a particular device.
-
-    >>> make_dev_path('xvdc')
-    /dev/xvdc
-
-    >>> make_dev_path('xvdc', 1)
-    /dev/xvdc1
-    """
-    path = os.path.join(base, dev)
-    if partition:
-        path += str(partition)
-    return path
 
 
 def sanitize_hostname(hostname, default_name=None):
@@ -475,45 +442,6 @@ def temporary_mutation(obj, **kwargs):
                 set_value(obj, attr, old_value)
 
 
-def generate_mac_address():
-    """Generate an Ethernet MAC address."""
-    # NOTE(vish): We would prefer to use 0xfe here to ensure that linux
-    #             bridge mac addresses don't change, but it appears to
-    #             conflict with libvirt, so we use the next highest octet
-    #             that has the unicast and locally administered bits set
-    #             properly: 0xfa.
-    #             Discussion: https://bugs.launchpad.net/nova/+bug/921838
-    mac = [0xfa, 0x16, 0x3e,
-           random.randint(0x00, 0xff),
-           random.randint(0x00, 0xff),
-           random.randint(0x00, 0xff)]
-    return ':'.join(map(lambda x: "%02x" % x, mac))
-
-
-# NOTE(mikal): I really wanted this code to go away, but I can't find a way
-# to implement what the callers of this method want with privsep. Basically,
-# if we could hand off either a file descriptor or a file like object then
-# we could make this go away.
-@contextlib.contextmanager
-def temporary_chown(path, owner_uid=None):
-    """Temporarily chown a path.
-
-    :param owner_uid: UID of temporary owner (defaults to current user)
-    """
-    if owner_uid is None:
-        owner_uid = os.getuid()
-
-    orig_uid = os.stat(path).st_uid
-
-    if orig_uid != owner_uid:
-        nova.privsep.path.chown(path, uid=owner_uid)
-    try:
-        yield
-    finally:
-        if orig_uid != owner_uid:
-            nova.privsep.path.chown(path, uid=orig_uid)
-
-
 @contextlib.contextmanager
 def tempdir(**kwargs):
     argdict = kwargs.copy()
@@ -527,34 +455,6 @@ def tempdir(**kwargs):
             shutil.rmtree(tmpdir)
         except OSError as e:
             LOG.error('Could not remove tmpdir: %s', e)
-
-
-class UndoManager(object):
-    """Provides a mechanism to facilitate rolling back a series of actions
-    when an exception is raised.
-    """
-
-    def __init__(self):
-        self.undo_stack = []
-
-    def undo_with(self, undo_func):
-        self.undo_stack.append(undo_func)
-
-    def _rollback(self):
-        for undo_func in reversed(self.undo_stack):
-            undo_func()
-
-    def rollback_and_reraise(self, msg=None, **kwargs):
-        """Rollback a series of actions then re-raise the exception.
-
-        .. note:: (sirp) This should only be called within an
-                  exception handler.
-        """
-        with excutils.save_and_reraise_exception():
-            if msg:
-                LOG.exception(msg, **kwargs)
-
-            self._rollback()
 
 
 def metadata_to_dict(metadata, include_deleted=False):
