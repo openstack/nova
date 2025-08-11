@@ -24,7 +24,6 @@ from oslo_db.sqlalchemy import models
 from oslo_utils import timeutils
 import sqlalchemy as sa
 import sqlalchemy.dialects.mysql
-from sqlalchemy.ext import declarative
 from sqlalchemy import orm
 from sqlalchemy import schema
 
@@ -101,7 +100,7 @@ REMOVED_TABLES = {
 
 # we don't configure 'cls' since we have models that don't use the
 # TimestampMixin
-BASE = declarative.declarative_base()
+BASE = orm.declarative_base()
 
 
 class NovaBase(models.TimestampMixin, models.ModelBase):

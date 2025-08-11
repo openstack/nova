@@ -15,7 +15,6 @@ from oslo_db.sqlalchemy import models
 from oslo_log import log as logging
 import sqlalchemy as sa
 import sqlalchemy.dialects.mysql
-from sqlalchemy.ext import declarative
 from sqlalchemy import orm
 from sqlalchemy import schema
 
@@ -62,7 +61,7 @@ class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
     pass
 
 
-BASE = declarative.declarative_base(cls=_NovaAPIBase)
+BASE = orm.declarative_base(cls=_NovaAPIBase)
 
 
 class AggregateHost(BASE):
