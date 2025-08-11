@@ -1343,9 +1343,8 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
 @db.pick_context_manager_writer
 def populate_missing_availability_zones(context, max_count):
     # instances without host have no reasonable AZ to set
-    not_empty_host = models.Instance.host != None  # noqa E711
     instances = (context.session.query(models.Instance).
-        filter(not_empty_host).
+        filter(models.Instance.host.is_not(None)).
         filter_by(availability_zone=None).limit(max_count).all())
     count_all = len(instances)
     count_hit = 0
@@ -1360,7 +1359,7 @@ def populate_missing_availability_zones(context, max_count):
 @db.pick_context_manager_writer
 def populate_instance_compute_id(context, max_count):
     instances = (context.session.query(models.Instance).
-        filter(models.Instance.compute_id == None).  # noqa E711
+        filter(models.Instance.compute_id.is_(None)).
         limit(max_count).all())
     count_all = count_hit = 0
     rd_context = nova_context.get_admin_context(read_deleted='yes')
