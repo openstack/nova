@@ -16,7 +16,7 @@ features:
     additional API queries (potentially to multiple services) to get that
     information.
 
-upgrades:
+upgrade:
   - |
     To expose the newly added attributes in the libvirt domain metadata
     in an upgraded environment, already running instances will need to
