@@ -918,7 +918,7 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
 def _numa_fit_instance_cell(
     host_cell: 'objects.NUMACell',
     instance_cell: 'objects.InstanceNUMACell',
-    limits: ty.Optional['objects.NUMATopologyLimit'] = None,
+    limits: ty.Optional['objects.NUMATopologyLimits'] = None,
     cpuset_reserved: int = 0,
 ) -> ty.Optional['objects.InstanceNUMACell']:
     """Ensure an instance cell can fit onto a host cell
@@ -929,7 +929,7 @@ def _numa_fit_instance_cell(
 
     :param host_cell: host cell to fit the instance cell onto
     :param instance_cell: instance cell we want to fit
-    :param limits: an objects.NUMATopologyLimit or None
+    :param limits: an objects.NUMATopologyLimits or None
     :param cpuset_reserved: An int to indicate the number of CPUs overhead
 
     :returns: objects.InstanceNUMACell with the id set to that of the
@@ -2436,7 +2436,7 @@ def numa_fit_instance_to_host(
     host_topology: 'objects.NUMATopology',
     instance_topology: 'objects.InstanceNUMATopology',
     provider_mapping: ty.Optional[ty.Dict[str, ty.List[str]]],
-    limits: ty.Optional['objects.NUMATopologyLimit'] = None,
+    limits: ty.Optional['objects.NUMATopologyLimits'] = None,
     pci_requests: ty.Optional['objects.InstancePCIRequests'] = None,
     pci_stats: ty.Optional[stats.PciDeviceStats] = None,
 ):
