@@ -46,7 +46,6 @@ metadata_opts = [
     cfg.StrOpt("config_drive_skip_versions",
         default=("1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 "
                  "2007-12-15 2008-02-01 2008-09-01"),
-        deprecated_group="DEFAULT",
         help="""
 When gathering the existing metadata for a config drive, the EC2-style
 metadata is returned for all versions that don't appear in this option.
@@ -79,7 +78,6 @@ Possible values:
              'for ``vendor_data2.json``.'),
         ]),
         default=['StaticJSON'],
-        deprecated_group="DEFAULT",
         help="""
 A list of vendordata providers.
 
@@ -100,7 +98,6 @@ Related options:
 """),
     cfg.ListOpt('vendordata_dynamic_targets',
         default=[],
-        deprecated_group="DEFAULT",
         help="""
 A list of targets for the dynamic vendordata provider. These targets are of
 the form ``<name>@<url>``.
@@ -111,7 +108,6 @@ is documented in the vendordata.rst file in the nova developer reference.
 """),
     cfg.StrOpt('vendordata_dynamic_ssl_certfile',
         default='',
-        deprecated_group="DEFAULT",
         help="""
 Path to an optional certificate file or CA bundle to verify dynamic
 vendordata REST services ssl certificates against.
@@ -131,7 +127,6 @@ Related options:
     cfg.IntOpt('vendordata_dynamic_connect_timeout',
         default=5,
         min=3,
-        deprecated_group="DEFAULT",
         help="""
 Maximum wait time for an external REST service to connect.
 
@@ -152,7 +147,6 @@ Related options:
     cfg.IntOpt('vendordata_dynamic_read_timeout',
         default=5,
         min=0,
-        deprecated_group="DEFAULT",
         help="""
 Maximum wait time for an external REST service to return data once connected.
 
@@ -185,7 +179,6 @@ Related options:
     cfg.IntOpt("metadata_cache_expiration",
         default=15,
         min=0,
-        deprecated_group="DEFAULT",
         help="""
 This option is the time (in seconds) to cache metadata. When set to 0,
 metadata caching is disabled entirely; this is generally not recommended for
@@ -207,7 +200,6 @@ Neutron metadata-agent to point to the corresponding nova-metadata API
 service.
 """),
     cfg.StrOpt("dhcp_domain",
-        deprecated_group="DEFAULT",
         default="novalocal",
         help="""
 Domain name used to configure FQDN for instances.
@@ -226,7 +218,6 @@ Possible values:
 
 file_opts = [
     cfg.StrOpt("vendordata_jsonfile_path",
-        deprecated_group="DEFAULT",
         help="""
 Cloud providers may store custom data in vendor data file that will then be
 available to the instances via the metadata service, and to the rendering of
@@ -249,15 +240,11 @@ osapi_opts = [
     cfg.IntOpt("max_limit",
         default=1000,
         min=0,
-        deprecated_group="DEFAULT",
-        deprecated_name="osapi_max_limit",
         help="""
 As a query can potentially return many thousands of items, you can limit the
 maximum number of items in a single response by setting this option.
 """),
     cfg.StrOpt("compute_link_prefix",
-        deprecated_group="DEFAULT",
-        deprecated_name="osapi_compute_link_prefix",
         help="""
 This string is prepended to the normal URL that is returned in links to the
 OpenStack Compute API. If it is empty (the default), the URLs are returned
@@ -268,8 +255,6 @@ Possible values:
 * Any string, including an empty string (the default).
 """),
     cfg.StrOpt("glance_link_prefix",
-        deprecated_group="DEFAULT",
-        deprecated_name="osapi_glance_link_prefix",
         help="""
 This string is prepended to the normal URL that is returned in links to
 Glance resources. If it is empty (the default), the URLs are returned
@@ -362,18 +347,17 @@ more information.
 os_network_opts = [
     cfg.BoolOpt("use_neutron_default_nets",
         default=False,
-        deprecated_group="DEFAULT",
         help="""
 When True, the TenantNetworkController will query the Neutron API to get the
 default networks to use.
 
 Related options:
 
-* neutron_default_tenant_id
+* neutron_default_project_id
 """),
-    cfg.StrOpt("neutron_default_tenant_id",
+    cfg.StrOpt("neutron_default_project_id",
+        deprecated_name="neutron_default_tenant_id",
         default="default",
-        deprecated_group="DEFAULT",
         help="""
 Tenant ID for getting the default network from Neutron API (also referred in
 some places as the 'project ID') to use.
@@ -387,7 +371,6 @@ Related options:
 enable_inst_pw_opts = [
     cfg.BoolOpt("enable_instance_password",
         default=True,
-        deprecated_group="DEFAULT",
         help="""
 Enables returning of the instance password by the relevant server API calls
 such as create, rebuild, evacuate, or rescue. If the hypervisor does not

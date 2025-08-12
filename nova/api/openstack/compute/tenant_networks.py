@@ -69,9 +69,8 @@ class TenantNetworkController(wsgi.Controller):
                 LOG.exception("Failed to get default networks")
 
     def _get_default_networks(self):
-        project_id = CONF.api.neutron_default_tenant_id
-        ctx = nova_context.RequestContext(user_id=None,
-                                          project_id=project_id)
+        project_id = CONF.api.neutron_default_project_id
+        ctx = nova_context.RequestContext(user_id=None, project_id=project_id)
         return self.network_api.get_all(ctx)
 
     @wsgi.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
