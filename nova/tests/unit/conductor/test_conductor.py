@@ -3650,7 +3650,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance, [])
         mock_execute.side_effect = ex
-        self.conductor = utils.ExceptionHelper(self.conductor)
+        self.conductor = test_utils.ExceptionHelper(self.conductor)
 
         self.assertRaises(type(ex),
             self.conductor.migrate_server, self.context, inst_obj,
@@ -3679,7 +3679,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         ex = exc.InvalidCPUInfo(reason="invalid cpu info.")
         mock_execute.side_effect = ex
 
-        self.conductor = utils.ExceptionHelper(self.conductor)
+        self.conductor = test_utils.ExceptionHelper(self.conductor)
 
         self.assertRaises(exc.InvalidCPUInfo,
             self.conductor.migrate_server, self.context, inst_obj,

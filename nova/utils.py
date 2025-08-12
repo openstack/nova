@@ -41,7 +41,6 @@ from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_context import context as common_context
 from oslo_log import log as logging
-import oslo_messaging as messaging
 from oslo_utils import encodeutils
 from oslo_utils import importutils
 from oslo_utils import strutils
@@ -511,26 +510,6 @@ def expects_func_args(*args):
                                  'd_name': dec.__name__})
         return _decorator
     return _decorator_checker
-
-
-class ExceptionHelper(object):
-    """Class to wrap another and translate the ClientExceptions raised by its
-    function calls to the actual ones.
-    """
-
-    def __init__(self, target):
-        self._target = target
-
-    def __getattr__(self, name):
-        func = getattr(self._target, name)
-
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                return func(*args, **kwargs)
-            except messaging.ExpectedException as e:
-                raise e.exc_info[1]
-        return wrapper
 
 
 def check_string_length(value, name=None, min_length=0, max_length=None):
