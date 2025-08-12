@@ -27,7 +27,6 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase):
     API to see if the provided image_ref for rebuild is different than the
     original image.
     """
-    api_major_version = 'v2.1'
     # We need microversion <=2.93 to get the old BFV rebuild behavior
     # that was the environment for this regression.
     microversion = '2.92'

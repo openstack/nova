@@ -42,7 +42,7 @@ class TestCompareResult(test.NoDBTestCase):
         ast_instance = api_samples_test_base.ApiSampleTestBase('setUp')
 
         # required by ApiSampleTestBase
-        ast_instance.api_major_version = 'v2'
+        ast_instance.api_major_version = 'v2.1'
         ast_instance.USE_PROJECT_ID = 'True'
 
         # automagically create magic methods usually handled by test classes
@@ -280,7 +280,7 @@ class TestCompareResult(test.NoDBTestCase):
             [
                 {
                     u'href':
-                        (u'http://openstack.example.com/v2/%s/server/'
+                        (u'http://openstack.example.com/v2.1/%s/server/'
                             '858f295a-8543-45fa-804a-08f8356d616d' %
                          api_samples_test_base.PROJECT_ID
                         ),
@@ -327,7 +327,7 @@ class TestCompareResult(test.NoDBTestCase):
             [
                 {
                     u'href':
-                        (u'http://openstack.example.com/v2/openstack/server/'
+                        (u'http://openstack.example.com/v2.1/openstack/server/'
                             '858f295a-8543-45fa-804a-08f8356d616d'),
                     u'rel': u'self'
                 },
@@ -368,7 +368,7 @@ class TestCompareResult(test.NoDBTestCase):
             [
                 {
                     u'href':
-                        (u'http://openstack.example.com/v2/openstack/server/'
+                        (u'http://openstack.example.com/v2.1/openstack/server/'
                             '858f295a-8543-45fa-804a-08f8356d616d'),
                     u'rel': u'self'
                 },

@@ -34,8 +34,6 @@ class TestLiveMigrateUpdateDevicePath(
     Bug #1939545 covering the case where the returned path from os-brick
     isn't being saved into the connection_info of the associated bdm in Nova.
     """
-
-    api_major_version = 'v2.1'
     microversion = 'latest'
     ADMIN_API = True
 

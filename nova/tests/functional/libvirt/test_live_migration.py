@@ -33,8 +33,6 @@ class LiveMigrationWithLockBase(
     use it simultaneously. Every test using this mechanism should use
     separate class instance.
     """
-
-    api_major_version = 'v2.1'
     microversion = '2.74'
     ADMIN_API = True
 
@@ -217,8 +215,6 @@ class LiveMigrationWithCpuSharedSet(
     libvirt_base.ServersTestBase,
     integrated_helpers.InstanceHelperMixin
 ):
-
-    api_major_version = 'v2.1'
     # Microversion 2.74 is required to boot a server on a specific host,
     # which is used in the below tests.
     microversion = '2.74'

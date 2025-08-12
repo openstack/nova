@@ -22,8 +22,6 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase):
     Uses the CinderFixture fixture with a specific volume ID
     to represent a multiattach volume.
     """
-    # These are all used in _IntegratedTestBase.
-    api_major_version = 'v2.1'
     microversion = '2.60'
 
     def setUp(self):

@@ -15,10 +15,8 @@ from nova.tests.functional import integrated_helpers
 
 
 class ComputeVersion6xPinnedRpcTests(integrated_helpers._IntegratedTestBase):
-
     compute_driver = 'fake.MediumFakeDriver'
     ADMIN_API = True
-    api_major_version = 'v2.1'
     microversion = 'latest'
 
     def setUp(self):

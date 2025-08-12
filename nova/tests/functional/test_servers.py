@@ -889,7 +889,7 @@ class ServersTestV21(ServersTest):
 
 
 class ServersTestV219(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2.1'
+    microversion = '2.19'
 
     def _create_server(self, set_desc = True, desc = None):
         server = self._build_server()
@@ -992,7 +992,6 @@ class ServersTestV219(integrated_helpers._IntegratedTestBase):
             self.assertEqual(400, cm.exception.response.status_code)
 
     def test_create_server_with_description(self):
-        self.api.microversion = '2.19'
         # Create and get a server with a description
         self._create_server_and_verify(True, 'test description')
         # Create and get a server with an empty description
@@ -1003,7 +1002,6 @@ class ServersTestV219(integrated_helpers._IntegratedTestBase):
         self._create_server_and_verify(False)
 
     def test_update_server_with_description(self):
-        self.api.microversion = '2.19'
         # Create a server with an initial description
         server = self._create_server(True, 'test desc 1')[1]
         server_id = server['id']
@@ -1023,8 +1021,6 @@ class ServersTestV219(integrated_helpers._IntegratedTestBase):
         self._delete_server(server)
 
     def test_rebuild_server_with_description(self):
-        self.api.microversion = '2.19'
-
         # Create a server with an initial description
         server = self._create_server(True, 'test desc 1')[1]
         server_id = server['id']
@@ -1078,7 +1074,6 @@ class ServersTestV219(integrated_helpers._IntegratedTestBase):
         self._create_assertRaisesRegex('test create 2.18')
 
     def test_description_errors(self):
-        self.api.microversion = '2.19'
         # Create servers with invalid descriptions.  These throw 400.
         # Invalid unicode with non-printable control char
         self._create_assertRaisesRegex(u'invalid\0dstring')
@@ -1100,11 +1095,10 @@ class ServersTestV219(integrated_helpers._IntegratedTestBase):
 
 
 class ServerTestV220(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2.1'
+    microversion = '2.20'
 
     def setUp(self):
         super(ServerTestV220, self).setUp()
-        self.api.microversion = '2.20'
         self.ctxt = context.get_admin_context()
 
     def _create_server(self):
@@ -1175,12 +1169,11 @@ class ServerTestV220(integrated_helpers._IntegratedTestBase):
 
 
 class ServerTestV269(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2.1'
+    microversion = '2.69'
     NUMBER_OF_CELLS = 3
 
     def setUp(self):
         super(ServerTestV269, self).setUp()
-        self.api.microversion = '2.69'
 
         self.ctxt = context.get_admin_context()
         self.project_id = self.api.project_id
@@ -1363,7 +1356,6 @@ class ServerTestV269(integrated_helpers._IntegratedTestBase):
         # We get the results only from the up cells, this ignoring the down
         # cells if list_records_by_skipping_down_cells config option is True.
         self.admin_api = self.api_fixture.admin_api
-        self.admin_api.microversion = '2.69'
         servers = self.admin_api.get_servers(
             search_opts={'hostname': "cell3-inst0"})
         self.assertEqual(1, len(servers))
@@ -1371,7 +1363,6 @@ class ServerTestV269(integrated_helpers._IntegratedTestBase):
 
     def test_get_servers_detail_all_tenants_with_down_cells(self):
         self.admin_api = self.api_fixture.admin_api
-        self.admin_api.microversion = '2.69'
         servers = self.admin_api.get_servers(search_opts={'all_tenants': True})
         # 4 servers from the up cells and 4 servers from the down cells
         # plus the 2 instances from cell1 and cell3 which are in a different
@@ -1397,7 +1388,6 @@ class ServerTestV269(integrated_helpers._IntegratedTestBase):
 
 
 class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2.1'
     # We have to cap the microversion at 2.38 because that's the max we
     # can use to update image metadata via our compute images proxy API.
     microversion = '2.38'
@@ -1624,7 +1614,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
 
 
 class ServerRebuildTestCaseV293(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2.1'
+    microversion = '2.93'
 
     def setUp(self):
         super(ServerRebuildTestCaseV293, self).setUp()
@@ -1651,7 +1641,6 @@ class ServerRebuildTestCaseV293(integrated_helpers._IntegratedTestBase):
         return self._wait_for_state_change(server, 'ACTIVE')
 
     def _test_rebuild(self, server):
-        self.api.microversion = '2.93'
         # Now rebuild the server with a different image than was used to create
         # our fake volume.
         rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
@@ -1708,18 +1697,9 @@ class ServerRebuildTestCaseV293(integrated_helpers._IntegratedTestBase):
 
 
 class ServersTestV280(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2.1'
+    microversion = '2.80'
 
-    def setUp(self):
-        super(ServersTestV280, self).setUp()
-        self.api = self.api_fixture.api
-        self.admin_api = self.api_fixture.admin_api
-
-        self.api.microversion = '2.80'
-        self.admin_api.microversion = '2.80'
-
-    def test_get_migrations_after_cold_migrate_server_in_same_project(
-            self):
+    def test_get_migrations_after_cold_migrate_server_in_same_project(self):
         # Create a server by non-admin
         server = self.api.post_server({
             'server': {
@@ -1751,7 +1731,8 @@ class ServersTestV280(integrated_helpers._IntegratedTestBase):
         self.assertEqual([], migrations)
 
     def test_get_migrations_after_live_migrate_server_in_different_project(
-            self):
+        self
+    ):
         # Create a server by non-admin
         server = self.api.post_server({
             'server': {
@@ -4860,7 +4841,6 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
 
 
 class ServerTestV256Common(integrated_helpers._IntegratedTestBase):
-    api_major_version = 'v2.1'
     microversion = '2.56'
     ADMIN_API = True
 

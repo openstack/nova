@@ -179,7 +179,6 @@ class NovaManageDBIronicTest(test.TestCase):
 
 class TestIronicComputeNodeMove(NovaManageDBIronicTest):
     """Functional tests for "nova-manage db ironic_compute_node_move" CLI."""
-    api_major_version = 'v2.1'
 
     def setUp(self):
         super(TestIronicComputeNodeMove, self).setUp()
@@ -2120,7 +2119,6 @@ class TestNovaManagePlacementAudit(
 
 class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
     """Functional tests for the "nova-manage db archive_deleted_rows" CLI."""
-    api_major_version = 'v2.1'
 
     def setUp(self):
         super(TestDBArchiveDeletedRows, self).setUp()
@@ -2167,7 +2165,6 @@ class TestDBArchiveDeletedRowsTaskLog(integrated_helpers._IntegratedTestBase):
     """Functional tests for the
     "nova-manage db archive_deleted_rows --task-log" CLI.
     """
-    api_major_version = 'v2.1'
 
     def setUp(self):
         # Override time to ensure we cross audit period boundaries in a

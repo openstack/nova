@@ -23,7 +23,6 @@ class RebuildWithKeypairTestCase(integrated_helpers._IntegratedTestBase):
 
     This tests a rebuild scenario with new key pairs.
     """
-    api_major_version = 'v2.1'
     microversion = 'latest'
 
     def test_rebuild_with_keypair(self):

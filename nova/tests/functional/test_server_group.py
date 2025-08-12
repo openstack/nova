@@ -38,7 +38,6 @@ CONF = cfg.CONF
 class ServerGroupTestBase(test.TestCase,
                           integrated_helpers.InstanceHelperMixin):
     REQUIRES_LOCKING = True
-    api_major_version = 'v2.1'
     microversion = None
 
     _enabled_filters = (CONF.filter_scheduler.enabled_filters +
@@ -581,7 +580,6 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
 
 class ServerGroupAffinityConfTest(ServerGroupTestBase):
-    api_major_version = 'v2.1'
     # Load only anti-affinity filter so affinity will be missing
     _enabled_filters = ['ServerGroupAntiAffinityFilter']
 
@@ -598,7 +596,6 @@ class ServerGroupAffinityConfTest(ServerGroupTestBase):
 
 
 class ServerGroupAntiAffinityConfTest(ServerGroupTestBase):
-    api_major_version = 'v2.1'
     # Load only affinity filter so anti-affinity will be missing
     _enabled_filters = ['ServerGroupAffinityFilter']
 
@@ -615,7 +612,6 @@ class ServerGroupAntiAffinityConfTest(ServerGroupTestBase):
 
 
 class ServerGroupSoftAffinityConfTest(ServerGroupTestBase):
-    api_major_version = 'v2.1'
     microversion = '2.15'
     soft_affinity = {'name': 'fake-name-4',
                      'policies': ['soft-affinity']}
@@ -638,7 +634,6 @@ class ServerGroupSoftAffinityConfTest(ServerGroupTestBase):
 
 
 class ServerGroupSoftAntiAffinityConfTest(ServerGroupTestBase):
-    api_major_version = 'v2.1'
     microversion = '2.15'
     soft_anti_affinity = {'name': 'fake-name-3',
                           'policies': ['soft-anti-affinity']}
@@ -661,7 +656,6 @@ class ServerGroupSoftAntiAffinityConfTest(ServerGroupTestBase):
 
 
 class ServerGroupTestV215(ServerGroupTestV21):
-    api_major_version = 'v2.1'
     microversion = '2.15'
 
     soft_anti_affinity = {'name': 'fake-name-3',
@@ -910,7 +904,6 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
 
 class ServerGroupTestV264(ServerGroupTestV215):
-    api_major_version = 'v2.1'
     microversion = '2.64'
     anti_affinity = {'name': 'fake-name-1', 'policy': 'anti-affinity'}
     affinity = {'name': 'fake-name-2', 'policy': 'affinity'}

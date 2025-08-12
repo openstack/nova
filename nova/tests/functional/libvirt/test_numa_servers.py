@@ -1106,9 +1106,6 @@ class NUMAServerTestWithCountingQuotaFromPlacement(NUMAServersTest):
 
 
 class ReshapeForPCPUsTest(NUMAServersTestBase):
-
-    api_major_version = 'v2.1'
-
     # TODO(stephenfin): We're using this because we want to be able to force
     # the host during scheduling. We should instead look at overriding policy
     ADMIN_API = True

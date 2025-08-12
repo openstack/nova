@@ -56,10 +56,9 @@ def _verify_list_fulfillment(context, instance_uuid):
 
 
 class VirtualInterfaceListMigrationTestCase(
-        integrated_helpers._IntegratedTestBase):
-
+    integrated_helpers._IntegratedTestBase
+):
     ADMIN_API = True
-    api_major_version = 'v2.1'
 
     def setUp(self):
         super(VirtualInterfaceListMigrationTestCase, self).setUp()

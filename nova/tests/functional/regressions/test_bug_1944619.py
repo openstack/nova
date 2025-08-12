@@ -36,8 +36,6 @@ class TestRollbackWithHWOffloadedOVS(
     that might cause the pre-live migration process to fail and
     rollback_live_migration_at_source reproduce the device re-attach failure.
     """
-
-    api_major_version = 'v2.1'
     microversion = 'latest'
     ADMIN_API = True
 

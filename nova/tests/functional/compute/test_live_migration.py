@@ -46,7 +46,6 @@ class FakeCinderError(object):
 class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase):
     # Default self.api to the self.admin_api as live migration is admin only
     ADMIN_API = True
-    api_major_version = 'v2.1'
     microversion = 'latest'
 
     def setUp(self):

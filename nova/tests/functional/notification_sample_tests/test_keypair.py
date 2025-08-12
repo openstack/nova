@@ -14,9 +14,8 @@ from nova.tests.functional.notification_sample_tests \
 
 
 class TestKeypairNotificationSample(
-        notification_sample_base.NotificationSampleTestBase):
-
-    api_major_version = 'v2.1'
+    notification_sample_base.NotificationSampleTestBase
+):
     microversion = 'latest'
 
     def test_keypair_create_delete(self):

@@ -29,7 +29,6 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase):
     The regression is that Nova would not clean up the reserved volumes and
     the volume would be stuck in 'attaching' state.
     """
-    api_major_version = 'v2.1'
     microversion = 'latest'
 
     def _setup_compute_service(self):

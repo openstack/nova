@@ -30,7 +30,6 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase):
     NUMBER_OF_CELLS = 2
     REQUIRES_LOCKING = False
     ADMIN_API = True
-    api_major_version = 'v2.1'
     microversion = '2.11'  # Need at least 2.11 for the force-down API
 
     def setUp(self):

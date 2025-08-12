@@ -27,11 +27,7 @@ LOG = logging.getLogger(__name__)
 CONF = conf.CONF
 
 
-class RescueServerTestWithDeletedBaseImage(
-    base.ServersTestBase
-):
-
-    api_major_version = 'v2.1'
+class RescueServerTestWithDeletedBaseImage(base.ServersTestBase):
     microversion = '2.87'
 
     # BUG #2002606
