@@ -42,8 +42,7 @@ IMAGE_FIXTURES = image_fixtures.get_image_fixtures()
 class ImagesControllerTestV21(test.NoDBTestCase):
     """Test of the OpenStack API /images application controller w/Glance.
     """
-    url_base = '/v2/%s' % fakes.FAKE_PROJECT_ID
-    bookmark_base = '/%s' % fakes.FAKE_PROJECT_ID
+    url_base = '/v2.1'
     http_request = fakes.HTTPRequestV21
 
     def setUp(self):
@@ -57,15 +56,14 @@ class ImagesControllerTestV21(test.NoDBTestCase):
 
         self.controller = images_v21.ImagesController()
         self.url_prefix = "http://localhost%s/images" % self.url_base
-        self.bookmark_prefix = "http://localhost%s/images" % self.bookmark_base
+        self.bookmark_prefix = "http://localhost/images"
         self.uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
         self.server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
         self.server_href = (
             "http://localhost%s/servers/%s" % (self.url_base,
                                                self.server_uuid))
         self.server_bookmark = (
-             "http://localhost%s/servers/%s" % (self.bookmark_base,
-                                                self.server_uuid))
+             "http://localhost/servers/%s" % self.server_uuid)
         self.alternate = "%s/images/%s"
 
         self.image_a_uuid = IMAGE_FIXTURES[0]['id']
@@ -174,16 +172,14 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         expected_image["image"]["links"][0]["href"] = (
             f"https://zoo.com:42{self.url_base}/images/{self.image_b_uuid}")
         expected_image["image"]["links"][1]["href"] = (
-            f"https://zoo.com:42{self.bookmark_base}/images/"
-            f"{self.image_b_uuid}")
+            f"https://zoo.com:42/images/{self.image_b_uuid}")
         expected_image["image"]["links"][2]["href"] = (
             f"http://circus.com:34/images/{self.image_b_uuid}")
         expected_image["image"]["server"]["links"][0]["href"] = (
             "https://zoo.com:42%s/servers/%s" % (self.url_base,
                                                  self.server_uuid))
         expected_image["image"]["server"]["links"][1]["href"] = (
-            "https://zoo.com:42%s/servers/%s" % (self.bookmark_base,
-                                                 self.server_uuid))
+            "https://zoo.com:42/servers/%s" % (self.server_uuid))
 
         self.assertThat(actual_image, matchers.DictMatches(expected_image))
 

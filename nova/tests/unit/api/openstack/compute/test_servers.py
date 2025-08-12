@@ -178,11 +178,8 @@ def fake_get_inst_mappings_by_instance_uuids_from_db(*args, **kwargs):
 
 class ControllerTest(test.TestCase):
     project_id = fakes.FAKE_PROJECT_ID
-    path = '/%s/servers' % project_id
-    path_v2 = '/v2' + path
-    path_with_id = path + '/%s'
-    path_with_id_v2 = path_v2 + '/%s'
-    path_with_query = path + '?%s'
+    path = '/servers'
+    path_v2 = '/v2.1' + path
     path_detail = path + '/detail'
     path_detail_v2 = path_v2 + '/detail'
     path_detail_with_query = path_detail + '?%s'
@@ -261,7 +258,7 @@ class _ServersControllerTest(ControllerTest):
     def setUp(self):
         super().setUp()
         self.request = fakes.HTTPRequest.blank(
-            self.path_with_id_v2 % FAKE_UUID,
+            '/v2.1/servers/%s' % FAKE_UUID,
             use_admin_context=False,
             version=self.microversion)
         return_server = fakes.fake_compute_get(
@@ -322,11 +319,11 @@ class _ServersControllerTest(ControllerTest):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost%s/%s" % (self.path_v2, uuid),
+                        "href": "http://localhost/v2.1/servers/%s" % uuid,
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost%s/%s" % (self.path, uuid),
+                        "href": "http://localhost/servers/%s" % uuid,
                     },
                 ],
                 "OS-DCF:diskConfig": "MANUAL",
@@ -358,7 +355,7 @@ class ServersControllerTest(_ServersControllerTest):
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     def test_instance_lookup_targets(self, mock_get_im, mock_get_inst):
-        ctxt = context.RequestContext('fake', self.project_id)
+        ctxt = context.RequestContext('fake', fakes.FAKE_PROJECT_ID)
         mock_get_im.return_value.cell_mapping.database_connection = uuids.cell1
         self.controller._get_instance(ctxt, 'foo')
         mock_get_im.assert_called_once_with(ctxt, 'foo')
@@ -455,7 +452,7 @@ class ServersControllerTest(_ServersControllerTest):
             self.assertEqual(['flavor', 'info_cache', 'metadata',
                               'numa_topology', 'services'],
                               expected_attrs)
-            ctxt = context.RequestContext('fake', self.project_id)
+            ctxt = context.RequestContext('fake', fakes.FAKE_PROJECT_ID)
             return fake_instance.fake_instance_obj(
                 ctxt, expected_attrs=expected_attrs,
                 project_id=self.request.environ['nova.context'].project_id)
@@ -473,9 +470,9 @@ class ServersControllerTest(_ServersControllerTest):
                                            project_id=project_id,
                                            host='fake_host')
 
-        req1 = self.req(self.path_with_id % FAKE_UUID)
+        req1 = self.req('/servers/%s' % FAKE_UUID)
         project_id = uuidutils.generate_uuid()
-        req2 = fakes.HTTPRequest.blank(self.path_with_id % FAKE_UUID,
+        req2 = fakes.HTTPRequest.blank('/servers/%s' % FAKE_UUID,
                                        version=self.microversion,
                                        project_id=project_id)
 
@@ -487,9 +484,8 @@ class ServersControllerTest(_ServersControllerTest):
                             server2['server']['hostId'])
 
     def test_get_server_by_id(self):
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
 
         uuid = FAKE_UUID
         res_dict = self.controller.show(self.request, uuid)
@@ -504,7 +500,7 @@ class ServersControllerTest(_ServersControllerTest):
 
     def test_get_server_empty_az(self):
         uuid = FAKE_UUID
-        req = self.req(self.path_with_id_v2 % uuid)
+        req = self.req('/v2.1/servers/%s' % uuid)
 
         self.mock_get.side_effect = fakes.fake_compute_get(
             availability_zone='',
@@ -513,9 +509,8 @@ class ServersControllerTest(_ServersControllerTest):
         self.assertEqual(res_dict['server']['OS-EXT-AZ:availability_zone'], '')
 
     def test_get_server_with_active_status_by_id(self):
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
 
         res_dict = self.controller.show(self.request, FAKE_UUID)
         expected_server = self._get_server_data_dict(FAKE_UUID,
@@ -533,9 +528,8 @@ class ServersControllerTest(_ServersControllerTest):
                             cell_down_support=False)
 
     def test_get_server_with_id_image_ref_by_id(self):
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
 
         res_dict = self.controller.show(self.request, FAKE_UUID)
         expected_server = self._get_server_data_dict(FAKE_UUID,
@@ -587,7 +581,7 @@ class ServersControllerTest(_ServersControllerTest):
         self.mock_get.side_effect = fakes.fake_compute_get(nw_cache=nw_cache,
             availability_zone='nova')
 
-        req = self.req((self.path_with_id % FAKE_UUID) + '/ips')
+        req = self.req(('/servers/%s' % FAKE_UUID) + '/ips')
         res_dict = self.ips_controller.index(req, FAKE_UUID)
 
         expected = {
@@ -615,7 +609,7 @@ class ServersControllerTest(_ServersControllerTest):
             self.assertEqual(label, labels[index])
 
     def test_get_server_addresses_nonexistent_network(self):
-        url = ((self.path_with_id_v2 % FAKE_UUID) + '/ips/network_0')
+        url = (('/v2.1/servers/%s' % FAKE_UUID) + '/ips/network_0')
         req = self.req(url)
         self.assertRaises(webob.exc.HTTPNotFound, self.ips_controller.show,
                           req, FAKE_UUID, 'network_0')
@@ -623,7 +617,7 @@ class ServersControllerTest(_ServersControllerTest):
     def test_get_server_addresses_nonexistent_server(self):
         self.mock_get.side_effect = exception.InstanceNotFound(
             instance_id='fake')
-        req = self.req((self.path_with_id % uuids.fake) + '/ips')
+        req = self.req(('/servers/%s' % uuids.fake) + '/ips')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.ips_controller.index, req, uuids.fake)
         self.mock_get.assert_called_once_with(
@@ -632,7 +626,7 @@ class ServersControllerTest(_ServersControllerTest):
 
     def test_show_server_hide_addresses_in_building(self):
         uuid = FAKE_UUID
-        req = self.req(self.path_with_id_v2 % uuid)
+        req = self.req('/v2.1/servers/%s' % uuid)
         self.mock_get.side_effect = fakes.fake_compute_get(
             uuid=uuid, vm_state=vm_states.BUILDING,
             project_id=req.environ['nova.context'].project_id)
@@ -668,7 +662,7 @@ class ServersControllerTest(_ServersControllerTest):
                 ],
             },
         }
-        req = self.req(self.path_with_id_v2 % uuid)
+        req = self.req('/v2.1/servers/%s' % uuid)
         self.mock_get.side_effect = fakes.fake_compute_get(
             nw_cache=nw_cache, uuid=uuid, vm_state=vm_states.ACTIVE,
             project_id=req.environ['nova.context'].project_id)
@@ -717,7 +711,7 @@ class ServersControllerTest(_ServersControllerTest):
                                                  nw_cache=nw_cache)])
 
         self.mock_get_all.side_effect = fake_get_all
-        req = self.req(self.path_with_query % 'deleted=true',
+        req = self.req('/v2.1/servers?%s' % 'deleted=true',
                        use_admin_context=True)
 
         servers = self.controller.detail(req)['servers']
@@ -743,7 +737,7 @@ class ServersControllerTest(_ServersControllerTest):
             cell_down_support=False, all_tenants=False)
 
     def test_get_server_list_with_reservation_id(self):
-        req = self.req(self.path_with_query % 'reservation_id=foo')
+        req = self.req('/v2.1/servers?%s' % 'reservation_id=foo')
         res_dict = self.controller.index(req)
 
         i = 0
@@ -782,20 +776,19 @@ class ServersControllerTest(_ServersControllerTest):
             expected_links = [
                 {
                     "rel": "self",
-                    "href": "http://localhost" + (
-                                 self.path_with_id_v2 % s['id']),
+                    "href": "http://localhost/v2.1/servers/%s" % s['id'],
                 },
                 {
                     "rel": "bookmark",
                     "href": "http://localhost" + (
-                                self.path_with_id % s['id']),
+                                '/servers/%s' % s['id']),
                 },
             ]
 
             self.assertEqual(s['links'], expected_links)
 
     def test_get_servers_with_limit(self):
-        req = self.req(self.path_with_query % 'limit=3')
+        req = self.req('/v2.1/servers?%s' % 'limit=3')
         res_dict = self.controller.index(req)
 
         servers = res_dict['servers']
@@ -805,15 +798,14 @@ class ServersControllerTest(_ServersControllerTest):
         servers_links = res_dict['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
         href_parts = urlparse.urlparse(servers_links[0]['href'])
-        self.assertEqual('/v2' + self.path,
-                         href_parts.path)
+        self.assertEqual('/v2.1/servers', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         expected_params = {'limit': ['3'],
                            'marker': [fakes.get_fake_uuid(2)]}
         self.assertThat(params, matchers.DictMatches(expected_params))
 
     def test_get_servers_with_limit_bad_value(self):
-        req = self.req(self.path_with_query % 'limit=aaa')
+        req = self.req('/v2.1/servers?%s' % 'limit=aaa')
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
@@ -884,51 +876,50 @@ class ServersControllerTest(_ServersControllerTest):
         self.assertThat(params, matchers.DictMatches(expected))
 
     def test_get_servers_with_too_big_limit(self):
-        req = self.req(self.path_with_query % 'limit=30')
+        req = self.req('/v2.1/servers?%s' % 'limit=30')
         res_dict = self.controller.index(req)
         self.assertNotIn('servers_links', res_dict)
 
     def test_get_servers_with_bad_limit(self):
-        req = self.req(self.path_with_query % 'limit=asdf')
+        req = self.req('/v2.1/servers?%s' % 'limit=asdf')
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
     def test_get_servers_with_marker(self):
-        url = '%s?marker=%s' % (self.path_v2, fakes.get_fake_uuid(2))
+        url = '/v2.1/servers?marker=%s' % (fakes.get_fake_uuid(2))
         req = self.req(url)
         servers = self.controller.index(req)['servers']
         self.assertEqual([s['name'] for s in servers], ["server4", "server5"])
 
     def test_get_servers_with_limit_and_marker(self):
-        url = '%s?limit=2&marker=%s' % (self.path_v2,
-                                        fakes.get_fake_uuid(1))
+        url = '/v2.1/servers?limit=2&marker=%s' % fakes.get_fake_uuid(1)
         req = self.req(url)
         servers = self.controller.index(req)['servers']
         self.assertEqual([s['name'] for s in servers], ['server3', 'server4'])
 
     def test_get_servers_with_bad_marker(self):
-        req = self.req(self.path_with_query % 'limit=2&marker=asdf')
+        req = self.req('/v2.1/servers?%s' % 'limit=2&marker=asdf')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
     def test_get_servers_with_invalid_filter_param(self):
-        req = self.req(self.path_with_query % 'info_cache=asdf',
+        req = self.req('/v2.1/servers?%s' % 'info_cache=asdf',
                        use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
-        req = self.req(self.path_with_query % '__foo__=asdf',
+        req = self.req('/v2.1/servers?%s' % '__foo__=asdf',
                        use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
     def test_get_servers_with_invalid_regex_filter_param(self):
-        req = self.req(self.path_with_query % 'flavor=[[[',
+        req = self.req('/v2.1/servers?%s' % 'flavor=[[[',
                        use_admin_context=True)
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
     def test_get_servers_with_empty_regex_filter_param(self):
-        req = self.req(self.path_with_query % 'flavor=',
+        req = self.req('/v2.1/servers?%s' % 'flavor=',
                        use_admin_context=True)
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
@@ -941,13 +932,13 @@ class ServersControllerTest(_ServersControllerTest):
 
     def test_get_servers_invalid_sort_key(self):
         # "hidden" is a real field for instances but not exposed in the API.
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                        'sort_key=hidden&sort_dir=desc')
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
     def test_get_servers_ignore_sort_key(self):
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                        'sort_key=vcpus&sort_dir=asc')
         self.controller.index(req)
         self.mock_get_all.assert_called_once_with(
@@ -957,7 +948,7 @@ class ServersControllerTest(_ServersControllerTest):
 
     def test_get_servers_ignore_locked_sort_key(self):
         # Prior to microversion 2.73 locked sort key is ignored.
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                        'sort_key=locked&sort_dir=asc')
         self.controller.detail(req)
         self.mock_get_all.assert_called_once_with(
@@ -966,7 +957,7 @@ class ServersControllerTest(_ServersControllerTest):
             cell_down_support=False, all_tenants=False)
 
     def test_get_servers_ignore_sort_key_only_one_dir(self):
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                 'sort_key=user_id&sort_key=vcpus&sort_dir=asc')
         self.controller.index(req)
         self.mock_get_all.assert_called_once_with(
@@ -975,7 +966,7 @@ class ServersControllerTest(_ServersControllerTest):
             sort_dirs=['asc'], cell_down_support=False, all_tenants=False)
 
     def test_get_servers_ignore_sort_key_with_no_sort_dir(self):
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                        'sort_key=vcpus&sort_key=user_id')
         self.controller.index(req)
         self.mock_get_all.assert_called_once_with(
@@ -984,7 +975,7 @@ class ServersControllerTest(_ServersControllerTest):
             cell_down_support=False, all_tenants=False)
 
     def test_get_servers_ignore_sort_key_with_bad_sort_dir(self):
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                        'sort_key=vcpus&sort_dir=bad_dir')
         self.controller.index(req)
         self.mock_get_all.assert_called_once_with(
@@ -993,13 +984,13 @@ class ServersControllerTest(_ServersControllerTest):
             cell_down_support=False, all_tenants=False)
 
     def test_get_servers_non_admin_with_admin_only_sort_key(self):
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                        'sort_key=host&sort_dir=desc')
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.index, req)
 
     def test_get_servers_admin_with_admin_only_sort_key(self):
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                        'sort_key=node&sort_dir=desc',
                        use_admin_context=True)
         self.controller.detail(req)
@@ -1019,7 +1010,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'unknownoption=whee')
+        req = self.req('/v2.1/servers?%s' % 'unknownoption=whee')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -1043,7 +1034,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'locked=true')
+        req = self.req('/v2.1/servers?%s' % 'locked=true')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -1069,7 +1060,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'image=12345')
+        req = self.req('/v2.1/servers?%s' % 'image=12345')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -1082,7 +1073,7 @@ class ServersControllerTest(_ServersControllerTest):
             self.assertEqual(self.project_id, search_opts['project_id'])
             return [fakes.stub_instance_obj(100)]
 
-        req = self.req(self.path_with_query % 'tenant_id=newfake')
+        req = self.req('/v2.1/servers?%s' % 'tenant_id=newfake')
         self.mock_get_all.side_effect = fake_get_all
         servers = self.controller.index(req)['servers']
         self.assertEqual(len(servers), 1)
@@ -1095,7 +1086,7 @@ class ServersControllerTest(_ServersControllerTest):
             self.assertEqual(self.project_id, search_opts['project_id'])
             return [fakes.stub_instance_obj(100)]
 
-        req = self.req(self.path_with_query % 'tenant_id=newfake',
+        req = self.req('/v2.1/servers?%s' % 'tenant_id=newfake',
                        use_admin_context=True)
         self.mock_get_all.side_effect = fake_get_all
         servers = self.controller.index(req)['servers']
@@ -1106,7 +1097,7 @@ class ServersControllerTest(_ServersControllerTest):
             self.assertNotIn('project_id', search_opts)
             return [fakes.stub_instance_obj(100)]
 
-        req = self.req(self.path_with_query % 'all_tenants',
+        req = self.req('/v2.1/servers?%s' % 'all_tenants',
                        use_admin_context=True)
         self.mock_get_all.side_effect = fake_get_all
         servers = self.controller.index(req)['servers']
@@ -1119,7 +1110,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'all_tenants=1',
+        req = self.req('/v2.1/servers?%s' % 'all_tenants=1',
                        use_admin_context=True)
         servers = self.controller.index(req)['servers']
         self.assertEqual(1, len(servers))
@@ -1131,7 +1122,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'all_tenants=0',
+        req = self.req('/v2.1/servers?%s' % 'all_tenants=0',
                        use_admin_context=True)
         servers = self.controller.index(req)['servers']
         self.assertEqual(1, len(servers))
@@ -1143,7 +1134,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'all_tenants=false',
+        req = self.req('/v2.1/servers?%s' % 'all_tenants=false',
                        use_admin_context=True)
         servers = self.controller.index(req)['servers']
         self.assertEqual(1, len(servers))
@@ -1155,7 +1146,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'all_tenants=xxx',
+        req = self.req('/v2.1/servers?%s' % 'all_tenants=xxx',
                        use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
@@ -1187,7 +1178,7 @@ class ServersControllerTest(_ServersControllerTest):
         }
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
-        req = self.req(self.path_with_query % 'all_tenants=1')
+        req = self.req('/v2.1/servers?%s' % 'all_tenants=1')
         servers = self.controller.index(req)['servers']
         self.assertEqual(1, len(servers))
 
@@ -1205,14 +1196,14 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'flavor=12345')
+        req = self.req('/v2.1/servers?%s' % 'flavor=12345')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
         self.assertEqual(uuids.fake, servers[0]['id'])
 
     def test_get_servers_with_bad_flavor(self):
-        req = self.req(self.path_with_query % 'flavor=abcde')
+        req = self.req('/v2.1/servers?%s' % 'flavor=abcde')
         self.mock_get_all.side_effect = None
         self.mock_get_all.return_value = objects.InstanceList(objects=[])
         servers = self.controller.index(req)['servers']
@@ -1220,7 +1211,7 @@ class ServersControllerTest(_ServersControllerTest):
         self.assertEqual(len(servers), 0)
 
     def test_get_server_details_with_bad_flavor(self):
-        req = self.req(self.path_with_query % 'flavor=abcde')
+        req = self.req('/v2.1/servers?%s' % 'flavor=abcde')
         self.mock_get_all.side_effect = None
         self.mock_get_all.return_value = objects.InstanceList(objects=[])
         servers = self.controller.detail(req)['servers']
@@ -1240,7 +1231,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'status=active')
+        req = self.req('/v2.1/servers?%s' % 'status=active')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -1263,7 +1254,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'status=reboot')
+        req = self.req('/v2.1/servers?%s' % 'status=reboot')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -1284,7 +1275,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'status=resize')
+        req = self.req('/v2.1/servers?%s' % 'status=resize')
 
         servers = self.controller.detail(req)['servers']
         self.assertEqual(1, len(servers), 1)
@@ -1292,13 +1283,13 @@ class ServersControllerTest(_ServersControllerTest):
 
     def test_get_servers_invalid_status(self):
         # Test getting servers by invalid status.
-        req = self.req(self.path_with_query % 'status=baloney',
+        req = self.req('/v2.1/servers?%s' % 'status=baloney',
                        use_admin_context=False)
         servers = self.controller.index(req)['servers']
         self.assertEqual(len(servers), 0)
 
     def test_get_servers_deleted_status_as_user(self):
-        req = self.req(self.path_with_query % 'status=deleted',
+        req = self.req('/v2.1/servers?%s' % 'status=deleted',
                        use_admin_context=False)
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.detail, req)
@@ -1316,7 +1307,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'status=deleted',
+        req = self.req('/v2.1/servers?%s' % 'status=deleted',
                        use_admin_context=True)
 
         servers = self.controller.detail(req)['servers']
@@ -1330,7 +1321,7 @@ class ServersControllerTest(_ServersControllerTest):
         self.mock_get_all.side_effect = None
         self.mock_get_all.return_value = db_list
 
-        req = self.req(self.path_with_query % 'deleted=true',
+        req = self.req('/v2.1/servers?%s' % 'deleted=true',
                        use_admin_context=True)
 
         servers = self.controller.detail(req)['servers']
@@ -1349,7 +1340,7 @@ class ServersControllerTest(_ServersControllerTest):
         self.mock_get_all.side_effect = None
         self.mock_get_all.return_value = db_list
 
-        req = fakes.HTTPRequest.blank(self.path_with_query % 'deleted=abc',
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % 'deleted=abc',
                                       use_admin_context=True)
 
         servers = self.controller.detail(req)['servers']
@@ -1377,7 +1368,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'name=whee.*')
+        req = self.req('/v2.1/servers?%s' % 'name=whee.*')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -1387,7 +1378,7 @@ class ServersControllerTest(_ServersControllerTest):
         self.mock_get_all.side_effect = exception.FlavorNotFound(flavor_id=1)
 
         req = fakes.HTTPRequest.blank(
-                self.path_with_query % 'status=active&flavor=abc')
+                '/v2.1/servers?%s' % 'status=active&flavor=abc')
         servers = self.controller.index(req)['servers']
         self.assertEqual(0, len(servers))
 
@@ -1408,7 +1399,7 @@ class ServersControllerTest(_ServersControllerTest):
         self.mock_get_all.side_effect = fake_get_all
 
         params = 'changes-since=2011-01-24T17:08:01Z'
-        req = self.req(self.path_with_query % params)
+        req = self.req('/v2.1/servers?%s' % params)
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -1416,13 +1407,13 @@ class ServersControllerTest(_ServersControllerTest):
 
     def test_get_servers_allows_changes_since_bad_value(self):
         params = 'changes-since=asdf'
-        req = self.req(self.path_with_query % params)
+        req = self.req('/v2.1/servers?%s' % params)
         self.assertRaises(exception.ValidationError, self.controller.index,
                           req)
 
     def test_get_servers_allows_changes_since_bad_value_on_compat_mode(self):
         params = 'changes-since=asdf'
-        req = self.req(self.path_with_query % params)
+        req = self.req('/v2.1/servers?%s' % params)
         req.set_legacy_v2()
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index,
                           req)
@@ -1450,7 +1441,7 @@ class ServersControllerTest(_ServersControllerTest):
         self.mock_get_all.side_effect = fake_get_all
 
         query_str = "name=foo&ip=10.*&status=active&unknown_option=meow"
-        req = fakes.HTTPRequest.blank(self.path_with_query % query_str)
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % query_str)
         res = self.controller.index(req)
 
         servers = res['servers']
@@ -1481,7 +1472,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         query_str = ("name=foo&ip=10.*&status=active&unknown_option=meow&"
                      "terminated_at=^2016-02-01.*")
-        req = self.req(self.path_with_query % query_str,
+        req = self.req('/v2.1/servers?%s' % query_str,
                        use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
@@ -1524,7 +1515,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         query_str = ("name=foo&ip=10.*&status=active&unknown_option=meow&"
                      "terminated_at=^2016-02-01.*&hidden=true")
-        req = self.req(self.path_with_query % query_str)
+        req = self.req('/v2.1/servers?%s' % query_str)
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 1)
@@ -1544,7 +1535,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % r'ip=10\..*')
+        req = self.req('/v2.1/servers?%s' % r'ip=10\..*')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -1566,7 +1557,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'ip6=ffff.*',
+        req = self.req('/v2.1/servers?%s' % 'ip6=ffff.*',
                        use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
@@ -1589,7 +1580,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'ip6=ffff.*')
+        req = self.req('/v2.1/servers?%s' % 'ip6=ffff.*')
         req.api_version_request = api_version_request.APIVersionRequest('2.5')
         servers = self.controller.index(req)['servers']
 
@@ -1612,7 +1603,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'access_ip_v4=ffff.*',
+        req = self.req('/v2.1/servers?%s' % 'access_ip_v4=ffff.*',
                        use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
@@ -1635,7 +1626,7 @@ class ServersControllerTest(_ServersControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'access_ip_v6=ffff.*',
+        req = self.req('/v2.1/servers?%s' % 'access_ip_v6=ffff.*',
                        use_admin_context=True)
         servers = self.controller.index(req)['servers']
 
@@ -1655,7 +1646,7 @@ class ServersControllerTest(_ServersControllerTest):
     def test_show_server_usage(self):
         DATE1 = datetime.datetime(year=2013, month=4, day=5, hour=12)
         DATE2 = datetime.datetime(year=2013, month=4, day=5, hour=13)
-        req = self.req(self.path_with_id % FAKE_UUID)
+        req = self.req('/servers/%s' % FAKE_UUID)
         req.accept = 'application/json'
         req.method = 'GET'
         self.mock_get.side_effect = fakes.fake_compute_get(
@@ -1703,8 +1694,7 @@ class ServersControllerTest(_ServersControllerTest):
                 "links": [
                     {
                         "rel": "bookmark",
-                        "href": ('http://localhost/%s/flavors/2' %
-                                 self.project_id),
+                        "href": 'http://localhost/flavors/2',
                         },
                     ],
                 }
@@ -1713,8 +1703,7 @@ class ServersControllerTest(_ServersControllerTest):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": ('http://localhost/%s/images/%s' % (
-                        self.project_id, FAKE_UUID)),
+                    "href": 'http://localhost/images/%s' % FAKE_UUID,
                     },
                 ],
             }
@@ -1791,7 +1780,7 @@ class ServersControllerTestV23(_ServersControllerTest):
 
     def setUp(self):
         super(ServersControllerTestV23, self).setUp()
-        self.request = self.req(self.path_with_id % FAKE_UUID)
+        self.request = self.req('/servers/%s' % FAKE_UUID)
         self.project_id = self.request.environ['nova.context'].project_id
         self.mock_get.side_effect = fakes.fake_compute_get(
             id=2, uuid=FAKE_UUID,
@@ -1837,9 +1826,8 @@ class ServersControllerTestV23(_ServersControllerTest):
         return server_dict
 
     def test_show(self):
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
 
         res_dict = self.controller.show(self.request, FAKE_UUID)
 
@@ -1880,9 +1868,8 @@ class ServersControllerTestV23(_ServersControllerTest):
             req.environ['nova.context'])
 
         servers_list = self.controller.detail(req)
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
         expected_server = self._get_server_data_dict(FAKE_UUID,
                                                      image_bookmark,
                                                      flavor_bookmark,
@@ -1942,10 +1929,9 @@ class ServersControllerTestV29(_ServersControllerTest):
         return server_dict
 
     def _test_get_server_with_lock(self, locked_by):
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
-        req = self.req(self.path_with_id % FAKE_UUID)
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
+        req = self.req('/servers/%s' % FAKE_UUID)
         project_id = req.environ['nova.context'].project_id
         self.mock_get.side_effect = fakes.fake_compute_get(
             id=2, locked_by=locked_by, uuid=FAKE_UUID,
@@ -2123,9 +2109,8 @@ class ServersControllerTestV216(_ServersControllerTest):
         policy.set_rules(orig_rules)
 
     def test_show(self):
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
         res_dict = self.controller.show(self.request, FAKE_UUID)
         expected_server = self._get_server_data_dict(FAKE_UUID,
                                                      image_bookmark,
@@ -2169,9 +2154,8 @@ class ServersControllerTestV216(_ServersControllerTest):
 
         servers_list = self.controller.detail(req)
         self.assertEqual(2, len(servers_list['servers']))
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
         expected_server = self._get_server_data_dict(FAKE_UUID,
                                                      image_bookmark,
                                                      flavor_bookmark,
@@ -2241,10 +2225,9 @@ class ServersControllerTestV219(_ServersControllerTest):
         return server_dict
 
     def _test_get_server_with_description(self, description):
-        image_bookmark = "http://localhost/%s/images/%s" % (
-            self.project_id, FAKE_UUID)
-        flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
-        req = self.req(self.path_with_id % FAKE_UUID)
+        image_bookmark = "http://localhost/images/%s" % FAKE_UUID
+        flavor_bookmark = "http://localhost/flavors/2"
+        req = self.req('/servers/%s' % FAKE_UUID)
         project_id = req.environ['nova.context'].project_id
         self.mock_get.side_effect = fakes.fake_compute_get(
             id=2, display_description=description, uuid=FAKE_UUID,
@@ -2304,7 +2287,7 @@ class ServersControllerTestV226(ControllerTest):
     microversion = '2.26'
 
     def test_get_server_with_tags_by_id(self):
-        req = fakes.HTTPRequest.blank(self.path_with_id % FAKE_UUID,
+        req = fakes.HTTPRequest.blank('/servers/%s' % FAKE_UUID,
                                       version=self.microversion)
         ctxt = req.environ['nova.context']
         tags = ['tag1', 'tag2']
@@ -2331,7 +2314,7 @@ class ServersControllerTestV226(ControllerTest):
 
     def _test_get_servers_allows_tag_filters(self, filter_name):
         query_string = '%s=t1,t2' % filter_name
-        req = fakes.HTTPRequest.blank(self.path_with_query % query_string,
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % query_string,
                                       version=self.microversion)
 
         def fake_get_all(*a, **kw):
@@ -2485,7 +2468,7 @@ class ServersControllerTestV266(ControllerTest):
         self.mock_get_all.side_effect = fake_get_all
 
         params = 'changes-before=2011-01-24T17:08:01Z'
-        req = self.req(self.path_with_query % params)
+        req = self.req('/v2.1/servers?%s' % params)
         req.api_version_request = api_version_request.APIVersionRequest('2.66')
         servers = self.controller.index(req)['servers']
 
@@ -2494,14 +2477,14 @@ class ServersControllerTestV266(ControllerTest):
 
     def test_get_servers_allows_changes_before_bad_value(self):
         params = 'changes-before=asdf'
-        req = self.req(self.path_with_query % params)
+        req = self.req('/v2.1/servers?%s' % params)
         req.api_version_request = api_version_request.APIVersionRequest('2.66')
         self.assertRaises(exception.ValidationError, self.controller.index,
                           req)
 
     def test_get_servers_allows_changes_before_bad_value_on_compat_mode(self):
         params = 'changes-before=asdf'
-        req = self.req(self.path_with_query % params)
+        req = self.req('/v2.1/servers?%s' % params)
         req.api_version_request = api_version_request.APIVersionRequest('2.66')
         req.set_legacy_v2()
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
@@ -2528,7 +2511,7 @@ class ServersControllerTestV266(ControllerTest):
 
         params = 'changes-since=2011-01-23T17:08:01Z&' \
                  'changes-before=2011-01-24T17:08:01Z'
-        req = self.req(self.path_with_query % params)
+        req = self.req('/v2.1/servers?%s' % params)
         req.api_version_request = api_version_request.APIVersionRequest('2.66')
         servers = self.controller.index(req)['servers']
 
@@ -2540,7 +2523,7 @@ class ServersControllerTestV266(ControllerTest):
         changes_before = '2018-09-03T05:45:27Z'
         query_string = ('changes-since=%s&changes-before=%s' %
                         (changes_since, changes_before))
-        req = self.req(self.path_with_query % query_string)
+        req = self.req('/v2.1/servers?%s' % query_string)
         req.api_version_request = api_version_request.APIVersionRequest('2.66')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
 
@@ -2549,7 +2532,7 @@ class ServersControllerTestV271(ControllerTest):
     microversion = '2.71'
 
     def test_show_server_group_not_exist(self):
-        req = self.req(self.path_with_id % FAKE_UUID)
+        req = self.req('/servers/%s' % FAKE_UUID)
         return_server = fakes.fake_compute_get(
             id=2, vm_state=vm_states.ACTIVE,
             project_id=req.environ['nova.context'].project_id)
@@ -2580,7 +2563,7 @@ class ServersControllerTestV273(ControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'locked=true')
+        req = self.req('/v2.1/servers?%s' % 'locked=true')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -2606,7 +2589,7 @@ class ServersControllerTestV273(ControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'locked=price')
+        req = self.req('/v2.1/servers?%s' % 'locked=price')
         exp = self.assertRaises(webob.exc.HTTPBadRequest,
                                 self.controller.index, req)
         self.assertIn("Unrecognized value 'price'", str(exp))
@@ -2623,7 +2606,7 @@ class ServersControllerTestV273(ControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query % 'locked=')
+        req = self.req('/v2.1/servers?%s' % 'locked=')
         exp = self.assertRaises(webob.exc.HTTPBadRequest,
                                 self.controller.index, req)
         self.assertIn("Unrecognized value ''", str(exp))
@@ -2640,7 +2623,7 @@ class ServersControllerTestV273(ControllerTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        req = self.req(self.path_with_query %
+        req = self.req('/v2.1/servers?%s' %
                        'sort_dir=desc&sort_key=locked')
         servers = self.controller.index(req)['servers']
 
@@ -2659,19 +2642,19 @@ class ServersControllerTestV275(ControllerTest):
     microversion = '2.75'
 
     def test_get_servers_additional_query_param_old_version(self):
-        req = fakes.HTTPRequest.blank(self.path_with_query % 'unknown=1',
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % 'unknown=1',
                                       use_admin_context=True,
                                       version='2.74')
         self.controller.index(req)
 
     def test_get_servers_ignore_sort_key_old_version(self):
         req = fakes.HTTPRequest.blank(
-                self.path_with_query % 'sort_key=deleted',
+                '/v2.1/servers?%s' % 'sort_key=deleted',
                 use_admin_context=True, version='2.74')
         self.controller.index(req)
 
     def test_get_servers_additional_query_param(self):
-        req = fakes.HTTPRequest.blank(self.path_with_query % 'unknown=1',
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % 'unknown=1',
                                       use_admin_context=True,
                                       version=self.microversion)
         self.assertRaises(exception.ValidationError, self.controller.index,
@@ -2680,7 +2663,7 @@ class ServersControllerTestV275(ControllerTest):
     def test_get_servers_previously_ignored_sort_key(self):
         for s_ignore in servers_schema.SERVER_LIST_IGNORE_SORT_KEY_V273:
             req = fakes.HTTPRequest.blank(
-                self.path_with_query % 'sort_key=%s' % s_ignore,
+                '/v2.1/servers?%s' % 'sort_key=%s' % s_ignore,
                 use_admin_context=True,
                 version=self.microversion)
             self.assertRaises(exception.ValidationError, self.controller.index,
@@ -2688,7 +2671,7 @@ class ServersControllerTestV275(ControllerTest):
 
     def test_get_servers_additional_sort_key(self):
         req = fakes.HTTPRequest.blank(
-                self.path_with_query % 'sort_key=unknown',
+                '/v2.1/servers?%s' % 'sort_key=unknown',
                 use_admin_context=True, version=self.microversion)
         self.assertRaises(exception.ValidationError, self.controller.index,
                           req)
@@ -2711,7 +2694,7 @@ class ServersControllerTestV283(ControllerTest):
         self.mock_get_all.side_effect = fake_get_all
 
         query_str = '&'.join('%s=test_value' % f for f in self.filters)
-        req = fakes.HTTPRequest.blank(self.path_with_query % query_str,
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % query_str,
                                       version='2.83')
         servers = self.controller.index(req)['servers']
 
@@ -2731,7 +2714,7 @@ class ServersControllerTestV283(ControllerTest):
         self.mock_get_all.side_effect = fake_get_all
 
         query_str = '&'.join('%s=test_value' % f for f in self.filters)
-        req = fakes.HTTPRequest.blank(self.path_with_query % query_str,
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % query_str,
                                       version='2.82')
         servers = self.controller.index(req)['servers']
 
@@ -2750,7 +2733,7 @@ class ServersControllerTestV283(ControllerTest):
         self.mock_get_all.side_effect = fake_get_all
 
         query_str = "node=node1"
-        req = fakes.HTTPRequest.blank(self.path_with_query % query_str,
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % query_str,
                                       version='2.83')
         servers = self.controller.index(req)['servers']
 
@@ -2773,7 +2756,7 @@ class ServersControllerTestV290(ControllerTest):
 
         query_str = '&'.join('%s=test_value' % f for f in self.filters)
         req = fakes.HTTPRequest.blank(
-            self.path_with_query % query_str, version='2.90')
+            '/v2.1/servers?%s' % query_str, version='2.90')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -2792,7 +2775,7 @@ class ServersControllerTestV290(ControllerTest):
 
         query_str = '&'.join('%s=test_value' % f for f in self.filters)
         req = fakes.HTTPRequest.blank(
-            self.path_with_query % query_str, version='2.89')
+            '/v2.1/servers?%s' % query_str, version='2.89')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(0, len(servers))
@@ -2812,7 +2795,7 @@ class ServersControllerTestV290(ControllerTest):
 
         query_str = "node=node1"
         req = fakes.HTTPRequest.blank(
-            self.path_with_query % query_str, version='2.90')
+            '/v2.1/servers?%s' % query_str, version='2.90')
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(1, len(servers))
@@ -2838,7 +2821,7 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def _create_delete_request(self, uuid):
         fakes.stub_out_instance_quota(self, 0, 10)
-        req = fakes.HTTPRequestV21.blank(self.path_with_id % uuid)
+        req = fakes.HTTPRequestV21.blank('/servers/%s' % uuid)
         req.method = 'DELETE'
         fake_get = fakes.fake_compute_get(
             uuid=uuid,
@@ -2891,7 +2874,7 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def test_delete_server_instance_if_not_launched(self):
         self.flags(reclaim_instance_interval=3600)
-        req = fakes.HTTPRequestV21.blank(self.path_with_id % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s' % FAKE_UUID)
         req.method = 'DELETE'
 
         self.server_delete_called = False
@@ -3082,8 +3065,8 @@ class ServersControllerRebuildTest(_ServersControllerRebuildTest):
 
     def test_rebuild_server_with_image_as_full_url(self):
         image_href = (
-            'http://localhost/v2/%s/images/'
-            '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6' % self.project_id)
+            'http://localhost/v2.1/images/'
+            '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
         self.body['rebuild']['imageRef'] = image_href
         self.assertRaises(exception.ValidationError,
                           self.controller._action_rebuild,
@@ -3815,7 +3798,7 @@ class ServersControllerRebuildTestV275(ControllerTest):
         # the attributes which are not supposed to be included for Rebuild
         # response are not present.
         body = {'rebuild': {"imageRef": self.image_uuid}}
-        req = fakes.HTTPRequest.blank(self.path_with_query % 'unknown=1',
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % 'unknown=1',
                                       use_admin_context=True,
                                       version='2.74')
         fake_get = fakes.fake_compute_get(
@@ -3837,7 +3820,7 @@ class ServersControllerRebuildTestV275(ControllerTest):
 
     def test_rebuild_response_has_show_server_all_attributes(self):
         body = {'rebuild': {"imageRef": self.image_uuid}}
-        req = fakes.HTTPRequest.blank(self.path_with_query % 'unknown=1',
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % 'unknown=1',
                                       use_admin_context=True,
                                       version=self.microversion)
         self.mock_get.side_effect = fakes.fake_compute_get(
@@ -3977,7 +3960,7 @@ class _ServersControllerUpdateTest(ControllerTest):
     microversion = None
 
     def _get_request(self, body=None):
-        req = fakes.HTTPRequestV21.blank(self.path_with_id % FAKE_UUID)
+        req = fakes.HTTPRequestV21.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         req.body = jsonutils.dump_as_bytes(body)
@@ -4051,7 +4034,7 @@ class ServersControllerUpdateTest(_ServersControllerUpdateTest):
     def test_update_server_name_all_blank_spaces(self):
         self.stub_out('nova.db.main.api.instance_get',
                 fakes.fake_instance_get(name='server_test'))
-        req = fakes.HTTPRequest.blank(self.path_with_id % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {'name': ' ' * 64}}
@@ -4067,7 +4050,7 @@ class ServersControllerUpdateTest(_ServersControllerUpdateTest):
     def test_update_server_name_with_leading_trailing_spaces(self):
         self.stub_out('nova.db.main.api.instance_get',
                 fakes.fake_instance_get(name='server_test'))
-        req = fakes.HTTPRequest.blank(self.path_with_id % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {'name': '  abc   def  '}}
@@ -4085,7 +4068,7 @@ class ServersControllerUpdateTest(_ServersControllerUpdateTest):
         inst_dict = dict(name='server_test', admin_password='bacon')
         body = dict(server=inst_dict)
 
-        req = fakes.HTTPRequest.blank(self.path_with_id % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = "application/json"
         req.body = jsonutils.dump_as_bytes(body)
@@ -4096,7 +4079,7 @@ class ServersControllerUpdateTest(_ServersControllerUpdateTest):
         inst_dict = dict(host_id='123')
         body = dict(server=inst_dict)
 
-        req = fakes.HTTPRequest.blank(self.path_with_id % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = "application/json"
         req.body = jsonutils.dump_as_bytes(body)
@@ -4107,7 +4090,7 @@ class ServersControllerUpdateTest(_ServersControllerUpdateTest):
         self.mock_get.side_effect = exception.InstanceNotFound(
             instance_id='fake')
         body = {'server': {'name': 'server_test'}}
-        req = fakes.HTTPRequest.blank(self.path_with_id % FAKE_UUID)
+        req = fakes.HTTPRequest.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = "application/json"
         req.body = jsonutils.dump_as_bytes(body)
@@ -4213,7 +4196,7 @@ class ServersControllerUpdateTestV275(_ServersControllerUpdateTest):
         # attributes which are not supposed to be included for PUT
         # response are not present.
         body = {'server': {'name': 'server_test'}}
-        req = fakes.HTTPRequest.blank(self.path_with_query % 'unknown=1',
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % 'unknown=1',
                                       use_admin_context=True,
                                       version='2.74')
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
@@ -4226,7 +4209,7 @@ class ServersControllerUpdateTestV275(_ServersControllerUpdateTest):
 
     def test_update_response_has_show_server_all_attributes(self):
         body = {'server': {'name': 'server_test'}}
-        req = fakes.HTTPRequest.blank(self.path_with_query % 'unknown=1',
+        req = fakes.HTTPRequest.blank('/v2.1/servers?%s' % 'unknown=1',
                                       use_admin_context=True,
                                       version=self.microversion)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
@@ -4357,7 +4340,6 @@ class ServersControllerTriggerCrashDumpTest(ControllerTest):
 class ServerStatusTest(test.TestCase):
     project_id = fakes.FAKE_PROJECT_ID
     path = '/%s/servers' % project_id
-    path_with_id = path + '/%s'
     path_action = path + '/%s/action'
 
     def setUp(self):
@@ -4369,7 +4351,7 @@ class ServerStatusTest(test.TestCase):
         self.controller = servers.ServersController()
 
     def _get_with_state(self, vm_state, task_state=None):
-        request = fakes.HTTPRequestV21.blank(self.path_with_id % FAKE_UUID)
+        request = fakes.HTTPRequestV21.blank('/servers/%s' % FAKE_UUID)
         self.stub_out('nova.compute.api.API.get',
                 fakes.fake_compute_get(
                     vm_state=vm_state,
@@ -4472,7 +4454,7 @@ class _ServersControllerCreateTest(test.TestCase):
             'delete_on_termination': False
         }]
 
-        self.req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
+        self.req = fakes.HTTPRequest.blank('/servers')
         self.req.method = 'POST'
         self.req.headers["content-type"] = "application/json"
         server = dict(name='server_test', imageRef=FAKE_UUID, flavorRef=2)
@@ -4618,8 +4600,8 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
                           self.req, body=self.body)
 
     def test_create_instance_with_image_as_full_url(self):
-        image_href = ('http://localhost/v2/%s/images/'
-            '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6' % self.project_id)
+        image_href = ('http://localhost/v2.1/images/'
+            '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
         self.body['server']['imageRef'] = image_href
         self.assertRaises(exception.ValidationError,
                           self.controller.create,
@@ -4788,7 +4770,7 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
 
     def test_create_instance_name_all_blank_spaces(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/%s/flavors/3' % self.project_id
+        flavor_ref = 'http://localhost/v2.1/flavors/3'
         body = {
             'server': {
                 'name': ' ' * 64,
@@ -5204,8 +5186,8 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
 
     def test_create_instance_with_imageRef_as_full_url(self):
         bdm = [{'device_name': 'foo'}]
-        image_href = ('http://localhost/v2/%s/images/'
-                      '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6' % self.project_id)
+        image_href = ('http://localhost/v2.1/images/'
+                      '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
         params = {'block_device_mapping_v2': bdm,
                   'imageRef': image_href}
         self.assertRaises(exception.ValidationError,
@@ -5567,8 +5549,8 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
             'volume_id': fakes.FAKE_UUID,
             'device_name': 'vda'
         }]
-        image_href = ('http://localhost/v2/%s/images/'
-                      '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6' % self.project_id)
+        image_href = ('http://localhost/v2.1/images/'
+                      '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
         params = {'block_device_mapping': bdm,
                   'imageRef': image_href}
         self.assertRaises(exception.ValidationError,
@@ -5810,7 +5792,7 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
         self._test_create_extra(params)
 
     def test_create_instance_invalid_flavor_href(self):
-        flavor_ref = 'http://localhost/v2/flavors/asdf'
+        flavor_ref = 'http://localhost/v2.1/flavors/asdf'
         self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -5848,7 +5830,7 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_bad_flavor_href(self):
-        flavor_ref = 'http://localhost/v2/flavors/17'
+        flavor_ref = 'http://localhost/v2.1/flavors/17'
         self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -5892,8 +5874,7 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
 
     def test_create_location(self):
         self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
-        selfhref = 'http://localhost/v2/%s/servers/%s' % (self.project_id,
-                                                          FAKE_UUID)
+        selfhref = 'http://localhost/v2.1/servers/%s' % FAKE_UUID
         self.req.body = jsonutils.dump_as_bytes(self.body)
         robj = self.controller.create(self.req, body=self.body)
 
@@ -6170,7 +6151,7 @@ class ServersControllerCreateTest(_ServersControllerCreateTest):
 
     def test_create_instance_with_blank_min(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/123/flavors/3'
+        flavor_ref = 'http://localhost/v2.1/flavors/3'
 
         body = {
             'server': {
@@ -6845,8 +6826,7 @@ class ServersControllerCreateTestV232(test.NoDBTestCase):
             }
         }
 
-        self.req = fakes.HTTPRequestV21.blank(
-                '/%s/servers' % fakes.FAKE_PROJECT_ID, version='2.32')
+        self.req = fakes.HTTPRequestV21.blank('/servers', version='2.32')
         self.req.method = 'POST'
         self.req.headers['content-type'] = 'application/json'
 
@@ -6913,8 +6893,7 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
             },
         }
         # Create a fake request using the 2.37 microversion.
-        self.req = fakes.HTTPRequestV21.blank(
-                '/%s/servers' % fakes.FAKE_PROJECT_ID, version='2.37')
+        self.req = fakes.HTTPRequestV21.blank('/servers', version='2.37')
         self.req.method = 'POST'
         self.req.headers['content-type'] = 'application/json'
 
@@ -7034,8 +7013,7 @@ class ServersControllerCreateTestV252(test.NoDBTestCase):
             }
         }
 
-        self.req = fakes.HTTPRequestV21.blank(
-                '/%s/servers' % fakes.FAKE_PROJECT_ID, version='2.52')
+        self.req = fakes.HTTPRequestV21.blank('/servers', version='2.52')
         self.req.method = 'POST'
         self.req.headers['content-type'] = 'application/json'
 
@@ -7509,16 +7487,14 @@ class _ServersViewBuilderTest(test.TestCase):
 
         self.uuid = db_inst['uuid']
         self.view_builder = views.servers.ViewBuilder()
-        self.request = fakes.HTTPRequestV21.blank("/%s" % self.project_id)
+        self.request = fakes.HTTPRequestV21.blank("/")
         self.request.context = context.RequestContext('fake', self.project_id)
         self.instance = fake_instance.fake_instance_obj(
-                    self.request.context,
-                    expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
-                    **db_inst)
-        self.self_link = "http://localhost/v2/%s/servers/%s" % (
-                             self.project_id, self.uuid)
-        self.bookmark_link = "http://localhost/%s/servers/%s" % (
-                             self.project_id, self.uuid)
+            self.request.context,
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
+            **db_inst)
+        self.self_link = "http://localhost/v2.1/servers/%s" % self.uuid
+        self.bookmark_link = "http://localhost/servers/%s" % self.uuid
 
     def _generate_nw_cache_info(self):
         fixed_ipv4 = ('192.168.1.100', '192.168.2.100', '192.168.3.100')
@@ -7557,13 +7533,13 @@ class _ServersViewBuilderTest(test.TestCase):
 class ServersViewBuilderTest(_ServersViewBuilderTest):
 
     def test_get_flavor_valid_flavor(self):
-        flavor_bookmark = "http://localhost/%s/flavors/1" % self.project_id
+        flavor_bookmark = "http://localhost/flavors/1"
         expected = {"id": "1",
                     "links": [{"rel": "bookmark",
                                "href": flavor_bookmark}]}
         result = self.view_builder._get_flavor(self.request, self.instance,
                                                False)
-        self.assertEqual(result, expected)
+        self.assertEqual(expected, result)
 
     @mock.patch('nova.context.scatter_gather_cells')
     def test_get_volumes_attached_with_faily_cells(self, mock_sg):
@@ -7623,8 +7599,8 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
         self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail(self):
-        image_bookmark = "http://localhost/%s/images/5" % self.project_id
-        flavor_bookmark = "http://localhost/%s/flavors/1" % self.project_id
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
             "server": {
                 "id": self.uuid,
@@ -7713,8 +7689,8 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
         self.instance['fault'] = fake_instance.fake_fault_obj(
                                      self.request.context, self.uuid)
 
-        image_bookmark = "http://localhost/%s/images/5" % self.project_id
-        flavor_bookmark = "http://localhost/%s/flavors/1" % self.project_id
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
             "server": {
                 "id": self.uuid,
@@ -7912,8 +7888,8 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
         # set the power state of the instance to running
         self.instance['vm_state'] = vm_states.ACTIVE
         self.instance['progress'] = 100
-        image_bookmark = "http://localhost/%s/images/5" % self.project_id
-        flavor_bookmark = "http://localhost/%s/flavors/1" % self.project_id
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
             "server": {
                 "id": self.uuid,
@@ -8004,8 +7980,8 @@ class ServersViewBuilderTest(_ServersViewBuilderTest):
         metadata = nova_utils.metadata_to_dict(metadata)
         self.instance['metadata'] = metadata
 
-        image_bookmark = "http://localhost/%s/images/5" % self.project_id
-        flavor_bookmark = "http://localhost/%s/flavors/1" % self.project_id
+        image_bookmark = "http://localhost/images/5"
+        flavor_bookmark = "http://localhost/flavors/1"
         expected_server = {
             "server": {
                 "id": self.uuid,
@@ -8128,11 +8104,11 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
                 )
             ]
 
-        req = self.req('/%s/servers/detail' % self.project_id)
+        req = self.req('/servers/detail')
         output = self.view_builder.detail(req, self.instances, True)
 
         self.assertEqual(2, len(output['servers']))
-        image_bookmark = "http://localhost/%s/images/5" % self.project_id
+        image_bookmark = "http://localhost/images/5"
         expected = {
             "servers": [{
                 "id": self.uuid,
@@ -8231,15 +8207,13 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v2/%s/servers/%s" %
-                                (self.project_id, uuids.fake1),
+                        "href": f"http://localhost/v2.1/servers/{uuids.fake1}",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/%s/servers/%s" %
-                                (self.project_id, uuids.fake1),
+                        "href": f"http://localhost/servers/{uuids.fake1}",
                     },
-                ],
+                ]
             }]
         }
         self.assertThat(output, matchers.DictMatches(expected))
@@ -8256,7 +8230,7 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
                 )
             ]
 
-        req = self.req('/%s/servers' % self.project_id)
+        req = self.req('/servers')
         output = self.view_builder.index(req, self.instances, True)
 
         self.assertEqual(2, len(output['servers']))
@@ -8282,15 +8256,13 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v2/%s/servers/%s" %
-                                (self.project_id, uuids.fake1),
+                        "href": f"http://localhost/v2.1/servers/{uuids.fake1}",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/%s/servers/%s" %
-                                (self.project_id, uuids.fake1),
+                        "href": f"http://localhost/servers/{uuids.fake1}",
                     },
-                ],
+                ]
             }]
         }
 
@@ -8310,12 +8282,12 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
             availability_zone=self.instance.availability_zone
         )
 
-        req = self.req('/%s/servers/%s' % (self.project_id, FAKE_UUID))
+        req = self.req('/servers/%s' % (FAKE_UUID))
         output = self.view_builder.show(req, self.instance,
                                         cell_down_support=True)
         # ten fields from request_spec and instance_mapping
         self.assertEqual(10, len(output['server']))
-        image_bookmark = "http://localhost/%s/images/5" % self.project_id
+        image_bookmark = "http://localhost/images/5"
         expected = {
             "server": {
                 "id": self.uuid,
@@ -8346,13 +8318,11 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v2/%s/servers/%s" %
-                                (self.project_id, self.uuid),
+                        "href": f"http://localhost/v2.1/servers/{self.uuid}",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/%s/servers/%s" %
-                                (self.project_id, self.uuid),
+                        "href": f"http://localhost/servers/{self.uuid}",
                     },
                 ]
             }
@@ -8373,7 +8343,7 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
             availability_zone=None
         )
 
-        req = self.req('/%s/servers/%s' % (self.project_id, FAKE_UUID))
+        req = self.req('/servers/%s' % (FAKE_UUID))
         output = self.view_builder.show(req, self.instance,
                                         cell_down_support=True)
         # nine fields from request_spec and instance_mapping
@@ -8400,13 +8370,11 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v2/%s/servers/%s" %
-                                (self.project_id, self.uuid),
+                        "href": f"http://localhost/v2.1/servers/{self.uuid}",
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/%s/servers/%s" %
-                                (self.project_id, self.uuid),
+                        "href": f"http://localhost/servers/{self.uuid}",
                     },
                 ]
             }
@@ -8464,7 +8432,7 @@ class ServersViewBuilderTestV296(_ServersViewBuilderTest):
             instance_uuid=self.instance.uuid,
             availability_zone=self.instance.availability_zone)]
 
-        req = self.req('/%s/servers' % self.project_id)
+        req = self.req('/servers')
         output = self.view_builder.index(req, self.instances, False)
 
         self.assertEqual(2, len(output['servers']))
@@ -8488,7 +8456,7 @@ class ServersViewBuilderTestV296(_ServersViewBuilderTest):
                 availability_zone=None)
         ]
 
-        req = self.req('/%s/servers/detail' % self.project_id)
+        req = self.req('/servers/detail')
         output = self.view_builder.detail(req, self.instances, False)
 
         self.assertEqual(3, len(output['servers']))
@@ -8520,17 +8488,17 @@ class ServersViewBuilderTestV296(_ServersViewBuilderTest):
         ]
 
         # Instance show with request spec and pinned az
-        req = self.req('/%s/servers/1' % self.project_id)
+        req = self.req('/servers/1')
         output = self.view_builder.show(req, self.instances[0])
         self.assertEqual('nova', output['server']['pinned_availability_zone'])
 
         # Instance show with request spec and no pinned az
-        req = self.req('/%s/servers/2' % self.project_id)
+        req = self.req('/servers/2')
         output = self.view_builder.show(req, self.instances[1])
         self.assertIsNone(output['server']['pinned_availability_zone'])
 
         # Instance show without request spec
-        req = self.req('/%s/servers/3' % self.project_id)
+        req = self.req('/servers/3')
         output = self.view_builder.show(req, self.instances[2])
         self.assertIsNone(output['server']['pinned_availability_zone'])
 

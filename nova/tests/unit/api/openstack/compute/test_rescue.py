@@ -180,7 +180,7 @@ class RescueTestV21(test.NoDBTestCase):
                           self.fake_req, UUID, body=body)
 
     def test_rescue_with_imageRef_as_full_url(self):
-        image_href = ('http://localhost/v2/fake/images/'
+        image_href = ('http://localhost/v2.1/fake/images/'
                       '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
         body = {"rescue": {"adminPass": "ABC123",
                            "rescue_image_ref": image_href}}

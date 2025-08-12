@@ -59,7 +59,7 @@ def fake_create_without_swap(newflavor):
 class FlavorManageTestV21(test.NoDBTestCase):
     controller = flavors_v21.FlavorsController()
     validation_error = exception.ValidationError
-    base_url = '/v2/%s/flavors' % fakes.FAKE_PROJECT_ID
+    base_url = '/v2.1/flavors'
     microversion = '2.1'
 
     def setUp(self):
@@ -539,7 +539,7 @@ class FlavorManageTestV2_75(FlavorManageTestV2_61):
 
 class PrivateFlavorManageTestV21(test.TestCase):
     controller = flavors_v21.FlavorsController()
-    base_url = '/v2/%s/flavors' % fakes.FAKE_PROJECT_ID
+    base_url = '/v2.1/flavors'
 
     def setUp(self):
         super(PrivateFlavorManageTestV21, self).setUp()

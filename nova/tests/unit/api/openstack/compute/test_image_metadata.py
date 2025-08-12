@@ -36,7 +36,7 @@ def get_image_123():
 class ImageMetaDataTestV21(test.NoDBTestCase):
     controller_class = image_metadata_v21.ImageMetadataController
     invalid_request = exception.ValidationError
-    base_path = '/v2/%s/images/' % fakes.FAKE_PROJECT_ID
+    base_path = '/v2.1/images'
 
     def setUp(self):
         super(ImageMetaDataTestV21, self).setUp()

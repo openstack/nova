@@ -321,7 +321,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                 image_ref=uuids.image_ref,
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
-        self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
+        self_href = 'http://localhost/v2.1/servers/%s' % FAKE_UUID
 
         body = {
             "rebuild": {
@@ -348,7 +348,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         self.stub_out('nova.compute.api.API.rebuild', rebuild)
 
-        # proper local hrefs must start with 'http://localhost/v2/'
+        # proper local hrefs must start with 'http://localhost/v2.1/'
         body = {
             'rebuild': {
                 'imageRef': self.image_uuid,
@@ -359,7 +359,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(info['image_href_in_call'], self.image_uuid)
 
     def test_rebuild_instance_with_image_href_uses_uuid(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
+        # proper local hrefs must start with 'http://localhost/v2.1/'
         body = {
             'rebuild': {
                 'imageRef': self.image_href,
@@ -380,7 +380,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                 image_ref=uuids.image_ref,
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
-        self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
+        self_href = 'http://localhost/v2.1/servers/%s' % FAKE_UUID
 
         body = {
             "rebuild": {

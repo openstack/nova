@@ -44,7 +44,7 @@ class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
     os-flavors-manage adds a set of admin functions to the flavors
     resource for the creation and deletion of flavors.
 
-    POST /v2/flavors:
+    POST /v2.1/flavors:
 
     ::
 
@@ -62,7 +62,7 @@ class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
 
     Returns Flavor
 
-    DELETE /v2/flavors/ID
+    DELETE /v2.1/flavors/ID
 
 
     Functional Test Scope:
@@ -77,8 +77,7 @@ class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
 
     scenarios = [
         # test v2.1 base microversion
-        ('v2_1', {
-            'api_major_version': 'v2.1'}),
+        ('v2_1', {'api_major_version': 'v2.1'}),
     ]
 
     def setUp(self):

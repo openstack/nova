@@ -83,8 +83,7 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
                 side_effect=exception.InstanceIsLocked(
                     instance_uuid='fake_uuid'))
     def test_force_delete_instance_locked(self, mock_force_delete, mock_get):
-        req = fakes.HTTPRequest.blank('/v2/%s/servers/fake_uuid/action' %
-                                      fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/servers/fake_uuid/action')
         ex = self.assertRaises(
             webob.exc.HTTPConflict,
             self.extension._force_delete,
@@ -97,8 +96,7 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
                 side_effect=exception.InstanceNotFound(
                     instance_id='fake_uuid'))
     def test_force_delete_instance_notfound(self, mock_force_delete, mock_get):
-        req = fakes.HTTPRequest.blank('/v2/%s/servers/fake_uuid/action' %
-                                      fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/servers/fake_uuid/action')
         ex = self.assertRaises(
             webob.exc.HTTPNotFound,
             self.extension._force_delete,

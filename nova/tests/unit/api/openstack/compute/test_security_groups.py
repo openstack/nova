@@ -497,14 +497,12 @@ class TestSecurityGroupsV21(test.TestCase):
 
     def test_get_security_group_list(self):
         self._create_sg_template().get('security_group')
-        req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups' % fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-groups')
         list_dict = self.controller.index(req)
         self.assertEqual(len(list_dict['security_groups']), 2)
 
     def test_get_security_group_list_offset_and_limit(self):
-        path = ('/v2/%s/os-security-groups?offset=1&limit=1' %
-                fakes.FAKE_PROJECT_ID)
+        path = '/v2.1/os-security-groups?offset=1&limit=1'
         self._create_sg_template().get('security_group')
         req = fakes.HTTPRequest.blank(path)
         list_dict = self.controller.index(req)
@@ -565,8 +563,7 @@ class TestSecurityGroupsV21(test.TestCase):
                      'id': sg['id'], 'name': 'test',
                      'description': 'test-description'}]
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/servers/%s/os-security-groups'
-                % (fakes.FAKE_PROJECT_ID, UUID_SERVER))
+            '/v2.1/servers/%s/os-security-groups' % (UUID_SERVER))
         res_dict = self.server_controller.index(
             req, UUID_SERVER)['security_groups']
         self.assertEqual(expected, res_dict)
@@ -594,8 +591,7 @@ class TestSecurityGroupsV21(test.TestCase):
     def test_get_security_group_by_id(self):
         sg = self._create_sg_template().get('security_group')
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups/%s'
-                % (fakes.FAKE_PROJECT_ID, sg['id']))
+            '/v2.1/os-security-groups/%s' % (sg['id']))
         res_dict = self.controller.show(req, sg['id'])
         expected = {'security_group': sg}
         self.assertEqual(res_dict, expected)
@@ -617,15 +613,13 @@ class TestSecurityGroupsV21(test.TestCase):
     def test_delete_security_group_by_id(self):
         sg = self._create_sg_template().get('security_group')
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups/%s' %
-                (fakes.FAKE_PROJECT_ID, sg['id']))
+            '/v2.1/os-security-groups/%s' % (sg['id']))
         self.controller.delete(req, sg['id'])
 
     def test_delete_security_group_by_admin(self):
         sg = self._create_sg_template().get('security_group')
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups/%s' %
-                (fakes.FAKE_PROJECT_ID, sg['id']), use_admin_context=True)
+            '/v2.1/os-security-groups/%s' % (sg['id']), use_admin_context=True)
         self.controller.delete(req, sg['id'])
 
     def test_delete_security_group_by_invalid_id(self):
@@ -652,8 +646,7 @@ class TestSecurityGroupsV21(test.TestCase):
                                           security_groups=[sg['id']])
 
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups/%s'
-                % (fakes.FAKE_PROJECT_ID, sg['id']))
+            '/v2.1/os-security-groups/%s' % (sg['id']))
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                           req, sg['id'])
 
@@ -767,8 +760,7 @@ class TestSecurityGroupsV21(test.TestCase):
         body = dict(addSecurityGroup=dict(name="sg1"))
 
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/servers/%s/action' %
-                (fakes.FAKE_PROJECT_ID, UUID_SERVER))
+            '/v2.1/servers/%s/action' % (UUID_SERVER))
         self.assertRaises(webob.exc.HTTPConflict,
                           self.manager._addSecurityGroup,
                           req, UUID_SERVER, body=body)
@@ -784,8 +776,7 @@ class TestSecurityGroupsV21(test.TestCase):
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/servers/%s/action' %
-                (fakes.FAKE_PROJECT_ID, UUID_SERVER))
+            '/v2.1/servers/%s/action' % (UUID_SERVER))
         self.manager._addSecurityGroup(req, UUID_SERVER, body=body)
 
     def test_associate_port_security_enabled_false(self):
@@ -798,8 +789,7 @@ class TestSecurityGroupsV21(test.TestCase):
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/servers/%s/action' %
-                (fakes.FAKE_PROJECT_ID, UUID_SERVER))
+            '/v2.1/servers/%s/action' % (UUID_SERVER))
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup,
                           req, UUID_SERVER, body=body)
@@ -815,8 +805,7 @@ class TestSecurityGroupsV21(test.TestCase):
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/servers/%s/action' %
-                (fakes.FAKE_PROJECT_ID, UUID_SERVER))
+            '/v2.1/servers/%s/action' % (UUID_SERVER))
         self.manager._addSecurityGroup(req, UUID_SERVER, body=body)
 
     def test_associate(self):
@@ -829,16 +818,14 @@ class TestSecurityGroupsV21(test.TestCase):
         body = dict(addSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/servers/%s/action' %
-                (fakes.FAKE_PROJECT_ID, UUID_SERVER))
+            '/v2.1/servers/%s/action' % (UUID_SERVER))
         self.manager._addSecurityGroup(req, UUID_SERVER, body=body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
         body = dict(removeSecurityGroup=dict(name='non-existing'))
 
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/servers/%s/action' %
-                (fakes.FAKE_PROJECT_ID, UUID_SERVER))
+            '/v2.1/servers/%s/action' % (UUID_SERVER))
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._removeSecurityGroup,
                           req, UUID_SERVER, body=body)
@@ -883,8 +870,7 @@ class TestSecurityGroupsV21(test.TestCase):
         body = dict(removeSecurityGroup=dict(name="test"))
 
         req = fakes.HTTPRequest.blank(
-                '/v2/%s/servers/%s/action' %
-                (fakes.FAKE_PROJECT_ID, UUID_SERVER))
+            '/v2.1/servers/%s/action' % (UUID_SERVER))
         self.manager._removeSecurityGroup(req, UUID_SERVER, body=body)
 
     def test_get_instances_security_groups_bindings(self):
@@ -1103,13 +1089,11 @@ class TestSecurityGroupRulesV21(test.TestCase):
 
     def test_create_add_existing_rules_by_cidr(self):
         sg = security_group_template()
-        req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups' % fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-groups')
         self.controller_sg.create(req, body={'security_group': sg})
         rule = security_group_rule_template(
             cidr='15.0.0.0/8', parent_group_id=self.sg2['id'])
-        req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-group-rules' % fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-group-rules')
         self.controller.create(req, body={'security_group_rule': rule})
         self.assertRaises(
             webob.exc.HTTPBadRequest, self.controller.create,
@@ -1117,13 +1101,11 @@ class TestSecurityGroupRulesV21(test.TestCase):
 
     def test_create_add_existing_rules_by_group_id(self):
         sg = security_group_template()
-        req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups' % fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-groups')
         self.controller_sg.create(req, body={'security_group': sg})
         rule = security_group_rule_template(
             group=self.sg1['id'], parent_group_id=self.sg2['id'])
-        req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-group-rules' % fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-group-rules')
         self.controller.create(req, body={'security_group_rule': rule})
         self.assertRaises(
             webob.exc.HTTPBadRequest, self.controller.create,
@@ -1367,13 +1349,12 @@ class TestSecurityGroupRulesV21(test.TestCase):
     def test_delete(self):
         rule = security_group_rule_template(parent_group_id=self.sg2['id'])
 
-        req = fakes.HTTPRequest.blank(
-            '/v2/%s/os-security-group-rules' % fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-group-rules')
         res_dict = self.controller.create(
             req, body={'security_group_rule': rule})
         security_group_rule = res_dict['security_group_rule']
-        req = fakes.HTTPRequest.blank('/v2/%s/os-security-group-rules/%s' % (
-                fakes.FAKE_PROJECT_ID, security_group_rule['id']))
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-group-rules/%s' % (
+            security_group_rule['id']))
         self.controller.delete(req, security_group_rule['id'])
 
     def test_delete_invalid_rule_id(self):
@@ -1536,10 +1517,9 @@ class SecurityGroupsOutputTest(test.TestCase):
         return server.get('security_groups')
 
     def test_create(self):
-        url = '/v2/%s/servers' % fakes.FAKE_PROJECT_ID
+        url = '/v2.1/servers'
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups' % fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-groups')
         security_groups = [{'name': 'fake-2-0'}, {'name': 'fake-2-1'}]
         for security_group in security_groups:
             sg = security_group_template(name=security_group['name'])
@@ -1555,7 +1535,7 @@ class SecurityGroupsOutputTest(test.TestCase):
             self.assertEqual(group.get('name'), name)
 
     def test_create_server_get_default_security_group(self):
-        url = '/v2/%s/servers' % fakes.FAKE_PROJECT_ID
+        url = '/v2.1/servers'
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         res = self._make_request(url, {'server': server})
@@ -1570,10 +1550,9 @@ class SecurityGroupsOutputTest(test.TestCase):
             lambda inst, context, id: [
                 {'name': 'fake-2-0'}, {'name': 'fake-2-1'}])
 
-        url = '/v2/%s/servers' % fakes.FAKE_PROJECT_ID
+        url = '/v2.1/servers'
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        req = fakes.HTTPRequest.blank(
-                '/v2/%s/os-security-groups' % fakes.FAKE_PROJECT_ID)
+        req = fakes.HTTPRequest.blank('/v2.1/os-security-groups')
         security_groups = [{'name': 'fake-2-0'}, {'name': 'fake-2-1'}]
         for security_group in security_groups:
             sg = security_group_template(name=security_group['name'])
@@ -1589,7 +1568,7 @@ class SecurityGroupsOutputTest(test.TestCase):
             self.assertEqual(group.get('name'), name)
 
         # Test that show (GET) returns the same information as create (POST)
-        url = '/v2/%s/servers/%s' % (fakes.FAKE_PROJECT_ID, UUID3)
+        url = '/v2.1/servers/%s' % (UUID3)
         res = self._make_request(url)
         self.assertEqual(res.status_int, 200)
         server = self._get_server(res.body)
@@ -1599,7 +1578,7 @@ class SecurityGroupsOutputTest(test.TestCase):
             self.assertEqual(group.get('name'), name)
 
     def test_detail(self):
-        url = '/v2/%s/servers/detail' % fakes.FAKE_PROJECT_ID
+        url = '/v2.1/servers/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -1611,8 +1590,7 @@ class SecurityGroupsOutputTest(test.TestCase):
     @mock.patch('nova.compute.api.API.get',
                 side_effect=exception.InstanceNotFound(instance_id='fake'))
     def test_no_instance_passthrough_404(self, mock_get):
-        url = ('/v2/%s/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115' %
-               fakes.FAKE_PROJECT_ID)
+        url = '/v2.1/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)

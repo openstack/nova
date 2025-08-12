@@ -243,7 +243,7 @@ class HTTPRequest(os_wsgi.Request):
 
     @classmethod
     def blank(cls, *args, **kwargs):
-        defaults = {'base_url': 'http://localhost/v2'}
+        defaults = {'base_url': 'http://localhost/v2.1'}
         use_admin_context = kwargs.pop('use_admin_context', False)
         roles = kwargs.pop('roles', [])
         if use_admin_context:
@@ -252,7 +252,7 @@ class HTTPRequest(os_wsgi.Request):
         user_id = kwargs.pop('user_id', FAKE_USER_ID)
         version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
         defaults.update(kwargs)
-        out = super(HTTPRequest, cls).blank(*args, **defaults)
+        out = super().blank(*args, **defaults)
         out.environ['nova.context'] = FakeRequestContext(
             user_id=user_id,
             project_id=project_id,
