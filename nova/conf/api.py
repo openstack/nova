@@ -21,27 +21,6 @@ api_group = cfg.OptGroup('api',
 Options under this group are used to define Nova API.
 """)
 
-auth_opts = [
-    cfg.StrOpt("auth_strategy",
-        default="keystone",
-        choices=[
-            ("keystone", "Use keystone for authentication."),
-            ("noauth2", "Designed for testing only, as it does no actual "
-             "credential checking. 'noauth2' provides administrative "
-             "credentials only if 'admin' is specified as the username."),
-        ],
-        deprecated_for_removal=True,
-        deprecated_since='21.0.0',
-        deprecated_reason="""
-The only non-default choice, ``noauth2``, is for internal development and
-testing purposes only and should not be used in deployments. This option and
-its middleware, NoAuthMiddleware[V2_18], will be removed in a future release.
-""",
-        help="""
-Determine the strategy to use for authentication.
-"""),
-]
-
 metadata_opts = [
     cfg.StrOpt("config_drive_skip_versions",
         default=("1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 "
@@ -411,13 +390,14 @@ issues you are seeing to the Nova team so we can improve our schemas.
     ),
 ]
 
-API_OPTS = (auth_opts +
-            metadata_opts +
-            file_opts +
-            osapi_opts +
-            os_network_opts +
-            enable_inst_pw_opts +
-            validation_opts)
+API_OPTS = (
+    metadata_opts +
+    file_opts +
+    osapi_opts +
+    os_network_opts +
+    enable_inst_pw_opts +
+    validation_opts
+)
 
 
 def register_opts(conf):

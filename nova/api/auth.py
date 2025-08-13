@@ -17,7 +17,6 @@ Common Auth Middleware.
 """
 
 from oslo_log import log as logging
-from oslo_log import versionutils
 from oslo_serialization import jsonutils
 import webob.dec
 import webob.exc
@@ -43,16 +42,7 @@ def _load_pipeline(loader, pipeline):
 
 def pipeline_factory_v21(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
-    auth_strategy = CONF.api.auth_strategy
-    if auth_strategy == 'noauth2':
-        versionutils.report_deprecated_feature(
-            LOG,
-            "'[api]auth_strategy=noauth2' is deprecated as of the 21.0.0 "
-            "Ussuri release and will be removed in a future release. Please "
-            "remove any 'noauth2' entries from api-paste.ini; only the "
-            "'keystone' pipeline is supported."
-        )
-    return _load_pipeline(loader, local_conf[auth_strategy].split())
+    return _load_pipeline(loader, local_conf['keystone'].split())
 
 
 class InjectContext(wsgi.Middleware):
