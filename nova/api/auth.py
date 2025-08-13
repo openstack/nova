@@ -41,16 +41,6 @@ def _load_pipeline(loader, pipeline):
     return app
 
 
-def pipeline_factory(loader, global_conf, **local_conf):
-    """A paste pipeline replica that keys off of auth_strategy."""
-    versionutils.report_deprecated_feature(
-        LOG,
-        "The legacy V2 API code tree has been removed in Newton. "
-        "Please remove legacy v2 API entry from api-paste.ini, and use "
-        "V2.1 API or V2.1 API compat mode instead"
-    )
-
-
 def pipeline_factory_v21(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
     auth_strategy = CONF.api.auth_strategy
