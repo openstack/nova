@@ -764,31 +764,6 @@ class NameOrNoneTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
 
-class TcpUdpPortTestCase(APIValidationTestCase):
-
-    post_schema = {
-        'type': 'object',
-        'properties': {
-            'foo': parameter_types.tcp_udp_port,
-        },
-    }
-
-    def test_validate_tcp_udp_port(self):
-        self.post(body={'foo': 1024}, req=FakeRequest())
-        self.post(body={'foo': '1024'}, req=FakeRequest())
-
-    def test_validate_tcp_udp_port_fails(self):
-        detail = ("Invalid input for field/attribute foo. Value: True."
-                  " True is not of type 'integer', 'string'")
-        self.check_validation_error(self.post, body={'foo': True},
-                                    expected_detail=detail)
-
-        detail = ("Invalid input for field/attribute foo. Value: 65536."
-                  " 65536 is greater than the maximum of 65535")
-        self.check_validation_error(self.post, body={'foo': 65536},
-                                    expected_detail=detail)
-
-
 class CidrFormatTestCase(APIValidationTestCase):
 
     post_schema = {
