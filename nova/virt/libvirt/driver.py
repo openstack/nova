@@ -8351,7 +8351,7 @@ class LibvirtDriver(driver.ComputeDriver):
         pause = bool(events)
         try:
             with self.virtapi.wait_for_instance_event(
-                instance, events, deadline=timeout,
+                instance, events, timeout=timeout,
                 error_callback=self._neutron_failed_callback,
             ):
                 self.plug_vifs(instance, network_info)

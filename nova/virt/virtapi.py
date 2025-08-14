@@ -17,7 +17,7 @@ import contextlib
 
 class VirtAPI(object):
     @contextlib.contextmanager
-    def wait_for_instance_event(self, instance, event_names, deadline=300,
+    def wait_for_instance_event(self, instance, event_names, timeout=300,
                                 error_callback=None):
         raise NotImplementedError()
 
