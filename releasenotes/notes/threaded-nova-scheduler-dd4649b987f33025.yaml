@@ -3,7 +3,9 @@ features:
   - |
     The nova-scheduler now can be run in native threading mode instead
     of with eventlet. This is an experimental feature that is disabled by
-    default. Please read the
+    default. Please test the native threading mode in pre-production before
+    enabling it in production. If you do so please let us now how it went on
+    the mailing list openstack-discuss@lists.openstack.org. Please read the
     `concurrency <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__
     guide for more details.
 
