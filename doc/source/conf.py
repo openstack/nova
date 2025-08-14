@@ -188,11 +188,3 @@ openstackdocs_projects = [
     'watcher',
 ]
 # -- Custom extensions --------------------------------------------------------
-
-# NOTE(mdbooth): (2019-03-20) Sphinx loads policies defined in setup.cfg, which
-# includes the placement policy at nova/api/openstack/placement/policies.py.
-# Loading this imports nova/api/openstack/__init__.py, which imports
-# nova.monkey_patch, which will do eventlet monkey patching to the sphinx
-# process. As well as being unnecessary and a bad idea, this breaks on
-# python3.6 (but not python3.7), so don't do that.
-os.environ['OS_NOVA_DISABLE_EVENTLET_PATCHING'] = '1'

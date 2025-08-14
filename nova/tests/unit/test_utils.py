@@ -14,6 +14,7 @@
 
 import datetime
 import hashlib
+import os
 import threading
 from unittest import mock
 
@@ -26,11 +27,13 @@ from openstack import exceptions as sdk_exc
 from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
+import oslo_service.backend as oslo_backend
 from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
 
 from nova import context
 from nova import exception
+from nova import monkey_patch
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
@@ -1651,3 +1654,40 @@ class ExecutorStatsTestCase(test.NoDBTestCase):
 
         utils.spawn(self._task_finishes).result()
         mock_info.assert_not_called()
+
+
+class OsloServiceBackendSelectionTestCase(test.NoDBTestCase):
+    def setUp(self):
+        # NOTE(gibi): We need this as the base test class would trigger
+        # monkey patching and would prevent us to test the threading code path
+        self.useFixture(
+            fixtures.MonkeyPatch(
+                "nova.monkey_patch._monkey_patch", lambda: True))
+        super().setUp()
+        origi = monkey_patch.MONKEY_PATCHED
+        monkey_patch.MONKEY_PATCHED = False
+
+        def reset():
+            monkey_patch.MONKEY_PATCHED = origi
+        self.addCleanup(reset)
+
+    @mock.patch('oslo_service.backend.init_backend')
+    def test_eventlet_selected(self, init_backend):
+        monkey_patch.patch()
+
+        init_backend.assert_called_once_with(oslo_backend.BackendType.EVENTLET)
+
+    @mock.patch('oslo_service.backend.init_backend')
+    @mock.patch.dict(os.environ, {"OS_NOVA_DISABLE_EVENTLET_PATCHING": "true"})
+    def test_threading_selected_monkey_patching_poisoned(self, init_backend):
+        monkey_patch.patch()
+
+        init_backend.assert_called_once_with(
+            oslo_backend.BackendType.THREADING)
+        import eventlet
+        ex = self.assertRaises(RuntimeError, eventlet.monkey_patch)
+        self.assertEqual(
+            "The service is started with native threading via "
+            "OS_NOVA_DISABLE_EVENTLET_PATCHING set to 'true', but then the "
+            "service tried to call eventlet.monkey_patch(). This is a bug.",
+            str(ex))

@@ -25,6 +25,7 @@ import nova.conf
 import nova.context
 import nova.exception
 from nova.i18n import _
+from nova import utils
 
 __all__ = [
     'init',
@@ -217,10 +218,11 @@ def get_server(target, endpoints, serializer=None):
     else:
         serializer = RequestContextSerializer(serializer)
     access_policy = dispatcher.DefaultRPCAccessPolicy
+    exc = "threading" if utils.concurrency_mode_threading() else "eventlet"
     return messaging.get_rpc_server(TRANSPORT,
                                     target,
                                     endpoints,
-                                    executor='eventlet',
+                                    executor=exc,
                                     serializer=serializer,
                                     access_policy=access_policy)
 
