@@ -38,7 +38,7 @@ FAKE_UUID_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
 
 
 def fake_bdm_get_by_volume_and_instance(cls, ctxt, volume_id, instance_uuid):
-    if volume_id != FAKE_UUID_A:
+    if volume_id not in (FAKE_UUID_A, uuids.source_swap_vol):
         raise exception.VolumeBDMNotFound(volume_id=volume_id)
     db_bdm = fake_block_device.FakeDbBlockDeviceDict(
         {'id': 1,
@@ -55,15 +55,23 @@ def fake_bdm_get_by_volume_and_instance(cls, ctxt, volume_id, instance_uuid):
 
 
 def fake_get_volume(self, context, id):
+    migration_status = None
     if id == FAKE_UUID_A:
         status = 'in-use'
         attach_status = 'attached'
     elif id == FAKE_UUID_B:
         status = 'available'
         attach_status = 'detached'
+    elif id == uuids.source_swap_vol:
+        status = 'in-use'
+        attach_status = 'attached'
+        migration_status = 'migrating'
     else:
         raise exception.VolumeNotFound(volume_id=id)
-    return {'id': id, 'status': status, 'attach_status': attach_status}
+    return {
+        'id': id, 'status': status, 'attach_status': attach_status,
+        'migration_status': migration_status
+    }
 
 
 class VolumeAttachPolicyTest(base.BasePolicyTest):
@@ -163,9 +171,10 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
     def test_swap_volume_attach_policy(self, mock_swap_volume):
         rule_name = self.policy_root % "swap"
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
-        self.common_policy_auth(self.project_admin_authorized_contexts,
-                                rule_name, self.controller.update,
-                                self.req, FAKE_UUID, FAKE_UUID_A, body=body)
+        self.common_policy_auth(
+            self.project_admin_authorized_contexts,
+            rule_name, self.controller.update,
+            self.req, FAKE_UUID, uuids.source_swap_vol, body=body)
 
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
     @mock.patch('nova.compute.api.API.swap_volume')
@@ -198,9 +207,10 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         req = fakes.HTTPRequest.blank('', version='2.85')
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
             'delete_on_termination': True}}
-        self.common_policy_auth(self.project_admin_authorized_contexts,
-                                rule_name, self.controller.update,
-                                req, FAKE_UUID, FAKE_UUID_A, body=body)
+        self.common_policy_auth(
+            self.project_admin_authorized_contexts,
+            rule_name, self.controller.update,
+            req, FAKE_UUID, uuids.source_swap_vol, body=body)
         mock_swap_volume.assert_called()
         mock_bdm_save.assert_called()
 

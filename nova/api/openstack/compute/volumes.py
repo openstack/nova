@@ -431,6 +431,12 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
+        if ('migration_status' not in old_volume or
+            old_volume['migration_status'] in (None, '')):
+            message = (f"volume {old_volume_id} is not migrating this api "
+                       "should only be called by Cinder")
+            raise exc.HTTPConflict(explanation=message)
+
         new_volume_id = body['volumeAttachment']['volumeId']
         try:
             new_volume = self.volume_api.get(context, new_volume_id)

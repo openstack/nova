@@ -1554,8 +1554,14 @@ class TestInstanceNotificationSample(
     def test_volume_swap_server_with_error(self):
         server = self._do_setup_server_and_error_flag()
 
-        self._volume_swap_server(server, self.cinder.SWAP_ERR_OLD_VOL,
-                                 self.cinder.SWAP_ERR_NEW_VOL)
+        # This is calling swap volume but we are emulating cinder
+        # volume migrate in the fixture to allow this.
+        # i.e. this is simulating the workflow where you move a volume
+        # between cinder backend using a temp volume that cinder internally
+        # cleans up at the end of the migration.
+        self._volume_swap_server(
+            server, self.cinder.SWAP_ERR_OLD_VOL,
+            self.cinder.SWAP_ERR_NEW_VOL)
         self._wait_for_notification('compute.exception')
 
         # Eight versioned notifications are generated.
@@ -1570,6 +1576,8 @@ class TestInstanceNotificationSample(
         self.assertLessEqual(7, len(self.notifier.versioned_notifications),
                              'Unexpected number of versioned notifications. '
                              'Got: %s' % self.notifier.versioned_notifications)
+        # the block device mapping is using SWAP_ERR_OLD_VOL because this is
+        # the cinder volume migrate workflow.
         block_devices = [{
             "nova_object.data": {
                 "boot_index": None,

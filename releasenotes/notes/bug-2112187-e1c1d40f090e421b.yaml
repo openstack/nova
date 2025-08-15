@@ -1,0 +1,36 @@
+---
+security:
+  - |
+    Nova has documented that the ``update volume attachment`` API
+    PUT /servers/{server_id}/os-volume_attachments/{volume_id}
+    should not be called directly for a very long time.
+
+    "When updating volumeId, this API is typically meant to only
+    be used as part of a larger orchestrated volume migration
+    operation initiated in the block storage service via
+    the os-retype or os-migrate_volume volume actions.
+    Direct usage of this API to update volumeId is not recommended
+    and may result in needing to hard reboot the server
+    to update details within the guest such as block storage serial IDs.
+    Furthermore, updating volumeId via this API is only implemented
+    by certain compute drivers."
+
+    As an admin only api, direct usage has always been limited to admins
+    or service like ``watcher``.
+    This longstanding recommendation is now enforced as a security
+    hardening measure and restricted to only cinder.
+    The prior warning alluded to the fact that directly using this
+    api can result in a guest with a de-synced definition of the volume
+    serial. Before this change it was possible for an admin to unknowingly
+    put a VM in an inconsistent state such that a future live migration may
+    fail or succeed and break tenant isolation. This could not happen
+    when the api was called by cinder so Nova has restricted that api
+    exclusively to that use-case.
+    see: https://bugs.launchpad.net/nova/+bug/2112187 for details.
+
+fixes:
+  - |
+    ``Nova`` now strictly enforces that only ``cinder`` can call the
+    ``update volume attachment`` aka ``swap volume`` api. This is part
+    of addressing a security hardening gap identified as part of bug:
+    https://bugs.launchpad.net/nova/+bug/2112187

@@ -15,14 +15,16 @@
 #    under the License.
 
 import datetime
-from unittest import mock
 import urllib
 
+from unittest import mock
+
 import fixtures
+import webob
+
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import webob
 from webob import exc
 
 from nova.api.openstack import api_version_request
@@ -65,17 +67,28 @@ def fake_get_instance(self, context, instance_id, expected_attrs=None,
     return fake_instance.fake_instance_obj(
         context, id=1, uuid=instance_id, project_id=context.project_id)
 
+# TODO(sean-k-mooney): this is duplicated in the policy tests
+# we should consider consolidating this.
+
 
 def fake_get_volume(self, context, id):
+    migration_status = None
     if id == FAKE_UUID_A:
         status = 'in-use'
         attach_status = 'attached'
     elif id == FAKE_UUID_B:
         status = 'available'
         attach_status = 'detached'
+    elif id == uuids.source_swap_vol:
+        status = 'in-use'
+        attach_status = 'attached'
+        migration_status = 'migrating'
     else:
         raise exception.VolumeNotFound(volume_id=id)
-    return {'id': id, 'status': status, 'attach_status': attach_status}
+    return {
+        'id': id, 'status': status, 'attach_status': attach_status,
+        'migration_status': migration_status
+    }
 
 
 def fake_create_snapshot(self, context, volume, name, description):
@@ -99,7 +112,7 @@ def fake_compute_volume_snapshot_delete(self, context, volume_id, snapshot_id,
 
 @classmethod
 def fake_bdm_get_by_volume_and_instance(cls, ctxt, volume_id, instance_uuid):
-    if volume_id != FAKE_UUID_A:
+    if volume_id not in (FAKE_UUID_A, uuids.source_swap_vol):
         raise exception.VolumeBDMNotFound(volume_id=volume_id)
     db_bdm = fake_block_device.FakeDbBlockDeviceDict({
         'id': 1,
@@ -110,7 +123,7 @@ def fake_bdm_get_by_volume_and_instance(cls, ctxt, volume_id, instance_uuid):
         'source_type': 'volume',
         'destination_type': 'volume',
         'snapshot_id': None,
-        'volume_id': FAKE_UUID_A,
+        'volume_id': volume_id,
         'volume_size': 1,
         'attachment_id': uuids.attachment_id
     })
@@ -572,6 +585,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             test.MatchType(objects.Instance),
             {'attach_status': 'attached',
              'status': 'in-use',
+             'migration_status': None,
              'id': FAKE_UUID_A})
 
     @mock.patch.object(compute_api.API, 'detach_volume')
@@ -585,7 +599,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             test.MatchType(objects.Instance),
             {'attach_status': 'attached',
              'status': 'in-use',
-             'id': FAKE_UUID_A})
+             'id': FAKE_UUID_A,
+             'migration_status': None})
 
     def test_attach_volume(self):
         self.stub_out('nova.compute.api.API.attach_volume',
@@ -739,7 +754,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest, self.attachments.create,
                           req, FAKE_UUID, body=body)
 
-    def _test_swap(self, attachments, uuid=FAKE_UUID_A, body=None):
+    def _test_swap(self, attachments, uuid=uuids.source_swap_vol, body=None):
         body = body or {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
         return attachments.update(self.req, uuids.instance, uuid, body=body)
 
@@ -754,10 +769,13 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             self.req.environ['nova.context'], test.MatchType(objects.Instance),
             {'attach_status': 'attached',
              'status': 'in-use',
-             'id': FAKE_UUID_A},
+             'id': uuids.source_swap_vol,
+             'migration_status': 'migrating'
+             },
             {'attach_status': 'detached',
              'status': 'available',
-             'id': FAKE_UUID_B})
+             'id': FAKE_UUID_B,
+             'migration_status': None})
 
     @mock.patch.object(compute_api.API, 'swap_volume')
     def test_swap_volume(self, mock_swap_volume):
@@ -774,10 +792,12 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             self.req.environ['nova.context'], test.MatchType(objects.Instance),
             {'attach_status': 'attached',
              'status': 'in-use',
-             'id': FAKE_UUID_A},
+             'id': uuids.source_swap_vol,
+             'migration_status': 'migrating'},
             {'attach_status': 'detached',
              'status': 'available',
-             'id': FAKE_UUID_B})
+             'id': FAKE_UUID_B,
+             'migration_status': None})
 
     def test_swap_volume_with_nonexistent_uri(self):
         self.assertRaises(exc.HTTPNotFound, self._test_swap,
@@ -786,13 +806,14 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
     @mock.patch.object(cinder.API, 'get')
     def test_swap_volume_with_nonexistent_dest_in_body(self, mock_get):
         mock_get.side_effect = [
-            None, exception.VolumeNotFound(volume_id=FAKE_UUID_C)]
+            fake_get_volume(None, None, uuids.source_swap_vol),
+            exception.VolumeNotFound(volume_id=FAKE_UUID_C)]
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_C}}
         with mock.patch.object(self.attachments, '_update_volume_regular'):
             self.assertRaises(exc.HTTPBadRequest, self._test_swap,
                               self.attachments, body=body)
         mock_get.assert_has_calls([
-            mock.call(self.req.environ['nova.context'], FAKE_UUID_A),
+            mock.call(self.req.environ['nova.context'], uuids.source_swap_vol),
             mock.call(self.req.environ['nova.context'], FAKE_UUID_C)])
 
     def test_swap_volume_without_volumeId(self):
@@ -823,8 +844,9 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           self.attachments)
         if mock_bdm.called:
             # New path includes regular PUT procedure
-            mock_bdm.assert_called_once_with(self.req.environ['nova.context'],
-                                             FAKE_UUID_A, uuids.instance)
+            mock_bdm.assert_called_once_with(
+                self.req.environ['nova.context'],
+                uuids.source_swap_vol, uuids.instance)
             mock_swap_volume.assert_not_called()
         else:
             # Old path is pure swap-volume
@@ -834,10 +856,12 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                 test.MatchType(objects.Instance),
                 {'attach_status': 'attached',
                  'status': 'in-use',
-                 'id': FAKE_UUID_A},
+                 'migration_status': 'migrating',
+                 'id': uuids.source_swap_vol},
                 {'attach_status': 'detached',
                  'status': 'available',
-                 'id': FAKE_UUID_B})
+                 'id': FAKE_UUID_B,
+                 'migration_status': None})
 
     def _test_list_with_invalid_filter(self, url):
         req = self._build_request(url)
@@ -1191,7 +1215,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
             self.context,
             id=1,
             instance_uuid=FAKE_UUID,
-            volume_id=FAKE_UUID_A,
+            volume_id=uuids.source_swap_vol,
             source_type='volume',
             destination_type='volume',
             delete_on_termination=False,
@@ -1306,7 +1330,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
             self.context,
             id=1,
             instance_uuid=FAKE_UUID,
-            volume_id=FAKE_UUID_A,
+            volume_id=uuids.source_swap_vol,
             source_type='volume',
             destination_type='volume',
             delete_on_termination=False,
@@ -1322,7 +1346,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
             'delete_on_termination': True,
         }}
         self.attachments.update(self.req, FAKE_UUID,
-                                FAKE_UUID_A, body=body)
+                                uuids.source_swap_vol, body=body)
         mock_bdm_save.assert_called_once()
         self.assertTrue(vol_bdm['delete_on_termination'])
         # Swap volume is tested elsewhere, just make sure that we did
@@ -1339,7 +1363,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
             self.context,
             id=1,
             instance_uuid=FAKE_UUID,
-            volume_id=FAKE_UUID_A,
+            volume_id=uuids.source_swap_vol,
             source_type='volume',
             destination_type='volume',
             delete_on_termination=False,
@@ -1354,7 +1378,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
         }}
         req = self._get_req(body, microversion='2.84')
         self.attachments.update(req, FAKE_UUID,
-                                FAKE_UUID_A, body=body)
+                                uuids.source_swap_vol, body=body)
         mock_swap.assert_called_once()
         mock_bdm_save.assert_not_called()
 
@@ -1640,6 +1664,7 @@ class SwapVolumeMultiattachTestCase(test.NoDBTestCase):
                     'id': volume_id,
                     'size': 1,
                     'multiattach': True,
+                    'migration_status': 'migrating',
                     'attachments': {
                         uuids.server1: {
                             'attachment_id': uuids.attachment_id1,
@@ -1689,12 +1714,12 @@ class SwapVolumeMultiattachTestCase(test.NoDBTestCase):
             ex = self.assertRaises(
                 webob.exc.HTTPBadRequest, controller.update, req,
                 uuids.server1, uuids.old_vol_id, body=body)
-        self.assertIn('Swapping multi-attach volumes with more than one ',
-                      str(ex))
-        mock_attachment_get.assert_has_calls([
-            mock.call(ctxt, uuids.attachment_id1),
-            mock.call(ctxt, uuids.attachment_id2)], any_order=True)
-        mock_roll_detaching.assert_called_once_with(ctxt, uuids.old_vol_id)
+            self.assertIn(
+                'Swapping multi-attach volumes with more than one ', str(ex))
+            mock_attachment_get.assert_has_calls([
+                mock.call(ctxt, uuids.attachment_id1),
+                mock.call(ctxt, uuids.attachment_id2)], any_order=True)
+            mock_roll_detaching.assert_called_once_with(ctxt, uuids.old_vol_id)
 
 
 class CommonBadRequestTestCase(object):
