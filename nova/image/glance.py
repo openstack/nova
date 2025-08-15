@@ -95,16 +95,6 @@ def _endpoint_from_image_ref(image_href):
     return (image_id, endpoint)
 
 
-def generate_identity_headers(context, status='Confirmed'):
-    return {
-        'X-Auth-Token': getattr(context, 'auth_token', None),
-        'X-User-Id': getattr(context, 'user_id', None),
-        'X-Tenant-Id': getattr(context, 'project_id', None),
-        'X-Roles': ','.join(getattr(context, 'roles', [])),
-        'X-Identity-Status': status,
-    }
-
-
 def get_api_servers(context):
     """Shuffle a list of service endpoints and return an iterator that will
     cycle through the list, looping around to the beginning if necessary.
