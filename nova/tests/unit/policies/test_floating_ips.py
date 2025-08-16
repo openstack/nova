@@ -64,7 +64,8 @@ class FloatingIPPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
@@ -75,7 +76,8 @@ class FloatingIPPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
         # With legacy rule and no scope checks, all admin, project members
         # project reader or other project role(because legacy rule allow server
@@ -218,7 +220,8 @@ class FloatingIPScopeTypePolicyTest(FloatingIPPolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_manager_context,
             self.other_project_reader_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
@@ -226,7 +229,8 @@ class FloatingIPScopeTypePolicyTest(FloatingIPPolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_manager_context,
             self.other_project_reader_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
 
 

@@ -41,6 +41,12 @@ ADMIN = 'rule:context_is_admin'
 PROJECT_MEMBER = 'rule:project_manager_api'
 PROJECT_MEMBER = 'rule:project_member_api'
 PROJECT_READER = 'rule:project_reader_api'
+# TODO(gmaan): Remove the admin role from the service rule in 2026.2. We are
+# continue allowing admin to access the service APIs, otherwise it will break
+# deployment where nova service users in other services are not assigned
+# 'service' role. After one SLURP (2026.1), we can make service APIs only
+# allowed for the 'service' role.
+SERVICE_ROLE = 'rule:service_or_admin'
 PROJECT_MANAGER_OR_ADMIN = 'rule:project_manager_or_admin'
 PROJECT_MEMBER_OR_ADMIN = 'rule:project_member_or_admin'
 PROJECT_READER_OR_ADMIN = 'rule:project_reader_or_admin'
@@ -107,6 +113,11 @@ rules = [
         "Default rule for Project level read only APIs.",
         deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY),
     policy.RuleDefault(
+        "service_api",
+        "role:service",
+        "Default rule for service-to-service APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_POLICY),
+    policy.RuleDefault(
         "project_manager_or_admin",
         "rule:project_manager_api or rule:context_is_admin",
         "Default rule for Project Manager or admin APIs.",
@@ -120,7 +131,13 @@ rules = [
         "project_reader_or_admin",
         "rule:project_reader_api or rule:context_is_admin",
         "Default rule for Project reader or admin APIs.",
-        deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY)
+        deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY),
+    policy.RuleDefault(
+        "service_or_admin",
+        "rule:service_api or rule:context_is_admin",
+        "Default rule for service or admin APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_POLICY),
+
 ]
 
 

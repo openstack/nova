@@ -7628,6 +7628,12 @@ volumeId_swap:
   in: body
   required: true
   type: string
+volumeId_update:
+  description: |
+    The UUID of the attached volume.
+  in: body
+  required: true
+  type: string
 volumes:
   description: |
     The list of ``volume`` objects.

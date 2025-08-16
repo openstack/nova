@@ -51,13 +51,15 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
         # In the base/legacy case, all project and system contexts are
         # authorized in the "anyone" case.
         self.all_authorized_contexts = (self.all_project_contexts |
-                                        self.all_system_contexts)
+                                        self.all_system_contexts |
+                                        set([self.service_context]))
 
         # In the base/legacy case, all project and system contexts are
         # authorized in the case of things that distinguish between
         # scopes, since scope checking is disabled.
         self.all_project_authorized_contexts = (self.all_project_contexts |
-                                               self.all_system_contexts)
+                                               self.all_system_contexts |
+                                               set([self.service_context]))
 
         # In the base/legacy case, any admin is an admin.
         self.admin_authorized_contexts = set([self.project_admin_context,
@@ -211,8 +213,10 @@ class FlavorExtraSpecsScopeTypePolicyTest(FlavorExtraSpecsPolicyTest):
         self.flags(enforce_scope=True, group="oslo_policy")
 
         # Only project users are authorized
-        self.reduce_set('all_project_authorized', self.all_project_contexts)
-        self.reduce_set('all_authorized', self.all_project_contexts)
+        self.reduce_set('all_project_authorized',
+     self.all_project_contexts | set([self.service_context]))
+        self.reduce_set('all_authorized',
+     self.all_project_contexts | set([self.service_context]))
 
         # Only admins can do admin things
         self.admin_authorized_contexts = [self.legacy_admin_context,
@@ -254,9 +258,10 @@ class FlavorExtraSpecsNoLegacyPolicyTest(FlavorExtraSpecsScopeTypePolicyTest):
         # contexts stay separate.
         self.reduce_set(
             'all_project_authorized',
-            self.all_project_contexts - set([self.project_foo_context]))
+            self.all_project_contexts - set([self.project_foo_context,
+                self.service_context]))
         everything_but_foo_and_system = (
             self.all_contexts - set([
-                self.project_foo_context,
+                self.project_foo_context, self.service_context,
             ]) - self.all_system_contexts)
         self.reduce_set('all_authorized', everything_but_foo_and_system)

@@ -24,14 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-assisted-volume-snapshots:%s'
 assisted_volume_snapshots_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        # TODO(gmann): This is internal API policy and called by
-        # cinder. Add 'service' role in this policy so that cinder
-        # can call it with user having 'service' role (not having
-        # correct project_id). That is for phase-2 of RBAC goal and until
-        # then, we keep it open for all admin in any project. We cannot
-        # default it to ADMIN which has the project_id in
-        # check_str and will fail if cinder call it with other project_id.
-        check_str=base.ADMIN,
+        check_str=base.SERVICE_ROLE,
         description="Create an assisted volume snapshot",
         operations=[
             {
@@ -42,14 +35,7 @@ assisted_volume_snapshots_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        # TODO(gmann): This is internal API policy and called by
-        # cinder. Add 'service' role in this policy so that cinder
-        # can call it with user having 'service' role (not having
-        # correct project_id). That is for phase-2 of RBAC goal and until
-        # then, we keep it open for all admin in any project. We cannot
-        # default it to ADMIN which has the project_id in
-        # check_str and will fail if cinder call it with other project_id.
-        check_str=base.ADMIN,
+        check_str=base.SERVICE_ROLE,
         description="Delete an assisted volume snapshot",
         operations=[
             {

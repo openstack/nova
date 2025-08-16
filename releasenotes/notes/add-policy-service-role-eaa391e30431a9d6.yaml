@@ -1,0 +1,43 @@
+---
+features:
+  - |
+    A few of the Nova APIs are meant only for use by other Openstack services.
+    Those APIs are not supposed to be used by any non-service users (even
+    admins) because they can make deployment or resources in unwanted state.
+    To restrict the usage of those APIs by users, Nova now defaults those APIs
+    to a policy rule of the ``service`` role. This will make sure they are
+    allowed to be used by the OpenStack services only.
+upgrade:
+  - |
+    Nova changed the default access for the service-to-service APIs which are
+    meant to be used by the OpenStack services only and not by any users.
+    The below service-to-service APIs access default to the ``service`` role:
+
+    * os_compute_api:os-assisted-volume-snapshots:create
+    * os_compute_api:os-assisted-volume-snapshots:delete
+    * os_compute_api:os-server-external-events:create
+    * os_compute_api:os-volumes-attachments:swap
+
+    Make sure the configured nova service user in other services has the
+    ``service`` role otherwise communication from the other services to
+    Nova will fail. For example, user configured as ``username`` option in
+    ``neutron.conf`` file under ``[nova]`` section has the ``service``
+    role.
+
+    If you are allowing these APIs to be accessed by admin or non-admin users
+    then it is highly recommended to remove that permission and make sure
+    those APIs are not accessible by any non-service users.
+
+    For backward compatibility, Nova continue allow ``admin`` role token to
+    access service APIs but in future release, ``admin`` access will be
+    removed.
+deprecations:
+  - |
+    The below service-to-service APIs policy rule default value
+    ``role:admin or role:service`` is deprecated and will be changed to
+    ``role:service`` in future release:
+
+    * os_compute_api:os-assisted-volume-snapshots:create
+    * os_compute_api:os-assisted-volume-snapshots:delete
+    * os_compute_api:os-server-external-events:create
+    * os_compute_api:os-volumes-attachments:swap

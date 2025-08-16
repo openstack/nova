@@ -131,7 +131,8 @@ class LimitsScopeTypePolicyTest(LimitsPolicyTest):
             self.project_reader_context,
             self.other_project_manager_context,
             self.other_project_member_context,
-            self.project_foo_context, self.other_project_reader_context
+            self.project_foo_context, self.other_project_reader_context,
+            self.service_context,
         ]
 
 
@@ -157,5 +158,6 @@ class LimitsScopeTypeNoLegacyPolicyTest(LimitsScopeTypePolicyTest):
             self.project_reader_context,
             self.other_project_manager_context,
             self.other_project_member_context,
-            self.project_foo_context, self.other_project_reader_context
+            self.project_foo_context, self.other_project_reader_context,
+            self.service_context,
         ]

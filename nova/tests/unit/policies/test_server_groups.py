@@ -83,7 +83,8 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
 
         # With legacy rule, anyone can create SG.
@@ -222,19 +223,13 @@ class ServerGroupScopeTypePolicyTest(ServerGroupPolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_reader_context,
             self.other_project_member_context,
-            self.other_project_manager_context]
+            self.other_project_manager_context,
+            self.service_context]
 
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context]
-
-        self.everyone_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_manager_context,
-            self.other_project_reader_context,
-            self.other_project_member_context
-        ]
+        self.everyone_authorized_contexts = (
+            self.project_create_authorized_contexts)
 
 
 class ServerGroupScopeTypeNoLegacyPolicyTest(ServerGroupScopeTypePolicyTest):

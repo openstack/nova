@@ -30,17 +30,7 @@ class ExtensionsPolicyTest(base.BasePolicyTest):
         self.req = fakes.HTTPRequest.blank('')
 
         # Check that everyone is able to get extension info.
-        self.everyone_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_manager_context,
-            self.project_member_context, self.project_reader_context,
-            self.project_foo_context,
-            self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_manager_context,
-            self.other_project_member_context
-        ]
+        self.everyone_authorized_contexts = self.all_contexts
         self.everyone_unauthorized_contexts = []
 
     def test_list_extensions_policy(self):
@@ -80,7 +70,8 @@ class ExtensionsScopeTypePolicyTest(ExtensionsPolicyTest):
             self.project_foo_context,
             self.other_project_manager_context,
             self.other_project_reader_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
         self.everyone_unauthorized_contexts = [
             self.system_admin_context, self.system_member_context,

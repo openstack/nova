@@ -126,7 +126,8 @@ class FlavorAccessScopeTypePolicyTest(FlavorAccessPolicyTest):
         self.admin_authorized_contexts = [
             self.legacy_admin_context,
             self.project_admin_context]
-        self.admin_index_authorized_contexts = self.all_project_contexts
+        self.admin_index_authorized_contexts = (self.all_project_contexts |
+                set([self.service_context]))
 
 
 class FlavorAccessScopeTypeNoLegacyPolicyTest(FlavorAccessScopeTypePolicyTest):

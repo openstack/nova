@@ -49,7 +49,8 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
             self.project_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
-            self.other_project_reader_context])
+            self.other_project_reader_context,
+            self.service_context])
         # Everyone is able to get the default quota
         self.everyone_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
@@ -60,7 +61,7 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
             self.project_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
-            self.other_project_reader_context])
+            self.other_project_reader_context, self.service_context])
 
     @mock.patch('nova.quota.QUOTAS.get_project_quotas')
     @mock.patch('nova.quota.QUOTAS.get_settable_quotas')
@@ -185,8 +186,10 @@ class QuotaSetsScopeTypePolicyTest(QuotaSetsPolicyTest):
             self.legacy_admin_context,
             self.project_admin_context]))
         self.reduce_set('project_reader_authorized',
-                        self.all_project_contexts)
-        self.everyone_authorized_contexts = self.all_project_contexts
+                        self.all_project_contexts | set([
+                            self.service_context]))
+        self.everyone_authorized_contexts = (self.all_project_contexts | set([
+                            self.service_context]))
 
 
 class QuotaSetsScopeTypeNoLegacyPolicyTest(QuotaSetsScopeTypePolicyTest):

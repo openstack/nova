@@ -54,6 +54,19 @@ the `API guide <https://docs.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-server-external-events.inc
 .. include:: server-topology.inc
 
+=====================
+Internal Service APIs
+=====================
+
+.. warning::
+   The below Nova APIs are meant to communicate to OpenStack services. Those
+   APIs are not supposed to be used by any users because they can make
+   deployment or resources in unwanted state.
+
+.. include:: os-assisted-volume-snapshots.inc
+.. include:: os-volume-attachments-swap.inc
+.. include:: os-server-external-events.inc
+
 ===============
 Deprecated APIs
 ===============

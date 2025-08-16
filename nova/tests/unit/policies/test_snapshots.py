@@ -61,7 +61,8 @@ class SnapshotsPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
@@ -72,7 +73,8 @@ class SnapshotsPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
 
     @mock.patch('nova.volume.cinder.API.get_all_snapshots')
@@ -191,7 +193,8 @@ class SnapshotsScopeTypePolicyTest(SnapshotsPolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_reader_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
@@ -200,7 +203,8 @@ class SnapshotsScopeTypePolicyTest(SnapshotsPolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_reader_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
 
 

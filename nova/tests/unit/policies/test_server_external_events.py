@@ -34,11 +34,11 @@ class ServerExternalEventsPolicyTest(base.BasePolicyTest):
         self.controller = ev.ServerExternalEventsController()
         self.req = fakes.HTTPRequest.blank('')
 
-        # With legacy rule and no scope checks, all admin can
-        # create the server external events.
+        # With legacy rule and no scope checks, all admin and service user
+        # can create the server external events.
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context
+            self.project_admin_context, self.service_context
         ]
 
     @mock.patch('nova.compute.api.API.external_instance_event')
@@ -82,7 +82,8 @@ class ServerExternalEventsScopeTypePolicyTest(ServerExternalEventsPolicyTest):
 
         # With scope checks, system admin is not allowed.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
+            self.legacy_admin_context, self.project_admin_context,
+            self.service_context]
 
 
 class ServerExternalEventsScopeTypeNoLegacyPolicyTest(

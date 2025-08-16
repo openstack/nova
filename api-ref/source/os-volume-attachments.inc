@@ -182,31 +182,10 @@ Update a volume attachment
 
 Update a volume attachment.
 
-.. note:: This action only valid when the server is in ACTIVE, PAUSED and RESIZED state,
-          or a conflict(409) error will be returned.
-
-.. Important::
-
-   When updating volumeId, this API **MUST**  only be used
-   as part of a larger orchestrated volume
-   migration operation initiated in the block storage
-   service via the ``os-retype`` or ``os-migrate_volume``
-   volume actions. Direct usage of this API is not supported
-   and will be blocked by nova with a 409 conflict.
-   Furthermore, updating ``volumeId`` via this API is only
-   implemented by `certain compute drivers`_.
-
-.. _certain compute drivers: https://docs.openstack.org/nova/latest/user/support-matrix.html#operation_swap_volume
-
-Policy default role is 'rule:system_admin_or_owner', its scope is
-[system, project], which allow project members or system admins to
-change the fields of an attached volume of a server. Policy defaults
-enable only users with the administrative role to change ``volumeId``
-via this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
-
-Updating, or what is commonly referred to as "swapping", volume attachments
-with volumes that have more than one read/write attachment, is not supported.
+Policy default role is 'rule:admin_or_owner', its scope is [project], which
+allow project members or admins to change the fields of an attached volume of
+a server. Cloud providers can change these permissions through the
+``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -218,9 +197,9 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
-  - volume_id: volume_id_swap_src
+  - volume_id: volume_id_path
   - volumeAttachment: volumeAttachment_put
-  - volumeId: volumeId_swap
+  - volumeId: volumeId_update
   - delete_on_termination: delete_on_termination_put_req
   - device: attachment_device_put_req
   - serverId: attachment_server_id_put_req

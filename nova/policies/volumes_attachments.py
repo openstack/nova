@@ -73,14 +73,7 @@ always superset of this policy permission.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'swap',
-        # TODO(gmann): This is internal API policy and supposed to be called
-        # only by cinder. Add 'service' role in this policy so that cinder
-        # can call it with user having 'service' role (not having server's
-        # project_id). That is for phase-2 of RBAC goal and until then,
-        # we keep it open for all admin in any project. We cannot default it to
-        # ADMIN which has the project_id in check_str and will fail
-        # if cinder call it with other project_id.
-        check_str=base.ADMIN,
+        check_str=base.SERVICE_ROLE,
         description="Update a volume attachment with a different volumeId",
         operations=[
             {

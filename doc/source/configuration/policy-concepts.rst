@@ -276,6 +276,25 @@ With these new defaults, you can solve the problem of:
    to provide access to project level user to perform operations within
    their project only.
 
+.. rubric:: ``service``
+
+The ``service`` role is a special role in Keystone, which is used for the
+internal service-to-service communication. It is assigned to service users
+i.e. nova or neutron which model the OpenStack services. Nova defaults its
+service-to-service APIs to require the ``service`` role so that they cannot
+be used by any non-service users. Allowing access to service-to-service APIs
+to non-service users can be destructive to resources and leave the deployment
+in an invalid state. It's advisable to audit the ``policy.yaml`` files and
+keystone users to make sure those APIs are not allowed to any non-service
+users and the service role is not granted to human admin accounts.
+
+.. note::
+
+    Make sure the configured nova service user in other services has the
+    ``service`` role otherwise communication from the other services to
+    Nova will fail. For example, user configured as ``username`` option in
+    ``neutron.conf`` file under ``[nova]`` section has the ``service`` role.
+
 Nova supported scope & Roles
 -----------------------------
 
@@ -307,6 +326,10 @@ overridden in the policy.yaml file but scope is not override-able.
 #. PROJECT_READER_OR_ADMIN: ``admin`` or ``reader`` role on ``project`` scope.
    Such policy rules are default to most of the read only APIs so that legacy
    admin can continue to access those APIs.
+
+#. SERVICE_ROLE (Internal): ``service`` role on service users with ``project``
+   scope. Such policy rules are default to the service-to-service APIs (The
+   APIs only meant to be called by the OpenStack services).
 
 Backward Compatibility
 ----------------------

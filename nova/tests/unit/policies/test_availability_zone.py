@@ -84,7 +84,8 @@ class AvailabilityZoneScopeTypePolicyTest(AvailabilityZonePolicyTest):
         # able to get AZ with host information.
         self.project_admin_authorized_contexts = [self.legacy_admin_context,
                                                   self.project_admin_context]
-        self.project_authorized_contexts = self.all_project_contexts
+        self.project_authorized_contexts = (self.all_project_contexts | set([
+            self.service_context]))
 
 
 class AZScopeTypeNoLegacyPolicyTest(AvailabilityZoneScopeTypePolicyTest):

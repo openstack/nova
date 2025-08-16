@@ -34,11 +34,10 @@ class AssistedVolumeSnapshotPolicyTest(base.BasePolicyTest):
         self.controller = snapshots.AssistedVolumeSnapshotsController()
         self.req = fakes.HTTPRequest.blank('')
         # By default, legacy rule are enable and scope check is disabled.
-        # system admin, legacy admin, and project admin is able to
-        # take volume snapshot.
+        # admin and service user is able to manage volume snapshot.
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
+            self.project_admin_context, self.service_context]
 
     @mock.patch('nova.compute.api.API.volume_snapshot_create')
     def test_assisted_create_policy(self, mock_create):
@@ -98,7 +97,8 @@ class AssistedSnapshotScopeTypePolicyTest(AssistedVolumeSnapshotPolicyTest):
         # With scope check enabled, system admin is not able to
         # take volume snapshot.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
+            self.legacy_admin_context, self.project_admin_context,
+            self.service_context]
 
 
 class AssistedSnapshotScopeTypeNoLegacyPolicyTest(

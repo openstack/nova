@@ -48,7 +48,8 @@ class TenantNetworksPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.service_context
         ]
 
     @mock.patch('nova.network.neutron.API.get_all')
@@ -113,7 +114,7 @@ class TenantNetworksScopeTypePolicyTest(TenantNetworksPolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_reader_context,
             self.other_project_manager_context,
-            self.other_project_member_context
+            self.other_project_member_context, self.service_context
         ]
 
 

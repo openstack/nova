@@ -24,15 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-server-external-events:%s'
 server_external_events_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        # TODO(gmann): This is internal API policy and supposed to be called
-        # by neutron, cinder, ironic, and cyborg (may be other openstack
-        # services in future). Add 'service' role in this policy so that
-        # neutron can call it with user having 'service' role (not having
-        # server's project_id). That is for phase-2 of RBAC goal and until
-        # then, we keep it open for all admin in any project. We cannot
-        # default it to ADMIN which has the project_id in
-        # check_str and will fail if neutron call it with other project_id.
-        check_str=base.ADMIN,
+        check_str=base.SERVICE_ROLE,
         description="Create one or more external events",
         operations=[
             {

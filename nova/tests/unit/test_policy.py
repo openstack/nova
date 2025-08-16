@@ -308,6 +308,11 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.admin_context = context.RequestContext(
             'fake', 'fake', True, roles=[
             'admin', 'manager', 'member', 'reader'])
+        self.service_context = context.RequestContext(
+                user_id="service_user",
+                project_id="service_user_project_id",
+                roles=['service'])
+
         self.target = {}
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 
@@ -359,12 +364,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             "os_compute_api:os-shelve:shelve_offload",
             "os_compute_api:os-shelve:unshelve_to_host",
             "os_compute_api:os-availability-zone:detail",
-            "os_compute_api:os-assisted-volume-snapshots:create",
-            "os_compute_api:os-assisted-volume-snapshots:delete",
             "os_compute_api:os-console-auth-tokens",
             "os_compute_api:os-quota-class-sets:update",
-            "os_compute_api:os-server-external-events:create",
-            "os_compute_api:os-volumes-attachments:swap",
             "os_compute_api:servers:create:zero_disk_flavor",
             "os_compute_api:os-baremetal-nodes:list",
             "os_compute_api:os-baremetal-nodes:show",
@@ -525,6 +526,13 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             servers_policy.CROSS_CELL_RESIZE,
         )
 
+        self.service_rules = (
+            "os_compute_api:os-assisted-volume-snapshots:create",
+            "os_compute_api:os-assisted-volume-snapshots:delete",
+            "os_compute_api:os-server-external-events:create",
+            "os_compute_api:os-volumes-attachments:swap",
+        )
+
     def test_all_rules_in_sample_file(self):
         special_rules = ["context_is_admin", "admin_or_owner", "default"]
         for (name, rule) in self.fake_policy.items():
@@ -556,6 +564,18 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.admin_context, rule, self.target)
 
+    def test_service_only_rules(self):
+        for rule in self.service_rules:
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
+                              self.non_admin_context, rule,
+                              {'project_id': 'fake', 'user_id': 'fake'})
+            # TODO(gmaan): For backward compatibility, we are allowing admin
+            # user to access service only rules, but once we remove that
+            # access, we need to assert here that the admin cannot access the
+            # service only rules.
+            policy.authorize(self.admin_context, rule)
+            policy.authorize(self.service_context, rule)
+
     def test_rule_missing(self):
         rules = policy.get_rules()
         # eliqiao os_compute_api:os-quota-class-sets:show requires
@@ -567,9 +587,11 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
                          'project_member_api', 'project_reader_api',
                          'project_manager_or_admin',
                          'project_member_or_admin',
-                         'project_reader_or_admin')
+                         'project_reader_or_admin', 'service_api',
+                         'service_or_admin')
         result = set(rules.keys()) - set(self.admin_only_rules +
             self.admin_or_owner_rules +
             self.allow_all_rules +
-            self.allow_nobody_rules + special_rules)
+            self.allow_nobody_rules + special_rules +
+            self.service_rules)
         self.assertEqual(set([]), result)

@@ -119,11 +119,11 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
             self.project_member_authorized_contexts)
 
         # By default, legacy rule are enable and scope check is disabled.
-        # system admin, legacy admin, and project admin is able to update
-        # volume attachment with a different volumeId.
+        # system admin, legacy admin, project admin, and service user is able
+        # to update volume attachment with a different volumeId.
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
+            self.project_admin_context, self.service_context]
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     def test_index_volume_attach_policy(self, mock_get_instance):
@@ -256,7 +256,8 @@ class VolumeAttachScopeTypePolicyTest(VolumeAttachPolicyTest):
             self.project_m_r_or_admin_with_scope_and_legacy)
 
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
+            self.legacy_admin_context, self.project_admin_context,
+            self.service_context]
 
 
 class VolumeAttachScopeTypeNoLegacyPolicyTest(VolumeAttachScopeTypePolicyTest):

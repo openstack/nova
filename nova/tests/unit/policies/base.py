@@ -132,6 +132,12 @@ class BasePolicyTest(test.TestCase):
                 project_id=self.project_id_other,
                 roles=['reader'])
 
+        # service user
+        self.service_context = nova_context.RequestContext(
+                user_id="service_user",
+                project_id="service_user_project_id",
+                roles=['service'])
+
         self.all_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
             self.system_member_context, self.system_reader_context,
@@ -140,7 +146,8 @@ class BasePolicyTest(test.TestCase):
             self.project_member_context, self.project_reader_context,
             self.other_project_manager_context,
             self.other_project_member_context,
-            self.project_foo_context, self.other_project_reader_context
+            self.project_foo_context, self.other_project_reader_context,
+            self.service_context
         ])
 
         # All the project contexts for easy access.
@@ -238,6 +245,7 @@ class BasePolicyTest(test.TestCase):
                     "rule:project_member_api or rule:context_is_admin",
                 "project_reader_or_admin":
                     "rule:project_reader_api or rule:context_is_admin",
+                "service_api": "role:service",
             })
             self.policy.set_rules(self.rules_without_deprecation,
                                   overwrite=False)
