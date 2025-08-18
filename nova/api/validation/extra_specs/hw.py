@@ -278,7 +278,7 @@ cpu_topology_validators = [
     base.ExtraSpecValidator(
         name='hw:cpu_sockets',
         description=(
-            'The number of virtual CPU threads to emulate in the guest '
+            'The number of virtual CPU sockets to emulate in the guest '
             'CPU topology. '
             'Defaults to the number of vCPUs requested. '
             'Only supported by the libvirt virt driver.'
@@ -318,9 +318,9 @@ cpu_topology_validators = [
         },
     ),
     base.ExtraSpecValidator(
-        name='hw:max_cpu_sockets',
+        name='hw:cpu_max_sockets',
         description=(
-            'The max number of virtual CPU threads to emulate in the '
+            'The max number of virtual CPU sockets to emulate in the '
             'guest CPU topology. '
             'This is used to limit the topologies that can be requested by '
             'an image and will be used to validate the ``hw_cpu_sockets`` '
@@ -334,7 +334,7 @@ cpu_topology_validators = [
         },
     ),
     base.ExtraSpecValidator(
-        name='hw:max_cpu_cores',
+        name='hw:cpu_max_cores',
         description=(
             'The max number of virtual CPU cores to emulate per socket in the '
             'guest CPU topology. '
@@ -350,7 +350,7 @@ cpu_topology_validators = [
         },
     ),
     base.ExtraSpecValidator(
-        name='hw:max_cpu_threads',
+        name='hw:cpu_max_threads',
         description=(
             'The max number of virtual CPU threads to emulate per core in the '
             'guest CPU topology. '
