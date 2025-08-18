@@ -65,10 +65,10 @@ as follows::
                     "rel": "self"
                 }
             ],
-            "status": "SUPPORTED",
+            "status": "DEPRECATED",
             "version": "",
             "min_version": "",
-            "updated": "2011-01-21T11:33:21Z"
+            "updated": "2025-07-04T12:00:00Z"
         },
         {
             "id": "v2.1",

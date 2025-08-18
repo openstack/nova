@@ -18,9 +18,9 @@
                 "type": "application/vnd.openstack.compute+json;version=2"
             }
         ],
-        "status": "SUPPORTED",
+        "status": "DEPRECATED",
         "version": "",
         "min_version": "",
-        "updated": "2011-01-21T11:33:21Z"
+        "updated": "2025-07-04T12:00:00Z"
     }
 }

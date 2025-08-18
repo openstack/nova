@@ -19,8 +19,8 @@
             }
         ],
         "min_version": "",
-        "status": "SUPPORTED",
-        "updated": "2011-01-21T11:33:21Z",
+        "status": "DEPRECATED",
+        "updated": "2025-07-04T12:00:00Z",
         "version": ""
     }
 }
