@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
+
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
@@ -634,16 +636,17 @@ class ViewBuilder(common.ViewBuilder):
             }
 
             if api_version_request.is_supported(request, '2.98'):
-                image_props = {}
-                for key, value in instance.system_metadata.items():
-                    if key.startswith(utils.SM_IMAGE_PROP_PREFIX):
-                        # remove prefix 'image_' at start of key, so that
-                        # key 'image_<key-name>' becomes '<key-name>'
-                        k = key.partition('_')[2]
-                        image_props[k] = value
-
-                image['properties'] = image_props
-
+                prefix_len = len(utils.SM_IMAGE_PROP_PREFIX)
+                # allow legacy names if that is what were stored in metadata
+                std_fields = set(itertools.chain(
+                    objects.ImageMetaProps.fields.keys(),
+                    objects.ImageMetaProps._legacy_property_map.keys()
+                ))
+                image['properties'] = {
+                    key[prefix_len:]: value for key, value in
+                    instance.system_metadata.items()
+                    if (key.startswith(utils.SM_IMAGE_PROP_PREFIX) and
+                        key[prefix_len:] in std_fields and value is not None)}
             return image
         else:
             return ""

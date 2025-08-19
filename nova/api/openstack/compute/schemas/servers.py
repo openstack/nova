@@ -1216,10 +1216,10 @@ rebuild_response_v298['properties']['server']['properties']['image'][
         'patternProperties': {
             '^[a-zA-Z0-9_:. ]{1,255}$': {
                 'type': 'string',
-                'max_Length': 255,
-                },
+                'maxLength': 255,
             },
-            'additionalProperties': False,
+        },
+        'additionalProperties': False,
     },
 })
 
