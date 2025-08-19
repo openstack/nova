@@ -262,11 +262,15 @@ class CinderFixture(fixtures.Fixture):
                     'attachment_id': attachment['id'],
                     'mountpoint': '/dev/vdb',
                 }
-
+            migration_status = (
+                None if volume_id not in (
+                    self.SWAP_OLD_VOL, self.SWAP_ERR_OLD_VOL)
+                else "migrating")
             volume.update({
                 'status': 'in-use',
                 'attach_status': 'attached',
                 'attachments': attachments,
+                'migration_status': migration_status
             })
         # Otherwise mark the volume as available and detached
         else:
