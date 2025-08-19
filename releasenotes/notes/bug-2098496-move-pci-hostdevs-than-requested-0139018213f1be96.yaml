@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    Fixed the issue
+    `bug 2098496 <https://bugs.launchpad.net/nova/+bug/2098496>`__ where nova
+    assigned more PCI hostdevs to a VM than the flavor requested via the
+    pci_passthrough:alias extra_spec. This only affected systems where both
+    ``[filter_scheduler]pci_in_placement`` and ``[pci]report_in_placement``
+    were set to True. This only affected systems where the PCI alias requested
+    type-VF devices and a single PF device on the compute node supported more
+    than one VFs and ``[pci]device_spec`` configuration allowed nova to use
+    multiple VFs from a single PF.
