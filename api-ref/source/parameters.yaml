@@ -1815,7 +1815,7 @@ attachment_id_put_req:
   min_version: 2.85
 attachment_id_resp:
   description: |
-    The UUID of the attachment.
+    The volume ID of the attachment.
   in: body
   required: false
   type: string
