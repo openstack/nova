@@ -1074,6 +1074,20 @@ class HackingTestCase(test.NoDBTestCase):
             code, checks.check_eventlet_primitives, expected_errors=errors)
 
         code = """
+                    from eventlet import timeout
+                    from eventlet import event
+                    eventlet.event.Event
+                    eventlet.timeout.Timeout(deadline)
+                    eventlet.semaphore.Semaphore(3)
+                    eventlet.semaphore.BoundedSemaphore(2)
+               """
+        errors = [(x + 1, 0, 'N373') for x in range(6)]
+        self._assert_has_errors(
+            code, checks.check_eventlet_primitives, expected_errors=errors)
+
+        code = """
+                    threading.Semaphore(value=1)
+                    threading.Event()
                     time.sleep(0)
                     time.sleep(1)
                """

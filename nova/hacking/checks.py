@@ -146,6 +146,9 @@ set_daemon_re = re.compile(r"\.setDaemon\(")
 eventlet_stdlib_primitives_re = re.compile(
     r".*(eventlet|greenthread)\.sleep\(.*")
 eventlet_yield_re = re.compile(r".*time\.sleep\(0\).*")
+eventlet_primitives_re = re.compile(
+    r".*(eventlet)\.(semaphore|timeout|event).*"
+    r"|from\s+eventlet\s+import\s+(semaphore|timeout|event)")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -1116,6 +1119,11 @@ def check_eventlet_primitives(logical_line, filename):
         "specific one")
 
     match = re.match(eventlet_stdlib_primitives_re, logical_line)
+
+    if match:
+        yield (0, msg)
+
+    match = re.match(eventlet_primitives_re, logical_line)
 
     if match:
         yield (0, msg)
