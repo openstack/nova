@@ -1175,9 +1175,9 @@ class MigrationTestCase(test.TestCase):
         migrations = db.migration_get_all_by_filters(self.ctxt, filters)
         self.assertEqual(2, len(migrations))
         sources = [x['source_compute'] for x in migrations]
-        self.assertEqual(['host2', 'host2'], sources)
+        self.assertEqual(['host2', 'host2'], sorted(sources))
         dests = [x['dest_compute'] for x in migrations]
-        self.assertEqual(['host1', 'host3'], dests)
+        self.assertEqual(['host1', 'host3'], sorted(dests))
 
     def test_get_migrations_by_filters_instance_uuid(self):
         migrations = db.migration_get_all_by_filters(self.ctxt, filters={})

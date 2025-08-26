@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    Two indexes were added to the ``migrations`` table:
+    ``migrations_by_src_host_nodes_and_status_idx`` and
+    ``migrations_by_dest_host_nodes_and_status_idx``. These indexes optimize
+    migration lookups for a specific compute node by source or destination
+    host/node and are used by the ``_cleanup_incomplete_migrations`` periodic
+    task (run every 5 minutes by default on each compute service). In
+    environments with large migration tables, this significantly reduces query
+    latency and improves the nova-conductor performance. See `bug 2121465
+    <https://bugs.launchpad.net/nova/+bug/2121465>`__ for details.
