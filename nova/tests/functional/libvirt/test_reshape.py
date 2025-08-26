@@ -256,6 +256,14 @@ class SevResphapeTests(base.ServersTestBase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_guest_configure_mem_encryption')
     def test_create_servers_with_amd_sev(self, mock_configure_me):
+        """Verify that SEV reshape works with libvirt driver
+
+        1) create one server with an old tree where the MEM_ENCRYPTION_CONTEXT
+           resource is on the compute provider
+        2) trigger a reshape
+        3) check that the allocation of the server is still valid
+        4) create another server now against the new tree
+        """
         self.hostname = self.start_compute(
             hostname='compute1',
         )
@@ -326,3 +334,100 @@ class SevResphapeTests(base.ServersTestBase):
 
         sev_usages = self._get_provider_usages(sev_rp_uuid)
         self.assertEqual(2, sev_usages['MEM_ENCRYPTION_CONTEXT'])
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_guest_configure_mem_encryption')
+    def test_create_servers_with_amd_sev_mixed(self, mock_configure_me):
+        """Verify that SEV reshape supports upgrade sceario
+
+        1) prepare two compute nodes with old tree
+        2) trigger a reshape in one compute node
+        3) create one server against the new tree and another against the old
+           tree
+        """
+        self.hostname1 = self.start_compute(
+            hostname='compute1',
+        )
+        self.hostname2 = self.start_compute(
+            hostname='compute2',
+        )
+        self.compute1 = self.computes[self.hostname1]
+        self.compute2 = self.computes[self.hostname2]
+        self.flags(num_memory_encrypted_guests=16, group='libvirt')
+
+        # create the MEM_ENCRYPTION_CONTEXT resource in placement manually,
+        # to simulate the old layout.
+        for name in ('compute1', 'compute2'):
+            compute_rp_uuid = self._get_provider_uuid_by_name(name)
+            inventories = self.placement.get(
+                '/resource_providers/%s/inventories' % compute_rp_uuid).body
+            inventories['inventories']['MEM_ENCRYPTION_CONTEXT'] = {
+                'allocation_ratio': 1.0,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'step_size': 1,
+                'total': 16}
+            self.placement.put(
+                '/resource_providers/%s/inventories' % compute_rp_uuid,
+                inventories)
+            traits = self._get_provider_traits(compute_rp_uuid)
+            traits.append(os_traits.HW_CPU_X86_AMD_SEV)
+            self._set_provider_traits(compute_rp_uuid, traits)
+
+        # verify that the inventory, usages and allocation are correct before
+        # the reshape
+        for name in ('compute1', 'compute2'):
+            compute_rp_uuid = self._get_provider_uuid_by_name(name)
+            compute_inventories = self._get_provider_inventory(compute_rp_uuid)
+            self.assertEqual(
+                16, compute_inventories['MEM_ENCRYPTION_CONTEXT']['total'])
+            compute_usages = self._get_provider_usages(compute_rp_uuid)
+            self.assertEqual(0, compute_usages['MEM_ENCRYPTION_CONTEXT'])
+
+        # restart the compute service in compute1 to trigger reshape
+        with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
+                        return_value=True), \
+                mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
+                           return_value=False):
+            self.compute1 = self.restart_compute_service(self.hostname1)
+
+        # compute1 should have its RP reshaped
+        compute_rp_uuid = self._get_provider_uuid_by_name('compute1')
+        compute_inventories = self._get_provider_inventory(compute_rp_uuid)
+        self.assertNotIn('MEM_ENCRYPTION_CONTEXT', compute_inventories)
+
+        sev_rp_uuid = self._get_provider_uuid_by_name('compute1_amd_sev')
+        sev_inventories = self._get_provider_inventory(sev_rp_uuid)
+        self.assertEqual(
+            16, sev_inventories['MEM_ENCRYPTION_CONTEXT']['total'])
+        sev_usages = self._get_provider_usages(sev_rp_uuid)
+        self.assertEqual(0, sev_usages['MEM_ENCRYPTION_CONTEXT'])
+
+        # compute2 should have old RP
+        compute_rp_uuid = self._get_provider_uuid_by_name('compute2')
+        compute_inventories = self._get_provider_inventory(compute_rp_uuid)
+        self.assertEqual(
+            16, compute_inventories['MEM_ENCRYPTION_CONTEXT']['total'])
+        compute_usages = self._get_provider_usages(compute_rp_uuid)
+        self.assertEqual(0, compute_usages['MEM_ENCRYPTION_CONTEXT'])
+
+        # create new servers to both compute nodes
+        post_server1 = self._create_server(
+            host='compute1', networks='none',
+            image_uuid=uuidsentinel.mem_enc_image_id)
+        self.addCleanup(self._delete_server, post_server1)
+        post_server2 = self._create_server(
+            host='compute2', networks='none',
+            image_uuid=uuidsentinel.mem_enc_image_id)
+        self.addCleanup(self._delete_server, post_server2)
+
+        # server1 should allocate M_E_C from SEV RP
+        sev_rp_uuid = self._get_provider_uuid_by_name('compute1_amd_sev')
+        sev_usages = self._get_provider_usages(sev_rp_uuid)
+        self.assertEqual(1, sev_usages['MEM_ENCRYPTION_CONTEXT'])
+
+        # server2 should allocate M_E_C from compute RP
+        compute_rp_uuid = self._get_provider_uuid_by_name('compute2')
+        compute_usages = self._get_provider_usages(compute_rp_uuid)
+        self.assertEqual(1, compute_usages['MEM_ENCRYPTION_CONTEXT'])
