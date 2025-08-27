@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    The nova (metadata)api wsgi application will now detect fatal errors
+    (configuration, et al) on startup and lock into a permanent error state
+    until fixed and restarted. This solves a problem with some wsgi runtimes
+    ignoring initialization errors and continuing to send requests to the
+    half-initialized service. See https://bugs.launchpad.net/nova/+bug/2103811
+    for more details.

@@ -82,12 +82,34 @@ document_root = /tmp
         # raised during it.
         self.assertRaises(test.TestingException, wsgi_app.init_application,
                           'nova-api')
+        # reset the latch_error_on_raise decorator
+        wsgi_app.init_application.reset()
         # Now run init_application a second time, it should succeed since no
         # exception is being raised (the init of global data should not be
         # re-attempted).
         wsgi_app.init_application('nova-api')
         self.assertIn('Global data already initialized, not re-initializing.',
                       self.stdlog.logger.output)
+
+    @mock.patch(
+        'sys.argv', new=mock.MagicMock(return_value=mock.sentinel.argv))
+    @mock.patch('nova.api.openstack.wsgi_app._get_config_files')
+    def test_init_application_called_unrecoverable(self, mock_get_files):
+        """Test that init_application can tolerate being called more than once
+        in a single python interpreter instance and raises the same exception
+        forever if its unrecoverable.
+        """
+        error = ValueError("unrecoverable config error")
+        excepted_type = type(error)
+        mock_get_files.side_effect = [
+            error, test.TestingException, test.TestingException]
+        for i in range(3):
+            e = self.assertRaises(
+                excepted_type, wsgi_app.init_application, 'nova-api')
+            self.assertIs(e, error)
+        # since the expction is latched on the first raise mock_get_files
+        # should not be called again on each iteration
+        mock_get_files.assert_called_once()
 
     @mock.patch('nova.objects.Service.get_by_host_and_binary')
     @mock.patch('nova.utils.raise_if_old_compute')

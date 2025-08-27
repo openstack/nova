@@ -1154,3 +1154,42 @@ def run_once(message, logger, cleanup=None):
         wrapper.reset = functools.partial(reset, wrapper)
         return wrapper
     return outer_wrapper
+
+
+class _SentinelException(Exception):
+    """This type exists to act as a placeholder and will never be raised"""
+
+
+def latch_error_on_raise(retryable=(_SentinelException,)):
+    """This is a utility decorator to ensure if a function ever raises
+    it will always raise the same exception going forward.
+
+    The only exception we know is safe to ignore is an oslo db connection
+    error as the db may be temporarily unavailable and we should allow
+    mod_wsgi to retry
+    """
+
+    def outer_wrapper(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if wrapper.error:
+                raise wrapper.error
+            try:
+                return func(*args, **kwargs)
+            except retryable:
+                # reraise any retryable exception to allow them to be handled
+                # by the caller.
+                raise
+            except Exception as e:
+                wrapper.error = e
+                LOG.exception(e)
+                raise
+
+        wrapper.error = None
+
+        def reset(wrapper):
+            wrapper.error = None
+
+        wrapper.reset = functools.partial(reset, wrapper)
+        return wrapper
+    return outer_wrapper
