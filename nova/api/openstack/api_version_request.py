@@ -13,9 +13,13 @@
 #    under the License.
 
 import re
+import typing as ty
 
 from nova import exception
 from nova.i18n import _
+
+if ty.TYPE_CHECKING:
+    from nova.api.openstack import wsgi
 
 # Define the minimum and maximum version of the API across all of the
 # REST API. The format of the version is:
@@ -306,7 +310,7 @@ def max_api_version():
     return APIVersionRequest(_MAX_API_VERSION)
 
 
-def is_supported(req, version):
+def is_supported(req: 'wsgi.Request', version: str) -> bool:
     """Check if API request version satisfies version restrictions.
 
     :param req: request object
@@ -316,6 +320,10 @@ def is_supported(req, version):
     :returns: True if request satisfies minimal and maximum API version
         requirements. False in other case.
     """
+    # TODO(stephenfin): This should be an error since it highlights bugs in
+    # either our middleware or (more likely) an incomplete test
+    if req.is_legacy_v2():  # legacy requests will not pass microversion info
+        return False
 
     return req.api_version_request >= APIVersionRequest(version)
 

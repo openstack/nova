@@ -21,7 +21,6 @@ from unittest import mock
 from oslo_utils.fixture import uuidsentinel
 from webob import exc
 
-from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import aggregates as aggregates_v21
 from nova.compute import api as compute_api
 from nova import context
@@ -731,15 +730,16 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         # top-level dict, so we need to put availability_zone at the top also
         agg['availability_zone'] = 'nova'
 
-        avr_v240 = api_version_request.APIVersionRequest("2.40")
-        avr_v241 = api_version_request.APIVersionRequest("2.41")
-
-        req = mock.MagicMock(api_version_request=avr_v241)
+        req = fakes.HTTPRequest.blank('/v2/os-aggregates',
+                                      use_admin_context=True,
+                                      version='2.41')
         marshalled_agg = self.controller._marshall_aggregate(req, agg_obj)
 
         self.assertEqual(agg, marshalled_agg['aggregate'])
 
-        req = mock.MagicMock(api_version_request=avr_v240)
+        req = fakes.HTTPRequest.blank('/v2/os-aggregates',
+                                      use_admin_context=True,
+                                      version='2.40')
         marshalled_agg = self.controller._marshall_aggregate(req, agg_obj)
 
         # UUID isn't in microversion 2.40 and before
