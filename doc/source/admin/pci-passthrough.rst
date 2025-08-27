@@ -463,10 +463,11 @@ the PF and its VFs are made available for consumption.
 
 Since nova 27.0.0 (2023.1 Antelope) scheduling and allocation of PCI devices
 in Placement can also be enabled via
-:oslo.config:option:`filter_scheduler.pci_in_placement`. Please note that this
-should only be enabled after all the computes in the system is configured to
-report PCI inventory in Placement via
-enabling :oslo.config:option:`pci.report_in_placement`. In Antelope flavor
+:oslo.config:option:`filter_scheduler.pci_in_placement` config option set in
+the nova-api, nova-scheduler, and nova-conductor configuration. Please note
+that this should only be enabled after all the computes in the system is
+configured to report PCI inventory in Placement via enabling
+:oslo.config:option:`pci.report_in_placement`. In Antelope flavor
 based PCI requests are support but Neutron port base PCI requests are not
 handled in Placement.
 
