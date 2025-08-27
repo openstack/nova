@@ -104,6 +104,9 @@ class PciDeviceStats(object):
             pool_keys = pool.copy()
             del pool_keys['count']
             del pool_keys['devices']
+            for tag in self.ignored_pool_tags:
+                pool_keys.pop(tag, None)
+
             if (len(pool_keys.keys()) == len(dev_pool.keys()) and
                 self._equal_properties(dev_pool, pool_keys, list(dev_pool))):
                 return pool
@@ -309,12 +312,20 @@ class PciDeviceStats(object):
             else:
                 # but if there is placement allocation then we have to follow
                 # it
+
+                if not self._assert_one_pool_per_rp_uuid(pools):
+                    raise exception.PciDeviceRequestFailed(
+                        requests=pci_requests)
+
                 requested_devs_per_pool_rp = collections.Counter(rp_uuids)
                 for pool in pools:
                     count = requested_devs_per_pool_rp[pool['rp_uuid']]
                     pool['count'] -= count
                     alloc_devices += self._allocate_devs(
                         pool, count, request.request_id)
+                    # we consumed all the requested devices for the rp_uuid
+                    # so we can drop that rp_uuid from the request.
+                    requested_devs_per_pool_rp.pop(pool['rp_uuid'], None)
 
         return alloc_devices
 
@@ -823,10 +834,18 @@ class PciDeviceStats(object):
                     break
         else:
             # but if there is placement allocation then we have to follow that
+
+            if not self._assert_one_pool_per_rp_uuid(pools):
+                return False
+
             requested_devs_per_pool_rp = collections.Counter(rp_uuids)
             for pool in filtered_pools:
                 count = requested_devs_per_pool_rp[pool['rp_uuid']]
                 pool['count'] -= count
+                # we consumed all the requested devices for the rp_uuid
+                # so we can drop that rp_uuid from the request.
+                requested_devs_per_pool_rp.pop(pool['rp_uuid'], None)
+
                 if pool['count'] == 0:
                     pools.remove(pool)
 
@@ -982,3 +1001,31 @@ class PciDeviceStats(object):
 
             if pool_rps:  # now we know that it is a single RP
                 pool['rp_uuid'] = next(iter(pool_rps))
+
+    @staticmethod
+    def _assert_one_pool_per_rp_uuid(pools: ty.List[Pool]) -> bool:
+        """Asserts that each pool has a unique rp_uuid if any
+
+        :param pools: A list of Pool objects.
+        :return: True if each pool has a unique rp_uuid or no rp_uuid assigned,
+                 False otherwise.
+        """
+        pools_per_rp_uuid = collections.defaultdict(list)
+        for pool in pools:
+            if "rp_uuid" in pool:
+                pools_per_rp_uuid[pool["rp_uuid"]].append(pool)
+
+        split_rp_uuids = {
+            rp_uuid: pools
+            for rp_uuid, pools in pools_per_rp_uuid.items()
+            if len(pools) > 1}
+
+        if split_rp_uuids:
+            LOG.warning(
+                "The PCI allocation logic assumes that devices "
+                "related to the same rp_uuid are in the same pool. "
+                "However the following rp_uuids are split across multiple "
+                "pools. This should not happen. Please file a bug report. %s",
+                split_rp_uuids
+            )
+        return not split_rp_uuids
