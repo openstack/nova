@@ -3757,17 +3757,24 @@ class LibvirtDriver(driver.ComputeDriver):
             # If the rebased image is going to have a backing file then
             # explicitly set the backing file format to avoid any security
             # concerns related to file format auto detection.
-            if os.path.isabs(rebase_base):
-                backing_file = rebase_base
+            backing_file = rebase_base
+
+            # We will need the absolute path to the backing file in order to
+            # call images.qemu_img_info() as it checks for path existence.
+            # We still want to do the rebase itself with a relative path if a
+            # relative path was given, so that Cinder will also be able to
+            # successfully reference the backing file in its environment.
+            if os.path.isabs(backing_file):
+                backing_file_abs = backing_file
             else:
                 # this is a probably a volume snapshot case where the
                 # rebase_base is relative. See bug
                 # https://bugs.launchpad.net/nova/+bug/1885528
                 backing_file_name = os.path.basename(rebase_base)
                 volume_path = os.path.dirname(source_path)
-                backing_file = os.path.join(volume_path, backing_file_name)
+                backing_file_abs = os.path.join(volume_path, backing_file_name)
 
-            b_file_fmt = images.qemu_img_info(backing_file).file_format
+            b_file_fmt = images.qemu_img_info(backing_file_abs).file_format
             qemu_img_extra_arg = ['-F', b_file_fmt]
 
         qemu_img_extra_arg.append(source_path)
