@@ -4,28 +4,28 @@
             "createdAt": "%(strtime)s",
             "displayDescription": "Default description",
             "displayName": "Default name",
-            "id": 100,
+            "id": "%(uuid)s",
             "size": 100,
             "status": "available",
-            "volumeId": 12
+            "volumeId": "%(uuid)s"
         },
         {
             "createdAt": "%(strtime)s",
             "displayDescription": "Default description",
             "displayName": "Default name",
-            "id": 101,
+            "id": "%(uuid)s",
             "size": 100,
             "status": "available",
-            "volumeId": 12
+            "volumeId": "%(uuid)s"
         },
         {
             "createdAt": "%(strtime)s",
             "displayDescription": "Default description",
             "displayName": "Default name",
-            "id": 102,
+            "id": "%(uuid)s",
             "size": 100,
             "status": "available",
-            "volumeId": 12
+            "volumeId": "%(uuid)s"
         }
     ]
 }

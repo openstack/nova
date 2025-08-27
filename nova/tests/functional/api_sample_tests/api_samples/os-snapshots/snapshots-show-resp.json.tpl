@@ -3,9 +3,9 @@
         "createdAt": "%(strtime)s",
         "displayDescription": "%(description)s",
         "displayName": "%(snapshot_name)s",
-        "id": "100",
+        "id": "%(uuid)s",
         "size": 100,
         "status": "available",
-        "volumeId": 12
+        "volumeId": "%(uuid)s"
     }
 }

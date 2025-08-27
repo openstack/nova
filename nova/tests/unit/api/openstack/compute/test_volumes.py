@@ -31,9 +31,6 @@ from nova.volume import cinder
 
 CONF = nova.conf.CONF
 
-FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-
 
 class BootFromVolumeTest(test.TestCase):
 
@@ -56,11 +53,11 @@ class BootFromVolumeTest(test.TestCase):
             resv_id = None
             return ([{'id': 1,
                       'display_name': 'test_server',
-                      'uuid': FAKE_UUID,
+                      'uuid': uuids.server,
                       'flavor': flavor,
                       'access_ip_v4': '1.2.3.4',
                       'access_ip_v6': 'fead::1234',
-                      'image_ref': IMAGE_UUID,
+                      'image_ref': uuids.image,
                       'user_id': 'fake',
                       'project_id': fakes.FAKE_PROJECT_ID,
                       'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
@@ -72,7 +69,7 @@ class BootFromVolumeTest(test.TestCase):
 
     def test_create_root_volume(self):
         body = dict(server=dict(
-                name='test_server', imageRef=IMAGE_UUID,
+                name='test_server', imageRef=uuids.image,
                 flavorRef=2, min_count=1, max_count=1,
                 block_device_mapping=[dict(
                         volume_id='ca9fe3f5-cede-43cb-8050-1672acabe348',
@@ -88,7 +85,7 @@ class BootFromVolumeTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app_v21())
         self.assertEqual(202, res.status_int)
         server = jsonutils.loads(res.body)['server']
-        self.assertEqual(FAKE_UUID, server['id'])
+        self.assertEqual(uuids.server, server['id'])
         self.assertEqual(CONF.password_length, len(server['adminPass']))
         self.assertEqual(1, len(self._block_device_mapping_seen))
         self.assertTrue(self._legacy_bdm_seen)
@@ -99,7 +96,7 @@ class BootFromVolumeTest(test.TestCase):
 
     def test_create_root_volume_bdm_v2(self):
         body = dict(server=dict(
-                name='test_server', imageRef=IMAGE_UUID,
+                name='test_server', imageRef=uuids.image,
                 flavorRef=2, min_count=1, max_count=1,
                 block_device_mapping_v2=[dict(
                         source_type='volume',
@@ -117,7 +114,7 @@ class BootFromVolumeTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app_v21())
         self.assertEqual(202, res.status_int)
         server = jsonutils.loads(res.body)['server']
-        self.assertEqual(FAKE_UUID, server['id'])
+        self.assertEqual(uuids.server, server['id'])
         self.assertEqual(CONF.password_length, len(server['adminPass']))
         self.assertEqual(1, len(self._block_device_mapping_seen))
         self.assertFalse(self._legacy_bdm_seen)
@@ -132,13 +129,13 @@ class VolumeApiTestV21(test.NoDBTestCase):
         super().setUp()
         fakes.stub_out_networking(self)
 
-        self.stub_out('nova.volume.cinder.API.create',
-                      fakes.stub_volume_create)
-        self.stub_out('nova.volume.cinder.API.delete',
-                      lambda self, context, volume_id: None)
+        self.stub_out(
+            'nova.volume.cinder.API.create', fakes.stub_volume_create)
+        self.stub_out(
+            'nova.volume.cinder.API.delete', fakes.stub_volume_delete)
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        self.stub_out('nova.volume.cinder.API.get_all',
-                      fakes.stub_volume_get_all)
+        self.stub_out(
+            'nova.volume.cinder.API.get_all', fakes.stub_volume_get_all)
 
         self.controller = volumes_v21.VolumeController()
         self.req = fakes.HTTPRequest.blank('')
@@ -147,7 +144,7 @@ class VolumeApiTestV21(test.NoDBTestCase):
         vol = {"size": 100,
                "display_name": "Volume Test Name",
                "display_description": "Volume Test Desc",
-               "availability_zone": "zone1:host1"}
+               "availability_zone": "dublin"}
         body = {"volume": vol}
         resp = self.controller.create(self.req, body=body).obj
 
@@ -168,7 +165,7 @@ class VolumeApiTestV21(test.NoDBTestCase):
         vol = {"size": '10',
                "display_name": "Volume Test Name",
                "display_description": "Volume Test Desc",
-               "availability_zone": "zone1:host1"}
+               "availability_zone": "dublin"}
         body = {"volume": vol}
 
         self.assertRaises(api_exc,
@@ -176,7 +173,7 @@ class VolumeApiTestV21(test.NoDBTestCase):
                           body=body)
         mock_create.assert_called_once_with(
             mock.ANY, '10', 'Volume Test Name',
-            'Volume Test Desc', availability_zone='zone1:host1',
+            'Volume Test Desc', availability_zone='dublin',
             metadata=None, snapshot=None, volume_type=None)
 
     @mock.patch.object(cinder.API, 'get_snapshot')
@@ -335,9 +332,9 @@ class TestVolumesAPIDeprecation(test.NoDBTestCase):
 
     def test_all_apis_return_not_found(self):
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
-            self.controller.show, self.req, fakes.FAKE_UUID)
+            self.controller.show, self.req, uuids.volume)
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
-            self.controller.delete, self.req, fakes.FAKE_UUID)
+            self.controller.delete, self.req, uuids.volume)
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
             self.controller.index, self.req)
         self.assertRaises(exception.VersionNotFoundForAPIMethod,

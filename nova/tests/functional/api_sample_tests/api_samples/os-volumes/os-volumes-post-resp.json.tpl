@@ -2,7 +2,7 @@
     "volume": {
         "status": "in-use",
         "displayDescription": "%(volume_desc)s",
-        "availabilityZone": "zone1:host1",
+        "availabilityZone": "dublin",
         "displayName": "%(volume_name)s",
         "attachments": [
             { "device": "/",
@@ -11,7 +11,7 @@
               "volumeId": "%(uuid)s"
             }
         ],
-     "volumeType": "Backup",
+     "volumeType": "vol_type_name",
      "snapshotId": null,
      "metadata": {},
      "id": "%(uuid)s",

@@ -140,6 +140,7 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.compute.api.API.attach_volume')
     def test_create_volume_attach_policy(self, mock_attach_volume):
+        mock_attach_volume.return_value = '/dev/sdb'
         rule_name = self.policy_root % "create"
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
                                      'device': '/dev/fake'}}

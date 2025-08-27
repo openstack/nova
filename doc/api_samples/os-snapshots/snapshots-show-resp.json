@@ -1,11 +1,11 @@
 {
     "snapshot": {
-        "createdAt": "2013-02-25T16:27:54.724209",
+        "createdAt": "2025-06-12T14:56:28.922532",
         "displayDescription": "Default description",
         "displayName": "Default name",
-        "id": "100",
+        "id": "ec675a13-5be8-4077-8381-9d70a12f77fb",
         "size": 100,
         "status": "available",
-        "volumeId": 12
+        "volumeId": "d7bccf30-48a2-4cfc-a9c0-71c5ee144f61"
     }
 }

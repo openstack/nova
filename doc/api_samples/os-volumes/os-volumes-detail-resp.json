@@ -9,7 +9,7 @@
                     "volumeId": "a26887c6-c47b-4654-abb5-dfadf7d3f803"
                 }
             ],
-            "availabilityZone": "zone1:host1",
+            "availabilityZone": "dublin",
             "createdAt": "1999-01-01T01:01:01.000000",
             "displayDescription": "Volume Description",
             "displayName": "Volume Name",
@@ -18,7 +18,7 @@
             "size": 100,
             "snapshotId": null,
             "status": "in-use",
-            "volumeType": "Backup"
+            "volumeType": "vol_type_name"
         }
     ]
 }

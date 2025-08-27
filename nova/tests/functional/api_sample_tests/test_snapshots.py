@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack import fakes
 
@@ -54,7 +56,7 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
 
     def test_snapshots_delete(self):
         self._create_snapshot()
-        response = self._do_delete('os-snapshots/100')
+        response = self._do_delete(f'os-snapshots/{uuids.snapshot}')
         self.assertEqual(202, response.status_code)
         self.assertEqual('', response.text)
 
@@ -67,7 +69,7 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         self._verify_response('snapshots-list-resp', {}, response, 200)
 
     def test_snapshots_show(self):
-        response = self._do_get('os-snapshots/100')
+        response = self._do_get(f'os-snapshots/{uuids.snapshot}')
         subs = {
             'snapshot_name': 'Default name',
             'description': 'Default description'
