@@ -64,4 +64,4 @@ class TestDirectSwapVolume(
             client.OpenStackApiException, self.api.put_server_volume,
             server_id, self.cinder.MULTIATTACH_RO_SWAP_OLD_VOL,
             self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL)
-        self.assertIn("this api should only be called by Cinder", str(ex))
+        self.assertIn("this API should only be called by Cinder", str(ex))

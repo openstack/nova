@@ -79,10 +79,12 @@ from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import services
 from nova.api.openstack.compute import shelve
 from nova.api.openstack.compute import simple_tenant_usage
+from nova.api.openstack.compute import snapshots
 from nova.api.openstack.compute import suspend_server
 from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack.compute import versionsV21
 from nova.api.openstack.compute import virtual_interfaces
+from nova.api.openstack.compute import volume_attachments
 from nova.api.openstack.compute import volumes
 from nova.api.openstack import wsgi
 from nova.api import wsgi as base_wsgi
@@ -321,7 +323,7 @@ server_topology_controller = functools.partial(_create_controller,
     server_topology.ServerTopologyController, [])
 
 server_volume_attachments_controller = functools.partial(_create_controller,
-    volumes.VolumeAttachmentController, [])
+    volume_attachments.VolumeAttachmentController, [])
 
 
 services_controller = functools.partial(_create_controller,
@@ -333,7 +335,7 @@ simple_tenant_usage_controller = functools.partial(_create_controller,
 
 
 snapshots_controller = functools.partial(_create_controller,
-    volumes.SnapshotController, [])
+    snapshots.SnapshotController, [])
 
 
 tenant_networks_controller = functools.partial(_create_controller,

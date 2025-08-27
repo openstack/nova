@@ -45,12 +45,12 @@ Response
 
 **Example List volume attachments for an instance: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/list-volume-attachments-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/list-volume-attachments-resp.json
    :language: javascript
 
 **Example List tagged volume attachments for an instance (v2.89): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.89/list-volume-attachments-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/v2.89/list-volume-attachments-resp.json
    :language: javascript
 
 Attach a volume to an instance
@@ -90,17 +90,17 @@ Request
 
 **Example Attach a volume to an instance: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/attach-volume-to-server-req.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/attach-volume-to-server-req.json
    :language: javascript
 
 **Example Attach a volume to an instance and tag it (v2.49): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.49/attach-volume-to-server-req.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/v2.49/attach-volume-to-server-req.json
    :language: javascript
 
 **Example Attach a volume to an instance with "delete_on_termination" (v2.79): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.79/attach-volume-to-server-req.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/v2.79/attach-volume-to-server-req.json
    :language: javascript
 
 Response
@@ -118,17 +118,17 @@ Response
 
 **Example Attach a volume to an instance: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/attach-volume-to-server-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/attach-volume-to-server-resp.json
    :language: javascript
 
 **Example Attach a tagged volume to an instance (v2.70): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.70/attach-volume-to-server-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/v2.70/attach-volume-to-server-resp.json
    :language: javascript
 
 **Example Attach a volume with "delete_on_termination" (v2.79): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.79/attach-volume-to-server-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/v2.79/attach-volume-to-server-resp.json
    :language: javascript
 
 Show a detail of a volume attachment
@@ -167,12 +167,12 @@ Response
 
 **Example Show a detail of a volume attachment: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/volume-attachment-detail-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/volume-attachment-detail-resp.json
    :language: javascript
 
 **Example Show a detail of a tagged volume attachment (v2.89): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.89/volume-attachment-detail-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/v2.89/volume-attachment-detail-resp.json
    :language: javascript
 
 Update a volume attachment
@@ -233,7 +233,7 @@ Request
 
 **Example Update a volume attachment (v2.85): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.85/update-volume-attachment-delete-flag-req.json
+.. literalinclude:: ../../doc/api_samples/os-volume_attachments/v2.85/update-volume-attachment-delete-flag-req.json
    :language: javascript
 
 Response

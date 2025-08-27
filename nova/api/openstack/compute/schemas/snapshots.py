@@ -17,29 +17,21 @@ from nova.api.validation import parameter_types
 create = {
     'type': 'object',
     'properties': {
-        'volume': {
+        'snapshot': {
             'type': 'object',
             'properties': {
-                'volume_type': {'type': 'string'},
-                'metadata': {'type': 'object'},
-                'snapshot_id': {'type': 'string'},
-                'size': {
-                    'type': ['integer', 'string'],
-                    'pattern': '^[0-9]+$',
-                    'minimum': 1
-                },
-                'availability_zone': {'type': 'string'},
+                'volume_id': {'type': 'string'},
+                'force': parameter_types.boolean,
                 'display_name': {'type': 'string'},
                 'display_description': {'type': 'string'},
             },
-            'required': ['size'],
+            'required': ['volume_id'],
             'additionalProperties': False,
         },
     },
-    'required': ['volume'],
+    'required': ['snapshot'],
     'additionalProperties': False,
 }
-
 
 index_query = {
     'type': 'object',
