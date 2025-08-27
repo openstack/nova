@@ -24,7 +24,6 @@ import stat
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import units
-from oslo_utils import uuidutils
 
 import nova.privsep
 
@@ -189,18 +188,6 @@ def readpty(path):
             'Ignored error while reading from instance console pty: %s', exc
         )
         return ''
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def create_mdev(physical_device, mdev_type, uuid=None):
-    """Instantiate a mediated device."""
-    if uuid is None:
-        uuid = uuidutils.generate_uuid()
-    fpath = '/sys/class/mdev_bus/{0}/mdev_supported_types/{1}/create'
-    fpath = fpath.format(physical_device, mdev_type)
-    with open(fpath, 'w') as f:
-        f.write(uuid)
-    return uuid
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint

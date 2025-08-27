@@ -22702,13 +22702,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_MAXPHYSADDR))
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_MAXPHYSADDR))
     @mock.patch.object(fakelibvirt.Connection, 'getType',
                        return_value=host.HV_DRIVER_QEMU)
     def test_update_host_specific_capabilities_with_maxphysaddr(
-            self, mock_get_lib_version, mock_get_version, mock_type):
+            self, mock_get_lib_version, mock_type):
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         driver._update_host_specific_capabilities()
         self.assertTrue(
@@ -22738,14 +22735,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_MAXPHYSADDR))
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_MAXPHYSADDR) - 1)
+                           libvirt_driver.MIN_LIBVIRT_MAXPHYSADDR) - 1)
     @mock.patch.object(fakelibvirt.Connection, 'getType',
                        return_value=host.HV_DRIVER_QEMU)
     def test_update_host_specific_capabilities_without_maxphysaddr(
-            self, mock_get_lib_version, mock_get_version, mock_type):
+            self, mock_get_lib_version, mock_type):
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         driver._update_host_specific_capabilities()
         self.assertFalse(
@@ -22753,33 +22747,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertFalse(
             driver.capabilities.get('supports_address_space_emulated'))
 
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_TB_CACHE_SIZE) - 1)
-    def test_supports_tb_cache_size_fail(self, mock_getversion):
-        self.flags(virt_type='qemu', group='libvirt')
-        self.flags(tb_cache_size=10, group='libvirt')
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        self.assertRaises(exception.InvalidConfiguration,
-                          driver.init_host, 'dummyhost')
-
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       '_register_all_undefined_instance_details',
-                       new=mock.Mock())
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_TB_CACHE_SIZE))
-    def test_supports_tb_cache_size_ok(self, mock_getversion):
-        self.flags(virt_type='qemu', group='libvirt')
-        self.flags(tb_cache_size=10, group='libvirt')
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        driver.init_host('dummyhost')
-
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            libvirt_driver.MIN_LIBVIRT_TB_CACHE_SIZE))
-    def test_get_guest_config_feature_tcg(self, mock_getversion):
+    def test_get_guest_config_feature_tcg(self):
         self.flags(virt_type='qemu', group='libvirt')
         self.flags(tb_cache_size=10, group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -28358,7 +28326,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         get_unassigned_mdevs.assert_called_once_with('pci_0000_06_00_0',
                                                      ['nvidia-11'])
 
-    @mock.patch.object(nova.privsep.libvirt, 'create_mdev')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_mdev_capable_devices')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -28368,8 +28335,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def test_allocate_mdevs_with_no_gpu_capacity(self,
                                                  get_supported_mdev_rcs,
                                                  unallocated_mdevs,
-                                                 get_mdev_capable_devs,
-                                                 privsep_create_mdev):
+                                                 get_mdev_capable_devs):
         self.flags(enabled_mdev_types=['nvidia-11'], group='devices')
         allocations = {
             uuids.rp1: {
