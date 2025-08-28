@@ -691,6 +691,23 @@ class TestXenAddress(TestField):
         self.from_primitive_values = self.coerce_good_values
 
 
+class TestMemEncryptionModel(TestField):
+    def setUp(self):
+        super(TestMemEncryptionModel, self).setUp()
+        self.field = fields.MemEncryptionModel()
+        self.coerce_good_values = [('amd-sev', 'amd-sev'),
+                                   ('amd-sev-es', 'amd-sev-es')]
+        self.coerce_bad_values = ['amd-sev-foo']
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'amd-sev'", self.field.stringify('amd-sev'))
+
+    def test_stringify_invalid(self):
+        self.assertRaises(ValueError, self.field.stringify, 'amd-sev-foo')
+
+
 class TestSecureBoot(TestField):
     def setUp(self):
         super(TestSecureBoot, self).setUp()
