@@ -9437,7 +9437,6 @@ class LibvirtDriver(driver.ComputeDriver):
         memory_mb = int(self._host.get_memory_mb_total())
         vcpus = len(self._get_vcpu_available())
         pcpus = len(self._get_pcpu_available())
-        memory_enc_slots = self._get_memory_encrypted_slots()
 
         # NOTE(yikun): If the inv record does not exists, the allocation_ratio
         # will use the CONF.xxx_allocation_ratio value if xxx_allocation_ratio
@@ -9482,16 +9481,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 'reserved': 0,
             }
 
-        if memory_enc_slots:
-            result[orc.MEM_ENCRYPTION_CONTEXT] = {
-                'total': memory_enc_slots,
-                'min_unit': 1,
-                'max_unit': 1,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-                'reserved': 0,
-            }
-
         # If a sharing DISK_GB provider exists in the provider tree, then our
         # storage is shared, and we should not report the DISK_GB inventory in
         # the compute node provider.
@@ -9522,6 +9511,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._update_provider_tree_for_vpmems(
             provider_tree, nodename, result, resources)
+
+        self._update_provider_tree_for_memory_encryption(
+            provider_tree, nodename, allocations=allocations)
 
         provider_tree.update_inventory(nodename, result)
         provider_tree.update_resources(nodename, resources)
@@ -9564,7 +9556,189 @@ class LibvirtDriver(driver.ComputeDriver):
                     metadata=vpmem)
                 resources[rc].add(resource_obj)
 
-    def _get_memory_encrypted_slots(self):
+    def _update_provider_tree_for_memory_encryption(self, provider_tree,
+                                                    nodename, allocations):
+        """Updates the provider tree for MEM_ENCRYPTION_CONTEXT inventory.
+
+        Before 2025.2, MEM_ENCRYPTION_CONTEXT inventory and allocations were on
+        the root compute node provider in the tree. Starting in 2025.2,
+        the MEM_ENCRYPTION_CONTEXT inventory is on a child provider in
+        the tree. As a result, this method will "reshape" the tree if necessary
+        on first start of this compute service in 2025.2.
+
+        :param provider_tree: The ProviderTree to update.
+        :param nodename: The ComputeNode.hypervisor_hostname, also known as
+            the name of the root node provider in the tree for this host.
+        :param allocations: If not None, indicates a reshape was requested and
+            should be performed.
+        :raises: nova.exception.ReshapeNeeded if ``allocations`` is None and
+            the method determines a reshape of the tree is needed, i.e.
+            MEM_ENCRYPTION_CONTEXT inventory and allocations must be migrated
+            from the root node provider to a child provider of
+            MEM_ENCRYPTION_CONTEXT resources in the tree.
+        :raises: nova.exception.ReshapeFailed if the requested tree reshape
+            fails for whatever reason.
+        """
+        inventories_dict = self._get_memory_encryption_inventories()
+        if not inventories_dict:
+            return
+
+        me_rps = self._ensure_memory_encryption_providers(
+            inventories_dict, provider_tree, nodename)
+
+        if self._is_reshape_needed_memory_encryption_on_root(provider_tree,
+                                                             nodename):
+            if allocations is None:
+                LOG.info('Requesting provider tree reshape in order to move '
+                         'memory encryption context inventory from the root '
+                         'compute node provider %s to a child provider.',
+                         nodename)
+                raise exception.ReshapeNeeded()
+            root_node = provider_tree.data(nodename)
+            self._reshape_memory_encryption_resources(allocations, root_node,
+                                                      me_rps)
+            if provider_tree.has_traits(nodename, [ot.HW_CPU_X86_AMD_SEV]):
+                provider_tree.remove_traits(nodename, ot.HW_CPU_X86_AMD_SEV)
+            if orc.MEM_ENCRYPTION_CONTEXT in root_node.inventory:
+                del root_node.inventory[orc.MEM_ENCRYPTION_CONTEXT]
+                provider_tree.update_inventory(nodename, root_node.inventory)
+
+    @staticmethod
+    def _is_reshape_needed_memory_encryption_on_root(provider_tree, nodename):
+        """Determine if root RP has MEM_ENCRYPTION_CONTEXT inventories.
+
+        Check to see if the root compute node provider in the tree for
+        this host already has MEM_ENCRYPTION_CONTEXT inventory because if it
+        does, we either need to signal for a reshape (if
+        _update_provider_tree_for_memory_encryption () has no allocations) or
+        move the allocations within the ProviderTree if passed.
+
+        :param provider_tree: The ProviderTree object for this host.
+        :param nodename: The ComputeNode.hypervisor_hostname, also known as
+            the name of the root node provider in the tree for this host.
+        :returns: boolean, whether we have MEM_ENCRYPTION_CONTEXT root
+            inventory.
+        """
+        root_node = provider_tree.data(nodename)
+        return orc.MEM_ENCRYPTION_CONTEXT in root_node.inventory
+
+    def _ensure_memory_encryption_providers(self, inventories_dict,
+                                            provider_tree, nodename):
+        """Ensures MEM_ENCRYPTION_CONTEXT inventory providers exist in the tree
+        for $nodename.
+
+        MEM_ENCRYPTION_CONTEXT providers are named $nodename_$model, e.g.
+        ``somehost.foo.bar.com_amd_sev``.
+
+        :param inventories_dict: Dictionary of inventories for
+            MEM_ENCRYPTION_CONTEXT class
+            directly provided by _get_memory_encryption_inventories() and which
+            looks like:
+                {'amd_sev':
+                    {'total': $TOTAL,
+                     'min_unit': 1,
+                     'max_unit': 1,
+                     'step_size': 1,
+                     'reserved': 0,
+                     'allocation_ratio': 1.0,
+                     'traits': [ot.HW_CPU_X86_AMD_SEV],
+                    }
+                }
+        :param provider_tree: The ProviderTree to update.
+        :param nodename: The ComputeNode.hypervisor_hostname, also known as
+            the name of the root node provider in the tree for this host.
+        :returns: dict, keyed by memory encryption model, to ProviderData
+            object representing that resource provider in the tree
+        """
+        me_rps = {}
+        for me_id, inventory in inventories_dict.items():
+            me_rp_name = '%s_%s' % (nodename, me_id)
+            if not inventory['total']:
+                if provider_tree.exists(me_rp_name):
+                    provider_tree.remove(me_rp_name)
+                break
+            if not provider_tree.exists(me_rp_name):
+                provider_tree.new_child(me_rp_name, nodename)
+            me_rp = provider_tree.data(me_rp_name)
+            me_rps[me_id] = me_rp
+            me_traits = inventory.pop('traits', [])
+            me_inventory = {orc.MEM_ENCRYPTION_CONTEXT: inventory}
+            provider_tree.update_inventory(me_rp_name, me_inventory)
+            provider_tree.add_traits(me_rp_name, *me_traits)
+        return me_rps
+
+    def _reshape_memory_encryption_resources(
+            self, allocations, root_node, me_rps):
+        for consumer_uuid, alloc_data in allocations.items():
+            allocs = alloc_data['allocations']
+            for rp_uuid in list(allocs):
+                resources = allocs[rp_uuid]['resources']
+                if orc.MEM_ENCRYPTION_CONTEXT in resources:
+                    self._reshape_memory_encryption_allocations(
+                        rp_uuid, root_node, consumer_uuid, alloc_data,
+                        resources, me_rps)
+
+    def _reshape_memory_encryption_allocations(
+            self, rp_uuid, root_node, consumer_uuid, alloc_data, resources,
+            me_rps):
+        """Update existing MEM_ENCRYPTION_CONTEXT allocations by moving them
+        from the root node provider to the child provider for AMD SEV
+
+        :param rp_uuid: UUID of the MEM_ENCRYPTION_CONTEXT resource provider
+            with allocations from consumer_uuid (should be the root node
+            provider before reshaping occurs)
+        :param root_node: ProviderData object for the root compute node
+            resource provider in the provider tree
+        :param consumer_uuid: UUID of the consumer (instance) with
+            MEM_ENCRYPTION_CONTEXT allocations against the resource provider
+            represented by rp_uuid
+        :param alloc_data: dict of allocation information for consumer_uuid
+        :param resources: dict, keyed by resource class, of resources allocated
+            to consumer_uuid from rp_uuid
+        :param me_rps: dict, keyed by memory encryption model, to ProviderData
+            object representing that resource provider in the tree
+        :raises: ReshapeFailed if the reshape fails for whatever reason
+        """
+        self._assert_is_root_provider(
+            orc.MEM_ENCRYPTION_CONTEXT, rp_uuid, root_node, consumer_uuid,
+            alloc_data)
+
+        sev_rp = None
+        for me_rp_name in me_rps:
+            if ot.HW_CPU_X86_AMD_SEV in me_rps[me_rp_name].traits:
+                sev_rp = me_rps[me_rp_name]
+                break
+
+        if sev_rp is None:
+            msg = (_('MEM_ENCRYPTION_CONTEXT resources in the root provider '
+                     '%(rp_uuid)s are allocated by %(consumer_uuid)s but '
+                     'the child resource provider for AMD SEV is not found.')
+                   % {'rp_uuid': rp_uuid, 'consumer_uuid': consumer_uuid})
+            raise exception.ReshapeFailed(error=msg)
+
+        allocs = alloc_data['allocations']
+        allocs[sev_rp.uuid] = {
+            'resources': {
+                orc.MEM_ENCRYPTION_CONTEXT: 1
+            }
+        }
+        del resources[orc.MEM_ENCRYPTION_CONTEXT]
+
+    def _get_memory_encryption_inventories(self):
+        """Returns the inventories for MEM_ENCRYPTION_CONTEXT.
+
+        :returns: dict, keyed by memory encryption model, of dicts like:
+                {'amd_sev':
+                    {'total': $TOTAL,
+                     'min_unit': 1,
+                     'max_unit': 1,
+                     'step_size': 1,
+                     'reserved': 0,
+                     'allocation_ratio': 1.0,
+                     'traits': [ot.HW_CPU_X86_AMD_SEV]
+                    }
+                }
+        """
         conf_slots = CONF.libvirt.num_memory_encrypted_guests
 
         if not self._host.supports_amd_sev:
@@ -9572,7 +9746,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warning("Host is configured with "
                             "libvirt.num_memory_encrypted_guests set to "
                             "%d, but is not SEV-capable.", conf_slots)
-            return 0
+            return {}
 
         slots = db_const.MAX_INT
 
@@ -9587,8 +9761,18 @@ class LibvirtDriver(driver.ComputeDriver):
                             "but supports only %d.", conf_slots, slots)
             slots = min(slots, conf_slots)
 
-        LOG.debug("Available memory encrypted slots: %d", slots)
-        return slots
+        LOG.debug("Available memory encrypted slots: AMD SEV=%d", slots)
+        return {
+            'amd_sev': {
+                'total': slots,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'allocation_ratio': 1.0,
+                'reserved': 0,
+                'traits': [ot.HW_CPU_X86_AMD_SEV]
+            }
+        }
 
     @property
     def static_traits(self) -> ty.Dict[str, bool]:
@@ -9688,12 +9872,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _assert_is_root_provider(
-            rp_uuid, root_node, consumer_uuid, alloc_data):
+            rc_name, rp_uuid, root_node, consumer_uuid, alloc_data):
         """Asserts during a reshape that rp_uuid is for the root node provider.
 
         When reshaping, inventory and allocations should be on the root node
         provider and then moved to child providers.
 
+        :param rc_name: Resource class name
         :param rp_uuid: UUID of the provider that holds inventory/allocations.
         :param root_node: ProviderData object representing the root node in a
             provider tree.
@@ -9705,15 +9890,16 @@ class LibvirtDriver(driver.ComputeDriver):
             expected.
         """
         if rp_uuid != root_node.uuid:
-            # Something is wrong - VGPU inventory should
+            # Something is wrong - the inventory should
             # only be on the root node provider if we are
             # reshaping the tree.
-            msg = (_('Unexpected VGPU resource allocation '
+            msg = (_('Unexpected %(rc_name)s resource allocation '
                      'on provider %(rp_uuid)s for consumer '
                      '%(consumer_uuid)s: %(alloc_data)s. '
-                     'Expected VGPU allocation to be on root '
+                     'Expected %(rc_name)s allocation to be on root '
                      'compute node provider %(root_uuid)s.')
-                   % {'rp_uuid': rp_uuid,
+                   % {'rc_name': rc_name,
+                      'rp_uuid': rp_uuid,
                       'consumer_uuid': consumer_uuid,
                       'alloc_data': alloc_data,
                       'root_uuid': root_node.uuid})
@@ -9827,7 +10013,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # We've found VGPU allocations on a provider. It should be the root
         # node provider.
         self._assert_is_root_provider(
-            rp_uuid, root_node, consumer_uuid, alloc_data)
+            orc.VGPU, rp_uuid, root_node, consumer_uuid, alloc_data)
 
         # Find which physical GPU corresponds to this allocation.
         mdev_uuids = self._get_assigned_mdevs_for_reshape(
@@ -13220,7 +13406,6 @@ class LibvirtDriver(driver.ComputeDriver):
         :return: A dict of trait names mapped to boolean values.
         """
         traits = self._get_cpu_feature_traits()
-        traits[ot.HW_CPU_X86_AMD_SEV] = self._host.supports_amd_sev
         traits[ot.HW_CPU_HYPERTHREADING] = self._host.has_hyperthreading
         traits.update(self._get_cpu_arch_traits())
         traits.update(self._get_cpu_emulation_arch_traits())
