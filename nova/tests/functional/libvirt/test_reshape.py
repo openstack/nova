@@ -253,8 +253,9 @@ class SevResphapeTests(base.ServersTestBase):
         hw_mem_enc_image['properties']['hw_mem_encryption'] = True
         self.glance.create(admin_context, hw_mem_enc_image)
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._guest_configure_sev')
-    def test_create_servers_with_amd_sev(self, mock_configure_sev):
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_guest_configure_mem_encryption')
+    def test_create_servers_with_amd_sev(self, mock_configure_me):
         self.hostname = self.start_compute(
             hostname='compute1',
         )

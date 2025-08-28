@@ -408,6 +408,22 @@ feature_flag_validators = [
         },
     ),
     base.ExtraSpecValidator(
+        name='hw:mem_encryption_model',
+        description=(
+            'CPU feature used for memory encryption of the guest. '
+            'This has no effect unless hw:mem_encryption (or equivalent '
+            'image property) is set to True.'
+        ),
+        value={
+            'type': str,
+            'description': 'A CPU feature used for memory encryption',
+            'enum': [
+                'amd-sev',
+                'amd-sev-es',
+            ],
+        },
+    ),
+    base.ExtraSpecValidator(
         name='hw:pmem',
         description=(
             'A comma-separated list of ``$LABEL``\\ s defined in config for '

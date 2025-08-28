@@ -2716,6 +2716,17 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
         self.assertXmlEqual(launch_security_expected, xml)
 
+        obj.policy = 0x0035
+        xml = obj.to_xml()
+        launch_security_expected = """
+            <launchSecurity type="sev">
+              <policy>0x0035</policy>
+              <cbitpos>47</cbitpos>
+              <reducedPhysBits>1</reducedPhysBits>
+            </launchSecurity>"""
+
+        self.assertXmlEqual(launch_security_expected, xml)
+
     def test_config_lxc(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "lxc"

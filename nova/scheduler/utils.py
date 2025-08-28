@@ -184,7 +184,7 @@ class ResourceRequest(object):
             if disk:
                 res_req._add_resource(orc.DISK_GB, disk)
 
-        res_req._translate_memory_encryption(request_spec.flavor, image)
+        res_req._translate_mem_encryption_request(request_spec.flavor, image)
 
         res_req._translate_vpmems_request(request_spec.flavor)
 
@@ -317,23 +317,31 @@ class ResourceRequest(object):
         LOG.debug("Requiring emulated TPM support via trait %s and %s.",
                   version_trait, model_trait)
 
-    def _translate_memory_encryption(self, flavor, image):
+    def _translate_mem_encryption_request(self, flavor, image):
         """When the hw:mem_encryption extra spec or the hw_mem_encryption
         image property are requested, translate into a request for
         resources:MEM_ENCRYPTION_CONTEXT=1 which requires a slot on a
-        host which can support encryption of the guest memory.
+        host which can support encryption of the guest memory. Also require
+        the specific trait for the requested memory encryption feature of CPU.
         """
         # NOTE(aspiers): In theory this could raise FlavorImageConflict,
         # but we already check it in the API layer, so that should never
-        # happen.
-        if not hardware.get_mem_encryption_constraint(flavor, image):
+        # happen
+        mem_enc_config = hardware.get_mem_encryption_constraint(flavor, image)
+        if not mem_enc_config:
             # No memory encryption required, so no further action required.
             return
 
         self._add_resource(orc.MEM_ENCRYPTION_CONTEXT, 1)
-        self._add_trait(os_traits.HW_CPU_X86_AMD_SEV, 'required')
         LOG.debug("Added %s=1 to requested resources",
                   orc.MEM_ENCRYPTION_CONTEXT)
+
+        me_trait = os_traits.HW_CPU_X86_AMD_SEV
+        if mem_enc_config.model == obj_fields.MemEncryptionModel.AMD_SEV_ES:
+            me_trait = os_traits.HW_CPU_X86_AMD_SEV_ES
+        self._add_trait(me_trait, 'required')
+        LOG.debug("Requiring memory encryption model %s via trait %s",
+                  mem_enc_config.model, me_trait)
 
     def _translate_vpmems_request(self, flavor):
         """When the hw:pmem extra spec is present, require hosts which can

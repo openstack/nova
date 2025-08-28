@@ -5333,7 +5333,7 @@ class MemEncryptionNotRequiredTestCase(test.NoDBTestCase):
         if image_meta is None:
             image_meta = objects.ImageMeta(properties=objects.ImageMetaProps())
 
-        self.assertFalse(hw.get_mem_encryption_constraint(flavor, image_meta))
+        self.assertIsNone(hw.get_mem_encryption_constraint(flavor, image_meta))
 
     def test_requirement_disabled(self):
         self._test_encrypted_memory_support_not_required()
@@ -5509,8 +5509,8 @@ class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
         flavor = objects.Flavor(name=self.flavor_name,
                                 extra_specs=extra_specs)
         exc = self.assertRaises(self.expected_exception,
-                                    hw.get_mem_encryption_constraint,
-                                    flavor, image_meta)
+                                hw.get_mem_encryption_constraint,
+                                flavor, image_meta)
         self.assertEqual(self.expected_error % error_data, str(exc))
 
     def test_flavor_requires_encrypted_memory_support_pc(self):
@@ -5571,8 +5571,10 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
                 'id': self.image_id,
                 'name': self.image_name,
                 'properties': image_props})
-            self.assertTrue(hw.get_mem_encryption_constraint(flavor,
-                                                             image_meta))
+            expected = hw.MemEncryptionConfig(
+                model=fields.MemEncryptionModel.AMD_SEV)
+            self.assertEqual(
+                expected, hw.get_mem_encryption_constraint(flavor, image_meta))
             mock_log.debug.assert_has_calls([
                 mock.call("Memory encryption requested by %s", requesters)
             ])
@@ -5643,8 +5645,11 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
             'size': 0,
             'status': 'active'})
 
-        self.assertTrue(hw.get_mem_encryption_constraint(flavor,
-                                                         image_meta))
+        expected = hw.MemEncryptionConfig(
+            model=fields.MemEncryptionModel.AMD_SEV)
+        self.assertEqual(
+            expected,
+            hw.get_mem_encryption_constraint(flavor, image_meta))
 
         requesters = "hw:mem_encryption extra spec in %s flavor and " \
                      "hw_mem_encryption property of image %s" % \

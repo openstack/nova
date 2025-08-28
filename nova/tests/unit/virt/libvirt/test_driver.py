@@ -3787,9 +3787,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             None, None, flavor, image_meta,
         )
 
-    def _test_sev_enabled(self, expected=None, host_sev_enabled=False,
-                          enc_extra_spec=None, enc_image_prop=None,
-                          hw_machine_type=None, hw_firmware_type=None):
+    def _test_get_mem_encryption_config(
+            self, expected=None, host_sev_enabled=False, enc_extra_spec=None,
+            enc_image_prop=None, hw_machine_type=None, hw_firmware_type=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = host_sev_enabled
 
@@ -3812,42 +3812,45 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             {'id': '150d530b-1c57-4367-b754-1f1b5237923d'},
             {}, image_props)
 
-        enabled = drvr._sev_enabled(flavor, image_meta)
+        me_config = drvr._get_mem_encryption_config(flavor, image_meta)
 
         if expected is None:
-            self.fail("_test_sev_enabled called without an expected "
-                      "return value. Maybe you expected an exception?")
+            self.assertIsNone(me_config)
+        else:
+            self.assertEqual(expected, me_config)
 
-        self.assertEqual(expected, enabled)
+    def test_get_mem_encryption_config_no_host_support(self):
+        self._test_get_mem_encryption_config()
 
-    def test_sev_enabled_no_host_support(self):
-        self._test_sev_enabled(False)
+    def test_get_mem_encryption_config_host_support_no_flavor_image(self):
+        self._test_get_mem_encryption_config(host_sev_enabled=True)
 
-    def test_sev_enabled_host_support_no_flavor_image(self):
-        self._test_sev_enabled(False, host_sev_enabled=True)
+    def test_get_mem_encryption_config_no_host_support_flavor_requested(self):
+        self._test_get_mem_encryption_config(enc_extra_spec=True)
 
-    def test_sev_enabled_no_host_support_flavor_requested(self):
-        self._test_sev_enabled(False, enc_extra_spec=True)
+    def test_get_mem_encryption_config_no_host_support_image_requested(self):
+        self._test_get_mem_encryption_config(enc_image_prop=True)
 
-    def test_sev_enabled_no_host_support_image_requested(self):
-        self._test_sev_enabled(False, enc_image_prop=True)
+    def test_get_mem_encryption_config_host_support_flavor_requested(self):
+        expected = hardware.MemEncryptionConfig(
+            model=fields.MemEncryptionModel.AMD_SEV)
+        self._test_get_mem_encryption_config(
+            expected, host_sev_enabled=True, enc_extra_spec=True,
+            hw_firmware_type='uefi', hw_machine_type='q35')
 
-    def test_sev_enabled_host_support_flavor_requested(self):
-        self._test_sev_enabled(True, host_sev_enabled=True,
-                               enc_extra_spec=True, hw_firmware_type='uefi',
-                               hw_machine_type='q35')
-
-    def test_sev_enabled_host_support_image_requested(self):
-        self._test_sev_enabled(True, host_sev_enabled=True,
-                               enc_image_prop=True, hw_firmware_type='uefi',
-                               hw_machine_type='q35')
+    def test_get_mem_encryption_config_host_support_image_requested(self):
+        expected = hardware.MemEncryptionConfig(
+            model=fields.MemEncryptionModel.AMD_SEV)
+        self._test_get_mem_encryption_config(
+            expected, host_sev_enabled=True, enc_image_prop=True,
+            hw_firmware_type='uefi', hw_machine_type='q35')
 
     # The cases where the flavor and image requests contradict each other
     # are already covered by test_hardware.MemEncryptionConflictTestCase
     # so we don't need to test them in great detail here.
-    def test_sev_enabled_host_extra_spec_image_conflict(self):
+    def test_get_mem_encryption_config_host_extra_spec_image_conflict(self):
         exc = self.assertRaises(exception.FlavorImageConflict,
-                                self._test_sev_enabled,
+                                self._test_get_mem_encryption_config,
                                 host_sev_enabled=True, enc_extra_spec=False,
                                 enc_image_prop=True)
         self.assertEqual(
@@ -3855,9 +3858,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "to False, conflicting with image fake_image which has "
             "hw_mem_encryption property explicitly set to True", str(exc))
 
-    def test_sev_enabled_host_extra_spec_no_uefi(self):
+    def test_get_mem_encryption_config_host_extra_spec_no_uefi(self):
         exc = self.assertRaises(exception.FlavorImageConflict,
-                                self._test_sev_enabled,
+                                self._test_get_mem_encryption_config,
                                 host_sev_enabled=True, enc_extra_spec=True)
         self.assertEqual(
             "Memory encryption requested by hw:mem_encryption extra spec in "
@@ -3865,9 +3868,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "'hw_firmware_type' property set to 'uefi' or volume-backed "
             "instance was requested", str(exc))
 
-    def test_sev_enabled_host_extra_spec_no_machine_type(self):
+    def test_get_mem_encryption_config_host_extra_spec_no_machine_type(self):
         exc = self.assertRaises(exception.InvalidMachineType,
-                                self._test_sev_enabled,
+                                self._test_get_mem_encryption_config,
                                 host_sev_enabled=True, enc_extra_spec=True,
                                 hw_firmware_type='uefi')
         self.assertEqual(
@@ -3875,9 +3878,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "(150d530b-1c57-4367-b754-1f1b5237923d): q35 type is required "
             "for SEV to work", str(exc))
 
-    def test_sev_enabled_host_extra_spec_pc(self):
+    def test_get_mem_encryption_config_host_extra_spec_pc(self):
         exc = self.assertRaises(exception.InvalidMachineType,
-                                self._test_sev_enabled,
+                                self._test_get_mem_encryption_config,
                                 host_sev_enabled=True, enc_extra_spec=True,
                                 hw_firmware_type='uefi', hw_machine_type='pc')
         self.assertEqual(
@@ -3920,7 +3923,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(47, feature.cbitpos)
         self.assertEqual(1, feature.reduced_phys_bits)
 
-    def _setup_sev_guest(self, extra_image_properties=None):
+    def _setup_sev_guest(self, extra_image_properties=None, model=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_uefi = True
         drvr._host._supports_amd_sev = True
@@ -3933,6 +3936,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         extra_specs = {
             "hw:mem_encryption": True,
         }
+        if model:
+            extra_specs['hw:mem_encryption_model'] = model
         flavor = objects.Flavor(
             id=42, name='m1.small', memory_mb=6,
             vcpus=28, root_gb=496, ephemeral_gb=8128,
@@ -3960,15 +3965,23 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       image_meta, disk_info,
                                       context=ctxt)
 
-    def test_get_guest_config_sev_no_feature(self):
+    @ddt.data(None, 'amd-sev', 'amd-sev-es')
+    def test_get_guest_config_sev_no_feature(self, sev_model):
         self.assertRaises(exception.MissingDomainCapabilityFeatureException,
-                          self._setup_sev_guest)
+                          self._setup_sev_guest, model=sev_model)
 
+    @ddt.unpack
+    @ddt.data(
+        {'sev_model': None, 'sev_policy': 0x0033},
+        {'sev_model': 'amd-sev', 'sev_policy': 0x0033},
+        {'sev_model': 'amd-sev-es', 'sev_policy': 0x0035}
+    )
     @mock.patch.object(host.Host, 'get_domain_capabilities')
     @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
-    def test_get_guest_config_sev(self, mock_designer, fake_domain_caps):
+    def test_get_guest_config_sev(self, mock_designer, fake_domain_caps,
+                                  sev_model, sev_policy):
         self._setup_fake_domain_caps(fake_domain_caps)
-        cfg = self._setup_sev_guest()
+        cfg = self._setup_sev_guest(model=sev_model)
 
         # SEV-related tag should be set
         self.assertIsInstance(cfg.launch_security,
@@ -3976,6 +3989,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.membacking,
                               vconfig.LibvirtConfigGuestMemoryBacking)
         self.assertTrue(cfg.membacking.locked)
+        self.assertEqual(sev_policy, cfg.launch_security.policy)
 
         mock_designer.assert_called_once_with(cfg)
 
@@ -7359,14 +7373,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[6].type, "unix")
         self.assertEqual(cfg.devices[6].target_name, "org.qemu.guest_agent.0")
 
+    @ddt.unpack
+    @ddt.data(
+        {'sev_model': None},
+        {'sev_model': 'amd-sev'},
+        {'sev_model': 'amd-sev-es'}
+    )
     @mock.patch.object(host.Host, 'get_domain_capabilities')
     @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
     def test_get_guest_config_with_qga_through_image_meta_with_sev(
-        self, mock_designer, fake_domain_caps,
+        self, mock_designer, fake_domain_caps, sev_model
     ):
         self._setup_fake_domain_caps(fake_domain_caps)
         extra_properties = {"hw_qemu_guest_agent": "yes"}
-        cfg = self._setup_sev_guest(extra_properties)
+        cfg = self._setup_sev_guest(extra_properties, model=sev_model)
 
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigGuestController)
@@ -10149,8 +10169,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         return fake_config
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_sev_enabled',
-                       new=mock.Mock(return_value=False))
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_mem_encryption_config',
+                       new=mock.Mock(return_value=None))
     @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver, 'get_config')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_cache_mode')
     def test_get_volume_config(self, mock_set_cache_mode, mock_get_config):
@@ -10177,8 +10198,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_set_cache_mode.assert_called_once_with(returned_config)
         self.assertEqual(generated_config.to_xml(), returned_config.to_xml())
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_sev_enabled',
-                       new=mock.Mock(return_value=True))
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_get_mem_encryption_config',
+        new=mock.Mock(return_value=hardware.MemEncryptionConfig(
+            model=fields.MemEncryptionModel.AMD_SEV)))
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_cache_mode',
                        new=mock.Mock())
     @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver, 'get_config')
@@ -13547,7 +13570,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 guest, 'get_xml_desc', return_value=initial_xml
             ),
             mock.patch.object(
-                drvr, '_sev_enabled', new=mock.Mock(return_value=False)
+                drvr, '_get_mem_encryption_config',
+                new=mock.Mock(return_value=None)
             )
         ):
             config = libvirt_migrate.get_updated_guest_xml(
@@ -13755,7 +13779,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 guest, 'get_xml_desc', return_value=initial_xml
             ),
             mock.patch.object(
-                drvr, '_sev_enabled', new=mock.Mock(return_value=False)
+                drvr, '_get_mem_encryption_config',
+                new=mock.Mock(return_value=None)
             )
         ):
             config = libvirt_migrate.get_updated_guest_xml(
@@ -13801,7 +13826,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 guest, 'get_xml_desc', return_value=initial_xml
             ),
             mock.patch.object(
-                drvr, '_sev_enabled', new=mock.Mock(return_value=False)
+                drvr, '_get_mem_encryption_config',
+                new=mock.Mock(return_value=None)
             )
         ):
             config = libvirt_migrate.get_updated_guest_xml(
@@ -25775,7 +25801,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_set_metadata.assert_called_once_with(config_meta)
 
     @mock.patch('nova.virt.libvirt.designer.set_driver_iommu_for_device')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_sev_enabled')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_mem_encryption_config')
     @mock.patch.object(objects.Instance, 'get_network_info')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
@@ -25785,8 +25812,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def _test_attach_interface(self, power_state, expected_flags,
                                mock_get_domain, mock_attach, mock_info,
                                mock_build, mock_save, mock_get_network_info,
-                               mock_sev_enabled, mock_designer_set_iommu,
-                               sev_enabled=False):
+                               mock_me_config, mock_designer_set_iommu,
+                               me_config=None):
         instance = self._create_instance()
         network_info = _fake_network_info(self)
         domain = FakeVirtDomain(fake_xml="""
@@ -25804,7 +25831,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 </domain>""")
         mock_get_domain.return_value = domain
         mock_info.return_value = [power_state, 1, 2, 3, 4]
-        mock_sev_enabled.return_value = sev_enabled
+        mock_me_config.return_value = me_config
 
         fake_image_meta = objects.ImageMeta.from_dict(
             {'id': instance.image_ref})
@@ -25830,7 +25857,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_get_network_info.assert_called_once_with()
             mock_attach.assert_called_once_with(expected.to_xml(),
                                                 flags=expected_flags)
-            if sev_enabled:
+            if me_config:
                 mock_designer_set_iommu.assert_called_once_with(expected)
 
     def test_attach_interface_with_running_instance(self):
@@ -25844,7 +25871,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             power_state.RUNNING,
             (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
              fakelibvirt.VIR_DOMAIN_AFFECT_LIVE),
-            sev_enabled=True)
+            me_config=hardware.MemEncryptionConfig(
+                model=fields.MemEncryptionModel.AMD_SEV
+            ))
 
     def test_attach_interface_with_pause_instance(self):
         self._test_attach_interface(

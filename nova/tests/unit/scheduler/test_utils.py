@@ -2327,16 +2327,22 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
         reqspec = self._get_request_spec(extra_specs, image)
         return utils.ResourceRequest.from_request_spec(reqspec)
 
-    def _get_expected_resource_request(self, mem_encryption_context):
+    def _get_expected_resource_request(self, mem_encryption_model):
         expected_resources = {
             'VCPU': 1,
             'MEMORY_MB': 1024,
             'DISK_GB': 15,
         }
         required_traits = []
-        if mem_encryption_context:
+        if mem_encryption_model == 'amd-sev':
             expected_resources[orc.MEM_ENCRYPTION_CONTEXT] = 1
             required_traits = ['HW_CPU_X86_AMD_SEV']
+        elif mem_encryption_model == 'amd-sev-es':
+            expected_resources[orc.MEM_ENCRYPTION_CONTEXT] = 1
+            required_traits = ['HW_CPU_X86_AMD_SEV_ES']
+        elif mem_encryption_model is not None:
+            self.fail('invalid mem_encryption_model: %s'
+                      % mem_encryption_model)
 
         expected = FakeResourceRequest()
         expected._rg_by_id[None] = objects.RequestGroup(
@@ -2349,7 +2355,7 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
     def _test_encrypted_memory_support_not_required(self, extra_specs,
                                                     image=None):
         resreq = self._get_resource_request(extra_specs, image)
-        expected = self._get_expected_resource_request(False)
+        expected = self._get_expected_resource_request(None)
 
         self.assertResourceRequestsEqual(expected, resreq)
 
@@ -2442,14 +2448,23 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
 
     @mock.patch.object(utils, 'LOG')
     def _test_encrypted_memory_support_required(self, requesters, extra_specs,
-                                                mock_log, image=None):
+                                                mock_log, image=None,
+                                                model='amd-sev'):
         resreq = self._get_resource_request(extra_specs, image)
-        expected = self._get_expected_resource_request(True)
+        expected = self._get_expected_resource_request(model)
 
         self.assertResourceRequestsEqual(expected, resreq)
         mock_log.debug.assert_has_calls([
             mock.call('Added %s=1 to requested resources',
                       orc.MEM_ENCRYPTION_CONTEXT)
+        ])
+
+        me_trait = 'HW_CPU_X86_AMD_SEV'
+        if model == 'amd-sev-es':
+            me_trait = 'HW_CPU_X86_AMD_SEV_ES'
+        mock_log.debug.assert_has_calls([
+            mock.call('Requiring memory encryption model %s via trait %s',
+                      model, me_trait)
         ])
 
     def test_encrypted_memory_support_extra_spec(self):
@@ -2493,6 +2508,79 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
                             hw_firmware_type='uefi',
                             hw_mem_encryption=image_prop))
                 )
+
+    def test_encrypted_memory_model_extra_spec(self):
+        for model in ('amd-sev', 'amd-sev-es'):
+            self._test_encrypted_memory_support_required(
+                'hw:mem_encryption extra spec',
+                {'hw:mem_encryption': 'true',
+                 'hw:mem_encryption_model': model},
+                image=objects.ImageMeta(
+                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
+                    properties=objects.ImageMetaProps(
+                        hw_machine_type='q35',
+                        hw_firmware_type='uefi')),
+                model=model
+            )
+
+    def test_encrypted_memory_model_image_prop(self):
+        for model in ('amd-sev', 'amd-sev-es'):
+            self._test_encrypted_memory_support_required(
+                'hw_mem_encryption image property',
+                {},
+                image=objects.ImageMeta(
+                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
+                    name=self.image_name,
+                    properties=objects.ImageMetaProps(
+                        hw_machine_type='q35',
+                        hw_firmware_type='uefi',
+                        hw_mem_encryption='true',
+                        hw_mem_encryption_model=model)),
+                model=model
+            )
+
+    def test_encrypted_memory_model_both_required(self):
+        for model in ('amd-sev', 'amd-sev-es'):
+            self._test_encrypted_memory_support_required(
+                'hw:mem_encryption extra spec and '
+                'hw_mem_encryption image property',
+                {'hw:mem_encryption': 'true',
+                 'hw:mem_encryption_model': model},
+                image=objects.ImageMeta(
+                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
+                    name=self.image_name,
+                    properties=objects.ImageMetaProps(
+                        hw_machine_type='q35',
+                        hw_firmware_type='uefi',
+                        hw_mem_encryption='true',
+                        hw_mem_encryption_model=model)),
+                model=model
+            )
+
+    def test_encrypted_memory_model_conflict_1(self):
+        for f_model, i_model in (
+                ('amd-sev', 'amd-sev-es'),
+                ('amd-sev-es', 'amd-sev')
+        ):
+            image = objects.ImageMeta(
+                name=self.image_name,
+                properties=objects.ImageMetaProps(
+                    hw_machine_type='q35',
+                    hw_firmware_type='uefi',
+                    hw_mem_encryption='true',
+                    hw_mem_encryption_model=i_model
+                )
+            )
+            reqspec = self._get_request_spec(
+                extra_specs={
+                    'hw:mem_encryption': 'true',
+                    'hw:mem_encryption_model': f_model,
+                },
+                image=image)
+            self.assertRaises(
+                exception.FlavorImageConflict,
+                utils.ResourceRequest.from_request_spec, reqspec
+            )
 
 
 class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):

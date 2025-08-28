@@ -3023,6 +3023,8 @@ class LibvirtConfigGuestSEVLaunchSecurity(LibvirtConfigObject):
         super(LibvirtConfigGuestSEVLaunchSecurity, self).__init__(
             root_name='launchSecurity', **kwargs)
 
+        # hardcoded default for SEV according to the spec
+        self.policy = 0x0033
         self.cbitpos = None
         self.reduced_phys_bits = None
 
@@ -3031,7 +3033,7 @@ class LibvirtConfigGuestSEVLaunchSecurity(LibvirtConfigObject):
 
         root.set('type', 'sev')
         policy = etree.Element('policy')
-        policy.text = '0x0033'  # hardcoded default according to the spec
+        policy.text = '0x%04x' % self.policy
         root.append(policy)
 
         cbitpos = etree.Element('cbitpos')
