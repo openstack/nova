@@ -253,6 +253,11 @@ class SevResphapeTests(base.ServersTestBase):
         hw_mem_enc_image['properties']['hw_mem_encryption'] = True
         self.glance.create(admin_context, hw_mem_enc_image)
 
+    def _delete_server(self, server):
+        with mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                        'update_provider_tree'):
+            super()._delete_server(server)
+
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_guest_configure_mem_encryption')
     def test_create_servers_with_amd_sev(self, mock_configure_me):
@@ -294,7 +299,7 @@ class SevResphapeTests(base.ServersTestBase):
                         'update_provider_tree'):
             pre_server = self._create_server(
                 image_uuid=uuidsentinel.mem_enc_image_id)
-            self.addCleanup(self._delete_server, pre_server)
+        self.addCleanup(self._delete_server, pre_server)
 
         # verify that the inventory, usages and allocation are correct before
         # the reshape
@@ -328,8 +333,12 @@ class SevResphapeTests(base.ServersTestBase):
         self.assertIn(os_traits.HW_CPU_X86_AMD_SEV, sev_traits)
 
         # create a new server after reshape
-        post_server = self._create_server(
-            image_uuid=uuidsentinel.mem_enc_image_id)
+        with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
+                        return_value=True), \
+                mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
+                           return_value=False):
+            post_server = self._create_server(
+                image_uuid=uuidsentinel.mem_enc_image_id)
         self.addCleanup(self._delete_server, post_server)
 
         sev_usages = self._get_provider_usages(sev_rp_uuid)
@@ -413,13 +422,21 @@ class SevResphapeTests(base.ServersTestBase):
         self.assertEqual(0, compute_usages['MEM_ENCRYPTION_CONTEXT'])
 
         # create new servers to both compute nodes
-        post_server1 = self._create_server(
-            host='compute1', networks='none',
-            image_uuid=uuidsentinel.mem_enc_image_id)
+        with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
+                        return_value=True), \
+                mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
+                           return_value=False):
+            post_server1 = self._create_server(
+                host='compute1', networks='none',
+                image_uuid=uuidsentinel.mem_enc_image_id)
         self.addCleanup(self._delete_server, post_server1)
-        post_server2 = self._create_server(
-            host='compute2', networks='none',
-            image_uuid=uuidsentinel.mem_enc_image_id)
+        # NOTE(tkajinam): compute2 has old SEV RP so we should avoid
+        # update_provider_tree here
+        with mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                        'update_provider_tree'):
+            post_server2 = self._create_server(
+                host='compute2', networks='none',
+                image_uuid=uuidsentinel.mem_enc_image_id)
         self.addCleanup(self._delete_server, post_server2)
 
         # server1 should allocate M_E_C from SEV RP

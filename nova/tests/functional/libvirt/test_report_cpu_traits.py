@@ -433,11 +433,9 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
 
-            # NOTE(tkajinam): Currently the sev rp is not deleted after sev
-            # support is turned off. This follows the existing behavior for
-            # other resources such as vGPU.
-            # sev_rps = self._get_amd_sev_rps()
-            # self.assertEqual(0, len(sev_rps['sev-es']))
+            sev_rps = self._get_amd_sev_rps()
+            self.assertEqual(1, len(sev_rps['sev']))
+            self.assertEqual(0, len(sev_rps['sev-es']))
 
         # Now simulate the host losing SEV functionality.  Here we
         # simulate a kernel downgrade or reconfiguration which causes
@@ -480,8 +478,6 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
 
-            # NOTE(tkajinam): Currently the sev rp is not deleted after sev
-            # support is turned off. This follows the existing behavior for
-            # other resources such as vGPU.
-            # sev_rps = self._get_amd_sev_rps()
-            # self.assertEqual(0, len(sev_rps['sev']))
+            sev_rps = self._get_amd_sev_rps()
+            self.assertEqual(0, len(sev_rps['sev']))
+            self.assertEqual(0, len(sev_rps['sev-es']))

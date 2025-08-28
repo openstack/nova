@@ -31209,24 +31209,52 @@ class TestLibvirtSEV(test.NoDBTestCase):
 @mock.patch.object(os.path, 'exists', new=mock.Mock(return_value=False))
 class TestLibvirtSEVUnsupported(TestLibvirtSEV):
     def test_get_memory_encryption_inventories_no_config(self):
-        self.assertEqual({}, self.driver._get_memory_encryption_inventories())
+        self.assertEqual({
+            'amd_sev': {
+                'total': 0
+            },
+            'amd_sev_es': {
+                'total': 0
+            }
+        }, self.driver._get_memory_encryption_inventories())
 
     def test_get_memory_encryption_inventories_config_zero(self):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
-        self.assertEqual({}, self.driver._get_memory_encryption_inventories())
+        self.assertEqual({
+            'amd_sev': {
+                'total': 0
+            },
+            'amd_sev_es': {
+                'total': 0
+            }
+        }, self.driver._get_memory_encryption_inventories())
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_memory_encryption_inventories_config_non_zero_unsupported(
             self, mock_log):
         self.flags(num_memory_encrypted_guests=16, group='libvirt')
         # Still zero without mocked SEV support
-        self.assertEqual({}, self.driver._get_memory_encryption_inventories())
+        self.assertEqual({
+            'amd_sev': {
+                'total': 0
+            },
+            'amd_sev_es': {
+                'total': 0
+            }
+        }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_called_with(
             'Host is configured with libvirt.num_memory_encrypted_guests '
             'set to %d, but is not SEV-capable.', 16)
 
     def test_get_memory_encryption_inventories_unsupported(self):
-        self.assertEqual({}, self.driver._get_memory_encryption_inventories())
+        self.assertEqual({
+            'amd_sev': {
+                'total': 0
+            },
+            'amd_sev_es': {
+                'total': 0
+            }
+        }, self.driver._get_memory_encryption_inventories())
 
 
 @mock.patch.object(vc, '_domain_capability_features',
@@ -31254,6 +31282,9 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
                 'reserved': 0,
                 'allocation_ratio': 1.0,
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
+            },
+            'amd_sev_es': {
+                'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
 
@@ -31269,6 +31300,9 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
                 'reserved': 0,
                 'allocation_ratio': 1.0,
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
+            },
+            'amd_sev_es': {
+                'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
 
@@ -31284,6 +31318,9 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
                 'reserved': 0,
                 'allocation_ratio': 1.0,
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
+            },
+            'amd_sev_es': {
+                'total': 0
             },
         }, self.driver._get_memory_encryption_inventories())
 
@@ -31315,6 +31352,9 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
                 'allocation_ratio': 1.0,
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
             },
+            'amd_sev_es': {
+                'total': 0
+            },
         }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_not_called()
 
@@ -31331,6 +31371,9 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
                 'reserved': 0,
                 'allocation_ratio': 1.0,
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
+            },
+            'amd_sev_es': {
+                'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_called_with(
@@ -31350,6 +31393,9 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
                 'reserved': 0,
                 'allocation_ratio': 1.0,
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
+            },
+            'amd_sev_es': {
+                'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_not_called()

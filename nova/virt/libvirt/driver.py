@@ -9750,7 +9750,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warning("Host is configured with "
                             "libvirt.num_memory_encrypted_guests set to "
                             "%d, but is not SEV-capable.", conf_slots)
-            return {}
+            return {
+                'amd_sev': {
+                    'total': 0
+                },
+                'amd_sev_es': {
+                    'total': 0
+                }
+            }
 
         sev_slots = db_const.MAX_INT
 
@@ -9788,6 +9795,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 'allocation_ratio': 1.0,
                 'reserved': 0,
                 'traits': [ot.HW_CPU_X86_AMD_SEV_ES]
+            }
+        else:
+            inventories['amd_sev_es'] = {
+                'total': 0,
             }
 
         LOG.debug("Available memory encrypted slots: "

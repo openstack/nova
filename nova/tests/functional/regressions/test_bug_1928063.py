@@ -48,7 +48,11 @@ class TestSEVInstanceReboot(base.ServersTestBase):
         sev_image['properties']['hw_mem_encryption'] = 'True'
         self.glance.create(None, sev_image)
 
-    def test_hard_reboot(self):
+    @mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
+                return_value=False)
+    @mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
+                return_value=True)
+    def test_hard_reboot(self, mock_sev, mock_sev_es):
         # Launch a SEV based instance and then attempt to hard reboot
         server = self._create_server(
             image_uuid=uuids.sev_image_id,
