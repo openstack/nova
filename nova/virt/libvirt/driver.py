@@ -9748,23 +9748,21 @@ class LibvirtDriver(driver.ComputeDriver):
                             "%d, but is not SEV-capable.", conf_slots)
             return {}
 
-        slots = db_const.MAX_INT
+        sev_slots = db_const.MAX_INT
 
-        # NOTE(tkajinam): Current nova supports SEV only so we ignore SEV-ES
         if self._host.max_sev_guests is not None:
-            slots = self._host.max_sev_guests
+            sev_slots = self._host.max_sev_guests
 
         if conf_slots is not None:
-            if conf_slots > slots:
+            if conf_slots > sev_slots:
                 LOG.warning("Host is configured with "
                             "libvirt.num_memory_encrypted_guests set to %d, "
-                            "but supports only %d.", conf_slots, slots)
-            slots = min(slots, conf_slots)
+                            "but supports only %d.", conf_slots, sev_slots)
+            sev_slots = min(sev_slots, conf_slots)
 
-        LOG.debug("Available memory encrypted slots: AMD SEV=%d", slots)
-        return {
+        inventories = {
             'amd_sev': {
-                'total': slots,
+                'total': sev_slots,
                 'step_size': 1,
                 'max_unit': 1,
                 'min_unit': 1,
@@ -9773,6 +9771,24 @@ class LibvirtDriver(driver.ComputeDriver):
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
             }
         }
+
+        sev_es_slots = 0
+        if self._host.supports_amd_sev_es:
+            if self._host.max_sev_es_guests is not None:
+                sev_es_slots = self._host.max_sev_es_guests
+            inventories['amd_sev_es'] = {
+                'total': sev_es_slots,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'allocation_ratio': 1.0,
+                'reserved': 0,
+                'traits': [ot.HW_CPU_X86_AMD_SEV_ES]
+            }
+
+        LOG.debug("Available memory encrypted slots: "
+                  "AMD SEV=%d SEV-ES=%d", sev_slots, sev_es_slots)
+        return inventories
 
     @property
     def static_traits(self) -> ty.Dict[str, bool]:

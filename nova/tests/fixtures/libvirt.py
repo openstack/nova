@@ -2584,7 +2584,9 @@ class LibvirtFixture(fixtures.Fixture):
         real_exists = os.path.exists
 
         def fake_exists(path):
-            if path == host.SEV_KERNEL_PARAM_FILE:
+            if path == (host.SEV_KERNEL_PARAM_FILE % 'sev'):
+                return False
+            if path == (host.SEV_KERNEL_PARAM_FILE % 'sev-es'):
                 return False
             return real_exists(path)
 

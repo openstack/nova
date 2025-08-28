@@ -840,6 +840,13 @@ Related options:
     cfg.IntOpt('num_memory_encrypted_guests',
                default=None,
                min=0,
+               deprecated_for_removal=True,
+               deprecated_since='32.0.0',
+               deprecated_reason="""
+This option is effective for only SEV and has no effect for SEV-ES. Libvirt
+is capable to present maximum number of SEV guests and one of SEV-ES guests
+since 8.0.0 and this option is no longer necessary.
+""",
                help="""
 Maximum number of guests with encrypted memory which can run
 concurrently on this compute host.

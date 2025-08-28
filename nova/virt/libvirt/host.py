@@ -86,7 +86,7 @@ CONF = nova.conf.CONF
 # This is *not* the complete list of supported hypervisor drivers.
 HV_DRIVER_QEMU = "QEMU"
 
-SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/sev'
+SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/%s'
 
 # These are taken from the spec
 # https://github.com/qemu/qemu/blob/v5.2.0/docs/interop/firmware.json
@@ -95,6 +95,8 @@ QEMU_FIRMWARE_DESCRIPTOR_PATHS = [
     '/etc/qemu/firmware',
     # we intentionally ignore '$XDG_CONFIG_HOME/qemu/firmware'
 ]
+
+MIN_QEMU_SEV_ES_VERSION = (8, 0, 0)
 
 
 def _get_loaders():
@@ -162,6 +164,7 @@ class Host(object):
         # kernel, QEMU, and/or libvirt. These are determined on demand and
         # memoized by various properties below
         self._supports_amd_sev: ty.Optional[bool] = None
+        self._supports_amd_sev_es: ty.Optional[bool] = None
         self._max_sev_guests: ty.Optional[int] = None
         self._max_sev_es_guests: ty.Optional[int] = None
         self._supports_uefi: ty.Optional[bool] = None
@@ -1936,14 +1939,18 @@ class Host(object):
         # safe guard
         return []
 
-    def _kernel_supports_amd_sev(self) -> bool:
-        if not os.path.exists(SEV_KERNEL_PARAM_FILE):
-            LOG.debug("%s does not exist", SEV_KERNEL_PARAM_FILE)
+    def _kernel_supports_amd_sev(self, model='sev') -> bool:
+        """Determine if the kernel supports AMD SEV for guests.
+        """
+        kernel_param_file = SEV_KERNEL_PARAM_FILE % model.replace('-', '_')
+
+        if not os.path.exists(kernel_param_file):
+            LOG.debug("%s does not exist", kernel_param_file)
             return False
 
-        with open(SEV_KERNEL_PARAM_FILE) as f:
+        with open(kernel_param_file) as f:
             content = f.read()
-            LOG.debug("%s contains [%s]", SEV_KERNEL_PARAM_FILE, content)
+            LOG.debug("%s contains [%s]", kernel_param_file, content)
             return strutils.bool_from_string(content)
 
     @property
@@ -1988,6 +1995,34 @@ class Host(object):
 
         LOG.debug("No AMD SEV support detected for any (arch, machine_type)")
         return self._supports_amd_sev
+
+    @property
+    def supports_amd_sev_es(self) -> bool:
+        """Determine if the host supports AMD SEV-ES for guests.
+
+        Returns a boolean indicating whether AMD SEV (Secure Encrypted
+        Virtualization-Encrypted State) is supported.  This is conditional on
+        support in the hardware, kernel, qemu, and libvirt. SEV-ES is enabled
+        in kernel only when SEV is enabled, so this check depends on
+        the supports_amd_sev check.
+        """
+        if self._supports_amd_sev_es is not None:
+            return self._supports_amd_sev_es
+
+        self._supports_amd_sev_es = False
+        if not self.supports_amd_sev:
+            return self._supports_amd_sev_es
+
+        if not self._kernel_supports_amd_sev(model='sev-es'):
+            LOG.info("kernel doesn't support AMD SEV-ES")
+            return self._supports_amd_sev_es
+
+        if not self.has_min_version(hv_ver=MIN_QEMU_SEV_ES_VERSION):
+            LOG.info("QEMU doesn't support AMD SEV-ES")
+            return self._supports_amd_sev_es
+
+        self._supports_amd_sev_es = True
+        return self._supports_amd_sev_es
 
     @property
     def max_sev_guests(self) -> ty.Optional[int]:
