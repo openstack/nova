@@ -94,17 +94,7 @@ def patch():
 
         # NOTE(gibi): We were asked not to monkey patch. Let's enforce it by
         # removing the possibility to monkey_patch accidentally
-        def poison(*args, **kwargs):
-            raise RuntimeError(
-                "The service is started with native threading via "
-                "OS_NOVA_DISABLE_EVENTLET_PATCHING set to '%s', but then the "
-                "service tried to call eventlet.monkey_patch(). This is a "
-                "bug."
-                % os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', ''))
-
-        import eventlet
-        eventlet.monkey_patch = poison
-        eventlet.patcher.monkey_patch = poison
+        poison_eventlet()
 
         from oslo_log import log as logging
         LOG = logging.getLogger(__name__)
@@ -112,3 +102,30 @@ def patch():
             "Service is starting with native threading. This is currently "
             "experimental. Do not use it in production without first "
             "testing it in pre-production.")
+
+
+def _poison(*args, **kwargs):
+    raise RuntimeError(
+        "The service is started with native threading via "
+        "OS_NOVA_DISABLE_EVENTLET_PATCHING set to '%s', but then the "
+        "service tried to call eventlet.monkey_patch(). This is a bug."
+        % os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', ''))
+
+
+def poison_eventlet():
+    import eventlet
+    eventlet.monkey_patch = _poison
+    eventlet.patcher.monkey_patch = _poison
+
+    # We want to have this but cannot have this yet as we still have common
+    # code that imports eventlet like nova.utils.tpool
+    #
+    # class PoisonEventletImport:
+    #     def find_spec(self, fullname, path, target=None):
+    #         if fullname.startswith('eventlet'):
+    #             raise ImportError(
+    #                 "The service started in threading mode so it should "
+    #                 "not import eventlet")
+
+    # import sys
+    # sys.meta_path.insert(0, PoisonEventletImport())
