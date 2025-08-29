@@ -185,7 +185,6 @@ class ServerGroupController(wsgi.Controller):
                   for group in limited_list]
         return {'server_groups': result}
 
-    @wsgi.api_version("2.1")
     @wsgi.expected_errors((400, 403, 409))
     @validation.schema(schema.create, "2.0", "2.14")
     @validation.schema(schema.create_v215, "2.15", "2.63")

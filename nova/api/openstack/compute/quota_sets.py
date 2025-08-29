@@ -110,7 +110,6 @@ class QuotaSetsController(wsgi.Controller):
         else:
             return []
 
-    @wsgi.api_version('2.1')
     @wsgi.expected_errors(400)
     @validation.query_schema(quota_sets.show_query, '2.0', '2.74')
     @validation.query_schema(quota_sets.show_query_v275, '2.75')
@@ -148,7 +147,6 @@ class QuotaSetsController(wsgi.Controller):
             self._get_quotas(context, id, user_id=user_id, usages=True),
             filtered_quotas=filtered_quotas)
 
-    @wsgi.api_version('2.1')
     @wsgi.expected_errors(400)
     @validation.schema(quota_sets.update, '2.0', '2.35')
     @validation.schema(quota_sets.update_v236, '2.36', '2.56')
