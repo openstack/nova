@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    [`bug 2117170 <https://bugs.launchpad.net/nova/+bug/2117170>`_] Libvirt
+    driver no longer enables VMCoreInfo device when an instance has memory
+    encryption is enabled, to avoid kernel crash caused by fw_cfg device in
+    guest requiring DMA.
