@@ -3018,13 +3018,27 @@ class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
 
 
 class LibvirtConfigGuestSEVLaunchSecurity(LibvirtConfigObject):
+    # NOTE(tkajinam): See also
+    # https://gitlab.com/qemu-project/qemu/-/blob/v10.1.0/target/i386/sev.h
+    SEV_POLICY_NODEBG = 0x1
+    SEV_POLICY_NOKS = 0x2
+    SEV_POLICY_ES = 0x4
+    SEV_POLICY_NOSEND = 0x8
+    SEV_POLICY_DOMAIN = 0x10
+    SEV_POLICY_SEV = 0x20
+
+    DEFAULT_SEV_POLICY = (
+        SEV_POLICY_NODEBG | SEV_POLICY_NOKS |
+        SEV_POLICY_DOMAIN | SEV_POLICY_SEV)
+    DEFAULT_SEV_ES_POLICY = (
+        DEFAULT_SEV_POLICY | SEV_POLICY_ES)
 
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestSEVLaunchSecurity, self).__init__(
             root_name='launchSecurity', **kwargs)
-
-        # hardcoded default for SEV according to the spec
-        self.policy = 0x0033
+        # Use SEV policy as default, because SEV is the default encryption
+        # model
+        self.policy = self.DEFAULT_SEV_POLICY
         self.cbitpos = None
         self.reduced_phys_bits = None
 

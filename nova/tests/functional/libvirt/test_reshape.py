@@ -280,6 +280,7 @@ class SevResphapeTests(base.ServersTestBase):
         compute_rp_uuid = self._get_provider_uuid_by_name('compute1')
         inventories = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body
+        # MEM_ENCRYPTION_CONTEXT inventory was added to compute RP
         inventories['inventories']['MEM_ENCRYPTION_CONTEXT'] = {
             'allocation_ratio': 1.0,
             'max_unit': 1,
@@ -290,6 +291,7 @@ class SevResphapeTests(base.ServersTestBase):
         self.placement.put(
             '/resource_providers/%s/inventories' % compute_rp_uuid,
             inventories)
+        # SEV trait was also added to compute RP
         traits = self._get_provider_traits(compute_rp_uuid)
         traits.append(os_traits.HW_CPU_X86_AMD_SEV)
         self._set_provider_traits(compute_rp_uuid, traits)
@@ -322,13 +324,14 @@ class SevResphapeTests(base.ServersTestBase):
         self.assertNotIn('MEM_ENCRYPTION_CONTEXT', compute_inventories)
         compute_usages = self._get_provider_usages(compute_rp_uuid)
         self.assertNotIn('MEM_ENCRYPTION_CONTEXT', compute_usages)
-
+        # MEM_ENCRYPTION_CONTEXT inventory/usage should be moreved to child RP
         sev_rp_uuid = self._get_provider_uuid_by_name('compute1_amd_sev')
         sev_inventories = self._get_provider_inventory(sev_rp_uuid)
         self.assertEqual(
             16, sev_inventories['MEM_ENCRYPTION_CONTEXT']['total'])
         sev_usages = self._get_provider_usages(sev_rp_uuid)
         self.assertEqual(1, sev_usages['MEM_ENCRYPTION_CONTEXT'])
+        # SEV trait should be also moved to child RP
         sev_traits = self._get_provider_traits(sev_rp_uuid)
         self.assertIn(os_traits.HW_CPU_X86_AMD_SEV, sev_traits)
 
@@ -370,6 +373,7 @@ class SevResphapeTests(base.ServersTestBase):
             compute_rp_uuid = self._get_provider_uuid_by_name(name)
             inventories = self.placement.get(
                 '/resource_providers/%s/inventories' % compute_rp_uuid).body
+            # MEM_ENCRYPTION_CONTEXT inventory was added to compute RP
             inventories['inventories']['MEM_ENCRYPTION_CONTEXT'] = {
                 'allocation_ratio': 1.0,
                 'max_unit': 1,
@@ -380,6 +384,7 @@ class SevResphapeTests(base.ServersTestBase):
             self.placement.put(
                 '/resource_providers/%s/inventories' % compute_rp_uuid,
                 inventories)
+            # SEV trait was also added to compute root RP
             traits = self._get_provider_traits(compute_rp_uuid)
             traits.append(os_traits.HW_CPU_X86_AMD_SEV)
             self._set_provider_traits(compute_rp_uuid, traits)
@@ -444,7 +449,7 @@ class SevResphapeTests(base.ServersTestBase):
         sev_usages = self._get_provider_usages(sev_rp_uuid)
         self.assertEqual(1, sev_usages['MEM_ENCRYPTION_CONTEXT'])
 
-        # server2 should allocate M_E_C from compute RP
+        # server2 should allocate M_E_C from compute root RP
         compute_rp_uuid = self._get_provider_uuid_by_name('compute2')
         compute_usages = self._get_provider_usages(compute_rp_uuid)
         self.assertEqual(1, compute_usages['MEM_ENCRYPTION_CONTEXT'])

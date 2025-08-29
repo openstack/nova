@@ -2716,11 +2716,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
         self.assertXmlEqual(launch_security_expected, xml)
 
-        obj.policy = 0x0035
+        obj.policy = obj.DEFAULT_SEV_ES_POLICY
         xml = obj.to_xml()
         launch_security_expected = """
             <launchSecurity type="sev">
-              <policy>0x0035</policy>
+              <policy>0x0037</policy>
               <cbitpos>47</cbitpos>
               <reducedPhysBits>1</reducedPhysBits>
             </launchSecurity>"""
