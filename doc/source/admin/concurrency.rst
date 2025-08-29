@@ -13,7 +13,10 @@ up support for the native threading mode.
 
 .. note::
 
-   The native threading mode is not ready yet. Do not use it in production.
+   The native threading mode is experimental. Do not use it in production
+   without first testing it in pre-production. If you do so please let us now
+   how it went on the mailing list openstack-discuss@lists.openstack.org.
+
 
 Selecting concurrency mode for a service
 ----------------------------------------

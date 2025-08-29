@@ -110,4 +110,5 @@ def patch():
         LOG = logging.getLogger(__name__)
         LOG.warning(
             "Service is starting with native threading. This is currently "
-            "experimental. Do not use it in production.")
+            "experimental. Do not use it in production without first "
+            "testing it in pre-production.")
