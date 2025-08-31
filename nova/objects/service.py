@@ -265,7 +265,11 @@ NODE_IDENTITY_VERSION = 65
 #    and value be the latest service version that the release supports (for
 #    example, before Bobcat RC1, please add 'Bobcat': XX where X is the latest
 #    servion version that was added)
-OLDEST_SUPPORTED_SERVICE_VERSION = 'Caracal'
+# NOTE(sbauza): The check for the minimum supported compute service version at
+# service startup can be skipped by setting the
+# [workarounds]/[workarounds]/disable_compute_service_check_for_ffu
+# configuration option to True, like grenade-skip-level jobs do.
+OLDEST_SUPPORTED_SERVICE_VERSION = 'Epoxy'
 SERVICE_VERSION_ALIASES = {
     'Victoria': 52,
     'Wallaby': 54,
