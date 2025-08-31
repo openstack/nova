@@ -735,10 +735,6 @@
 - job:
     name: tempest-integrated-compute-rbac-old-defaults
     parent: tempest-integrated-compute
-    # TODO(gmann): As per the 2025.1 testing runtime, we need to run at least
-    # one job on jammy. This job can be moved to Noble in the next cycle
-    # (2025.2).
-    nodeset: openstack-single-node-jammy
     description: |
       This job runs the Tempest tests with Nova RBAC old defaults
     irrelevant-files: &policies-irrelevant-files
