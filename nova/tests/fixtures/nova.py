@@ -560,10 +560,11 @@ class CellDatabases(fixtures.Fixture):
     def _wrap_get_server(self, target, endpoints, serializer=None):
         """Mirror rpc.get_server() but with our special sauce."""
         serializer = CheatingSerializer(serializer)
+        exc = "threading" if utils.concurrency_mode_threading() else "eventlet"
         return messaging.get_rpc_server(rpc.TRANSPORT,
                                         target,
                                         endpoints,
-                                        executor='eventlet',
+                                        executor=exc,
                                         serializer=serializer)
 
     def _wrap_get_client(self, target, version_cap=None, serializer=None,
