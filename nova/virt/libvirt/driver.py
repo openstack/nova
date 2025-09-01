@@ -7702,8 +7702,9 @@ class LibvirtDriver(driver.ComputeDriver):
         launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
         launch_security.cbitpos = sev.cbitpos
         launch_security.reduced_phys_bits = sev.reduced_phys_bits
+        # NOTE(tkajinam): Default policy is for SEV
         if model == fields.MemEncryptionModel.AMD_SEV_ES:
-            launch_security.policy = 0x0035
+            launch_security.policy = launch_security.DEFAULT_SEV_ES_POLICY
         guest.launch_security = launch_security
 
     def _find_sev_feature(self, arch, mach_type):
@@ -9560,8 +9561,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     metadata=vpmem)
                 resources[rc].add(resource_obj)
 
-    def _update_provider_tree_for_memory_encryption(self, provider_tree,
-                                                    nodename, allocations):
+    def _update_provider_tree_for_memory_encryption(
+            self, provider_tree, nodename, allocations):
         """Updates the provider tree for MEM_ENCRYPTION_CONTEXT inventory.
 
         Before 2025.2, MEM_ENCRYPTION_CONTEXT inventory and allocations were on
@@ -9626,8 +9627,8 @@ class LibvirtDriver(driver.ComputeDriver):
         root_node = provider_tree.data(nodename)
         return orc.MEM_ENCRYPTION_CONTEXT in root_node.inventory
 
-    def _ensure_memory_encryption_providers(self, inventories_dict,
-                                            provider_tree, nodename):
+    def _ensure_memory_encryption_providers(
+            self, inventories_dict, provider_tree, nodename):
         """Ensures MEM_ENCRYPTION_CONTEXT inventory providers exist in the tree
         for $nodename.
 
@@ -9660,7 +9661,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if not inventory['total']:
                 if provider_tree.exists(me_rp_name):
                     provider_tree.remove(me_rp_name)
-                break
+                continue
             if not provider_tree.exists(me_rp_name):
                 provider_tree.new_child(me_rp_name, nodename)
             me_rp = provider_tree.data(me_rp_name)
@@ -9847,8 +9848,8 @@ class LibvirtDriver(driver.ComputeDriver):
         root_node = provider_tree.data(nodename)
         return orc.VGPU in root_node.inventory
 
-    def _ensure_pgpu_providers(self, inventories_dict, provider_tree,
-                               nodename):
+    def _ensure_pgpu_providers(
+            self, inventories_dict, provider_tree, nodename):
         """Ensures GPU inventory providers exist in the tree for $nodename.
 
         GPU providers are named $nodename_$gpu-device-id, e.g.
@@ -10116,8 +10117,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         rp_uuid, root_node, consumer_uuid, alloc_data,
                         resources, pgpu_rps)
 
-    def _update_provider_tree_for_vgpu(self, provider_tree, nodename,
-                                       allocations=None):
+    def _update_provider_tree_for_vgpu(
+            self, provider_tree, nodename, allocations=None):
         """Updates the provider tree for VGPU inventory.
 
         Before Stein, VGPU inventory and allocations were on the root compute
@@ -10173,8 +10174,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 del root_node.inventory[orc.VGPU]
                 provider_tree.update_inventory(nodename, root_node.inventory)
 
-    def _update_provider_tree_for_pcpu(self, provider_tree, nodename,
-                                       allocations=None):
+    def _update_provider_tree_for_pcpu(
+            self, provider_tree, nodename, allocations=None):
         """Updates the provider tree for PCPU inventory.
 
         Before Train, pinned instances consumed VCPU inventory just like

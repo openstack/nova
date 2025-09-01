@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
 from unittest import mock
 
 import ddt
@@ -2301,6 +2302,7 @@ class TestUtils(TestUtilsBase):
         mock_map.assert_called_once_with(allocation, {uuids.rp_uuid: traits})
 
 
+@ddt.ddt
 class TestEncryptedMemoryTranslation(TestUtilsBase):
     flavor_name = 'm1.test'
     image_name = 'cirros'
@@ -2333,13 +2335,13 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
             'MEMORY_MB': 1024,
             'DISK_GB': 15,
         }
-        required_traits = []
+        required_traits = set()
         if mem_encryption_model == 'amd-sev':
             expected_resources[orc.MEM_ENCRYPTION_CONTEXT] = 1
-            required_traits = ['HW_CPU_X86_AMD_SEV']
+            required_traits |= {'HW_CPU_X86_AMD_SEV'}
         elif mem_encryption_model == 'amd-sev-es':
             expected_resources[orc.MEM_ENCRYPTION_CONTEXT] = 1
-            required_traits = ['HW_CPU_X86_AMD_SEV_ES']
+            required_traits |= {'HW_CPU_X86_AMD_SEV_ES'}
         elif mem_encryption_model is not None:
             self.fail('invalid mem_encryption_model: %s'
                       % mem_encryption_model)
@@ -2348,7 +2350,7 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
         expected._rg_by_id[None] = objects.RequestGroup(
             use_same_provider=False,
             resources=expected_resources,
-            required_traits=set(required_traits)
+            required_traits=required_traits
         )
         return expected
 
@@ -2362,34 +2364,35 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
     def test_encrypted_memory_support_empty_extra_specs(self):
         self._test_encrypted_memory_support_not_required(extra_specs={})
 
-    def test_encrypted_memory_support_false_extra_spec(self):
-        for extra_spec in ('0', 'false', 'False'):
-            self._test_encrypted_memory_support_not_required(
-                extra_specs={'hw:mem_encryption': extra_spec})
+    @ddt.data('0', 'false', 'False')
+    def test_encrypted_memory_support_false_extra_spec(self, extra_spec):
+        self._test_encrypted_memory_support_not_required(
+            extra_specs={'hw:mem_encryption': extra_spec})
 
     def test_encrypted_memory_support_empty_image_props(self):
         self._test_encrypted_memory_support_not_required(
             extra_specs={},
             image=objects.ImageMeta(properties=objects.ImageMetaProps()))
 
-    def test_encrypted_memory_support_false_image_prop(self):
-        for image_prop in ('0', 'false', 'False'):
-            self._test_encrypted_memory_support_not_required(
-                extra_specs={},
-                image=objects.ImageMeta(
-                    properties=objects.ImageMetaProps(
-                        hw_mem_encryption=image_prop))
-            )
+    @ddt.data('0', 'false', 'False')
+    def test_encrypted_memory_support_false_image_prop(self, image_prop):
+        self._test_encrypted_memory_support_not_required(
+            extra_specs={},
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps(
+                    hw_mem_encryption=image_prop))
+        )
 
-    def test_encrypted_memory_support_both_false(self):
-        for extra_spec in ('0', 'false', 'False'):
-            for image_prop in ('0', 'false', 'False'):
-                self._test_encrypted_memory_support_not_required(
-                    extra_specs={'hw:mem_encryption': extra_spec},
-                    image=objects.ImageMeta(
-                        properties=objects.ImageMetaProps(
-                            hw_mem_encryption=image_prop))
-                )
+    @ddt.unpack
+    @ddt.data(*itertools.product(
+            ('0', 'false', 'False'), ('0', 'false', 'False')))
+    def test_encrypted_memory_support_both_false(self, image_prop, extra_spec):
+        self._test_encrypted_memory_support_not_required(
+            extra_specs={'hw:mem_encryption': extra_spec},
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps(
+                    hw_mem_encryption=image_prop))
+        )
 
     def _test_encrypted_memory_support_conflict(self, extra_spec,
                                                 image_prop_in,
@@ -2432,19 +2435,25 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
         }
         self.assertEqual(error % error_data, str(exc))
 
-    def test_encrypted_memory_support_conflict1(self):
-        for extra_spec in ('0', 'false', 'False'):
-            for image_prop_in in ('1', 'true', 'True'):
-                self._test_encrypted_memory_support_conflict(
-                    extra_spec, image_prop_in, True
-                )
+    @ddt.unpack
+    @ddt.data(*itertools.product(
+            ('1', 'true', 'True'),
+            ('0', 'false', 'False')))
+    def test_encrypted_memory_support_conflict1(
+            self, image_prop_in, extra_spec):
+        self._test_encrypted_memory_support_conflict(
+            extra_spec, image_prop_in, True
+        )
 
-    def test_encrypted_memory_support_conflict2(self):
-        for extra_spec in ('1', 'true', 'True'):
-            for image_prop_in in ('0', 'false', 'False'):
-                self._test_encrypted_memory_support_conflict(
-                    extra_spec, image_prop_in, False
-                )
+    @ddt.unpack
+    @ddt.data(*itertools.product(
+            ('0', 'false', 'False'),
+            ('1', 'true', 'True')))
+    def test_encrypted_memory_support_conflict2(
+            self, image_prop_in, extra_spec):
+        self._test_encrypted_memory_support_conflict(
+            extra_spec, image_prop_in, False
+        )
 
     @mock.patch.object(utils, 'LOG')
     def _test_encrypted_memory_support_required(self, requesters, extra_specs,
@@ -2467,120 +2476,122 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
                       model, me_trait)
         ])
 
-    def test_encrypted_memory_support_extra_spec(self):
-        for extra_spec in ('1', 'true', 'True'):
-            self._test_encrypted_memory_support_required(
-                'hw:mem_encryption extra spec',
-                {'hw:mem_encryption': extra_spec},
-                image=objects.ImageMeta(
-                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
-                    properties=objects.ImageMetaProps(
-                        hw_machine_type='q35',
-                        hw_firmware_type='uefi'))
-            )
+    @ddt.data('1', 'true', 'True')
+    def test_encrypted_memory_support_extra_spec(self, extra_spec):
+        self._test_encrypted_memory_support_required(
+            'hw:mem_encryption extra spec',
+            {'hw:mem_encryption': extra_spec},
+            image=objects.ImageMeta(
+                id='005249be-3c2f-4351-9df7-29bb13c21b14',
+                properties=objects.ImageMetaProps(
+                    hw_machine_type='q35',
+                    hw_firmware_type='uefi'))
+        )
 
-    def test_encrypted_memory_support_image_prop(self):
-        for image_prop in ('1', 'true', 'True'):
-            self._test_encrypted_memory_support_required(
-                'hw_mem_encryption image property',
-                {},
-                image=objects.ImageMeta(
-                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
-                    name=self.image_name,
-                    properties=objects.ImageMetaProps(
-                        hw_machine_type='q35',
-                        hw_firmware_type='uefi',
-                        hw_mem_encryption=image_prop))
-            )
+    @ddt.data('1', 'true', 'True')
+    def test_encrypted_memory_support_image_prop(self, image_prop):
+        self._test_encrypted_memory_support_required(
+            'hw_mem_encryption image property',
+            {},
+            image=objects.ImageMeta(
+                id='005249be-3c2f-4351-9df7-29bb13c21b14',
+                name=self.image_name,
+                properties=objects.ImageMetaProps(
+                    hw_machine_type='q35',
+                    hw_firmware_type='uefi',
+                    hw_mem_encryption=image_prop))
+        )
 
-    def test_encrypted_memory_support_both_required(self):
-        for extra_spec in ('1', 'true', 'True'):
-            for image_prop in ('1', 'true', 'True'):
-                self._test_encrypted_memory_support_required(
-                    'hw:mem_encryption extra spec and '
-                    'hw_mem_encryption image property',
-                    {'hw:mem_encryption': extra_spec},
-                    image=objects.ImageMeta(
-                        id='005249be-3c2f-4351-9df7-29bb13c21b14',
-                        name=self.image_name,
-                        properties=objects.ImageMetaProps(
-                            hw_machine_type='q35',
-                            hw_firmware_type='uefi',
-                            hw_mem_encryption=image_prop))
-                )
+    @ddt.unpack
+    @ddt.data(*itertools.product(
+            ('1', 'true', 'True'), ('1', 'true', 'True')))
+    def test_encrypted_memory_support_both_required(
+            self, image_prop, extra_spec):
+        self._test_encrypted_memory_support_required(
+            'hw:mem_encryption extra spec and '
+            'hw_mem_encryption image property',
+            {'hw:mem_encryption': extra_spec},
+            image=objects.ImageMeta(
+                id='005249be-3c2f-4351-9df7-29bb13c21b14',
+                name=self.image_name,
+                properties=objects.ImageMetaProps(
+                    hw_machine_type='q35',
+                    hw_firmware_type='uefi',
+                    hw_mem_encryption=image_prop))
+        )
 
-    def test_encrypted_memory_model_extra_spec(self):
-        for model in ('amd-sev', 'amd-sev-es'):
-            self._test_encrypted_memory_support_required(
-                'hw:mem_encryption extra spec',
-                {'hw:mem_encryption': 'true',
-                 'hw:mem_encryption_model': model},
-                image=objects.ImageMeta(
-                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
-                    properties=objects.ImageMetaProps(
-                        hw_machine_type='q35',
-                        hw_firmware_type='uefi')),
-                model=model
-            )
+    @ddt.data('amd-sev', 'amd-sev-es')
+    def test_encrypted_memory_model_extra_spec(self, model):
+        self._test_encrypted_memory_support_required(
+            'hw:mem_encryption extra spec',
+            {'hw:mem_encryption': 'true',
+             'hw:mem_encryption_model': model},
+            image=objects.ImageMeta(
+                id='005249be-3c2f-4351-9df7-29bb13c21b14',
+                properties=objects.ImageMetaProps(
+                    hw_machine_type='q35',
+                    hw_firmware_type='uefi')),
+            model=model
+        )
 
-    def test_encrypted_memory_model_image_prop(self):
-        for model in ('amd-sev', 'amd-sev-es'):
-            self._test_encrypted_memory_support_required(
-                'hw_mem_encryption image property',
-                {},
-                image=objects.ImageMeta(
-                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
-                    name=self.image_name,
-                    properties=objects.ImageMetaProps(
-                        hw_machine_type='q35',
-                        hw_firmware_type='uefi',
-                        hw_mem_encryption='true',
-                        hw_mem_encryption_model=model)),
-                model=model
-            )
-
-    def test_encrypted_memory_model_both_required(self):
-        for model in ('amd-sev', 'amd-sev-es'):
-            self._test_encrypted_memory_support_required(
-                'hw:mem_encryption extra spec and '
-                'hw_mem_encryption image property',
-                {'hw:mem_encryption': 'true',
-                 'hw:mem_encryption_model': model},
-                image=objects.ImageMeta(
-                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
-                    name=self.image_name,
-                    properties=objects.ImageMetaProps(
-                        hw_machine_type='q35',
-                        hw_firmware_type='uefi',
-                        hw_mem_encryption='true',
-                        hw_mem_encryption_model=model)),
-                model=model
-            )
-
-    def test_encrypted_memory_model_conflict_1(self):
-        for f_model, i_model in (
-                ('amd-sev', 'amd-sev-es'),
-                ('amd-sev-es', 'amd-sev')
-        ):
-            image = objects.ImageMeta(
+    @ddt.data('amd-sev', 'amd-sev-es')
+    def test_encrypted_memory_model_image_prop(self, model):
+        self._test_encrypted_memory_support_required(
+            'hw_mem_encryption image property',
+            {},
+            image=objects.ImageMeta(
+                id='005249be-3c2f-4351-9df7-29bb13c21b14',
                 name=self.image_name,
                 properties=objects.ImageMetaProps(
                     hw_machine_type='q35',
                     hw_firmware_type='uefi',
                     hw_mem_encryption='true',
-                    hw_mem_encryption_model=i_model
-                )
+                    hw_mem_encryption_model=model)),
+            model=model
+        )
+
+    @ddt.data('amd-sev', 'amd-sev-es')
+    def test_encrypted_memory_model_both_required(self, model):
+        self._test_encrypted_memory_support_required(
+            'hw:mem_encryption extra spec and '
+            'hw_mem_encryption image property',
+            {'hw:mem_encryption': 'true',
+             'hw:mem_encryption_model': model},
+            image=objects.ImageMeta(
+                id='005249be-3c2f-4351-9df7-29bb13c21b14',
+                name=self.image_name,
+                properties=objects.ImageMetaProps(
+                    hw_machine_type='q35',
+                    hw_firmware_type='uefi',
+                    hw_mem_encryption='true',
+                    hw_mem_encryption_model=model)),
+            model=model
+        )
+
+    @ddt.unpack
+    @ddt.data(
+        ('amd-sev', 'amd-sev-es'),
+        ('amd-sev-es', 'amd-sev'))
+    def test_encrypted_memory_model_conflict_1(self, f_model, i_model):
+        image = objects.ImageMeta(
+            name=self.image_name,
+            properties=objects.ImageMetaProps(
+                hw_machine_type='q35',
+                hw_firmware_type='uefi',
+                hw_mem_encryption='true',
+                hw_mem_encryption_model=i_model
             )
-            reqspec = self._get_request_spec(
-                extra_specs={
-                    'hw:mem_encryption': 'true',
-                    'hw:mem_encryption_model': f_model,
-                },
-                image=image)
-            self.assertRaises(
-                exception.FlavorImageConflict,
-                utils.ResourceRequest.from_request_spec, reqspec
-            )
+        )
+        reqspec = self._get_request_spec(
+            extra_specs={
+                'hw:mem_encryption': 'true',
+                'hw:mem_encryption_model': f_model,
+            },
+            image=image)
+        self.assertRaises(
+            exception.FlavorImageConflict,
+            utils.ResourceRequest.from_request_spec, reqspec
+        )
 
 
 class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):

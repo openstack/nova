@@ -3974,7 +3974,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @ddt.data(
         {'sev_model': None, 'sev_policy': 0x0033},
         {'sev_model': 'amd-sev', 'sev_policy': 0x0033},
-        {'sev_model': 'amd-sev-es', 'sev_policy': 0x0035}
+        {'sev_model': 'amd-sev-es', 'sev_policy': 0x0037}
     )
     @mock.patch.object(host.Host, 'get_domain_capabilities')
     @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
