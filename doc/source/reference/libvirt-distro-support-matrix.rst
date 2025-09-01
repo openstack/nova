@@ -244,11 +244,6 @@ important OS distros.
       -
       -
       -
-    * - 8
-      - Provided by the advanced-virtualization module as of 2021-11-18.
-      - 7.0.0-14
-      - 5.2.0-16
-      - 1.44.0-2
     * - 9
       - As of 2025-02-27.
       - 10.10.0
