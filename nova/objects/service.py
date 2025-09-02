@@ -281,6 +281,7 @@ SERVICE_VERSION_ALIASES = {
     'Caracal': 66,
     'Dalmatian': 67,
     'Epoxy': 68,
+    'Flamingo': 70,
 }
 
 
