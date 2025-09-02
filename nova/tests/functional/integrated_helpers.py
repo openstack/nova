@@ -1313,7 +1313,7 @@ class PlacementInstanceHelperMixin(InstanceHelperMixin, PlacementHelperMixin):
         given flavor (assumes a single instance on the hypervisor).
 
         :param compute_node_uuid: UUID of the ComputeNode to check.
-        :param flavor: "flavor" entry dict from from GET /flavors/{flavor_id}
+        :param flavor: "flavor" entry dict from GET /flavors/{flavor_id}
         :param volume_backed: True if the flavor is used with a volume-backed
             server, False otherwise.
         """

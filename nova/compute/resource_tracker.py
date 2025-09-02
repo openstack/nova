@@ -649,7 +649,7 @@ class ResourceTracker(object):
 
         # NOTE(stephenfin): This runs on the destination, before we return to
         # the source and resume the instance there. As such, the migration
-        # isn't really really reverted yet, but this status is what we use to
+        # isn't really reverted yet, but this status is what we use to
         # indicate that we no longer needs to account for usage on this host
         migration.status = 'reverted'
         migration.save()

@@ -827,7 +827,7 @@ emulator threads.
 The behavior of this option depends on the definition of the deprecated
 ``vcpu_pin_set`` option.
 
-* If ``vcpu_pin_set`` is not defined, ``[compute] cpu_shared_set`` will be be
+* If ``vcpu_pin_set`` is not defined, ``[compute] cpu_shared_set`` will be
   used to provide ``VCPU`` inventory and to determine the host CPUs that
   unpinned instances can be scheduled to. It will also be used to determine the
   host CPUS that instance emulator threads should be offloaded to for instances

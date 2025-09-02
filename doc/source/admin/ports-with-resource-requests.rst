@@ -70,7 +70,7 @@ Extended resource request
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is expected that neutron 20.0.0 (Yoga) will implement an extended resource
-request format via the the ``port-resource-request-groups`` neutron API
+request format via the ``port-resource-request-groups`` neutron API
 extension. As of nova 24.0.0 (Xena), nova already supports this extension if
 every nova-compute service is upgraded to Xena version and the
 :oslo.config:option:`upgrade_levels.compute` configuration does not prevent

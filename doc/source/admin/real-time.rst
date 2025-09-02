@@ -78,7 +78,7 @@ Configuring a flavor or image
     :nova:extra-spec:`hw:cpu_realtime`. Starting in Victoria, it is possible
     to omit this when an emulator thread policy is configured using the
     :nova:extra-spec:`hw:emulator_threads_policy` extra spec, thus allowing all
-    guest cores to be be allocated as real-time cores.
+    guest cores to be allocated as real-time cores.
 
 .. versionchanged:: 22.0.0 (Victoria)
 
