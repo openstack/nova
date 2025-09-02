@@ -59,7 +59,7 @@ def isolate_aggregates(ctxt, request_spec):
     either of flavor extra specs or image properties, then those aggregates
     will be included in the list of isolated aggregates.
 
-    Precisely this filter gets the trait request form the image and
+    Precisely this filter gets the trait request from the image and
     flavor and unions them. Then it accumulates the set of aggregates that
     request traits are "non_matching_by_metadata_keys" and uses that to
     produce the list of isolated aggregates.

@@ -107,7 +107,7 @@ the scheduler can use that data to help pick a nova-compute host.
 Resource Tracker
 -----------------
 
-The recent work to add support for NUMA and PCI pass through have shown we
+The recent work to add support for NUMA and PCI passthrough have shown we
 have no good pattern to extend the resource tracker. Ideally we want to keep
 the innovation inside the nova tree, but we also need it to be easier.
 

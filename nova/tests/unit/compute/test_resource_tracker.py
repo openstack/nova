@@ -3823,7 +3823,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # Call the method.
         self.rt._remove_deleted_instances_allocations(
             ctx, cn, [mig], {uuids.migration:
-                             objects.Instance(uuid=uuids.imigration)})
+                             objects.Instance(uuid=uuids.migration)})
         # Only one call should be made to delete allocations, and that should
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(

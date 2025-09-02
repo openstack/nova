@@ -186,6 +186,6 @@ upgrading to N+1. Change I44919422c48570f2647f2325ff895255fc2adf27 provides a
 fully worked example of this approach.
 
 The advantages and disadvantages of this approach are the inverse of those of
-the inline data migrations approach. While they can be used to ensure an data
+the inline data migrations approach. While they can be used to ensure a data
 migration is actually applied, they require operator involvement and can
 prevent upgrades until fully applied.

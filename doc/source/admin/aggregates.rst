@@ -310,7 +310,7 @@ To set and unset a property on the aggregate, run:
 
 .. code-block:: console
 
-    $ openstack aggregate set --property pinned=true my-aggregrate
+    $ openstack aggregate set --property pinned=true my-aggregate
     $ openstack aggregate unset --property pinned my-aggregate
 
 To rename the aggregate, run:
