@@ -80,13 +80,12 @@ _SERVICE_TYPES = service_types.ServiceTypes()
 
 DEFAULT_EXECUTOR = None
 
-# TODO(ksambor) Make this a no-op in threading mode once a
-# threading-compatible service is available.Also, remove all
-# cooperative_yield calls after dropping Eventlet support.
-
 
 def cooperative_yield():
-    time.sleep(0)
+    # TODO(ksambor) Remove all cooperative_yield calls after dropping Eventlet
+    #  support.
+    if not concurrency_mode_threading():
+        time.sleep(0)
 
 
 def destroy_default_executor():
