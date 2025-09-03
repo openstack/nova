@@ -126,7 +126,7 @@ class HostsScopeTypePolicyTest(HostsPolicyTest):
 
 
 class HostsScopeTypeNoLegacyPolicyTest(HostsScopeTypePolicyTest):
-    """Test Hosts APIs policies with with no legacy deprecated rules
+    """Test Hosts APIs policies with no legacy deprecated rules
     and scope checks enabled which means scope + new defaults. So
     only system admin is able to perform hosts Operations.
     """

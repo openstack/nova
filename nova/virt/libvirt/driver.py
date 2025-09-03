@@ -2277,7 +2277,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'disk_bus': disk_bus,
             'device_type': device_type}
 
-        # Note(cfb): If the volume has a custom block size, check that that we
+        # Note(cfb): If the volume has a custom block size, check that we
         # are using QEMU/KVM. The presence of a block size is considered
         # mandatory by cinder so we fail if we can't honor the request.
         data = {}

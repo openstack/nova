@@ -6925,9 +6925,8 @@ class _ComputeAPIUnitTestMixIn(object):
         # This test checks the following scenario:
         # The instance is not mapped to a cell, so it should be retrieved from
         # a BuildRequest object. However the BuildRequest does not exist
-        # because the instance was put in a cell and mapped while while
-        # attempting to get the BuildRequest. So pull the instance from the
-        # cell.
+        # because the instance was put in a cell and mapped while attempting
+        # to get the BuildRequest. So pull the instance from the cell.
         self.useFixture(nova_fixtures.AllServicesCurrent())
         build_req_obj = fake_build_request.fake_req_obj(self.context)
         instance = build_req_obj.instance

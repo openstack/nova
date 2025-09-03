@@ -615,7 +615,7 @@ Here are four possible values allowed for ``hw:viommu_model``
 **smmuv3**
     Supported on Libvirt since 5.5.0, for ARM virt guests.
 **intel**
-    Supported for for Q35 guests.
+    Supported for Q35 guests.
 
 **auto**
     This option will translate to ``virtio`` if Libvirt supported,
