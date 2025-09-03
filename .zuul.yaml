@@ -837,8 +837,7 @@
         - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
-        - nova-tox-py312-threading:
-            voting: false
+        - nova-tox-py312-threading
     gate:
       jobs:
         - nova-live-migration
@@ -866,6 +865,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
+        - nova-tox-py312-threading
     periodic-weekly:
       jobs:
         # Runs emulation feature functionality test less frequently due
