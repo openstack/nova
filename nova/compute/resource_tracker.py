@@ -1173,7 +1173,8 @@ class ResourceTracker(object):
                   "used_disk=%(used_disk)sGB "
                   "total_vcpus=%(total_vcpus)s "
                   "used_vcpus=%(used_vcpus)s "
-                  "pci_stats=%(pci_stats)s",
+                  "pci_stats=%(pci_stats)s "
+                  "stats=%(stats)s",
                   {'node': nodename,
                    'phys_ram': cn.memory_mb,
                    'used_ram': cn.memory_mb_used,
@@ -1181,7 +1182,9 @@ class ResourceTracker(object):
                    'used_disk': cn.local_gb_used,
                    'total_vcpus': tcpu,
                    'used_vcpus': ucpu,
-                   'pci_stats': pci_stats})
+                   'pci_stats': pci_stats,
+                   'stats': cn.stats or {}
+                   })
 
     def _resource_change(self, compute_node):
         """Check to see if any resources have changed."""

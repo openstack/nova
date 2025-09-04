@@ -1,0 +1,23 @@
+---
+fixes:
+  - |
+    Fixed performance issue with the ``/os-hypervisors/detail`` API endpoint
+    when using microversion 2.88 or higher. The API was making sequential RPC
+    calls to each compute node to gather uptime information, causing significant
+    delays in environments with many compute nodes (LP#2122036).
+
+    The fix optimizes uptime retrieval by:
+
+    * Adding uptime information to the periodic resource updates sent by
+      nova-compute to the database, eliminating the need for synchronous RPC
+      calls during API requests
+    * Only attempting RPC-based uptime retrieval for hypervisor types that
+      actually support it (libvirt and z/VM), avoiding unnecessary calls to
+      other hypervisor types that would always return NotImplementedError
+    * Preferring cached uptime data from the database over RPC calls when
+      available, this updates at the cadence specified by
+      `[DEFAULT]update_resources_interval` which is the same interval the
+      other hypervisor stats update.
+
+    This change significantly reduces response times for the hypervisor detail
+    API in large deployments while maintaining backward compatibility.

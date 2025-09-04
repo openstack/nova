@@ -37,6 +37,12 @@ class Stats(dict):
         if stats is None:
             return
         if isinstance(stats, dict):
+            # use None as a sentinel to the API that
+            # the driver does not support uptime
+            # setdefault will update the dict if and only if
+            # uptime is not set then return the value.
+            # since we dont need it we just discard the result
+            stats.setdefault('uptime', None)
             self.update(stats)
             return
         raise ValueError(_('Unexpected type adding stats'))
