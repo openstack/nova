@@ -100,18 +100,24 @@ class HypervisorsController(wsgi.Controller):
         if detail and api_version_request.is_supported(
             req, min_version='2.88',
         ):
-            try:
-                hyp_dict['uptime'] = self.host_api.get_host_uptime(
-                    req.environ['nova.context'], hypervisor.host)
-            except (
-                NotImplementedError,
-                exception.ComputeServiceUnavailable,
-                exception.HostMappingNotFound,
-                exception.HostNotFound,
-            ):
-                # Not all virt drivers support this, and it's not generally
-                # possible to get uptime for a down host
-                hyp_dict['uptime'] = None
+            uptime = None
+            if "stats" in hypervisor and "uptime" in hypervisor.stats:
+                uptime = hypervisor.stats.get("uptime")
+            else:
+                try:
+                    uptime = self.host_api.get_host_uptime(
+                        req.environ['nova.context'], hypervisor.host)
+                except (
+                        NotImplementedError,  # only raised in tests
+                        exception.ComputeServiceUnavailable,
+                        exception.HostMappingNotFound,
+                        exception.HostNotFound,
+                ):
+                    # Only libvirt and ZVM drivers support this, and it's
+                    # not generally possible to get uptime for a down host
+                    pass
+
+            hyp_dict['uptime'] = uptime
 
         if servers:
             hyp_dict['servers'] = [
