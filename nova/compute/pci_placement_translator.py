@@ -136,14 +136,24 @@ class PciResourceProvider:
         self.resource_class: ty.Optional[str] = None
         self.traits: ty.Optional[ty.Set[str]] = None
         self.is_otu = False
+        # This is an adjustment for the total inventory based on normal device
+        # due to possibility of devices held in the tracker even though they
+        # are removed from the configuration due to still having allocations.
+        # This number will be calculated based on the existing allocations
+        # during update_provider_tree call.
+        self.adjustment = 0
 
     @property
     def devs(self) -> ty.List[pci_device.PciDevice]:
         return [self.parent_dev] if self.parent_dev else self.children_devs
 
     @property
+    def total(self):
+        return len(self.devs) + self.adjustment
+
+    @property
     def to_be_deleted(self):
-        return not bool(self.devs)
+        return self.total == 0
 
     def add_child(self, dev, dev_spec_tags: ty.Dict[str, str]) -> None:
         if self.parent_dev:
@@ -242,8 +252,8 @@ class PciResourceProvider:
         # one_time_use=true flag, but otherwise the operator controls
         # reserved and nova will not override that value periodically.
         inventory = {
-            "total": len(self.devs),
-            "max_unit": len(self.devs),
+            "total": self.total,
+            "max_unit": self.total,
         }
 
         self._handle_one_time_use(inventory)
@@ -260,27 +270,61 @@ class PciResourceProvider:
             # If we are an allocated parent device, and our one-time-use flag
             # is set, we need to also set our inventory to reserved.
             # NOTE(danms): VERY IMPORTANT: we never *ever* want to update
-            # reserved to anything other than len(self.devs), and definitely
+            # reserved to anything other than self.total, and definitely
             # not if we are not allocated. These devices are intended to go
             # from unallocated to allocated AND reserved. They may be
             # unreserved by an external entity, but never nova.
-            inventory['reserved'] = len(self.devs)
+            inventory['reserved'] = self.total
+
+    def _adjust_for_removals_and_held_devices(
+        self,
+        provider_tree: provider_tree.ProviderTree,
+        rp_rc_usage: ty.Dict[str, ty.Dict[str, int]],
+    ) -> None:
+
+        rp_uuid = provider_tree.data(self.name).uuid
+        rc_usage = rp_rc_usage[rp_uuid]
+
+        if not self.resource_class:
+            # The resource_class is undefined when there are no normal devices
+            # exists any more on this RP. If no normal devs exists then there
+            # is no device_spec to derive the RC and traits from. But if we
+            # still have allocations in placement against this RP that means
+            # there are devices removed from the configuration but kept in the
+            # tracker as they are still allocated. In this case we
+            # need to recover the resource class and traits from the
+            # existing allocation.
+            if len(rc_usage) == 0:
+                # no usage so nothing to adjust here
+                return
+            else:
+                # The len > 1 case should not happen for PCI RPs as we either
+                # track the parent PF or the child VFs there on the RP but
+                # never both.
+                self.resource_class = list(rc_usage.keys())[0]
+                self.traits = provider_tree.data(rp_uuid).traits
+
+        # If device being removed but still held due to still having
+        # allocations then we need to adjust the total inventory to never go
+        # below the current usage otherwise Placement will reject the update.
+        usage = rc_usage[self.resource_class]
+        inventory = self.total
+        if usage > inventory:
+            LOG.warning(
+                "Needed to adjust inventories of %s on "
+                "resource provider %s from %d to %d due to existing "
+                "placement allocations. This should only happen while "
+                "VMs using already removed devices.",
+                self.resource_class, self.name, inventory, usage)
+            # This is counted into self.total to adjust the inventory
+            self.adjustment += usage - inventory
 
     def update_provider_tree(
         self,
         provider_tree: provider_tree.ProviderTree,
         parent_rp_name: str,
+        rp_rc_usage: ty.Dict[str, ty.Dict[str, int]],
     ) -> None:
-
-        if self.to_be_deleted:
-            # This means we need to delete the RP from placement if exists
-            if provider_tree.exists(self.name):
-                # NOTE(gibi): If there are allocations on this RP then
-                # Placement will reject the update the provider_tree is
-                # synced up.
-                provider_tree.remove(self.name)
-
-            return
 
         if not provider_tree.exists(self.name):
             # NOTE(gibi): We need to generate UUID for the new provider in Nova
@@ -293,6 +337,14 @@ class PciResourceProvider:
                 parent_rp_name,
                 uuid=uuidutils.generate_uuid(dashed=True)
             )
+
+        self._adjust_for_removals_and_held_devices(provider_tree, rp_rc_usage)
+
+        # if after the adjustment no inventory left then we need to delete
+        # the RP explicitly
+        if self.total == 0:
+            provider_tree.remove(self.name)
+            return
 
         provider_tree.update_inventory(
             self.name,
@@ -385,13 +437,13 @@ class PciResourceProvider:
         return updated
 
     def __str__(self) -> str:
-        if self.devs:
+        if not self.to_be_deleted:
             return (
-                f"RP({self.name}, {self.resource_class}={len(self.devs)}, "
+                f"RP({self.name}, {self.resource_class}={self.total}, "
                 f"traits={','.join(sorted(self.traits or set()))})"
             )
         else:
-            return f"RP({self.name}, <EMPTY>)"
+            return f"RP({self.name}, <to be deleted>)"
 
 
 class PlacementView:
@@ -425,18 +477,6 @@ class PlacementView:
 
         return self._get_rp_name_for_address(dev.parent_addr)
 
-    def _add_child(
-        self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
-    ) -> None:
-        rp_name = self._get_rp_name_for_child(dev)
-        self._ensure_rp(rp_name).add_child(dev, dev_spec_tags)
-
-    def _add_parent(
-        self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
-    ) -> None:
-        rp_name = self._get_rp_name_for_address(dev.address)
-        self._ensure_rp(rp_name).add_parent(dev, dev_spec_tags)
-
     def _add_dev(
         self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
     ) -> None:
@@ -447,10 +487,11 @@ class PlacementView:
             # devices in placement.
             return
 
+        rp = self._ensure_rp_for_dev(dev)
         if dev.dev_type in PARENT_TYPES:
-            self._add_parent(dev, dev_spec_tags)
+            rp.add_parent(dev, dev_spec_tags)
         elif dev.dev_type in CHILD_TYPES:
-            self._add_child(dev, dev_spec_tags)
+            rp.add_child(dev, dev_spec_tags)
         else:
             msg = _(
                 "Unhandled PCI device type %(type)s for %(dev)s. Please "
@@ -461,51 +502,92 @@ class PlacementView:
             }
             raise exception.PlacementPciException(error=msg)
 
-    def _remove_child(self, dev: pci_device.PciDevice) -> None:
-        rp_name = self._get_rp_name_for_child(dev)
-        self._ensure_rp(rp_name).remove_child(dev)
-
-    def _remove_parent(self, dev: pci_device.PciDevice) -> None:
-        rp_name = self._get_rp_name_for_address(dev.address)
-        self._ensure_rp(rp_name).remove_parent(dev)
-
     def _remove_dev(self, dev: pci_device.PciDevice) -> None:
         """Remove PCI devices from Placement that existed before but now
         deleted from the hypervisor or unlisted from [pci]device_spec
         """
+        rp = self._ensure_rp_for_dev(dev)
         if dev.dev_type in PARENT_TYPES:
-            self._remove_parent(dev)
+            rp.remove_parent(dev)
         elif dev.dev_type in CHILD_TYPES:
-            self._remove_child(dev)
+            rp.remove_child(dev)
+
+    def _ensure_rp_for_dev(
+        self, dev: pci_device.PciDevice
+    ) -> PciResourceProvider:
+        """Ensures that the RP exists for the device and returns it
+        but does not do any inventory accounting for the given device on
+        the RP.
+        """
+        if dev.dev_type in PARENT_TYPES:
+            rp_name = self._get_rp_name_for_address(dev.address)
+            return self._ensure_rp(rp_name)
+        elif dev.dev_type in CHILD_TYPES:
+            rp_name = self._get_rp_name_for_child(dev)
+            return self._ensure_rp(rp_name)
+        else:
+            raise ValueError(
+                f"Unhandled PCI device type {dev.dev_type} "
+                f"for dev {dev.address}.")
 
     def process_dev(
         self,
         dev: pci_device.PciDevice,
         dev_spec: ty.Optional[devspec.PciDeviceSpec],
     ) -> None:
+        # NOTE(gibi): We never observer dev.status DELETED as when that is set
+        # the device is also removed from the PCI tracker. So we can ignore
+        # that state.
+        if dev.status == fields.PciDeviceStatus.REMOVED:
+            # NOTE(gibi): We need to handle the situation when an instance
+            # uses a device where a dev_spec is removed. Here we need to keep
+            # the device in the Placement view similarly how the PCI tracker
+            # does it.
+            # However, we also need to handle the situation when such VM is
+            # being deleted. In that case we are called after the dev is freed
+            # and marked as removed by the tracker so dev.instance_uuid is
+            # None and dev.status is REMOVED. At this point the Placement
+            # allocation for this dev is still not deleted so we still have to
+            # keep the device in our view. The device will be deleted when the
+            # PCI tracker is saved which happens after us.
+            # However, we cannot overly eagerly keep devices here as a
+            # device in REMOVED state might be a device that had no allocation
+            # in Placement so it can be removed already without waiting for
+            # the next periodic update when the device disappears from the
+            # PCI tracker's list. If we are over eagerly keeping such device
+            # when it is not allocated then that will prevent a single step
+            # reconfiguration from whitelisting a VF to whitelisting its
+            # parent PF, because the VF will be kept at restart and conflict
+            # with the PF being added.
 
-        if dev.status in (
-            fields.PciDeviceStatus.DELETED,
-            fields.PciDeviceStatus.REMOVED,
-        ):
-            # If the PCI tracker marked the device DELETED or REMOVED then
-            # such device is not allocated, so we are free to drop it from
-            # placement too.
+            # We choose to remove these devs so the happy path of removing
+            # not allocated devs is simple. And then we do an extra
+            # step later in update_provider_tree to reconcile Placement
+            # allocations with our view and add back some inventories to handle
+            # removed but allocated devs.
             self._remove_dev(dev)
         else:
             if not dev_spec:
                 if dev.instance_uuid:
                     LOG.warning(
                         "Device spec is not found for device %s in "
-                        "[pci]device_spec. We are skipping this devices "
-                        "during Placement update. The device is allocated by "
-                        "%s. You should not remove an allocated device from "
-                        "the configuration. Please restore the configuration "
-                        "or cold migrate the instance to resolve the "
-                        "inconsistency.",
+                        "[pci]device_spec. The device is allocated by "
+                        "%s. We are keeping this device in the Placement "
+                        "view. You should not remove an allocated device from "
+                        "the configuration. Please restore the configuration. "
+                        "If you cannot restore the configuration as the "
+                        "device is dead then delete or cold migrate the "
+                        "instance and then restart the nova-compute service "
+                        "to resolve the inconsistency.",
                         dev.address,
                         dev.instance_uuid
                     )
+                    # We need to keep the RP, but we cannot just use _add_dev
+                    # to generate the inventory on the RP as that would require
+                    # to know the dev_spec to e.g. have the RC. So we only
+                    # ensure that the RP exists, the inventory will be adjusted
+                    # based on the existing allocation in a later step.
+                    self._ensure_rp_for_dev(dev)
                 else:
                     LOG.warning(
                         "Device spec is not found for device %s in "
@@ -525,11 +607,50 @@ class PlacementView:
             f"{', '.join(str(rp) for rp in self.rps.values())}"
         )
 
-    def update_provider_tree(
+    @staticmethod
+    def get_usage_per_rc_and_rp(
+        allocations
+    ) -> ty.Dict[str, ty.Dict[str, int]]:
+        """Returns a dict keyed by RP uuid and the value is a dict of
+        resource class: usage pairs telling how much total usage the given RP
+        has from the given resource class across all the allocations.
+        """
+        rp_rc_usage: ty.Dict[str, ty.Dict[str, int]] = (
+            collections.defaultdict(lambda: collections.defaultdict(int)))
+        for consumer in allocations.values():
+            for rp_uuid, alloc in consumer["allocations"].items():
+                for rc, amount in alloc["resources"].items():
+                    rp_rc_usage[rp_uuid][rc] += amount
+
+        return rp_rc_usage
+
+    def _remove_managed_rps_from_tree_not_in_view(
         self, provider_tree: provider_tree.ProviderTree
     ) -> None:
+        """Removes PCI RPs from the provider_tree that are not present in the
+        current PlacementView.
+        """
+        rp_names_in_view = {rp.name for rp in self.rps.values()}
+        uuids_in_tree = provider_tree.get_provider_uuids_in_tree(
+            self.root_rp_name)
+        for rp_uuid in uuids_in_tree:
+            rp_data = provider_tree.data(rp_uuid)
+            is_pci_rp = provider_tree.has_traits(
+                rp_uuid, [os_traits.COMPUTE_MANAGED_PCI_DEVICE])
+            if is_pci_rp and rp_data.name not in rp_names_in_view:
+                provider_tree.remove(rp_uuid)
+
+    def update_provider_tree(
+        self,
+        provider_tree: provider_tree.ProviderTree,
+        allocations: dict,
+    ) -> None:
+        self._remove_managed_rps_from_tree_not_in_view(provider_tree)
+
+        rp_rc_usage = self.get_usage_per_rc_and_rp(allocations)
         for rp_name, rp in self.rps.items():
-            rp.update_provider_tree(provider_tree, self.root_rp_name)
+            rp.update_provider_tree(
+                provider_tree, self.root_rp_name, rp_rc_usage)
 
     def update_allocations(
         self,
@@ -639,9 +760,10 @@ def update_provider_tree_for_pci(
         dev_spec = pci_tracker.dev_filter.get_devspec(dev)
         pv.process_dev(dev, dev_spec)
 
+    pv.update_provider_tree(provider_tree, allocations)
+
     LOG.info("Placement PCI resource view: %s", pv)
 
-    pv.update_provider_tree(provider_tree)
     old_alloc = copy.deepcopy(allocations)
     # update_provider_tree correlated the PciDevice objects with RPs in
     # placement and recorded the RP UUID in the PciDevice object. We need to
