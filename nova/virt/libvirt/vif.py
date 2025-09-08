@@ -433,6 +433,7 @@ class LibvirtGenericVIFDriver(object):
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev)
+        conf.managed = "no"
 
         network = vif.get('network')
         if network and network.get_meta('mtu'):
