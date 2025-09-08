@@ -1,0 +1,16 @@
+---
+fixes:
+  - |
+    Nova operation with VIF type TAP was broken by a libvirt change (in 9.5.0)
+    to treat TAP interface specifications as "managed" by default.  This means
+    that libvirt expects to create the TAP interface itself, which is
+    incompatible with how Nova works, because Nova creates the TAP interface
+    before telling libvirt about it. In particular this broke OpenStack with
+    Calico as the network plugin, because Calico uses VIF type TAP.
+
+    This is now fixed, by Nova adding the `managed="no"` attribute to TAP
+    interface XML specifications.
+
+    See `bug 2033681`_ for more details.
+
+    .. _bug 2033681: https://bugs.launchpad.net/nova/+bug/2033681
