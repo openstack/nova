@@ -217,6 +217,12 @@ support the decided libvirt version.
       - 10.0.0
       - 6.2.0
       - 8.2.2
+    * - 2025.2 Flamingo
+      - 31.0.0
+      - 8.0.0
+      - 10.0.0
+      - 6.2.0
+      - 8.2.2
 
 
 OS distribution versions
