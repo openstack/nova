@@ -10379,6 +10379,7 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             data['numa_topology'] = None
 
+        data['stats'] = {'uptime': self.get_host_uptime()}
         return data
 
     def check_instance_shared_storage_local(self, context, instance):
