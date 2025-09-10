@@ -27,11 +27,11 @@ _legacy_block_device_mapping = {
         'volume_id': parameter_types.volume_id,
         'snapshot_id': parameter_types.image_id,
         'volume_size': parameter_types.volume_size,
-        # Do not allow empty device names and number values and
-        # containing spaces(defined in nova/block_device.py:from_api())
+        # Do not allow empty device names or spaces in name (defined in
+        # nova/block_device.py:validate_device_name())
         'device_name': {
             'type': 'string', 'minLength': 1, 'maxLength': 255,
-            'pattern': '^[a-zA-Z0-9._-r/]*$',
+            'pattern': '^[a-zA-Z0-9._/-]*$',
         },
         # Defined as boolean in nova/block_device.py:from_api()
         'delete_on_termination': parameter_types.boolean,
