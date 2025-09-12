@@ -3692,7 +3692,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             'nova.network.neutron.API.has_port_binding_extension',
             lambda *args: True))
         self.assertRaises(
-            test.TestingException,
+            exception.MigrationPreCheckError,
             self._test_check_can_live_migrate_destination,
             do_raise=True)
 
@@ -3764,7 +3764,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                    'check_can_live_migrate_source',
                                    side_effect=messaging.MessagingTimeout):
                 self.assertRaises(
-                    messaging.MessagingTimeout,
+                    exception.MigrationPreCheckError,
                     self.compute.check_can_live_migrate_destination,
                     self.context, instance, None, None, None, None)
         _do_test()
