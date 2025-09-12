@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Fixed the issue
+    `bug 2044235 <https://bugs.launchpad.net/nova/+bug/2044235>`__ where Nova
+    Conductor puts an instance into an error state if any errors occur during
+    execution of the 'check_can_live_migrate_source()' method in an RPC call.
+    Now, any error is caught and a MigrationPreCheckError exception is re-raised
+    to reset the instance state.

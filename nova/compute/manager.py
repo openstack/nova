@@ -9087,8 +9087,20 @@ class ComputeManager(manager.Manager):
         try:
             allocs = self.reportclient.get_allocations_for_consumer(
                 ctxt, instance.uuid)
-            migrate_data = self.compute_rpcapi.check_can_live_migrate_source(
-                ctxt, instance, dest_check_data)
+            try:
+                migrate_data = (
+                    self.compute_rpcapi.check_can_live_migrate_source(
+                        ctxt, instance, dest_check_data)
+                )
+            except Exception as ex:
+                msg = _("Error while check_can_live_migrate_source from "
+                        "%(src)s to host %(dest)s: %(ex_type)s %(ex)s") % {
+                            'src': instance.host,
+                            'dest': CONF.host,
+                            'ex_type': type(ex).__name__,
+                            'ex': ex
+                        }
+                raise exception.MigrationPreCheckError(msg)
             if ('src_supports_numa_live_migration' in migrate_data and
                     migrate_data.src_supports_numa_live_migration):
                 migrate_data = self._live_migration_claim(
