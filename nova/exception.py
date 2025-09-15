@@ -2245,7 +2245,7 @@ class PlacementReshapeConflict(PlacementAPIConflict):
     """
     msg_fmt = _(
         "A conflict was encountered attempting to reshape a provider tree: "
-        "$(error)s"
+        "%(error)s"
     )
 
 
