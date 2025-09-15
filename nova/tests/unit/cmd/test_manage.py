@@ -4340,6 +4340,60 @@ class ImagePropertyCommandsTestCase(test.NoDBTestCase):
             image_properties=['hw_cdrom_bus'])
         self.assertEqual(4, ret, 'return code')
 
+    @mock.patch('nova.objects.RequestSpec.save')
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties_with_trait_in_property_name(
+        self, mock_instance_save, mock_target_cell, mock_get_instance,
+        mock_get_request_spec, mock_request_spec_save
+    ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            },
+            image_ref=''
+        )
+        mock_get_request_spec.return_value = objects.RequestSpec()
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=["trait:CUSTOM_WINDOWS_HOST=required"])
+        self.assertEqual(0, ret, 'return code')
+        img_props = mock_get_instance.return_value.image_meta.properties
+        self.assertIn('CUSTOM_WINDOWS_HOST', img_props.traits_required)
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties_without_trait_in_property_name(
+        self, mock_target_cell, mock_get_instance
+        ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.SHELVED_OFFLOADED,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            }
+        )
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=['CUSTOM_WINDOWS_HOST=required'])
+        self.assertEqual(5, ret, 'return code')
+
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
