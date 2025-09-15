@@ -1592,7 +1592,7 @@ class DownCellFixture(fixtures.Fixture):
                 ctxt.cell_uuid = cell_uuid
                 return multi_cell_list.RecordWrapper(ctxt, sort_ctx, thing)
 
-            if fn is multi_cell_list.query_wrapper:
+            if fn.__func__ is multi_cell_list.CrossCellLister.query_wrapper:
                 # If the function called through scatter-gather utility is the
                 # multi_cell_list.query_wrapper, we should wrap the exception
                 # object into the multi_cell_list.RecordWrapper. This is

@@ -13,8 +13,8 @@
 import abc
 import copy
 import heapq
+import time
 
-import eventlet
 from oslo_log import log as logging
 
 import nova.conf
@@ -31,6 +31,11 @@ class RecordSortContext(object):
     def __init__(self, sort_keys, sort_dirs):
         self.sort_keys = sort_keys
         self.sort_dirs = sort_dirs
+        self.start_time = time.monotonic()
+
+    @property
+    def timeout_expired(self):
+        return time.monotonic() - self.start_time > context.CELL_TIMEOUT
 
     def compare_records(self, rec1, rec2):
         """Implements cmp(rec1, rec2) for the first key that is different.
@@ -83,34 +88,6 @@ class RecordWrapper(object):
                                            other._db_record)
         # cmp(x, y) returns -1 if x < y
         return r == -1
-
-
-def query_wrapper(ctx, fn, *args, **kwargs):
-    """This is a helper to run a query with predictable fail semantics.
-
-    This is a generator which will mimic the scatter_gather_cells() behavior
-    by honoring a timeout and catching exceptions, yielding the usual
-    sentinel objects instead of raising. It wraps these in RecordWrapper
-    objects, which will prioritize them to the merge sort, causing them to
-    be handled by the main get_objects_sorted() feeder loop quickly and
-    gracefully.
-    """
-    with eventlet.timeout.Timeout(context.CELL_TIMEOUT, exception.CellTimeout):
-        try:
-            for record in fn(ctx, *args, **kwargs):
-                yield record
-        except exception.CellTimeout:
-            # Here, we yield a RecordWrapper (no sort_ctx needed since
-            # we won't call into the implementation's comparison routines)
-            # wrapping the sentinel indicating timeout.
-            yield RecordWrapper(ctx, None, context.did_not_respond_sentinel)
-            return
-        except Exception as e:
-            # Here, we yield a RecordWrapper (no sort_ctx needed since
-            # we won't call into the implementation's comparison routines)
-            # wrapping the exception object indicating failure.
-            yield RecordWrapper(ctx, None, e.__class__(e.args))
-            return
 
 
 class CrossCellLister(metaclass=abc.ABCMeta):
@@ -214,6 +191,34 @@ class CrossCellLister(metaclass=abc.ABCMeta):
         :returns: A list of records
         """
         pass
+
+    def query_wrapper(self, ctx, fn, *args, **kwargs):
+        """This is a helper to run a query with predictable fail semantics.
+
+        This is a generator which will mimic the scatter_gather_cells()
+        behavior by honoring a timeout and catching exceptions, yielding the
+        usual sentinel objects instead of raising. It wraps these in
+        RecordWrapper objects, which will prioritize them to the merge sort,
+        causing them to be handled by the main get_objects_sorted() feeder
+        loop quickly and gracefully.
+        """
+        try:
+            for record in fn(ctx, *args, **kwargs):
+                if self.sort_ctx.timeout_expired:
+                    raise exception.CellTimeout()
+                yield record
+        except exception.CellTimeout:
+            # Here, we yield a RecordWrapper (no sort_ctx needed since
+            # we won't call into the implementation's comparison routines)
+            # wrapping the sentinel indicating timeout.
+            yield RecordWrapper(ctx, None, context.did_not_respond_sentinel)
+            return
+        except Exception as e:
+            # Here, we yield a RecordWrapper (no sort_ctx needed since
+            # we won't call into the implementation's comparison routines)
+            # wrapping the exception object indicating failure.
+            yield RecordWrapper(ctx, None, e.__class__(e.args))
+            return
 
     def get_records_sorted(self, ctx, filters, limit, marker, **kwargs):
         """Get a cross-cell list of records matching filters.
@@ -387,10 +392,12 @@ class CrossCellLister(metaclass=abc.ABCMeta):
         if self.cells:
             results = context.scatter_gather_cells(ctx, self.cells,
                                                    context.CELL_TIMEOUT,
-                                                   query_wrapper, do_query)
+                                                   self.query_wrapper,
+                                                   do_query)
         else:
             results = context.scatter_gather_all_cells(ctx,
-                                                       query_wrapper, do_query)
+                                                       self.query_wrapper,
+                                                       do_query)
 
         # If a limit was provided, it was passed to the per-cell query
         # routines.  That means we have NUM_CELLS * limit items across
