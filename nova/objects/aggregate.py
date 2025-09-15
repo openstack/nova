@@ -113,8 +113,15 @@ def _metadata_add_to_db(context, aggregate_id, metadata, max_retries=10,
                         api_models.AggregateMetadata.key.in_(all_keys))
                     for meta_ref in query.all():
                         key = meta_ref.key
-                        meta_ref.update({"value": metadata[key]})
-                        already_existing_keys.add(key)
+                        try:
+                            meta_ref.update({"value": metadata[key]})
+                            already_existing_keys.add(key)
+                        except KeyError:
+                            # NOTE(ratailor): When user tries updating
+                            # metadata using case-sensitive key, we get
+                            # KeyError.
+                            raise exception.AggregateMetadataKeyExists(
+                                aggregate_id=aggregate_id, key=key)
 
                 new_entries = []
                 for key, value in metadata.items():
