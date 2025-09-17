@@ -6728,8 +6728,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 fields.Architecture.I686, fields.Architecture.X86_64,
                 fields.Architecture.AARCH64,
             ):
-                guest.add_feature(
-                    vconfig.LibvirtConfigGuestFeatureVMCoreInfo())
+                # VMCoreInfo device requires DMA between guest OS and host
+                # OS, which is prohibited when guest memory is encrypted.
+                if not self._sev_enabled(flavor, image_meta):
+                    guest.add_feature(
+                        vconfig.LibvirtConfigGuestFeatureVMCoreInfo())
 
             if hide_hypervisor_id:
                 guest.add_feature(
