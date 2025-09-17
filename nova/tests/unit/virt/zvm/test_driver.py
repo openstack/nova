@@ -128,8 +128,11 @@ class TestZVMDriver(test.NoDBTestCase):
         self.assertRaises(exception.ZVMDriverException,
                           zvmdriver.ZVMDriver, 'virtapi')
 
+    @mock.patch(
+        'nova.virt.zvm.driver.ZVMDriver.get_host_uptime',
+        return_value='IPL at 11/14/17 10:47:44 EST')
     @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
-    def test_get_available_resource_err_case(self, call):
+    def test_get_available_resource_err_case(self, call, uptime_mock):
         res = {'overallRC': 1, 'errmsg': 'err', 'rc': 0, 'rs': 0}
         call.side_effect = exception.ZVMConnectorError(results=res)
         results = self._driver.get_available_resource()
@@ -138,6 +141,8 @@ class TestZVMDriver(test.NoDBTestCase):
         self.assertEqual(0, results['disk_available_least'])
         self.assertEqual(0, results['hypervisor_version'])
         self.assertEqual('TESTHOST', results['hypervisor_hostname'])
+        self.assertEqual(uptime_mock.return_value, results['stats']['uptime'])
+        uptime_mock.assert_called_once()
 
     def test_driver_template_validation(self):
         self.flags(instance_name_template='abc%6d')
