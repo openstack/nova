@@ -61,8 +61,14 @@ class TestImagePropsWeigher(integrated_helpers._IntegratedTestBase):
         server3 = self._create_server(
             name='inst3',
             networks='none',
-            expected_state='ERROR'
             )
-        self.assertIn("AttributeError", server3['fault']['message'])
-        self.assertIn("\'NoneType\' object has no attribute \'is_admin\'",
-                      server3['fault']['details'])
+        #  server3 is now on the same host than host1 as the weigh multiplier
+        #  makes the scheduler to pack instances sharing the same image props.
+        self.assertEqual('host1', server3['OS-EXT-SRV-ATTR:host'])
+
+        server4 = self._create_server(
+            name='inst4',
+            networks='none',
+            )
+        #  server4 is now packed with server1 and server3.
+        self.assertEqual('host1', server4['OS-EXT-SRV-ATTR:host'])
