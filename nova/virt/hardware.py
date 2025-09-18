@@ -1193,13 +1193,18 @@ def get_mem_encryption_constraint(
     # If we get this far, either the extra spec or image property explicitly
     # specified a requirement regarding memory encryption, and if both did,
     # they are asking for the same thing.
+    # NOTE(jie, sean): When creating a volume booted instance with memory
+    # encryption enabled, image_meta has no id key. See bug #2041511.
+    # So we check whether id exists. If there is no value, we set it
+    # to a sentinel value we can detect later. i.e. '<no-id>'.
     requesters = []
     if flavor_mem_enc:
         requesters.append("hw:mem_encryption extra spec in %s flavor" %
                           flavor.name)
     if image_mem_enc:
+        image_id = (image_meta.id if 'id' in image_meta else '<no-id>')
         requesters.append("hw_mem_encryption property of image %s" %
-                          image_meta.id)
+                          image_id)
 
     _check_mem_encryption_uses_uefi_image(requesters, image_meta)
     _check_mem_encryption_machine_type(image_meta, machine_type)
@@ -1277,12 +1282,14 @@ def _check_mem_encryption_machine_type(image_meta, machine_type=None):
 
     # image_meta.name is not set if image object represents root Cinder volume.
     image_name = (image_meta.name if 'name' in image_meta else None)
+    # image_meta.id is not set when booting from volume.
+    image_id = (image_meta.id if 'id' in image_meta else '<no-id>')
     # Could be something like pc-q35-2.11 if a specific version of the
     # machine type is required, so do substring matching.
     if 'q35' not in mach_type:
         raise exception.InvalidMachineType(
             mtype=mach_type,
-            image_id=image_meta.id, image_name=image_name,
+            image_id=image_id, image_name=image_name,
             reason=_("q35 type is required for SEV to work"))
 
 
