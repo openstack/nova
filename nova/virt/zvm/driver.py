@@ -130,6 +130,7 @@ class ZVMDriver(driver.ComputeDriver):
                                      obj_fields.HVType.ZVM,
                                      obj_fields.VMMode.HVM)],
             'numa_topology': None,
+            'stats': {'uptime': self.get_host_uptime()}
         }
 
         LOG.debug("Getting available resource for %(host)s:%(nodename)s",
