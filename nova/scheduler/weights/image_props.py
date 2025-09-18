@@ -21,6 +21,7 @@ The default value of the multiplier is 0, which disables the weigher.
 """
 
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova.scheduler import utils
@@ -69,7 +70,12 @@ class ImagePropertiesWeigher(weights.BaseHostWeigher):
 
         existing_props = []
 
-        insts = objects.InstanceList(objects=host_state.instances.values())
+        # As we create a list of instances, we need them to have an admin
+        # context so we can access all of them, not only the ones from the
+        # request.
+        ctxt = nova_context.get_admin_context()
+        insts = objects.InstanceList(ctxt,
+                                     objects=host_state.instances.values())
         # system_metadata isn't loaded yet, let's do this.
         insts.fill_metadata()
 
