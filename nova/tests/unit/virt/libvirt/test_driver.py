@@ -21756,7 +21756,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_unplug.assert_called_once_with(fake_inst, 'netinfo', True)
         mock_get_mapping.assert_called_once_with(None)
         mock_delete_files.assert_called_once_with(fake_inst)
-        mock_delete_vtpm.assert_called_once_with('ctxt', fake_inst)
+        # vTPM secret should not be deleted until instance is deleted.
+        mock_delete_vtpm.assert_not_called()
         mock_undefine.assert_called_once_with(fake_inst)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
@@ -21780,7 +21781,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             instance_save.side_effect = exception.InstanceNotFound(
                 instance_id=uuids.instance)
             drvr.cleanup('ctxt', fake_inst, 'netinfo')
-        mock_delete_vtpm.assert_called_once_with('ctxt', fake_inst)
+        # vTPM secret should not be deleted until instance is deleted.
+        mock_delete_vtpm.assert_not_called()
         mock_undefine.assert_called_once_with(fake_inst)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
