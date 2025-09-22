@@ -434,21 +434,3 @@ class VTPMServersTestNonShared(VTPMServersTest):
         self.useFixture(fixtures.MockPatch(
             'nova.compute.manager.ComputeManager._is_instance_storage_shared',
             return_value=False))
-
-    # FIXME: Remove this entire method when
-    # https://bugs.launchpad.net/nova/+bug/2125030 is fixed.
-    def test_resize_revert_server__vtpm_to_vtpm_same_config(self):
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._test_resize_revert_server__vtpm_to_vtpm)
-        self.assertEqual(500, ex.response.status_code)
-
-    # FIXME: Remove this entire method when
-    # https://bugs.launchpad.net/nova/+bug/2125030 is fixed.
-    def test_resize_revert_server__vtpm_to_vtpm_different_config(self):
-        extra_specs = {'hw:tpm_model': 'tpm-tis', 'hw:tpm_version': '2.0'}
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._test_resize_revert_server__vtpm_to_vtpm,
-            extra_specs=extra_specs)
-        self.assertEqual(500, ex.response.status_code)
