@@ -1649,7 +1649,8 @@ class LibvirtDriver(driver.ComputeDriver):
         :param destroy_disks: if local ephemeral disks should be destroyed
         :param migrate_data: optional migrate_data object
         :param destroy_vifs: if plugged vifs should be unplugged
-        :param destroy_secrets: Indicates if secrets should be destroyed
+        :param destroy_secrets: Indicates if libvirt secrets for Cinder volume
+                   encryption should be destroyed
         """
         cleanup_instance_dir = False
         cleanup_instance_disks = False
@@ -1703,8 +1704,8 @@ class LibvirtDriver(driver.ComputeDriver):
         :param cleanup_instance_dir: If the instance dir should be removed
         :param cleanup_instance_disks: If the instance disks should be removed.
             Also removes ephemeral encryption secrets, if present.
-        :param destroy_secrets: If the cinder volume encryption secrets should
-            be deleted.
+        :param destroy_secrets: If the cinder volume encryption libvirt secrets
+                   should be deleted.
         """
         # zero the data on backend pmem device
         vpmems = self._get_vpmems(instance)
@@ -1769,7 +1770,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 pass
 
         if cleanup_instance_disks:
-            crypto.delete_vtpm_secret(context, instance)
             # Make sure that the instance directory files were successfully
             # deleted before destroying the encryption secrets in the case of
             # image backends that are not 'lvm' or 'rbd'. We don't want to
