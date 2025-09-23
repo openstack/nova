@@ -785,7 +785,7 @@ cell, host, and instance mapping records required.
      - The instance is not mapped to a cell. See the ``map_instances``
        command.
    * - 2
-     - The cell mapping is missing. See the ``map_cell_and_hots`` command if
+     - The cell mapping is missing. See the ``map_cell_and_hosts`` command if
        you are upgrading from a cells v1 environment, and the
        ``simple_cell_setup`` command if you are upgrading from a non-cells v1
        environment.
