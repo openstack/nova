@@ -1220,6 +1220,43 @@ def destroy_scatter_gather_executor():
     SCATTER_GATHER_EXECUTOR = None
 
 
+CACHE_IMAGES_EXECUTOR = None
+
+
+def get_cache_images_executor():
+    """Returns the executor used for cache images operations."""
+    global CACHE_IMAGES_EXECUTOR
+
+    if not CACHE_IMAGES_EXECUTOR:
+        max_workers = CONF.image_cache.precache_concurrency
+        CACHE_IMAGES_EXECUTOR = create_executor(max_workers)
+
+        pname = multiprocessing.current_process().name
+        executor_name = f"{pname}.cache_images"
+        CACHE_IMAGES_EXECUTOR.name = executor_name
+
+        LOG.info("The cache images executor %s is initialized", executor_name)
+
+    return CACHE_IMAGES_EXECUTOR
+
+
+def destroy_cache_images_executor():
+    """Closes the executor and resets the global to None to allow forked worker
+    processes to properly init it.
+    """
+    global CACHE_IMAGES_EXECUTOR
+    if CACHE_IMAGES_EXECUTOR:
+        LOG.info(
+            "The cache images thread pool %s is shutting down",
+            CACHE_IMAGES_EXECUTOR.name)
+        CACHE_IMAGES_EXECUTOR.shutdown()
+        LOG.info(
+            "The cache images thread pool %s is closed",
+            CACHE_IMAGES_EXECUTOR.name)
+
+    CACHE_IMAGES_EXECUTOR = None
+
+
 def _log_executor_stats(executor):
     if CONF.thread_pool_statistic_period < 0:
         return

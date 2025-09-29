@@ -26,6 +26,7 @@ import nova.conf
 from nova import config
 from nova import objects
 from nova import service
+from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
@@ -43,5 +44,7 @@ def main():
     server = service.Service.create(binary='nova-conductor',
                                     topic=rpcapi.RPC_TOPIC)
     workers = CONF.conductor.workers or processutils.get_worker_count()
+
+    utils.destroy_default_executor()
     service.serve(server, workers=workers)
     service.wait()

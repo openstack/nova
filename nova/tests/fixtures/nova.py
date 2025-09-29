@@ -1199,12 +1199,15 @@ class IsolatedExecutorFixture(fixtures.Fixture):
         # Just safety that the previous testcase cleaned up after itself
         assert utils.SCATTER_GATHER_EXECUTOR is None
         assert utils.DEFAULT_EXECUTOR is None
+        assert utils.CACHE_IMAGES_EXECUTOR is None
 
         origi_get_scatter_gather = utils.get_scatter_gather_executor
         origi_default_executor = utils._get_default_executor
+        origi_get_cache_images_executor = utils.get_cache_images_executor
 
         self.executor = None
         self.scatter_gather_executor = None
+        self.cache_images_executor = None
 
         def _get_default_executor():
             self.executor = origi_default_executor()
@@ -1232,11 +1235,25 @@ class IsolatedExecutorFixture(fixtures.Fixture):
         self.addCleanup(
             lambda: self.do_cleanup_executor(self.scatter_gather_executor))
 
+        def _get_cache_images_executor():
+            self.cache_images_executor = origi_get_cache_images_executor()
+            self.cache_images_executor.name = (
+                f"{self.test_case_id}.cache_images")
+            return self.cache_images_executor
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils.get_cache_images_executor',
+            _get_cache_images_executor))
+
+        self.addCleanup(
+            lambda: self.do_cleanup_executor(self.cache_images_executor))
+
         self.addCleanup(self.reset_globals)
 
     def reset_globals(self):
         utils.SCATTER_GATHER_EXECUTOR = None
         utils.DEFAULT_EXECUTOR = None
+        utils.CACHE_IMAGES_EXECUTOR = None
 
     def do_cleanup_executor(self, executor):
         # NOTE(gibi): we cannot rely on utils.concurrency_mode_threading
