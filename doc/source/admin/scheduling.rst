@@ -1104,6 +1104,14 @@ provided in the option value.
 The resulted host weight would then be multiplied by the value of
 :oslo.config:option:`filter_scheduler.image_props_weight_multiplier`.
 
+
+.. note::
+
+    The weigher compares the values of the image properties as strings. If some
+    image properties are lists (eg. hw_numa_nodes), then if the values are
+    ordered differently, then the weigher will consider them as different
+    values.
+
 Utilization-aware scheduling
 ----------------------------
 

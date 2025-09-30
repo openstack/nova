@@ -2066,6 +2066,8 @@ class TestInstanceListObject(test_objects._LocalTest,
                   'host': 'foo'}
 
         for i in range(5):
+            # persist some metadata directly in the DB
+            values['system_metadata'] = {'BTTF2': '2015'}
             db.instance_create(self.context,
                                dict(values))
 
@@ -2089,12 +2091,17 @@ class TestInstanceListObject(test_objects._LocalTest,
         self.assertEqual(0, len([i for i in insts
                                  if 'system_metadata' not in i]))
 
+        #  Inst 1 is now updated with the new metadata
+        self.assertEqual({'BTTF1': '1955'}, insts[1].system_metadata)
+
         # Inst 2 should have not had its in-memory copy clobbered
         self.assertEqual({'bttf3': '1885'}, insts[2].system_metadata)
 
-        # Inst 1 should have system_metadata loaded, but empty
-        self.assertIn('system_metadata', insts[0])
-        self.assertEqual({}, insts[0].system_metadata)
+        # Other instances should have system_metadata loaded directly from the
+        # DB
+        for i in [0, 3, 4]:
+            self.assertIn('system_metadata', insts[i])
+            self.assertEqual({'BTTF2': '2015'}, insts[i].system_metadata)
 
     def test_fill_metadata_nop(self):
         insts = objects.InstanceList([objects.Instance(uuid=uuids.inst,

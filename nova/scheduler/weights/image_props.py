@@ -74,10 +74,18 @@ class ImagePropertiesWeigher(weights.BaseHostWeigher):
         # context so we can access all of them, not only the ones from the
         # request.
         ctxt = nova_context.get_admin_context()
-        insts = objects.InstanceList(ctxt,
-                                     objects=host_state.instances.values())
         # system_metadata isn't loaded yet, let's do this.
-        insts.fill_metadata()
+        # Given all instances are in the same host, we can target the same
+        # cell.
+        try:
+            cell_mapping = objects.CellMapping.get_by_uuid(
+                ctxt, host_state.cell_uuid)
+        except exception.CellMappingNotFound:
+            return weight
+        with nova_context.target_cell(ctxt, cell_mapping) as cell_ctxt:
+            insts = objects.InstanceList(cell_ctxt,
+                objects=host_state.instances.values())
+            insts.fill_metadata()
 
         for inst in insts:
             try:
