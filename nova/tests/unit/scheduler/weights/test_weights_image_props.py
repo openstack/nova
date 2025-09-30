@@ -16,6 +16,8 @@ from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova import context as nova_context
+from nova import exception
 from nova import objects
 from nova.scheduler import weights
 from nova.scheduler.weights import image_props
@@ -36,7 +38,7 @@ PROP_LIN_PC = objects.ImageMeta(
     properties=objects.ImageMetaProps(os_distro='linux', hw_machine_type='pc'))
 
 
-class ImagePropertiesWeigherTestCase(test.NoDBTestCase):
+class _ImagePropertiesWeigherBase(test.NoDBTestCase):
 
     def setUp(self):
         super().setUp()
@@ -89,6 +91,9 @@ class ImagePropertiesWeigherTestCase(test.NoDBTestCase):
         ]
         return [fakes.FakeHostState(host, node, values)
                 for host, node, values in host_values]
+
+
+class ImagePropertiesWeigherTestCase(_ImagePropertiesWeigherBase):
 
     @mock.patch('nova.objects.InstanceList.fill_metadata')
     def test_multiplier_default(self, mock_fm):
@@ -194,3 +199,71 @@ class ImagePropertiesWeigherTestCase(test.NoDBTestCase):
         self.assertEqual('host3', weights[0].obj.host)
         mock_fm.assert_has_calls([mock.call(), mock.call(),
                                   mock.call(), mock.call()])
+
+
+class TestTargetCellCalled(_ImagePropertiesWeigherBase):
+    # Using real cell infrastructure instead of SingleCellSimple fixture
+    # as we need to verify set_target_cell calls are made
+    USES_DB_SELF = True
+
+    @mock.patch('nova.objects.InstanceList.fill_metadata')
+    @mock.patch.object(nova_context, 'set_target_cell')
+    @mock.patch('nova.objects.CellMapping.get_by_uuid')
+    @mock.patch.object(nova_context.RequestContext, 'from_dict')
+    @mock.patch.object(nova_context, 'get_admin_context')
+    def test_target_cell_called(self, mock_get_admin_context, mock_from_dict,
+                                mock_get_by_uuid, mock_target_cell, mock_fm):
+        fake_context = nova_context.RequestContext(is_admin=True)
+        fake_cell_ctx = nova_context.RequestContext(is_admin=True)
+        # let's simulate that we set a cell context as target_cell calls
+        # from_dict internally
+        mock_from_dict.return_value = fake_cell_ctx
+        mock_get_admin_context.return_value = fake_context
+        self.flags(image_props_weight_multiplier=1.0, group='filter_scheduler')
+
+        fake_cell_mapping = objects.CellMapping(uuid=uuids.cell1)
+        mock_get_by_uuid.side_effect = [fake_cell_mapping, fake_cell_mapping,
+                                        # host3 won't have a cell mapping
+                                        exception.CellMappingNotFound(
+                                            uuid=uuids.cell2)]
+
+        # Just create three hosts with only one instance, we just want to test
+        # the calls to target_cell and fill_metadata.
+        hostinfo_list = [
+            fakes.FakeHostState('host1', 'node1',
+                               {'instances': {uuids.inst1: objects.Instance(
+                                               uuid=uuids.inst1)},
+                                'cell_uuid': uuids.cell1}),
+            fakes.FakeHostState('host2', 'node2',
+                               {'instances': {}, 'cell_uuid': uuids.cell1}),
+            # host3 is in a different cell
+            fakes.FakeHostState('host3', 'node3',
+                                {'instances': {}, 'cell_uuid': uuids.cell2}),
+        ]
+        request_spec = objects.RequestSpec(image=PROP_WIN_PC)
+
+        weights = self.weight_handler.get_weighed_objects(
+            self.weighers, hostinfo_list, weighing_properties=request_spec)
+
+        mock_get_by_uuid.assert_has_calls([
+            mock.call(fake_context, uuids.cell1),
+            mock.call(fake_context, uuids.cell1),
+            mock.call(fake_context, uuids.cell2)])
+
+        # Now we see that set_target_cell is called with the cell context only
+        # twice given host3 does not have a cell mapping
+        mock_target_cell.assert_has_calls(
+            [mock.call(fake_cell_ctx, fake_cell_mapping),
+             mock.call(fake_cell_ctx, fake_cell_mapping)])
+
+        # Ensure that fill_metadata was called with the correct context
+        def _fake_fill_metadata(_self):
+            self.assertEqual(fake_cell_ctx, _self._context)
+        mock_fm.side_effect = _fake_fill_metadata
+
+        # Double check that we called it only twice
+        self.assertEqual(2, mock_fm.call_count)
+
+        # host1 wins but we return all three hosts.
+        self.assertEqual(3, len(weights))
+        self.assertEqual('host1', weights[0].obj.host)

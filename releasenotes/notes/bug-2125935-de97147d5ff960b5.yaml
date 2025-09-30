@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Previously the ImagePropertiesWeigher was not running correctly as it wasn't
+    targeting the correct cell context for getting the system metadata of the
+    instances. This was fixed in bug `#2125935`_.
+
+    .. _`#2125935`: https://bugs.launchpad.net/nova/+bug/2125935

@@ -1605,7 +1605,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             for inst in [i for i in self if i.uuid in updated]:
                 # Patch up our instances with system_metadata from the fill
                 # operation
-                inst.system_metadata = utils.instance_sys_meta(updated)
+                inst.system_metadata = utils.instance_sys_meta(
+                    updated[inst.uuid])
 
     @base.remotable_classmethod
     def get_uuids_by_host(cls, context, host):
