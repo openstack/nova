@@ -19,7 +19,6 @@ Manage hosts in the current zone.
 
 import collections
 import functools
-import time
 
 import iso8601
 from oslo_log import log as logging
@@ -465,8 +464,7 @@ class HostManager(object):
                                                          "updated": False}
                         inst_dict = self._instance_info[host]
                         inst_dict["instances"][instance.uuid] = instance
-                    # Call sleep() to cooperatively yield
-                    time.sleep(0)
+                    utils.cooperative_yield()
                 LOG.debug("END:_async_init_instance_info")
 
         # Run this async so that we don't block the scheduler start-up

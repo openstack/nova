@@ -11537,7 +11537,7 @@ class LibvirtDriver(driver.ComputeDriver):
         future.add_done_callback(thread_finished)
 
         # Let eventlet schedule the new thread right away
-        time.sleep(0)
+        utils.cooperative_yield()
 
         try:
             LOG.debug("Starting monitoring of live migration",
