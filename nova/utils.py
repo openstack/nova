@@ -85,7 +85,7 @@ def cooperative_yield():
     # TODO(ksambor) Remove all cooperative_yield calls after dropping Eventlet
     #  support.
     if not concurrency_mode_threading():
-        time.sleep(0)
+        time.sleep(0)  # noqa: N374
 
 
 def destroy_default_executor():

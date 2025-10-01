@@ -79,6 +79,8 @@ Nova Specific Commandments
 - [N372] Don't use the setDaemon method. Use the daemon attribute instead.
 - [N373] Don't use eventlet specific concurrency primitives. Use the one
   from stdlib instead. E.g. eventlet.sleep => time.sleep
+- [N374] Don't use time.sleep(0) to trigger eventlet yielding.
+  Use nova.utils.cooperative_yield() instead.
 
 Creating Unit Tests
 -------------------

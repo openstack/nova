@@ -145,6 +145,7 @@ six_re = re.compile(r"^(import six(\..*)?|from six(\..*)? import .*)$")
 set_daemon_re = re.compile(r"\.setDaemon\(")
 eventlet_stdlib_primitives_re = re.compile(
     r".*(eventlet|greenthread)\.sleep\(.*")
+eventlet_yield_re = re.compile(r".*time\.sleep\(0\).*")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -1111,10 +1112,26 @@ def check_eventlet_primitives(logical_line, filename):
     N373
     """
     msg = (
-        "N373: Use the stdlib concurrency primitive instead of the Eventelt "
+        "N373: Use the stdlib concurrency primitive instead of the Eventlet "
         "specific one")
 
     match = re.match(eventlet_stdlib_primitives_re, logical_line)
+
+    if match:
+        yield (0, msg)
+
+
+@core.flake8ext
+def check_eventlet_yield(logical_line, filename):
+    """Check for use of time.sleep(0) triggering eventlet yield
+
+    N374
+    """
+    msg = (
+        "N374: Use the nova.utils.cooperative_yield instead of time.sleep(0) "
+        "to trigger an eventlet context switch")
+
+    match = re.match(eventlet_yield_re, logical_line)
 
     if match:
         yield (0, msg)
