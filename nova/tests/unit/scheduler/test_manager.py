@@ -1767,7 +1767,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     @mock.patch('nova.rpc.get_notifier')
     def test_init_lazy_placement_client_failures(self, mock_rpc, mock_sg,
                                                  mock_hm, mock_report):
-        # Certain keystoneclient exceptions are fatal
+        # Certain keystoneauth1 exceptions are fatal
         mock_report.side_effect = ks_exc.Unauthorized
         self.assertRaises(ks_exc.Unauthorized, manager.SchedulerManager)
 

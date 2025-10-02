@@ -28,7 +28,7 @@ from castellan import key_manager
 from cinderclient import exceptions as cinder_exception
 import ddt
 import futurist
-from keystoneclient import exceptions as keystone_exception
+from keystoneauth1 import exceptions as keystone_exception
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging
 import oslo_messaging as messaging
