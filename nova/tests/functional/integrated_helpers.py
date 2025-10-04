@@ -1376,7 +1376,9 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
         if self.CAST_AS_CALL:
             self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
-        self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
+        self.placement_fixture = self.useFixture(
+            func_fixtures.PlacementFixture())
+        self.placement = self.placement_fixture.api
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))

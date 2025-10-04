@@ -87,6 +87,14 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
 
     def setUp(self):
         super().setUp()
+        # Use tuned placement config to exercise the more complex code
+        # path when pci_in_placement is used
+        self.placement_fixture.conf_fixture.config(
+                group='workarounds', optimize_for_wide_provider_trees=True)
+        self.placement_fixture.conf_fixture.config(
+                group='placement',
+                allocation_candidates_generation_strategy="breadth-first")
+
         self.flags(group="pci", report_in_placement=True)
 
         # These tests should not depend on the host's sysfs
