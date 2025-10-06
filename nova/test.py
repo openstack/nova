@@ -458,6 +458,8 @@ class TestCase(base.BaseTestCase):
             ctxt = context.get_context()
             cell_name = cell_name or CELL1_NAME
             cell = self.cell_mappings[cell_name]
+            svc = self.useFixture(
+                nova_fixtures.ServiceFixture(name, host, cell=cell, **kwargs))
             if (host or name) not in self.host_mappings:
                 # NOTE(gibi): If the HostMapping does not exists then this is
                 # the first start of the service so we create the mapping.
@@ -466,8 +468,19 @@ class TestCase(base.BaseTestCase):
                                          cell_mapping=cell)
                 hm.create()
                 self.host_mappings[hm.host] = hm
-        svc = self.useFixture(
-            nova_fixtures.ServiceFixture(name, host, cell=cell, **kwargs))
+
+                # NOTE(jlejeune): update the compute node's mapped field
+                # like it's done in _check_and_create_node_host_mappings()
+                # function.
+                with context.target_cell(ctxt, cell) as cctxt:
+                    node = objects.ComputeNode.get_by_service_id(
+                        context=cctxt,
+                        service_id=svc.service.service_ref.id)
+                    node.mapped = 1
+                    node.save()
+        else:
+            svc = self.useFixture(
+                nova_fixtures.ServiceFixture(name, host, cell=cell, **kwargs))
 
         # Keep track of how many instances of this service are running.
         self._service_fixture_count[name] += 1
