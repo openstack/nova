@@ -79,6 +79,13 @@ nova.tests.unit.compute.test_shelve.ShelveComputeAPITestCase.test_unshelve_witho
 nova.tests.unit.compute.test_shelve.ShelveComputeAPITestCase.test_unshelve_without_az_to_newaz
 nova.tests.unit.compute.test_shelve.ShelveComputeAPITestCase.test_unshelve_with_az_to_newaz
 nova.tests.unit.api.openstack.compute.test_availability_zone.ServersControllerCreateTestV21.test_create_instance_with_availability_zone
+nova.tests.unit.api.openstack.compute.test_services.ServicesTestV275.test_services_list_with_additional_filter_old_version
+
+# This fails also with sqlite3.OperationalError: cannot start a transaction within a transaction but
+# not from nova.compute.api.HostAPI._service_get_all_cells but from the db api
+# _instance_get_by_uuid
+nova.tests.unit.conductor.test_conductor.ConductorTaskRPCAPITestCase.test_evacuate_old_rpc_without_target_state
+
 
 # This test has an eventlet and a threading version we
 # should either combine them and make the dynamic or
