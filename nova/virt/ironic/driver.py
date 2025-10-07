@@ -408,13 +408,16 @@ class IronicDriver(virt_driver.ComputeDriver):
             return
         self._cleanup_deploy(node, instance)
 
+    def _is_boot_from_volume(self, block_device_info):
+        root_bdm = block_device.get_root_bdm(
+            virt_driver.block_device_info_get_mapping(block_device_info))
+        return root_bdm is not None
+
     def _add_instance_info_to_node(self, node, instance, image_meta, flavor,
                                    metadata, preserve_ephemeral=None,
                                    block_device_info=None):
 
-        root_bdm = block_device.get_root_bdm(
-            virt_driver.block_device_info_get_mapping(block_device_info))
-        boot_from_volume = root_bdm is not None
+        boot_from_volume = self._is_boot_from_volume(block_device_info)
         patch = patcher.create(node).get_deploy_patch(instance,
                                                       image_meta,
                                                       flavor,
@@ -1739,12 +1742,15 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param preserve_ephemeral: Boolean value; if True the ephemeral
             must be preserved on rebuild.
         :param accel_uuids: Accelerator UUIDs. Ignored by this driver.
-        :param reimage_boot_volume: Re-image the volume backed instance.
+        :param reimage_boot_volume: Ironic driver raises when rebuild
+            of a boot from volume instance, as its not yet supported.
         """
         if reimage_boot_volume:
-            raise exception.NovaException(
-                _("Ironic doesn't support rebuilding volume backed "
-                  "instances."))
+            boot_from_volume = self._is_boot_from_volume(block_device_info)
+            if boot_from_volume:
+                raise exception.NovaException(
+                    _("Ironic doesn't support rebuilding volume backed "
+                      "instances."))
 
         LOG.debug('Rebuild called for instance', instance=instance)
 
