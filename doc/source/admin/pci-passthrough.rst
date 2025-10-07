@@ -393,6 +393,15 @@ PCI tracking in Placement
    Please note that once it is enabled on a given compute host
    **it cannot be disabled there any more**.
 
+.. warning::
+   If you configure more than 8 PCI devices per compute with the same
+   product_id or resource_class then placement needs configuration tuning
+   to keep the scheduling speed acceptable. Please read the following
+   two release notes:
+
+   * https://github.com/openstack/placement/blob/master/releasenotes/notes/bug-2070257-allocation-candidates-generation-limit-and-strategy.yaml-e73796898163fb55.yaml
+   * https://github.com/openstack/placement/blob/master/releasenotes/notes/bug-2126751-optimize_for_wide_provider_trees-b50b7813fd0d9dd2.yaml
+
 Since nova 26.0.0 (Zed) PCI passthrough device inventories are tracked in
 Placement. If a PCI device exists on the hypervisor and
 matches one of the device specifications configured via
