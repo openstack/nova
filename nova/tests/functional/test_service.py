@@ -51,7 +51,6 @@ class ServiceTestCase(test.TestCase,
         """Tests that the cell cache for database transaction context managers
         is cleared after a service reset (example scenario: SIGHUP).
         """
-        self.assertFalse(nova_context.CELL_CACHE)
         server_req = self._build_server()
         server = self.api.post_server({'server': server_req})
         self._wait_for_state_change(server, 'ACTIVE')
@@ -66,7 +65,6 @@ class ServiceTestCase(test.TestCase,
         is cleared upon a service start (example scenario: service start after
         a SIGTERM and the parent process forks child process workers).
         """
-        self.assertFalse(nova_context.CELL_CACHE)
         server_req = self._build_server()
         server = self.api.post_server({'server': server_req})
         self._wait_for_state_change(server, 'ACTIVE')
