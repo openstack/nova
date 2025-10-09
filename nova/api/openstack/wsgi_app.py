@@ -112,15 +112,10 @@ def init_global_data(conf_files, service_name):
     gmr.TextGuruMeditation.setup_autorun(
         version, conf=CONF, service_name=service_name)
 
-    # dump conf at debug (log_options option comes from oslo.service)
     # FIXME(mriedem): This is gross but we don't have a public hook into
     # oslo.service to register these options, so we are doing it manually for
     # now; remove this when we have a hook method into oslo.service.
     CONF.register_opts(service_opts.service_opts)
-    if CONF.log_options:
-        CONF.log_opt_values(
-            logging.getLogger(__name__),
-            logging.DEBUG)
 
 
 @utils.latch_error_on_raise(retryable=(odbe.DBConnectionError,))
@@ -146,4 +141,13 @@ def init_application(name):
 
     conf = conf_files[0]
 
-    return deploy.loadapp('config:%s' % conf, name=name)
+    app = deploy.loadapp('config:%s' % conf, name=name)
+    # We dump the conf after the WSGI app is loaded because some config options
+    # (such as the keystonemiddleware.auth_token options) are registered later
+    # in the pipeline.
+    if CONF.log_options:
+        # dump conf at debug (log_options option comes from oslo.service)
+        CONF.log_opt_values(
+            logging.getLogger(__name__),
+            logging.DEBUG)
+    return app
