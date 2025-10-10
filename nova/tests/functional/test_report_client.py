@@ -1569,13 +1569,17 @@ class SchedulerReportClientTests(test.TestCase):
         # So we expect that it is signalled with an exception so that the
         # upper layer can re-drive the reshape process with a fresh tree that
         # now has the inventories
-        self.assertRaises(
+        ex = self.assertRaises(
             exception.PlacementReshapeConflict,
             self.client.update_from_provider_tree,
             self.context,
             ptree,
             allocations=allocs,
         )
+        ex_msg = str(ex)
+        self.assertNotIn('$', ex_msg)
+        self.assertIn("A conflict was encountered attempting to reshape "
+                      "a provider tree", ex_msg)
         # also we except that the internal caches is cleared so that the
         # re-drive will have a chance to load fresh data from placement
         self.assertEqual(0, len(self.client._provider_tree.roots))
