@@ -892,48 +892,26 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
         )
 
         self.stdlog.delete_stored_logs()
-        # Delete the server as the warning suggests
-        self._delete_server(server)
+        # Delete the server as the warning suggests. Unfortunately the deletion
+        # fails. This is bug https://bugs.launchpad.net/nova/+bug/2115905
+        ex = self.assertRaises(
+            client.OpenStackApiException, self._delete_server, server)
+        self.assertIn("Unexpected API Error. Please report this", str(ex))
 
-        # The deletion triggers a warning suggesting we have a bug. Indeed,
-        # this is part of https://bugs.launchpad.net/nova/+bug/2115905
-        self.assertIn(
-            "WARNING [nova.compute.pci_placement_translator] "
-            "Device spec is not found for device 0000:81:00.0 in "
-            "[pci]device_spec. Ignoring device in Placement resource view. "
-            "This should not happen. Please file a bug",
-            self.stdlog.logger.output
-        )
+        # The sever delete fails as nova tries to delete the RP while it still
+        # has allocations.
+        self.assertRegex(
+            self.stdlog.logger.output,
+            "ERROR .nova.scheduler.client.report..*Failed to delete "
+            "resource provider with UUID.*from the placement API. "
+            "Got 409.*Unable to delete resource provider.*Resource "
+            "provider has allocations.")
 
-        # The allocation successfully removed
-        compute1_expected_placement_view["usages"] = {
-            "0000:81:00.0": {
-                self.PF_RC: 0,
-            }
-        }
-        compute1_expected_placement_view["allocations"].pop(server["id"])
-        # However the RP and the inventory are not removed from Placement
-        # due to pci tracker caching. The PciDevice remains in the DB until
-        # the next nova-compute restart and therefore the RP remains in
-        # Placement until too. This is a potential bug that keeps a device
-        # that seems to be available, but it should not as the device is not
-        # in the device spec anymore.
-        self.assert_placement_pci_view(
-            "compute1", **compute1_expected_placement_view)
+        # The instance is put into ERROR state.
+        server = self.api.get_server(server['id'])
+        self.assertEqual(server['status'], 'ERROR')
 
-        self.stdlog.delete_stored_logs()
-        self.restart_compute_service(hostname="compute1")
-        self._run_periodics()
-
-        # The next compute restart not trigger PCI warning
-        self.assertNotIn(
-            "WARNING [nova.compute.pci_placement_translator]",
-            self.stdlog.logger.output)
-
-        # And the device is now removed from Placement
-        compute1_expected_placement_view["inventories"].pop("0000:81:00.0")
-        compute1_expected_placement_view["traits"].pop("0000:81:00.0")
-        compute1_expected_placement_view["usages"].pop("0000:81:00.0")
+        # And the allocation is not removed.
         self.assert_placement_pci_view(
             "compute1", **compute1_expected_placement_view)
 
@@ -1022,49 +1000,26 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
             self.stdlog.logger.output,
         )
 
-        self.stdlog.delete_stored_logs()
-        # Delete the server as the warning suggests
-        self._delete_server(server)
+        # Delete the server as the warning suggests. Unfortunately the deletion
+        # fails. This is bug https://bugs.launchpad.net/nova/+bug/2115905
+        ex = self.assertRaises(
+            client.OpenStackApiException, self._delete_server, server)
+        self.assertIn("Unexpected API Error. Please report this", str(ex))
 
-        # The deletion triggers a warning suggesting we have a bug. Indeed,
-        # this is part of https://bugs.launchpad.net/nova/+bug/2115905
-        self.assertIn(
-            "WARNING [nova.compute.pci_placement_translator] "
-            "Device spec is not found for device 0000:81:00.1 in "
-            "[pci]device_spec. Ignoring device in Placement resource view. "
-            "This should not happen. Please file a bug",
-            self.stdlog.logger.output
-        )
+        # The sever delete fails as nova tries to delete the RP while it still
+        # has allocations.
+        self.assertRegex(
+            self.stdlog.logger.output,
+            "ERROR .nova.scheduler.client.report..*Failed to delete "
+            "resource provider with UUID.*from the placement API. "
+            "Got 409.*Unable to delete resource provider.*Resource "
+            "provider has allocations.")
 
-        # The allocation successfully removed
-        compute1_expected_placement_view["usages"] = {
-            "0000:81:00.0": {
-                self.VF_RC: 0,
-            }
-        }
-        compute1_expected_placement_view["allocations"].pop(server["id"])
-        # However the RP and the inventory are not removed from Placement
-        # due to pci tracker caching. The PciDevice remains in the DB until
-        # the next nova-compute restart and therefore the RP remains in
-        # Placement until too. This is a potential bug that keeps a device
-        # that seems to be available, but it should not as the device is not
-        # in the device spec anymore.
-        self.assert_placement_pci_view(
-            "compute1", **compute1_expected_placement_view)
+        # The instance is put into ERROR state.
+        server = self.api.get_server(server['id'])
+        self.assertEqual(server['status'], 'ERROR')
 
-        self.stdlog.delete_stored_logs()
-        self.restart_compute_service(hostname="compute1")
-        self._run_periodics()
-
-        # The next compute restart not trigger PCI warning
-        self.assertNotIn(
-            "WARNING [nova.compute.pci_placement_translator]",
-            self.stdlog.logger.output)
-
-        # And the device is now removed from Placement
-        compute1_expected_placement_view["inventories"].pop("0000:81:00.0")
-        compute1_expected_placement_view["traits"].pop("0000:81:00.0")
-        compute1_expected_placement_view["usages"].pop("0000:81:00.0")
+        # And the allocation is not removed.
         self.assert_placement_pci_view(
             "compute1", **compute1_expected_placement_view)
 
@@ -1113,16 +1068,7 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
             client.OpenStackApiException, self._delete_server, server)
         self.assertIn("Unexpected API Error. Please report this", str(ex))
 
-        # The deletion triggers a warning as well suggesting we have a bug.
-        self.assertIn(
-            "WARNING [nova.compute.pci_placement_translator] "
-            "Device spec is not found for device 0000:81:00.2 in "
-            "[pci]device_spec. Ignoring device in Placement resource view. "
-            "This should not happen. Please file a bug",
-            self.stdlog.logger.output
-        )
-
-        # and the same RP deletion error as before.
+        # We have the same RP deletion error as before.
         self.assertRegex(
             self.stdlog.logger.output,
             "ERROR .nova.scheduler.client.report..*Failed to delete "
