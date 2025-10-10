@@ -2736,7 +2736,8 @@ class ComputeManager(manager.Manager):
                 exception.VirtualInterfaceMacAddressException,
                 exception.FixedIpInvalidOnHost,
                 exception.UnableToAutoAllocateNetwork,
-                exception.NetworksWithQoSPolicyNotSupported) as e:
+                exception.NetworksWithQoSPolicyNotSupported,
+                exception.VTPMSecretForbidden) as e:
             LOG.exception('Failed to allocate network(s)',
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
@@ -3515,6 +3516,7 @@ class ComputeManager(manager.Manager):
     # NOTE(johannes): This is probably better named power_on_instance
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
+    @messaging.expected_exceptions(exception.VTPMSecretForbidden)
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -4384,6 +4386,7 @@ class ComputeManager(manager.Manager):
 
         return share_info
 
+    @messaging.expected_exceptions(exception.VTPMSecretForbidden)
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')

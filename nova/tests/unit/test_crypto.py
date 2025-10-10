@@ -314,6 +314,56 @@ class VTPMTest(test.NoDBTestCase):
             self.ctxt, uuids.vtpm,
         )
 
+    @mock.patch.object(crypto, '_get_key_manager')
+    def test_ensure_vtpm_secret_create_forbidden(self, mock_get_manager):
+        """Check when we fail access to create a secret via castellan.
+
+        We should bubble up the error.
+        """
+        instance = objects.Instance(uuid=uuids.instance)
+        instance.system_metadata = {}
+        mock_get_manager.return_value.store.side_effect = (
+            castellan_exception.KeyManagerError(
+                'Forbidden: Secret payload retrieval attempt not allowed'))
+
+        self.assertRaises(
+            exception.VTPMSecretForbidden,
+            crypto.ensure_vtpm_secret,
+            self.ctxt, instance)
+
+    @mock.patch.object(crypto, '_get_key_manager')
+    def test_ensure_vtpm_secret_get_forbidden(self, mock_get_manager):
+        """Check when we fail access to retrieve a secret via castellan.
+
+        We should bubble up the error.
+        """
+        instance = objects.Instance()
+        instance.system_metadata = {'vtpm_secret_uuid': uuids.vtpm}
+        mock_get_manager.return_value.get.side_effect = (
+            castellan_exception.KeyManagerError(
+                'Forbidden: Secret payload retrieval attempt not allowed'))
+
+        self.assertRaises(
+            exception.VTPMSecretForbidden,
+            crypto.ensure_vtpm_secret,
+            self.ctxt, instance)
+
+    @mock.patch.object(crypto, '_get_key_manager')
+    def test_ensure_vtpm_secret_other_keymanager_error(self, mock_get_manager):
+        """Check when we fail for any other key manager error via castellan.
+
+        We should bubble up the error.
+        """
+        instance = objects.Instance()
+        instance.system_metadata = {'vtpm_secret_uuid': uuids.vtpm}
+        mock_get_manager.return_value.get.side_effect = (
+            castellan_exception.KeyManagerError('Something else'))
+
+        self.assertRaises(
+            castellan_exception.KeyManagerError,
+            crypto.ensure_vtpm_secret,
+            self.ctxt, instance)
+
 
 class EncryptionSecretTest(test.NoDBTestCase):
 

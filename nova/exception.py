@@ -2666,3 +2666,7 @@ class HostConflict(Exception):
 class InstanceEventTimeout(Exception):
     """A custom timeout exception to replace eventlet.timeout.Timeout."""
     pass
+
+
+class VTPMSecretForbidden(Forbidden):
+    pass
