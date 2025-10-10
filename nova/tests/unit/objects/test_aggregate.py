@@ -175,6 +175,30 @@ class _TestAggregateObject(object):
                                                       123,
                                                       {'toadd': 'myval'})
 
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
+    def test_update_metadata_api_case_sensitive(self, mock_notify):
+        # Mock context.session.query().filter_by().filter().all()
+        fake_context = mock.Mock()
+        mock_query = mock.Mock()
+        fake_context.session.query.return_value = mock_query
+        mock_query = mock_query.filter_by.return_value.filter.return_value
+
+        # Return a fake meta_ref that raises a KeyError
+        fake_meta_ref = mock.Mock()
+        fake_meta_ref.update.side_effect = KeyError
+        mock_query.all.return_value = [fake_meta_ref]
+
+        # Create an aggregate in the database
+        agg = aggregate.Aggregate(
+            context=self.context, name='agg', metadata={'Abc': 'bar'})
+        agg.create()
+
+        # Then replace its context with mock context
+        agg._context = fake_context
+        self.assertRaises(exception.AggregateMetadataKeyExists,
+                          agg.update_metadata,
+                          {'abC': 'barbar'})
+
     @mock.patch('nova.objects.aggregate._host_add_to_db')
     def test_add_host_api(self, mock_host_add_api):
         mock_host_add_api.return_value = {'host': 'bar'}
