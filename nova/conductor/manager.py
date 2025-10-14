@@ -15,6 +15,7 @@
 """Handles database requests from other nova services."""
 
 import collections
+import concurrent.futures
 import contextlib
 import copy
 import functools
@@ -2071,8 +2072,8 @@ class ComputeTaskManager:
             fields.NotificationPhase.START)
 
         clock = timeutils.StopWatch()
-        threads = CONF.image_cache.precache_concurrency
-        fetch_executor = utils.create_executor(threads)
+        cache_image_executor = utils.get_cache_images_executor()
+        futures = []
 
         hosts_by_cell = {}
         cells_by_uuid = {}
@@ -2143,11 +2144,12 @@ class ComputeTaskManager:
                             {'host': host})
                         skipped_host(target_ctxt, host, image_ids)
                         continue
-                    utils.spawn_on(fetch_executor, wrap_cache_images,
-                                   target_ctxt, host, image_ids)
-
+                    future = utils.spawn_on(cache_image_executor,
+                                    wrap_cache_images,
+                                    target_ctxt, host, image_ids)
+                    futures.append(future)
         # Wait until all those things finish
-        fetch_executor.shutdown(wait=True)
+        concurrent.futures.wait(futures)
 
         overall_stats = {'cached': 0, 'existing': 0, 'error': 0,
                          'unsupported': 0}
