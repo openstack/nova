@@ -17,6 +17,7 @@ from unittest import mock
 
 from castellan.common.objects import passphrase
 from castellan.key_manager import key_manager
+import fixtures
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 
@@ -239,6 +240,51 @@ class VTPMServersTest(base.ServersTestBase):
         # is still correct
         self.assertInstanceHasSecret(server)
 
+    def _test_resize_revert_server__vtpm_to_vtpm(self, extra_specs=None):
+        """Test behavior of revert when a vTPM is retained across a resize.
+
+        Other tests cover going from no vTPM => vTPM and vice versa.
+        """
+        for host in ('test_compute0', 'test_compute1'):
+            self.start_compute(host)
+
+        server = self._create_server_with_vtpm()
+
+        # Create a different flavor with a vTPM.
+        extra_specs = extra_specs or {
+            'hw:tpm_model': 'tpm-tis', 'hw:tpm_version': '1.2'}
+        flavor_id = self._create_flavor(extra_spec=extra_specs)
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._resize_server(server, flavor_id=flavor_id)
+
+        # ensure our instance's system_metadata field and key manager inventory
+        # is updated to reflect the new vTPM requirement
+        self.assertInstanceHasSecret(server)
+
+        # revert the instance rather than confirming it, and ensure the secret
+        # is correctly cleaned up
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._revert_resize(server)
+
+        # Should still have a secret because we had a vTPM before too.
+        self.assertInstanceHasSecret(server)
+
+    def test_resize_revert_server__vtpm_to_vtpm_same_config(self):
+        self._test_resize_revert_server__vtpm_to_vtpm()
+
+    def test_resize_revert_server__vtpm_to_vtpm_different_config(self):
+        extra_specs = {'hw:tpm_model': 'tpm-tis', 'hw:tpm_version': '2.0'}
+        self._test_resize_revert_server__vtpm_to_vtpm(
+            extra_specs=extra_specs)
+
     def test_resize_server__no_vtpm_to_vtpm(self):
         for host in ('test_compute0', 'test_compute1'):
             self.start_compute(host)
@@ -379,3 +425,30 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertRaises(
             client.OpenStackApiException,
             self._shelve_server, server)
+
+
+class VTPMServersTestNonShared(VTPMServersTest):
+
+    def setUp(self):
+        super().setUp()
+        self.useFixture(fixtures.MockPatch(
+            'nova.compute.manager.ComputeManager._is_instance_storage_shared',
+            return_value=False))
+
+    # FIXME: Remove this entire method when
+    # https://bugs.launchpad.net/nova/+bug/2125030 is fixed.
+    def test_resize_revert_server__vtpm_to_vtpm_same_config(self):
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._test_resize_revert_server__vtpm_to_vtpm)
+        self.assertEqual(500, ex.response.status_code)
+
+    # FIXME: Remove this entire method when
+    # https://bugs.launchpad.net/nova/+bug/2125030 is fixed.
+    def test_resize_revert_server__vtpm_to_vtpm_different_config(self):
+        extra_specs = {'hw:tpm_model': 'tpm-tis', 'hw:tpm_version': '2.0'}
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._test_resize_revert_server__vtpm_to_vtpm,
+            extra_specs=extra_specs)
+        self.assertEqual(500, ex.response.status_code)
