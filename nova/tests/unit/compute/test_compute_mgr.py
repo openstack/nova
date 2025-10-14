@@ -1752,6 +1752,40 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               self.compute._get_power_state,
                               instance)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    @mock.patch('nova.crypto.delete_vtpm_secret')
+    @ddt.data(0, 3600)
+    def test__complete_deletion(
+            self, reclaim_instance_interval, mock_delete_vtpm,
+            mock_delete_alloc):
+        self.flags(reclaim_instance_interval=reclaim_instance_interval)
+        instance = objects.Instance(uuid=uuids.instance)
+
+        with mock.patch.multiple(
+                self.compute,
+                _update_resource_tracker=mock.DEFAULT,
+                _clean_instance_console_tokens=mock.DEFAULT,
+                _delete_scheduler_instance_info=mock.DEFAULT) as mocks:
+            self.compute._complete_deletion(self.context, instance)
+
+        mocks['_update_resource_tracker'].assert_called_once_with(
+            self.context, instance)
+        mocks['_clean_instance_console_tokens'].assert_called_once_with(
+            self.context, instance)
+        mocks['_delete_scheduler_instance_info'].assert_called_once_with(
+            self.context, instance.uuid)
+        mock_delete_vtpm.assert_called_once_with(self.context, instance)
+        # _complete_deletion() is only called at actual delete time (either
+        # regular delete or when reaping after soft delete). The force argument
+        # differs based on actual or reap delete for other reasons.
+        if reclaim_instance_interval > 0:
+            mock_delete_alloc.assert_called_once_with(
+                self.context, instance.uuid, force=False)
+        else:
+            mock_delete_alloc.assert_called_once_with(
+                self.context, instance.uuid, force=True)
+
     @mock.patch.object(manager.ComputeManager, '_mount_all_shares')
     @mock.patch.object(manager.ComputeManager, '_get_share_info')
     @mock.patch.object(manager.ComputeManager, '_get_power_state')
@@ -1792,6 +1826,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_share_info.assert_called_once_with(mock.ANY, instance)
         mock_mount.assert_called_once_with(mock.ANY, instance, share_info)
 
+    @mock.patch('nova.crypto.delete_vtpm_secret')
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'destroy')
@@ -1800,7 +1835,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     def test_init_instance_complete_partial_deletion(
             self, mock_ids_from_instance,
             mock_inst_destroy, mock_obj_load_attr, mock_get_by_instance_uuid,
-            mock_bdm_destroy):
+            mock_bdm_destroy, mock_delete_vtpm):
         """Test to complete deletion for instances in DELETED status but not
         marked as deleted in the DB
         """
@@ -1833,15 +1868,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                instance.user_id)
         mock_inst_destroy.side_effect = fake_inst_destroy()
 
-        with mock.patch(
-            "nova.compute.manager.ComputeManager._get_share_info",
-            return_value=objects.ShareMappingList(),
+        with mock.patch.multiple(
+            self.compute,
+            _get_share_info=mock.Mock(return_value=objects.ShareMappingList()),
+            _clean_instance_console_tokens=mock.DEFAULT,
         ):
             self.compute._init_instance(self.context, instance)
 
         # Make sure that instance.destroy method was called and
         # instance was deleted from db.
         self.assertNotEqual(0, instance.deleted)
+
+        mock_delete_vtpm.assert_called_once_with(self.context, instance)
 
     @mock.patch('nova.compute.manager.LOG')
     def test_init_instance_complete_partial_deletion_raises_exception(
