@@ -83,14 +83,12 @@ class TestImagePropsWeigher(integrated_helpers._IntegratedTestBase):
             networks='none',
             )
 
-        # The weigher is called but it says that there are no existing
-        # instances on both the hosts with the same image props, while we are
-        # sure that the values should be 1.0 for both hosts.
-        # FIXME(sbauza): That's due to bug/2125935
+        # now the weigher sees that host1 has an instance with the same image
+        # props
         mock_debug.assert_any_call(
             "%s: raw weights %s",
             "ImagePropertiesWeigher",
-            {('host2', 'host2'): 0.0, ('host1', 'host1'): 0.0})
+            {('host2', 'host2'): 1.0, ('host1', 'host1'): 1.0})
         mock_debug.reset_mock()
         # server3 is now on the same host than host1 as the weigh multiplier
         # makes the scheduler to pack instances sharing the same image props.
@@ -100,13 +98,10 @@ class TestImagePropsWeigher(integrated_helpers._IntegratedTestBase):
             name='inst4',
             networks='none',
             )
-        # FIXME(sbauza): Same issue. The values should be 2.0 for host1 and 1.0
-        # for host2. That said, due to the fact the HostState is refreshed
-        # already for the previous schedule, the system metadata is existing
-        # for this instance so that's why the weight is 1.0 for host1.
+        # eventually, the weigher sees the two existing instances on host1
         mock_debug.assert_any_call(
             "%s: raw weights %s",
             "ImagePropertiesWeigher",
-            {('host2', 'host2'): 0.0, ('host1', 'host1'): 1.0})
+            {('host2', 'host2'): 1.0, ('host1', 'host1'): 2.0})
         # server4 is now packed with server1 and server3.
         self.assertEqual('host1', server4['OS-EXT-SRV-ATTR:host'])
