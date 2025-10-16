@@ -5399,6 +5399,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.compute.check_can_live_migrate_destination,
                 self.context, instance, None, None, None, None)
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
+        side_effect=exception.InstanceGroupNotFound(group_uuid='')))
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    def test_check_can_live_migrate_destination_precheck_exception(
+            self, mock_fail_db):
+        @mock.patch.object(self.compute, '_get_compute_info')
+        def _do_test(mock_get):
+            instance = fake_instance.fake_instance_obj(
+                self.context, host=self.compute.host,
+                vm_state=vm_states.ACTIVE, node='fake-node')
+
+            with mock.patch.object(self.compute.compute_rpcapi,
+                                   'check_can_live_migrate_source',
+                                   side_effect=messaging.MessagingTimeout):
+                self.assertRaises(
+                    messaging.MessagingTimeout,
+                    self.compute.check_can_live_migrate_destination,
+                    self.context, instance, None, None, None, None)
+        _do_test()
+
     def test_dest_can_numa_live_migrate(self):
         positive_dest_check_data = objects.LibvirtLiveMigrateData(
             dst_supports_numa_live_migration=True)
