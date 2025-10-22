@@ -64,13 +64,26 @@ Possible Values:
 
   This defines an alias for the Intel QuickAssist card. (multi valued).
 
-  Another example::
+  Another example which matches a single device but by its placement resource
+  class is::
 
     alias = {
       "name": "A16_16A",
       "device_type": "type-VF",
       "resource_class": "GPU_VF",
       "traits": "blue, big"
+    }
+
+  Yet another scenario where multiple devices with different ``vendor_id`` and
+  ``product_id`` values but which are functionally the same can be achieved
+  using a custom resource class in the ``device_spec`` which we request here.
+  A list of traits may be used for further refinement::
+
+    alias = {
+      "name": "NVME256G",
+      "device_type": "type-PCI",
+      "resource_class": "CUSTOM_NVME256G",
+      "traits": "nvme-with-crypto-erase",
     }
 
   Valid key values are :
@@ -123,7 +136,9 @@ Possible Values:
     ``traits`` requested in the alias ensured to be in the list of traits
     provided in the ``traits`` field of the ``[pci]device_spec`` when
     scheduling the request. This field can only be used only if
-    ``[filter_scheduler]pci_in_placement`` is enabled.
+    ``[filter_scheduler]pci_in_placement`` is enabled. **NOTE**: An alias must
+    include either a ``vendor_id``/``product_id`` pair or a ``resource_class``.
+    An alias with only ``traits`` is not allowed.
 
   ``live_migratable``
     Specify if live-migratable devices are desired.
