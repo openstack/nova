@@ -34,7 +34,8 @@ class LibvirtNFSVolumeDriver(fs.LibvirtMountedFileSystemVolumeDriver):
         conf.source_type = 'file'
         conf.source_path = connection_info['data']['device_path']
         conf.driver_format = connection_info['data'].get('format', 'raw')
-        conf.driver_io = "native"
+        if not CONF.libvirt.use_default_aio_mode_for_volumes:
+            conf.driver_io = "native"
         return conf
 
     def _mount_options(self, connection_info):

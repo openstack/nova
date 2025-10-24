@@ -65,6 +65,22 @@ class LibvirtFibreChannelVolumeDriverTestCase(
         self.assertEqual('raw', tree.find('./driver').get('type'))
         self.assertEqual('native', tree.find('./driver').get('io'))
 
+    def test_libvirt_fibrechan_driver_get_config_default_aio_mode(self):
+        self.flags(use_default_aio_mode_for_volumes=True, group='libvirt')
+
+        libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
+                                                                self.fake_host)
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+
+        self.assertEqual('block', tree.get('type'))
+        self.assertEqual(device_path, tree.find('./source').get('dev'))
+        self.assertEqual('raw', tree.find('./driver').get('type'))
+        self.assertIsNone(tree.find('./driver').get('io'))
+
     def test_extend_volume(self):
         device_path = '/dev/fake-dev'
         connection_info = {'data': {'device_path': device_path}}

@@ -77,6 +77,24 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual('raw', tree.find('./driver').get('type'))
         self.assertEqual('native', tree.find('./driver').get('io'))
 
+    def test_libvirt_nfs_driver_get_config_default_aio_mode(self):
+        self.flags(use_default_aio_mode_for_volumes=True, group='libvirt')
+
+        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
+        export_string = '192.168.1.1:/nfs/share1'
+        export_mnt_base = os.path.join(self.mnt_base,
+                                       utils.get_hash_str(export_string))
+        file_path = os.path.join(export_mnt_base, self.name)
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name,
+                                    'device_path': file_path}}
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self._assertFileTypeEquals(tree, file_path)
+        self.assertEqual('raw', tree.find('./driver').get('type'))
+        self.assertIsNone(tree.find('./driver').get('io'))
+
     def test_libvirt_nfs_driver_with_opts(self):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/nfs/share1'
