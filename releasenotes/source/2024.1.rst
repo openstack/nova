@@ -3,4 +3,4 @@
 ===========================
 
 .. release-notes::
-   :branch: stable/2024.1
+   :branch: unmaintained/2024.1
