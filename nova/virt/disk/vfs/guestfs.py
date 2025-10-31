@@ -14,13 +14,13 @@
 
 import os
 
-from eventlet import tpool
 from oslo_log import log as logging
 from oslo_utils import importutils
 
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova import utils
 from nova.virt.disk.vfs import api as vfs
 from nova.virt.image import model as imgmodel
 
@@ -82,7 +82,7 @@ class VFSGuestFS(vfs.VFS):
                 LOG.debug('Inspecting guestfs capabilities non-threaded.')
                 g = guestfs.GuestFS()
             else:
-                g = tpool.Proxy(guestfs.GuestFS())
+                g = utils.tpool_wrap(guestfs.GuestFS())
             g.add_drive("/dev/null")  # sic
             g.launch()
         except Exception as e:
@@ -181,7 +181,7 @@ class VFSGuestFS(vfs.VFS):
         LOG.debug("Setting up appliance for %(image)s",
                   {'image': self.image})
         try:
-            self.handle = tpool.Proxy(
+            self.handle = utils.tpool_wrap(
                 guestfs.GuestFS(python_return_dict=False,
                                 close_on_exit=False))
         except TypeError as e:
@@ -189,7 +189,7 @@ class VFSGuestFS(vfs.VFS):
                 # NOTE(russellb) In case we're not using a version of
                 # libguestfs new enough to support parameters close_on_exit
                 # and python_return_dict which were added in libguestfs 1.20.
-                self.handle = tpool.Proxy(guestfs.GuestFS())
+                self.handle = utils.tpool_wrap(guestfs.GuestFS())
             else:
                 raise
 

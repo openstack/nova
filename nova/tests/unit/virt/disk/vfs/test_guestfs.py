@@ -334,7 +334,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
     @mock.patch('os.access')
     @mock.patch('os.uname', return_value=os_uname(
         'Linux', '', 'kernel_name', '', ''))
-    def test_appliance_setup_inspect_capabilties_fail_with_ubuntu(
+    def test_appliance_setup_inspect_capabilities_fail_with_ubuntu(
         self, mock_uname, mock_access,
     ):
         # In ubuntu os will default host kernel as 600 permission
@@ -343,7 +343,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         mock_access.return_value = False
         self.flags(debug=False, group='guestfs')
-        with mock.patch('eventlet.tpool.Proxy', return_value=m) as tpool_mock:
+        with mock.patch('nova.utils.tpool_wrap', return_value=m) as target:
             self.assertRaises(exception.LibguestfsCannotReadKernel,
                                     vfs.inspect_capabilities)
             m.add_drive.assert_called_once_with('/dev/null')
@@ -351,7 +351,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
             mock_access.assert_called_once_with('/boot/vmlinuz-kernel_name',
                                                 mock.ANY)
             mock_uname.assert_called_once_with()
-            self.assertEqual(1, tpool_mock.call_count)
+            self.assertEqual(1, target.call_count)
 
     def test_appliance_setup_inspect_capabilties_debug_mode(self):
         """Asserts that we do not use an eventlet thread pool when guestfs
