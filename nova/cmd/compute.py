@@ -61,5 +61,6 @@ def main():
     objects.Service.enable_min_version_cache()
     server = service.Service.create(binary='nova-compute',
                                     topic=compute_rpcapi.RPC_TOPIC)
-    service.serve(server)
+    # Compute service should never fork worker processes
+    service.serve(server, workers=1, no_fork=True)
     service.wait()
