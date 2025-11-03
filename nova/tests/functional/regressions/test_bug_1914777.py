@@ -51,7 +51,14 @@ class TestDeleteWhileBooting(test.TestCase,
             api_version='v2.1'))
         self.api = api_fixture.api
 
-        self.ctxt = nova_context.get_context()
+        # context needs to have the correct project and user ids for the
+        # instance lookup. Otherwise authorization will fail during the
+        # delete request processing because Instance.get_by_uuid will
+        # return this context also during the delete request(due to the mock)
+        self.ctxt = nova_context.RequestContext(
+            project_id=self.api.project_id,
+            user_id=self.api.auth_user
+        )
 
         # We intentionally do not start a conductor or scheduler service, since
         # our goal is to simulate an instance that has not been scheduled yet.
