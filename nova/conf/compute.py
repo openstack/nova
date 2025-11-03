@@ -694,7 +694,12 @@ that doing so is safe and stable in your environment.
 
 Possible values:
 
-* 0 : treated as unlimited.
+* ``0``: Deprecated since 33.0.0 (2026.1 Gazpacho). This value was previously
+  documented as meaning unlimited but the actual implementation used maximum
+  1000 greenthreads. Since this release, the implementation keep using 1000
+  greenthreads in eventlet mode and will use 5 native threads in threading
+  mode. In the future release when eventlet support is removed, 0 as a valid
+  value will also be removed.
 * Any positive integer representing maximum number of live migrations
   to run concurrently.
 """),
@@ -732,9 +737,9 @@ Related options:
   checks
 """),
     cfg.IntOpt('sync_power_state_pool_size',
-        default=1000,
+        default=5,
         help="""
-Number of greenthreads available for use to sync power states.
+Number of threads available for use to sync instance power states.
 
 This option can be used to reduce the number of concurrent requests
 made to the hypervisor or system with real instance power states
@@ -742,8 +747,8 @@ for performance reasons, for example, with Ironic.
 
 Possible values:
 
-* Any positive integer representing greenthreads count.
-""")
+* Any positive integer representing threads count.
+"""),
 ]
 
 compute_group_opts = [

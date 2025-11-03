@@ -18,6 +18,8 @@
 """Tests for compute service."""
 
 import datetime
+import threading
+
 import fixtures as std_fixtures
 from itertools import chain
 import operator
@@ -1661,7 +1663,14 @@ class ComputeTestCase(BaseTestCase,
     def setUp(self):
         super(ComputeTestCase, self).setUp()
         self.compute._live_migration_executor = futurist.SynchronousExecutor()
+        # NOTE(gibi): the _sync_power_states periodic task in the
+        # ComputeManager spawning concurrent tasks and uses a lock to
+        # synchronize a shared data structure. As the spawn is made
+        # synchronous meaning the tasks runs on the caller thread. This means
+        # the simple lock causes a deadlock in the unit test. Upgrade that lock
+        # to be reentrant so the test can pass with synchronous spawn.
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        self.compute._syncs_in_progress_lock = threading.RLock()
 
         self.image_api = image_api.API()
         self.default_flavor = objects.Flavor.get_by_name(self.context,

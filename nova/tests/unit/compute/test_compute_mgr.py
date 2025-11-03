@@ -72,6 +72,7 @@ from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_instance_numa
+from nova import utils
 from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
 from nova.virt import driver as virt_driver
 from nova.virt import event as virtevent
@@ -4287,6 +4288,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                           db_instance,
                                                           power_state.NOSTATE,
                                                           use_slave=True)
+
+    def test_syncs_in_progress(self):
+        self.assertFalse(self.compute._syncs_in_progress_lock.locked())
+        self.compute._syncs_in_progress.add("fake-uuid")
+
+        with self.compute.syncs_in_progress() as syncs:
+            self.assertTrue(self.compute._syncs_in_progress_lock.locked())
+            self.assertEqual({"fake-uuid"}, syncs)
+            syncs.remove("fake-uuid")
+
+        self.assertFalse(self.compute._syncs_in_progress_lock.locked())
+        self.assertEqual(set(), self.compute._syncs_in_progress)
 
     def test_cleanup_running_deleted_instances_virt_driver_not_ready(self):
         """Tests the scenario that the driver raises VirtDriverNotReady
@@ -11743,7 +11756,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     def test_max_concurrent_live_semaphore_unlimited(self):
         self.flags(max_concurrent_live_migrations=0)
         mgr = manager.ComputeManager()
-        self.assertEqual(1000, mgr._live_migration_executor._max_workers)
+        if utils.concurrency_mode_threading():
+            self.assertEqual(5, mgr._live_migration_executor._max_workers)
+        else:
+            self.assertEqual(1000, mgr._live_migration_executor._max_workers)
 
     @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
