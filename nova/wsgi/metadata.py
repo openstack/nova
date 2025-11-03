@@ -11,6 +11,9 @@
 # under the License.
 
 """WSGI application entry-point for Nova Metadata API."""
+# autopep8: off
+from nova import monkey_patch ; monkey_patch.patch()  # noqa
+# autopep8: on
 
 import threading
 

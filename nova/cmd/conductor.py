@@ -13,6 +13,9 @@
 #    under the License.
 
 """Starter script for Nova Conductor."""
+# autopep8: off
+from nova import monkey_patch; monkey_patch.patch()  # noqa
+# autopep8: on
 
 import sys
 
