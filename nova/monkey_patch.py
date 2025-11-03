@@ -72,10 +72,29 @@ def _monkey_patch():
     return True
 
 
-def patch():
-    if (os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', '').lower()
-        not in ('1', 'true', 'yes')):
+def patch(backend='eventlet'):
+    """Apply eventlet monkey patching according to environment.
 
+    :param backend: Defines the default backend if not explicitly set via
+        the environment. If 'eventlet', then monkey patch if environment
+        variable is not defined. If 'threading', then do not monkey patch if
+        environment variable is not defined. Any other value results in a
+        ValueError. If the environment variable is defined this parameter
+        is ignored.
+    """
+    if backend not in ('eventlet', 'threading'):
+        raise ValueError(
+            "the backend can only be 'eventlet' or 'threading'")
+
+    env = os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', '').lower()
+    if env == '':
+        should_patch = (backend == 'eventlet')
+    elif env in ('1', 'true', 'yes'):
+        should_patch = False
+    else:
+        should_patch = True
+
+    if should_patch:
         if _monkey_patch():
             global MONKEY_PATCHED
             MONKEY_PATCHED = True

@@ -12,7 +12,7 @@
 
 """WSGI application entry-point for Nova Metadata API."""
 # autopep8: off
-from nova import monkey_patch ; monkey_patch.patch()  # noqa
+from nova import monkey_patch; monkey_patch.patch(backend='threading')  # noqa
 # autopep8: on
 
 import threading

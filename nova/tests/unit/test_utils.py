@@ -1691,3 +1691,17 @@ class OsloServiceBackendSelectionTestCase(test.NoDBTestCase):
             "OS_NOVA_DISABLE_EVENTLET_PATCHING set to 'true', but then the "
             "service tried to call eventlet.monkey_patch(). This is a bug.",
             str(ex))
+
+    @mock.patch('oslo_service.backend.init_backend')
+    def test_threading_selected_by_default(self, init_backend):
+        with mock.patch.dict(os.environ):
+            del os.environ["OS_NOVA_DISABLE_EVENTLET_PATCHING"]
+            monkey_patch.patch(backend='threading')
+
+        init_backend.assert_called_once_with(
+            oslo_backend.BackendType.THREADING)
+
+    def test_invalid_default_backend(self):
+        ex = self.assertRaises(ValueError, monkey_patch.patch, backend='foo')
+        self.assertEqual(
+            "the backend can only be 'eventlet' or 'threading'", str(ex))

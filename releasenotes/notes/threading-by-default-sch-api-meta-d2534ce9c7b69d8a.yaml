@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The default concurrency mode is now switched from eventlet to native
+    threading for nova-scheduler, nova-api, and nova-metadata services.
+    The concurrency mode can still be switched back to eventlet if needed.
+    Please read the
+    `concurrency <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__
+    guide for more details.
