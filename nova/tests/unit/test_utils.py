@@ -1559,6 +1559,18 @@ class SpawnOnTestCase(test.NoDBTestCase):
             'test_spawn_on_warns_on_full_executor.cell_worker', task)
 
 
+class SpawnAfterTestCase(test.NoDBTestCase):
+    @mock.patch.object(time, "sleep")
+    def test_spawn_after_submits_work_after_delay(self, mock_sleep):
+        task = mock.MagicMock()
+
+        future = utils.spawn_after(0.1, task, 13, foo='bar')
+        future.result()
+
+        task.assert_called_once_with(13, foo='bar')
+        mock_sleep.assert_called_once_with(0.1)
+
+
 class ExecutorStatsTestCase(test.NoDBTestCase):
 
     def setUp(self):
