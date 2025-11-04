@@ -171,7 +171,7 @@ def _create_x509_openssl_config(conffile: str, upn: str):
 def ensure_vtpm_secret(
     context: nova_context.RequestContext,
     instance: 'objects.Instance',
-) -> ty.Tuple[str, str]:
+) -> ty.Tuple[str, bytes]:
     """Communicates with the key manager service to retrieve or create a secret
     for an instance's emulated TPM.
 
