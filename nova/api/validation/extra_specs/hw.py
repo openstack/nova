@@ -506,6 +506,23 @@ feature_flag_validators = [
         },
     ),
     base.ExtraSpecValidator(
+        name='hw:tpm_secret_security',
+        description=(
+            "The TPM secret security. "
+            "Only supported by the libvirt virt driver."
+        ),
+        value={
+            'type': str,
+            'description': 'The TPM secret security policy to apply. '
+                           'See the TPM documentation for more details',
+            'enum': [
+                'user',
+                'host',
+                'deployment',
+            ],
+        },
+    ),
+    base.ExtraSpecValidator(
         name='hw:watchdog_action',
         description=(
             'The action to take when the watchdog timer is kicked. '
