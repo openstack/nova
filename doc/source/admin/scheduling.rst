@@ -1373,7 +1373,7 @@ via the ``nova.api.extra_spec_validator`` `entrypoint`__.
 
 The module containing your custom filter(s) must be packaged and available in
 the same environment(s) that the nova controllers, or specifically the
-:program:`nova-scheduler` and :program:`nova-api-wsgi` services, are available in.
+:program:`nova-scheduler` and Compute API services, are available in.
 As an example, consider the following sample package, which is the `minimal
 structure`__ for a standard, setuptools-based Python package:
 

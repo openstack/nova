@@ -16,24 +16,22 @@ users; quotas are limited per project (the number of instances, for example).
 OpenStack Compute can scale horizontally on standard hardware, and download
 images to launch instances.
 
-OpenStack Compute consists of the following areas and their components:
+OpenStack Compute consists of two :doc:`WSGI </admin/wsgi>` APIs and a number
+of services:
 
-``nova-api-wsgi`` service
+Compute API
   Accepts and responds to end user compute API calls. The service supports the
   OpenStack Compute API.  It enforces some policies and initiates most
   orchestration activities, such as running an instance.
 
-``nova-metadata-wsgi`` service
+Metadata API
   Accepts metadata requests from instances. For more information, refer to
   :doc:`/admin/metadata-service`.
 
 ``nova-compute`` service
   A worker daemon that creates and terminates virtual machine instances through
-  hypervisor APIs. For example:
-
-  - libvirt for KVM or QEMU
-
-  - VMwareAPI for VMware
+  hypervisor APIs. The default hypervisor is libvirt with KVM or QEMU, but
+  other hypervisors are supported.
 
   Processing is fairly complex. Basically, the daemon accepts actions from the
   queue and performs a series of system commands such as launching a KVM

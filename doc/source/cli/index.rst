@@ -54,12 +54,9 @@ daemonize correctly after starting up.
 WSGI Services
 -------------
 
-Starting in the 2025.2 release, the only way to deploy the nova api is in a
-wsgi container (uwsgi or apache/mod_wsgi). These are the wsgi entry points to
-do that:
-
-* :doc:`nova-api-wsgi </user/wsgi>`
-* :doc:`nova-metadata-wsgi </user/wsgi>`
+Starting in the 2025.2 release, the only way to deploy the compute and metadata
+APIs is via WSGI (uwsgi or apache/mod_wsgi). Refer to :doc:`/admin/wsgi` for
+more information.
 
 Additional Tools
 ----------------

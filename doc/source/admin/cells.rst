@@ -19,7 +19,7 @@ Laski gave at the Austin (Newton) summit which may be worth watching.
 .. note::
 
    Cells v2 is different to the cells feature found in earlier versions of
-   nova, also known as cells v1. Cells v1 was deprecated in 16.0.0 (Pike) and
+   nova, also known as Cells v1. Cells v1 was deprecated in 16.0.0 (Pike) and
    removed entirely in Train (20.0.0).
 
 
@@ -34,14 +34,13 @@ This means a multi-cell deployment will not be radically different from a
 
 Consider such a deployment. It will consists of the following components:
 
-- The :program:`nova-api-wsgi` service which provides the external REST API to
-  users.
+- The Compute API which provides the external REST API to users.
 
 - The :program:`nova-scheduler` and ``placement`` services which are
   responsible for tracking resources and deciding which compute node instances
   should be on.
 
-- An "API database" that is used primarily by :program:`nova-api-wsgi` and
+- An "API database" that is used primarily by the Compute API and
   :program:`nova-scheduler` (called *API-level services* below) to track
   location information about instances, as well as a temporary location for
   instances being built but not yet scheduled.
@@ -268,8 +267,8 @@ database schemas, respectively.
 API database
 ~~~~~~~~~~~~
 
-The API database is the database used for API-level services, such as
-:program:`nova-api-wsgi` and, in a multi-cell deployment, the superconductor.
+The API database is the database used for API-level services, such as the
+Compute API and, in a multi-cell deployment, the superconductor.
 The models and migrations related to this database can be found in
 ``nova.db.api``, and the database can be managed using the
 :program:`nova-manage api_db` commands.
@@ -797,22 +796,21 @@ Starting from the 19.0.0 (Stein) release, the :doc:`nova metadata API service
 .. rubric:: Global
 
 If you have networks that span cells, you might need to run Nova metadata API
-globally. When running globally, it should be configured as an API-level
+globally by setting :oslo.config:option:`api.local_metadata_per_cell` to
+``false``. When running globally, it should be configured as an API-level
 service with access to the :oslo.config:option:`api_database.connection`
-information. The nova metadata API service **must not** be run as a standalone
-service, using the :program:`nova-metadata-wsgi` service, in this case.
+information.
 
 .. rubric:: Local per cell
 
 Running Nova metadata API per cell can have better performance and data
 isolation in a multi-cell deployment. If your networks are segmented along
-cell boundaries, then you can run Nova metadata API service per cell. If you
-choose to run it per cell, you should also configure each
+cell boundaries, then you can run Nova metadata API service per cell by setting
+:oslo.config:option:`api.local_metadata_per_cell` to ``true``. If you choose to
+run it per cell, you should also configure each
 :neutron-doc:`neutron-metadata-agent
 <configuration/metadata-agent.html?#DEFAULT.nova_metadata_host>` service to
-point to the corresponding :program:`nova-metadata-wsgi`. The nova metadata API
-service **must** be run as a standalone service, using the
-:program:`nova-metadata-wsgi` service, in this case.
+point to the hostname/IP address of the corresponding Compute Metadata API.
 
 Console proxies
 ~~~~~~~~~~~~~~~
@@ -1024,7 +1022,7 @@ FAQs
   using the ``nova-manage cell_v2 update_cell`` command but the API is still
   trying to use the old settings.
 
-  The cell mappings are cached in the :program:`nova-api-wsgi` service worker so you
+  The cell mappings are cached in the compute API service worker so you
   will need to restart the worker process to rebuild the cache. Note that there
   is another global cache tied to request contexts, which is used in the
   nova-conductor and nova-scheduler services, so you might need to do the same

@@ -28,11 +28,11 @@ responsibilities of services and drivers are:
 
 .. rubric:: Services
 
-:doc:`nova-metadata-wsgi </user/wsgi>`
-  A WSGI application that serves the Nova Metadata API.
-
-:doc:`nova-api-wsgi </user/wsgi>`
+:doc:`Compute API </admin/wsgi>`
   A WSGI application that serves the Nova OpenStack Compute API.
+
+:doc:`Metadata API </admin/metadata-service>`
+  A WSGI application that serves the Nova Metadata API.
 
 :doc:`nova-compute </cli/nova-compute>`
   Manages virtual machines. Loads a Service object, and exposes the public
@@ -102,8 +102,8 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
 * :placement-doc:`Placement service <>`: Overview of the placement
   service, including how it fits in with the rest of nova.
 
-* :doc:`Running nova-api on wsgi </user/wsgi>`: Considerations for using a real
-  WSGI container instead of the baked-in eventlet web server.
+* :doc:`Running nova-api on wsgi </admin/wsgi>`: Considerations for deploying
+  the APIs.
 
 * :doc:`Nova service concurrency </admin/concurrency>`: Considerations on how
   to use and tune Nova services in threading mode.

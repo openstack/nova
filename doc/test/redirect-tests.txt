@@ -76,9 +76,10 @@
 /nova/latest/user/user-data.html 301 /nova/latest/user/metadata.html
 /nova/latest/user/upgrade.html 301 /nova/latest/admin/upgrades.html
 /nova/latest/user/vendordata.html 301 /nova/latest/user/metadata.html
+/nova/latest/user/wsgi.html 301 /nova/latest/admin/wsgi.html
 /nova/latest/vendordata.html 301 /nova/latest/user/metadata.html
 /nova/latest/vmstates.html 301 /nova/latest/reference/vm-states.html
-/nova/latest/wsgi.html 301 /nova/latest/user/wsgi.html
+/nova/latest/wsgi.html 301 /nova/latest/admin/wsgi.html
 /nova/latest/admin/arch.html 301 /nova/latest/admin/architecture.html
 /nova/latest/admin/adv-config.html 301 /nova/latest/admin/index.html
 /nova/latest/admin/configuration/schedulers.html 301 /nova/latest/admin/scheduling.html

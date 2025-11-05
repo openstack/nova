@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The WSGI scripts, ``nova-api-wsgi`` and ``nova-metadata-wsgi``, have been
+    removed. Deployment tooling should instead reference the Python module
+    paths for these services, ``nova.wsgi.osapi_compute`` and
+    ``nova.wsgi.metadata``, if their chosen WSGI server supports this
+    (gunicorn, uWSGI) or implement a ``.wsgi`` script themselves if not
+    (mod_wsgi).
