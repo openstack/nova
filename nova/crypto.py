@@ -186,6 +186,19 @@ def ensure_vtpm_secret(
         the instance's system metadata but could not be found in the key
         manager service.
     """
+
+    def handle_key_manager_error_forbidden(e):
+        # Castellan catches the HTTPClientError from barbicanclient and
+        # re-raises it without its status_code attribute. It also does not
+        # include the status code in its exception message, so the best we can
+        # do is look for the word "Forbidden". Example error message:
+        #   "Key manager error: Forbidden: Secret payload retrieval attempt not
+        #   allowed - please review your user/project privileges"
+        if 'Forbidden' not in str(e):
+            raise
+        LOG.error(str(e), instance=instance)
+        raise exception.VTPMSecretForbidden(str(e)) from None
+
     key_mgr = _get_key_manager()
 
     secret_uuid = instance.system_metadata.get('vtpm_secret_uuid')
@@ -206,6 +219,8 @@ def ensure_vtpm_secret(
                 "is likely to be unrecoverable.",
                 secret_uuid, instance=instance)
             raise
+        except castellan_exception.KeyManagerError as e:
+            handle_key_manager_error_forbidden(e)
 
     # If we get here, the instance has no vtpm_secret_uuid. Create a new one
     # and register it with the key manager.
@@ -213,9 +228,12 @@ def ensure_vtpm_secret(
     # Castellan ManagedObject
     cmo = passphrase.Passphrase(
         secret, name="vTPM secret for instance %s" % instance.uuid)
-    secret_uuid = key_mgr.store(context, cmo)
-    LOG.debug("Created vTPM secret with UUID %s",
-              secret_uuid, instance=instance)
+    try:
+        secret_uuid = key_mgr.store(context, cmo)
+        LOG.debug("Created vTPM secret with UUID %s",
+                  secret_uuid, instance=instance)
+    except castellan_exception.KeyManagerError as e:
+        handle_key_manager_error_forbidden(e)
 
     instance.system_metadata['vtpm_secret_uuid'] = secret_uuid
     instance.save()
