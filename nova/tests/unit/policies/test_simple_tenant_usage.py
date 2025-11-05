@@ -10,7 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 from unittest import mock
+
+from oslo_utils import timeutils
 
 from nova.api.openstack.compute import simple_tenant_usage
 from nova.policies import simple_tenant_usage as policies
@@ -29,7 +32,10 @@ class SimpleTenantUsagePolicyTest(base.BasePolicyTest):
     def setUp(self):
         super(SimpleTenantUsagePolicyTest, self).setUp()
         self.controller = simple_tenant_usage.SimpleTenantUsageController()
-        self.req = fakes.HTTPRequest.blank('')
+        start = timeutils.utcnow()
+        end = start + datetime.timedelta(hours=5)
+        url = '?start=%s&end=%s' % (start.isoformat(), end.isoformat())
+        self.req = fakes.HTTPRequest.blank(url)
         self.controller._get_instances_all_cells = mock.MagicMock()
 
         # Currently any admin can list other project usage.
