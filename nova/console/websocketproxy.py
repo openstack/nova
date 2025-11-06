@@ -27,6 +27,7 @@ from urllib import parse as urlparse
 
 from oslo_log import log as logging
 from oslo_utils import encodeutils
+from oslo_utils import netutils
 import websockify
 from websockify import websockifyserver
 
@@ -197,12 +198,8 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
 
         # Verify Origin
         expected_origin_hostname = self.headers.get('Host')
-        if ':' in expected_origin_hostname:
-            e = expected_origin_hostname
-            if '[' in e and ']' in e:
-                expected_origin_hostname = e.split(']')[0][1:]
-            else:
-                expected_origin_hostname = e.split(':')[0]
+        expected_origin_hostname = netutils.parse_host_port(
+            expected_origin_hostname)[0]
         expected_origin_hostnames = CONF.console.allowed_origins
         expected_origin_hostnames.append(expected_origin_hostname)
         origin_url = self.headers.get('Origin')
