@@ -139,7 +139,7 @@
     post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
-    name: nova-ovs-hybrid-plug
+    name: nova-alt-configurations
     parent: tempest-multinode-full-py3
     nodeset: devstack-two-node-debian-bookworm
     description: |
@@ -148,6 +148,9 @@
       the "iptables_hybrid" securitygroup firewall driver, aka "hybrid plug".
       The external events interactions between Nova and Neutron in these
       situations has historically been fragile. This job exercises them.
+      This job also explicitly sets eventlet mode for all nova services to keep
+      testing eventlet mode even after the default is set to native threading
+      for some services.
     irrelevant-files: &nova-base-irrelevant-files
       - ^api-.*$
       - ^(test-|)requirements.txt$
@@ -175,6 +178,12 @@
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
         ML2_L3_PLUGIN: router
         NOVA_VNC_ENABLED: False
+        'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-cond-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
@@ -225,6 +234,7 @@
           ML2_L3_PLUGIN: router
           NOVA_VNC_ENABLED: False
           NOVA_SPICE_ENABLED: true
+          'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         devstack_services:
           # Disable OVN services
           br-ex-tcpdump: false
@@ -821,7 +831,7 @@
         - nova-lvm
         - nova-multi-cell
         - nova-next
-        - nova-ovs-hybrid-plug
+        - nova-alt-configurations
         - nova-tox-validate-backport:
             voting: false
         - nova-tox-functional-py310
@@ -877,6 +887,7 @@
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-tox-py312-threading
+        - nova-alt-configurations
     periodic-weekly:
       jobs:
         # Runs emulation feature functionality test less frequently due
