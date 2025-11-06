@@ -16,6 +16,9 @@
 
 """Base proxy module used to create compatible consoles
 for OpenStack Nova."""
+# autopep8: off
+from nova import monkey_patch; monkey_patch.patch()  # noqa
+# autopep8: on
 
 import os
 import sys

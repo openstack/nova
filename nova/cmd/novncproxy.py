@@ -17,6 +17,9 @@
 Websocket proxy that is compatible with OpenStack Nova
 noVNC consoles. Leverages websockify.py by Joel Martin
 """
+# autopep8: off
+from nova import monkey_patch; monkey_patch.patch()  # noqa
+# autopep8: on
 
 import sys
 

@@ -17,9 +17,6 @@
 """
 WSGI middleware for OpenStack API controllers.
 """
-# autopep8: off
-from nova import monkey_patch ; monkey_patch.patch()  # noqa
-# autopep8: on
 
 from oslo_log import log as logging
 import routes

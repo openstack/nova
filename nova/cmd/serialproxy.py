@@ -17,6 +17,10 @@ Websocket proxy that is compatible with OpenStack Nova
 Serial consoles. Leverages websockify.py by Joel Martin.
 Based on nova-novncproxy.
 """
+# autopep8: off
+from nova import monkey_patch; monkey_patch.patch()  # noqa
+# autopep8: on
+
 import sys
 
 from nova.cmd import baseproxy

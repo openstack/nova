@@ -15,6 +15,9 @@
 #    under the License.
 
 """Starter script for Nova Compute."""
+# autopep8: off
+from nova import monkey_patch; monkey_patch.patch()  # noqa
+# autopep8: on
 
 import shlex
 import sys
