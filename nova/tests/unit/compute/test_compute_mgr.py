@@ -1118,21 +1118,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             test.MatchType(nova.context.RequestContext))
 
         self.assertGreaterEqual(len(self.compute.driver.mock_calls), 2)
-        # This is bug https://bugs.launchpad.net/nova/+bug/2130881.
-        # The driver.init_host should have been called first
-        self.assertEqual(
-            mock.call.list_instance_uuids(),
-            self.compute.driver.mock_calls[0])
         self.assertEqual(
             mock.call.init_host(host='fake-mini'),
+            self.compute.driver.mock_calls[0])
+        self.assertEqual(
+            mock.call.list_instance_uuids(),
             self.compute.driver.mock_calls[1])
-        # After the fix the following should pass
-        # self.assertEqual(
-        #     mock.call.init_host(host='fake-mini'),
-        #     self.compute.driver.mock_calls[0])
-        # self.assertEqual(
-        #     mock.call.list_instance_uuids(),
-        #     self.compute.driver.mock_calls[1])
 
     def test_init_host_new_with_instances(self):
         """Tests the case where we start up without an existing service_ref,
