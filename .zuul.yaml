@@ -442,6 +442,7 @@
               # Use lower TB cache than default(1GiB), only applicable with
               # libvirt>=8.0.0
               tb_cache_size: 128
+              live_migration_parallel_connections: 4
             compute:
               # Switch off the provider association refresh, which should
               # reduce the number of placement calls in steady state. Added in
