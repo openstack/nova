@@ -585,11 +585,10 @@ class GlanceImageServiceV2(object):
             _reraise_translated_exception()
 
     def _upload_data(self, context, image_id, data):
-        # NOTE(aarents) offload upload in a native thread as it can block
-        # coroutine in busy environment.
-        utils.tpool_execute(self._client.call,
-                      context, 2, 'upload',
-                      args=(image_id, data))
+        # NOTE(aarents) In eventlet mode offload upload in a native thread as
+        # it can block coroutine in busy environment.
+        utils.tpool_wrap(
+            self._client.call)(context, 2, 'upload', args=(image_id, data))
 
         return self._client.call(context, 2, 'get', args=(image_id,))
 
