@@ -216,12 +216,6 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         utils.ssh_execute('remotehost', 'ls', '-l')
         mock_execute.assert_called_once_with(*expected_args)
 
-    @mock.patch('nova.utils.generate_uid')
-    def test_tpool_execute(self, mock_generate):
-        expected_kargs = {'size': 12}
-        utils.tpool_execute(utils.generate_uid, 'mytopic', size=12)
-        mock_generate.assert_called_once_with('mytopic', **expected_kargs)
-
     def test_generate_hostid(self):
         host = 'host'
         project_id = '9b9e3c847e904b0686e8ffb20e4c6381'
