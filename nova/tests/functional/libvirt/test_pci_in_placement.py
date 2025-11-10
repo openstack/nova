@@ -89,8 +89,20 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
         super().setUp()
         # Use tuned placement config to exercise the more complex code
         # path when pci_in_placement is used
-        self.placement_fixture.conf_fixture.config(
+        # TODO(sean-k-mooney): remove this try except after we have
+        # a release with [workarounds]optimize_for_wide_provider_trees
+        # this currently passes in ci because the nova functional job
+        # uses required project to install placement form master
+        # but this fails in cross-nova-functional job in the requirements
+        # repo and locally as we have not release placement since this
+        # config option was introduced.
+        try:
+            self.placement_fixture.conf_fixture.config(
                 group='workarounds', optimize_for_wide_provider_trees=True)
+        except cfg.NoSuchGroupError:
+            # this means we are running with an older version of placement
+            # that does not support this config option
+            pass
         self.placement_fixture.conf_fixture.config(
                 group='placement',
                 allocation_candidates_generation_strategy="breadth-first")
