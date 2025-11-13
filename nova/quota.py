@@ -549,15 +549,20 @@ class DbQuotaDriver(object):
         # together.
 
         # per project quota limits (quotas that have no concept of
-        # user-scoping: <none>)
+        # user-scoping: <none>). Note that this could be mostly empty if no
+        # project quotas have been set in the database, for example if only the
+        # config option values are being used.
         project_quotas = objects.Quotas.get_all_by_project(context, project_id)
         # per user quotas, project quota limits (for quotas that have
-        # user-scoping, limits for the project)
+        # user-scoping, limits for the project). This will pull in config
+        # option values if no project quotas are set in the database.
         quotas = self._get_quotas(context, resources, all_keys,
                                   project_id=project_id,
                                   project_quotas=project_quotas)
         # per user quotas, user quota limits (for quotas that have
-        # user-scoping, the limits for the user)
+        # user-scoping, the limits for the user). This will pull in config
+        # option values if no project and no user quotas are set in the
+        # database.
         user_quotas = self._get_quotas(context, resources, all_keys,
                                        project_id=project_id,
                                        user_id=user_id,
@@ -609,9 +614,10 @@ class DbQuotaDriver(object):
             headroom = {}
             for key in overs:
                 headroom[key] = quotas_exceeded[key]
+            scope = 'user' if over_user_quota else 'project'
             raise exception.OverQuota(overs=sorted(overs),
                                       quotas=quotas_exceeded, usages={},
-                                      headroom=headroom)
+                                      headroom=headroom, scope=scope)
 
 
 class NoopQuotaDriver(object):

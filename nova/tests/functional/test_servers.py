@@ -905,12 +905,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
                                self.api.post_server_action,
                                created_server1['id'], post)
         self.assertEqual(403, ex.response.status_code)
-        # FIXME(melwitt): This is the bug, uncomment the correct expected
-        # message when the bug is fixed.
         msg = ('Quota exceeded for ram: Requested 1536, but already used '
-               '512 of 4000 ram')
-        # msg = ('Quota exceeded for ram: Requested 1536, but already used '
-        #        '2560 of 4000 ram')
+               '2560 of 4000 ram')
         self.assertIn(msg, str(ex))
 
         # Add a user-scoped ram quota of 4000 for user 'fake'.
@@ -931,13 +927,9 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         server3 = self._build_server(flavor_id='2')
         ex = self.assertRaises(client.OpenStackApiException,
                                self.api.post_server, {"server": server3})
-        # FIXME(melwitt): This is bug NNNNN, uncomment the correct expected
-        # response and message when the bug is fixed.
-        self.assertEqual(500, ex.response.status_code)
-        msg = 'RecursionError'
-        # self.assertEqual(403, ex.response.status_code)
-        # msg = ('Quota exceeded for ram: Requested 2048, but already used '
-        #        '2560 of 4000 ram')
+        self.assertEqual(403, ex.response.status_code)
+        msg = ('Quota exceeded for ram: Requested 2048, but already used '
+               '2560 of 4000 ram')
         self.assertIn(msg, str(ex))
 
     def test_resize_server_overquota_user_quota(self):
@@ -973,12 +965,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
                                self.api.post_server_action,
                                created_server1['id'], post)
         self.assertEqual(403, ex.response.status_code)
-        # FIXME(melwitt): This is the bug, uncomment the correct expected
-        # message when the bug is fixed.
         msg = ('Quota exceeded for ram: Requested 1536, but already used '
-               '512 of 4000 ram')
-        # msg = ('Quota exceeded for ram: Requested 1536, but already used '
-        #        '2560 of 4000 ram')
+               '2560 of 4000 ram')
         self.assertIn(msg, str(ex))
 
         # Add a user quota for user 'other' of 2400.
@@ -997,6 +985,55 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         msg = ('Quota exceeded for ram: Requested 512, but already used 2048 '
                'of 2400 ram')
         self.assertIn(msg, str(ex))
+
+    def test_update_quota_user_exceeds_project(self):
+        """Test that user quota cannot be set larger than project quota."""
+        # Set the project quota for instances to 5.
+        self.admin_api.update_quota(
+            {'instances': 5},
+            project_id=self.api_fixture.project_id)
+
+        # Try to set user quota for instances to 10 which exceeds the
+        # project quota of 5. This should fail with a 400 error.
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self.admin_api.update_quota,
+            {'instances': 10},
+            project_id=self.api_fixture.project_id,
+            user_id='fake')
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            'Quota limit 10 for instances must be less than or equal to 5',
+            str(ex))
+
+    def test_update_quota_project_below_user(self):
+        """Test that project quota cannot be set less than user quota."""
+        # Set the project quota for instances to 10.
+        self.admin_api.update_quota(
+            {'instances': 10},
+            project_id=self.api_fixture.project_id)
+
+        # Set the user quota for instances to 5.
+        self.admin_api.update_quota(
+            {'instances': 5},
+            project_id=self.api_fixture.project_id,
+            user_id='fake')
+
+        # Try to set the project quota for instances to 3, which is less
+        # than the user quota of 5. This should fail with a 400 error.
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self.admin_api.update_quota,
+            {'instances': 3},
+            project_id=self.api_fixture.project_id)
+        self.assertEqual(400, ex.response.status_code)
+        # The minimum for a project quota is the sum of user quotas, but the
+        # error message says "already used and reserved" because the same
+        # message is used for both user and project quota validation.
+        self.assertIn(
+            'Quota limit 3 for instances must be greater than or equal '
+            'to already used and reserved 5',
+            str(ex))
 
     def test_attach_vol_maximum_disk_devices_exceeded(self):
         server = self._build_server()

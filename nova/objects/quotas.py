@@ -365,7 +365,17 @@ class Quotas(base.NovaObject):
             cls.limit_check_project_and_user(context, **check_kwargs)
         except exception.OverQuota as exc:
             # Report usage in the exception when going over quota
-            key = 'user' if 'user' in count else 'project'
+            if 'scope' in exc.kwargs:
+                # We will receive a 'scope' keyword arg if this was a quota
+                # counted across both project and user.
+                key = exc.kwargs['scope']
+            else:
+                # Otherwise, the quota is the minimum of project or user quota
+                # and user quota must be less than or equal to project quota.
+                # We only count across a user if a user-scoped quota has been
+                # set, so if we have a user resource count, it means that user
+                # quota has been exceeded.
+                key = 'user' if 'user' in count else 'project'
             exc.kwargs['usages'] = count[key]
             raise exc
 
