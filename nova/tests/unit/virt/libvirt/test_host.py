@@ -27,6 +27,7 @@ from oslo_utils import uuidutils
 from oslo_utils import versionutils
 import testtools
 
+from nova.compute import manager
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
@@ -459,8 +460,12 @@ class HostTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host.Host, "_connect")
     def test_conn_event_thread(self, mock_conn):
-        event = eventlet.event.Event()
-        h = host.Host("qemu:///system", conn_event_handler=event.send)
+        event = manager.ThreadingEventWithResult()
+
+        # This emulates LibvirtDriver._handle_conn_event
+        def conn_event_handler(*args, **kwargs):
+            event.set()
+        h = host.Host("qemu:///system", conn_event_handler=conn_event_handler)
         h.initialize()
 
         h.get_connection()
