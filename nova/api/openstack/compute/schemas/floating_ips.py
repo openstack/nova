@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 
 from nova.api.validation import parameter_types
 
@@ -61,6 +62,50 @@ remove_floating_ip = {
 # deprecated proxy APIs
 show_query = {}
 index_query = {}
+
+_floating_ip_response = {
+    'type': 'object',
+    'properties': {
+        'fixed_ip': {
+            'type': ['string', 'null'],
+            'anyOf': [{'format': 'ipv4'}, {'format': 'ipv6'}],
+        },
+        'id': {'type': 'string', 'format': 'uuid'},
+        'instance_id': {'type': ['string', 'null'], 'format': 'uuid'},
+        'ip': {
+            'type': 'string',
+            'anyOf': [{'format': 'ipv4'}, {'format': 'ipv6'}],
+        },
+        'pool': {'type': 'string'},
+    },
+    'required': ['fixed_ip', 'id', 'instance_id', 'ip', 'pool'],
+    'additionalProperties': False
+}
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'floating_ip': _floating_ip_response,
+    },
+    'required': ['floating_ip'],
+    'additionalProperties': False,
+}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'floating_ips': {
+            'type': 'array',
+            'items': _floating_ip_response,
+        },
+    },
+    'required': ['floating_ips'],
+    'additionalProperties': False,
+}
+
+create_response = copy.deepcopy(show_response)
+
+delete_response = {'type': 'null'}
 
 add_floating_ip_response = {
     'type': 'null',

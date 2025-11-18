@@ -91,6 +91,13 @@ class FloatingIPPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.network.neutron.API.get_floating_ip')
     def test_show_floating_ip_policy(self, mock_get):
+        mock_get.return_value = {
+            'fixed_ip_address': None,
+            'floating_ip_address': '172.16.22.3',
+            'id': uuids.floating_ip_id,
+            'network_details': {'name': 'public'},
+            'port_details': None,
+        }
         rule_name = "os_compute_api:os-floating-ips:show"
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name, self.controller.show,
@@ -106,6 +113,13 @@ class FloatingIPPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.network.neutron.API.get_floating_ip_by_address')
     @mock.patch('nova.network.neutron.API.allocate_floating_ip')
     def test_create_floating_ip_policy(self, mock_create, mock_get):
+        mock_get.return_value = {
+            'fixed_ip_address': None,
+            'floating_ip_address': '172.16.22.3',
+            'id': uuids.floating_ip_id,
+            'network_details': {'name': 'public'},
+            'port_details': None,
+        }
         rule_name = "os_compute_api:os-floating-ips:create"
         self.common_policy_auth(self.member_authorized_contexts,
                                 rule_name, self.controller.create,
