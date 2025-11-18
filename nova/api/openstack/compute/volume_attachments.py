@@ -88,6 +88,7 @@ def _check_request_version(req, min_version, method, server_id, server_state):
         exc_inv, method, server_id)
 
 
+@validation.validated
 class VolumeAttachmentController(wsgi.Controller):
     """The volume attachment API controller for the OpenStack API.
 
@@ -104,6 +105,10 @@ class VolumeAttachmentController(wsgi.Controller):
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.index_query, '2.0', '2.74')
     @validation.query_schema(schema.index_query_v275, '2.75')
+    @validation.response_body_schema(schema.index_response, '2.0', '2.69')
+    @validation.response_body_schema(schema.index_response_v270, '2.70', '2.78')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v279, '2.79', '2.88')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v289, '2.89')
     def index(self, req, server_id):
         """Returns the list of volume attachments for a given instance."""
         context = req.environ['nova.context']
@@ -136,6 +141,10 @@ class VolumeAttachmentController(wsgi.Controller):
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response, '2.0', '2.69')
+    @validation.response_body_schema(schema.show_response_v270, '2.70', '2.78')  # noqa: E501
+    @validation.response_body_schema(schema.show_response_v279, '2.79', '2.88')  # noqa: E501
+    @validation.response_body_schema(schema.show_response_v289, '2.89')
     def show(self, req, server_id, id):
         """Return data about the given volume attachment."""
         context = req.environ['nova.context']
@@ -175,6 +184,9 @@ class VolumeAttachmentController(wsgi.Controller):
     @validation.schema(schema.create, '2.0', '2.48')
     @validation.schema(schema.create_v249, '2.49', '2.78')
     @validation.schema(schema.create_v279, '2.79')
+    @validation.response_body_schema(schema.create_response, '2.0', '2.69')
+    @validation.response_body_schema(schema.create_response_v270, '2.70', '2.78')  # noqa: E501
+    @validation.response_body_schema(schema.create_response_v279, '2.79')
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
@@ -234,6 +246,8 @@ class VolumeAttachmentController(wsgi.Controller):
             attachment['tag'] = tag
         if api_version_request.is_supported(req, '2.79'):
             attachment['delete_on_termination'] = delete_on_termination
+        # TODO(stephenfin): We forgot to apply 2.89 here. We should return
+        # 'bdm_uuid' and 'attachment_id' and stop returning 'id'
         return {'volumeAttachment': attachment}
 
     def _update_volume_swap(self, req, instance, id, body):
@@ -318,6 +332,7 @@ class VolumeAttachmentController(wsgi.Controller):
     @wsgi.expected_errors((400, 404, 409))
     @validation.schema(schema.update, '2.0', '2.84')
     @validation.schema(schema.update_v285, '2.85')
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
@@ -348,6 +363,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, server_id, id):
         """Detach a volume from an instance."""
         context = req.environ['nova.context']
