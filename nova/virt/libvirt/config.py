@@ -1913,6 +1913,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.device_addr = None
         self.mtu = None
         self.alias = None
+        self.managed = None
 
     def __eq__(self, other):
         if not isinstance(other, LibvirtConfigGuestInterface):
@@ -2019,7 +2020,11 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             dev.append(vlan_elem)
 
         if self.target_dev is not None:
-            dev.append(etree.Element("target", dev=self.target_dev))
+            if self.managed is not None:
+                dev.append(etree.Element("target", dev=self.target_dev,
+                                         managed=self.managed))
+            else:
+                dev.append(etree.Element("target", dev=self.target_dev))
 
         if self.vporttype is not None:
             vport = etree.Element("virtualport", type=self.vporttype)
@@ -2105,6 +2110,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                     self.source_dev = c.get('bridge')
             elif c.tag == 'target':
                 self.target_dev = c.get('dev')
+                self.managed = c.get('managed')
             elif c.tag == 'script':
                 self.script = c.get('path')
             elif c.tag == 'vlan':

@@ -2103,6 +2103,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
     def test_config_ethernet(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "ethernet"
+        obj.managed = "no"
         obj.mac_addr = "DE:AD:BE:EF:CA:FE"
         obj.model = "virtio"
         obj.target_dev = "vnet0"
@@ -2120,7 +2121,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
               <driver name="vhost"/>
-              <target dev="vnet0"/>
+              <target dev="vnet0" managed="no"/>
               <bandwidth>
                 <inbound average="16384" peak="32768" burst="3276"/>
                 <outbound average="32768" peak="65536" burst="6553"/>
@@ -2136,6 +2137,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
     def test_config_ethernet_with_mtu(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "ethernet"
+        obj.managed = "no"
         obj.mac_addr = "DE:AD:BE:EF:CA:FE"
         obj.model = "virtio"
         obj.target_dev = "vnet0"
@@ -2155,7 +2157,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <model type="virtio"/>
               <driver name="vhost"/>
               <mtu size="9000"/>
-              <target dev="vnet0"/>
+              <target dev="vnet0" managed="no"/>
               <bandwidth>
                 <inbound average="16384" peak="32768" burst="3276"/>
                 <outbound average="32768" peak="65536" burst="6553"/>
