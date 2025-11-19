@@ -13,6 +13,7 @@
 import os_traits as ot
 from unittest import mock
 
+import ddt
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
@@ -25,6 +26,7 @@ from nova import test
 from nova.tests.unit import utils
 
 
+@ddt.ddt
 class TestRequestFilter(test.NoDBTestCase):
     def setUp(self):
         super(TestRequestFilter, self).setUp()
@@ -746,3 +748,68 @@ class TestRequestFilter(test.NoDBTestCase):
             {ot.COMPUTE_SOUND_MODEL_VIRTIO},
             reqspec.root_required)
         self.assertEqual(set(), reqspec.root_forbidden)
+
+    @ddt.data('flavor', 'image')
+    def test_tpm_secret_security_filter(self, source):
+        # First ensure that tpm_secret_security_filter is included
+        self.assertIn(request_filter.tpm_secret_security_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        if source == 'flavor':
+            reqspec = objects.RequestSpec(
+                flavor=objects.Flavor(
+                    extra_specs={
+                        'hw:tpm_model': 'tpm-tis',
+                        'hw:tpm_version': '1.2',
+                        'hw:tpm_secret_security': 'user',
+                    }),
+                image=objects.ImageMeta(properties=objects.ImageMetaProps()))
+        elif source == 'image':
+            reqspec = objects.RequestSpec(
+                flavor=objects.Flavor(
+                    extra_specs={
+                        'hw:tpm_secret_security': 'user',
+                    }),
+                image=objects.ImageMeta(
+                    properties=objects.ImageMetaProps(hw_tpm_model='tpm-tis',
+                                                      hw_tpm_version='1.2')))
+
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+        self.assertTrue(
+            request_filter.tpm_secret_security_filter(self.context, reqspec))
+        self.assertEqual(
+            {ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER},
+            reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+    def test_tpm_secret_security_filter_skip(self):
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(extra_specs={}),
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps()))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+        self.assertFalse(
+            request_filter.tpm_secret_security_filter(self.context, reqspec))
+
+    def test_tpm_secret_security_filter_fail(self):
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(
+                extra_specs={
+                    'hw:tpm_model': 'tpm-tis',
+                    'hw:tpm_version': '1.2',
+                    'hw:tpm_secret_security': 'bogus',
+                }),
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps()))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+        # Mock out get_tpm_secret_security_constraint() so we don't get caught
+        # by the Invalid check before we can test the filter fail.
+        with mock.patch(
+                'nova.virt.hardware.get_tpm_secret_security_constraint'):
+            self.assertRaises(
+                exception.RequestFilterFailed,
+                request_filter.tpm_secret_security_filter,
+                self.context, reqspec)

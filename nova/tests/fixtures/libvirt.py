@@ -1910,6 +1910,12 @@ class Connection(object):
         self._id_counter = 1  # libvirt reserves 0 for the hypervisor.
         self._nodedevs = {}
         self._secrets = {}
+        # NOTE(artom) The secret is undefined as soon as the guest has
+        # successfully started, but we still want to assert that is had been
+        # defined in this libvirt connection. We therefore keep a history of
+        # self._removed_secrets to allow functional tests to make those
+        # assertions.
+        self._removed_secrets = {}
         self._event_callbacks = {}
         self.fakeLibVersion = version
         self.fakeVersion = hv_version
@@ -1931,7 +1937,7 @@ class Connection(object):
         self._secrets[secret._uuid] = secret
 
     def _remove_secret(self, secret):
-        del self._secrets[secret._uuid]
+        self._removed_secrets[secret._uuid] = self._secrets.pop(secret._uuid)
 
     def _mark_running(self, dom):
         self._running_vms[self._id_counter] = dom

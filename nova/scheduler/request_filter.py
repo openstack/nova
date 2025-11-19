@@ -465,6 +465,34 @@ def virtio_sound_filter(
     return True
 
 
+@trace_request_filter
+def tpm_secret_security_filter(
+    ctxt: nova_context.RequestContext,
+    request_spec: 'objects.RequestSpec'
+) -> bool:
+    has_vtpm = hardware.get_vtpm_constraint(
+            request_spec.flavor, request_spec.image) is not None
+
+    if not has_vtpm:
+        LOG.debug("tpm_secret_security_filter skipped")
+        return False
+
+    security = hardware.get_tpm_secret_security_constraint(
+            request_spec.flavor) or 'user'
+
+    if security == 'user':
+        request_spec.root_required.add(
+            os_traits.COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER)
+    else:
+        # We can get here if the requested TPM secret security passed extra
+        # spec validation but is not otherwise supported in the code at this
+        # time.
+        msg = f"TPM secret security '{security}' is not supported."
+        LOG.warning(msg)
+        raise exception.RequestFilterFailed(reason=_(msg))
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
@@ -477,7 +505,8 @@ ALL_REQUEST_FILTERS = [
     routed_networks_filter,
     remote_managed_ports_filter,
     ephemeral_encryption_filter,
-    virtio_sound_filter
+    virtio_sound_filter,
+    tpm_secret_security_filter,
 ]
 
 

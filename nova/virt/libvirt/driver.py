@@ -13338,6 +13338,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 ot.COMPUTE_SECURITY_TPM_1_2: '1.2' in tpm_versions,
             })
 
+        if 'user' in CONF.libvirt.supported_tpm_secret_security:
+            tr.update({
+                ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_USER: True})
+        if 'host' in CONF.libvirt.supported_tpm_secret_security:
+            tr.update({
+                ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_HOST: True})
+        if 'deployment' in CONF.libvirt.supported_tpm_secret_security:
+            tr.update({
+                ot.COMPUTE_SECURITY_TPM_SECRET_SECURITY_DEPLOYMENT: True})
+
         return tr
 
     def _get_vif_model_traits(self) -> ty.Dict[str, bool]:
