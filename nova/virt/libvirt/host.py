@@ -1079,6 +1079,8 @@ class Host(object):
             usage_type_const = libvirt.VIR_SECRET_USAGE_TYPE_CEPH
         elif usage_type == 'volume':
             usage_type_const = libvirt.VIR_SECRET_USAGE_TYPE_VOLUME
+        elif usage_type == 'vtpm':
+            usage_type_const = libvirt.VIR_SECRET_USAGE_TYPE_VTPM
         else:
             msg = _("Invalid usage_type: %s")
             raise exception.InternalError(msg % usage_type)
@@ -1090,7 +1092,8 @@ class Host(object):
             if e.get_error_code() == libvirt.VIR_ERR_NO_SECRET:
                 return None
 
-    def create_secret(self, usage_type, usage_id, password=None, uuid=None):
+    def create_secret(self, usage_type, usage_id, password=None, uuid=None,
+                      ephemeral=None, private=None):
         """Create a secret.
 
         :param usage_type: one of 'iscsi', 'ceph', 'rbd', 'volume', 'vtpm'.
@@ -1102,8 +1105,14 @@ class Host(object):
             libvirt
         """
         secret_conf = vconfig.LibvirtConfigSecret()
-        secret_conf.ephemeral = usage_type == 'vtpm'
-        secret_conf.private = usage_type == 'vtpm'
+        if ephemeral is None:
+            secret_conf.ephemeral = usage_type == 'vtpm'
+        else:
+            secret_conf.ephemeral = ephemeral
+        if private is None:
+            secret_conf.private = usage_type == 'vtpm'
+        else:
+            secret_conf.private = private
         secret_conf.usage_id = usage_id
         secret_conf.uuid = uuid
         if usage_type in ('rbd', 'ceph'):

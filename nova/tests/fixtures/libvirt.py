@@ -198,6 +198,7 @@ VIR_SECRET_USAGE_TYPE_NONE = 0
 VIR_SECRET_USAGE_TYPE_VOLUME = 1
 VIR_SECRET_USAGE_TYPE_CEPH = 2
 VIR_SECRET_USAGE_TYPE_ISCSI = 3
+VIR_SECRET_USAGE_TYPE_VTPM = 5
 
 # metadata types
 VIR_DOMAIN_METADATA_DESCRIPTION = 0
@@ -1834,12 +1835,15 @@ class Secret(object):
     def _parse_xml(self, xml):
         tree = etree.fromstring(xml)
         self._uuid = tree.find('./uuid').text
+        self._ephemeral = tree.get('ephemeral') == 'yes'
         self._private = tree.get('private') == 'yes'
         self._usage_id = None
         usage = tree.find('./usage')
         if usage is not None:
             if usage.get('type') == 'volume':
                 self._usage_id = usage.find('volume').text
+            if usage.get('type') == 'vtpm':
+                self._usage_id = usage.find('name').text
 
     def setValue(self, value, flags=0):
         self._value = value
