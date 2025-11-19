@@ -21,7 +21,7 @@ POLICY_ROOT = 'os_compute_api:os-server-shares:%s'
 server_shares_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List all shares for given server",
         operations=[
             {
@@ -32,7 +32,7 @@ server_shares_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Attach a share to the specified server",
         operations=[
             {
@@ -43,7 +43,7 @@ server_shares_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Show a share configured for the specified server",
         operations=[
             {
@@ -54,7 +54,7 @@ server_shares_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Detach a share to the specified server",
         operations=[
             {
