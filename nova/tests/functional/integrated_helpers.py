@@ -600,11 +600,13 @@ class InstanceHelperMixin:
         self.notifier.wait_for_versioned_notifications('instance.rebuild.end')
         return self._wait_for_state_change(server, expected_state)
 
-    def _migrate_server(self, server, host=None):
+    def _migrate_server(self, server, host=None,
+                        expected_state='VERIFY_RESIZE', api=None):
         """Cold migrate a server."""
         body = {'host': host} if host else None
-        self.api.post_server_action(server['id'], {'migrate': body})
-        return self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        api = api or self.api
+        api.post_server_action(server['id'], {'migrate': body})
+        return self._wait_for_state_change(server, expected_state)
 
     def _resize_server(self, server, flavor_id):
         self.api.post_server_action(
