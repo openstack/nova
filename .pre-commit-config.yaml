@@ -64,7 +64,7 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-paramiko
-        # keep this in-sync with '[mypy] files' in 'setup.cfg'
+        # keep this in-sync with '[tool.mypy] files' in 'pyproject.toml'
         files: |
           (?x)(
             nova/compute/manager.py
