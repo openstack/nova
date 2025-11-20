@@ -71,10 +71,12 @@ _POWER_STATE_MAP = {
 
 _UNPROVISION_STATES = (ironic_states.ACTIVE, ironic_states.DEPLOYFAIL,
                        ironic_states.ERROR, ironic_states.DEPLOYWAIT,
-                       ironic_states.DEPLOYING, ironic_states.RESCUE,
-                       ironic_states.RESCUING, ironic_states.RESCUEWAIT,
-                       ironic_states.RESCUEFAIL, ironic_states.UNRESCUING,
-                       ironic_states.UNRESCUEFAIL)
+                       ironic_states.DEPLOYING, ironic_states.DEPLOYHOLD,
+                       ironic_states.RESCUE, ironic_states.RESCUING,
+                       ironic_states.RESCUEWAIT, ironic_states.RESCUEFAIL,
+                       ironic_states.UNRESCUING, ironic_states.UNRESCUEFAIL,
+                       ironic_states.SERVICING, ironic_states.SERVICEWAIT,
+                       ironic_states.SERVICEFAIL, ironic_states.SERVICEHOLD)
 
 _NODE_FIELDS = ('uuid', 'power_state', 'target_power_state', 'provision_state',
                 'target_provision_state', 'last_error', 'maintenance',
@@ -1364,13 +1366,18 @@ class IronicDriver(virt_driver.ComputeDriver):
             #             without raising any exceptions.
             return
 
-        if node.provision_state in _UNPROVISION_STATES:
+        if (node.provision_state in _UNPROVISION_STATES or
+            node.provision_state not in ironic_states.PROVISION_STATE_LIST):
             # NOTE(mgoddard): Ironic's node tear-down procedure includes all of
             # the things we do in _cleanup_deploy, so let's not repeat them
             # here. Doing so would also race with the node cleaning process,
             # which may acquire the node lock and prevent us from making
             # changes to the node. See
             # https://bugs.launchpad.net/nova/+bug/2019977
+            # NOTE(JayF): For maximum safety, we call unprovision also in cases
+            # where we see an unrecognized state. See
+            # https://bugs.launchpad.net/nova/+bug/2131960 for more
+            # information.
             self._unprovision(instance, node)
         else:
             self._cleanup_deploy(node, instance, network_info)

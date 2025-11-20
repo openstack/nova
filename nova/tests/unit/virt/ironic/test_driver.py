@@ -1695,6 +1695,91 @@ class IronicDriverTestCase(test.NoDBTestCase):
             self._test_destroy(state)
 
     @mock.patch.object(ironic_driver.IronicDriver,
+                       '_remove_instance_info_from_node')
+    @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
+    def test_destroy_servicing_states_unprovision(self, mock_cleanup_deploy,
+                                                   mock_remove_instance_info):
+        """Test that servicing and deployhold states trigger unprovisioning.
+
+        This is a regression test for bug 2131960 where nodes in servicing
+        states (SERVICING, SERVICEWAIT, SERVICEHOLD, SERVICEFAIL) and
+        DEPLOYHOLD were not being properly unprovisioned when destroyed.
+        """
+        # Test all servicing-related states and deployhold
+        servicing_states = [
+            ironic_states.DEPLOYHOLD,
+            ironic_states.SERVICING,
+            ironic_states.SERVICEWAIT,
+            ironic_states.SERVICEFAIL,
+            ironic_states.SERVICEHOLD,
+        ]
+
+        for state in servicing_states:
+            mock_cleanup_deploy.reset_mock()
+            mock_remove_instance_info.reset_mock()
+            self.mock_conn.set_node_provision_state.reset_mock()
+
+            node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+            network_info = 'foo'
+
+            node = _get_cached_node(
+                driver='fake', id=node_id, provision_state=state)
+            instance = fake_instance.fake_instance_obj(self.ctx, node=node_id)
+
+            def fake_set_node_provision_state(*_):
+                node.provision_state = None
+
+            self.mock_conn.nodes.return_value = iter([node])
+            self.mock_conn.set_node_provision_state.side_effect = \
+                fake_set_node_provision_state
+            self.driver.destroy(self.ctx, instance, network_info, None)
+
+            # All these states should trigger unprovisioning, not cleanup
+            self.mock_conn.set_node_provision_state.assert_called_once_with(
+                node_id, 'deleted',
+            )
+            self.assertFalse(mock_remove_instance_info.called)
+            self.assertFalse(mock_cleanup_deploy.called)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_remove_instance_info_from_node')
+    @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
+    def test_destroy_unknown_state_unprovision(self, mock_cleanup_deploy,
+                                                mock_remove_instance_info):
+        """Test that unknown provision states trigger unprovisioning.
+
+        This is a regression test for bug 2131960. As a safety mechanism,
+        nodes in provision states that are not recognized (not in
+        PROVISION_STATE_LIST) should trigger unprovisioning rather than
+        cleanup to ensure proper node teardown even when encountering
+        unexpected or future Ironic states.
+        """
+        # Test with a completely unknown state that doesn't exist in
+        # PROVISION_STATE_LIST
+        node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        network_info = 'foo'
+        unknown_state = 'unknown-future-state'
+
+        node = _get_cached_node(
+            driver='fake', id=node_id, provision_state=unknown_state)
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node_id)
+
+        def fake_set_node_provision_state(*_):
+            node.provision_state = None
+
+        self.mock_conn.nodes.return_value = iter([node])
+        self.mock_conn.set_node_provision_state.side_effect = \
+            fake_set_node_provision_state
+        self.driver.destroy(self.ctx, instance, network_info, None)
+
+        # Unknown states should trigger unprovisioning for safety
+        self.mock_conn.set_node_provision_state.assert_called_once_with(
+            node_id, 'deleted',
+        )
+        self.assertFalse(mock_remove_instance_info.called)
+        self.assertFalse(mock_cleanup_deploy.called)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_cleanup_deploy')
