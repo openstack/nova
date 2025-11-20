@@ -110,6 +110,9 @@ the driver to finish a cleaning step.
 CLEANFAIL = 'clean failed'
 """ Node failed cleaning. This requires operator intervention to resolve. """
 
+CLEANHOLD = 'clean hold'
+""" Node is being held by a cleaning step. """
+
 ERROR = 'error'
 """ An error occurred during node processing.
 
@@ -131,6 +134,8 @@ inspected node shall transition to MANAGEABLE status.
 INSPECTFAIL = 'inspect failed'
 """ Node inspection failed. """
 
+INSPECTWAIT = 'inspect wait'
+""" Node is waiting for inspection callback. """
 
 RESCUE = 'rescue'
 """ Node is in rescue mode.
@@ -158,6 +163,30 @@ UNRESCUEFAIL = 'unrescue failed'
 UNRESCUING = "unrescuing"
 """ Node is unrescuing. """
 
+DEPLOYHOLD = 'deploy hold'
+""" Node is being held by a deploy step. """
+
+SERVICING = 'servicing'
+""" Node is actively being changed by a service step. """
+
+SERVICEWAIT = 'service wait'
+""" Node is waiting for an operation to complete. """
+
+SERVICEFAIL = 'service failed'
+""" Node has failed in a service step execution. """
+
+SERVICEHOLD = 'service hold'
+""" Node is being held for direct intervention from a service step. """
+
+ENROLL = 'enroll'
+""" Node being entrolled into Ironic.
+Nova should never see a node in this state."""
+
+VERIFYING = 'verifying'
+""" Node driver attributes being verified.
+Nova should never see a node in this state."""
+
+
 ##############
 # Power states
 ##############
@@ -176,7 +205,10 @@ REBOOT = 'rebooting'
 ##################
 
 PROVISION_STATE_LIST = (NOSTATE, MANAGEABLE, AVAILABLE, ACTIVE, DEPLOYWAIT,
-                        DEPLOYING, DEPLOYFAIL, DEPLOYDONE, DELETING, DELETED,
-                        CLEANING, CLEANWAIT, CLEANFAIL, ERROR, REBUILD,
-                        INSPECTING, INSPECTFAIL)
+                        DEPLOYING, DEPLOYFAIL, DEPLOYDONE, DEPLOYHOLD,
+                        DELETING, DELETED, CLEANING, CLEANWAIT, CLEANFAIL,
+                        CLEANHOLD, ERROR, REBUILD, INSPECTING, INSPECTFAIL,
+                        INSPECTWAIT, RESCUE, RESCUEFAIL, RESCUEWAIT, RESCUING,
+                        SERVICING, SERVICEWAIT, SERVICEFAIL, SERVICEHOLD,
+                        UNRESCUEFAIL, UNRESCUING, ENROLL, VERIFYING)
 """ A list of all provision states. """
