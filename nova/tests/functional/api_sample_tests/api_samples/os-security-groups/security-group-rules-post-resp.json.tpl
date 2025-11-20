@@ -4,10 +4,10 @@
         "group": {},
         "ip_protocol": "tcp",
         "to_port": 22,
-        "parent_group_id": "11111111-1111-1111-1111-111111111111",
+        "parent_group_id": "d6f86d8c-06ef-4bef-8e7c-8bf8f9ba9b7a",
         "ip_range": {
             "cidr": "10.0.0.0/24"
         },
-        "id": "00000000-0000-0000-0000-000000000000"
+        "id": "%(uuid)s"
     }
 }

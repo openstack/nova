@@ -513,14 +513,14 @@ class TestSecurityGroupsV21(test.TestCase):
         rule1 = security_group_rule_template(
             cidr='10.2.3.124/24',
             parent_group_id=uuids.parent_group_id,
-            group_id={}, id=88,
+            group_id={}, id=uuids.sg_rule_1,
             protocol='TCP')
         rule2 = security_group_rule_template(
             cidr='10.2.3.125/24',
             parent_group_id=uuids.parent_group_id,
-            id=99, protocol=88,
+            id=uuids.sg_rule_2, protocol=88,
             group_id='HAS_BEEN_DELETED')
-        sg = security_group_template(id=1,
+        sg = security_group_template(id=uuids.sg,
                                      name='test',
                                      description='test-desc',
                                      rules=[rule1, rule2])
@@ -533,8 +533,8 @@ class TestSecurityGroupsV21(test.TestCase):
         expected_rule = security_group_rule_template(
             ip_range={'cidr': '10.2.3.124/24'},
             parent_group_id=uuids.parent_group_id,
-            group={}, id=88, ip_protocol='TCP')
-        expected = security_group_template(id=1,
+            group={}, id=uuids.sg_rule_1, ip_protocol='TCP')
+        expected = security_group_template(id=uuids.sg,
                                      name='test',
                                      description='test-desc',
                                      rules=[expected_rule])
@@ -542,10 +542,9 @@ class TestSecurityGroupsV21(test.TestCase):
         expected = {'security_groups': [expected]}
 
         with mock.patch(
-                'nova.network.security_group_api.list',
-                return_value=[
-                    security_group_db(
-                        secgroup) for secgroup in groups]) as mock_list:
+            'nova.network.security_group_api.list',
+            return_value=[security_group_db(secgroup) for secgroup in groups],
+        ) as mock_list:
             res_dict = self.controller.index(self.req)
 
         self.assertEqual(res_dict, expected)

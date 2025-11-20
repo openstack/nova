@@ -2,7 +2,7 @@
     "security_groups": [
         {
             "description": "default",
-            "id": 1,
+            "id": "4e469db4-3b60-43c7-8dfa-2c60e2f27075",
             "name": "default",
             "rules": [],
             "tenant_id": "6f70656e737461636b20342065766572"
