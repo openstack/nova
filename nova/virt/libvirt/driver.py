@@ -7809,6 +7809,20 @@ class LibvirtDriver(driver.ComputeDriver):
                                                       mach_type)
 
     def _guest_configure_mem_encryption(self, guest, arch, mach_type, model):
+        if model in (fields.MemEncryptionModel.AMD_SEV,
+                     fields.MemEncryptionModel.AMD_SEV_ES):
+            self._guest_configure_sev_mem_encryption(
+                guest, arch, mach_type, model)
+        else:
+            raise exception.Invalid(
+                "Unknown MemEncryptionModel: %(model)s. "
+                "Supported models: %(supported)s" % {
+                    'model': model,
+                    'supported': ', '.join(fields.MemEncryptionModel.ALL)
+                })
+
+    def _guest_configure_sev_mem_encryption(
+        self, guest, arch, mach_type, model):
         sev = self._find_sev_feature(arch, mach_type)
         if sev is None:
             # In theory this should never happen because it should
