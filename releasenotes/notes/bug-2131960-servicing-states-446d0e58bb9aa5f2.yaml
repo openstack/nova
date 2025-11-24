@@ -1,0 +1,25 @@
+---
+security:
+  - |
+    [`bug 2131960 <https://bugs.launchpad.net/nova/+bug/2131960>`_]
+    Fixed improper teardown of Ironic nodes in servicing states.
+    Previously, when Nova's virt driver called ``destroy()`` on Ironic
+    nodes in certain states (``deploy hold``, ``servicing``, ``service wait``,
+    ``service hold``, ``service failed``), these nodes would fail to undergo
+    proper teardown, resulting in orphaned instances where instance metadata
+    was removed but nodes remained unprovisioned in Ironic. In flat networking
+    configurations, this could allow nodes traversing servicing states to
+    briefly access tenant networks. In Neutron networking configurations,
+    while VIFs would detach correctly, nodes would remain in Ironic with a
+    shutdown IPA, and future deprovisioning attempts would fail due to missing
+    networking metadata. These states are now properly handled to ensure
+    complete node deprovisioning.
+fixes:
+  - |
+    [`bug 2131960 <https://bugs.launchpad.net/nova/+bug/2131960>`_]
+    Fixed a bug where Ironic nodes in servicing-related provision states
+    (``deploy hold``, ``servicing``, ``service wait``, ``service hold``,
+    ``service failed``) were not properly unprovisioned when instances were
+    destroyed. The Nova Ironic virt driver now correctly triggers
+    unprovisioning for nodes in these states, preventing orphaned node
+    configurations in Ironic.
