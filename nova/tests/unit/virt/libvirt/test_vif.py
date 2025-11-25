@@ -540,14 +540,18 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         mac = node.find("mac").get("address")
         self.assertEqual(mac, vif['address'])
 
-    def _assertTypeEquals(self, node, type, attr, source, br_want):
+    def _assertTypeEquals(self, node, type, attr, source, br_want,
+                          managed_want=None):
         self.assertEqual(node.get("type"), type)
         br_name = node.find(attr).get(source)
         self.assertEqual(br_name, br_want)
+        if managed_want is not None:
+            managed = node.find(attr).get("managed")
+            self.assertEqual(managed, managed_want)
 
     def _assertTypeAndMacEquals(self, node, type, attr, source, vif,
-                                br_want=None):
-        self._assertTypeEquals(node, type, attr, source, br_want)
+                                br_want=None, managed_want=None):
+        self._assertTypeEquals(node, type, attr, source, br_want, managed_want)
         self._assertMacEquals(node, vif)
 
     def _assertModel(self, xml, model_want=None, driver_want=None):
@@ -1113,7 +1117,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         xml = self._get_instance_xml(d, self.vif_tap)
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
-                                     self.vif_tap, br_want)
+                                     self.vif_tap, br_want, "no")
 
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
