@@ -21,7 +21,6 @@ from nova.api.openstack.compute import lock_server
 from nova.compute import vm_states
 import nova.conf
 from nova import exception
-from nova.policies import base as base_policy
 from nova.policies import lock_server as ls_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -189,7 +188,7 @@ class LockServerOverridePolicyTest(LockServerScopeTypeNoLegacyPolicyTest):
     def setUp(self):
         super(LockServerOverridePolicyTest, self).setUp()
         # We are overriding the 'unlock:unlock_override' policy
-        # to PROJECT_MEMBER so testing it with both admin as well
+        # to rule:project_member_api so testing it with both admin as well
         # as project member as allowed context.
         self.project_admin_authorized_contexts = [
             self.project_admin_context, self.project_manager_context,
@@ -201,6 +200,6 @@ class LockServerOverridePolicyTest(LockServerScopeTypeNoLegacyPolicyTest):
         # make unlock allowed for everyone so that we can check unlock
         # override policy.
         ls_policies.POLICY_ROOT % 'unlock': "@",
-        rule: base_policy.PROJECT_MEMBER}, overwrite=False)
+        rule: "rule:project_member_api"}, overwrite=False)
         super(LockServerOverridePolicyTest,
               self).test_unlock_override_server_policy()

@@ -249,11 +249,11 @@ class ServerMigrationsOverridePolicyTest(
         # NOTE(gmann): override the rule to project member and verify it
         # work as policy is project scoped.
         self.policy.set_rules({
-            rule_show: base_policy.PROJECT_READER,
-            rule_list: base_policy.PROJECT_READER,
-            rule_list_host: base_policy.PROJECT_READER,
-            rule_force: base_policy.PROJECT_READER,
-            rule_delete: base_policy.PROJECT_READER},
+            rule_show: "rule:project_reader_api",
+            rule_list: "rule:project_reader_api",
+            rule_list_host: "rule:project_reader_api",
+            rule_force: "rule:project_reader_api",
+            rule_delete: "rule:project_reader_api"},
             overwrite=False)
 
         # Check that project reader as override above
