@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    [`bug 2133416 <https://bugs.launchpad.net/nova/+bug/2133416>`_] Libvirt
+    virt driver now ignores the OVMF firmware files of the following types.
+    Previously nova failed to start instances with UEFI boot when it attempts
+    to check such firmware files.
+
+    - stateless mode
+    - memory device
