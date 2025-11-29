@@ -2094,31 +2094,37 @@ class Host(object):
         machine = self.get_canonical_machine_type(arch, machine)
 
         for loader in self.loaders:
-            for target in loader['targets']:
-                if arch != target['architecture']:
-                    continue
+            try:
+                for target in loader['targets']:
+                    if arch != target['architecture']:
+                        continue
 
-                for machine_glob in target['machines']:
-                    # the 'machines' attribute supports glob patterns (e.g.
-                    # 'pc-q35-*') so we need to resolve these
-                    if fnmatch.fnmatch(machine, machine_glob):
-                        break
+                    for machine_glob in target['machines']:
+                        # the 'machines' attribute supports glob patterns (e.g.
+                        # 'pc-q35-*') so we need to resolve these
+                        if fnmatch.fnmatch(machine, machine_glob):
+                            break
+                    else:
+                        continue
+
+                    # if we've got this far, we have a match on the target
+                    break
                 else:
                     continue
 
-                # if we've got this far, we have a match on the target
-                break
-            else:
-                continue
+                # if we request secure boot then we should get it and vice
+                # versa
+                if has_secure_boot != ('secure-boot' in loader['features']):
+                    continue
 
-            # if we request secure boot then we should get it and vice versa
-            if has_secure_boot != ('secure-boot' in loader['features']):
+                return (
+                    loader['mapping']['executable']['filename'],
+                    loader['mapping']['nvram-template']['filename'],
+                    'requires-smm' in loader['features'],
+                )
+            except KeyError:
+                # This indicates that the description structure is new and nova
+                # does not how to handle it
                 continue
-
-            return (
-                loader['mapping']['executable']['filename'],
-                loader['mapping']['nvram-template']['filename'],
-                'requires-smm' in loader['features'],
-            )
 
         raise exception.UEFINotSupported()
