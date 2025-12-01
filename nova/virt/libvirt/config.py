@@ -57,15 +57,12 @@ def parse_libvirt_device_alias(alias):
 
 class LibvirtConfigObject(object):
 
-    def __init__(self, **kwargs):
+    def __init__(self, *, root_name, ns_prefix=None, ns_uri=None):
         super(LibvirtConfigObject, self).__init__()
 
-        self.root_name = kwargs.pop("root_name")
-        self.ns_prefix = kwargs.pop("ns_prefix", None)
-        self.ns_uri = kwargs.pop("ns_uri", None)
-
-        # handle programmer error
-        assert not kwargs
+        self.root_name = root_name
+        self.ns_prefix = ns_prefix
+        self.ns_uri = ns_uri
 
     def _new_node(self, node_name, **kwargs):
         if self.ns_uri is None:
