@@ -1042,6 +1042,12 @@ Requires:
 * Qemu >= 1.5 (raw format)
 * Qemu >= 1.6 (qcow2 format)
 """),
+    cfg.IntOpt('images_cpu_time_limit',
+               default=30,
+               help='CPU time process limit in seconds for qemu-img'),
+    cfg.IntOpt('images_address_space_limit',
+               default=1,
+               help='Address space process limit in gigabytes for qemu-img'),
 ]
 
 libvirt_lvm_opts = [
