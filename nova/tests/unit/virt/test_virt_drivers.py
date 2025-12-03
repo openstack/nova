@@ -122,7 +122,7 @@ class _FakeDriverBackendTestCase(object):
         self.stub_out('nova.virt.libvirt.guest.Guest.migrate',
                       lambda self, destination, migrate_uri=None,
                       migrate_disks=None, destination_xml=None, flags=0,
-                      bandwidth=0: None)
+                      bandwidth=0, parallel=0: None)
         # We can't actually make a config drive v2 because ensure_tree has
         # been faked out
         self.stub_out('nova.virt.configdrive.ConfigDriveBuilder.make_drive',
