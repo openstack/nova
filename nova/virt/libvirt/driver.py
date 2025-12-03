@@ -11379,7 +11379,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _live_migration_monitor(self, context, instance, guest,
                                 dest, post_method,
                                 recover_method, block_migration,
-                                migrate_data, finish_event,
+                                migrate_data, future,
                                 disk_paths):
 
         on_migration_failure: ty.Deque[str] = deque()
@@ -11402,7 +11402,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if info.type == libvirt.VIR_DOMAIN_JOB_NONE:
                 # Either still running, or failed or completed,
                 # lets untangle the mess
-                if not finish_event.is_set():
+                if not future.done():
                     LOG.debug("Operation thread is still running",
                               instance=instance)
                 else:
@@ -11589,15 +11589,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                      migrate_data, guest,
                                      device_names)
 
-        finish_event = threading.Event()
         self.active_migrations[instance.uuid] = deque()
-
-        def thread_finished(_):
-            LOG.debug("Migration operation thread notification",
-                      instance=instance)
-
-            finish_event.set()
-        future.add_done_callback(thread_finished)
 
         # Let eventlet schedule the new thread right away
         utils.cooperative_yield()
@@ -11608,7 +11600,10 @@ class LibvirtDriver(driver.ComputeDriver):
             self._live_migration_monitor(context, instance, guest, dest,
                                          post_method, recover_method,
                                          block_migration, migrate_data,
-                                         finish_event, disk_paths)
+                                         future, disk_paths)
+            # Collect the result of the future to surface any exceptions
+            # that might have been raised in _live_migration_operation()
+            future.result()
         except Exception as ex:
             LOG.warning("Error monitoring migration: %(ex)s",
                         {"ex": ex}, instance=instance, exc_info=True)
