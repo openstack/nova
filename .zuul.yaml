@@ -326,6 +326,10 @@
       devstack_services:
         openstack-cli-server: true
       devstack_local_conf:
+        post-config:
+          $NOVA_CPU_CONF:
+            libvirt:
+              images_address_space_limit: 2
         test-config:
           $TEMPEST_CONFIG:
             compute-feature-enabled:
@@ -787,6 +791,9 @@
               images_rbd_glance_store_name: robust
             workarounds:
               never_download_image_if_on_rbd: True
+          $NOVA_CPU_CONF:
+            libvirt:
+              images_address_space_limit: 2
           $GLANCE_API_CONF:
             DEFAULT:
               enabled_backends: "cheap:file, robust:rbd, web:http"

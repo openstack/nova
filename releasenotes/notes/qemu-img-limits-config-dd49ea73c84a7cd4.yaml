@@ -1,0 +1,11 @@
+features:
+  - |
+    New configuration options ``[libvirt]images_cpu_time_limit`` and
+    ``[libvirt]images_address_space_limit`` have been added to enable tuning of
+    process limits for qemu-img. The default for
+    ``[libvirt]images_address_space_limit`` is unchanged from the hard-coded 1G
+    limit in order to maintain existing behavior. If you are using newer versions
+    of Ceph this should be increased. For more details, see bug `#2116852`_.
+
+    .. _#2116852: https://bugs.launchpad.net/nova/+bug/2116852
+
