@@ -25,15 +25,18 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import units
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 import nova.privsep.utils
 
 LOG = logging.getLogger(__name__)
 
+CONF = nova.conf.CONF
+
 QEMU_IMG_LIMITS = processutils.ProcessLimits(
-    cpu_time=30,
-    address_space=1 * units.Gi)
+    cpu_time=CONF.libvirt.images_cpu_time_limit,
+    address_space=CONF.libvirt.images_address_space_limit * units.Gi)
 
 
 class EncryptionOptions(ty.TypedDict):
