@@ -398,6 +398,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             startup=False,
         )
 
+    def test__get_multiattach_volume_lock_names_bdms(self):
+        bdms = objects.BlockDeviceMappingList(
+            objects=[
+                objects.BlockDeviceMapping(
+                    volume_id=uuids.volume1,
+                    destination_type='volume',
+                    instance_uuid=uuids.instance,
+                    attachment_id=uuids.attachment1),
+                objects.BlockDeviceMapping(
+                    volume_id=uuids.volume2,
+                    destination_type='volume',
+                    instance_uuid=uuids.instance,
+                    attachment_id=uuids.attachment2,
+                    connection_info='{"multiattach": true}'),
+            ]
+        )
+        lock_names = self.compute._get_multiattach_volume_lock_names_bdms(bdms)
+        expected_lock_names = [f"multi_attach_volume_{uuids.volume2}"]
+        self.assertEqual(expected_lock_names, lock_names)
+
     @mock.patch('nova.compute.manager.LOG')
     def test_update_available_resource_for_node_reshape_failed(self, log_mock):
         """ReshapeFailed logs and reraises."""

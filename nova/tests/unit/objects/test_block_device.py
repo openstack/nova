@@ -251,6 +251,19 @@ class _TestBlockDeviceMappingObject(object):
                                          destination_type='local')
         self.assertFalse(bdm.is_volume)
 
+    def test_is_mutiattach_true(self):
+        bdm = objects.BlockDeviceMapping(
+            context=self.context, volume_id=uuids.volume_id,
+            destination_type='volume',
+            connection_info='{"multiattach": true}')
+        self.assertTrue(bdm.is_multiattach)
+
+    def test_is_multiattach_false(self):
+        bdm = objects.BlockDeviceMapping(
+            context=self.context, destination_type='volume',
+            volume_id=uuids.volume_id)
+        self.assertFalse(bdm.is_multiattach)
+
     def test_is_local(self):
         self.assertTrue(
             objects.BlockDeviceMapping(

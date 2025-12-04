@@ -15,6 +15,7 @@
 from oslo_db import api as oslo_db_api
 from oslo_db.sqlalchemy import update_match
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
@@ -315,6 +316,26 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     def is_volume(self):
         return (self.destination_type ==
                     fields.BlockDeviceDestinationType.VOLUME)
+
+    @property
+    def is_multiattach(self):
+        """Return whether the volume is multiattach.
+
+        Note that this property is only valid for volumes that are attached to
+        an instance. If the volume is not attached to an instance, this
+        property will return False.
+
+        :returns: True if the volume is multiattach, False otherwise
+        """
+
+        if not self.is_volume:
+            return False
+        if 'connection_info' not in self:
+            return False
+        if not self.connection_info:
+            return False
+        info = jsonutils.loads(self.connection_info)
+        return info.get("multiattach", False)
 
     @property
     def is_image(self):
