@@ -3,7 +3,20 @@ features:
   - |
     The default concurrency mode is now switched from eventlet to native
     threading for nova-scheduler, nova-api, and nova-metadata services.
-    The concurrency mode can still be switched back to eventlet if needed.
-    Please read the
+    The concurrency mode can still be switched back to eventlet if needed
+    per service. Please read the
     `concurrency <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__
     guide for more details.
+upgrade:
+  - |
+    When you are upgrading to 2026.1 (Gazpacho) or newer the default
+    configuration of nova-scheduler, nova-api, and nova-metadata services
+    change to run these services with native threading mode by default
+    instead of the legacy eventlet mode. We recommend to decouple the
+    upgrade from the concurrency mode change to reduce the risk of issues.
+    To do that either test the native threading mode of these services already
+    in 2025.2 (Flamingo) or ensure that your service configuration is
+    explicitly using the eventlet mode before you upgrade and only change to
+    threading mode after the upgrade was successful. Please read the
+    `concurrency <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__
+    guide for more details on how to configure the mode.

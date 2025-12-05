@@ -24,7 +24,7 @@ Selecting concurrency mode for a service
 Since nova 33.0.0 (2026.1 Gazpacho) the nova-scheduler, nova-api, and
 nova-metadata are using native threading by default. The rest of the
 services are using eventlet by default in this release. The concurrency mode
-can be configured via setting the environment variable
+can be configured per service via setting the environment variable
 ``OS_NOVA_DISABLE_EVENTLET_PATCHING``. Setting that variable to ``true``
 requests the native threading mode while setting it to ``false`` requests the
 eventlet mode. If the variable is not set the above default is applied.
@@ -36,6 +36,10 @@ eventlet mode. If the variable is not set the above default is applied.
 
    Since nova 33.0.0 (2026.1 Gazpacho) also the nova-conductor can be switched
    to native threading mode.
+
+   Since nova 33.0.0 (2026.1. Gazpacho) the nova-scheduler, nova-metadata, and
+   nova-api using native threading mode by default but still can be switched
+   back to eventlet if needed.
 
 
 Tunables for the native threading mode
@@ -114,3 +118,14 @@ adding the `read_timeout`__ connection parameter to the connection string.
 
 We recommend using both in deployments where Nova services are running in
 native threading mode.
+
+Upgrading to nova 33.0.0 (2026.1. Gazpacho) or newer
+----------------------------------------------------
+
+In nova 33.0.0 (2026.1. Gazpacho) the default concurrency mode of
+nova-scheduler, nova-api, and nova-metadata service are switched to native
+threading. We recommend to decouple the upgrade from the concurrency mode
+change to reduce the risk of issues. To do that either test and tune the native
+threading mode of these services already in 2025.2 (Flamingo) or ensure that
+your service configuration is explicitly using the eventlet mode before you
+upgrade and only change to threading mode after the upgrade was successful.
