@@ -1,0 +1,10 @@
+features:
+  - |
+    A new configuration option ``[libvirt]use_default_aio_mode_for_volumes``
+    has been added to enable use of QEMU default AIO modes for NFS, FC, and
+    iSCSI Cinder volumes.
+    By default, Nova explicitly sets AIO mode ``io=native`` in the Libvirt
+    guest XML for NFS, FC, and iSCSI Cinder volumes. Operators may set this
+    option to ``True`` in order to defer AIO mode selection to QEMU if forcing
+    ``io=native`` is not desired.
+

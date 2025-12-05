@@ -55,7 +55,8 @@ class LibvirtISCSIVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
                      self).get_config(connection_info, disk_info)
         conf.source_type = "block"
         conf.source_path = connection_info['data']['device_path']
-        conf.driver_io = "native"
+        if not CONF.libvirt.use_default_aio_mode_for_volumes:
+            conf.driver_io = "native"
         return conf
 
     def connect_volume(self, connection_info, instance):

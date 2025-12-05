@@ -1653,6 +1653,15 @@ Possible values are:
   can be read by anyone with sufficient access on the host. The instance can
   be live-migrated and automatically resumed after host reboot.
 """),
+    cfg.BoolOpt(
+        'use_default_aio_mode_for_volumes',
+        default=False,
+        help="""
+With the NFS, FC, and iSCSI Cinder volume backends, Nova explicitly sets AIO
+mode ``io=native`` in the Libvirt guest XML. Operators may set this option to
+True in order to defer AIO mode selection to QEMU if forcing ``io=native`` is
+not desired.
+"""),
 ]
 
 libvirt_cpu_mgmt_opts = [
