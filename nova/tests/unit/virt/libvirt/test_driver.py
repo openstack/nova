@@ -35,8 +35,6 @@ from unittest import mock
 
 from castellan import key_manager
 import ddt
-import eventlet
-from eventlet import greenthread
 import fixtures
 import futurist
 from lxml import etree
@@ -18603,7 +18601,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(2, mock_get.call_count)
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
-    @mock.patch.object(greenthread, 'sleep')
+    @mock.patch.object(time, 'sleep')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_hard_reboot')
     @mock.patch.object(host.Host, '_get_domain')
     def test_reboot_same_ids(self, mock_get_domain, mock_hard_reboot,
@@ -30720,9 +30718,8 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
         drvr.set_host_enabled = mock.Mock()
         jsonutils.to_primitive(drvr._conn, convert_instances=True)
 
-    @mock.patch.object(eventlet.tpool, 'execute')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
-    def test_tpool_execute_calls_libvirt(self, mock_svc, mock_execute):
+    def test_tpool_execute_calls_libvirt(self, mock_svc):
         if utils.concurrency_mode_threading():
             self.skipTest(
                 "In threading mode nova does not use eventlet.tpool to "
@@ -30751,13 +30748,15 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
             side_effect.append(None)
             expected_calls.append(mock.call(
                 conn.registerCloseCallback, mock.ANY, mock.ANY))
-        mock_execute.side_effect = side_effect
 
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        c = driver._get_connection()
-        self.assertTrue(c.is_expected)
-        self.assertEqual(len(expected_calls), mock_execute.call_count)
-        mock_execute.assert_has_calls(expected_calls)
+        with mock.patch('eventlet.tpool.execute') as mock_execute:
+            mock_execute.side_effect = side_effect
+
+            driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+            c = driver._get_connection()
+            self.assertTrue(c.is_expected)
+            self.assertEqual(len(expected_calls), mock_execute.call_count)
+            mock_execute.assert_has_calls(expected_calls)
 
 
 class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
