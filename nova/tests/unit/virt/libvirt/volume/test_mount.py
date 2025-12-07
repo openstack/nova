@@ -17,13 +17,13 @@ import threading
 import time
 from unittest import mock
 
-import eventlet
 import fixtures
 from oslo_concurrency import processutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import test
+from nova import utils
 from nova.virt.libvirt import config as libvirt_config
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host as libvirt_host
@@ -87,8 +87,7 @@ class ThreadController(object):
         self.complete = False
 
         # We must not execute fn() until the thread has been registered in
-        # all_threads. eventlet doesn't give us an API to do this directly,
-        # so we defer with an Event
+        # all_threads. So we defer with an Event
         def deferred_start():
             self.start_event.wait()
             fn()
@@ -97,12 +96,13 @@ class ThreadController(object):
                 self.complete = True
                 self.wait_lock.notify_all()
 
-        self.thread = eventlet.greenthread.spawn(deferred_start)
+        self.thread = threading.Thread(target=deferred_start)
         self.all_threads[self.thread] = self
+        self.thread.start()
 
     @classmethod
     def current(cls):
-        return cls.all_threads.get(eventlet.greenthread.getcurrent())
+        return cls.all_threads.get(threading.current_thread())
 
     def _ensure_running(self):
         if not self.running:
@@ -166,7 +166,7 @@ class ThreadController(object):
                 self.wait_lock.wait(1)
                 assert time.time() - wait_since < MAX_WAIT
 
-        self.thread.wait()
+        self.thread.join()
 
 
 class MountFixture(fixtures.Fixture):
@@ -656,8 +656,7 @@ class MountManagerTestCase(test.NoDBTestCase):
 
         # Call host_up in a separate thread because it will block, and give
         # it plenty of time to race
-        host_up = eventlet.greenthread.spawn(self.m.host_up,
-                                             mock.sentinel.host)
+        host_up = utils.spawn(self.m.host_up, mock.sentinel.host)
         time.sleep(0.01)
 
         # Assert that we haven't instantiated a new state while there's an
@@ -666,7 +665,7 @@ class MountManagerTestCase(test.NoDBTestCase):
 
         # Allow the previous ongoing operation and host_up to complete
         ctl.finish()
-        host_up.wait()
+        host_up.result()
 
         # Assert that we've got a new state generation
         state = self._get_state()
