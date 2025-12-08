@@ -58,41 +58,6 @@ repos:
       - id: codespell
         args: ['--ignore-words=doc/dictionary.txt']
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - types-paramiko
-        # keep this in-sync with '[tool.mypy] files' in 'pyproject.toml'
-        files: |
-          (?x)(
-            nova/compute/manager.py
-            | nova/compute/pci_placement_translator.py
-            | nova/crypto.py
-            | nova/filesystem.py
-            | nova/limit/local.py
-            | nova/limit/placement.py
-            | nova/network/neutron.py
-            | nova/pci
-            | nova/privsep/path.py
-            | nova/scheduler/client/report.py
-            | nova/scheduler/request_filter.py
-            | nova/scheduler/utils.py
-            | nova/virt/driver.py
-            | nova/virt/hardware.py
-            | nova/virt/libvirt/machine_type_utils.py
-            | nova/virt/libvirt/__init__.py
-            | nova/virt/libvirt/cpu/__init__.py
-            | nova/virt/libvirt/cpu/api.py
-            | nova/virt/libvirt/cpu/core.py
-            | nova/virt/libvirt/driver.py
-            | nova/virt/libvirt/event.py
-            | nova/virt/libvirt/guest.py
-            | nova/virt/libvirt/host.py
-            | nova/virt/libvirt/utils.py
-          )
-
   - repo: https://github.com/sphinx-contrib/sphinx-lint
     rev: v1.0.1
     hooks:

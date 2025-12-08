@@ -124,7 +124,6 @@ follow_imports = "skip"
 incremental = true
 check_untyped_defs = true
 warn_unused_ignores = true
-# keep this in-sync with 'mypy.exclude' in '.pre-commit-config.yaml'
 files = [
     "nova/compute/manager.py",
     "nova/compute/pci_placement_translator.py",
