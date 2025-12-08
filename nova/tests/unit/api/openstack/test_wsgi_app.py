@@ -82,13 +82,13 @@ document_root = /tmp
         # Run init_application the first time, simulating an exception being
         # raised during it.
         self.assertRaises(test.TestingException, wsgi_app.init_application,
-                          'nova-api')
+                          'nova-api', 'nova-api')
         # reset the latch_error_on_raise decorator
         wsgi_app.init_application.reset()
         # Now run init_application a second time, it should succeed since no
         # exception is being raised (the init of global data should not be
         # re-attempted).
-        wsgi_app.init_application('nova-api')
+        wsgi_app.init_application('nova-api', 'nova-api')
         self.assertIn('Global data already initialized, not re-initializing.',
                       self.stdlog.logger.output)
 
@@ -106,7 +106,8 @@ document_root = /tmp
             error, test.TestingException, test.TestingException]
         for i in range(3):
             e = self.assertRaises(
-                excepted_type, wsgi_app.init_application, 'nova-api')
+                excepted_type, wsgi_app.init_application, 'nova-api',
+                'nova-api')
             self.assertIs(e, error)
         # since the expction is latched on the first raise mock_get_files
         # should not be called again on each iteration

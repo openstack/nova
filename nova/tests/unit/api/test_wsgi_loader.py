@@ -31,8 +31,9 @@ class TestInitApplication(test.NoDBTestCase):
 
         with utils.temporary_mutation(sys, argv=mock.sentinel.argv):
             with mock.patch('nova.config.parse_args') as mock_parse_args:
-                wsgi_app.init_application('test-app')
+                wsgi_app.init_application('test-app', 'test-app')
                 mock_parse_args.assert_called_once_with(
                     mock.sentinel.argv,
                     default_config_files=[
-                        '/etc/nova/api-paste.ini', '/etc/nova/nova.conf'])
+                        '/etc/nova/api-paste.ini', '/etc/nova/nova.conf'],
+                    prog='test-app')

@@ -98,14 +98,17 @@ def error_application(exc, name):
 
 @utils.run_once('Global data already initialized, not re-initializing.',
                 LOG.info)
-def init_global_data(conf_files, service_name):
+def init_global_data(conf_files, service_name, prog):
     # NOTE(melwitt): parse_args initializes logging and calls global rpc.init()
     # and db_api.configure(). The db_api.configure() call does not initiate any
     # connection to the database.
 
     # NOTE(gibi): sys.argv is set by the wsgi runner e.g. uwsgi sets it based
     # on the --pyargv parameter of the uwsgi binary
-    config.parse_args(sys.argv, default_config_files=conf_files)
+    config.parse_args(
+        sys.argv,
+        default_config_files=conf_files,
+        prog=prog)
 
     logging.setup(CONF, "nova")
     gmr_opts.set_defaults(CONF)
@@ -119,7 +122,7 @@ def init_global_data(conf_files, service_name):
 
 
 @utils.latch_error_on_raise(retryable=(odbe.DBConnectionError,))
-def init_application(name):
+def init_application(name, prog):
     conf_files = _get_config_files()
 
     # NOTE(melwitt): The init_application method can be called multiple times
@@ -128,7 +131,7 @@ def init_application(name):
     # apache/mod_wsgi reloads the init_application script. So, we initialize
     # global data separately and decorate the method to run only once in a
     # python interpreter instance.
-    init_global_data(conf_files, name)
+    init_global_data(conf_files, name, prog)
 
     try:
         _setup_service(CONF.host, name)

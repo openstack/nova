@@ -79,7 +79,7 @@ def set_log_defaults():
 
 
 def parse_args(argv, default_config_files=None, configure_db=True,
-               init_rpc=True):
+               init_rpc=True, prog=None):
     log.register_options(CONF)
 
     # NOTE(sean-k-mooney): this filter addresses bug #1825584
@@ -94,6 +94,7 @@ def parse_args(argv, default_config_files=None, configure_db=True,
 
     CONF(argv[1:],
          project='nova',
+         prog=prog,
          version=version.version_string(),
          default_config_files=default_config_files)
 
