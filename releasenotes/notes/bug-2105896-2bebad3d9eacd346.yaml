@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    `Bug #2105896`_: Fix error when multiple security groups in a project
+    share the same name. The security group resolution now checks UUIDs
+    before names, ensuring that a request using a specific UUID is never
+    blocked by a naming collision. When a security group is requested by
+    name and multiple groups share that name, a ``NoUniqueMatch`` error is
+    raised prompting the user to use a UUID instead.
+
+    .. _Bug #2105896: https://launchpad.net/bugs/2105896
