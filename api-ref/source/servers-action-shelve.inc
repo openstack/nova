@@ -11,7 +11,7 @@ Specify the ``shelve`` action in the request body.
 
 All associated data and resources are kept but anything still in memory is not retained. To restore a shelved instance, use the ``unshelve`` action. To remove a shelved instance, use the ``shelveOffload`` action.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 **Preconditions**
 
@@ -66,7 +66,7 @@ Specify the ``shelveOffload`` action in the request body.
 
 Data and resource associations are deleted. If an instance is no longer needed, you can remove that instance from the hypervisor to minimize resource usage.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 **Preconditions**
 
@@ -117,7 +117,7 @@ Unshelves, or restores, a shelved server.
 
 Specify the ``unshelve`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 **Preconditions**
 

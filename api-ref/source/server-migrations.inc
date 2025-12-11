@@ -17,7 +17,7 @@ Lists in-progress live migrations for a given server.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
-``policy.json`` file.
+``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -72,7 +72,7 @@ Show details for an in-progress live migration for a given server.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
-``policy.json`` file.
+``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -135,7 +135,7 @@ Specify the ``force_complete`` action in the request body.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
-``policy.json`` file.
+``policy.yaml`` file.
 
 **Preconditions**
 
@@ -202,7 +202,7 @@ Abort an in-progress live migration.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
-``policy.json`` file.
+``policy.yaml`` file.
 
 **Preconditions**
 

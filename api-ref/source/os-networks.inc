@@ -31,7 +31,7 @@ List Networks
 Lists networks for the project.
 
 Policy defaults enable all users to perform this operation. Cloud
-providers can change these permissions through the ``policy.json`` file.
+providers can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -54,7 +54,7 @@ Creates a network.
 
 Policy defaults enable only users with the administrative role or the
 owner of the network to perform this operation. Cloud providers can change
-these permissions through the ``policy.json`` file.
+these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -86,7 +86,7 @@ Adds a network to a project.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through the
-``policy.json`` file.
+``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -112,7 +112,7 @@ Show Network Details
 Shows details for a network.
 
 Policy defaults enable all users to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -142,7 +142,7 @@ Deletes a network.
 
 Policy defaults enable only users with the administrative role or the
 owner of the network to perform this operation. Cloud providers can change
-these permissions through the ``policy.json`` file.
+these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -172,7 +172,7 @@ Specify the ``associate_host`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the owner
 of the network to perform this operation. Cloud providers can change these
-permissions through the ``policy.json`` file.
+permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -208,7 +208,7 @@ Specify the ``disassociate`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the
 owner of the network to perform this operation. Cloud providers can change
-these permissions through the ``policy.json`` file.
+these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -243,7 +243,7 @@ Specify the ``disassociate_host`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the
 owner of the network to perform this operation. Cloud providers can change
-these permissions through the ``policy.json`` file.
+these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -279,7 +279,7 @@ Specify the ``disassociate_project`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the
 owner of the network to perform this operation. Cloud providers can change
-these permissions through the ``policy.json`` file.
+these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 

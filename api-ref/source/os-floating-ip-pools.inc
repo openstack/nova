@@ -26,7 +26,7 @@ Lists floating IP pools.
 Policy defaults enable only users with the administrative role or user
 who is authorized to operate on tenant <tenant_id> to perform this
 operation. Cloud providers can change these permissions through the
-``policy.json`` file.
+``policy.yaml`` file.
 
 Normal response codes: 200
 

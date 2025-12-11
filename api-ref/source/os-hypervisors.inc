@@ -22,7 +22,7 @@ Lists hypervisors.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
-the ``policy.json`` file.
+the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -75,7 +75,7 @@ Lists hypervisors details.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
-the ``policy.json`` file.
+the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -160,7 +160,7 @@ Shows summary statistics for all enabled hypervisors over all compute nodes.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
-the ``policy.json`` file.
+the ``policy.yaml`` file.
 
 .. note::
 
@@ -209,7 +209,7 @@ Shows details for a given hypervisor.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
-the ``policy.json`` file.
+the ``policy.yaml`` file.
 
 .. note::
 
@@ -301,7 +301,7 @@ Shows the uptime for a given hypervisor.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
-the ``policy.json`` file.
+the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -353,7 +353,7 @@ Search hypervisor by a given hypervisor host name or portion of it.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
-the ``policy.json`` file.
+the ``policy.yaml`` file.
 
 Normal response code: 200
 
@@ -398,7 +398,7 @@ a given hypervisor host name or portion of it.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
-the ``policy.json`` file.
+the ``policy.yaml`` file.
 
 Normal response code: 200
 

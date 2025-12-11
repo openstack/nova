@@ -126,7 +126,7 @@ Specify the ``changePassword`` action in the request body.
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers can
-change these permissions through the ``policy.json`` file.
+change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -230,7 +230,7 @@ Specify the ``createBackup`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the
 owner of the server to perform this operation. Cloud providers can
-change these permissions through the ``policy.json`` file.
+change these permissions through the ``policy.yaml`` file.
 
 .. note::
     Starting from version 2.39 the image quota enforcement with Nova `metadata`
@@ -403,7 +403,7 @@ the `Show Server Details API
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 Administrators can overwrite owner's lock.
 
 Normal response codes: 202
@@ -447,7 +447,7 @@ Specify the ``pause`` action in the request body.
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -899,7 +899,7 @@ Specify the ``resume`` action in the request body.
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -1090,7 +1090,7 @@ Specify the ``suspend`` action in the request body.
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -1127,7 +1127,7 @@ Specify the ``unlock`` action in the request body.
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -1163,7 +1163,7 @@ Specify the ``unpause`` action in the request body.
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 

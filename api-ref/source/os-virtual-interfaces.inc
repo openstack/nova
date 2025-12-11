@@ -30,7 +30,7 @@ Lists the virtual interfaces for an instance.
 
 Policy defaults enable only users with the administrative role or the owner of
 the server to perform this operation. Change these permissions through the
-``policy.json`` file.
+``policy.yaml`` file.
 
 Normal response codes: 200
 
