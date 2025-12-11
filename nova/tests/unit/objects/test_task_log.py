@@ -13,7 +13,6 @@
 import datetime
 from unittest import mock
 
-import iso8601
 from oslo_utils import timeutils
 
 from nova import objects
@@ -71,9 +70,9 @@ class _TestTaskLog(object):
             self.context,
             fake_task_log['task_name'],
             fake_task_log['period_beginning'].replace(
-                tzinfo=iso8601.UTC),
+                tzinfo=datetime.timezone.utc),
             fake_task_log['period_ending'].replace(
-                tzinfo=iso8601.UTC),
+                tzinfo=datetime.timezone.utc),
             fake_task_log['host'],
             task_items=fake_task_log['task_items'],
             message=fake_task_log['message'])
@@ -92,9 +91,9 @@ class _TestTaskLog(object):
             self.context,
             fake_task_log['task_name'],
             fake_task_log['period_beginning'].replace(
-                tzinfo=iso8601.UTC),
+                tzinfo=datetime.timezone.utc),
             fake_task_log['period_ending'].replace(
-                tzinfo=iso8601.UTC),
+                tzinfo=datetime.timezone.utc),
             fake_task_log['host'],
             errors=fake_task_log['errors'],
             message=fake_task_log['message'])

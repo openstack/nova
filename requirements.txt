@@ -19,7 +19,6 @@ PrettyTable>=0.7.1 # BSD
 alembic>=1.5.0 # MIT
 netaddr>=0.7.18 # BSD
 paramiko>=2.7.1 # LGPLv2.1+
-iso8601>=0.1.11 # MIT
 jsonschema>=4.0.0 # MIT
 python-cinderclient>=4.0.1 # Apache-2.0
 keystoneauth1>=3.16.0 # Apache-2.0

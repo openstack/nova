@@ -17,7 +17,6 @@ import collections
 import datetime
 from urllib import parse as urlparse
 
-import iso8601
 from oslo_utils import timeutils
 from webob import exc
 
@@ -244,7 +243,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         # instance object fields and still maintain backwards compatibility
         # in the API.
         if value.utcoffset() is None:
-            value = value.replace(tzinfo=iso8601.UTC)
+            value = value.replace(tzinfo=datetime.timezone.utc)
         return value
 
     def _get_datetime_range(self, req):

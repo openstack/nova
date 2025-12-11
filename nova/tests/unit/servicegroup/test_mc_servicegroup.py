@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import iso8601
+import datetime
 from unittest import mock
 
 from nova import servicegroup
@@ -72,7 +72,7 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         service_ref = {
             'host': 'fake-host',
             'topic': 'compute',
-            'updated_at': updated_at_time.replace(tzinfo=iso8601.UTC)
+            'updated_at': updated_at_time.replace(tzinfo=datetime.timezone.utc)
         }
 
         # If no record returned from the mc, return record from DB
@@ -84,13 +84,13 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         self.mc_client.reset_mock()
         retval = timeutils.utcnow()
         self.mc_client.get.return_value = retval
-        self.assertEqual(retval.replace(tzinfo=iso8601.UTC),
+        self.assertEqual(retval.replace(tzinfo=datetime.timezone.utc),
                          self.servicegroup_api.get_updated_time(service_ref))
         self.mc_client.get.assert_called_once_with('compute:fake-host')
         # If the record in DB is newer than mc, return record from DB
         self.mc_client.reset_mock()
         service_ref['updated_at'] = \
-            retval.replace(tzinfo=iso8601.UTC)
+            retval.replace(tzinfo=datetime.timezone.utc)
         self.mc_client.get.return_value = updated_at_time
         self.assertEqual(service_ref['updated_at'],
                          self.servicegroup_api.get_updated_time(service_ref))
@@ -99,6 +99,6 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         self.mc_client.reset_mock()
         service_ref['updated_at'] = None
         self.mc_client.get.return_value = updated_at_time
-        self.assertEqual(updated_at_time.replace(tzinfo=iso8601.UTC),
+        self.assertEqual(updated_at_time.replace(tzinfo=datetime.timezone.utc),
                          self.servicegroup_api.get_updated_time(service_ref))
         self.mc_client.get.assert_called_once_with('compute:fake-host')
