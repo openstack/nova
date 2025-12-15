@@ -43,6 +43,7 @@ def parse_strtime(dstr, fmt):
         raise exception.InvalidStrTime(reason=str(e))
 
 
+@validation.validated
 class SimpleTenantUsageController(wsgi.Controller):
 
     _view_builder_class = usages_view.ViewBuilder
@@ -246,7 +247,7 @@ class SimpleTenantUsageController(wsgi.Controller):
             value = value.replace(tzinfo=datetime.timezone.utc)
         return value
 
-    def _get_datetime_range(self, req):
+    def _parse_qs_params(self, req):
         qs = req.environ.get('QUERY_STRING', '')
         env = urlparse.parse_qs(qs)
         # NOTE(lzyeval): env.get() always returns a list
@@ -264,6 +265,8 @@ class SimpleTenantUsageController(wsgi.Controller):
     @validation.query_schema(schema.index_query, '2.1', '2.39')
     @validation.query_schema(schema.index_query_v240, '2.40', '2.74')
     @validation.query_schema(schema.index_query_v275, '2.75')
+    @validation.response_body_schema(schema.index_response, '2.1', '2.39')
+    @validation.response_body_schema(schema.index_response_v240, '2.40')
     @wsgi.expected_errors(400)
     def index(self, req):
         """Retrieve tenant_usage for all tenants."""
@@ -279,8 +282,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         context.can(stu_policies.POLICY_ROOT % 'list')
 
         try:
-            (period_start, period_stop, detailed) = self._get_datetime_range(
-                req)
+            period_start, period_stop, detailed = self._parse_qs_params(req)
         except exception.InvalidStrTime as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
@@ -312,6 +314,8 @@ class SimpleTenantUsageController(wsgi.Controller):
     @validation.query_schema(schema.show_query, '2.1', '2.39')
     @validation.query_schema(schema.show_query_v240, '2.40', '2.74')
     @validation.query_schema(schema.show_query_v275, '2.75')
+    @validation.response_body_schema(schema.show_response, '2.1', '2.39')
+    @validation.response_body_schema(schema.show_response_v240, '2.40')
     @wsgi.expected_errors(400)
     def show(self, req, id):
         """Retrieve tenant_usage for a specified tenant."""
@@ -329,8 +333,7 @@ class SimpleTenantUsageController(wsgi.Controller):
                     {'project_id': tenant_id})
 
         try:
-            (period_start, period_stop, ignore) = self._get_datetime_range(
-                req)
+            period_start, period_stop, ignore = self._parse_qs_params(req)
         except exception.InvalidStrTime as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 

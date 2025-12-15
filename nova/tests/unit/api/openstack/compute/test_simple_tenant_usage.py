@@ -115,16 +115,19 @@ def fake_get_active_deleted_flavorless(cls, context, begin, end=None,
                                        limit=None, marker=None):
     # First get some normal instances to have actual usage
     instances = [
-        _fake_instance(START, STOP, x,
-                       project_id or 'faketenant_%s' % (x // SERVERS))
-        for x in range(TENANTS * SERVERS)]
+        _fake_instance(
+            START, STOP, x,
+            project_id or getattr(uuids, 'faketenant_%s' % (x // SERVERS))
+        ) for x in range(TENANTS * SERVERS)
+    ]
     # Then get some deleted instances with no flavor to test bugs 1643444 and
     # 1692893 (duplicates)
     instances.extend([
         _fake_instance_deleted_flavorless(
             context, START, STOP, x,
-            project_id or 'faketenant_%s' % (x // SERVERS))
-        for x in range(TENANTS * SERVERS)])
+            project_id or getattr(uuids, 'faketenant_%s' % (x // SERVERS))
+        ) for x in range(TENANTS * SERVERS)
+    ])
     return objects.InstanceList(objects=instances)
 
 
@@ -134,9 +137,10 @@ def fake_get_active_by_window_joined(cls, context, begin, end=None,
                                      expected_attrs=None, use_slave=False,
                                      limit=None, marker=None):
     return objects.InstanceList(objects=[
-        _fake_instance(START, STOP, x,
-                       project_id or 'faketenant_%s' % (x // SERVERS))
-        for x in range(TENANTS * SERVERS)])
+        _fake_instance(
+            START, STOP, x,
+            project_id or getattr(uuids, 'faketenant_%s' % (x // SERVERS))
+        ) for x in range(TENANTS * SERVERS)])
 
 
 class SimpleTenantUsageTestV21(test.TestCase):
@@ -146,15 +150,18 @@ class SimpleTenantUsageTestV21(test.TestCase):
 
     def setUp(self):
         super(SimpleTenantUsageTestV21, self).setUp()
-        self.admin_context = context.RequestContext('fakeadmin_0',
-                                                    'faketenant_0',
-                                                    is_admin=True)
-        self.user_context = context.RequestContext('fakeadmin_0',
-                                                   'faketenant_0',
-                                                    is_admin=False)
-        self.alt_user_context = context.RequestContext('fakeadmin_0',
-                                                      'faketenant_1',
-                                                       is_admin=False)
+        self.admin_context = context.RequestContext(
+            uuids.fakeadmin_0,
+            uuids.faketenant_0,
+            is_admin=True)
+        self.user_context = context.RequestContext(
+            uuids.fakeadmin_0,
+            uuids.faketenant_0,
+            is_admin=False)
+        self.alt_user_context = context.RequestContext(
+            uuids.fakeadmin_0,
+            uuids.faketenant_1,
+            is_admin=False)
         self.num_cells = len(objects.CellMappingList.get_all(
             self.admin_context))
 
@@ -276,7 +283,7 @@ class SimpleTenantUsageTestV21(test.TestCase):
     @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
                 fake_get_active_by_window_joined)
     def _test_verify_show(self, start, stop, limit=None):
-        tenant_id = 1
+        tenant_id = uuids.tenant_id
         url = '?start=%s&end=%s'
         if limit:
             url += '&limit=%s' % (limit)
@@ -319,22 +326,24 @@ class SimpleTenantUsageTestV21(test.TestCase):
                     (future.isoformat(), NOW.isoformat()),
                     version=self.version)
         req.environ['nova.context'] = self.user_context
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.show, req, 'faketenant_0')
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.controller.show, req, uuids.faketenant_0)
 
     def test_get_tenants_usage_with_invalid_start_date(self):
         req = fakes.HTTPRequest.blank('?start=%s&end=%s' %
                     ("xxxx", NOW.isoformat()),
                     version=self.version)
         req.environ['nova.context'] = self.user_context
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.show, req, 'faketenant_0')
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.controller.show, req, uuids.faketenant_0)
 
     def _test_get_tenants_usage_with_one_date(self, date_url_param):
         req = fakes.HTTPRequest.blank('?%s' % date_url_param,
                                       version=self.version)
         req.environ['nova.context'] = self.user_context
-        res = self.controller.show(req, 'faketenant_0')
+        res = self.controller.show(req, uuids.faketenant_0)
         self.assertIn('tenant_usage', res)
 
     def test_get_tenants_usage_with_no_start_date(self):
@@ -382,7 +391,7 @@ class SimpleTenantUsageTestV21(test.TestCase):
                     (START.isoformat(), param, value, param, value),
                     version=self.version)
 
-            res = self.controller.show(req, 1)
+            res = self.controller.show(req, uuids.tenant_id)
             self.assertIn('tenant_usage', res)
 
     def test_show_duplicate_query_parameters_validation(self):
@@ -453,15 +462,16 @@ class SimpleTenantUsageTestV2_75(SimpleTenantUsageTestV40):
         req = fakes.HTTPRequest.blank('?start=%s&end=%s&additional=1' %
                 (START.isoformat(), STOP.isoformat()),
                 version='2.74')
-        res = self.controller.show(req, 1)
+        res = self.controller.show(req, uuids.tenant_id)
         self.assertIn('tenant_usage', res)
 
     def test_show_additional_query_parameters(self):
         req = fakes.HTTPRequest.blank('?start=%s&end=%s&additional=1' %
                 (START.isoformat(), STOP.isoformat()),
                 version=self.version)
-        self.assertRaises(exception.ValidationError, self.controller.show,
-                          req, 1)
+        self.assertRaises(
+            exception.ValidationError, self.controller.show,
+           req, uuids.tenant_id)
 
 
 class SimpleTenantUsageLimitsTestV21(test.TestCase):
@@ -470,7 +480,6 @@ class SimpleTenantUsageLimitsTestV21(test.TestCase):
     def setUp(self):
         super(SimpleTenantUsageLimitsTestV21, self).setUp()
         self.controller = simple_tenant_usage_v21.SimpleTenantUsageController()
-        self.tenant_id = 1
 
     def _get_request(self, url):
         url = url % (START.isoformat(), STOP.isoformat())
@@ -484,7 +493,7 @@ class SimpleTenantUsageLimitsTestV21(test.TestCase):
     @mock.patch('nova.objects.InstanceList.get_active_by_window_joined')
     def test_limit_defaults_to_conf_max_limit_show(self, mock_get):
         req = self._get_request('?start=%s&end=%s')
-        self.controller.show(req, self.tenant_id)
+        self.controller.show(req, uuids.tenant_id)
         self.assert_limit(mock_get, CONF.api.max_limit)
 
     @mock.patch('nova.objects.InstanceList.get_active_by_window_joined')
@@ -506,7 +515,7 @@ class SimpleTenantUsageLimitsTestV240(SimpleTenantUsageLimitsTestV21):
     @mock.patch('nova.objects.InstanceList.get_active_by_window_joined')
     def test_limit_and_marker_show(self, mock_get):
         req = self._get_request('?start=%s&end=%s&limit=3&marker=some-marker')
-        self.controller.show(req, self.tenant_id)
+        self.controller.show(req, uuids.tenant_id)
         self.assert_limit_and_marker(mock_get, 3, 'some-marker')
 
     @mock.patch('nova.objects.InstanceList.get_active_by_window_joined')
