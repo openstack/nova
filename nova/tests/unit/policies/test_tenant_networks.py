@@ -61,6 +61,7 @@ class TenantNetworksPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.network.neutron.API.get')
     def test_show_tenant_network_policy(self, mock_get):
+        mock_get.return_value = {'id': uuids.netword_id, 'name': 'foo'}
         rule_name = "os_compute_api:os-tenant-networks:show"
         self.common_policy_auth(self.project_reader_authorized_contexts,
                                 rule_name, self.controller.show,

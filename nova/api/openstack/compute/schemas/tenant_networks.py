@@ -18,5 +18,42 @@ create = {}
 index_query = {}
 show_query = {}
 
+_tenant_network_response = {
+    'type': 'object',
+    'properties': {
+        'cidr': {
+            'oneOf': [
+                {'const': 'None'},
+                {'type': 'string', 'format': 'cidr'},
+            ]
+        },
+        'id': {'type': 'string', 'format': 'uuid'},
+        'label': {'type': 'string'},
+    },
+    'required': ['cidr', 'id', 'label'],
+    'additionalProperties': False,
+}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'networks': {
+            'type': 'array',
+            'items': _tenant_network_response,
+        }
+    },
+    'required': ['networks'],
+    'additionalProperties': False,
+}
+
+show_response = {
+    'type': 'object',
+    'properties': {
+        'network': _tenant_network_response,
+    },
+    'required': ['network'],
+    'additionalProperties': False,
+}
+
 delete_response = {}
 create_response = {}
