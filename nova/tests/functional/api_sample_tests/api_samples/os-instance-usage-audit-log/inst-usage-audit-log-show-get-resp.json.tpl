@@ -1,25 +1,25 @@
 {
     "instance_usage_audit_log": {
         "hosts_not_run": [
-            "samplehost3"
+            "329fa448-f6bb-4e72-b954-faa66c30d4fa"
         ],
         "log": {
-            "samplehost0": {
+            "2c8ef37b-f0cc-4a9e-92a6-32df0095cb12": {
                 "errors": 1,
                 "instances": 1,
-                "message": "Instance usage audit ran for host samplehost0, 1 instances in 0.01 seconds.",
+                "message": "Instance usage audit ran for host 2c8ef37b-f0cc-4a9e-92a6-32df0095cb12, 1 instances in 0.01 seconds.",
                 "state": "DONE"
             },
-            "samplehost1": {
+            "60dbe74d-0cf3-419b-83f5-407e4b78c7b4": {
                 "errors": 1,
                 "instances": 2,
-                "message": "Instance usage audit ran for host samplehost1, 2 instances in 0.01 seconds.",
+                "message": "Instance usage audit ran for host 60dbe74d-0cf3-419b-83f5-407e4b78c7b4, 2 instances in 0.01 seconds.",
                 "state": "DONE"
             },
-            "samplehost2": {
+            "2aa90c00-23eb-4da6-aff9-eda66bb56182": {
                 "errors": 1,
                 "instances": 3,
-                "message": "Instance usage audit ran for host samplehost2, 3 instances in 0.01 seconds.",
+                "message": "Instance usage audit ran for host 2aa90c00-23eb-4da6-aff9-eda66bb56182, 3 instances in 0.01 seconds.",
                 "state": "DONE"
             }
         },

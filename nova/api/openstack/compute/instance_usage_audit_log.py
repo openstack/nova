@@ -27,6 +27,7 @@ from nova.policies import instance_usage_audit_log as iual_policies
 from nova import utils
 
 
+@validation.validated
 class InstanceUsageAuditLogController(wsgi.Controller):
 
     def __init__(self):
@@ -35,6 +36,7 @@ class InstanceUsageAuditLogController(wsgi.Controller):
 
     @wsgi.expected_errors(())
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req):
         context = req.environ['nova.context']
         context.can(iual_policies.BASE_POLICY_NAME % 'list', target={})
@@ -43,16 +45,17 @@ class InstanceUsageAuditLogController(wsgi.Controller):
 
     @wsgi.expected_errors(400)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(iual_policies.BASE_POLICY_NAME % 'show', target={})
         try:
             if '.' in id:
-                before_date = datetime.datetime.strptime(str(id),
-                                                "%Y-%m-%d %H:%M:%S.%f")
+                before_date = datetime.datetime.strptime(
+                    str(id), "%Y-%m-%d %H:%M:%S.%f")
             else:
-                before_date = datetime.datetime.strptime(str(id),
-                                                "%Y-%m-%d %H:%M:%S")
+                before_date = datetime.datetime.strptime(
+                    str(id), "%Y-%m-%d %H:%M:%S")
         except ValueError:
             msg = _("Invalid timestamp for date %s") % id
             raise webob.exc.HTTPBadRequest(explanation=msg)
