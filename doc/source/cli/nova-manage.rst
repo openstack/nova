@@ -424,7 +424,6 @@ For example::
     |       migrate_quota_classes_to_api_db       |      0       |     0     |
     |        migrate_quota_limits_to_api_db       |      0       |     0     |
     |          migration_migrate_to_uuid          |      0       |     0     |
-    |     populate_missing_availability_zones     |      0       |     0     |
     |          populate_queued_for_delete         |      2       |     2     |
     |                populate_uuids               |      0       |     0     |
     +---------------------------------------------+--------------+-----------+
