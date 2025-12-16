@@ -41,7 +41,6 @@ import typing as ty
 from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher
-from eventlet import tpool
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -195,7 +194,7 @@ class Host(object):
         # eventlet's event loop, starving all other greenthreads until
         # completion. eventlet's tpool.Proxy handles this situation for us by
         # executing proxied calls in a native thread.
-        return tpool.Proxy(obj, autowrap=self._libvirt_proxy_classes)
+        return utils.tpool_wrap(obj, autowrap=self._libvirt_proxy_classes)
 
     def _native_thread(self):
         """Receives async events coming in from libvirtd.

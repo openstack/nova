@@ -29998,6 +29998,16 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
                    group='libvirt')
 
     def test_connection_to_primitive(self):
+        if utils.concurrency_mode_threading():
+            self.skipTest(
+                "In threading mode nova does not use eventlet.tpool to "
+                "wrap the libvirt calls. This test case asserts that the "
+                "libvirt connection having eventlet.tpool.Proxy objects "
+                "are serializable. See "
+                "https://bugs.launchpad.net/nova/+bug/962840. "
+                "As Proxy object is not present in threading mode this test "
+                "is not valid. ")
+
         # Test bug 962840.
         import nova.virt.libvirt.driver as libvirt_driver
         drvr = libvirt_driver.LibvirtDriver('')
@@ -30007,6 +30017,13 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
     @mock.patch.object(eventlet.tpool, 'execute')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_tpool_execute_calls_libvirt(self, mock_svc, mock_execute):
+        if utils.concurrency_mode_threading():
+            self.skipTest(
+                "In threading mode nova does not use eventlet.tpool to "
+                "wrap the libvirt calls. This test case asserts that libvirt "
+                "connect goes through the tpool, so in threading mode this "
+                "test case is invalid.")
+
         conn = fakelibvirt.virConnect()
         conn.is_expected = True
 
