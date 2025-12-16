@@ -22,6 +22,7 @@ from nova import exception
 from nova import objects
 from nova.storage import rbd_utils
 from nova import test
+from nova import utils
 
 
 CEPH_MON_DUMP = r"""dumped monmap epoch 1
@@ -147,7 +148,10 @@ class RbdTestCase(test.NoDBTestCase):
 
     def test_rbdproxy_wraps_rbd(self):
         proxy = rbd_utils.RbdProxy()
-        self.assertIsInstance(proxy._rbd, tpool.Proxy)
+        if utils.concurrency_mode_threading():
+            self.assertEqual(proxy._rbd, self.mock_rbd.RBD.return_value)
+        else:
+            self.assertIsInstance(proxy._rbd, tpool.Proxy)
 
     def test_rbdproxy_attribute_access_proxying(self):
         client = mock.MagicMock(ioctx='fake_ioctx')
