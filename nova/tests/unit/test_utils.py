@@ -235,11 +235,13 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertEqual('', utils.generate_hostid(None, project_id))
 
     @mock.patch('nova.utils.concurrency_mode_threading', return_value=False)
-    def test_tpool_wrap_eventlet(self, mock_concurrency_mode):
+    @mock.patch('nova.utils.tpool.Proxy')
+    def test_tpool_wrap_eventlet(self, mock_tpool, mock_concurrency_mode):
         mock_target = mock.MagicMock()
         target = utils.tpool_wrap(mock_target)
 
-        self.assertEqual(target._obj, mock_target)
+        mock_tpool.assert_called_once_with(mock_target, autowrap=())
+        self.assertEqual(mock_tpool.return_value, target)
         mock_concurrency_mode.assert_called_once_with()
 
     @mock.patch('nova.utils.concurrency_mode_threading', return_value=True)
