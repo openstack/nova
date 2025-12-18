@@ -421,10 +421,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertEqual(storage_ip, result['ip'])
 
     @catch_notimplementederror
-    @mock.patch('threading.Event.wait', new=mock.Mock())
     @mock.patch.object(libvirt.driver.LibvirtDriver, '_build_device_metadata',
                        return_value=objects.InstanceDeviceMetadata())
     def test_attach_detach_volume(self, _):
+        self.flags(device_detach_timeout="1", group="libvirt")
         instance_ref, network_info = self._get_running_instance()
         connection_info = {
             "driver_volume_type": "fake",
@@ -458,10 +458,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                         '/dev/sda', 2))
 
     @catch_notimplementederror
-    @mock.patch('threading.Event.wait', new=mock.Mock())
     @mock.patch.object(libvirt.driver.LibvirtDriver, '_build_device_metadata',
                        return_value=objects.InstanceDeviceMetadata())
     def test_attach_detach_different_power_states(self, _):
+        self.flags(device_detach_timeout="1", group="libvirt")
         instance_ref, network_info = self._get_running_instance()
         connection_info = {
             "driver_volume_type": "fake",
