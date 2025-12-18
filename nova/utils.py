@@ -563,30 +563,6 @@ def _serialize_profile_info():
     return trace_info
 
 
-def _pass_context(runner, func, *args, **kwargs):
-    """Generalised passthrough method
-    It will grab the context from the threadlocal store and add it to
-    the store on the runner.  This allows for continuity in logging the
-    context when using this method to spawn a new thread through the
-    runner function
-    """
-
-    _context = common_context.get_current()
-    profiler_info = _serialize_profile_info()
-
-    @functools.wraps(func)
-    def context_wrapper(*args, **kwargs):
-        # NOTE: If update_store is not called after spawning a thread, it won't
-        # be available for the logger to pull from threadlocal storage.
-        if _context is not None:
-            _context.update_store()
-        if profiler_info and profiler:
-            profiler.init(**profiler_info)
-        return func(*args, **kwargs)
-
-    return runner(context_wrapper, *args, **kwargs)
-
-
 def spawn(func, *args, **kwargs) -> futurist.Future:
     """Passthrough method for eventlet.spawn.
 
@@ -627,12 +603,21 @@ def spawn_on(executor, func, *args, **kwargs) -> futurist.Future:
             "queued. If this happens repeatedly then the size of the pool is "
             "too small for the load or there are stuck threads filling the "
             "pool.", executor.name, func)
-    return _pass_context(executor.submit, func, *args, **kwargs)
 
+    _context = common_context.get_current()
+    profiler_info = _serialize_profile_info()
 
-def tpool_execute(func, *args, **kwargs):
-    """Run func in a native thread"""
-    return _pass_context(tpool.execute, func, *args, **kwargs)
+    @functools.wraps(func)
+    def context_wrapper(*args, **kwargs):
+        # NOTE: If update_store is not called after spawning a thread, it won't
+        # be available for the logger to pull from threadlocal storage.
+        if _context is not None:
+            _context.update_store()
+        if profiler_info and profiler:
+            profiler.init(**profiler_info)
+        return func(*args, **kwargs)
+
+    return executor.submit(context_wrapper, *args, **kwargs)
 
 
 def is_none_string(val):
