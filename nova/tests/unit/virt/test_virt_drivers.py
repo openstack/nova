@@ -13,6 +13,7 @@
 #    under the License.
 
 from collections import deque
+import functools
 import sys
 import traceback
 from unittest import mock
@@ -56,6 +57,7 @@ def catch_notimplementederror(f):
     log it so that we can extract this information afterwards as needed.
     """
 
+    @functools.wraps(f)
     def wrapped_func(self, *args, **kwargs):
         try:
             return f(self, *args, **kwargs)
@@ -66,8 +68,6 @@ def catch_notimplementederror(f):
                       {'driver': type(self.connection),
                        'method': frame[2], 'test': f.__name__})
 
-    wrapped_func.__name__ = f.__name__
-    wrapped_func.__doc__ = f.__doc__
     return wrapped_func
 
 
