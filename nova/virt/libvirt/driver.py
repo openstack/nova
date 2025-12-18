@@ -303,6 +303,9 @@ class AsyncDeviceEventsHandler:
                 self.device_name == event.dev and
                 isinstance(event, tuple(self.event_types)))
 
+        def wait(self, timeout: float) -> bool:
+            return self.threading_event.wait(timeout)
+
         def __repr__(self) -> str:
             return (
                 "AsyncDeviceEventsHandler.Waiter("
@@ -360,7 +363,7 @@ class AsyncDeviceEventsHandler:
             the event to be received
         :returns: The received libvirt event, or None in case of timeout
         """
-        token.threading_event.wait(timeout)
+        token.wait(timeout)
 
         with self._lock:
             self._waiters.remove(token)

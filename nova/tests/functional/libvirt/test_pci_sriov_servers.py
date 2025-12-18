@@ -2545,15 +2545,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             port['binding:profile'],
         )
 
-        # By mocking threading.Event.wait we prevent the test to wait until the
-        # timeout happens.
-        # We return True signaling that the event is set, i.e. the libvirt
-        # event the caller is waiting for has been received.
-        # Note: This mock behavior cannot be added to the fixture because
-        # many unit tests rely on it for different side effects.
-        with mock.patch("threading.Event.wait", side_effect=[True]):
-            # now live migrate that server
-            self._live_migrate(server, "completed")
+        self._live_migrate(server, "completed")
         dst_xml = self._get_xml(self.comp1, server)
         self.assertPCIDeviceCounts(self.comp0, total=2, free=2)
         self.assertPCIDeviceCounts(self.comp1, total=2, free=0)
@@ -2904,21 +2896,14 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             port['binding:profile'],
         )
 
-        # By mocking threading.Event.wait we prevent the test to wait until the
-        # timeout happens.
-        # We return True signaling that the event is set, i.e. the libvirt
-        # event the caller is waiting for has been received.
-        # Note: This mock behavior cannot be added to the fixture because
-        # many unit tests rely on it for different side effects.
-        with mock.patch("threading.Event.wait", side_effect=[True]):
-            # now live migrate that server
-            # The OpenStackApiException means the server failed to be migrated
-            exc = self.assertRaises(
-                client.OpenStackApiException,
-                self._live_migrate,
-                server,
-                "completed",
-            )
+        # now live migrate that server
+        # The OpenStackApiException means the server failed to be migrated
+        exc = self.assertRaises(
+            client.OpenStackApiException,
+            self._live_migrate,
+            server,
+            "completed",
+        )
         self.assertEqual(500, exc.response.status_code)
         self.assertIn('NoValidHost', str(exc))
         self.assertPCIDeviceCounts(self.comp0, total=2, free=0)
@@ -3115,15 +3100,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             port['binding:profile'],
         )
 
-        # By mocking threading.Event.wait we prevent the test to wait until the
-        # timeout happens.
-        # We return True signaling that the event is set, i.e. the libvirt
-        # event the caller is waiting for has been received.
-        # Note: This mock behavior cannot be added to the fixture because
-        # many unit tests rely on it for different side effects.
-        with mock.patch("threading.Event.wait", side_effect=[True]):
-            # now live migrate that server
-            self._live_migrate(server, "completed")
+        # now live migrate that server
+        self._live_migrate(server, "completed")
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
@@ -3591,7 +3569,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         This should succeed since we support this, via detach and attach of the
         PCI device.
         """
-
+        self.flags(device_detach_timeout="1", group="libvirt")
         # start two compute services with differing PCI device inventory
         source_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=4, numa_node=0)
@@ -3692,15 +3670,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             pf_port['binding:profile'],
         )
 
-        # By mocking threading.Event.wait we prevent the test to wait until the
-        # timeout happens.
-        # We return True signaling that the event is set, i.e. the libvirt
-        # event the caller is waiting for has been received.
-        # Note: This mock behavior cannot be added to the fixture because
-        # many unit tests rely on it for different side effects.
-        with mock.patch("threading.Event.wait", side_effect=[True]):
-            # now live migrate that server
-            self._live_migrate(server, "completed")
+        # now live migrate that server
+        self._live_migrate(server, "completed")
 
         # we should now have transitioned our usage to the destination, freeing
         # up the source in the process
