@@ -13,6 +13,7 @@
 from urllib import parse as urlparse
 
 from oslo_log import log as logging
+from oslo_utils import netutils
 from oslo_utils import versionutils
 from sqlalchemy import sql
 from sqlalchemy.sql import expression
@@ -45,16 +46,9 @@ def _parse_netloc(netloc):
         hostport = netloc
         userpass = ''
 
-    if hostport.startswith('['):
-        host_end = hostport.find(']')
-        if host_end < 0:
-            raise ValueError('Invalid IPv6 URL')
-        these['hostname'] = hostport[1:host_end]
-        these['port'] = hostport[host_end + 1:]
-    elif ':' in hostport:
-        these['hostname'], these['port'] = hostport.split(':', 1)
-    else:
-        these['hostname'] = hostport
+    host, port = netutils.parse_host_port(hostport)
+    these['hostname'] = host
+    these['port'] = port
 
     if ':' in userpass:
         these['username'], these['password'] = userpass.split(':', 1)
