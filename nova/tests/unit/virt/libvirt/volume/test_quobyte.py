@@ -264,9 +264,9 @@ class QuobyteTestCase(test.NoDBTestCase):
         stat_mock.side_effect = [os.stat, statMockCall]
 
         self.assertRaises(
-            excClass=nova_exception.InvalidVolume,
-            callableObj=drv.validate_volume,
-            mount_path=self.TEST_MNT_POINT)
+            nova_exception.InvalidVolume,
+            drv.validate_volume,
+            self.TEST_MNT_POINT)
         stat_mock.assert_called_with(self.TEST_MNT_POINT)
         part_mock.assert_called_once_with(all=True)
 
