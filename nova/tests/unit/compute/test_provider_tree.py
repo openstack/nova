@@ -9,6 +9,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import copy
+
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import provider_tree
@@ -726,3 +728,17 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertTrue(pt.update_resources(cn.uuid, cn_resources))
         # resources not changed
         self.assertFalse(pt.update_resources(cn.uuid, cn_resources))
+
+    def test_deep_copy(self):
+        """Test that ProviderTree is copiable and the lock inside it
+        is still pointing to the same named lock instance.
+        """
+        pt = provider_tree.ProviderTree()
+        pt2 = provider_tree.ProviderTree()
+        # Two ProviderTree instances are sharing the same named lock
+        self.assertIs(pt.lock, pt2.lock)
+
+        cpt = copy.deepcopy(pt)
+        # Verify that deep copy behaves the same so the copy uses the same
+        # shared lock
+        self.assertIs(pt.lock, cpt.lock)
