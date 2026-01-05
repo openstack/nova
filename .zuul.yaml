@@ -653,8 +653,6 @@
              - ^setup.cfg$
              - ^tools/.*$
              - ^tox.ini$
-        - grenade-skip-level:
-            irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
@@ -713,7 +711,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-ovs-tempest-iptables_hybrid:
             irrelevant-files: *nova-base-irrelevant-files
-        - os-vif-ovs:
+        - os-vif-ovn:
             irrelevant-files: *nova-base-irrelevant-files
         - devstack-plugin-ceph-compute-local-ephemeral:
             irrelevant-files: *nova-base-irrelevant-files
