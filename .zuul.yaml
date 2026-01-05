@@ -576,29 +576,6 @@
         <<: *uec_image_vars
 
 - job:
-    name: nova-grenade-multinode
-    parent: grenade-multinode
-    description: |
-      Run a multinode grenade job and run the smoke, cold and live migration
-      tests with the controller upgraded and the compute on the older release.
-      The former names for this job were "nova-grenade-live-migration" and
-      "legacy-grenade-dsvm-neutron-multinode-live-migration".
-    irrelevant-files: *nova-base-irrelevant-files
-    vars:
-      devstack_local_conf:
-        test-config:
-          $TEMPEST_CONFIG:
-            compute-feature-enabled:
-              live_migration: true
-              volume_backed_live_migration: true
-              block_migration_for_live_migration: true
-              block_migrate_cinder_iscsi: true
-      tox_envlist: all
-      tempest_test_regex: ((tempest\.(api\.compute|scenario)\..*smoke.*)|(^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))|(^tempest\.api\.compute\.servers\.test_server_actions))
-      # revert this when bug #1940425 is fixed in neutron
-      tempest_exclude_regex: (test_live_migration_with_trunk)
-
-- job:
     name: nova-multi-cell
     parent: tempest-multinode-full-py3
     description: |
@@ -852,8 +829,6 @@
             irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
-        - nova-grenade-multinode:
-            irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
@@ -890,8 +865,6 @@
             irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
-        - nova-grenade-multinode:
-           irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
@@ -922,7 +895,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-ovs-tempest-iptables_hybrid:
             irrelevant-files: *nova-base-irrelevant-files
-        - os-vif-ovs:
+        - os-vif-ovn:
             irrelevant-files: *nova-base-irrelevant-files
         - devstack-plugin-ceph-compute-local-ephemeral:
             irrelevant-files: *nova-base-irrelevant-files
