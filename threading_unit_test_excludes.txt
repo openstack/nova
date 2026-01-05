@@ -7,10 +7,17 @@ nova.tests.unit.test_context.ContextTestCase.test_scatter_gather_cells_queued_ta
 nova.tests.unit.virt.libvirt.test_driver.CacheConcurrencyTestCase.test_different_fname_concurrency
 nova.tests.unit.virt.libvirt.test_driver.CacheConcurrencyTestCase.test_same_fname_concurrency
 
+#  File "/home/gibi/upstream/git/nova/nova/tests/unit/virt/libvirt/volume/test_mount.py", line 144, in runto
+#  assert time.time() - wait_since < MAX_WAIT
+# Wait until eventlet.Event is removed by https://review.opendev.org/c/openstack/nova/+/949754
+# Then we need to do something with the eventlet.spawn in the test code
 nova.tests.unit.virt.libvirt.volume.test_mount.HostMountStateTestCase.test_mount_concurrent
 nova.tests.unit.virt.libvirt.volume.test_mount.HostMountStateTestCase.test_mount_concurrent_no_interfere
 nova.tests.unit.virt.libvirt.volume.test_mount.MountManagerTestCase.test_host_up_waits_for_completion
+
+# To be classified
 nova.tests.unit.virt.vmwareapi.test_vm_util.VMwareVMUtilTestCase.test_create_vm_invalid_guestid
+
 # Independent failure ~10% with multiple possible error:
 # - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) not an error
 # - sqlite3.OperationalError: cannot start a transaction within a transaction
@@ -35,11 +42,12 @@ nova.tests.unit.conductor.test_conductor.ConductorTaskRPCAPITestCase.test_evacua
 # should either combine them and make the dynamic or
 # have the two variant executed conditionally
 nova.tests.unit.test_rpc.TestRPC.test_get_server
-
-# ditto
 nova.tests.unit.test_utils.ExecutorStatsTestCase.test_stats_logged_eventlet
 nova.tests.unit.test_utils.OsloServiceBackendSelectionTestCase.test_eventlet_selected
 
 # This is exactly the same test as nova.tests.unit.test_rpc.TestRPC.test_get_server
 # we should delete it
 nova.tests.unit.test_rpc.TestRPC.test_get_server_profiler_enabled
+
+# webob.exc.HTTPBadRequest: Invalid start time. The start time cannot occur after the end time.
+nova.tests.unit.policies.test_simple_tenant_usage.SimpleTenantUsageNoLegacyNoScopePolicyTest.test_show_simple_tenant_usage_policy
