@@ -803,7 +803,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - neutron-ovs-tempest-iptables_hybrid:
             irrelevant-files: *nova-base-irrelevant-files
-        - os-vif-ovs:
+        - os-vif-ovn:
             irrelevant-files: *nova-base-irrelevant-files
         - devstack-plugin-ceph-compute-local-ephemeral:
             irrelevant-files: *nova-base-irrelevant-files
