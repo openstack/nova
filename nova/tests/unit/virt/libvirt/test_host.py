@@ -2056,6 +2056,7 @@ Active:          8381604 kB
                 'interface-types': ['uefi'],
                 'mapping': {
                     'device': 'flash',
+                    'mode': 'split',
                     'executable': {
                         'filename': '/usr/share/edk2/ovmf/OVMF_CODE.fd',
                         'format': 'raw',
@@ -2072,6 +2073,44 @@ Active:          8381604 kB
                     },
                 ],
                 'features': ['acpi-s3', 'amd-sev', 'verbose-dynamic'],
+                'tags': [],
+            },
+            # NOTE(tkajinam): The following loaders are not supported and
+            # should be ignored. https://bugs.launchpad.net/nova/+bug/2122288
+            {
+                'description': 'Sample descriptor for stateless mode',
+                'interface-types': ['uefi'],
+                'mapping': {
+                    'device': 'flash',
+                    'mode': 'stateless',
+                    'executable': {
+                        'filename': '/usr/share/edk2/ovmf/OVMF_CODE_SL.fd',
+                        'format': 'raw'
+                    }
+                },
+                'targets': [
+                    {
+                        'architecture': 'x86_64',
+                        'machines': ['pc-q35-*'],
+                    },
+                ],
+                'features': ['amd-sev', 'verbose-dynamic'],
+                'tags': [],
+            },
+            {
+                'description': 'Sample descriptor for memory device',
+                'interface-types': ['uefi'],
+                'mapping': {
+                    'device': 'memory',
+                    'filename': '/usr/share/edk2/ovmf/OVMF_MEM.fd'
+                },
+                'targets': [
+                    {
+                        'architecture': 'x86_64',
+                        'machines': ['pc-q35-*'],
+                    }
+                ],
+                'features': ['amd-sev', 'verbose-dynamic'],
                 'tags': [],
             },
         ]
