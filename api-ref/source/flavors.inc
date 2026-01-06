@@ -226,7 +226,7 @@ This API is available starting with microversion 2.55.
 
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 Normal response codes: 200
 

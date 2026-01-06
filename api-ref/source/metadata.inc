@@ -17,7 +17,7 @@ List All Metadata
 
 Lists all metadata for a server.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -54,7 +54,7 @@ Creates any metadata items that do not already exist in the server, replaces
 exists metadata items that match keys. Does not modify items that are not in
 the request.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -96,7 +96,7 @@ Replaces one or more metadata items for a server.
 
 Creates any metadata items that do not already exist in the server. Removes and completely replaces any metadata items that already exist in the server with the metadata items in the request.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -136,7 +136,7 @@ Show Metadata Item Details
 
 Shows details for a metadata item, by key, for a server.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -173,7 +173,7 @@ Creates or replaces a metadata item, by key, for a server.
 Creates a metadata item that does not already exist in the server. Replaces
 existing metadata items that match keys with the metadata item in the request.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -213,7 +213,7 @@ Delete Metadata Item
 
 Deletes a metadata item, by key, from a server.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 204
 

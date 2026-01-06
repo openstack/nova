@@ -18,7 +18,7 @@ starting with microversion 2.21.
 
 Policy defaults enable only users with the administrative role or the owner of
 the server to perform this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -75,7 +75,7 @@ than microversion 2.21.
 
 Policy defaults enable only users with the administrative role or the owner of
 the server to perform this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 Normal response codes: 200
 

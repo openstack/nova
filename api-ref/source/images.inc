@@ -23,7 +23,7 @@ server. By default, operators provide pre-built operating system images.
 You can also create custom images. See: `Create Image Action
 <https://docs.openstack.org/api-ref/compute/#create-image-createimage-action>`__.
 
-By default, the ``policy.json`` file authorizes all users to view the
+By default, the ``policy.yaml`` file authorizes all users to view the
 image size in the ``OS-EXT-IMG-SIZE:size`` extended attribute.
 
 List Images

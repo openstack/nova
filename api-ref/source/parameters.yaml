@@ -2710,7 +2710,7 @@ event_host:
 
     Policy defaults enable only users with the administrative role to see
     an instance action event host. Cloud providers can change these
-    permissions through the ``policy.json`` file.
+    permissions through the ``policy.yaml`` file.
   in: body
   required: false
   type: string
@@ -2790,7 +2790,7 @@ event_traceback:
 
     Policy defaults enable only users with the administrative role to see
     an instance action event traceback. Cloud providers can change these
-    permissions through the ``policy.json`` file.
+    permissions through the ``policy.yaml`` file.
   in: body
   required: true
   type: string
@@ -4145,7 +4145,7 @@ instance_action_events_2_50:
 
     Policy defaults enable only users with the administrative role to see
     instance action event information. Cloud providers can change these
-    permissions through the ``policy.json`` file.
+    permissions through the ``policy.yaml`` file.
   in: body
   required: false
   type: array
@@ -4156,7 +4156,7 @@ instance_action_events_2_51:
 
     Policy defaults enable only users with the administrative role or the owner
     of the server to see instance action event information. Cloud providers can
-    change these permissions through the ``policy.json`` file.
+    change these permissions through the ``policy.yaml`` file.
   in: body
   required: true
   type: array
@@ -5798,7 +5798,7 @@ pool:
     are available, the call returns the ``400`` response code with an informational
     message.  Policy defaults enable only users with the administrative role or the
     owner of the server to perform this operation. Cloud providers can change these
-    permissions through the ``policy.json`` file.
+    permissions through the ``policy.yaml`` file.
   in: body
   required: false
   type: string

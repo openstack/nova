@@ -10,7 +10,7 @@ where usage auditing is required.
 
 Policy defaults enable only users with the administrative role to perform
 all os-instance-usage-audit-log related operations. Cloud providers can change
-these permissions through the ``policy.json`` file.
+these permissions through the ``policy.yaml`` file.
 
 List Server Usage Audits
 ========================

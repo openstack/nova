@@ -23,7 +23,7 @@ Specify the ``injectNetworkInfo`` action in the request body.
 
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 .. warning:: There is very limited support on this API, For more information,
              see `nova virt support matrix
@@ -78,7 +78,7 @@ automatically confirms the migrate operation after the configured interval.
 There are two different policies for this action, depending on whether the host
 parameter is set. Both defaults enable only users with the administrative role
 to perform this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -130,7 +130,7 @@ migration.
 
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 Starting from REST API version 2.34 pre-live-migration checks are done
 asynchronously, results of these checks are available in ``instance-actions``.
@@ -189,7 +189,7 @@ Specify the ``resetNetwork`` action in the request body.
 
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
@@ -227,7 +227,7 @@ Specify the ``os-resetState`` action and the ``state`` in the request body.
 
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 Normal response codes: 202
 

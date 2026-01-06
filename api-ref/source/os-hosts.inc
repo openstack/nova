@@ -20,7 +20,7 @@ matrix <https://docs.openstack.org/nova/latest/user/support-matrix.html>`__
 
 Policy defaults enable only users with the administrative role to perform
 all os-hosts related operations. Cloud providers can change these permissions
-through the ``policy.json`` file.
+through the ``policy.yaml`` file.
 
 List Hosts
 ==========

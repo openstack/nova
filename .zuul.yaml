@@ -636,12 +636,6 @@
       tempest_test_regex: ^tempest\.(scenario|(api\.compute))
       tempest_test_exclude_list: '{{ ansible_user_dir }}/{{ zuul.projects["opendev.org/openstack/nova"].src_dir }}/devstack/nova-multi-cell-exclude-list.txt'
       devstack_local_conf:
-        post-config:
-          $NOVA_CONF:
-            oslo_policy:
-              # The default policy file is policy.json but the
-              # setup-multi-cell-policy role will write to policy.yaml.
-              policy_file: policy.yaml
         test-config:
           $TEMPEST_CONFIG:
             compute-feature-enabled:

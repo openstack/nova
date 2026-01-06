@@ -46,7 +46,7 @@ Lists floating IP addresses associated with the tenant or account.
 
 Policy defaults enable only users with the administrative role
 or the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -82,7 +82,7 @@ If more than one floating IP address pool is available, use the
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -127,7 +127,7 @@ Shows details for a floating IP address, by ID, that is associated with the tena
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 200
 
@@ -171,7 +171,7 @@ it is automatically disassociated from that instance.
 
 Policy defaults enable only users with the administrative role or
 the owner of the server to perform this operation. Cloud providers
-can change these permissions through the ``policy.json`` file.
+can change these permissions through the ``policy.yaml`` file.
 
 Normal response codes: 202
 
