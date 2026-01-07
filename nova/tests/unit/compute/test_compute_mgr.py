@@ -8534,6 +8534,36 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock.ANY, network_arqs)
         return resources
 
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_for_spawn')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_build_networks_for_instance')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_networks_before_block_device_mapping')
+    def test_build_resources_prepnets_exception(
+    self, mock_prep_net, mock_build_net, mock_prep_spawn):
+
+        args = (self.context, self.instance, self.requested_networks,
+                self.security_groups, self.image, self.block_device_mapping,
+                self.resource_provider_mapping, [])
+
+        mock_prep_net.side_effect = exception.ExternalNetworkAttachForbidden(
+            network_uuid=uuids.network_id)
+
+        resources = self.compute._build_resources(*args)
+        e = self.assertRaises(
+            exception.BuildAbortException,
+            resources.__enter__
+        )
+        self.assertIn(
+            "It is not allowed to create an interface on external network",
+            str(e)
+        )
+
+        mock_build_net.assert_called_once_with(self.context, self.instance,
+            self.requested_networks, mock.ANY,
+            mock.ANY, mock.ANY)
+
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_bound_arq_resources')
     def test_accel_build_resources_no_device_profile(self, mock_get_arqs):

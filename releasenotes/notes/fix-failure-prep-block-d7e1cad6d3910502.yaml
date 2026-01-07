@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Fixes `bug 2137673`_ where details about the fact that the user specified
+    an incorrect configuration by requesting to attach to an external network are
+    masked by "Failure prepping block device" since they do not have access to
+    the whole backtrace.
+
+    .. _bug 2137673: https://bugs.launchpad.net/nova/+bug/2137673
