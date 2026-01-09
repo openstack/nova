@@ -2673,6 +2673,12 @@ class LibvirtDriver(driver.ComputeDriver):
             synchronously.
         :raises DeviceDetachFailed: if libvirt sent DeviceRemovalFailedEvent
         """
+        if dev.alias is None:
+            # our event handler needs a device alias, and we should never get
+            # here without one
+            msg = 'Device %s has no alias. This should not happen.'
+            raise exception.InternalError(msg % dev)
+
         # So we will issue an detach to libvirt and we will wait for an
         # event from libvirt about the result. We need to set up the event
         # handling before the detach to avoid missing the event if libvirt

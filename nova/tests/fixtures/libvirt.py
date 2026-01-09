@@ -917,6 +917,10 @@ def _parse_disk_info(element):
         disk_info['target_dev'] = target.get('dev')
         disk_info['target_bus'] = target.get('bus')
 
+    alias = element.find('./alias')
+    if alias is not None:
+        disk_info['alias'] = alias.get('name')
+
     return disk_info
 
 
@@ -962,6 +966,10 @@ def _parse_nic_info(element):
     if target is not None:
         nic_info['target_dev'] = target.get('dev')
 
+    alias = element.find('./alias')
+    if alias is not None:
+        nic_info['alias'] = alias.get('name')
+
     return nic_info
 
 
@@ -978,6 +986,10 @@ def _parse_hostdev_info(element):
             hostdev_info['bus'] = address.get('bus')
             hostdev_info['slot'] = address.get('slot')
             hostdev_info['function'] = address.get('function')
+
+    alias = element.find('./alias')
+    if alias is not None:
+        hostdev_info['alias'] = alias.get('name')
 
     return hostdev_info
 
@@ -1222,8 +1234,16 @@ class Domain(object):
         if device_nodes is not None:
             disks_info = []
             disks = device_nodes.findall('./disk')
-            for disk in disks:
-                disks_info += [_parse_disk_info(disk)]
+            for idx, disk in enumerate(disks):
+                disk_info = _parse_disk_info(disk)
+
+                alias = disk.find('./alias')
+                if alias is not None:
+                    disk_info['alias'] = alias.get('name')
+                else:
+                    disk_info['alias'] = f'disk{idx}'
+
+                disks_info.append(disk_info)
             devices['disks'] = disks_info
 
             # Manage shares
@@ -1235,13 +1255,19 @@ class Domain(object):
 
             nics_info = []
             nics = device_nodes.findall('./interface')
-            for nic in nics:
+            for idx, nic in enumerate(nics):
                 nic_info = {}
                 nic_info['type'] = nic.get('type')
 
                 mac = nic.find('./mac')
                 if mac is not None:
                     nic_info['mac'] = mac.get('address')
+
+                alias = nic.find('./alias')
+                if alias is not None:
+                    nic_info['alias'] = alias.get('name')
+                else:
+                    nic_info['alias'] = f'net{idx}'
 
                 source = nic.find('./source')
                 if source is not None:
@@ -1409,16 +1435,25 @@ class Domain(object):
         if xml.startswith("<disk"):
             disk_info = _parse_disk_info(etree.fromstring(xml))
             disk_info['_attached'] = True
+            if 'alias' not in disk_info:
+                idx = len(self._def['devices']['disks'])
+                disk_info['alias'] = f'disk{idx}'
             self._def['devices']['disks'] += [disk_info]
             result = True
         elif xml.startswith("<interface"):
             nic_info = _parse_nic_info(etree.fromstring(xml))
             nic_info['_attached'] = True
+            if 'alias' not in nic_info:
+                idx = len(self._def['devices']['nics'])
+                nic_info['alias'] = f'net{idx}'
             self._def['devices']['nics'] += [nic_info]
             result = True
         elif xml.startswith("<hostdev"):
             hostdev_info = _parse_hostdev_info(etree.fromstring(xml))
             hostdev_info['_attached'] = True
+            if 'alias' not in hostdev_info:
+                idx = len(self._def['devices']['hostdevs'])
+                hostdev_info['alias'] = f'hostdev{idx}'
             self._def['devices']['hostdevs'] += [hostdev_info]
             result = True
         else:
@@ -1518,7 +1553,9 @@ class Domain(object):
             strformat = """
     <disk type='%(type)s' device='%(device)s'>
       <driver name='%(driver_name)s' type='%(driver_type)s'/>
+      <alias name='%(alias)s'/>
       <source %(source_attr)s='%(source)s'"""
+
             if 'encryption_format' not in disk:
                 strformat += '/>'
             else:
@@ -1555,6 +1592,7 @@ class Domain(object):
                 # this branch covers kernel ovs interfaces
                 nics += '''<interface type='%(type)s'>
           <mac address='%(mac)s'/>
+          <alias name='%(alias)s'/>
           <target dev='tap274487d1-6%(func)s'/>
           <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
                    function='0x%(func)s'/>
@@ -1563,6 +1601,7 @@ class Domain(object):
                 # this branch covers hardware offloaded ovs with vdpa
                 nics += '''<interface type='%(type)s'>
           <mac address='%(mac)s'/>
+          <alias name='%(alias)s'/>
           <source dev='%(source)s'/>
           <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
                    function='0x%(func)s'/>
@@ -1572,6 +1611,7 @@ class Domain(object):
             elif 'source' in nic:
                 nics += '''<interface type='%(type)s'>
           <mac address='%(mac)s'/>
+          <alias name='%(alias)s'/>
           <source %(type)s='%(source)s'/>
           <target dev='tap274487d1-6%(func)s'/>
           <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
@@ -1584,6 +1624,7 @@ class Domain(object):
                 # the fixture we hard code it.
                 nics += '''<interface type='%(type)s'>
           <mac address='%(mac)s'/>
+          <alias name='%(alias)s'/>
           <source dev='fake_pf_interface_name' mode='passthrough'>
               <address type='pci' domain='0x0000' bus='0x81' slot='0x00'
                    function='0x%(func)s'/>

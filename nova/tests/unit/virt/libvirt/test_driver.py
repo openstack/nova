@@ -10726,17 +10726,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         volume_id = uuids.volume
-        alias_xml = '<alias name="%s"/>' % vconfig.make_libvirt_device_alias(
-            volume_id)
+        if use_alias:
+            alias = vconfig.make_libvirt_device_alias(volume_id)
+        else:
+            # if we haven't created our own alias, libvirt will generate one
+            # for us
+            alias = 'virtio-disk0'
+
         mock_xml_with_disk = """<domain>
   <devices>
     <disk type='file'>
-      %(alias)s
+      <alias name="%(alias)s"/>
       <source file='/path/to/fake-volume'/>
       <target dev='vdc' bus='virtio'/>
     </disk>
   </devices>
-</domain>""" % {'alias': use_alias and alias_xml or ''}
+</domain>""" % {'alias': alias}
         mock_xml_without_disk = """<domain>
   <devices>
   </devices>
@@ -10781,10 +10786,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
                 mock_get_domain.assert_called_with(instance)
                 xml = """<disk type="file" device="disk">
-                            %(alias)s
+                            <alias name="%(alias)s"/>
                             <source file="/path/to/fake-volume"/>
                             <target bus="virtio" dev="vdc"/>
-                        </disk>""" % {'alias': use_alias and alias_xml or ''}
+                        </disk>""" % {'alias': alias}
                 # we expect two separate detach calls
                 self.assertEqual(2, mock_dom.detachDeviceFlags.call_count)
                 # one for the persistent domain
@@ -26094,6 +26099,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                     <devices>
                         <interface type='bridge'>
                             <mac address='52:54:00:f6:35:8f'/>
+                            <alias name='bridge0'/>
                             <model type='virtio'/>
                             <source bridge='br0'/>
                             <target dev='tap12345678'/>
@@ -26109,6 +26115,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         expected_cfg.parse_str("""
             <interface type='bridge'>
               <mac address='52:54:00:f6:35:8f'/>
+              <alias name='bridge0'/>
               <model type='virtio'/>
               <source bridge='br0'/>
               <target dev='tap12345678'/>
@@ -26250,6 +26257,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                     <devices>
                         <interface type='bridge'>
                             <mac address='52:54:00:f6:35:8f'/>
+                            <alias name='bridge0'/>
                             <model type='virtio'/>
                             <source bridge='br0'/>
                             <target dev='tap12345678'/>
@@ -26258,6 +26266,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                         </interface>
                         <interface type='bridge'>
                             <mac address='52:54:00:f6:35:8f'/>
+                            <alias name='bridge1'/>
                             <model type='virtio'/>
                             <source bridge='br1'/>
                             <target dev='tap87654321'/>
@@ -26272,6 +26281,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         expected.parse_str("""
             <interface type='bridge'>
                 <mac address='52:54:00:f6:35:8f'/>
+                <alias name='bridge0'/>
                 <model type='virtio'/>
                 <source bridge='br0'/>
                 <target dev='tap12345678'/>
