@@ -95,6 +95,11 @@ VIF_DETAILS_TAP_MAC_ADDRESS = 'mac_address'
 VIF_DETAILS_OVS_DATAPATH_SYSTEM = 'system'
 VIF_DETAILS_OVS_DATAPATH_NETDEV = 'netdev'
 
+# Specifies whether os-vif should create the TAP device. When True, os-vif
+# will pre-create the TAP device before adding it to OVS, reducing live
+# migration downtime. See bug #2069718.
+VIF_DETAILS_OVS_CREATE_TAP = 'ovs_create_tap'
+
 # Define supported virtual NIC types. VNIC_TYPE_DIRECT and VNIC_TYPE_MACVTAP
 # are used for SR-IOV ports
 VNIC_TYPE_NORMAL = 'normal'

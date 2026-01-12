@@ -1549,6 +1549,107 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
+    @mock.patch.object(os_vif, "plug")
+    def test_osvif_plug_multiqueue_with_create_tap(self, mock_plug,
+                                                   mock_convert_vif,
+                                                   mock_convert_inst):
+        """Test that multiqueue is set on port profile when create_tap=True."""
+        # Skip test if os-vif doesn't support create_tap/multiqueue fields
+        test_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
+            interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
+            profile_id="fishfood")
+        if ('create_tap' not in test_prof.fields or
+                'multiqueue' not in test_prof.fields):
+            self.skipTest("os-vif does not support create_tap/multiqueue")
+
+        # Create a port profile with create_tap=True and multiqueue field
+        os_vif_ovs_tap_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
+            interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
+            profile_id="fishfood",
+            create_tap=True,
+            multiqueue=False)  # Will be set to True by _plug_os_vif
+
+        os_vif_ovs_tap = osv_objects.vif.VIFOpenVSwitch(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            address="22:52:25:62:e2:aa",
+            vif_name="nicdc065497-3c",
+            bridge_name="br0",
+            port_profile=os_vif_ovs_tap_prof,
+            network=self.os_vif_network)
+
+        mock_convert_vif.return_value = os_vif_ovs_tap
+        mock_convert_inst.return_value = self.os_vif_inst_info
+
+        # Create an instance with multiqueue enabled via image property
+        ins = objects.Instance(
+            id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            image_ref=uuids.image_ref, flavor=self.flavor_2vcpu,
+            project_id=723,
+            system_metadata={
+                'image_hw_vif_multiqueue_enabled': 'True'
+            },
+        )
+
+        d = vif.LibvirtGenericVIFDriver()
+        d.plug(ins, self.vif_ovs)
+
+        # Verify multiqueue was set to True on the port profile
+        self.assertTrue(os_vif_ovs_tap_prof.multiqueue)
+        mock_plug.assert_called_once()
+
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
+    @mock.patch.object(os_vif, "plug")
+    def test_osvif_plug_multiqueue_without_create_tap(self, mock_plug,
+                                                      mock_convert_vif,
+                                                      mock_convert_inst):
+        """Test multiqueue is NOT set when create_tap=False."""
+        # Skip test if os-vif doesn't support create_tap/multiqueue fields
+        test_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
+            interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
+            profile_id="fishfood")
+        if ('create_tap' not in test_prof.fields or
+                'multiqueue' not in test_prof.fields):
+            self.skipTest("os-vif does not support create_tap/multiqueue")
+
+        # Create a profile with create_port=True but create_tap=False
+        os_vif_ovs_no_tap_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
+            interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
+            profile_id="fishfood",
+            create_port=True,
+            create_tap=False,
+            multiqueue=False)
+
+        os_vif_ovs_no_tap = osv_objects.vif.VIFOpenVSwitch(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            address="22:52:25:62:e2:aa",
+            vif_name="nicdc065497-3c",
+            bridge_name="br0",
+            port_profile=os_vif_ovs_no_tap_prof,
+            network=self.os_vif_network)
+
+        mock_convert_vif.return_value = os_vif_ovs_no_tap
+        mock_convert_inst.return_value = self.os_vif_inst_info
+
+        # Instance with multiqueue enabled
+        ins = objects.Instance(
+            id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            image_ref=uuids.image_ref, flavor=self.flavor_2vcpu,
+            project_id=723,
+            system_metadata={
+                'image_hw_vif_multiqueue_enabled': 'True'
+            },
+        )
+
+        d = vif.LibvirtGenericVIFDriver()
+        d.plug(ins, self.vif_ovs)
+
+        # Verify multiqueue was NOT set (remains False) since create_tap=False
+        self.assertFalse(os_vif_ovs_no_tap_prof.multiqueue)
+        mock_plug.assert_called_once()
+
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
     @mock.patch.object(os_vif, "unplug")
     def _test_osvif_unplug(self, fail, mock_unplug,
                          mock_convert_vif, mock_convert_inst):
@@ -1717,6 +1818,46 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              <source bridge="br0"/>
              <mtu size="9000"/>
              <target dev="nicdc065497-3c"/>
+             <bandwidth>
+              <inbound average="100" peak="200" burst="300"/>
+              <outbound average="10" peak="20" burst="30"/>
+             </bandwidth>
+            </interface>"""
+
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
+
+    def test_config_os_vif_ovs_with_create_tap(self):
+        """Test that create_tap=True results in managed='no' in XML."""
+        # Skip test if os-vif doesn't support create_tap field
+        test_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
+            interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
+            profile_id="fishfood")
+        if 'create_tap' not in test_prof.fields:
+            self.skipTest("os-vif does not support create_tap")
+
+        # Create a port profile with create_tap=True
+        os_vif_ovs_tap_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
+            interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
+            profile_id="fishfood",
+            create_tap=True)
+
+        os_vif_type = osv_objects.vif.VIFOpenVSwitch(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            address="22:52:25:62:e2:aa",
+            vif_name="nicdc065497-3c",
+            bridge_name="br0",
+            port_profile=os_vif_ovs_tap_prof,
+            network=self.os_vif_network)
+
+        vif_type = self.vif_ovs
+
+        # Expected XML should have managed="no" on the target element
+        expected_xml = """
+            <interface type="ethernet">
+             <mac address="22:52:25:62:e2:aa"/>
+             <model type="virtio"/>
+             <mtu size="9000"/>
+             <target dev="nicdc065497-3c" managed="no"/>
              <bandwidth>
               <inbound average="100" peak="200" burst="300"/>
               <outbound average="10" peak="20" burst="30"/>

@@ -457,9 +457,33 @@ class LibvirtGenericVIFDriver(object):
         conf.target_dev = vif.vif_name
 
     def _set_config_VIFOpenVSwitch(self, instance, vif, conf):
-        # if delegating creation to os-vif, create an ethernet-type VIF and let
-        # os-vif do the actual wiring up
-        if 'create_port' in vif.port_profile and vif.port_profile.create_port:
+        # Check if os-vif will create the TAP device (with backward compat
+        # check for older os-vif versions that don't have create_tap field)
+        # NOTE: 'field in profile.fields' checks schema existence,
+        # 'field in profile' checks if the attribute is set
+        create_tap = (
+            'create_tap' in vif.port_profile.fields and
+            'create_tap' in vif.port_profile and
+            vif.port_profile.create_tap
+        )
+        # Check if delegating port creation to os-vif
+        create_port = (
+            'create_port' in vif.port_profile.fields and
+            'create_port' in vif.port_profile and
+            vif.port_profile.create_port
+        )
+
+        # TODO(sean-k-mooney): we should always delegate to os-vif and have
+        # os-vif create the tap once we are sure all compute nodes are
+        # upgraded. Simplify this logic in 2026.2+
+        if create_tap:
+            # os-vif will create the TAP device, so use ethernet-type VIF
+            # and set managed=no so libvirt uses the existing TAP device
+            self._set_config_VIFGeneric(instance, vif, conf)
+            conf.managed = "no"
+        elif create_port:
+            # Delegating creation to os-vif, create an ethernet-type VIF
+            # and let os-vif do the actual wiring up
             self._set_config_VIFGeneric(instance, vif, conf)
         else:
             conf.net_type = "bridge"
@@ -705,6 +729,24 @@ class LibvirtGenericVIFDriver(object):
 
     def _plug_os_vif(self, instance, vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)
+
+        # Set multiqueue on the port profile if create_tap is enabled and
+        # the instance has multiqueue enabled via flavor/image properties.
+        # This must be done here because nova_to_osvif_vif doesn't have
+        # access to the instance.
+        # NOTE: 'field in obj.fields' checks schema existence,
+        # 'field in obj' checks if the attribute is set on the instance
+        if ('port_profile' in vif.fields and
+                'port_profile' in vif):
+            profile = vif.port_profile
+            if (profile is not None and
+                    'create_tap' in profile.fields and
+                    'create_tap' in profile and
+                    profile.create_tap and
+                    'multiqueue' in profile.fields):
+                multiqueue = hardware.get_vif_multiqueue_constraint(
+                    instance.flavor, instance.image_meta)
+                profile.multiqueue = multiqueue
 
         try:
             os_vif.plug(vif, instance_info)

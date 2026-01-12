@@ -1,0 +1,15 @@
+---
+fixes:
+  - |
+    Updated nova to support os-vif TAP device pre-creation for OVN ports.
+    When Neutron sets ``ovs_create_tap`` in vif_details (enabled via
+    the ``[ovn]/ovs_create_tap`` config option in the ML2 driver config),
+    Nova propagates this to os-vif which creates the TAP
+    device before libvirt starts the VM. Nova then configures libvirt with
+    ``managed="no"`` so it uses the pre-created TAP device instead of creating
+    a new one. This allows nova via os-vif to pre create the tap device in
+    pre live migration allowing ovn to install openflow rules before nova
+    starts the live migration. This reduces network connectivity downtime
+    when ovn is overloaded.
+
+    See `bug 2069718 <https://bugs.launchpad.net/neutron/+bug/2069718>`_.

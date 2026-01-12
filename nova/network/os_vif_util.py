@@ -332,6 +332,18 @@ def _nova_to_osvif_vif_ovs(vif):
         interface_id=vif.get('ovs_interfaceid') or vif['id'],
         datapath_type=vif['details'].get(
             model.VIF_DETAILS_OVS_DATAPATH_TYPE))
+
+    # Set create_tap from Neutron binding details if supported by the
+    # os-vif version (check profile.fields for schema, not profile for set
+    # values)
+    create_tap = vif['details'].get(
+        model.VIF_DETAILS_OVS_CREATE_TAP, False)
+    if 'create_tap' in profile.fields:
+        profile.create_tap = create_tap
+    # NOTE: multiqueue is determined by Nova from hw:vif_multiqueue_enabled
+    # flavor extra spec or image property. It is set in _plug_os_vif() in
+    # nova/virt/libvirt/vif.py where the instance is available.
+
     if vnic_type in (model.VNIC_TYPE_DIRECT, model.VNIC_TYPE_VDPA):
         obj = _get_vnic_direct_vif_instance(
             vif,

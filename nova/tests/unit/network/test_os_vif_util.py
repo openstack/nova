@@ -473,7 +473,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             port_profile=osv_objects.vif.VIFPortProfileOpenVSwitch(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
                 datapath_type=None,
-                create_port=False),
+                create_port=False,
+                create_tap=False),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
@@ -604,7 +605,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             port_profile=osv_objects.vif.VIFPortProfileOpenVSwitch(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
                 datapath_type=model.VIF_DETAILS_OVS_DATAPATH_SYSTEM,
-                create_port=True),
+                create_port=True,
+                create_tap=False),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
@@ -644,7 +646,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             bridge_name="qbrdc065497-3c",
             port_profile=osv_objects.vif.VIFPortProfileOpenVSwitch(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
-                datapath_type="system"),
+                datapath_type="system",
+                create_tap=False),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
@@ -1292,3 +1295,55 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                     objects=[])))
 
         self.assertObjEqual(expect, actual)
+
+    def test_nova_to_osvif_vif_ovs_with_tap_creation(self):
+        """Test that ovs_create_tap is propagated to create_tap."""
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_OVS,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_PORT_FILTER: True,
+                model.VIF_DETAILS_OVS_DATAPATH_TYPE:
+                    model.VIF_DETAILS_OVS_DATAPATH_SYSTEM,
+                model.VIF_DETAILS_OVS_CREATE_TAP: True,
+            },
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+
+        # Verify the port profile has create_tap set
+        self.assertIsInstance(
+            actual.port_profile, osv_objects.vif.VIFPortProfileOpenVSwitch)
+        # Check if the field exists in the schema (for backward compat)
+        if 'create_tap' in actual.port_profile.fields:
+            self.assertTrue(actual.port_profile.create_tap)
+
+    def test_nova_to_osvif_vif_ovs_without_tap_creation(self):
+        """Test that create_tap defaults to False when not in details."""
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_OVS,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_PORT_FILTER: True,
+                model.VIF_DETAILS_OVS_DATAPATH_TYPE:
+                    model.VIF_DETAILS_OVS_DATAPATH_SYSTEM,
+            },
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+
+        # Verify the port profile doesn't have create_tap set to True
+        self.assertIsInstance(
+            actual.port_profile, osv_objects.vif.VIFPortProfileOpenVSwitch)
+        if 'create_tap' in actual.port_profile.fields:
+            self.assertFalse(actual.port_profile.create_tap)
