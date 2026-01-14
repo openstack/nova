@@ -322,13 +322,13 @@ class Service(service.Service):
 _launcher = None
 
 
-def serve(server, workers=None):
+def serve(server, workers=None, no_fork=False):
     global _launcher
     if _launcher:
         raise RuntimeError(_('serve() can only be called once'))
 
     _launcher = service.launch(CONF, server, workers=workers,
-                               restart_method='mutate')
+                               restart_method='mutate', no_fork=no_fork)
 
 
 def wait():

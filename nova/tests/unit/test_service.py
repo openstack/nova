@@ -324,7 +324,8 @@ class TestLauncher(test.NoDBTestCase):
         mock_launch.assert_called_once_with(mock.ANY,
                                             mock.sentinel.service,
                                             workers=None,
-                                            restart_method='mutate')
+                                            restart_method='mutate',
+                                            no_fork=False)
 
     @mock.patch.object(_service, 'launch')
     def test_launch_app_with_workers(self, mock_launch):
@@ -333,7 +334,19 @@ class TestLauncher(test.NoDBTestCase):
         mock_launch.assert_called_once_with(mock.ANY,
                                             mock.sentinel.service,
                                             workers=mock.sentinel.workers,
-                                            restart_method='mutate')
+                                            restart_method='mutate',
+                                            no_fork=False)
+
+    @mock.patch.object(_service, 'launch')
+    def test_launch_app_with_workers_no_fork(self, mock_launch):
+        service._launcher = None
+        service.serve(
+            mock.sentinel.service, workers=mock.sentinel.workers, no_fork=True)
+        mock_launch.assert_called_once_with(mock.ANY,
+                                            mock.sentinel.service,
+                                            workers=mock.sentinel.workers,
+                                            restart_method='mutate',
+                                            no_fork=True)
 
     @mock.patch.object(_service, 'launch')
     def test_launch_app_more_than_once_raises(self, mock_launch):
