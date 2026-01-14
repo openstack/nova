@@ -1373,7 +1373,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             return
 
         if (node.provision_state in _UNPROVISION_STATES or
-            node.provision_state not in ironic_states.PROVISION_STATE_LIST):
+            node.provision_state not in ironic_states.ALL_STATES):
             # NOTE(mgoddard): Ironic's node tear-down procedure includes all of
             # the things we do in _cleanup_deploy, so let's not repeat them
             # here. Doing so would also race with the node cleaning process,
@@ -2240,7 +2240,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         try:
             self.ironic_connection.set_node_provision_state(
                 node_id,
-                ironic_states.UNRESCUE,
+                ironic_states.VERBS['unrescue'],
             )
         except Exception as e:
             raise exception.InstanceUnRescueFailure(reason=str(e))

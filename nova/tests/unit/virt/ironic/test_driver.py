@@ -18,6 +18,7 @@
 import base64
 from unittest import mock
 
+import ddt
 import fixtures
 from openstack.baremetal.v1 import node as _node
 from openstack import exceptions as sdk_exc
@@ -96,6 +97,7 @@ def _make_compute_service(hostname):
     return objects.Service(host=hostname)
 
 
+@ddt.ddt
 class IronicDriverTestCase(test.NoDBTestCase):
 
     @mock.patch.object(ironic_driver.IronicDriver, '_refresh_hash_ring')
@@ -1742,9 +1744,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         # we call this innter function twice so we need to reset mocks
         self.mock_conn.set_node_provision_state.reset_mock()
 
-    def test_destroy(self):
-        for state in ironic_states.PROVISION_STATE_LIST:
-            self._test_destroy(state)
+    @ddt.data(*ironic_states.ALL_STATES)
+    def test_destroy(self, state):
+        self._test_destroy(state)
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_remove_instance_info_from_node')
