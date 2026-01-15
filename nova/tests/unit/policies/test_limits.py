@@ -39,13 +39,18 @@ class LimitsPolicyTest(base.BasePolicyTest):
         self.req = fakes.HTTPRequest.blank('')
 
         self.absolute_limits = {
-            'ram': 512,
-            'instances': 5,
             'cores': 21,
-            'key_pairs': 10,
             'floating_ips': 10,
-            'security_groups': 10,
+            'injected_file_content_bytes': 1024,
+            'injected_files': 20,
+            'instances': 5,
+            'key_pairs': 10,
+            'metadata_items': 10,
+            'ram': 512,
             'security_group_rules': 20,
+            'security_groups': 10,
+            'server_group_members': 5,
+            'server_groups': 10,
         }
 
         def stub_get_project_quotas(context, project_id, usages=True):

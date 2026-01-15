@@ -33,7 +33,7 @@ class ViewBuilder(object):
             "security_group_rules": ["maxSecurityGroupRules"],
             "server_groups": ["maxServerGroups"],
             "server_group_members": ["maxServerGroupMembers"]
-    }
+        }
 
     def build(self, request, quotas, filtered_limits=None,
               max_image_meta=True):

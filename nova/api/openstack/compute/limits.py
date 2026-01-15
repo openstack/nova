@@ -14,7 +14,7 @@
 #    under the License.
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.schemas import limits
+from nova.api.openstack.compute.schemas import limits as schema
 from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -27,26 +27,32 @@ QUOTAS = quota.QUOTAS
 # This is a list of limits which needs to filter out from the API response.
 # This is due to the deprecation of network related proxy APIs, the related
 # limit should be removed from the API also.
-FILTERED_LIMITS_2_36 = ['floating_ips', 'security_groups',
-                        'security_group_rules']
+FILTERED_LIMITS_v236 = [
+    'floating_ips', 'security_groups', 'security_group_rules'
+]
 
-FILTERED_LIMITS_2_57 = list(FILTERED_LIMITS_2_36)
-FILTERED_LIMITS_2_57.extend(['injected_files', 'injected_file_content_bytes'])
+FILTERED_LIMITS_v257 = list(FILTERED_LIMITS_v236)
+FILTERED_LIMITS_v257.extend(['injected_files', 'injected_file_content_bytes'])
 
 
+@validation.validated
 class LimitsController(wsgi.Controller):
     """Controller for accessing limits in the OpenStack API."""
 
     @wsgi.expected_errors(())
-    @validation.query_schema(limits.limits_query_schema, '2.1', '2.56')
-    @validation.query_schema(limits.limits_query_schema, '2.57', '2.74')
-    @validation.query_schema(limits.limits_query_schema_275, '2.75')
+    @validation.query_schema(schema.index_query, '2.1', '2.56')
+    @validation.query_schema(schema.index_query, '2.57', '2.74')
+    @validation.query_schema(schema.index_query_v275, '2.75')
+    @validation.response_body_schema(schema.index_response, '2.1', '2.35')
+    @validation.response_body_schema(schema.index_response_v236, '2.36', '2.38')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v239, '2.39', '2.56')  # noqa: E501
+    @validation.response_body_schema(schema.index_response_v257, '2.57')
     def index(self, req):
         filtered_limits = []
         if api_version_request.is_supported(req, '2.57'):
-            filtered_limits = FILTERED_LIMITS_2_57
+            filtered_limits = FILTERED_LIMITS_v257
         elif api_version_request.is_supported(req, '2.36'):
-            filtered_limits = FILTERED_LIMITS_2_36
+            filtered_limits = FILTERED_LIMITS_v236
 
         max_image_meta = True
         if api_version_request.is_supported(req, '2.39'):
