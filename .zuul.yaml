@@ -30,12 +30,12 @@
     timeout: 3600
 
 - job:
-    name: nova-tox-functional-py312
-    parent: openstack-tox-functional-py312
+    name: nova-tox-functional-py313
+    parent: openstack-tox-functional-py313
     description: |
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.12 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py312`` environment.
+      Uses tox with the ``functional-py313`` environment.
 
       This job also provides a parent for other projects to run the nova
       functional tests on their own changes.
@@ -48,7 +48,7 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py312
+      bindep_profile: test py313
     timeout: 3600
 
 - job:
@@ -830,9 +830,7 @@
         - nova-tox-validate-backport:
             voting: false
         - nova-tox-functional-py310
-        - nova-tox-functional-py312
-        - openstack-tox-py312:
-            voting: true
+        - nova-tox-functional-py313
         - tempest-integrated-compute:
            # NOTE(gmann): Policies changes do not need to run all the
            # integration test jobs. Running only tempest and grenade
@@ -858,7 +856,7 @@
       jobs:
         - nova-live-migration
         - nova-tox-functional-py310
-        - nova-tox-functional-py312
+        - nova-tox-functional-py313
         - nova-multi-cell
         - nova-next
         - nova-tox-validate-backport
