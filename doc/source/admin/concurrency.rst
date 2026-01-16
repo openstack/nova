@@ -47,7 +47,7 @@ Tunables for the native threading mode
 As native threads are more expensive resources than greenthreads Nova provides
 a set of configuration options to allow fine tuning the deployment based on
 load and resource constraints. The default values are selected to support a
-basic, small deployment without consuming substantially  more memory resources,
+basic, small deployment without consuming substantially more memory resources,
 than the legacy Eventlet mode. Increasing the size of the below thread pools
 means that the given service will consume more memory but will also allow more
 tasks to be executed concurrently.
@@ -78,6 +78,23 @@ tasks to be executed concurrently.
   tasks in the service that are not categorized into the above pools.
 
   This option is relevant to every nova service using ``nova.utils.spawn()``.
+
+* :oslo.config:option:`sync_power_state_pool_size`: Used by the
+  nova-compute service to sync the power state of each instance on the host
+  between the hypervisor and the DB. Since nova 33.0.0 (2026.1 Gazpacho) the
+  default value of this option is changed from 1000 to 5 to have a sane default
+  in native threading mode. Increasing this value in native threading mode
+  increases the nova-compute memory consumption on a host that has many
+  instances.
+
+* :oslo.config:option:`max_concurrent_live_migrations`: Used by the
+  nova-compute service to limit the number of outgoing concurrent live
+  migrations from the host. It is implemented via a thread pool. So increasing
+  the the number of concurrent live migrations will increase the nova-compute
+  service memory consumption in native threading mode. It is almost always
+  a bad idea to use change this config option from its default value, 1. If
+  more performant live migration is needed then enable
+  :oslo.config:option:`libvirt.live_migration_parallel_connections` instead.
 
 Seeing the usage of the pools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,0 +1,28 @@
+---
+upgrade:
+  - |
+    The meaning of the 0 value of the config option
+    ``[DEFAULT]max_concurrent_live_migrations`` has been changed. In the past
+    the implementation of the meaning of "unlimited" used maximum 1000
+    concurrent worker greenthreads. For eventlet mode this behavior is kept but
+    for the native threading mode it is now reduced to 5 native threads. It is
+    almost always a bad idea to change this config option from its default value, 1.
+    Please read the `concurrency
+    <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__
+    guide for more details.
+  - |
+    The default value of the configuration option
+    ``[DEFAULT]sync_power_state_thread_pool_size`` is changed from 1000 to 5 to
+    have a value that is safe to use in native threading mode. If you are still
+    using the eventlet mode and relying on a higher value then configure that
+    higher value explicitly before the upgrade. Please read the
+    `concurrency <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__
+    guide for more details.
+deprecations:
+  - |
+    The possible 0 value of the configuration option
+    ``[DEFAULT]max_concurrent_live_migrations`` is deprecated and will be
+    removed in a future release. It is almost always a bad idea to change the
+    default value, 1, of this config option. If more performant live migration
+    is needed, use the ``live_migration_parallel_connections`` config option
+    instead.

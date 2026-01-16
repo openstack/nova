@@ -39,7 +39,6 @@ import typing as ty
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
-import futurist
 from keystoneauth1 import exceptions as keystone_exception
 from openstack import exceptions as sdk_exc
 import os_traits
@@ -667,9 +666,10 @@ class ComputeManager(manager.Manager):
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.query_client = query.SchedulerQueryClient()
         self.instance_events = InstanceEvents()
-        self._sync_power_executor = futurist.GreenThreadPoolExecutor(
+        self._sync_power_executor = nova.utils.create_executor(
             max_workers=CONF.sync_power_state_pool_size)
-        self._syncs_in_progress = {}
+        self._syncs_in_progress: set[str] = set()
+        self._syncs_in_progress_lock = threading.Lock()
         self.send_instance_updates = (
             CONF.filter_scheduler.track_instance_changes)
         if CONF.max_concurrent_builds != 0:
@@ -683,11 +683,27 @@ class ComputeManager(manager.Manager):
         else:
             self._snapshot_semaphore = compute_utils.UnlimitedSemaphore()
         if CONF.max_concurrent_live_migrations > 0:
-            self._live_migration_executor = futurist.GreenThreadPoolExecutor(
+            self._live_migration_executor = nova.utils.create_executor(
                 max_workers=CONF.max_concurrent_live_migrations)
         else:
-            # CONF.max_concurrent_live_migrations is 0 (unlimited)
-            self._live_migration_executor = futurist.GreenThreadPoolExecutor()
+            # setting CONF.max_concurrent_live_migrations to 0 (unlimited)
+            # is deprecated but still supported, so we need to use a sane
+            # default values for each threading mode
+            LOG.warning("Nova compute deprecated the support of unlimited "
+                        "parallel live migration so "
+                        "[DEFAULT]max_concurrent_live_migrations configured "
+                        "with value 0 is deprecated and will not be supported "
+                        "in future releases. Please set an explicit positive"
+                        "value to this config option instead.")
+            if utils.concurrency_mode_threading():
+                self._live_migration_executor = nova.utils.create_executor(
+                    max_workers=5)
+            else:
+                # In eventlet mode we need to keep backward compatibility and
+                # 1000 greenthreads to emulate unlimited.
+                self._live_migration_executor = nova.utils.create_executor(
+                    max_workers=1000)
+
         # This is a dict, keyed by instance uuid, to a two-item tuple of
         # migration object and Future for the queued live migration.
         self._waiting_live_migrations = {}
@@ -705,6 +721,11 @@ class ComputeManager(manager.Manager):
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.rt = resource_tracker.ResourceTracker(
             self.host, self.driver, reportclient=self.reportclient)
+
+    @contextlib.contextmanager
+    def syncs_in_progress(self) -> ty.Iterator[set[str]]:
+        with self._syncs_in_progress_lock:
+            yield self._syncs_in_progress
 
     def reset(self):
         LOG.info('Reloading compute RPC API')
@@ -11031,20 +11052,21 @@ class ComputeManager(manager.Manager):
                 LOG.exception("Periodic sync_power_state task had an "
                               "error while processing an instance.",
                               instance=db_instance)
-
-            self._syncs_in_progress.pop(db_instance.uuid)
+            with self.syncs_in_progress() as syncs:
+                syncs.remove(db_instance.uuid)
 
         for db_instance in db_instances:
             # process syncs asynchronously - don't want instance locking to
             # block entire periodic task thread
             uuid = db_instance.uuid
-            if uuid in self._syncs_in_progress:
-                LOG.debug('Sync already in progress for %s', uuid)
-            else:
-                LOG.debug('Triggering sync for uuid %s', uuid)
-                self._syncs_in_progress[uuid] = True
-                nova.utils.spawn_on(
-                    self._sync_power_executor, _sync, db_instance)
+            with self.syncs_in_progress() as syncs:
+                if uuid in syncs:
+                    LOG.debug('Sync already in progress for %s', uuid)
+                else:
+                    LOG.debug('Triggering sync for uuid %s', uuid)
+                    syncs.add(uuid)
+                    nova.utils.spawn_on(
+                        self._sync_power_executor, _sync, db_instance)
 
     def _query_driver_power_state_and_sync(self, context, db_instance):
         if db_instance.task_state is not None:
