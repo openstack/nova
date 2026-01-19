@@ -2221,6 +2221,7 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
     @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
     def test_unsupported_without_feature(self, fake_exists):
         self.assertFalse(self.host.supports_amd_sev)
+        self.assertFalse(self.host.supports_mem_encryption)
 
     @mock.patch.object(os.path, 'exists', return_value=True)
     @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
@@ -2228,6 +2229,7 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
         new=vc._domain_capability_features_with_SEV_unsupported)
     def test_unsupported_with_feature(self, fake_exists):
         self.assertFalse(self.host.supports_amd_sev)
+        self.assertFalse(self.host.supports_mem_encryption)
 
     def test_non_x86_architecture(self):
         fake_caps_xml = '''
@@ -2242,6 +2244,7 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
         with mock.patch.object(fakelibvirt.virConnect, 'getCapabilities',
                                return_value=fake_caps_xml):
             self.assertFalse(self.host.supports_amd_sev)
+            self.assertFalse(self.host.supports_mem_encryption)
 
 
 class TestLibvirtSEVSupported(TestLibvirtSEV):
@@ -2253,6 +2256,7 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
                        new=vc._domain_capability_features_with_SEV)
     def test_supported_with_feature(self, fake_exists):
         self.assertTrue(self.host.supports_amd_sev)
+        self.assertTrue(self.host.supports_mem_encryption)
 
 
 @ddt.ddt
@@ -2333,6 +2337,7 @@ class TestLibvirtSEVESSupported(TestLibvirtSEV):
                        new=vc._domain_capability_features_with_SEV)
     def test_supported_with_feature(self, fake_exists, get_version):
         self.assertTrue(self.host.supports_amd_sev_es)
+        self.assertTrue(self.host.supports_mem_encryption)
 
 
 class LibvirtTpoolProxyTestCase(test.NoDBTestCase):

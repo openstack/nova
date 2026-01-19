@@ -7673,10 +7673,9 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(vpmem_config)
 
     def _get_mem_encryption_config(self, flavor, image_meta):
-        """To enable AMD SEV, the following should be true:
+        """To enable memory encryption the following should be true:
 
-        a) the supports_amd_sev instance variable in the host is
-           true,
+        a) the host supports a memory encryption architecture,
         b) the instance extra specs and/or image properties request
            memory encryption to be enabled, and
         c) there are no conflicts between extra specs, image properties
@@ -7693,7 +7692,7 @@ class LibvirtDriver(driver.ComputeDriver):
         pass it to be checked alongside the other sanity checks which
         are run while determining whether SEV is selected.
         """
-        if not self._host.supports_amd_sev:
+        if not self._host.supports_mem_encryption:
             return None
 
         mach_type = libvirt_utils.get_machine_type(image_meta)

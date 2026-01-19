@@ -2043,6 +2043,20 @@ class Host(object):
         return self._max_sev_es_guests
 
     @property
+    def supports_mem_encryption(self) -> bool:
+        """Determine if the host supports memory encryption for guests.
+
+        This checks whether any memory encryption technology
+        (e.g., AMD SEV, Arm CCA) is supported by the host.
+        This is conditional on support in the hardware,
+        kernel, qemu, and libvirt for the specific encryption technology.
+        Returns a boolean indicating whether any memory encryption
+        is supported.
+        """
+
+        return self.supports_amd_sev
+
+    @property
     def supports_remote_managed_ports(self) -> bool:
         """Determine if the host supports remote managed ports.
 
