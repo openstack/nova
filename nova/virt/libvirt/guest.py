@@ -34,7 +34,6 @@ from lxml import etree
 from oslo_log import log as logging
 from oslo_utils import encodeutils
 from oslo_utils import excutils
-from oslo_utils import importutils
 
 from nova.compute import power_state
 from nova import exception
@@ -42,10 +41,11 @@ from nova.i18n import _
 from nova.virt import hardware
 from nova.virt.libvirt import config as vconfig
 
-
-if ty.TYPE_CHECKING:
+try:
+    # This is optional for unit testing but required at runtime. We check for
+    # it during driver init.
     import libvirt
-else:
+except ImportError:
     libvirt = None
 
 try:
@@ -103,14 +103,9 @@ LIBVIRT_BLOCK_JOB_TYPE = {
 }
 
 
-class Guest(object):
+class Guest:
 
     def __init__(self, domain):
-
-        global libvirt
-        if libvirt is None:
-            libvirt = importutils.import_module('libvirt')
-
         self._domain = domain
 
     def __repr__(self):

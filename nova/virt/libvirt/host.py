@@ -31,7 +31,6 @@ from collections import defaultdict
 import fnmatch
 import glob
 import inspect
-from lxml import etree
 import operator
 import os
 import queue
@@ -41,10 +40,10 @@ import typing as ty
 from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher
+from lxml import etree
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
-from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_utils import versionutils
@@ -67,19 +66,19 @@ from nova.virt.libvirt import migration as libvirt_migrate
 from nova.virt.libvirt import utils as libvirt_utils
 import nova.virt.node  # noqa
 
-if ty.TYPE_CHECKING:
+try:
+    # This is optional for unit testing but required at runtime. We check for
+    # it during driver init.
     import libvirt
-else:
+except ImportError:
     libvirt = None
 
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
 native_Queue = patcher.original("queue")
-
-CONF = nova.conf.CONF
-
 
 # This list is for libvirt hypervisor drivers that need special handling.
 # This is *not* the complete list of supported hypervisor drivers.
@@ -125,11 +124,6 @@ class Host(object):
     def __init__(self, uri, read_only=False,
                  conn_event_handler=None,
                  lifecycle_event_handler=None):
-
-        global libvirt
-        if libvirt is None:
-            libvirt = importutils.import_module('libvirt')
-
         self._uri = uri
         self._read_only = read_only
         self._initial_connection = True
