@@ -261,7 +261,6 @@ _DEFAULT_FS_BY_OSTYPE = {'linux': FS_FORMAT_EXT4,
 
 
 def load_mkfs_command(os_type, command):
-    global _MKFS_COMMAND
     global _DEFAULT_MKFS_COMMAND
 
     _MKFS_COMMAND[os_type] = command
@@ -270,8 +269,6 @@ def load_mkfs_command(os_type, command):
 
 
 def get_fs_type_for_os_type(os_type):
-    global _MKFS_COMMAND
-
     return os_type if _MKFS_COMMAND.get(os_type) else 'default'
 
 
@@ -289,9 +286,6 @@ def _get_hash_str(base_str):
 
 def get_file_extension_for_os_type(os_type, default_ephemeral_format,
                                    specified_fs=None):
-    global _MKFS_COMMAND
-    global _DEFAULT_MKFS_COMMAND
-
     mkfs_command = _MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND)
     if mkfs_command:
         extension = mkfs_command
@@ -352,9 +346,6 @@ def configurable_mkfs(os_type, fs_label, target, run_as_root,
     # os type. If user has not provided any configuration, format type will
     # be used according to a default_ephemeral_format configuration or a
     # system default.
-    global _MKFS_COMMAND
-    global _DEFAULT_MKFS_COMMAND
-
     mkfs_command = (_MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND) or
                     '') % {'fs_label': fs_label, 'target': target}
     if mkfs_command:

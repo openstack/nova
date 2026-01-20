@@ -1376,7 +1376,6 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
                           'cores': <count across user>,
                           'ram': <count across user>}}
     """
-    global UID_QFD_POPULATED_CACHE_BY_PROJECT
     if CONF.quota.count_usage_from_placement:
         # If a project has all user_id and queued_for_delete data populated,
         # cache the result to avoid needless database checking in the future.

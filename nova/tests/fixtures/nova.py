@@ -420,7 +420,6 @@ class CellDatabases(fixtures.Fixture):
     def _cache_schema(self, connection_str):
         # NOTE(melwitt): See the regular Database fixture for why
         # we do this.
-        global DB_SCHEMA
         if not DB_SCHEMA[('main', None)]:
             ctxt_mgr = self._ctxt_mgrs[connection_str]
             engine = ctxt_mgr.writer.get_engine()
@@ -706,7 +705,6 @@ class Database(fixtures.Fixture):
         self.addCleanup(self.cleanup)
 
     def _apply_schema(self):
-        global DB_SCHEMA
         if not DB_SCHEMA[(self.database, self.version)]:
             # apply and cache schema
             engine = self.get_engine()

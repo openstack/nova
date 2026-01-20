@@ -30,7 +30,7 @@ repos:
         exclude: 'nova/virt/ironic/ironic_states.py'
 
   - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.5.5
+    rev: v1.5.6
     hooks:
       - id: remove-tabs
         exclude: '.*\.(svg)$'
@@ -46,7 +46,7 @@ repos:
   # fixing an issue changes the code and that should
   # not happen in ci.
   - repo: https://opendev.org/openstack/hacking
-    rev: 7.0.0
+    rev: 8.0.0
     hooks:
       - id: hacking
         additional_dependencies: []
@@ -59,7 +59,7 @@ repos:
         args: ['--ignore-words=doc/dictionary.txt']
 
   - repo: https://github.com/sphinx-contrib/sphinx-lint
-    rev: v1.0.1
+    rev: v1.0.2
     hooks:
       - id: sphinx-lint
         args: [--enable=default-role]

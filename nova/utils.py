@@ -765,8 +765,6 @@ def read_cached_file(filename, force_reload=False):
     :returns: A tuple with a boolean specifying if the data is fresh
               or not.
     """
-    global _FILE_CACHE
-
     if force_reload:
         delete_cached_file(filename)
 
@@ -788,8 +786,6 @@ def delete_cached_file(filename):
 
     :param filename: filename to delete
     """
-    global _FILE_CACHE
-
     if filename in _FILE_CACHE:
         del _FILE_CACHE[filename]
 

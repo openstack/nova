@@ -154,11 +154,12 @@ def set_stub_network_methods(test):
 
 
 def unset_stub_network_methods(test):
-    global _real_functions
-    if _real_functions:
-        for name in _real_functions:
-            test.stub_out('nova.compute.manager.ComputeManager.' + name,
-                          _real_functions[name])
+    if not _real_functions:
+        return
+
+    for name in _real_functions:
+        test.stub_out('nova.compute.manager.ComputeManager.' + name,
+                      _real_functions[name])
 
 
 def _get_fake_cache():

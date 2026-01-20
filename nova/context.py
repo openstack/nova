@@ -335,7 +335,6 @@ def set_target_cell(context, cell_mapping):
     :param context: The RequestContext to add connection information
     :param cell_mapping: An objects.CellMapping object or None
     """
-    global CELL_CACHE
     if cell_mapping is not None:
         # avoid circular import
         from nova.db.main import api as db

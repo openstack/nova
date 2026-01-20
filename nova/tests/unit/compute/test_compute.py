@@ -7399,9 +7399,6 @@ class ComputeTestCase(BaseTestCase,
         raised_exc = None
 
         def fake_db_fault_create(ctxt, values):
-            global exc_info
-            global raised_exc
-
             self.assertIn('raise messaging.RemoteError', values['details'])
             self.assertIn('Remote error: test My Test Message\nNone.',
                           values['details'])

@@ -30,7 +30,6 @@ _REGEX_RANGE_CACHE = {}
 def memorize(func):
     @functools.wraps(func)
     def memorizer(*args, **kwargs):
-        global _REGEX_RANGE_CACHE
         key = "%s:%s:%s" % (func.__name__, hash(str(args)), hash(str(kwargs)))
         value = _REGEX_RANGE_CACHE.get(key)
         if value is None:

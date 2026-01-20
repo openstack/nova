@@ -64,8 +64,6 @@ def validate(name: str, value: str):
 
 
 def load_validators():
-    global VALIDATORS
-
     def _report_load_failure(mgr, ep, err):
         LOG.warning(u'Failed to load %s: %s', ep.module_name, err)
 
