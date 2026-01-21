@@ -219,8 +219,6 @@ class BasePolicyTest(test.TestCase):
                     "rule:project_manager_api or rule:context_is_admin",
                 "project_member_or_admin":
                     "rule:project_member_api or rule:context_is_admin",
-                "project_reader_or_admin":
-                    "rule:project_reader_api or rule:context_is_admin",
                 "service_api": "role:service",
             })
             self.policy.set_rules(self.rules_without_deprecation,

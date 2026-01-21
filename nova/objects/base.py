@@ -305,7 +305,7 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
             # can't send them over RPC anyway. We convert it to list as this
             # way there will be no semantic change between the fake rpc driver
             # used in functional test and a normal rpc driver.
-            if iterable == set:
+            if iterable is set:
                 iterable = list
             return iterable([action_fn(context, value) for value in values])
 

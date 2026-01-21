@@ -1529,6 +1529,38 @@ class TestDestinationObject(test.NoDBTestCase):
         self.assertEqual('fake_host', obj_primitive['host'])
 
 
+class TestSchedulerRetriesObject(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.user_id = uuids.user_id
+        self.project_id = uuids.project_id
+        self.context = context.RequestContext(uuids.user_id, uuids.project_id)
+
+    def test_from_dict(self):
+        for retry_dict in [
+            {},
+            {'num_attempts': 2},
+            {'hosts': objects.ComputeNodeList()},
+        ]:
+            with self.subTest(retry_dict=retry_dict):
+                obj = request_spec.SchedulerRetries.from_dict(
+                    self.context, retry_dict
+                )
+                # neither field should be present
+                self.assertNotIn('num_attempts', obj)
+                self.assertNotIn('hosts', obj)
+
+        retry_dict = {'num_attempts': 2, 'hosts': objects.ComputeNodeList()}
+        with self.subTest(retry_dict=retry_dict):
+            obj = request_spec.SchedulerRetries.from_dict(
+                self.context, retry_dict
+            )
+            # both fields should be present
+            self.assertIn('num_attempts', obj)
+            self.assertIn('hosts', obj)
+
+
 class TestMappingRequestGroupsToProviders(test.NoDBTestCase):
     def setUp(self):
         super(TestMappingRequestGroupsToProviders, self).setUp()
