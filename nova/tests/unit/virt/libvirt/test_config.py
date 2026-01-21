@@ -2996,6 +2996,18 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               </os>
             </domain>""")
 
+    def test_config_guest_iothreads(self):
+        xml = """
+        <domain type="kvm">
+          <name>test42</name>
+          <iothreads>1</iothreads>
+        </domain>
+        """
+        obj = config.LibvirtConfigGuest()
+        obj.parse_str(xml)
+
+        self.assertEqual(1, obj.iothreads)
+
     def test_ConfigGuest_parse_devices(self):
         xmldoc = """ <domain type="kvm">
                       <devices>
@@ -3994,6 +4006,49 @@ class LibvirtConfigGuestCPUTuneTest(LibvirtConfigBaseTest):
             <vcpusched vcpus="0-3" scheduler="fifo" priority="1"/>
             <vcpusched vcpus="4-7" scheduler="fifo" priority="99"/>
           </cputune>""")
+
+    def test_config_cputune_vcpus_iothread(self):
+        cputune = config.LibvirtConfigGuestCPUTune()
+
+        vcpu0 = config.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpu0.id = 0
+        vcpu0.cpuset = set([0, 1])
+        vcpu1 = config.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpu1.id = 1
+        vcpu1.cpuset = set([2, 3])
+        vcpu2 = config.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpu2.id = 2
+        vcpu2.cpuset = set([4, 5])
+        vcpu3 = config.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpu3.id = 3
+        vcpu3.cpuset = set([6, 7])
+        cputune.vcpupin.extend([vcpu0, vcpu1, vcpu2, vcpu3])
+
+        emu = config.LibvirtConfigGuestCPUTuneIOThreadPin()
+        emu.cpuset = set([0, 1, 2, 3, 4, 5, 6, 7])
+        cputune.emulatorpin = emu
+
+        sch0 = config.LibvirtConfigGuestCPUTuneVCPUSched()
+        sch0.vcpus = set([0, 1, 2, 3])
+        sch0.scheduler = "fifo"
+        sch0.priority = 1
+        sch1 = config.LibvirtConfigGuestCPUTuneVCPUSched()
+        sch1.vcpus = set([4, 5, 6, 7])
+        sch1.scheduler = "fifo"
+        sch1.priority = 99
+        cputune.vcpusched.extend([sch0, sch1])
+
+        xml = cputune.to_xml()
+        self.assertXmlEqual("""
+          <cputune>
+            <iothreadpin cpuset="0-7"/>
+            <vcpupin vcpu="0" cpuset="0-1"/>
+            <vcpupin vcpu="1" cpuset="2-3"/>
+            <vcpupin vcpu="2" cpuset="4-5"/>
+            <vcpupin vcpu="3" cpuset="6-7"/>
+            <vcpusched vcpus="0-3" scheduler="fifo" priority="1"/>
+            <vcpusched vcpus="4-7" scheduler="fifo" priority="99"/>
+          </cputune>""", xml)
 
 
 class LibvirtConfigGuestMemoryBackingTest(LibvirtConfigBaseTest):
