@@ -420,7 +420,7 @@ class PatchOpenTestCase(test.NoDBTestCase):
 
 
 class SubclassSignatureTestCaseTestCase(test.SubclassSignatureTestCase):
-    class Baseclass():
+    class Baseclass:
         def method(self):
             pass
 

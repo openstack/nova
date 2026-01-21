@@ -163,7 +163,7 @@ class _EventletLibvirtEventHandler(LibvirtEventHandler):
         self._event_queue.put(event)
 
         # ...then wakeup the green thread to dispatch it
-        c = ' '.encode()
+        c = b' '
         self._event_notify_send.write(c)
         self._event_notify_send.flush()
 

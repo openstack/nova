@@ -159,3 +159,27 @@ files = [
     "nova/virt/libvirt/host.py",
     "nova/virt/libvirt/utils.py",
 ]
+
+[tool.ruff.lint]
+select = ["C90", "E", "F", "LOG", "UP"]
+ignore = [
+    "E402",   # Module level import not at top of file
+    "E731",   # Do not assign a `lambda` expression, use a `def`
+    "UP004",  # Class {name} inherits from object
+    "UP008",  # Use super() instead of super(__class__, self)
+    "UP015",  # Unnecessary mode argument
+    "UP018",  # Unnecessary {literal_type} call (rewrite as a literal)
+    "UP024",  # Replace aliased errors with `OSError`
+    "UP025",  # Remove unicode literals from strings
+    "UP030",  # Use implicit references for positional format fields
+    "UP031",  # Use format specifiers instead of percent format
+    "UP032",  # Use f-string instead of `format` call
+]
+external = ["H", "N"]
+
+[tool.ruff.lint.mccabe]
+# To get a list of functions that are more complex than 25, set max-complexity
+# to 25 and run 'tox -epep8'.
+# 39 is currently the most complex thing we have
+# TODO(jogo): get this number down to 25 or so
+max-complexity = 40

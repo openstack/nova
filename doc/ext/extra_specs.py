@@ -94,8 +94,7 @@ def _format_validator_group_help(
 ):
     """Generate reStructuredText snippets for a group of validators."""
     for validator in validators.values():
-        for line in _format_validator_help(validator, summary):
-            yield line
+        yield from _format_validator_help(validator, summary)
 
 
 def _format_validator_help(

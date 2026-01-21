@@ -32,7 +32,7 @@ It was removed in the 18.0.0 (Rocky) release.
 @validation.validated
 class ServerVirtualInterfaceController(wsgi.Controller):
 
-    @wsgi.expected_errors((410))
+    @wsgi.expected_errors(410)
     @wsgi.removed('18.0.0', _removal_reason)
     @validation.query_schema(schema.index_query)
     @validation.response_body_schema(schema.index_response)

@@ -110,15 +110,13 @@ def stub_export_locations():
     )
 
     export_locations.append(export_location)
-    for item in export_locations:
-        yield item
+    yield from export_locations
 
 
 def stub_access_list():
     access_list = []
     access_list.append(stub_access())
-    for access in access_list:
-        yield access
+    yield from access_list
 
 
 def stub_access():
@@ -182,8 +180,7 @@ def stub_resource_locks(share_id):
     resource_locks = []
     resource_lock = stub_lock(share_id)
     resource_locks.append(resource_lock)
-    for lock in resource_locks:
-        yield lock
+    yield from resource_locks
 
 
 class BaseManilaTestCase(object):

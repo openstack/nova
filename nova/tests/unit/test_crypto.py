@@ -223,7 +223,7 @@ class KeyPairTest(test.NoDBTestCase):
             self.assertEqual(self.rsa_fp, fingerprint)
 
 
-class FakePassphrase():
+class FakePassphrase:
     """A fake castellan ManagedObject."""
 
     def __init__(self):

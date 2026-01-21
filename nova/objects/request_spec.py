@@ -1231,11 +1231,11 @@ class SchedulerRetries(base.NovaObject):
             # NOTE(sbauza): We prefer to return an empty object if the
             # primitive is not good enough
             return retry_obj
-        retry_obj.num_attempts = retry_dict.get('num_attempts')
+        retry_obj.num_attempts = retry_dict['num_attempts']
         # NOTE(sbauza): each retry_dict['hosts'] item is a list of [host, node]
         computes = [objects.ComputeNode(context=context, host=host,
                                         hypervisor_hostname=node)
-                    for host, node in retry_dict.get('hosts')]
+                    for host, node in retry_dict['hosts']]
         retry_obj.hosts = objects.ComputeNodeList(objects=computes)
         return retry_obj
 

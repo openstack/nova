@@ -3451,7 +3451,7 @@ class ImagePropertyCommands:
             return 1
 
 
-class LimitsCommands():
+class LimitsCommands:
 
     def _create_unified_limits(self, ctxt, keystone_api, service_id,
                                legacy_defaults, project_id, region_id, output,
