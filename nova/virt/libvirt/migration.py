@@ -23,6 +23,7 @@ from nova.compute import power_state
 import nova.conf
 from nova import exception
 from nova import objects
+from nova.storage import rbd_utils
 from nova.virt import hardware
 from nova.virt.libvirt import config as vconfig
 
@@ -58,6 +59,7 @@ def get_updated_guest_xml(instance, guest, migrate_data, get_volume_config,
     xml_doc = _update_serial_xml(xml_doc, migrate_data)
     xml_doc = _update_volume_xml(
         xml_doc, migrate_data, instance, get_volume_config)
+    xml_doc = _update_rbd_xml(xml_doc, migrate_data)
     xml_doc = _update_perf_events_xml(xml_doc, migrate_data)
     xml_doc = _update_memory_backing_xml(xml_doc, migrate_data)
     xml_doc = _update_quota_xml(instance, xml_doc)
@@ -354,6 +356,59 @@ def _update_serial_xml(xml_doc, migrate_data):
     # This updates all "LibvirtConfigGuestConsole" devices
     for source in xml_doc.findall("./devices/console[@type='tcp']/source"):
         set_listen_addr_and_port(source, listen_addr, listen_ports)
+
+    return xml_doc
+
+
+def _update_rbd_xml(xml_doc, migrate_data):
+    """Update XML for rbd disk drives (ephemeral, root disk and config drive)
+    by checking if the set of mons is still up-to-date.
+    """
+
+    image_type = None
+    if migrate_data.obj_attr_is_set("image_type"):
+        image_type = migrate_data.image_type
+
+    if image_type != "rbd":
+        # only when we use image_type rbd, we have rbd 'local' disks
+        return xml_doc
+
+    rbd_mons, rbd_ports = rbd_utils.RBDDriver().get_mon_addrs()
+
+    # Update volume xml
+    disk_nodes = xml_doc.findall("./devices/disk")
+    for disk_dev in disk_nodes:
+        alias_element = disk_dev.find("alias")
+        alias = '' if alias_element is None else alias_element.get("name")
+        if alias != vconfig.parse_libvirt_device_alias(alias):
+            # as per libvirt-dev-alias spec, any attached disk with alias
+            # starting with 'ua-' is a user attached disk, which is handled
+            # by _update_volume_xml and should not be updated here.
+            continue
+        else:
+            # implement backward compatibility for instances that were created
+            # without the libvirt-dev-alias spec, which means they may have
+            # rbd disks with an 'alias' element that does not start with 'ua-'.
+            # For those scenarios we will fallback to the serial on the disk
+            # to exclude those, as disks with a serial configured on them
+            # are generally cinder volumes and not 'local' rbd disks.
+            # in the future we might want to remove this fallback and require
+            # the libvirt-dev-alias spec for all disks, but for now we want
+            # to be extra safe and not break any existing instances.
+            serial = disk_dev.findtext("serial")
+            if serial is not None:
+                continue
+
+        source = disk_dev.find("source")
+        if source is None or source.get("protocol") != 'rbd':
+            continue
+
+        for host in source.findall("host"):
+            source.remove(host)
+
+        for mon_name, mon_port in zip(rbd_mons, rbd_ports):
+            host_elem = etree.Element("host", name=mon_name, port=mon_port)
+            source.append(host_elem)
 
     return xml_doc
 
