@@ -73,7 +73,7 @@ class TestNeutronClient(test.NoDBTestCase):
 
     def setUp(self):
         super(TestNeutronClient, self).setUp()
-        neutronapi.reset_state()
+        service_auth.reset_globals()
         self.addCleanup(service_auth.reset_globals)
 
     def test_ksa_adapter_loading_defaults(self):
@@ -142,12 +142,9 @@ class TestNeutronClient(test.NoDBTestCase):
         self.assertIsInstance(cl.httpclient.auth,
                               service_token.ServiceTokenAuthWrapper)
 
-    @mock.patch('nova.service_auth._SERVICE_AUTH')
-    @mock.patch('nova.network.neutron._ADMIN_AUTH')
+    @mock.patch('nova.service_auth.get_service_auth_plugin')
     @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
-    def test_admin_with_service_token(
-        self, mock_load, mock_admin_auth, mock_service_auth
-    ):
+    def test_admin_with_service_token(self, mock_load, mock_service_auth):
         self.flags(send_service_user_token=True, group='service_user')
 
         admin_context = context.get_admin_context()
@@ -155,8 +152,10 @@ class TestNeutronClient(test.NoDBTestCase):
         cl = neutronapi.get_client(admin_context)
         self.assertIsInstance(cl.httpclient.auth,
                               service_token.ServiceTokenAuthWrapper)
-        self.assertEqual(mock_admin_auth, cl.httpclient.auth.user_auth)
-        self.assertEqual(mock_service_auth, cl.httpclient.auth.service_auth)
+        self.assertEqual(mock_service_auth.return_value,
+                         cl.httpclient.auth.user_auth)
+        self.assertEqual(mock_service_auth.return_value,
+                         cl.httpclient.auth.service_auth)
 
     @mock.patch.object(client.Client, "list_networks",
                        side_effect=exceptions.Unauthorized())
@@ -215,7 +214,7 @@ class TestNeutronClient(test.NoDBTestCase):
                           neutronapi.get_client,
                           my_context)
 
-    @mock.patch('nova.network.neutron._ADMIN_AUTH')
+    @mock.patch('nova.service_auth.get_service_auth_plugin')
     @mock.patch.object(client.Client, "list_networks", new=mock.Mock())
     def test_reuse_admin_token(self, m):
         self.flags(endpoint_override='http://anyhost/', group='neutron')
@@ -227,7 +226,7 @@ class TestNeutronClient(test.NoDBTestCase):
         def token_vals(*args, **kwargs):
             return tokens.pop()
 
-        m.get_token.side_effect = token_vals
+        m.return_value.get_token.side_effect = token_vals
 
         client1 = neutronapi.get_client(my_context, True)
         client1.list_networks(retrieve_all=False)
@@ -243,7 +242,7 @@ class TestNeutronClient(test.NoDBTestCase):
         mock_load_from_conf.return_value = None
         from neutronclient.common import exceptions as neutron_client_exc
         self.assertRaises(neutron_client_exc.Unauthorized,
-                          neutronapi._load_auth_plugin, CONF)
+                          neutronapi._load_auth_plugin)
         mock_log_err.assert_called()
         self.assertIn('The [neutron] section of your nova configuration file',
                       mock_log_err.call_args[0][0])
@@ -9247,7 +9246,7 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
                                                 auth_token='token')
 
         # clean global
-        neutronapi.reset_state()
+        service_auth.reset_globals()
 
         if admin_context:
             # Note that the context does not contain a token but is
@@ -9260,7 +9259,7 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
             # the context has an auth_token.
             context_client = neutronapi.get_client(my_context, True)
 
-        admin_auth = neutronapi._ADMIN_AUTH
+        admin_auth = service_auth.get_service_auth_plugin('neutron')
 
         self.assertEqual(CONF.neutron.auth_url, admin_auth.auth_url)
         self.assertEqual(CONF.neutron.password, admin_auth.password)
@@ -9278,12 +9277,12 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
             self.assertIsNone(admin_auth.tenant_id)
             self.assertIsNone(admin_auth.user_id)
 
-        self.assertEqual(CONF.neutron.timeout,
-                         neutronapi._SESSION.timeout)
+        auth_session = service_auth.get_service_auth_session('neutron')
+        self.assertEqual(CONF.neutron.timeout, auth_session.timeout)
 
         self.assertEqual(
             token_value,
-            context_client.httpclient.auth.get_token(neutronapi._SESSION))
+            context_client.httpclient.auth.get_token(auth_session))
         self.assertEqual(
             CONF.neutron.endpoint_override,
             context_client.httpclient.get_endpoint())

@@ -28,7 +28,6 @@ from cinderclient import api_versions as cinder_api_versions
 from cinderclient import client as cinder_client
 from cinderclient import exceptions as cinder_exception
 from keystoneauth1 import exceptions as keystone_exception
-from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -46,45 +45,23 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
-_ADMIN_AUTH = None
-_SESSION = None
 
-
-def reset_globals():
-    """Testing method to reset globals.
-    """
-    global _ADMIN_AUTH
-    global _SESSION
-
-    _ADMIN_AUTH = None
-    _SESSION = None
-
-
-def _load_auth_plugin(conf):
-    auth_plugin = ks_loading.load_auth_from_conf_options(conf,
-                                    nova.conf.cinder.cinder_group.name)
+def _load_auth_plugin():
+    auth_plugin = service_auth.get_service_auth_plugin(
+                nova.conf.cinder.cinder_group.name)
 
     if auth_plugin:
         return auth_plugin
 
-    if conf.cinder.auth_type is None:
+    if CONF.cinder.auth_type is None:
         LOG.error('The [cinder] section of your nova configuration file '
                   'must be configured for authentication with the '
                   'block-storage service endpoint.')
-    err_msg = _('Unknown auth type: %s') % conf.cinder.auth_type
+    err_msg = _('Unknown auth type: %s') % CONF.cinder.auth_type
     raise cinder_exception.Unauthorized(401, message=err_msg)
 
 
-def _load_session():
-    global _SESSION
-
-    if not _SESSION:
-        _SESSION = ks_loading.load_session_from_conf_options(
-            CONF, nova.conf.cinder.cinder_group.name)
-
-
 def _get_auth(context):
-    global _ADMIN_AUTH
     # NOTE(lixipeng): Auth token is none when call
     # cinder API from compute periodic tasks, context
     # from them generated from 'context.get_admin_context'
@@ -92,17 +69,16 @@ def _get_auth(context):
     # So add load_auth_plugin when this condition appear.
     user_auth = None
     if context.is_admin and not context.auth_token:
-        if not _ADMIN_AUTH:
-            _ADMIN_AUTH = _load_auth_plugin(CONF)
-        user_auth = _ADMIN_AUTH
+        user_auth = _load_auth_plugin()
 
     # When user_auth = None, user_auth will be extracted from the context.
-    return service_auth.get_auth_plugin(context, user_auth=user_auth)
+    return service_auth.get_service_user_token_auth_plugin(
+            context, user_auth=user_auth)
 
 
 # NOTE(efried): Bug #1752152
 # This method is copied/adapted from cinderclient.client.get_server_version so
-# we can use _SESSION.get rather than a raw requests.get to retrieve the
+# we can use Session.get rather than a raw requests.get to retrieve the
 # version document. This enables HTTPS by gleaning cert info from the session
 # config.
 def _get_server_version(context, url):
@@ -116,7 +92,8 @@ def _get_server_version(context, url):
     min_version = "2.0"
     current_version = "2.0"
 
-    _load_session()
+    session = service_auth.get_service_auth_session(
+            nova.conf.cinder.cinder_group.name)
     auth = _get_auth(context)
 
     try:
@@ -142,7 +119,7 @@ def _get_server_version(context, url):
             # leave as is without cropping.
             version_url = url
 
-        response = _SESSION.get(version_url, auth=auth)
+        response = session.get(version_url, auth=auth)
         data = jsonutils.loads(response.text)
         versions = data['versions']
         for version in versions:
@@ -190,7 +167,8 @@ def _check_microversion(context, url, microversion):
 
 
 def _get_cinderclient_parameters(context):
-    _load_session()
+    session = service_auth.get_service_auth_session(
+            nova.conf.cinder.cinder_group.name)
 
     auth = _get_auth(context)
 
@@ -208,7 +186,7 @@ def _get_cinderclient_parameters(context):
     if CONF.cinder.endpoint_template:
         url = CONF.cinder.endpoint_template % context.to_dict()
     else:
-        url = _SESSION.get_endpoint(auth, **service_parameters)
+        url = session.get_endpoint(auth, **service_parameters)
 
     return auth, service_parameters, url
 
@@ -268,8 +246,10 @@ def cinderclient(context, microversion=None, skip_version_check=False,
     if check_only:
         return
 
+    session = service_auth.get_service_auth_session(
+            nova.conf.cinder.cinder_group.name)
     return cinder_client.Client(version,
-                                session=_SESSION,
+                                session=session,
                                 auth=auth,
                                 endpoint_override=endpoint_override,
                                 connect_retries=CONF.cinder.http_retries,

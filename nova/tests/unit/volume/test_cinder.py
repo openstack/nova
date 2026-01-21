@@ -27,6 +27,7 @@ from oslo_utils import timeutils
 import nova.conf
 from nova import context
 from nova import exception
+from nova import service_auth
 from nova import test
 from nova.tests.unit.fake_instance import fake_instance_obj
 from nova.volume import cinder
@@ -1219,7 +1220,7 @@ class CinderClientTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(CinderClientTestCase, self).setUp()
-        cinder.reset_globals()
+        service_auth.reset_globals()
         self.ctxt = context.RequestContext('fake-user', 'fake-project')
         # Mock out the keystoneauth stuff.
         self.mock_session = mock.Mock(autospec=session.Session)
@@ -1301,27 +1302,29 @@ class CinderClientTestCase(test.NoDBTestCase):
     def test_load_auth_plugin_failed(self, mock_load_from_conf, mock_log_err):
         mock_load_from_conf.return_value = None
         self.assertRaises(cinder_exception.Unauthorized,
-                          cinder._load_auth_plugin, CONF)
+                          cinder._load_auth_plugin)
         mock_log_err.assert_called()
         self.assertIn('The [cinder] section of your nova configuration file',
                       mock_log_err.call_args[0][0])
 
-    @mock.patch('nova.volume.cinder._ADMIN_AUTH')
+    @mock.patch('nova.service_auth.get_service_auth_plugin')
     def test_admin_context_without_token(self,
                                          mock_admin_auth):
 
-        mock_admin_auth.return_value = '_FAKE_ADMIN_AUTH'
         admin_ctx = context.get_admin_context()
         params = cinder._get_cinderclient_parameters(admin_ctx)
-        self.assertEqual(params[0], mock_admin_auth)
+        self.assertEqual(params[0], mock_admin_auth.return_value)
 
-    @mock.patch('nova.service_auth._SERVICE_AUTH')
-    @mock.patch('nova.volume.cinder._ADMIN_AUTH')
+    @mock.patch('nova.service_auth.get_service_user_token_auth_plugin')
+    @mock.patch('nova.service_auth.get_service_auth_plugin')
     def test_admin_context_without_user_token_but_with_service_token(
         self, mock_admin_auth, mock_service_auth
     ):
         self.flags(send_service_user_token=True, group='service_user')
         admin_ctx = context.get_admin_context()
         params = cinder._get_cinderclient_parameters(admin_ctx)
-        self.assertEqual(mock_admin_auth, params[0].user_auth)
-        self.assertEqual(mock_service_auth, params[0].service_auth)
+        self.assertEqual(
+                mock_service_auth.return_value.user_auth, params[0].user_auth)
+        self.assertEqual(
+                mock_service_auth.return_value.service_auth,
+                params[0].service_auth)

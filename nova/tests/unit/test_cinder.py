@@ -21,6 +21,7 @@ from requests_mock.contrib import fixture
 import nova.conf
 from nova import context
 from nova import exception
+from nova import service_auth
 from nova import test
 from nova.volume import cinder
 
@@ -73,7 +74,7 @@ class BaseCinderTestCase(object):
 
     def setUp(self):
         super(BaseCinderTestCase, self).setUp()
-        cinder.reset_globals()
+        service_auth.reset_globals()
         self.requests = self.useFixture(fixture.Fixture())
         self.api = cinder.API()
 
@@ -84,7 +85,7 @@ class BaseCinderTestCase(object):
 
     def flags(self, *args, **kwargs):
         super(BaseCinderTestCase, self).flags(*args, **kwargs)
-        cinder.reset_globals()
+        service_auth.reset_globals()
 
     def create_client(self):
         return cinder.cinderclient(self.context)
@@ -128,7 +129,8 @@ class CinderV1TestCase(test.NoDBTestCase):
             return_value='http://localhost:8776/v1/%(project_id)s')
         fake_session = mock.Mock(get_endpoint=get_endpoint)
         ctxt = context.get_context()
-        with mock.patch.object(cinder, '_SESSION', fake_session):
+        with mock.patch.object(service_auth, 'get_service_auth_session',
+                               return_value=fake_session):
             self.assertRaises(exception.UnsupportedCinderAPIVersion,
                               cinder.cinderclient, ctxt)
         get_api_version.assert_called_once_with(get_endpoint.return_value)
@@ -148,7 +150,8 @@ class CinderV2TestCase(test.NoDBTestCase):
             return_value='http://localhost:8776/v2/%(project_id)s')
         fake_session = mock.Mock(get_endpoint=get_endpoint)
         ctxt = context.get_context()
-        with mock.patch.object(cinder, '_SESSION', fake_session):
+        with mock.patch.object(service_auth, 'get_service_auth_session',
+                               return_value=fake_session):
             self.assertRaises(exception.UnsupportedCinderAPIVersion,
                               cinder.cinderclient, ctxt)
         get_api_version.assert_called_once_with(get_endpoint.return_value)

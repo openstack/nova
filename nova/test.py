@@ -62,6 +62,7 @@ from nova.pci import request
 from nova import quota
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
+import nova.service_auth
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import matchers
 from nova import utils
@@ -334,6 +335,9 @@ class TestCase(base.BaseTestCase):
 
         # Reset the global identity client
         nova.limit.utils.IDENTITY_CLIENT = None
+
+        # Reset the global service auths and sessions
+        nova.service_auth.reset_globals()
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.

@@ -34,7 +34,6 @@ import glanceclient
 from glanceclient.common import utils as glance_utils
 import glanceclient.exc
 from glanceclient.v2 import schemas
-from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -52,20 +51,14 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
-_SESSION = None
-
 
 def _session_and_auth(context):
     # Session is cached, but auth needs to be pulled from context each time.
-    global _SESSION
+    session = service_auth.get_service_auth_session(
+            nova.conf.glance.glance_group.name)
+    auth = service_auth.get_service_user_token_auth_plugin(context)
 
-    if not _SESSION:
-        _SESSION = ks_loading.load_session_from_conf_options(
-            CONF, nova.conf.glance.glance_group.name)
-
-    auth = service_auth.get_auth_plugin(context)
-
-    return _SESSION, auth
+    return session, auth
 
 
 def _glanceclient_from_endpoint(context, endpoint, version):

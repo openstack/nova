@@ -116,7 +116,7 @@ class _CyborgClient(object):
     ARQ_URL = "/accelerator_requests"
 
     def __init__(self, context):
-        auth = service_auth.get_auth_plugin(context)
+        auth = service_auth.get_service_user_token_auth_plugin(context)
         self._client = utils.get_ksa_adapter('accelerator', ksa_auth=auth)
 
     def _call_cyborg(self, func, *args, **kwargs):
