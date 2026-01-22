@@ -26,6 +26,7 @@ import logging as std_logging
 import os
 import sys
 import time
+import traceback
 from unittest import mock
 import warnings
 
@@ -2181,3 +2182,35 @@ class UnifiedLimitsFixture(fixtures.Fixture):
         pl.region_id = attrs.get('region_id')
         pl.service_id = attrs.get('service_id')
         self.limits_list.append(pl)
+
+
+class RPCPollerCleanupFixture(fixtures.Fixture):
+    def setUp(self):
+        super().setUp()
+        orig_start = (
+            messaging._drivers.base.PollStyleListenerAdapter.start)
+
+        def wrapped_start(_self, *args, **kwargs):
+            stack = "".join(traceback.format_stack())
+            self.addCleanup(lambda: self._check_listener_stopped(_self, stack))
+            return orig_start(_self, *args, **kwargs)
+
+        self.useFixture(
+            fixtures.MonkeyPatch(
+                'oslo_messaging._drivers.base.'
+                'PollStyleListenerAdapter.start',
+                wrapped_start))
+
+    @staticmethod
+    def _check_listener_stopped(
+        listener: messaging._drivers.base.PollStyleListenerAdapter,
+        stack: str,
+    ):
+        if listener._started:
+            raise RuntimeError(
+                'The test case leaked an active oslo_messaging poller thread. '
+                'This can lead to unexpected failures in later test case. '
+                'Please stop the RPC server or the nova.service.Service '
+                'instance in your test case e.g. by using '
+                'self.addCleanup(...). The test started the poller at the '
+                'following place:\n%s' % stack)

@@ -61,6 +61,7 @@ class IsolationTestCase(test.TestCase):
         server = rpc.get_server(messaging.Target(topic='compute',
                                                  server=CONF.host),
                                 endpoints=[NeverCalled()])
+        self.addCleanup(server.stop)
         server.start()
 
 

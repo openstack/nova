@@ -124,6 +124,7 @@ class ServiceTestCase(test.NoDBTestCase):
                                self.binary,
                                self.topic,
                                'nova.tests.unit.test_service.FakeManager')
+        self.addCleanup(serv.stop)
         serv.manager = mock_manager
         serv.manager.service_name = self.topic
         serv.manager.additional_endpoints = []
@@ -165,6 +166,7 @@ class ServiceTestCase(test.NoDBTestCase):
 
         serv = service.Service(self.host, self.binary, self.topic,
                               'nova.tests.unit.test_service.FakeManager')
+        self.addCleanup(serv.stop)
         serv.start()
 
         # test service version got updated and saved:

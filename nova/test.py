@@ -229,6 +229,7 @@ class TestCase(base.BaseTestCase):
             # happens only in the RPCFixture
             CONF.set_default('driver', ['test'],
                              group='oslo_messaging_notifications')
+            self.useFixture(nova_fixtures.RPCPollerCleanupFixture())
 
         # NOTE(danms): Make sure to reset us back to non-remote objects
         # for each test to avoid interactions. Also, backup the object
