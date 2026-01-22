@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import abc
 import collections
 import itertools
 import re
@@ -48,8 +49,56 @@ class VTPMConfig(ty.NamedTuple):
     model: str
 
 
-class MemEncryptionConfig(ty.NamedTuple):
-    model: str
+class MemEncryptionConfig(metaclass=abc.ABCMeta):
+    @property
+    @abc.abstractmethod
+    def model(self) -> str:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def needs_locked_memory(self) -> bool:
+        pass
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, MemEncryptionConfig):
+            return False
+        return self.model == other.model
+
+    @classmethod
+    def create(cls, model: str) -> 'MemEncryptionConfig':
+        """Factory returning a MemEncryptionConfig class object
+        from the MemEncryptionModel.
+        """
+        model2cls = {
+            fields.MemEncryptionModel.AMD_SEV: MemEncryptionConfigSev,
+            fields.MemEncryptionModel.AMD_SEV_ES: MemEncryptionConfigSevEs,
+        }
+
+        if model not in model2cls:
+            raise exception.Invalid(
+                ("Invalid memory encryption model %(model)r. "
+                 "Allowed values: %(valid)s.") %
+                {'model': model,
+                 'valid': ', '.join(model2cls.keys())}
+            )
+        return model2cls[model]()
+
+
+class MemEncryptionConfigSev(MemEncryptionConfig):
+    @property
+    def model(self) -> str:
+        return fields.MemEncryptionModel.AMD_SEV
+
+    @property
+    def needs_locked_memory(self) -> bool:
+        return True
+
+
+class MemEncryptionConfigSevEs(MemEncryptionConfigSev):
+    @property
+    def model(self) -> str:
+        return fields.MemEncryptionModel.AMD_SEV_ES
 
 
 def get_vcpu_pin_set():
@@ -1250,20 +1299,12 @@ def get_mem_encryption_constraint(
             "hw_mem_encryption_model property of image %s" % image_id)
 
     if not mem_enc_model:
-        return MemEncryptionConfig(model=fields.MemEncryptionModel.AMD_SEV)
+        mem_enc_model = fields.MemEncryptionModel.AMD_SEV
+    else:
+        LOG.debug("Memory encryption model requested by %s",
+                  " and ".join(model_requesters))
 
-    LOG.debug("Memory encryption model requested by %s",
-              " and ".join(model_requesters))
-
-    if mem_enc_model not in fields.MemEncryptionModel.ALL:
-        raise exception.Invalid(
-            ("Invalid memory encryption model %(model)r. "
-             "Allowed values: %(valid)s.") %
-            {'model': mem_enc_model,
-             'valid': ', '.join(fields.MemEncryptionModel.ALL)}
-        )
-
-    return MemEncryptionConfig(model=mem_enc_model)
+    return MemEncryptionConfig.create(mem_enc_model)
 
 
 def _check_for_mem_encryption_requirement_conflicts(
@@ -1442,13 +1483,21 @@ def _get_constraint_mappings_from_flavor(flavor, key, func):
 def get_locked_memory_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
+    mach_type: str | None = None
 ) -> bool | None:
     """Validate and return the requested locked memory.
 
     :param flavor: ``nova.objects.Flavor`` instance
     :param image_meta: ``nova.objects.ImageMeta`` instance
+    :param mach_type: optional machine type string of the guest
     :raises: exception.LockMemoryForbidden if mem_page_size is not set
         while provide locked_memory value in image or flavor.
+    :raises: exception.FlavorImageLockedMemoryConflict if memory locking
+        constraints  between flavor and image conflicts
+    :raises: exception.FlavorImageConflict if memory encryption constraints
+        between flavor and image conflicts
+    :raises: exception.InvalidMachineType if the machine type does not
+       support memory encryption even if it is requested
     :returns: The locked memory flag requested.
     """
     mem_page_size_flavor, mem_page_size_image = _get_flavor_image_meta(
@@ -1477,6 +1526,18 @@ def get_locked_memory_constraint(
             mem_page_size_flavor or mem_page_size_image
     ):
         raise exception.LockMemoryForbidden()
+
+    # If flavor or image explicitly requests locked memory, no need to check
+    # memory encryption constraint.
+    if locked_memory:
+        return True
+
+    me_config = get_mem_encryption_constraint(flavor, image_meta, mach_type)
+    if me_config is not None and me_config.needs_locked_memory:
+        # If flavor or image denies locked_memory but memory encryption
+        # requests locked memory, FlavorImageLockedMemoryConflict exception
+        # should be raised here, but keep the existing behavior for now.
+        return True
 
     return locked_memory
 

@@ -3939,15 +3939,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self._test_get_mem_encryption_config(enc_image_prop=True)
 
     def test_get_mem_encryption_config_host_support_flavor_requested(self):
-        expected = hardware.MemEncryptionConfig(
-            model=fields.MemEncryptionModel.AMD_SEV)
+        expected = hardware.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.AMD_SEV)
         self._test_get_mem_encryption_config(
             expected, host_sev_enabled=True, enc_extra_spec=True,
             hw_firmware_type='uefi', hw_machine_type='q35')
 
     def test_get_mem_encryption_config_host_support_image_requested(self):
-        expected = hardware.MemEncryptionConfig(
-            model=fields.MemEncryptionModel.AMD_SEV)
+        expected = hardware.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.AMD_SEV)
         self._test_get_mem_encryption_config(
             expected, host_sev_enabled=True, enc_image_prop=True,
             hw_firmware_type='uefi', hw_machine_type='q35')
@@ -10727,8 +10727,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(
         libvirt_driver.LibvirtDriver, '_get_mem_encryption_config',
-        new=mock.Mock(return_value=hardware.MemEncryptionConfig(
-            model=fields.MemEncryptionModel.AMD_SEV)))
+        new=mock.Mock(return_value=hardware.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.AMD_SEV)))
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_cache_mode',
                        new=mock.Mock())
     @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver, 'get_config')
@@ -26750,8 +26750,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             power_state.RUNNING,
             (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
              fakelibvirt.VIR_DOMAIN_AFFECT_LIVE),
-            me_config=hardware.MemEncryptionConfig(
-                model=fields.MemEncryptionModel.AMD_SEV
+            me_config=hardware.MemEncryptionConfig.create(
+                fields.MemEncryptionModel.AMD_SEV
             ))
 
     def test_attach_interface_with_pause_instance(self):

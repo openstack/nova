@@ -2909,11 +2909,12 @@ class NumberOfSerialPortsTest(test.NoDBTestCase):
 
 
 class VirtLockMemoryTestCase(test.NoDBTestCase):
-    def _test_get_locked_memory_constraint(self, spec=None, props=None):
-        flavor = objects.Flavor(vcpus=16, memory_mb=2048,
+    def _test_get_locked_memory_constraint(self, spec=None, props=None,
+                                           mach_type=None):
+        flavor = objects.Flavor(name='m1.faketiny', vcpus=16, memory_mb=2048,
                                 extra_specs=spec or {})
         image_meta = objects.ImageMeta.from_dict({"properties": props or {}})
-        return hw.get_locked_memory_constraint(flavor, image_meta)
+        return hw.get_locked_memory_constraint(flavor, image_meta, mach_type)
 
     def test_get_locked_memory_constraint_image(self):
         self.assertTrue(
@@ -2954,6 +2955,24 @@ class VirtLockMemoryTestCase(test.NoDBTestCase):
             self._test_get_locked_memory_constraint(
                 spec=None,
                 props={"hw_locked_memory": "False"}))
+
+    def test_get_locked_memory_constraint_mem_enc_accepted(self):
+        self.assertTrue(
+            self._test_get_locked_memory_constraint(
+                spec={"hw:mem_encryption": "True",
+                      "hw:mem_encryption_model": "amd-sev"},
+                props={"hw_firmware_type": "uefi"},
+                mach_type='q35'))
+
+    def test_get_locked_memory_constraint_mem_enc_matched(self):
+        self.assertTrue(
+            self._test_get_locked_memory_constraint(
+                spec={"hw:locked_memory": "True",
+                      "hw:mem_page_size": "small"},
+                props={"hw_mem_encryption": "True",
+                       "hw_mem_encryption_model": "amd-sev",
+                       "hw_firmware_type": "uefi"},
+                mach_type='q35'))
 
 
 class VirtMemoryPagesTestCase(test.NoDBTestCase):
@@ -5364,6 +5383,27 @@ class MemEncryptionNotRequiredTestCase(test.NoDBTestCase):
                 )
 
 
+class GetMemEncryptionConfigTestCase(test.NoDBTestCase):
+    def test_invalid(self):
+        self.assertRaisesRegex(
+            exception.Invalid, "Invalid memory encryption model 'encr'",
+            hw.MemEncryptionConfig.create, 'encr')
+
+    def test_sev(self):
+        me_config = hw.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.AMD_SEV)
+        self.assertIs(hw.MemEncryptionConfigSev, type(me_config))
+        self.assertTrue(me_config.needs_locked_memory)
+        self.assertEqual(fields.MemEncryptionModel.AMD_SEV, me_config.model)
+
+    def test_sev_es(self):
+        me_config = hw.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.AMD_SEV_ES)
+        self.assertIs(hw.MemEncryptionConfigSevEs, type(me_config))
+        self.assertTrue(me_config.needs_locked_memory)
+        self.assertEqual(fields.MemEncryptionModel.AMD_SEV_ES, me_config.model)
+
+
 class MemEncryptionFlavorImageConflictTestCase(test.NoDBTestCase):
     def _test_encrypted_memory_support_conflict(self, extra_spec,
                                                 image_prop_in, image_prop_out):
@@ -5571,8 +5611,8 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
                 'id': self.image_id,
                 'name': self.image_name,
                 'properties': image_props})
-            expected = hw.MemEncryptionConfig(
-                model=fields.MemEncryptionModel.AMD_SEV)
+            expected = hw.MemEncryptionConfig.create(
+                fields.MemEncryptionModel.AMD_SEV)
             self.assertEqual(
                 expected, hw.get_mem_encryption_constraint(flavor, image_meta))
             mock_log.debug.assert_has_calls([
@@ -5645,8 +5685,8 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
             'size': 0,
             'status': 'active'})
 
-        expected = hw.MemEncryptionConfig(
-            model=fields.MemEncryptionModel.AMD_SEV)
+        expected = hw.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.AMD_SEV)
         self.assertEqual(
             expected,
             hw.get_mem_encryption_constraint(flavor, image_meta))
