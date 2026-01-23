@@ -35,7 +35,6 @@ del update_v250['properties']['quota_class_set']['properties'][
     'security_groups']
 del update_v250['properties']['quota_class_set']['properties'][
     'security_group_rules']
-del update_v250['properties']['quota_class_set']['properties']['networks']
 
 # 2.57 builds on 2.50 and removes injected_file* quotas.
 update_v257 = copy.deepcopy(update_v250)
@@ -65,13 +64,15 @@ _quota_response = {
         'instances': {'type': 'integer', 'minimum': -1},
         'key_pairs': {'type': 'integer', 'minimum': -1},
         'metadata_items': {'type': 'integer', 'minimum': -1},
-        'networks': {'type': 'integer', 'minimum': -1},
+        # NOTE(stephenfin): We previously has a 'networks' key but this was
+        # removed in Train [1]. If we end up needing this for clients, we can
+        # re-add it.
+        # [1] I352b71b5976d008c2b8fab8a6d6939c0e0b305be
         'ram': {'type': 'integer', 'minimum': -1},
         'security_groups': {'type': 'integer', 'minimum': -1},
         'security_group_rules': {'type': 'integer', 'minimum': -1},
     },
     'required': [
-        # only networks is optional (it only appears under nova-network)
         'cores',
         'fixed_ips',
         'floating_ips',

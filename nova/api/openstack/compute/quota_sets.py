@@ -172,12 +172,6 @@ class QuotaSetsController(wsgi.Controller):
 
         quota_set = body['quota_set']
 
-        # NOTE(stephenfin): network quotas were only used by nova-network and
-        # therefore should be explicitly rejected
-        if 'networks' in quota_set:
-            raise webob.exc.HTTPBadRequest(
-                explanation=_('The networks quota has been removed'))
-
         force_update = strutils.bool_from_string(quota_set.get('force',
                                                                'False'))
         settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
