@@ -50,8 +50,8 @@ sqlite-devel [platform:rpm test]
 texlive [pdf-docs]
 texlive-latex-recommended [pdf-docs]
 texlive-xetex [pdf-docs]
-libpcre3-dev [platform:dpkg doc]
-pcre-devel [platform:rpm doc]
+libpcre2-dev [platform:dpkg doc]
+pcre2-devel [platform:rpm doc]
 # Nova uses lsscsi via os-brick. Due to bindep usage in devstack and
 # elsewhere, we add it here to make sure it is picked up and available at
 # runtime and in unit tests. Net result is the same that lsscsi will be
