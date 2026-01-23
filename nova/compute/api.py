@@ -87,6 +87,7 @@ from nova import servicegroup
 from nova import utils
 from nova.virt import hardware
 from nova.volume import cinder
+from nova import vtpm
 
 LOG = logging.getLogger(__name__)
 
@@ -4197,6 +4198,39 @@ class API:
 
         return node
 
+    @staticmethod
+    def _validate_vtpm_secret_security(current_flavor, new_flavor, image_meta):
+        """Validate whether or not the requested resize is supported for vTPM.
+
+        This will reject requests that would require secret ownership
+        conversions for the time being. Secret ownership changes will be
+        complex, so we plan to add support for it as a separate follow-up
+        enhancement.
+
+        TODO(melwitt): Remove this when support for key manager service secret
+        ownership conversions is added.
+        """
+        if not (hardware.get_vtpm_constraint(current_flavor, image_meta) and
+                hardware.get_vtpm_constraint(new_flavor, image_meta)):
+            # If either of the flavors has no vTPM at all, we don't need to
+            # validate anything because no secret ownership change would be
+            # involved.
+            return
+
+        from_security = vtpm.get_instance_tpm_secret_security(current_flavor)
+        to_security = vtpm.get_instance_tpm_secret_security(new_flavor)
+
+        if (from_security != to_security and
+            (from_security == 'deployment' or to_security == 'deployment')):
+            # Resizing to 'deployment' TPM secret security from any other
+            # mode or resizing to any other mode from 'deployment' TPM secret
+            # security would involve converting key manager service secret
+            # ownership from the user to the Nova service user or from the Nova
+            # service user to the user, and we don't support that yet.
+            msg = _("Resize between 'deployment' TPM secret security and "
+                    "other TPM secret security modes is not supported.")
+            raise exception.OperationNotSupportedForVTPM(msg)
+
     @block_shares_not_supported()
     # TODO(stephenfin): This logic would be so much easier to grok if we
     # finally split resize and cold migration into separate code paths
@@ -4355,6 +4389,10 @@ class API:
             # instance.
             self._check_compute_service_for_mixed_instance(
                 request_spec.numa_topology, min_comp_ver)
+
+        if not same_flavor:
+            self._validate_vtpm_secret_security(current_flavor, new_flavor,
+                                                instance.image_meta)
 
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0

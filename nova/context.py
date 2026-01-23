@@ -28,13 +28,16 @@ from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova import policy
+from nova import service_auth
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+CONF = nova.conf.CONF
 CELL_CACHE = {}
 # NOTE(melwitt): Used for the scatter-gather utility to indicate we timed out
 # waiting for a result from a cell.
@@ -45,6 +48,14 @@ did_not_respond_sentinel = object()
 CELLS = []
 # Timeout value for waiting for cells to respond
 CELL_TIMEOUT = 60
+
+
+def reset_globals():
+    global CELL_CACHE
+    global CELLS
+    CELL_CACHE = {}
+    CELLS = []
+    service_auth.reset_globals()
 
 
 class _ContextAuthPlugin(plugin.BaseAuthPlugin):
@@ -275,6 +286,33 @@ def get_admin_context(read_deleted="no"):
                           is_admin=True,
                           read_deleted=read_deleted,
                           overwrite=False)
+
+
+def get_nova_service_user_context():
+    """Get a context that will authenticate as the Nova service user.
+
+    This will pull authentication parameters from the [<conf_group>]
+    section of the Nova configuration and load an auth plugin, then create
+    and return a RequestContext object containing that auth plugin.
+
+    Then, code using the RequestContext will call its get_auth_plugin() method
+    to authenticate with another service.
+    """
+    conf_group = nova.conf.service_token.SERVICE_USER_GROUP
+
+    auth = service_auth.get_service_auth_plugin(conf_group)
+    session = service_auth.get_service_auth_session(conf_group)
+
+    if auth is None or session is None:
+        raise exception.InvalidConfiguration(
+            'Failed to load auth plugin or session from configuration. '
+            f'Ensure the [{conf_group}] section of the Nova configuration '
+            'file is correctly configured for the Nova service user.')
+
+    return RequestContext(user_id=auth.get_user_id(session),
+                          project_id=auth.get_project_id(session),
+                          roles=auth.get_access(session).role_names,
+                          user_auth_plugin=auth, overwrite=False)
 
 
 def is_user_context(context):

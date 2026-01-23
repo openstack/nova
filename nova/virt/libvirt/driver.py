@@ -134,6 +134,7 @@ from nova.virt.libvirt.volume import remotefs
 from nova.virt.libvirt.volume import volume
 from nova.virt import netutils
 from nova.volume import cinder
+from nova import vtpm
 
 try:
     # This is optional for unit testing but required at runtime. We check for
@@ -1793,7 +1794,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 pass
 
         if cleanup_instance_disks:
-            if hardware.get_tpm_secret_security_constraint(
+            if vtpm.get_instance_tpm_secret_security(
                     instance.flavor) == 'host':
                 self._host.delete_secret('vtpm', instance.uuid)
             # Make sure that the instance directory files were successfully
@@ -1964,7 +1965,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # secret; the deletion of the instance directory and undefining of
             # the domain will take care of the TPM files themselves
             LOG.info('New flavor no longer requests vTPM; deleting secret.')
-            crypto.delete_vtpm_secret(context, instance)
+            vtpm.delete_secret(context, instance, flavor=instance.old_flavor)
 
     # TODO(stephenfin): Fold this back into its only caller, cleanup_resize
     def _cleanup_resize(self, context, instance, network_info):
@@ -4823,7 +4824,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # it to hand when generating the XML. This is slightly wasteful
                 # as we'll perform a redundant key manager API call later when
                 # we create the domain but the alternative is an ugly mess
-                crypto.ensure_vtpm_secret(context, instance)
+                self._get_or_create_secret_for_vtpm(context, instance)
 
         xml = self._get_guest_xml(context, instance, network_info,
                                   disk_info, image_meta,
@@ -8195,8 +8196,7 @@ class LibvirtDriver(driver.ComputeDriver):
         For all others, it will call the key manager service API to get or
         create a secret and then use it to create a libvirt secret.
         """
-        security = hardware.get_tpm_secret_security_constraint(
-                instance.flavor) or 'user'
+        security = vtpm.get_instance_tpm_secret_security(instance.flavor)
 
         libvirt_secret = None
         kwargs = {}
@@ -8210,8 +8210,8 @@ class LibvirtDriver(driver.ComputeDriver):
             kwargs = {'ephemeral': False, 'private': False}
 
         if libvirt_secret is None:
-            secret_uuid, passphrase = crypto.ensure_vtpm_secret(context,
-                                                                instance)
+            secret_uuid, passphrase = vtpm.get_or_create_secret(
+                    context, instance)
             libvirt_secret = self._host.create_secret(
                 'vtpm', instance.uuid, password=passphrase, uuid=secret_uuid,
                 **kwargs)
@@ -12649,7 +12649,7 @@ class LibvirtDriver(driver.ComputeDriver):
         elif new_vtpm_config:
             # we've requested vTPM in the new flavor and didn't have one
             # previously so we need to create a new secret
-            crypto.ensure_vtpm_secret(context, instance)
+            self._get_or_create_secret_for_vtpm(context, instance)
 
     def finish_migration(
         self,
@@ -12798,7 +12798,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # the instance gained a vTPM and must now lose it; delete the vTPM
             # secret, knowing that libvirt will take care of everything else on
             # the destination side
-            crypto.delete_vtpm_secret(context, instance)
+            vtpm.delete_secret(context, instance, flavor=instance.new_flavor)
 
     def finish_revert_migration(
         self,

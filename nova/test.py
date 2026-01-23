@@ -244,8 +244,7 @@ class TestCase(base.BaseTestCase):
         # NOTE(danms): Reset the cached list of cells
         from nova.compute import api
         api.CELLS = []
-        context.CELL_CACHE = {}
-        context.CELLS = []
+        context.reset_globals()
 
         self.computes = {}
         self.cell_mappings = {}

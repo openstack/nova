@@ -1636,7 +1636,7 @@ Related options:
 * ``swtpm_user`` must also be set.
 """),
     cfg.ListOpt('supported_tpm_secret_security',
-        default=['user', 'host'],
+        default=['user', 'host', 'deployment'],
         help="""
 The list of TPM security policies supported by this compute host. If a value is
 absent, it is not supported by this host, and any instance that requests it
@@ -1652,6 +1652,9 @@ Possible values are:
   accessed by anyone else. The Libvirt secret is public and persistent. It
   can be read by anyone with sufficient access on the host. The instance can
   be live-migrated and automatically resumed after host reboot.
+* ``deployment``: The Barbican secret is owned by the Nova service user. The
+  Libvirt secret is private and non-persistent. The instance can be
+  live-migrated and resumed automatically after host reboot.
 """),
     cfg.BoolOpt(
         'use_default_aio_mode_for_volumes',

@@ -168,6 +168,15 @@ class VTPMServersTest(base.ServersTestBase):
 
         self.key_mgr = crypto._get_key_manager()
 
+        # Mock the get_nova_service_user_context() method so we can
+        # differentiate request contexts for the 'nova' service user.
+        def fake_get_nova_service_user_context():
+            return nova_context.RequestContext(user_id='nova')
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.context.get_nova_service_user_context',
+            fake_get_nova_service_user_context))
+
     def _create_server_with_vtpm(self, secret_security=None,
                                  expected_state='ACTIVE'):
         extra_specs = {'hw:tpm_model': 'tpm-tis', 'hw:tpm_version': '1.2'}
@@ -183,14 +192,15 @@ class VTPMServersTest(base.ServersTestBase):
         # use the default flavor (i.e. one without vTPM extra specs)
         return self._create_server()
 
-    def assertInstanceHasSecret(self, server):
+    def assertInstanceHasSecret(self, server, user_id='fake'):
+        # user_id='fake' is the normal non-admin user.
         ctx = nova_context.get_admin_context()
         instance = objects.Instance.get_by_uuid(ctx, server['id'])
         self.assertIn('vtpm_secret_uuid', instance.system_metadata)
         self.assertEqual(1, len(self.key_mgr._passphrases))
-        self.assertIn(
-            instance.system_metadata['vtpm_secret_uuid'],
-            self.key_mgr._passphrases)
+        secret_uuid = instance.system_metadata['vtpm_secret_uuid']
+        self.assertIn(secret_uuid, self.key_mgr._passphrases)
+        self.assertEqual(user_id, self.key_mgr._contexts[secret_uuid].user_id)
         return instance.system_metadata['vtpm_secret_uuid']
 
     def assertInstanceHasNoSecret(self, server):
@@ -294,6 +304,41 @@ class VTPMServersTest(base.ServersTestBase):
         # ensure we deleted the key and undefined the secret now that we no
         # longer need it
         self.assertEqual(0, len(self.key_mgr._passphrases))
+        self.assertNotIn(instance.system_metadata['vtpm_secret_uuid'],
+                         conn._secrets)
+
+    def test_create_server_secret_security_deployment(self):
+        self.flags(
+            supported_tpm_secret_security=['deployment'], group='libvirt')
+        self.start_compute(hostname='tpm-host')
+        compute = self.computes['tpm-host']
+
+        # ensure we are reporting the correct traits
+        traits = self._get_provider_traits(self.compute_rp_uuids['tpm-host'])
+        self.assertIn(
+            'COMPUTE_SECURITY_TPM_SECRET_SECURITY_DEPLOYMENT', traits)
+
+        # create a server with vTPM
+        server = self._create_server_with_vtpm(secret_security='deployment')
+
+        # ensure our instance's system_metadata field and key manager inventory
+        # is correct
+        self.assertInstanceHasSecret(server, user_id='nova')
+
+        # ensure the libvirt secret is defined correctly
+        ctx = nova_context.get_admin_context()
+        instance = objects.Instance.get_by_uuid(ctx, server['id'])
+        self._assert_libvirt_had_secret(
+            compute, instance.system_metadata['vtpm_secret_uuid'])
+
+        # Now delete the server, this delete will fail if the secret ownership
+        # does not match. And we verified the secret owner is 'nova' above.
+        self._delete_server(server)
+
+        # ensure we deleted the key and undefined the secret now that we no
+        # longer need it
+        self.assertEqual(0, len(self.key_mgr._passphrases))
+        conn = compute.driver._host.get_connection()
         self.assertNotIn(instance.system_metadata['vtpm_secret_uuid'],
                          conn._secrets)
 
@@ -409,7 +454,22 @@ class VTPMServersTest(base.ServersTestBase):
         self._test_resize_revert_server__vtpm_to_vtpm(
             extra_specs=extra_specs)
 
-    def test_resize_server__no_vtpm_to_vtpm(self):
+    @ddt.data(None, 'user', 'host', 'deployment')
+    def test_resize_server__no_vtpm_to_vtpm(self, secret_security):
+        """Resize a server from a flavor without TPM to a flavor with TPM.
+
+        This tests a scenario where the instance does not have a TPM before
+        the resize but *does* have a TPM after the resize.
+
+        A TPM secret security of 'None' means the instance is either:
+
+          * A legacy vTPM instance
+
+          * A vTPM instance where the user did not specify TPM secret security
+
+        In both of these cases, the default TPM secret security policy is
+        'user'. So 'None' is the equivalent of 'user'.
+        """
         for host in ('test_compute0', 'test_compute1'):
             self.start_compute(host)
 
@@ -423,6 +483,8 @@ class VTPMServersTest(base.ServersTestBase):
 
         # create a flavor with vTPM
         extra_specs = {'hw:tpm_model': 'tpm-tis', 'hw:tpm_version': '1.2'}
+        if secret_security is not None:
+            extra_specs['hw:tpm_secret_security'] = secret_security
         flavor_id = self._create_flavor(extra_spec=extra_specs)
 
         # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
@@ -436,7 +498,8 @@ class VTPMServersTest(base.ServersTestBase):
 
         # ensure our instance's system_metadata field and key manager inventory
         # is updated to reflect the new vTPM requirement
-        self.assertInstanceHasSecret(server)
+        user_id = 'nova' if secret_security == 'deployment' else 'fake'
+        self.assertInstanceHasSecret(server, user_id=user_id)
 
         # revert the instance rather than confirming it, and ensure the secret
         # is correctly cleaned up
@@ -453,16 +516,32 @@ class VTPMServersTest(base.ServersTestBase):
         # ensure we delete the new key since we no longer need it
         self.assertInstanceHasNoSecret(server)
 
-    def test_resize_server__vtpm_to_no_vtpm(self):
+    @ddt.data(None, 'user', 'host', 'deployment')
+    def test_resize_server__vtpm_to_no_vtpm(self, secret_security):
+        """Resize a server from a flavor with TPM to a flavor without TPM.
+
+        This tests a scenario where the instance has a TPM before the resize
+        but does *not* have a TPM after the resize.
+
+        A TPM secret security of 'None' means the instance is either:
+
+          * A legacy vTPM instance
+
+          * A vTPM instance where the user did not specify TPM secret security
+
+        In both of these cases, the default TPM secret security policy is
+        'user'. So 'None' is the equivalent of 'user'.
+        """
         for host in ('test_compute0', 'test_compute1'):
             self.start_compute(host)
 
         # create a server with vTPM
-        server = self._create_server_with_vtpm()
+        server = self._create_server_with_vtpm(secret_security=secret_security)
         self.addCleanup(self._delete_server, server)
 
         # ensure our instance's system_metadata field is correct
-        self.assertInstanceHasSecret(server)
+        user_id = 'nova' if secret_security == 'deployment' else 'fake'
+        self.assertInstanceHasSecret(server, user_id=user_id)
 
         # create a flavor without vTPM
         flavor_id = self._create_flavor()
@@ -478,7 +557,8 @@ class VTPMServersTest(base.ServersTestBase):
 
         # ensure we still have the key for the vTPM device in storage in case
         # we revert
-        self.assertInstanceHasSecret(server)
+        user_id = 'nova' if secret_security == 'deployment' else 'fake'
+        self.assertInstanceHasSecret(server, user_id=user_id)
 
         # confirm the instance and ensure the secret is correctly cleaned up
 
@@ -488,12 +568,128 @@ class VTPMServersTest(base.ServersTestBase):
             'nova.virt.libvirt.driver.LibvirtDriver'
             '.migrate_disk_and_power_off', return_value='{}',
         ):
-            # revert back to the old flavor *with* vTPM
+            # confirm to the new flavor *without* vTPM
             server = self._confirm_resize(server)
 
         # ensure we have finally deleted the key for the vTPM device since
         # there is no going back now
         self.assertInstanceHasNoSecret(server)
+
+    @ddt.unpack
+    @ddt.data(
+        (None, 'deployment'), ('deployment', None),
+        ('user', 'deployment'), ('deployment', 'user'),
+        ('host', 'deployment'), ('deployment', 'host'))
+    def test_resize_vtpm_server_secret_security_deployment_unsupported(
+            self, from_secret_security, to_secret_security):
+        """Resizes that require secret ownership changes are not allowed.
+
+        This tests a scenario where the instance has a TPM before the resize
+        and has a TPM after the resize.
+
+        A TPM secret security of 'None' means the instance is either:
+
+          * A legacy vTPM instance
+
+          * A vTPM instance where the user did not specify TPM secret security
+
+        In both of these cases, the default TPM secret security policy is
+        'user'. So 'None' is the equivalent of 'user'.
+
+        Until a later patch in the series adds code to convert to and from a
+        user-owned secret <=> Nova service user owned secret, we will want to
+        reject requests that would require conversion. Otherwise, these
+        attempts will fail with secret access permission errors.
+        """
+        for host in ('test_compute0', 'test_compute1'):
+            self.start_compute(host)
+
+        # create a server with vTPM with from_secret_security
+        server = self._create_server_with_vtpm(
+                secret_security=from_secret_security)
+        self.addCleanup(self._delete_server, server)
+
+        # ensure our instance's system_metadata field is correct
+        user_id = 'nova' if from_secret_security == 'deployment' else 'fake'
+        self.assertInstanceHasSecret(server, user_id=user_id)
+
+        # create a flavor with to_secret_security
+        extra_specs = {'hw:tpm_version': '1.2',
+                       'hw:tpm_model': 'tpm-tis'}
+        if to_secret_security is not None:
+            extra_specs['hw:tpm_secret_security'] = to_secret_security
+        flavor_id = self._create_flavor(extra_spec=extra_specs)
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            ex = self.assertRaises(
+                    client.OpenStackApiException, self._resize_server, server,
+                    flavor_id=flavor_id)
+            self.assertEqual(400, ex.response.status_code)
+            self.assertIn(
+                "Resize between 'deployment' TPM secret security and "
+                "other TPM secret security modes is not supported.",
+                str(ex))
+
+    @ddt.unpack
+    @ddt.data(
+        (None, None),
+        ('user', 'user'),
+        ('host', 'host'),
+        ('deployment', 'deployment'),
+        (None, 'user'), ('user', None),
+        (None, 'host'), ('host', None),
+        ('user', 'host'), ('host', 'user'))
+    def test_resize_vtpm_server_secret_security_deployment_supported(
+            self, from_secret_security, to_secret_security):
+        """Resizes that do not require secret ownership changes are allowed.
+
+        This tests a scenario where the instance has a TPM before the resize
+        and has a TPM after the resize.
+
+        A TPM secret security of 'None' means the instance is either:
+
+          * A legacy vTPM instance
+
+          * A vTPM instance where the user did not specify TPM secret security
+
+        In both of these cases, the default TPM secret security policy is
+        'user'. So 'None' is the equivalent of 'user'.
+
+        A resize from 'deployment' to 'deployment' is allowed because in both
+        cases the key manager service secret will be owned by the Nova service
+        user and no ownership change will be needed.
+        """
+        for host in ('test_compute0', 'test_compute1'):
+            self.start_compute(host)
+
+        # create a server with vTPM with from_secret_security
+        server = self._create_server_with_vtpm(
+                secret_security=from_secret_security)
+        self.addCleanup(self._delete_server, server)
+
+        # ensure our instance's system_metadata field is correct
+        user_id = 'nova' if from_secret_security == 'deployment' else 'fake'
+        self.assertInstanceHasSecret(server, user_id=user_id)
+
+        # create a flavor with to_secret_security
+        extra_specs = {'hw:tpm_version': '1.2',
+                       'hw:tpm_model': 'tpm-tis'}
+        if to_secret_security is not None:
+            extra_specs['hw:tpm_secret_security'] = to_secret_security
+        flavor_id = self._create_flavor(extra_spec=extra_specs)
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            # resize should succeed
+            self._resize_server(server, flavor_id=flavor_id)
+
+        # And the secret should still be as expected.
+        self.assertInstanceHasSecret(server, user_id=user_id)
 
     def test_create_server_secret_security_unsupported(self):
         """Test when a not supported TPM secret security mode is requested
