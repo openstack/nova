@@ -118,8 +118,9 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(log_mock.method_calls),
                          'LOG should not be used in _connect_auth_cb.')
 
-    @mock.patch.object(utils, 'spawn_after')
-    def test_event_dispatch(self, mock_spawn_after):
+    @mock.patch.object(
+        utils, 'StaticallyDelayingCancellableTaskExecutorWrapper')
+    def test_event_dispatch(self, mock_wrapper):
         # Validate that the libvirt self-pipe for forwarding
         # events between threads is working sanely
 
@@ -164,9 +165,11 @@ class HostTestCase(test.NoDBTestCase):
         want_events = [event1, event2, event3]
         self.assertEqual(want_events, got_events)
 
+        mock_wrapper.assert_called_once_with(
+            delay=15, executor=utils._get_default_executor())
         # STOPPED is delayed so it's handled separately
-        mock_spawn_after.assert_called_once_with(
-            hostimpl._lifecycle_delay, hostimpl._event_emit, event4)
+        mock_wrapper.return_value.submit_with_delay(
+            hostimpl._event_emit, event4)
 
     @mock.patch('nova.virt.libvirt.host.Host._event_emit_delayed')
     def test_event_lifecycle(self, mock_emit):
@@ -275,19 +278,21 @@ class HostTestCase(test.NoDBTestCase):
             test.MatchType(libvirt_guest.Guest), instance=None,
             logging_ok=False)
 
-    @mock.patch.object(utils, 'spawn_after')
-    def test_event_emit_delayed_call_delayed(self, mock_spawn_after):
+    @mock.patch('nova.utils.StaticallyDelayingCancellableTaskExecutorWrapper')
+    def test_event_emit_delayed_call_delayed(self, mock_wrapper):
         ev = event.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
             event.EVENT_LIFECYCLE_STOPPED)
         hostimpl = host.Host(
             'qemu:///system', lifecycle_event_handler=lambda e: None)
         hostimpl._event_emit_delayed(ev)
-        mock_spawn_after.assert_called_once_with(
-            15, hostimpl._event_emit, ev)
+        mock_wrapper.assert_called_once_with(
+            delay=15, executor=utils._get_default_executor())
+        mock_wrapper.return_value.submit_with_delay.assert_called_once_with(
+            hostimpl._event_emit, ev)
 
-    @mock.patch.object(utils, 'spawn_after')
-    def test_event_emit_delayed_call_delayed_pending(self, spawn_after_mock):
+    @mock.patch('nova.utils.StaticallyDelayingCancellableTaskExecutorWrapper')
+    def test_event_emit_delayed_call_delayed_pending(self, mock_wrapper):
         hostimpl = host.Host(
             'qemu:///system', lifecycle_event_handler=lambda e: None)
         uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
@@ -295,9 +300,9 @@ class HostTestCase(test.NoDBTestCase):
         ev = event.LifecycleEvent(
             uuid, event.EVENT_LIFECYCLE_STOPPED)
         hostimpl._event_emit_delayed(ev)
-        mock_future = spawn_after_mock.return_value
+        mock_future = mock_wrapper.return_value.submit_with_delay.return_value
         mock_future.add_done_callback.assert_called_once()
-        self.assertTrue(spawn_after_mock.called)
+        self.assertTrue(mock_wrapper.return_value.submit_with_delay.called)
         self.assertIs(mock_future, hostimpl._events_delayed[uuid])
 
     def test_event_delayed_cleanup(self):

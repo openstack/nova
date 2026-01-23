@@ -346,7 +346,9 @@ class Host(object):
         #                STARTED events are sent. To prevent shutting
         #                down the domain during a reboot, delay the
         #                STOPPED lifecycle event some seconds.
-        self._lifecycle_delay = 15
+        self._delayed_executor = (
+            utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+                delay=15, executor=utils._get_default_executor()))
 
         self._initialized = False
         self._libvirt_proxy_classes = self._get_libvirt_proxy_classes(libvirt)
@@ -542,29 +544,29 @@ class Host(object):
 
     def _event_emit_delayed(self, event):
         """Emit events - possibly delayed."""
-        def event_cleanup(event):
-            """Callback function for greenthread. Called
-            to cleanup the _events_delayed dictionary when an event
-            was called.
-            """
-            self._events_delayed.pop(event.uuid, None)
 
-        # Cleanup possible delayed stop events.
-        if event.uuid in self._events_delayed.keys():
+        # Cancel possible delayed stop events when we received any other
+        # event for the same domain.
+        if (isinstance(event, virtevent.LifecycleEvent) and
+            event.uuid in self._events_delayed.keys()
+        ):
             self._events_delayed[event.uuid].cancel()
             self._events_delayed.pop(event.uuid, None)
-            LOG.debug("Removed pending event for %s due to event", event.uuid)
+            LOG.debug(
+                "Removed pending STOPPED event for %s due to new event %s",
+                event.uuid, event)
 
         if (isinstance(event, virtevent.LifecycleEvent) and
             event.transition == virtevent.EVENT_LIFECYCLE_STOPPED):
             # Delay STOPPED event, as they may be followed by a STARTED
             # event in case the instance is rebooting
-            id_ = utils.spawn_after(
-                self._lifecycle_delay, self._event_emit, event)
-            self._events_delayed[event.uuid] = id_
+            future = self._delayed_executor.submit_with_delay(
+                self._event_emit, event)
+            self._events_delayed[event.uuid] = future
             # add callback to cleanup self._events_delayed dict after
             # event was called
-            id_.add_done_callback(lambda _: event_cleanup(event))
+            future.add_done_callback(
+                lambda _: self._events_delayed.pop(event.uuid, None))
         else:
             self._event_emit(event)
 
