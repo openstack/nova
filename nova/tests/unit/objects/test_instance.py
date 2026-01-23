@@ -1937,42 +1937,170 @@ class _TestInstanceListObject(object):
         mock_fault_get.assert_called_once_with(self.context,
             [x['uuid'] for x in fake_insts])
 
-    @mock.patch.object(db, 'instance_fault_get_by_instance_uuids')
-    def test_fill_faults(self, mock_fault_get):
+    @mock.patch('nova.context.scatter_gather_all_cells')
+    def test_fill_faults(self, mock_sg):
         inst1 = objects.Instance(uuid=uuids.db_fault_1)
         inst2 = objects.Instance(uuid=uuids.db_fault_2)
         insts = [inst1, inst2]
         for inst in insts:
             inst.obj_reset_changes()
-        db_faults = {
-            'uuid1': [{'id': 123,
-                       'instance_uuid': uuids.db_fault_1,
-                       'code': 456,
-                       'message': 'Fake message',
-                       'details': 'No details',
-                       'host': 'foo',
-                       'deleted': False,
-                       'deleted_at': None,
-                       'updated_at': None,
-                       'created_at': None,
-                       }
-                      ]}
-        mock_fault_get.return_value = db_faults
+
+        # Create fake faults
+        fault = objects.InstanceFault(
+            id=123,
+            instance_uuid=uuids.db_fault_1,
+            code=456,
+            message='Fake message',
+            details='No details',
+            host='foo'
+        )
+        fault.obj_reset_changes()
+
+        # scatter_gather_all_cells returns a dict of {cell_uuid: result}
+        mock_sg.return_value = {
+            uuids.cell1: objects.InstanceFaultList(objects=[fault])
+        }
 
         inst_list = objects.InstanceList()
         inst_list._context = self.context
         inst_list.objects = insts
         faulty = inst_list.fill_faults()
         self.assertEqual([uuids.db_fault_1], list(faulty))
-        self.assertEqual(db_faults['uuid1'][0]['message'],
-                         inst_list[0].fault.message)
+        self.assertEqual('Fake message', inst_list[0].fault.message)
         self.assertIsNone(inst_list[1].fault)
         for inst in inst_list:
             self.assertEqual(set(), inst.obj_what_changed())
 
-        mock_fault_get.assert_called_once_with(self.context,
-                                               [x.uuid for x in insts],
-                                               latest=True)
+        mock_sg.assert_called_once_with(
+            self.context,
+            objects.InstanceFaultList.get_latest_by_instance_uuids,
+            [x.uuid for x in insts])
+
+    @mock.patch('nova.context.scatter_gather_all_cells')
+    def test_fill_faults_multicell(self, mock_sg):
+        # Prepare list with 2 instances
+        inst_list = objects.InstanceList()
+        inst_list._context = self.context
+        inst_list.objects = [
+            objects.Instance(uuid=uuids.inst_1),
+            objects.Instance(uuid=uuids.inst_2)
+        ]
+        for inst in inst_list.objects:
+            inst.obj_reset_changes()
+
+        # Create faults for instances in different cells
+        fault1 = objects.InstanceFault(
+            id=123,
+            instance_uuid=uuids.inst_1,
+            code=456,
+            message='Fake message %s' % uuids.inst_1,
+            details='No details',
+            host='foo'
+        )
+        fault2 = objects.InstanceFault(
+            id=124,
+            instance_uuid=uuids.inst_2,
+            code=456,
+            message='Fake message %s' % uuids.inst_2,
+            details='No details',
+            host='foo'
+        )
+
+        # scatter_gather_all_cells returns a dict of {cell_uuid: result}
+        # Simulate faults from different cells
+        mock_sg.return_value = {
+            uuids.cell1: objects.InstanceFaultList(objects=[fault1]),
+            uuids.cell2: objects.InstanceFaultList(objects=[fault2])
+        }
+
+        inst_list.fill_faults()
+        # Verify multicell fill_faults by comparing combined list of faults
+        # from different cell DBs to the list of instance faults as filled
+        self.assertEqual(['Fake message %s' % uuids.inst_1,
+                          'Fake message %s' % uuids.inst_2],
+                         [getattr(inst.fault, 'message', None)
+                          for inst in inst_list])
+
+        mock_sg.assert_called_once_with(
+            self.context,
+            objects.InstanceFaultList.get_latest_by_instance_uuids,
+            [uuids.inst_1, uuids.inst_2])
+
+    @mock.patch('nova.context.scatter_gather_all_cells')
+    def test_fill_faults_cell_no_response(self, mock_sg):
+        """Test fill_faults when a cell doesn't respond."""
+        inst1 = objects.Instance(uuid=uuids.db_fault_1)
+        inst2 = objects.Instance(uuid=uuids.db_fault_2)
+        insts = [inst1, inst2]
+        for inst in insts:
+            inst.obj_reset_changes()
+
+        # Create a fault for one cell, another cell doesn't respond
+        fault = objects.InstanceFault(
+            id=123,
+            instance_uuid=uuids.db_fault_1,
+            code=456,
+            message='Fake message',
+            details='No details',
+            host='foo'
+        )
+        fault.obj_reset_changes()
+
+        # One cell returns a fault, another doesn't respond
+        mock_sg.return_value = {
+            uuids.cell1: objects.InstanceFaultList(objects=[fault]),
+            uuids.cell2: context.did_not_respond_sentinel
+        }
+
+        inst_list = objects.InstanceList()
+        inst_list._context = self.context
+        inst_list.objects = insts
+        faulty = inst_list.fill_faults()
+
+        # Should still get the fault from the responsive cell
+        self.assertEqual([uuids.db_fault_1], list(faulty))
+        self.assertEqual('Fake message', inst_list[0].fault.message)
+        self.assertIsNone(inst_list[1].fault)
+        for inst in inst_list:
+            self.assertEqual(set(), inst.obj_what_changed())
+
+    @mock.patch('nova.context.scatter_gather_all_cells')
+    def test_fill_faults_cell_exception(self, mock_sg):
+        """Test fill_faults when getting faults raises an exception."""
+        inst1 = objects.Instance(uuid=uuids.db_fault_1)
+        inst2 = objects.Instance(uuid=uuids.db_fault_2)
+        insts = [inst1, inst2]
+        for inst in insts:
+            inst.obj_reset_changes()
+
+        # Create a fault for one cell, another cell raises exception
+        fault = objects.InstanceFault(
+            id=123,
+            instance_uuid=uuids.db_fault_1,
+            code=456,
+            message='Fake message',
+            details='No details',
+            host='foo'
+        )
+        fault.obj_reset_changes()
+
+        # One cell returns a fault, another raises an exception
+        mock_sg.return_value = {
+            uuids.cell1: objects.InstanceFaultList(objects=[fault]),
+            uuids.cell2: Exception('Database connection failed')
+        }
+
+        inst_list = objects.InstanceList()
+        inst_list._context = self.context
+        inst_list.objects = insts
+        faulty = inst_list.fill_faults()
+
+        # Should still get the fault from the successful cell
+        self.assertEqual([uuids.db_fault_1], list(faulty))
+        self.assertEqual('Fake message', inst_list[0].fault.message)
+        self.assertIsNone(inst_list[1].fault)
+        for inst in inst_list:
+            self.assertEqual(set(), inst.obj_what_changed())
 
     @mock.patch('nova.db.main.api.instance_get_all_uuids_by_hosts')
     def test_get_uuids_by_host_no_match(self, mock_get_all):

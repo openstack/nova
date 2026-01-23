@@ -1577,11 +1577,21 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         :returns: A list of instance uuids for which faults were found.
         """
         uuids = [inst.uuid for inst in self]
-        faults = objects.InstanceFaultList.get_latest_by_instance_uuids(
-            self._context, uuids)
+        results = nova_context.scatter_gather_all_cells(
+            self._context,
+            objects.InstanceFaultList.get_latest_by_instance_uuids,
+            uuids)
+
         faults_by_uuid = {}
-        for fault in faults:
-            faults_by_uuid[fault.instance_uuid] = fault
+        for cell_uuid, faults in results.items():
+            if faults is nova_context.did_not_respond_sentinel:
+                LOG.warning('Cell %s did not respond when getting faults',
+                            cell_uuid)
+            elif isinstance(faults, Exception):
+                LOG.warning('Failed to get faults for cell %s', cell_uuid)
+            else:
+                for fault in faults:
+                    faults_by_uuid[fault.instance_uuid] = fault
 
         for instance in self:
             if instance.uuid in faults_by_uuid:
