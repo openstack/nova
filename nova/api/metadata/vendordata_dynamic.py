@@ -18,18 +18,15 @@
 import sys
 
 from keystoneauth1 import exceptions as ks_exceptions
-from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova.api.metadata import vendordata
 import nova.conf
+from nova import service_auth
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
-
-_SESSION = None
-_ADMIN_AUTH = None
 
 
 def _load_ks_session(conf):
@@ -38,24 +35,18 @@ def _load_ks_session(conf):
     This is either an authenticated session or a requests session, depending on
     what's configured.
     """
-    global _ADMIN_AUTH
-    global _SESSION
+    auth = service_auth.get_service_auth_plugin(
+            nova.conf.vendordata.vendordata_group.name)
 
-    if not _ADMIN_AUTH:
-        _ADMIN_AUTH = ks_loading.load_auth_from_conf_options(
-            conf, nova.conf.vendordata.vendordata_group.name)
-
-    if not _ADMIN_AUTH:
+    if not auth:
         LOG.warning('Passing insecure dynamic vendordata requests '
                     'because of missing or incorrect service account '
                     'configuration.')
 
-    if not _SESSION:
-        _SESSION = ks_loading.load_session_from_conf_options(
-            conf, nova.conf.vendordata.vendordata_group.name,
-            auth=_ADMIN_AUTH)
+    session = service_auth.get_service_auth_session(
+            nova.conf.vendordata.vendordata_group.name, auth=auth)
 
-    return _SESSION
+    return session
 
 
 class DynamicVendorData(vendordata.VendorDataDriver):

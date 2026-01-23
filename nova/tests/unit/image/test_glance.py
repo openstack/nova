@@ -361,7 +361,7 @@ class TestGetImageService(test.NoDBTestCase):
 
 class TestCreateGlanceClient(test.NoDBTestCase):
 
-    @mock.patch.object(service_auth, 'get_auth_plugin')
+    @mock.patch.object(service_auth, 'get_service_user_token_auth_plugin')
     @mock.patch.object(ks_loading, 'load_session_from_conf_options')
     @mock.patch('glanceclient.Client')
     def test_glanceclient_with_ks_session(self, mock_client, mock_load,
@@ -375,14 +375,15 @@ class TestCreateGlanceClient(test.NoDBTestCase):
         mock_client.side_effect = ["a", "b"]
 
         # Reset the cache, so we know its empty before we start
-        glance._SESSION = None
+        service_auth.reset_globals()
 
         result1 = glance._glanceclient_from_endpoint(ctx, endpoint, 2)
         result2 = glance._glanceclient_from_endpoint(ctx, endpoint, 2)
 
         # Ensure that session is only loaded once.
-        mock_load.assert_called_once_with(glance.CONF, "glance")
-        self.assertEqual(session, glance._SESSION)
+        mock_load.assert_called_once_with(glance.CONF, "glance", auth=None)
+        self.assertEqual(session,
+                         service_auth.get_service_auth_session('glance'))
         # Ensure new client created every time
         client_call = mock.call(2, auth="fake_auth",
                 endpoint_override=endpoint, session=session,

@@ -28,41 +28,43 @@ class ServiceAuthTestCase(test.NoDBTestCase):
         self.addCleanup(service_auth.reset_globals)
 
     @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
-    def test_get_auth_plugin_no_wraps(self, mock_load):
+    def test_get_service_user_token_auth_plugin_no_wraps(self, mock_load):
         context = mock.MagicMock()
         context.get_auth_plugin.return_value = "fake"
 
-        result = service_auth.get_auth_plugin(context)
+        result = service_auth.get_service_user_token_auth_plugin(context)
 
         self.assertEqual("fake", result)
         mock_load.assert_not_called()
 
     @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
-    def test_get_auth_plugin_wraps(self, mock_load):
+    def test_get_service_user_token_auth_plugin_wraps(self, mock_load):
         self.flags(send_service_user_token=True, group='service_user')
 
-        result = service_auth.get_auth_plugin(self.ctx)
+        result = service_auth.get_service_user_token_auth_plugin(self.ctx)
 
         self.assertIsInstance(result, service_token.ServiceTokenAuthWrapper)
 
     @mock.patch.object(ks_loading, 'load_auth_from_conf_options',
                        return_value=None)
-    def test_get_auth_plugin_wraps_bad_config(self, mock_load):
+    def test_get_service_user_token_auth_plugin_wraps_bad_config(
+            self, mock_load):
         """Tests the case that send_service_user_token is True but there
         is some misconfiguration with the [service_user] section which makes
         KSA return None for the service user auth.
         """
         self.flags(send_service_user_token=True, group='service_user')
-        result = service_auth.get_auth_plugin(self.ctx)
+        result = service_auth.get_service_user_token_auth_plugin(self.ctx)
         self.assertEqual(1, mock_load.call_count)
         self.assertNotIsInstance(result, service_token.ServiceTokenAuthWrapper)
 
     @mock.patch.object(ks_loading, 'load_auth_from_conf_options',
                        new=mock.Mock())
-    def test_get_auth_plugin_user_auth(self):
+    def test_get_service_user_token_auth_plugin_user_auth(self):
         self.flags(send_service_user_token=True, group='service_user')
         user_auth = mock.Mock()
 
-        result = service_auth.get_auth_plugin(self.ctx, user_auth=user_auth)
+        result = service_auth.get_service_user_token_auth_plugin(
+                self.ctx, user_auth=user_auth)
 
         self.assertEqual(user_auth, result.user_auth)
