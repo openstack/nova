@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    The server-shares API policies have been updated to allow admin users
+    (those with the role admin) to access them. There are no changes to the
+    permissions for project users with the role reader/member. The following
+    API policies have been updated from PROJECT_READER/PROJECT_MEMBER to
+    PROJECT_READER_OR_ADMIN/PROJECT_MEMBER_OR_ADMIN to facilitate this change.
+
+    * ``os_compute_api:os-server-shares:index`` → ``PROJECT_READER_OR_ADMIN``
+    * ``os_compute_api:os-server-shares:create`` → ``PROJECT_MEMBER_OR_ADMIN``
+    * ``os_compute_api:os-server-shares:show`` → ``PROJECT_READER_OR_ADMIN``
+    * ``os_compute_api:os-server-shares:delete`` → ``PROJECT_MEMBER_OR_ADMIN``
