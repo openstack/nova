@@ -469,11 +469,11 @@ class QuotaEngineTestCase(test.TestCase):
         context = FakeContext(None, None)
         driver = FakeDriver()
         quota_obj = self._get_quota_engine(driver)
-        result1 = quota_obj.get_class_quotas(context, 'test_class')
+        result1 = quota_obj.get_class_quotas(context, 'default')
 
         self.assertEqual(driver.called, [
                 ('get_class_quotas', context, quota_obj._resources,
-                 'test_class'),
+                 'default'),
                 ])
         self.assertEqual(result1, quota_obj._resources)
 
@@ -485,14 +485,14 @@ class QuotaEngineTestCase(test.TestCase):
                                             'fake_user')
         result2 = quota_obj.get_user_quotas(context, 'test_project',
                                             'fake_user',
-                                            quota_class='test_class',
+                                            quota_class='default',
                                             usages=False)
 
         self.assertEqual(driver.called, [
                 ('get_user_quotas', context, quota_obj._resources,
                  'test_project', 'fake_user', None, True),
                 ('get_user_quotas', context, quota_obj._resources,
-                 'test_project', 'fake_user', 'test_class', False),
+                 'test_project', 'fake_user', 'default', False),
                 ])
         self.assertEqual(result1, quota_obj._resources)
         self.assertEqual(result2, quota_obj._resources)
@@ -503,14 +503,14 @@ class QuotaEngineTestCase(test.TestCase):
         quota_obj = self._get_quota_engine(driver)
         result1 = quota_obj.get_project_quotas(context, 'test_project')
         result2 = quota_obj.get_project_quotas(context, 'test_project',
-                                               quota_class='test_class',
+                                               quota_class='default',
                                                usages=False)
 
         self.assertEqual(driver.called, [
                 ('get_project_quotas', context, quota_obj._resources,
                  'test_project', None, True, False),
                 ('get_project_quotas', context, quota_obj._resources,
-                 'test_project', 'test_class', False, False),
+                 'test_project', 'default', False, False),
                 ])
         self.assertEqual(result1, quota_obj._resources)
         self.assertEqual(result2, quota_obj._resources)
@@ -649,7 +649,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         # Stub out quota_class_get_all_by_name
         def fake_qcgabn(cls, context, quota_class):
             self.calls.append('quota_class_get_all_by_name')
-            self.assertEqual(quota_class, 'test_class')
+            self.assertEqual(quota_class, 'default')
             return dict(
                 instances=5,
                 ram=25 * 1024,
@@ -661,7 +661,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_class_quotas(self):
         self._stub_quota_class_get_all_by_name()
         result = self.driver.get_class_quotas(None, quota.QUOTAS._resources,
-                                              'test_class')
+                                              'default')
 
         self.assertEqual(self.calls, ['quota_class_get_all_by_name'])
         self.assertEqual(result, dict(
@@ -744,7 +744,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_usages_for_project(self):
         resources = self._get_fake_countable_resources()
         actual = self.driver._get_usages(
-            FakeContext('test_project', 'test_class'), resources,
+            FakeContext('test_project', 'default'), resources,
             'test_project')
         # key_pairs, server_group_members, and security_group_rules are never
         # counted as a usage. Their counts are only for quota limit checking.
@@ -759,7 +759,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_usages_for_user(self):
         resources = self._get_fake_countable_resources()
         actual = self.driver._get_usages(
-            FakeContext('test_project', 'test_class'), resources,
+            FakeContext('test_project', 'default'), resources,
             'test_project', user_id='fake_user')
         # key_pairs, server_group_members, and security_group_rules are never
         # counted as a usage. Their counts are only for quota limit checking.
@@ -776,7 +776,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_user_quotas(self, mock_get_usages):
         self.maxDiff = None
         self._stub_get_by_project_and_user()
-        ctxt = FakeContext('test_project', 'test_class')
+        ctxt = FakeContext('test_project', 'default')
         result = self.driver.get_user_quotas(
             ctxt, quota.QUOTAS._resources, 'test_project', 'fake_user')
 
@@ -887,7 +887,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_project_quotas(self, mock_get_usages):
         self.maxDiff = None
         self._stub_get_by_project()
-        ctxt = FakeContext('test_project', 'test_class')
+        ctxt = FakeContext('test_project', 'default')
         result = self.driver.get_project_quotas(
             ctxt, quota.QUOTAS._resources, 'test_project')
 
@@ -962,7 +962,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_project_quotas_with_remains(self, mock_get_usages):
         self.maxDiff = None
         self._stub_get_by_project()
-        ctxt = FakeContext('test_project', 'test_class')
+        ctxt = FakeContext('test_project', 'default')
         result = self.driver.get_project_quotas(
             ctxt, quota.QUOTAS._resources, 'test_project', remains=True)
 
@@ -1204,7 +1204,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         ctxt = FakeContext('other_project', 'other_class')
         result = self.driver.get_user_quotas(
             ctxt, quota.QUOTAS._resources, 'test_project', 'fake_user',
-            quota_class='test_class')
+            quota_class='default')
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
@@ -1281,7 +1281,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         ctxt = FakeContext('other_project', 'other_class')
         result = self.driver.get_project_quotas(
             ctxt, quota.QUOTAS._resources, 'test_project',
-            quota_class='test_class')
+            quota_class='default')
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project',
@@ -1352,7 +1352,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_user_quotas_no_usages(self):
         self._stub_get_by_project_and_user()
         result = self.driver.get_user_quotas(
-            FakeContext('test_project', 'test_class'),
+            FakeContext('test_project', 'default'),
             quota.QUOTAS._resources, 'test_project', 'fake_user', usages=False)
 
         self.assertEqual(self.calls, [
@@ -1408,7 +1408,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_project_quotas_no_usages(self):
         self._stub_get_by_project()
         result = self.driver.get_project_quotas(
-            FakeContext('test_project', 'test_class'),
+            FakeContext('test_project', 'default'),
             quota.QUOTAS._resources, 'test_project', usages=False)
 
         self.assertEqual(self.calls, [
@@ -1527,7 +1527,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_settable_quotas_with_user(self):
         self._stub_get_settable_quotas()
         result = self.driver.get_settable_quotas(
-            FakeContext('test_project', 'test_class'),
+            FakeContext('test_project', 'default'),
             quota.QUOTAS._resources, 'test_project', user_id='test_user')
 
         self.assertEqual(self.calls, [
@@ -1598,7 +1598,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_settable_quotas_without_user(self):
         self._stub_get_settable_quotas()
         result = self.driver.get_settable_quotas(
-            FakeContext('test_project', 'test_class'),
+            FakeContext('test_project', 'default'),
             quota.QUOTAS._resources, 'test_project')
 
         self.assertEqual(self.calls, [
@@ -1667,7 +1667,7 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_get_settable_quotas_by_user_with_unlimited_value(self):
         self._stub_get_settable_quotas()
         result = self.driver.get_settable_quotas(
-            FakeContext('test_project', 'test_class'),
+            FakeContext('test_project', 'default'),
             quota.QUOTAS._resources, 'test_project', user_id='test_user')
 
         self.assertEqual(self.calls, [
@@ -1758,7 +1758,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self._stub_get_project_quotas()
         self.assertRaises(exception.InvalidQuotaValue,
                           self.driver.limit_check,
-                          FakeContext('test_project', 'test_class'),
+                          FakeContext('test_project', 'default'),
                           quota.QUOTAS._resources,
                           dict(metadata_items=-1))
 
@@ -1766,7 +1766,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self._stub_get_project_quotas()
         self.assertRaises(exception.OverQuota,
                           self.driver.limit_check,
-                          FakeContext('test_project', 'test_class'),
+                          FakeContext('test_project', 'default'),
                           quota.QUOTAS._resources,
                           dict(metadata_items=129))
 
@@ -1774,7 +1774,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self._stub_get_project_quotas()
         self.assertRaises(exception.OverQuota,
                           self.driver.limit_check,
-                          FakeContext('test_project', 'test_class'),
+                          FakeContext('test_project', 'default'),
                           quota.QUOTAS._resources,
                           dict(injected_file_content_bytes=10241,
                                injected_file_path_bytes=256))
@@ -1782,25 +1782,25 @@ class DbQuotaDriverTestCase(test.TestCase):
     def test_limit_check_unlimited(self):
         self.flags(metadata_items=-1, group='quota')
         self._stub_get_project_quotas()
-        self.driver.limit_check(FakeContext('test_project', 'test_class'),
+        self.driver.limit_check(FakeContext('test_project', 'default'),
                                 quota.QUOTAS._resources,
                                 dict(metadata_items=32767))
 
     def test_limit_check(self):
         self._stub_get_project_quotas()
-        self.driver.limit_check(FakeContext('test_project', 'test_class'),
+        self.driver.limit_check(FakeContext('test_project', 'default'),
                                 quota.QUOTAS._resources,
                                 dict(metadata_items=128))
 
     def test_limit_check_project_and_user_no_values(self):
         self.assertRaises(exception.Invalid,
                           self.driver.limit_check_project_and_user,
-                          FakeContext('test_project', 'test_class'),
+                          FakeContext('test_project', 'default'),
                           quota.QUOTAS._resources)
 
     def test_limit_check_project_and_user_under(self):
         self._stub_get_project_quotas()
-        ctxt = FakeContext('test_project', 'test_class')
+        ctxt = FakeContext('test_project', 'default')
         resources = self._get_fake_countable_resources()
         # Check: only project_values, only user_values, and then both.
         kwargs = [{'project_values': {'fixed_ips': -1}},
@@ -1820,7 +1820,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         resources = self._get_fake_countable_resources()
         self.assertRaises(exception.OverQuota,
                           self.driver.limit_check_project_and_user,
-                          FakeContext('test_project', 'test_class'),
+                          FakeContext('test_project', 'default'),
                           resources,
                           project_values=dict(instances=6),
                           user_values=dict(instances=5))
@@ -1834,14 +1834,14 @@ class DbQuotaDriverTestCase(test.TestCase):
         # pass project quota but user_values exceed user quota.
         self.assertRaises(exception.OverQuota,
                           self.driver.limit_check_project_and_user,
-                          FakeContext('test_project', 'test_class'),
+                          FakeContext('test_project', 'default'),
                           resources,
                           project_values=dict(instances=5),
                           user_values=dict(instances=6))
 
     def test_limit_check_project_and_user_overs(self):
         self._stub_get_project_quotas()
-        ctxt = FakeContext('test_project', 'test_class')
+        ctxt = FakeContext('test_project', 'default')
         resources = self._get_fake_countable_resources()
         # Check: only project_values, only user_values, and then both.
         kwargs = [{'project_values': {'instances': 512}},
@@ -1857,7 +1857,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.flags(key_pairs=-1, group='quota')
         self.flags(instances=-1, group='quota')
         self._stub_get_project_quotas()
-        ctxt = FakeContext('test_project', 'test_class')
+        ctxt = FakeContext('test_project', 'default')
         resources = self._get_fake_countable_resources()
         # Check: only project_values, only user_values, and then both.
         kwargs = [{'project_values': {'fixed_ips': 32767}},
@@ -1869,7 +1869,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
     def test_limit_check_project_and_user(self):
         self._stub_get_project_quotas()
-        ctxt = FakeContext('test_project', 'test_class')
+        ctxt = FakeContext('test_project', 'default')
         resources = self._get_fake_countable_resources()
         # Check: only project_values, only user_values, and then both.
         kwargs = [{'project_values': {'fixed_ips': 5}},
@@ -1885,7 +1885,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         project_values and user_values.
         """
         self._stub_get_project_quotas()
-        ctxt = FakeContext('test_project', 'test_class')
+        ctxt = FakeContext('test_project', 'default')
         resources = self._get_fake_countable_resources()
         # Check: only project_values, only user_values, and then both.
         kwargs = [{'project_values': {'fixed_ips': 0}},
@@ -1931,7 +1931,7 @@ class NoopQuotaDriverTestCase(test.TestCase):
     def test_get_class_quotas(self):
         result = self.driver.get_class_quotas(None,
                                               quota.QUOTAS._resources,
-                                              'test_class')
+                                              'default')
         self.assertEqual(self.expected_without_dict, result)
 
     def test_get_project_quotas(self):
@@ -2052,7 +2052,7 @@ class UnifiedLimitsDriverTestCase(NoopQuotaDriverTestCase):
     def test_get_class_quotas(self, mock_default):
         mock_default.return_value = {"instances": 1, "cores": 2, "ram": 0}
         result = self.driver.get_class_quotas(
-            None, quota.QUOTAS._resources, 'test_class')
+            None, quota.QUOTAS._resources, 'default')
         self.assertEqual(self.expected_without_dict, result)
         mock_default.assert_called_once_with()
 

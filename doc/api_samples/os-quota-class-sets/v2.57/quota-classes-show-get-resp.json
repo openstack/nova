@@ -1,7 +1,7 @@
 {
     "quota_class_set": {
         "cores": 20,
-        "id": "test_class",
+        "id": "default",
         "instances": 10,
         "key_pairs": 100,
         "metadata_items": 128,
