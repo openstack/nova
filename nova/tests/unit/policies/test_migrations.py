@@ -64,7 +64,7 @@ class MigrationsPolicyTest(base.BasePolicyTest):
                 'dest_compute': 'compute2',
                 'dest_host': '1.2.3.4',
                 'status': 'running',
-                'instance_uuid': 1234,
+                'instance_uuid': uuids.instance,
                 'old_instance_type_id': 1,
                 'new_instance_type_id': 2,
                 'migration_type': 'migration',
@@ -81,8 +81,8 @@ class MigrationsPolicyTest(base.BasePolicyTest):
                 'deleted': False,
                 'uuid': uuids.migration1,
                 'cross_cell_move': False,
-                'user_id': None,
-                'project_id': 'other_project'
+                'user_id': uuids.user_id,
+                'project_id': uuids.other_project_id,
             }
         ]
         if project_id is None:
@@ -239,17 +239,18 @@ class MigrationsPolicyTest(base.BasePolicyTest):
         # NOTE(gmaan): Only Admin (not Project manager) can list the
         # other project migrations.
         for auth_cxtx in self.project_admin_authorized_contexts:
-            project_id = 'other_project'
+            project_id = uuids.other_project_id
             req, _ = self.prepare_microversion_request(
                 auth_cxtx, mock_get, project_id=project_id)
             resp = self.controller.index(req)
             # NOTE(gmaan): Check their own project migrations are returned
             self.assertEqual(1, len(resp['migrations']))
-            self.assertEqual('other_project',
+            self.assertEqual(project_id,
                              resp['migrations'][0]['project_id'])
+
         for unauth_cxtx in (self.all_contexts -
                 set(self.project_admin_authorized_contexts)):
-            project_id = 'other_project'
+            project_id = uuids.other_project_id
             req, _ = self.prepare_microversion_request(
                 unauth_cxtx, mock_get, project_id=project_id)
             exc = self.assertRaises(
