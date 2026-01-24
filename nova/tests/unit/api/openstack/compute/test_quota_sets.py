@@ -20,7 +20,7 @@ from oslo_limit import fixture as limit_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 
-from nova.api.openstack.compute import quota_sets as quotas_v21
+from nova.api.openstack.compute import quota_sets
 from nova.db import constants as db_const
 from nova import exception
 from nova.limit import local as local_limit
@@ -32,12 +32,14 @@ from nova.tests.unit.api.openstack import fakes
 
 
 def quota_set(id, include_server_group_quotas=True):
-    res = {'quota_set': {'id': id, 'metadata_items': 128,
-           'ram': 51200, 'floating_ips': -1, 'fixed_ips': -1,
-           'instances': 10, 'injected_files': 5, 'cores': 20,
-           'injected_file_content_bytes': 10240,
-           'security_groups': -1, 'security_group_rules': -1,
-           'key_pairs': 100, 'injected_file_path_bytes': 255}}
+    res = {
+        'quota_set': {
+            'id': id, 'metadata_items': 128,
+            'ram': 51200, 'floating_ips': -1, 'fixed_ips': -1,
+            'instances': 10, 'injected_files': 5, 'cores': 20,
+            'injected_file_content_bytes': 10240,
+            'security_groups': -1, 'security_group_rules': -1,
+            'key_pairs': 100, 'injected_file_path_bytes': 255}}
     if include_server_group_quotas:
         res['quota_set']['server_groups'] = 10
         res['quota_set']['server_group_members'] = 10
@@ -47,7 +49,10 @@ def quota_set(id, include_server_group_quotas=True):
 class BaseQuotaSetsTest(test.TestCase):
 
     def setUp(self):
-        super(BaseQuotaSetsTest, self).setUp()
+        super().setUp()
+
+        self.controller = quota_sets.QuotaSetsController()
+
         # We need to stub out verify_project_id so that it doesn't
         # generate an EndpointNotFound exception and result in a
         # server error.
@@ -56,13 +61,11 @@ class BaseQuotaSetsTest(test.TestCase):
 
 
 class QuotaSetsTestV21(BaseQuotaSetsTest):
-    plugin = quotas_v21
     validation_error = exception.ValidationError
     include_server_group_quotas = True
 
     def setUp(self):
         super(QuotaSetsTestV21, self).setUp()
-        self._setup_controller()
         self.default_quotas = {
             'instances': 10,
             'cores': 20,
@@ -81,19 +84,15 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
             self.default_quotas['server_groups'] = 10
             self.default_quotas['server_group_members'] = 10
 
-    def _setup_controller(self):
-        self.controller = self.plugin.QuotaSetsController()
-
     def _get_http_request(self, url=''):
         return fakes.HTTPRequest.blank(url)
 
     def test_format_quota_set(self):
-        quota_set = self.controller._format_quota_set('1234',
-                                                      self.default_quotas,
-                                                      [])
+        quota_set = self.controller._format_quota_set(
+            uuids.project_id, self.default_quotas, [])
         qs = quota_set['quota_set']
 
-        self.assertEqual(qs['id'], '1234')
+        self.assertEqual(qs['id'], uuids.project_id)
         self.assertEqual(qs['instances'], 10)
         self.assertEqual(qs['cores'], 20)
         self.assertEqual(qs['ram'], 51200)
@@ -171,9 +170,11 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
 
     def test_quotas_show(self):
         req = self._get_http_request()
-        res_dict = self.controller.show(req, 1234)
+        res_dict = self.controller.show(req, uuids.project_id)
 
-        ref_quota_set = quota_set('1234', self.include_server_group_quotas)
+        ref_quota_set = quota_set(
+            uuids.project_id, self.include_server_group_quotas
+        )
         self.assertEqual(res_dict, ref_quota_set)
 
     def test_quotas_update(self):
@@ -197,8 +198,9 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
 
     @mock.patch('nova.api.validation.validators._SchemaValidator.validate')
     @mock.patch('nova.objects.Quotas.create_limit')
-    def test_quotas_update_with_bad_data(self, mock_createlimit,
-                                                  mock_validate):
+    def test_quotas_update_with_bad_data(
+        self, mock_createlimit, mock_validate,
+    ):
         self.default_quotas.update({
             'instances': 50,
             'cores': -50
@@ -278,69 +280,69 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
     @mock.patch('nova.objects.Quotas.destroy_all_by_project')
     def test_quotas_delete(self, mock_destroy_all_by_project):
         req = self._get_http_request()
-        self.controller.delete(req, 1234)
+        self.controller.delete(req, uuids.project_id)
         self.assertEqual(202, self.controller.delete.wsgi_codes(req))
         mock_destroy_all_by_project.assert_called_once_with(
-            req.environ['nova.context'], 1234)
+            req.environ['nova.context'], uuids.project_id)
 
     def test_duplicate_quota_filter(self):
         query_string = 'user_id=1&user_id=2'
         req = fakes.HTTPRequest.blank('', query_string=query_string)
-        self.controller.show(req, 1234)
-        self.controller.update(req, 1234, body={'quota_set': {}})
-        self.controller.detail(req, 1234)
-        self.controller.delete(req, 1234)
+        self.controller.show(req, uuids.project_id)
+        self.controller.update(req, uuids.project_id, body={'quota_set': {}})
+        self.controller.detail(req, uuids.project_id)
+        self.controller.delete(req, uuids.project_id)
 
     def test_quota_filter_negative_int_as_string(self):
         req = fakes.HTTPRequest.blank('', query_string='user_id=-1')
-        self.controller.show(req, 1234)
-        self.controller.update(req, 1234, body={'quota_set': {}})
-        self.controller.detail(req, 1234)
-        self.controller.delete(req, 1234)
+        self.controller.show(req, uuids.project_id)
+        self.controller.update(req, uuids.project_id, body={'quota_set': {}})
+        self.controller.detail(req, uuids.project_id)
+        self.controller.delete(req, uuids.project_id)
 
     def test_quota_filter_int_as_string(self):
         req = fakes.HTTPRequest.blank('', query_string='user_id=123')
-        self.controller.show(req, 1234)
-        self.controller.update(req, 1234, body={'quota_set': {}})
-        self.controller.detail(req, 1234)
-        self.controller.delete(req, 1234)
+        self.controller.show(req, uuids.project_id)
+        self.controller.update(req, uuids.project_id, body={'quota_set': {}})
+        self.controller.detail(req, uuids.project_id)
+        self.controller.delete(req, uuids.project_id)
 
     def test_unknown_quota_filter(self):
         query_string = 'unknown_filter=abc'
         req = fakes.HTTPRequest.blank('', query_string=query_string)
-        self.controller.show(req, 1234)
-        self.controller.update(req, 1234, body={'quota_set': {}})
-        self.controller.detail(req, 1234)
-        self.controller.delete(req, 1234)
+        self.controller.show(req, uuids.project_id)
+        self.controller.update(req, uuids.project_id, body={'quota_set': {}})
+        self.controller.detail(req, uuids.project_id)
+        self.controller.delete(req, uuids.project_id)
 
     def test_quota_additional_filter(self):
         query_string = 'user_id=1&additional_filter=2'
         req = fakes.HTTPRequest.blank('', query_string=query_string)
-        self.controller.show(req, 1234)
-        self.controller.update(req, 1234, body={'quota_set': {}})
-        self.controller.detail(req, 1234)
-        self.controller.delete(req, 1234)
+        self.controller.show(req, uuids.project_id)
+        self.controller.update(req, uuids.project_id, body={'quota_set': {}})
+        self.controller.detail(req, uuids.project_id)
+        self.controller.delete(req, uuids.project_id)
 
 
 class ExtendedQuotasTestV21(BaseQuotaSetsTest):
-    plugin = quotas_v21
-
-    def setUp(self):
-        super(ExtendedQuotasTestV21, self).setUp()
-        self._setup_controller()
-
-    fake_quotas = {'ram': {'limit': 51200,
-                           'in_use': 12800,
-                           'reserved': 12800},
-                   'cores': {'limit': 20,
-                             'in_use': 10,
-                             'reserved': 5},
-                   'instances': {'limit': 100,
-                                 'in_use': 0,
-                                 'reserved': 0}}
-
-    def _setup_controller(self):
-        self.controller = self.plugin.QuotaSetsController()
+    fake_quotas = {
+        'cores': {'limit': 20, 'in_use': 10, 'reserved': 5},
+        'fixed_ips': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'floating_ips': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'injected_file_content_bytes': {
+            'limit': -1, 'in_use': 0, 'reserved': -1
+        },
+        'injected_file_path_bytes': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'injected_files': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'instances': {'limit': 100, 'in_use': 0, 'reserved': 0},
+        'key_pairs': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'metadata_items': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'ram': {'limit': 51200, 'in_use': 12800, 'reserved': 12800},
+        'security_groups': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'security_group_rules': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'server_groups': {'limit': -1, 'in_use': 0, 'reserved': -1},
+        'server_group_members': {'limit': -1, 'in_use': 0, 'reserved': -1},
+    }
 
     def fake_get_quotas(self, context, id, user_id=None, usages=False):
         if usages:
@@ -350,15 +352,10 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
 
     def fake_get_settable_quotas(self, context, project_id, user_id=None):
         return {
-            'ram': {'minimum': self.fake_quotas['ram']['in_use'] +
-                               self.fake_quotas['ram']['reserved'],
-                    'maximum': -1},
-            'cores': {'minimum': self.fake_quotas['cores']['in_use'] +
-                                 self.fake_quotas['cores']['reserved'],
-                      'maximum': -1},
-            'instances': {'minimum': self.fake_quotas['instances']['in_use'] +
-                                     self.fake_quotas['instances']['reserved'],
-                          'maximum': -1},
+            k: {
+                'minimum': v['in_use'] + v['reserved'],
+                'maximum': -1,
+            } for k, v in self.fake_quotas.items()
         }
 
     def _get_http_request(self, url=''):
@@ -375,7 +372,7 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
 
     @mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
     def test_quotas_force_update_exceed_in_used(self, get_settable_quotas):
-        with mock.patch.object(self.plugin.QuotaSetsController,
+        with mock.patch.object(quota_sets.QuotaSetsController,
                                '_get_quotas') as _get_quotas:
 
             body = {'quota_set': {'cores': 10, 'force': 'True'}}
@@ -413,18 +410,11 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
 
 
 class UserQuotasTestV21(BaseQuotaSetsTest):
-    plugin = quotas_v21
+    plugin = quota_sets
     include_server_group_quotas = True
-
-    def setUp(self):
-        super(UserQuotasTestV21, self).setUp()
-        self._setup_controller()
 
     def _get_http_request(self, url=''):
         return fakes.HTTPRequest.blank(url)
-
-    def _setup_controller(self):
-        self.controller = self.plugin.QuotaSetsController()
 
     def test_user_quotas_show(self):
         req = self._get_http_request(
@@ -496,19 +486,15 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
                          len(mock_createlimit.mock_calls))
 
 
-class QuotaSetsTestV236(test.NoDBTestCase):
+class QuotaSetsTestV236(BaseQuotaSetsTest):
     microversion = '2.36'
 
     def setUp(self):
         super(QuotaSetsTestV236, self).setUp()
-        # We need to stub out verify_project_id so that it doesn't
-        # generate an EndpointNotFound exception and result in a
-        # server error.
-        self.stub_out('nova.api.openstack.identity.verify_project_id',
-                      lambda ctx, project_id: True)
 
         self.old_req = fakes.HTTPRequest.blank('', version='2.1')
-        self.filtered_quotas = ['fixed_ips', 'floating_ips',
+        self.filtered_quotas = [
+            'fixed_ips', 'floating_ips',
             'security_group_rules', 'security_groups']
         self.quotas = {
             'cores': {'limit': 20},
@@ -542,58 +528,57 @@ class QuotaSetsTestV236(test.NoDBTestCase):
             'server_group_members': 10,
             'server_groups': 10
         }
-        self.controller = quotas_v21.QuotaSetsController()
+        self.controller = quota_sets.QuotaSetsController()
         self.req = fakes.HTTPRequest.blank('', version=self.microversion)
 
-    def _ensure_filtered_quotas_existed_in_old_api(self):
-        res_dict = self.controller.show(self.old_req, 1234)
+    def test_quotas_show_filtered(self):
+        res_dict = self.controller.show(self.old_req, uuids.project_id)
         for filtered in self.filtered_quotas:
             self.assertIn(filtered, res_dict['quota_set'])
 
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    def test_quotas_show_filtered(self, mock_quotas):
-        mock_quotas.return_value = self.quotas
-        self._ensure_filtered_quotas_existed_in_old_api()
-        res_dict = self.controller.show(self.req, 1234)
+        res_dict = self.controller.show(self.req, uuids.project_id)
         for filtered in self.filtered_quotas:
             self.assertNotIn(filtered, res_dict['quota_set'])
 
-    @mock.patch('nova.quota.QUOTAS.get_defaults')
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    def test_quotas_default_filtered(self, mock_quotas, mock_defaults):
-        mock_quotas.return_value = self.quotas
-        self._ensure_filtered_quotas_existed_in_old_api()
-        res_dict = self.controller.defaults(self.req, 1234)
+    def test_quotas_default_filtered(self):
+        res_dict = self.controller.defaults(self.old_req, uuids.project_id)
+        for filtered in self.filtered_quotas:
+            self.assertIn(filtered, res_dict['quota_set'])
+
+        res_dict = self.controller.defaults(self.req, uuids.project_id)
         for filtered in self.filtered_quotas:
             self.assertNotIn(filtered, res_dict['quota_set'])
 
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    def test_quotas_detail_filtered(self, mock_quotas):
-        mock_quotas.return_value = self.quotas
-        self._ensure_filtered_quotas_existed_in_old_api()
-        res_dict = self.controller.detail(self.req, 1234)
+    def test_quotas_detail_filtered(self):
+        res_dict = self.controller.detail(self.old_req, uuids.project_id)
+        for filtered in self.filtered_quotas:
+            self.assertIn(filtered, res_dict['quota_set'])
+
+        res_dict = self.controller.detail(self.req, uuids.project_id)
         for filtered in self.filtered_quotas:
             self.assertNotIn(filtered, res_dict['quota_set'])
 
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    def test_quotas_update_input_filtered(self, mock_quotas):
-        mock_quotas.return_value = self.quotas
-        self._ensure_filtered_quotas_existed_in_old_api()
+    def test_quotas_update_input_filtered(self):
+        self.controller.update(
+            self.old_req, uuids.project_id,
+            body={'quota_set': {k: 100 for k in self.filtered_quotas}})
+
         for filtered in self.filtered_quotas:
-            self.assertRaises(exception.ValidationError,
-                self.controller.update, self.req, 1234,
+            self.assertRaises(
+                exception.ValidationError,
+                self.controller.update, self.req, uuids.project_id,
                 body={'quota_set': {filtered: 100}})
 
-    @mock.patch('nova.objects.Quotas.create_limit')
-    @mock.patch('nova.quota.QUOTAS.get_settable_quotas')
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    def test_quotas_update_output_filtered(self, mock_quotas, mock_settable,
-                                           mock_create_limit):
-        mock_quotas.return_value = self.quotas
-        mock_settable.return_value = {'cores': {'maximum': -1, 'minimum': 0}}
-        self._ensure_filtered_quotas_existed_in_old_api()
-        res_dict = self.controller.update(self.req, 1234,
-             body={'quota_set': {'cores': 100}})
+    def test_quotas_update_output_filtered(self):
+        res_dict = self.controller.update(
+            self.old_req, uuids.project_id,
+            body={'quota_set': {'cores': 100}})
+        for filtered in self.filtered_quotas:
+            self.assertIn(filtered, res_dict['quota_set'])
+
+        res_dict = self.controller.update(
+            self.req, uuids.project_id,
+            body={'quota_set': {'cores': 101}})
         for filtered in self.filtered_quotas:
             self.assertNotIn(filtered, res_dict['quota_set'])
 
@@ -603,29 +588,20 @@ class QuotaSetsTestV257(QuotaSetsTestV236):
 
     def setUp(self):
         super(QuotaSetsTestV257, self).setUp()
-        self.filtered_quotas.extend(quotas_v21.FILTERED_QUOTAS_2_57)
+        self.filtered_quotas.extend(quota_sets.FILTERED_QUOTAS_v257)
 
 
 class QuotaSetsTestV275(QuotaSetsTestV257):
     microversion = '2.75'
 
-    @mock.patch('nova.objects.Quotas.destroy_all_by_project')
-    @mock.patch('nova.objects.Quotas.create_limit')
-    @mock.patch('nova.quota.QUOTAS.get_settable_quotas')
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    def test_quota_additional_filter_older_version(self, mock_quotas,
-                                                   mock_settable,
-                                                   mock_create_limit,
-                                                   mock_destroy):
-        mock_quotas.return_value = self.quotas
-        mock_settable.return_value = {'cores': {'maximum': -1, 'minimum': 0}}
+    def test_quota_additional_filter_older_version(self):
         query_string = 'additional_filter=2'
         req = fakes.HTTPRequest.blank('', version='2.74',
                                       query_string=query_string)
-        self.controller.show(req, 1234)
-        self.controller.update(req, 1234, body={'quota_set': {}})
-        self.controller.detail(req, 1234)
-        self.controller.delete(req, 1234)
+        self.controller.show(req, uuids.project_id)
+        self.controller.update(req, uuids.project_id, body={'quota_set': {}})
+        self.controller.detail(req, uuids.project_id)
+        self.controller.delete(req, uuids.project_id)
 
     def test_quota_update_additional_filter(self):
         query_string = 'user_id=1&additional_filter=2'
@@ -639,33 +615,31 @@ class QuotaSetsTestV275(QuotaSetsTestV257):
         req = fakes.HTTPRequest.blank('', version=self.microversion,
                                       query_string=query_string)
         self.assertRaises(exception.ValidationError, self.controller.show,
-                          req, 1234)
+                          req, uuids.project_id)
 
     def test_quota_detail_additional_filter(self):
         query_string = 'user_id=1&additional_filter=2'
         req = fakes.HTTPRequest.blank('', version=self.microversion,
                                       query_string=query_string)
         self.assertRaises(exception.ValidationError, self.controller.detail,
-                          req, 1234)
+                          req, uuids.project_id)
 
     def test_quota_delete_additional_filter(self):
         query_string = 'user_id=1&additional_filter=2'
         req = fakes.HTTPRequest.blank('', version=self.microversion,
                                       query_string=query_string)
         self.assertRaises(exception.ValidationError, self.controller.delete,
-                          req, 1234)
+                          req, uuids.project_id)
 
 
-class NoopQuotaSetsTest(test.NoDBTestCase):
+class NoopQuotaSetsTest(BaseQuotaSetsTest):
     quota_driver = "nova.quota.NoopQuotaDriver"
     expected_detail = {'in_use': -1, 'limit': -1, 'reserved': -1}
 
     def setUp(self):
         super(NoopQuotaSetsTest, self).setUp()
         self.flags(driver=self.quota_driver, group="quota")
-        self.controller = quotas_v21.QuotaSetsController()
-        self.stub_out('nova.api.openstack.identity.verify_project_id',
-                      lambda ctx, project_id: True)
+        self.controller = quota_sets.QuotaSetsController()
 
     def test_show_v21(self):
         req = fakes.HTTPRequest.blank("")
@@ -845,16 +819,16 @@ class NoopQuotaSetsTest(test.NoDBTestCase):
     @mock.patch('nova.objects.Quotas.destroy_all_by_project')
     def test_quotas_delete(self, mock_destroy_all_by_project):
         req = fakes.HTTPRequest.blank("")
-        self.controller.delete(req, "1234")
+        self.controller.delete(req, uuids.project_id)
         mock_destroy_all_by_project.assert_called_once_with(
-            req.environ['nova.context'], "1234")
+            req.environ['nova.context'], uuids.project_id)
 
     @mock.patch('nova.objects.Quotas.destroy_all_by_project_and_user')
     def test_user_quotas_delete(self, mock_destroy_all_by_user):
         req = fakes.HTTPRequest.blank("?user_id=42")
-        self.controller.delete(req, "1234")
+        self.controller.delete(req, uuids.project_id)
         mock_destroy_all_by_user.assert_called_once_with(
-            req.environ['nova.context'], "1234", "42")
+            req.environ['nova.context'], uuids.project_id, "42")
 
 
 class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
@@ -1116,13 +1090,13 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
     @mock.patch('nova.objects.Quotas.destroy_all_by_project')
     def test_quotas_delete(self, mock_destroy_all_by_project):
         req = fakes.HTTPRequest.blank("")
-        self.controller.delete(req, "1234")
+        self.controller.delete(req, uuids.project_id)
         # Ensure destroy isn't called for unified limits
         self.assertEqual(0, mock_destroy_all_by_project.call_count)
 
     @mock.patch('nova.objects.Quotas.destroy_all_by_project_and_user')
     def test_user_quotas_delete(self, mock_destroy_all_by_user):
         req = fakes.HTTPRequest.blank("?user_id=42")
-        self.controller.delete(req, "1234")
+        self.controller.delete(req, uuids.project_id)
         # Ensure destroy isn't called for unified limits
         self.assertEqual(0, mock_destroy_all_by_user.call_count)

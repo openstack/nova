@@ -10,11 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
 from nova.api.openstack.compute import quota_sets
 from nova import exception
 from nova.policies import quota_sets as policies
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
 
@@ -30,9 +29,10 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
     def setUp(self):
         super(QuotaSetsPolicyTest, self).setUp()
         self.controller = quota_sets.QuotaSetsController()
-        self.controller._validate_quota_limit = mock.MagicMock()
         self.req = fakes.HTTPRequest.blank('')
         self.project_id = self.req.environ['nova.context'].project_id
+
+        self.useFixture(nova_fixtures.NoopQuotaDriverFixture())
 
         # With legacy rule all admin is able to update or revert their quota
         # to default or get other project quota.
@@ -42,9 +42,7 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
         # With legacy rule, everyone is able to get their own quota.
         self.project_reader_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_manager_context,
+            self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_manager_context,
@@ -63,20 +61,17 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
             self.other_project_member_context,
             self.other_project_reader_context, self.service_context])
 
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    @mock.patch('nova.quota.QUOTAS.get_settable_quotas')
-    def test_update_quota_sets_policy(self, mock_update, mock_get):
+    def test_update_quota_sets_policy(self):
         rule_name = policies.POLICY_ROOT % 'update'
-        body = {'quota_set': {
-                    'instances': 50,
-                    'cores': 50}
-               }
+        body = {'quota_set': {'instances': 50, 'cores': 50}}
+
         for cxtx in self.project_admin_authorized_contexts:
             req = fakes.HTTPRequest.blank('')
             req.environ['nova.context'] = cxtx
             self.controller.update(req, cxtx.project_id, body=body)
-        for cxtx in (self.all_contexts -
-                set(self.project_admin_authorized_contexts)):
+        for cxtx in (
+            self.all_contexts - set(self.project_admin_authorized_contexts)
+        ):
             req = fakes.HTTPRequest.blank('')
             req.environ['nova.context'] = cxtx
             exc = self.assertRaises(
@@ -86,15 +81,15 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
                 "Policy doesn't allow %s to be performed." % rule_name,
                 exc.format_message())
 
-    @mock.patch('nova.objects.Quotas.destroy_all_by_project')
-    def test_delete_quota_sets_policy(self, mock_delete):
+    def test_delete_quota_sets_policy(self):
         rule_name = policies.POLICY_ROOT % 'delete'
         for cxtx in self.project_admin_authorized_contexts:
             req = fakes.HTTPRequest.blank('')
             req.environ['nova.context'] = cxtx
             self.controller.delete(req, cxtx.project_id)
-        for cxtx in (self.all_contexts -
-                set(self.project_admin_authorized_contexts)):
+        for cxtx in (
+            self.all_contexts - set(self.project_admin_authorized_contexts)
+        ):
             req = fakes.HTTPRequest.blank('')
             req.environ['nova.context'] = cxtx
             exc = self.assertRaises(
@@ -104,41 +99,62 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
                 "Policy doesn't allow %s to be performed." % rule_name,
                 exc.format_message())
 
-    @mock.patch('nova.quota.QUOTAS.get_defaults')
-    def test_default_quota_sets_policy(self, mock_default):
+    def test_default_quota_sets_policy(self):
         rule_name = policies.POLICY_ROOT % 'defaults'
         self.common_policy_auth(self.everyone_authorized_contexts,
                                 rule_name,
                                 self.controller.defaults,
-                                self.req, self.project_id)
+                                self.req, self.project_id_unused)
 
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    def test_detail_quota_sets_policy(self, mock_get):
+    def test_detail_quota_sets_policy(self):
         rule_name = policies.POLICY_ROOT % 'detail'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.detail,
-                                self.req, 'try-other-project')
+                                self.req, self.project_id_unused)
         # Check if project reader or higher roles are able to get
         # their own quota
         for cxtx in self.project_reader_authorized_contexts:
             req = fakes.HTTPRequest.blank('')
             req.environ['nova.context'] = cxtx
-            self.controller.detail(req, cxtx.project_id)
+            self.controller.detail(req, cxtx.project_id or self.project_id)
+        for cxtx in (
+            self.all_contexts - self.project_reader_authorized_contexts
+        ):
+            req = fakes.HTTPRequest.blank('')
+            req.environ['nova.context'] = cxtx
+            exc = self.assertRaises(
+                exception.PolicyNotAuthorized, self.controller.detail,
+                req, cxtx.project_id or self.project_id)
+            self.assertEqual(
+                "Policy doesn't allow %s to be performed." % rule_name,
+                exc.format_message())
 
-    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
-    def test_show_quota_sets_policy(self, mock_get):
+    def test_show_quota_sets_policy(self):
         rule_name = policies.POLICY_ROOT % 'show'
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.show,
-                                self.req, 'try-other-project')
+                                self.req, self.project_id_unused)
         # Check if project reader or higher roles are able to get
         # their own quota
         for cxtx in self.project_reader_authorized_contexts:
             req = fakes.HTTPRequest.blank('')
             req.environ['nova.context'] = cxtx
-            self.controller.show(req, cxtx.project_id)
+            self.controller.show(req, cxtx.project_id or self.project_id)
+        cnt = 0
+        for cxtx in (
+            self.all_contexts - self.project_reader_authorized_contexts
+        ):
+            cnt += 1
+            req = fakes.HTTPRequest.blank('')
+            req.environ['nova.context'] = cxtx
+            exc = self.assertRaises(
+                exception.PolicyNotAuthorized, self.controller.show,
+                req, cxtx.project_id or self.project_id)
+            self.assertEqual(
+                "Policy doesn't allow %s to be performed." % rule_name,
+                exc.format_message())
 
 
 class QuotaSetsNoLegacyNoScopePolicyTest(QuotaSetsPolicyTest):
@@ -154,17 +170,17 @@ class QuotaSetsNoLegacyNoScopePolicyTest(QuotaSetsPolicyTest):
         # Even with no legacy rule, because any admin requesting
         # update/revert quota for their own project will be allowed.
         # And any admin will be able to get other project quota.
-        self.project_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
-        # With no legacy rule, other project and foo role will not be
-        # able to get the quota.
-        self.project_reader_authorized_contexts = [
+            self.project_admin_context])
+        # With no legacy rule, foo role will not be able to get the quota.
+        self.project_reader_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context,
-            self.system_member_context, self.system_reader_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context]
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
+            self.other_project_manager_context,
+            self.other_project_member_context,
+            self.other_project_reader_context])
 
 
 class QuotaSetsScopeTypePolicyTest(QuotaSetsPolicyTest):
