@@ -885,6 +885,14 @@ class WarningsFixture(fixtures.Fixture):
             ),
             category=DeprecationWarning,
         )
+        warnings.filterwarnings(
+            'ignore',
+            message=(
+                r"Using fork\(\) is a bad idea, and there is no guarantee "
+                r"eventlet will work."
+            ),
+            category=DeprecationWarning,
+        )
 
         # NOTE(gibi): The UUIDFields emits a warning if the value is not a
         # valid UUID. Let's escalate that to an exception in the test to
