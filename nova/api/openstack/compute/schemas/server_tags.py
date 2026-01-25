@@ -45,3 +45,37 @@ show_query = {
     'properties': {},
     'additionalProperties': True,
 }
+
+show_response = {'type': 'null'}
+
+index_response = {
+    'type': 'object',
+    'properties': {
+        'tags': {
+            'type': 'array',
+            'items': parameter_types.tag,
+            'additionalItems': False,
+        },
+    },
+    'required': ['tags'],
+    'additionalProperties': False,
+}
+
+update_response = {'type': 'null'}
+
+update_all_response = {
+    'type': 'object',
+    'properties': {
+        'tags': {
+            'type': 'array',
+            'items': parameter_types.tag,
+            'additionalItems': False,
+        },
+    },
+    'required': ['tags'],
+    'additionalProperties': False,
+}
+
+delete_response = {'type': 'null'}
+
+delete_all_response = {'type': 'null'}

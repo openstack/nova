@@ -41,6 +41,7 @@ def _get_instance_mapping(context, server_id):
         raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
 
+@validation.validated
 class ServerTagsController(wsgi.Controller):
     _view_builder_class = server_tags.ViewBuilder
 
@@ -64,6 +65,7 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.response(204)
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
+    @validation.response_body_schema(schema.show_response)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         im = _get_instance_mapping(context, server_id)
@@ -84,6 +86,7 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.api_version("2.26")
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.index_query)
+    @validation.response_body_schema(schema.index_response)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         im = _get_instance_mapping(context, server_id)
@@ -101,6 +104,7 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.api_version("2.26")
     @wsgi.expected_errors((400, 404, 409))
     @validation.schema(schema.update)
+    @validation.response_body_schema(schema.update_response)
     def update(self, req, server_id, id, body):
         context = req.environ["nova.context"]
         im = _get_instance_mapping(context, server_id)
@@ -154,6 +158,7 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.api_version("2.26")
     @wsgi.expected_errors((404, 409))
     @validation.schema(schema.update_all)
+    @validation.response_body_schema(schema.update_all_response)
     def update_all(self, req, server_id, body):
         context = req.environ["nova.context"]
         im = _get_instance_mapping(context, server_id)
@@ -179,6 +184,7 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.api_version("2.26")
     @wsgi.response(204)
     @wsgi.expected_errors((404, 409))
+    @validation.response_body_schema(schema.delete_response)
     def delete(self, req, server_id, id):
         context = req.environ["nova.context"]
         im = _get_instance_mapping(context, server_id)
@@ -204,6 +210,7 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.api_version("2.26")
     @wsgi.response(204)
     @wsgi.expected_errors((404, 409))
+    @validation.response_body_schema(schema.delete_all_response)
     def delete_all(self, req, server_id):
         context = req.environ["nova.context"]
         im = _get_instance_mapping(context, server_id)
