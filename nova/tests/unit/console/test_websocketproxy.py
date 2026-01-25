@@ -94,7 +94,7 @@ class NovaProxyRequestHandlerDBTestCase(test.TestCase):
             self.wh.socket.return_value = '<socket>'
         else:
             tsock = mock.MagicMock()
-            tsock.recv.return_value = "HTTP/1.1 200 OK\r\n\r\n"
+            tsock.recv.return_value = b"HTTP/1.1 200 OK\r\n\r\n"
             self.wh.socket.return_value = tsock
 
         self.wh.path = "http://127.0.0.1/?token=123-456-789"
@@ -286,7 +286,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         validate.return_value = objects.ConsoleAuthToken(**params)
 
         tsock = mock.MagicMock()
-        tsock.recv.return_value = "HTTP/1.1 200 OK\r\n\r\n"
+        tsock.recv.return_value = b"HTTP/1.1 200 OK\r\n\r\n"
 
         self.wh.socket.return_value = tsock
         self.wh.path = "http://127.0.0.1/?token=123-456-789"
@@ -318,7 +318,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         validate.return_value = objects.ConsoleAuthToken(**params)
 
         tsock = mock.MagicMock()
-        tsock.recv.return_value = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
+        tsock.recv.return_value = b"HTTP/1.1 500 Internal Server Error\r\n\r\n"
 
         self.wh.socket.return_value = tsock
         self.wh.path = "http://127.0.0.1/?token=123-456-789"
@@ -346,8 +346,8 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         validate.return_value = objects.ConsoleAuthToken(**params)
 
         tsock = mock.MagicMock()
-        HTTP_RESP = "HTTP/1.1 200 OK\r\n\r\n"
-        RFB_MSG = "RFB 003.003\n"
+        HTTP_RESP = b"HTTP/1.1 200 OK\r\n\r\n"
+        RFB_MSG = b"RFB 003.003\n"
         # RFB negotiation message may arrive earlier.
         tsock.recv.side_effect = [HTTP_RESP + RFB_MSG,
                                   HTTP_RESP]
