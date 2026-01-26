@@ -33,6 +33,10 @@ _quota_resources = {
     'floating_ips': _common_quota,
     'fixed_ips': _common_quota,
     'metadata_items': _common_quota,
+    # NOTE(stephenfin): We previously has a 'networks' key but this was
+    # removed in Train [1]. If we end up needing this for clients, we can
+    # re-add it.
+    # [1] I352b71b5976d008c2b8fab8a6d6939c0e0b305be
     'key_pairs': _common_quota,
     'security_groups': _common_quota,
     'security_group_rules': _common_quota,
@@ -41,9 +45,6 @@ _quota_resources = {
     'injected_file_path_bytes': _common_quota,
     'server_groups': _common_quota,
     'server_group_members': _common_quota,
-    # NOTE(stephenfin): This will always be rejected since it was nova-network
-    # only, but we need to allow users to submit it at a minimum
-    'networks': _common_quota
 }
 
 _update_quota_set = copy.deepcopy(_quota_resources)
@@ -54,7 +55,6 @@ del _update_quota_set_v236['fixed_ips']
 del _update_quota_set_v236['floating_ips']
 del _update_quota_set_v236['security_groups']
 del _update_quota_set_v236['security_group_rules']
-del _update_quota_set_v236['networks']
 
 _update_quota_set_v257 = copy.deepcopy(_update_quota_set_v236)
 del _update_quota_set_v257['injected_files']
@@ -123,7 +123,10 @@ _quota_response = {
         'instances': {'type': 'integer', 'minimum': -1},
         'key_pairs': {'type': 'integer', 'minimum': -1},
         'metadata_items': {'type': 'integer', 'minimum': -1},
-        'networks': {'type': 'integer', 'minimum': -1},
+        # NOTE(stephenfin): We previously has a 'networks' key but this was
+        # removed in Train [1]. If we end up needing this for clients, we can
+        # re-add it.
+        # [1] I352b71b5976d008c2b8fab8a6d6939c0e0b305be
         'ram': {'type': 'integer', 'minimum': -1},
         'security_groups': {'type': 'integer', 'minimum': -1},
         'security_group_rules': {'type': 'integer', 'minimum': -1},
@@ -131,7 +134,6 @@ _quota_response = {
         'server_group_members': {'type': 'integer', 'minimum': -1},
     },
     'required': [
-        # only networks is optional (it only appears under nova-network)
         'cores',
         'fixed_ips',
         'floating_ips',
