@@ -81,6 +81,8 @@ Nova Specific Commandments
   from stdlib instead. E.g. eventlet.sleep => time.sleep
 - [N374] Don't use time.sleep(0) to trigger eventlet yielding.
   Use nova.utils.cooperative_yield() instead.
+- [N375] Don't mock threading.Event directly, target the mock to your
+  specific Event instance.
 
 Creating Unit Tests
 -------------------

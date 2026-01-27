@@ -149,6 +149,12 @@ eventlet_yield_re = re.compile(r".*time\.sleep\(0\).*")
 eventlet_primitives_re = re.compile(
     r".*(eventlet)\.(semaphore|timeout|event).*"
     r"|from\s+eventlet\s+import\s+(semaphore|timeout|event)")
+threading_event_mock_re = re.compile(
+    r"mock.patch\(.threading.Event.wait|"
+    r"mock.patch.object\(threading, .Event.wait|"
+    r"mock.patch\(.threading.Event|"
+    r"mock.patch.object\(threading, .Event"
+)
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -1143,3 +1149,24 @@ def check_eventlet_yield(logical_line, filename):
 
     if match:
         yield (0, msg)
+
+
+@core.flake8ext
+def check_threading_event_mock(physical_line, filename):
+    """Check to prevent mocking threading.Event creation and usage.
+
+    N375
+    """
+    msg = (
+        "N375: Mocking threading.Event creation or usage leads to unexpected"
+        "behavior in our base libs like oslo.service.LoopingCall and our test"
+        "fixtures and causes leaked calls across test cases. Target your"
+        "mocking to the specific Event instance instead.")
+
+    if filename == 'nova/tests/unit/test_hacking.py':
+        return
+
+    match = re.search(threading_event_mock_re, physical_line)
+
+    if match:
+        return 0, msg

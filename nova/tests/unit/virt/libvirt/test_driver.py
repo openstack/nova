@@ -10925,10 +10925,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock_build_metadata.assert_called_with(self.context, instance)
                 mock_save.assert_called_with()
 
-    @mock.patch('threading.Event', new=mock.Mock())
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
     def test_detach_volume_with_vir_domain_affect_live_flag(self,
             mock_get_domain, use_alias=True):
+        self.flags(device_detach_timeout="1", group="libvirt")
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         volume_id = uuids.volume
@@ -26314,7 +26314,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self._test_attach_interface(
             power_state.SHUTDOWN, fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
 
-    @mock.patch('threading.Event.wait', new=mock.Mock())
     def _test_detach_interface(self, state, device_not_found=False):
         # setup some mocks
         instance = self._create_instance()
@@ -26433,6 +26432,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_unplug.assert_called_once_with(instance, network_info[0])
 
     def test_detach_interface_with_running_instance(self):
+        self.flags(device_detach_timeout="1", group="libvirt")
         self._test_detach_interface(power_state.RUNNING)
 
     def test_detach_interface_with_running_instance_device_not_found(self):
@@ -26441,6 +26441,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self._test_detach_interface(power_state.RUNNING, device_not_found=True)
 
     def test_detach_interface_with_pause_instance(self):
+        self.flags(device_detach_timeout="1", group="libvirt")
         self._test_detach_interface(power_state.PAUSED)
 
     def test_detach_interface_with_shutdown_instance(self):
@@ -26469,12 +26470,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertIn('the device is no longer found on the guest',
                       str(mock_log.warning.call_args[0]))
 
-    @mock.patch('threading.Event.wait', new=mock.Mock())
     @mock.patch.object(FakeVirtDomain, 'info')
     @mock.patch.object(FakeVirtDomain, 'detachDeviceFlags')
     @mock.patch.object(host.Host, '_get_domain')
     def test_detach_interface_device_with_same_mac_address(
             self, mock_get_domain, mock_detach, mock_info):
+        self.flags(device_detach_timeout="1", group="libvirt")
         instance = self._create_instance()
         network_info = _fake_network_info(self)
         domain = FakeVirtDomain(fake_xml="""
@@ -26904,7 +26905,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # check that the internal event handling is cleaned up
         self.assertEqual(set(), drvr._device_event_handler._waiters)
 
-    @mock.patch('threading.Event.wait')
+    @mock.patch(
+        'nova.virt.libvirt.driver.AsyncDeviceEventsHandler.Waiter.wait')
     @ddt.data(power_state.RUNNING, power_state.PAUSED)
     def test__detach_with_retry_timeout_retry_succeeds(
         self, state, mock_event_wait
@@ -26933,12 +26935,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 None,
             ]
         )
-        # By mocking threading.Event.wait we prevent the test to wait until the
-        # timeout happens, and by returning False first we simulate to the
-        # caller that the wait returned not because the event is set but
-        # because timeout happened. Then during the retry we return True
-        # signalling that the event is set, i.e. the libvirt event the caller
-        # is waiting for has been received
+        # By mocking AsyncDeviceEventsHandler.Waiter.wait we prevent the test
+        # to wait until the timeout happens, and by returning False first we
+        # simulate to the caller that the wait returned not because the event
+        # is set but because timeout happened. Then during the retry we return
+        # True signalling that the event is set, i.e. the libvirt event the
+        # caller is waiting for has been received
         mock_event_wait.side_effect = [False, True]
 
         drvr._detach_with_retry(
@@ -26960,7 +26962,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # check that the internal event handling is cleaned up
         self.assertEqual(set(), drvr._device_event_handler._waiters)
 
-    @mock.patch('threading.Event.wait')
+    @mock.patch(
+        'nova.virt.libvirt.driver.AsyncDeviceEventsHandler.Waiter.wait')
     def test__detach_with_retry_timeout_retry_unplug_in_progress(
         self, mock_event_wait
     ):
@@ -26990,12 +26993,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 None,
             ]
         )
-        # By mocking threading.Event.wait we prevent the test to wait until the
-        # timeout happens, and by returning False first we simulate to the
-        # caller that the wait returned not because the event is set but
-        # because timeout happened. Then during the retry we return True
-        # signalling that the event is set, i.e. the libvirt event the caller
-        # is waiting for has been received
+        # By mocking AsyncDeviceEventsHandler.Waiter.wait we prevent the test
+        # to wait until the timeout happens, and by returning False first we
+        # simulate to the caller that the wait returned not because the event
+        # is set but because timeout happened. Then during the retry we return
+        # True signalling that the event is set, i.e. the libvirt event the
+        # caller is waiting for has been received
         mock_event_wait.side_effect = [False, True]
 
         # there will be two detach attempts
@@ -27039,7 +27042,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # check that the internal event handling is cleaned up
         self.assertEqual(set(), drvr._device_event_handler._waiters)
 
-    @mock.patch('threading.Event.wait')
+    @mock.patch(
+        'nova.virt.libvirt.driver.AsyncDeviceEventsHandler.Waiter.wait')
     @ddt.data(power_state.RUNNING, power_state.PAUSED)
     def test__detach_with_retry_timeout_run_out_of_retries(
         self, state, mock_event_wait
@@ -27061,9 +27065,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         mock_get_device_conf_func = mock.Mock(return_value=mock_dev)
 
-        # By mocking threading.Event.wait we prevent the test to wait until the
-        # timeout happens, and by returning False we simulate to the
-        # caller that the wait returned not because the event is set but
+        # By mocking AsyncDeviceEventsHandler.Waiter.wait we prevent the test
+        # to wait until the timeout happens, and by returning False we simulate
+        # to the caller that the wait returned not because the event is set but
         # because timeout happened.
         mock_event_wait.return_value = False
 
