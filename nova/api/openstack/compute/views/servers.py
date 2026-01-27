@@ -17,7 +17,6 @@
 import itertools
 
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
@@ -76,7 +75,7 @@ class ViewBuilder(common.ViewBuilder):
         self._flavor_builder = views_flavors.ViewBuilder()
         self.compute_api = compute.API()
 
-    def create(self, request, instance):
+    def create(self, request, body, instance):
         """View that should be returned when an instance is created."""
 
         server = {
@@ -92,8 +91,11 @@ class ViewBuilder(common.ViewBuilder):
                     'AUTO' if instance.get('auto_disk_config') else 'MANUAL'),
             },
         }
-        self._add_security_grps(request, [server["server"]], [instance],
-                                create_request=True)
+
+        # Add security group to server, if no security group was in
+        # request add default since that is the group it is part of
+        server['server']['security_groups'] = body['server'].get(
+            'security_groups', [{'name': 'default'}])
 
         return server
 
@@ -186,7 +188,7 @@ class ViewBuilder(common.ViewBuilder):
             if show_server_groups:
                 context = request.environ['nova.context']
                 ret['server']['server_groups'] = self._get_server_groups(
-                                                             context, instance)
+                    context, instance)
         return ret
 
     @staticmethod
@@ -409,14 +411,10 @@ class ViewBuilder(common.ViewBuilder):
             # NOTE(mriedem): The os-extended-volumes prefix should not be used
             # for new attributes after v2.1. They are only in v2.1 for backward
             # compat with v2.0.
-            add_delete_on_termination = api_version_request.is_supported(
-                request, '2.3')
             if bdms is None:
                 bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
                     context, [instance["uuid"]])
-            self._add_volumes_attachments(server["server"],
-                                          bdms,
-                                          add_delete_on_termination)
+            self._add_volumes_attachments(request, server["server"], bdms)
 
         if api_version_request.is_supported(request, '2.16'):
             if show_host_status is None:
@@ -458,6 +456,11 @@ class ViewBuilder(common.ViewBuilder):
                 trusted_certs = instance.trusted_certs.ids
             server["server"]["trusted_image_certificates"] = trusted_certs
 
+        # This is shown from 2.71 or later _except_ for the server detail view
+        if show_server_groups:
+            server['server']['server_groups'] = self._get_server_groups(
+                context, instance)
+
         # TODO(stephenfin): Remove this check once we remove the
         # OS-EXT-SRV-ATTR:hostname policy checks from the policy is Y or later
         if api_version_request.is_supported(request, '2.90'):
@@ -467,10 +470,6 @@ class ViewBuilder(common.ViewBuilder):
                 server["server"]["OS-EXT-SRV-ATTR:hostname"] = \
                     instance.hostname
 
-        if show_server_groups:
-            server['server']['server_groups'] = self._get_server_groups(
-                                                                   context,
-                                                                   instance)
         return server
 
     def index(self, request, instances, cell_down_support=False):
@@ -538,7 +537,7 @@ class ViewBuilder(common.ViewBuilder):
                         included in the response dict.
         :param show_host_status: If the host status should be included in
                         the response dict.
-        :param show_sec_grp: If the security group should be included in
+        :param show_sec_grp: If the security groups should be included in
                         the response dict.
         :param bdms: Instances bdms info from multiple cells.
         :param cell_down_support: True if the API (and caller) support
@@ -753,36 +752,38 @@ class ViewBuilder(common.ViewBuilder):
                     continue
                 server['host_status'] = host_status
 
-    def _add_security_grps(self, req, servers, instances,
-                           create_request=False):
+    def _add_security_grps(self, request, servers, instances):
         if not len(servers):
             return
 
-        # If request is a POST create server we get the security groups
-        # intended for an instance from the request. This is necessary because
-        # the requested security groups for the instance have not yet been sent
-        # to neutron.
-        # Starting from microversion 2.75, security groups is returned in
-        # PUT and POST Rebuild response also.
-        if not create_request:
-            context = req.environ['nova.context']
-            sg_instance_bindings = (
-                security_group_api.get_instances_security_groups_bindings(
-                    context, servers))
-            for server in servers:
-                groups = sg_instance_bindings.get(server['id'])
-                if groups:
-                    server['security_groups'] = groups
+        context = request.environ['nova.context']
+        sg_instance_bindings = (
+            security_group_api.get_instances_security_groups_bindings(
+                context, servers))
+        for server in servers:
+            groups = sg_instance_bindings.get(server['id'])
+            if groups:
+                server['security_groups'] = groups
 
-        # This section is for POST create server request. There can be
-        # only one security group for POST create server request.
-        else:
-            # try converting to json
-            req_obj = jsonutils.loads(req.body)
-            # Add security group to server, if no security group was in
-            # request add default since that is the group it is part of
-            servers[0]['security_groups'] = req_obj['server'].get(
-                'security_groups', [{'name': 'default'}])
+    def _add_volumes_attachments(self, request, server, bdms):
+        # server['id'] is guaranteed to be in the cache due to
+        # the core API adding it in the 'detail' or 'show' method.
+        # If that instance has since been deleted, it won't be in the
+        # 'bdms' dictionary though, so use 'get' to avoid KeyErrors.
+        instance_bdms = bdms.get(server['id'], [])
+        volumes_attached = []
+        for bdm in instance_bdms:
+            if bdm.get('volume_id'):
+                volume_attached = {'id': bdm['volume_id']}
+                if api_version_request.is_supported(request, '2.3'):
+                    volume_attached['delete_on_termination'] = (
+                        bdm['delete_on_termination'])
+                volumes_attached.append(volume_attached)
+        # NOTE(mriedem): The os-extended-volumes prefix should not be used for
+        # new attributes after v2.1. They are only in v2.1 for backward compat
+        # with v2.0.
+        key = "os-extended-volumes:volumes_attached"
+        server[key] = volumes_attached
 
     @staticmethod
     def _get_instance_bdms_in_multiple_cells(ctxt, instance_uuids):
@@ -812,27 +813,6 @@ class ViewBuilder(common.ViewBuilder):
             else:
                 bdms.update(result)
         return bdms
-
-    def _add_volumes_attachments(self, server, bdms,
-                                 add_delete_on_termination):
-        # server['id'] is guaranteed to be in the cache due to
-        # the core API adding it in the 'detail' or 'show' method.
-        # If that instance has since been deleted, it won't be in the
-        # 'bdms' dictionary though, so use 'get' to avoid KeyErrors.
-        instance_bdms = bdms.get(server['id'], [])
-        volumes_attached = []
-        for bdm in instance_bdms:
-            if bdm.get('volume_id'):
-                volume_attached = {'id': bdm['volume_id']}
-                if add_delete_on_termination:
-                    volume_attached['delete_on_termination'] = (
-                        bdm['delete_on_termination'])
-                volumes_attached.append(volume_attached)
-        # NOTE(mriedem): The os-extended-volumes prefix should not be used for
-        # new attributes after v2.1. They are only in v2.1 for backward compat
-        # with v2.0.
-        key = "os-extended-volumes:volumes_attached"
-        server[key] = volumes_attached
 
     @staticmethod
     def _get_server_groups(context, instance):
