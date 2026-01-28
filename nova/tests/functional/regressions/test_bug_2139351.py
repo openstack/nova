@@ -126,18 +126,14 @@ class TestLiveMigrationIOThreadPinning(
         dest_iothreadpin = self._get_xml_element(
             dest_xml, './cputune/iothreadpin')
         self.assertIsNotNone(dest_iothreadpin)
-        # FIXME: this is bug 2139351
-        self.assertEqual('0-1', dest_iothreadpin.get('cpuset'))
-        self.assertNotEqual(
-            dest_emulatorpin.get('cpuset'), dest_iothreadpin.get('cpuset'))
-        # self.assertEqual(
-        #     '2-3', dest_iothreadpin.get('cpuset'),
-        #     f"iothreadpin was not updated during live migration. "
-        #     f"Expected '2-3' but got '{dest_iothreadpin.get('cpuset')}'")
+        self.assertEqual(
+            '2-3', dest_iothreadpin.get('cpuset'),
+            f"iothreadpin was not updated during live migration. "
+            f"Expected '2-3' but got '{dest_iothreadpin.get('cpuset')}'")
 
-        # # Both should match
-        # self.assertEqual(
-        #     dest_emulatorpin.get('cpuset'), dest_iothreadpin.get('cpuset'))
+        # Both should match
+        self.assertEqual(
+            dest_emulatorpin.get('cpuset'), dest_iothreadpin.get('cpuset'))
 
     def test_live_migrate_unpinned_vcpu_cpuset_updated(self):
         """Test vcpu cpuset updated for unpinned VMs with cpu_shared_set.
