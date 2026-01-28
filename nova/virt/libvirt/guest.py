@@ -289,11 +289,26 @@ class Guest:
             yield VCPUInfo(
                 id=vcpu[0], cpu=vcpu[3], state=vcpu[1], time=vcpu[2])
 
-    def delete_configuration(self):
-        """Undefines a domain from hypervisor."""
+    def delete_configuration(self, keep_vtpm=False):
+        """Undefines a domain from hypervisor.
+
+        :param keep_vtpm: If true, the vTPM data will be preserved. Otherwise,
+            it will be deleted. Defaults to false (that is, deleting the vTPM
+            data).
+
+        Calling this with `keep_vtpm` set to True should, eventually, be
+        followed up with a call where it is set to False (after re-defining
+        the VM in libvirt with the same UUID), to prevent orphaning the vTPM
+        data in libvirt's data directory.
+
+        It is the caller's responsibility to ensure that keep_vtpm is only set
+        to true on libvirt versions which support it, that is >= 8.9.0.
+        """
         try:
             flags = libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE
             flags |= libvirt.VIR_DOMAIN_UNDEFINE_NVRAM
+            if keep_vtpm:
+                flags |= libvirt.VIR_DOMAIN_UNDEFINE_KEEP_TPM
             self._domain.undefineFlags(flags)
         except libvirt.libvirtError:
             LOG.debug("Error from libvirt during undefineFlags for guest "
