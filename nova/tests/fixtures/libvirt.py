@@ -1221,6 +1221,10 @@ class Domain(object):
         if emulator_pin is not None:
             definition['emulator_pin'] = emulator_pin.get('cpuset')
 
+        iothread_pin = tree.find('./cputune/iothreadpin')
+        if iothread_pin is not None:
+            definition['iothread_pin'] = iothread_pin.get('cpuset')
+
         memnodes = {}
 
         for node in tree.findall('./numatune/memnode'):
@@ -1671,12 +1675,17 @@ class Domain(object):
         cputune = ''
         for vcpu, cpuset in self._def['cpu_pins'].items():
             cputune += '<vcpupin vcpu="%d" cpuset="%s"/>' % (int(vcpu), cpuset)
-        emulatorpin = None
+        emulatorpin = ''
         if 'emulator_pin' in self._def:
             emulatorpin = ('<emulatorpin cpuset="%s"/>' %
                            self._def['emulator_pin'])
-        if cputune or emulatorpin:
-            cputune = '<cputune>%s%s</cputune>' % (emulatorpin, cputune)
+        iothreadpin = ''
+        if 'iothread_pin' in self._def:
+            iothreadpin = ('<iothreadpin iothread="1" cpuset="%s"/>' %
+                           self._def['iothread_pin'])
+        if cputune or emulatorpin or iothreadpin:
+            cputune = '<cputune>%s%s%s</cputune>' % (
+                emulatorpin, iothreadpin, cputune)
 
         numatune = ''
         for cellid, nodeset in self._def['memnodes'].items():
