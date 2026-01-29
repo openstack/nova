@@ -41,10 +41,12 @@ default is applied.
      for the above services. Support was also added for ``nova-conductor`` and
      ``nova-compute``.
    * **Nova 34.0.0 (2026.2 Hibiscus):** Native threading became the **default**
-     for ``nova-conductor`` and ``nova-compute``.
+     for ``nova-conductor`` and ``nova-compute``. Support has also been
+     extended to ``nova-novncproxy``, ``nova-serialproxy``, and
+     ``nova-spicehtml5proxy``, though these services require manual
+     configuration to enable it.
 
    Operators can still manually revert to ``eventlet`` mode if needed.
-
 
 Tunables for the native threading mode
 --------------------------------------

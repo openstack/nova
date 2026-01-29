@@ -1,3 +1,13 @@
+- hosts: all
+  tasks:
+    - name: Install qemu-system-modules-spice for SPICE graphics support
+      become: yes
+      apt:
+        name: qemu-system-modules-spice
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
 - hosts: controller
   tasks:
     - name: create local.sh

@@ -247,6 +247,7 @@
         'SYSTEMD_ENV_VARS["n-cond-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-novnc-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
@@ -484,6 +485,7 @@
 - job:
     name: nova-next
     parent: tempest-multinode-full-py3
+    nodeset: openstack-two-node-noble
     description: |
       This job was added in Newton when placement and cellsv2
       were optional. Placement and cellsv2 are required starting in Ocata. In
@@ -509,14 +511,15 @@
     pre-run: playbooks/nova-next/pre.yaml
     required-projects:
         - novnc/novnc
-    nodeset: openstack-two-node-noble
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_exclude_regex.
       tox_envlist: all
       # Run all compute API tests and most scenario tests at the default
       # concurrency (nproc/2 which is normally 4 in the gate).
-      tempest_test_regex: ^tempest\.(scenario|api\.compute)
+      # Explicitly include console tests (novnc, spice) to ensure
+      # console proxy services are tested in threading mode.
+      tempest_test_regex: ^tempest\.((scenario|api\.compute)|(.*\.(novnc|spice).*))
       # The tempest.scenario.test_network* tests are skipped because they
       # (1) take a long time and (2) are already covered in the
       # tempest-slow* job. If this regex gets more complicated use
@@ -609,6 +612,7 @@
         FORCE_CONFIG_DRIVE: True
         # Added in Yoga.
         NOVNC_FROM_PACKAGE: False
+        NOVA_SPICE_ENABLED: True
         NOVA_USE_UNIFIED_LIMITS: True
         # Added in Caracal.
         # Temporarly disabled due to
@@ -620,6 +624,8 @@
         'SYSTEMD_ENV_VARS["n-cond-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
         'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
         'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-novnc-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-spice-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
@@ -640,6 +646,8 @@
         # Disable non-essential services that we don't need for this job.
         c-bak: false
         openstack-cli-server: true
+        n-spice: true
+        n-novnc: true
       devstack_plugins:
         # Needed for QoS port heal allocation testing.
         neutron: https://opendev.org/openstack/neutron
@@ -656,6 +664,7 @@
           FORCE_CONFIG_DRIVE: True
           # Added in Yoga.
           NOVNC_FROM_PACKAGE: False
+          NOVA_SPICE_ENABLED: True
           'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
         devstack_services:
           # Disable OVN services
