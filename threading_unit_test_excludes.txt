@@ -1,8 +1,5 @@
 nova.tests.unit.test_context.ContextTestCase.test_scatter_gather_cells_queued_task_cancelled
 
-# To be classified
-nova.tests.unit.virt.vmwareapi.test_vm_util.VMwareVMUtilTestCase.test_create_vm_invalid_guestid
-
 # Independent failure ~10% with multiple possible error:
 # - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) not an error
 # - sqlite3.OperationalError: cannot start a transaction within a transaction
