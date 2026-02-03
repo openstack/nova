@@ -206,6 +206,36 @@ class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
         self.assertEqual('4096', blockio.get('logical_block_size'))
         self.assertEqual('4096', blockio.get('physical_block_size'))
 
+    def test_libvirt_volume_driver_blockio_not_for_lun(self):
+        """Test blockio is not set for LUN devices (bug 2127196).
+
+        QEMU's scsi-block device driver does not support physical_block_size
+        and logical_block_size properties, so blockio must not be included
+        when device type is 'lun'.
+        """
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_host)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                'device_path': '/foo',
+                'logical_block_size': '4096',
+                'physical_block_size': '4096',
+            },
+            'serial': 'fake_serial',
+        }
+        disk_info = {
+            "bus": "scsi",
+            "dev": "sda",
+            "type": "lun",
+        }
+        conf = libvirt_driver.get_config(connection_info, disk_info)
+        tree = conf.format_dom()
+        self.assertEqual('lun', tree.get('device'))
+        # blockio should NOT be present for LUN devices
+        self.assertIsNone(tree.find('./blockio'))
+        # serial should also NOT be present for LUN devices
+        self.assertIsNone(tree.find('./serial'))
+
     def test_libvirt_volume_driver_iotune(self):
         libvirt_driver = volume.LibvirtVolumeDriver(self.fake_host)
         connection_info = {

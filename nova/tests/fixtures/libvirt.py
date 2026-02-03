@@ -921,6 +921,13 @@ def _parse_disk_info(element):
     if alias is not None:
         disk_info['alias'] = alias.get('name')
 
+    blockio = element.find('./blockio')
+    if blockio is not None:
+        disk_info['blockio_logical_block_size'] = blockio.get(
+            'logical_block_size')
+        disk_info['blockio_physical_block_size'] = blockio.get(
+            'physical_block_size')
+
     return disk_info
 
 
@@ -1570,7 +1577,24 @@ class Domain(object):
       </source>"""
             strformat += """
       <target dev='%(target_dev)s' bus='%(target_bus)s'/>
-      <address type='drive' controller='0' bus='0' unit='0'/>
+      <address type='drive' controller='0' bus='0' unit='0'/>"""
+
+            # Add blockio if present
+            if 'blockio_logical_block_size' in disk or \
+                    'blockio_physical_block_size' in disk:
+                blockio_attrs = []
+                if disk.get('blockio_logical_block_size'):
+                    blockio_attrs.append(
+                        "logical_block_size='%s'" %
+                        disk['blockio_logical_block_size'])
+                if disk.get('blockio_physical_block_size'):
+                    blockio_attrs.append(
+                        "physical_block_size='%s'" %
+                        disk['blockio_physical_block_size'])
+                strformat += """
+      <blockio %s/>""" % ' '.join(blockio_attrs)
+
+            strformat += """
     </disk>"""
             disks += strformat % dict(source_attr=source_attr, **disk)
         filesystems = ''

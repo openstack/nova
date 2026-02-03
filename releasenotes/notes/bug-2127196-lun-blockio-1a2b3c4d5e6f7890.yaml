@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    `Bug 2127196`_ is fixed where Nova incorrectly generated a ``<blockio>``
+    element in libvirt XML for LUN volumes when Cinder reported disk geometry
+    (logical and physical block size). QEMU's ``scsi-block`` device driver
+    does not support ``physical_block_size`` and ``logical_block_size``
+    properties, causing instance spawn to fail with the error
+    ``Property 'scsi-block.physical_block_size' not found``.
+    The ``<blockio>`` element is now omitted for LUN devices.
+
+    .. _Bug 2127196: https://bugs.launchpad.net/nova/+bug/2127196

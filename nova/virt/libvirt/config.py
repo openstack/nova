@@ -1359,8 +1359,12 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self._format_iotune(dev)
 
         # Block size tuning
-        if (self.logical_block_size is not None or
-                self.physical_block_size is not None):
+        # NOTE(bug 2127196): Block size properties are not supported for
+        # device='lun' because QEMU's scsi-block driver does not support
+        # physical_block_size and logical_block_size properties.
+        if (self.source_device != 'lun' and
+                (self.logical_block_size is not None or
+                 self.physical_block_size is not None)):
 
             blockio = etree.Element("blockio")
             if self.logical_block_size is not None:
