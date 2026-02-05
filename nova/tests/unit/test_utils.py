@@ -13,6 +13,7 @@
 #    under the License.
 
 import datetime
+import futurist
 import hashlib
 import os
 import os.path
@@ -1989,3 +1990,505 @@ class TestFairLockGuard(test.NoDBTestCase):
             self.assertTrue(lock_guard.is_locked())
             self.assertTrue(test_locks[0].is_writer())
             self.assertTrue(test_locks[1].is_writer())
+
+
+class StaticallyDelayingCancellableTaskExecutorWrapperTest(test.NoDBTestCase):
+    def test_submit_one(self):
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.01, utils._get_default_executor())
+        self.addCleanup(executor.shutdown)
+
+        task_done = threading.Event()
+
+        def task(num, foo):
+            self.assertEqual(12, num)
+            self.assertEqual("bar", foo)
+            task_done.set()
+            return foo + str(num)
+
+        future = executor.submit_with_delay(task, 12, foo="bar")
+
+        result = future.result()
+        self.assertTrue(task_done.is_set())
+        self.assertEqual("bar12", result)
+
+    def test_submit_one_exception_result(self):
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.01, utils._get_default_executor())
+        self.addCleanup(executor.shutdown)
+
+        task_done = threading.Event()
+        exc_to_raise = ValueError()
+
+        def task(num, foo):
+            self.assertEqual(12, num)
+            self.assertEqual("bar", foo)
+            task_done.set()
+            raise exc_to_raise
+
+        future = executor.submit_with_delay(task, 12, foo="bar")
+        exc = future.exception()
+
+        self.assertTrue(task_done.is_set())
+        self.assertEqual(exc_to_raise, exc)
+
+    def test_submit_two_non_overlapping(self):
+
+        def task1():
+            return 42
+
+        def task2():
+            return 13
+
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.01, utils._get_default_executor())
+
+        future1 = executor.submit_with_delay(task1)
+        self.assertEqual(42, future1.result())
+
+        future2 = executor.submit_with_delay(task2)
+        self.assertEqual(13, future2.result())
+
+        self.assertTrue(executor._queue.empty())
+
+    def test_submit_second_while_delaying_first(self):
+        task1_started = threading.Event()
+
+        def task1():
+            task1_started.set()
+            return 42
+
+        task2_started = threading.Event()
+
+        def task2():
+            task2_started.set()
+            return 13
+
+        # Create a "long" delay so the task will be actively managed by
+        # the wrapper while we submit the second task
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2, utils._get_default_executor())
+
+        future1 = executor.submit_with_delay(task1)
+        task1_start = time.monotonic()
+        # wait a bit so the wrapper is picking it up and waiting for its
+        # deadline
+        time.sleep(1)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(task1_started.is_set())
+
+        # now submit the second task, it will be queued
+        future2 = executor.submit_with_delay(task2)
+        task2_start = time.monotonic()
+        self.assertFalse(executor._queue.empty())
+        self.assertFalse(task1_started.is_set())
+
+        # eventually both tasks finishes
+        self.assertEqual(42, future1.result())
+        task1_end = time.monotonic()
+        self.assertEqual(13, future2.result())
+        task2_end = time.monotonic()
+
+        # and both tasks took about delay seconds individually, but the two
+        # tasks together took less than 2x delay seconds as they were
+        # overlapped.
+        task1_runtime = task1_end - task1_start
+        self.assertLess(task1_runtime, 2.5)
+        self.assertGreater(task1_runtime, 2.0)
+        task2_runtime = task2_end - task2_start
+        self.assertLess(task2_runtime, 2.5)
+        self.assertGreater(task2_runtime, 2.0)
+        total_runtime = task2_end - task1_start
+        self.assertLess(total_runtime, 4)
+
+    def test_submit_multiple(self):
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.1, utils._get_default_executor())
+
+        def task(i):
+            return 2 * i
+
+        futures = []
+        for i in range(20):
+            futures.append(executor.submit_with_delay(task, i))
+
+        for i, f in enumerate(futures):
+            self.assertEqual(2 * i, f.result())
+
+        executor.shutdown(wait=True)
+
+    def test_submit_multiple_executor_rejects_first_executes_second(self):
+        def task1():
+            return 42
+
+        def task2():
+            return 13
+
+        check_and_reject = mock.Mock(
+            side_effect=[futurist.RejectedSubmission(), None])
+
+        if utils.concurrency_mode_threading():
+            ex = futurist.ThreadPoolExecutor(
+                max_workers=1, check_and_reject=check_and_reject)
+        else:
+            ex = futurist.GreenThreadPoolExecutor(
+                max_workers=1, check_and_reject=check_and_reject)
+
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.1, ex)
+        self.addCleanup(executor.shutdown, wait=True)
+
+        future1 = executor.submit_with_delay(task1)
+        future2 = executor.submit_with_delay(task2)
+
+        self.assertEqual(
+            futurist.RejectedSubmission, type(future1.exception()))
+        self.assertEqual(13, future2.result())
+
+    def test_cancel_during_delay(self):
+        task1_started = threading.Event()
+
+        def task1():
+            task1_started.set()
+            return 42
+
+        def task2():
+            return 13
+
+        # Create a "long" delay so the task will be actively delayed by
+        # the wrapper when we cancel it
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2, utils._get_default_executor())
+
+        future1 = executor.submit_with_delay(task1)
+        # wait a bit to let the task being picked up
+        time.sleep(1)
+        # it is not in the queue, so it is picked up
+        self.assertTrue(executor._queue.empty())
+        # but not executing yet so it is being delayed
+        self.assertFalse(task1_started.is_set())
+
+        # cancel the task
+        future1.cancel()
+
+        # Submit and wait for the execution of the second task to prove
+        # that the executor had time to finish waiting for the deadline of
+        # the first task, detected the cancellation and skipped the task,
+        # then executed the second task.
+        future2 = executor.submit_with_delay(task2)
+        self.assertEqual(13, future2.result())
+
+        # task1 is still not executed
+        self.assertFalse(task1_started.is_set())
+        self.assertTrue(future1.cancelled())
+        # no tasks remaining in the executor queue
+        self.assertTrue(executor._queue.empty())
+
+    def test_cancel_while_in_queue(self):
+        task1_started = threading.Event()
+
+        def task1():
+            task1_started.set()
+            return 42
+
+        task2_started = threading.Event()
+
+        def task2():
+            task2_started.set()
+            return 13
+
+        # Create a "long" delay so one task will be actively delayed while
+        # we submit a second task then cancel the second task.
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2, utils._get_default_executor())
+
+        future1 = executor.submit_with_delay(task1)
+        # Wait a bit to let the task being picked up.
+        time.sleep(1)
+        # It is not in the queue, so it is picked up,
+        self.assertTrue(executor._queue.empty())
+        # but not executing yet, so it is being delayed
+        self.assertFalse(task1_started.is_set())
+
+        # Submit a second task that will be queued.
+        future2 = executor.submit_with_delay(task2)
+        self.assertFalse(executor._queue.empty())
+        self.assertFalse(task2_started.is_set())
+
+        # Cancel the second task while it is in the queue.
+        future2.cancel()
+
+        # The first task should finish normally
+        self.assertEqual(42, future1.result())
+
+        # But the second task should never be executed.
+        # To prove that we shutdown both the wrapper and the real executor
+        # then check the second task again.
+        executor.shutdown(wait=True)
+        utils._get_default_executor().shutdown(wait=True)
+        self.assertFalse(task2_started.is_set())
+        self.assertTrue(future2.cancelled())
+
+    def test_instantaneous_shutdown(self):
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.1, utils._get_default_executor())
+
+        executor.shutdown(wait=False)
+        self.assertTrue(executor._shutdown)
+
+    def test_shutdown_wait(self):
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.1, utils._get_default_executor())
+
+        executor.shutdown(wait=True)
+        self.assertTrue(executor._shutdown)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(executor.is_alive)
+        # Shutting down the wrapper does not affect the real executor
+        self.assertTrue(executor._executor.alive)
+
+    def test_submit_after_shutdown_rejected(self):
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.1, utils._get_default_executor())
+
+        executor.shutdown()
+        self.assertTrue(executor._shutdown)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(executor.is_alive)
+
+        exc = self.assertRaises(
+            RuntimeError, executor.submit_with_delay, lambda: None)
+        self.assertEqual(
+            "Cannot schedule new tasks after being shutdown", str(exc))
+
+    def test_submit_while_shutting_down(self):
+        task_started = threading.Event()
+
+        def task():
+            task_started.set()
+
+        # Create a "long" delay so the task will be actively managed by
+        # the wrapper while the test calls shutdown on it.
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2, utils._get_default_executor())
+        self.addCleanup(executor.shutdown, wait=True)
+
+        executor.submit_with_delay(task)
+        executor.shutdown(wait=False)
+
+        # the task is actively managed, delayed, by our wrapper while we are
+        # shutting the executor down, we should not be able to add new tasks
+        # even if the shutdown is not finished yet
+        self.assertFalse(task_started.is_set())
+        exc = self.assertRaises(
+            RuntimeError, executor.submit_with_delay, lambda: None)
+        self.assertEqual(
+            "Cannot schedule new tasks after being shutdown", str(exc))
+
+    def test_shutdown_after_task_finished(self):
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            0.01, utils._get_default_executor())
+        self.addCleanup(executor.shutdown)
+
+        def task():
+            return
+
+        future = executor.submit_with_delay(task)
+        future.result()
+
+        executor.shutdown()
+
+        self.assertTrue(executor._shutdown)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(executor.is_alive)
+
+    def test_no_wait_shutdown_task_finishes_normally(self):
+        task_started = threading.Event()
+
+        def task():
+            task_started.set()
+            return 42
+
+        # Create a "long" delay so the task will be actively managed by
+        # the wrapper while the test calls shutdown on it.
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2, utils._get_default_executor())
+        self.addCleanup(executor.shutdown, wait=True)
+
+        future = executor.submit_with_delay(task)
+        # Task is not executing it is being delayed
+        self.assertFalse(task_started.is_set())
+
+        # We expect that shutdown returns even though there are tasks being
+        # actively managed, delayed, by the executor as we called it with
+        # wait=False
+        executor.shutdown(wait=False)
+
+        self.assertTrue(executor._shutdown)
+        self.assertFalse(executor._queue.empty())
+        self.assertTrue(executor.is_alive)
+
+        # Task is still delayed
+        self.assertFalse(task_started.is_set())
+        # and it is not cancelled
+        self.assertFalse(future.cancelled())
+        # and eventually executed
+        self.assertEqual(42, future.result())
+        # and eventually the executor is terminated. This also covers the case
+        # when multiple shutdown call is made to the same executor.
+        executor.shutdown(wait=True)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(executor.is_alive)
+
+    def test_no_wait_shutdown_multiple_tasks_finishes_normally(self):
+        task1_started = threading.Event()
+
+        def task1():
+            task1_started.set()
+            return 42
+
+        task2_started = threading.Event()
+
+        def task2():
+            task2_started.set()
+            return 13
+
+        # Create a "long" delay so the task will be actively managed by
+        # the wrapper while the test calls shutdown on it.
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2, utils._get_default_executor())
+
+        future1 = executor.submit_with_delay(task1)
+        future2 = executor.submit_with_delay(task2)
+        # Tasks are not executing they are being delayed
+        self.assertFalse(task1_started.is_set())
+        self.assertFalse(task2_started.is_set())
+
+        # wait a bit so the wrapper actually starts waiting for the deadline
+        # of task1
+        time.sleep(1)
+        # Task are still not executing
+        self.assertFalse(task1_started.is_set())
+        self.assertFalse(task2_started.is_set())
+        # task1 is already popped from the queue and the code is waiting for
+        # its deadline, while task2 is in the queue waiting
+        self.assertEqual(1, executor._queue.qsize())
+
+        # Shut down the executor. We expect that the tasks are still executed
+        executor.shutdown(wait=True)
+
+        self.assertEqual(42, future1.result())
+        self.assertEqual(13, future2.result())
+        # and our wrapper is in a shutdown state
+        self.assertTrue(executor._shutdown)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(executor.is_alive)
+
+    def test_shutdown_wait_task_finishes_normally(self):
+        task_started = threading.Event()
+
+        def task():
+            task_started.set()
+            return 42
+
+        # Create a "long" delay so the task will be actively managed by
+        # the wrapper while the test calls shutdown on it.
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2, utils._get_default_executor())
+
+        future = executor.submit_with_delay(task)
+        # Task is not executing it is being delayed
+        self.assertFalse(task_started.is_set())
+
+        # We expect that shutdown waits for the task to be submitted to the
+        # real executor after the delay
+        executor.shutdown(wait=True)
+        # Task is now submitted to the real executor so it can actually run
+        # and produce a result
+        result = future.result()
+        self.assertTrue(task_started.is_set())
+        self.assertEqual(42, result)
+        # but our wrapper is in a shutdown state
+        self.assertTrue(executor._shutdown)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(executor.is_alive)
+
+    def test_shutdown_does_not_wait_for_cancelled_task(self):
+        task_started = threading.Event()
+
+        def task():
+            task_started.set()
+            return 42
+
+        # Create a very long delay so the task will be actively managed by
+        # the wrapper while the test calls shutdown on it and we can
+        # check that the wrapper detects cancelled tasks during shutdown and
+        # does not wait for the whole deadline.
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2000, utils._get_default_executor())
+
+        future = executor.submit_with_delay(task)
+        # Task is not executing it is being delayed
+        self.assertFalse(task_started.is_set())
+
+        # Cancel the task, shutdown the executor. We expect that the cancelled
+        # task is not submitted for execution.
+        future.cancel()
+        executor.shutdown(wait=True)
+        self.assertFalse(task_started.is_set())
+        self.assertTrue(future.cancelled())
+        # and our wrapper is in a shutdown state
+        self.assertTrue(executor._shutdown)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(executor.is_alive)
+
+    def test_shutdown_does_not_wait_for_multiple_cancelled_tasks(self):
+        task1_started = threading.Event()
+
+        def task1():
+            task1_started.set()
+            return 42
+
+        task2_started = threading.Event()
+
+        def task2():
+            task2_started.set()
+            return 13
+
+        # Create a very long delay so the task will be actively managed by
+        # the wrapper while the test calls shutdown on it and we can
+        # check that the wrapper detects cancelled tasks during shutdown and
+        # does not wait for the whole deadline.
+        executor = utils.StaticallyDelayingCancellableTaskExecutorWrapper(
+            2000, utils._get_default_executor())
+
+        future1 = executor.submit_with_delay(task1)
+        future2 = executor.submit_with_delay(task2)
+        # Tasks are not executing they are being delayed
+        self.assertFalse(task1_started.is_set())
+        self.assertFalse(task2_started.is_set())
+
+        # wait a bit so the wrapper actually starts waiting for the deadline
+        # of task1
+        time.sleep(1)
+        # Task are still not executing
+        self.assertFalse(task1_started.is_set())
+        self.assertFalse(task2_started.is_set())
+        # task1 is already popped from the queue and the code is waiting for
+        # its deadline, while task2 is in the queue waiting
+        self.assertEqual(1, executor._queue.qsize())
+
+        # Cancel both tasks then shutdown the executor and expect that no
+        # task will be executed.
+        future1.cancel()
+        future2.cancel()
+        executor.shutdown(wait=True)
+
+        self.assertFalse(task1_started.is_set())
+        self.assertTrue(future1.cancelled())
+        self.assertFalse(task2_started.is_set())
+        self.assertTrue(future2.cancelled())
+        # and our wrapper is in a shutdown state
+        self.assertTrue(executor._shutdown)
+        self.assertTrue(executor._queue.empty())
+        self.assertFalse(executor.is_alive)
