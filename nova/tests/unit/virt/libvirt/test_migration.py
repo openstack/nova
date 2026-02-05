@@ -518,6 +518,7 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
                 <vcpupin vcpu="0" cpuset="0,1,2,^2"/>
                 <vcpupin vcpu="1" cpuset="2-4,^4"/>
                 <emulatorpin cpuset="8-10,^8"/>
+                <iothreadpin cpuset="8-10,^8"/>
                 <vcpusched vcpus="10" priority="13" scheduler="fifo"/>
                 <vcpusched vcpus="11" priority="13" scheduler="fifo"/>
               </cputune>
@@ -545,6 +546,7 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
                 <vcpupin vcpu="0" cpuset="10-11"/>
                 <vcpupin vcpu="1" cpuset="12-13"/>
                 <emulatorpin cpuset="18-19"/>
+                <iothreadpin cpuset="18-19"/>
                 <vcpusched vcpus="20-21" priority="22" scheduler="fifo"/>
               </cputune>
               <numatune>
