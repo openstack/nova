@@ -577,6 +577,16 @@ def spawn(func, *args, **kwargs) -> futurist.Future:
     return spawn_on(_get_default_executor(), func, *args, **kwargs)
 
 
+def spawn_after(seconds, func, *args, **kwargs) -> futurist.Future:
+    """Executing the function asynchronously after the given time."""
+
+    def delayed(*args, **kwargs):
+        time.sleep(seconds)
+        return func(*args, **kwargs)
+
+    return spawn(delayed, *args, **kwargs)
+
+
 def _executor_is_full(executor):
     if concurrency_mode_threading():
         # TODO(gibi): Move this whole logic to futurist ThreadPoolExecutor

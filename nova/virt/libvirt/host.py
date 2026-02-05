@@ -39,9 +39,6 @@ import queue
 import threading
 import typing as ty
 
-from eventlet import greenio
-from eventlet import greenthread
-from eventlet import patcher
 from lxml import etree
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -77,10 +74,6 @@ except ImportError:
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
-
-native_socket = patcher.original('socket')
-native_threading = patcher.original("threading")
-native_Queue = patcher.original("queue")
 
 # This list is for libvirt hypervisor drivers that need special handling.
 # This is *not* the complete list of supported hypervisor drivers.
@@ -121,6 +114,205 @@ def _get_loaders():
     return _loaders
 
 
+class LibvirtEventHandler:
+    def __init__(self, conn_event_handler=None, lifecycle_event_handler=None):
+        self._lifecycle_event_handler = lifecycle_event_handler
+        self._conn_event_handler = conn_event_handler
+
+    def _queue_event(self, event):
+        raise NotImplementedError()
+
+    def start(self):
+        raise NotImplementedError()
+
+    @classmethod
+    def create(cls, conn_event_handler=None, lifecycle_event_handler=None):
+        if utils.concurrency_mode_threading():
+            return _ThreadingLibvirtEventHandler(
+                conn_event_handler, lifecycle_event_handler)
+        else:
+            return _EventletLibvirtEventHandler(
+                conn_event_handler, lifecycle_event_handler)
+
+
+class _EventletLibvirtEventHandler(LibvirtEventHandler):
+    def __init__(self, conn_event_handler=None, lifecycle_event_handler=None):
+        super().__init__(conn_event_handler, lifecycle_event_handler)
+
+        from eventlet import greenio
+        from eventlet import patcher
+
+        self.native_threading = patcher.original("threading")
+        self.native_queue = patcher.original("queue")
+
+        self._event_thread = None
+        # This is a Queue between the native libvirt event thread
+        # and the main thread with the eventlet hub. This needs to be
+        # a native queue.
+        self._event_queue: queue.Queue[
+            virtevent.InstanceEvent | Mapping[str, ty.Any]
+            ] = self.native_queue.Queue()
+
+        # Create a self-pipe for the native thread to synchronize on.
+        #
+        # This code is taken from the eventlet tpool module, under terms
+        # of the Apache License v2.0.
+        rpipe, wpipe = os.pipe()
+        self._event_notify_send = greenio.GreenPipe(wpipe, 'wb', 0)
+        self._event_notify_recv = greenio.GreenPipe(rpipe, 'rb', 0)
+
+    def start(self):
+        """Initializes the libvirt events subsystem.
+
+        This requires running a native thread to provide the
+        libvirt event loop integration. This forwards events
+        to a green thread which does the actual dispatching.
+        """
+        libvirt.virEventRegisterDefaultImpl()
+
+        LOG.debug("Starting event thread")
+        self._event_thread = self.native_threading.Thread(
+            target=self._native_thread)
+        self._event_thread.daemon = True
+        self._event_thread.start()
+
+        LOG.debug("Starting event dispatch greenthread")
+        utils.spawn(self._dispatch_thread)
+
+    def _queue_event(self, event):
+        """Puts an event on the queue for dispatch.
+
+        This method is called by the native event thread to
+        put events on the queue for later dispatch by the
+        green thread. Any use of logging APIs is forbidden.
+        """
+
+        if self._event_queue is None:
+            return
+
+        # Queue the event...
+        self._event_queue.put(event)
+
+        # ...then wakeup the green thread to dispatch it
+        c = ' '.encode()
+        self._event_notify_send.write(c)
+        self._event_notify_send.flush()
+
+    def _native_thread(self):
+        """Receives async events coming in from libvirtd.
+
+        This is a native thread which runs the default
+        libvirt event loop implementation. This processes
+        any incoming async events from libvirtd and queues
+        them for later dispatch. This thread is only
+        permitted to use libvirt python APIs, and the
+        driver.queue_event method. In particular any use
+        of logging is forbidden, since it will confuse
+        eventlet's greenthread integration
+        """
+
+        while True:
+            libvirt.virEventRunDefaultImpl()
+
+    def _dispatch_thread(self):
+        """Dispatches async events coming in from libvirtd.
+
+        This is a green thread which waits for events to
+        arrive from the libvirt event loop thread. This
+        then dispatches the events to the compute manager.
+        """
+
+        while True:
+            self._dispatch_events()
+
+    def _dispatch_events(self):
+        """Wait for & dispatch events from native thread
+
+        Blocks until native thread indicates some events
+        are ready. Then dispatches all queued events.
+        """
+
+        # Wait to be notified that there are some
+        # events pending
+        try:
+            _c = self._event_notify_recv.read(1)
+            assert _c
+        except ValueError:
+            return  # will be raised when pipe is closed
+
+        # Process as many events as possible without
+        # blocking
+        last_close_event = None
+        # required for mypy
+        if self._event_queue is None:
+            return
+        while not self._event_queue.empty():
+            try:
+                event: virtevent.InstanceEvent | Mapping[str, ty.Any] = (
+                    self._event_queue.get(block=False))
+                if issubclass(type(event), virtevent.InstanceEvent):
+                    self._lifecycle_event_handler(event)
+
+                elif 'conn' in event and 'reason' in event:
+                    last_close_event = event
+            except self.native_queue.Empty:
+                pass
+        if last_close_event is None:
+            return
+
+        conn = last_close_event['conn']
+        reason = str(last_close_event['reason'])
+        msg = _("Connection to libvirt lost: %s") % reason
+        self._conn_event_handler(conn, False, msg)
+
+
+class _ThreadingLibvirtEventHandler(LibvirtEventHandler):
+    def __init__(self, conn_event_handler=None, lifecycle_event_handler=None):
+        super().__init__(conn_event_handler, lifecycle_event_handler)
+
+        self._event_thread = None
+        self._started = False
+
+    def start(self):
+        """Initializes the libvirt events subsystem.
+
+        This requires running a native thread that pools for libvirt events.
+        """
+        libvirt.virEventRegisterDefaultImpl()
+
+        LOG.debug("Starting event thread")
+        self._event_thread = threading.Thread(target=self._native_thread)
+        self._event_thread.daemon = True
+        self._event_thread.start()
+
+    def _queue_event(self, event):
+        """Puts an event on the queue for dispatch.
+
+        In native threading mode instead of queueing we directly dispatch on
+        the thread that receives the event as we don't have the requirement to
+        move the event handler to the main thread with the eventlet hub
+        """
+
+        if issubclass(type(event), virtevent.InstanceEvent):
+            self._lifecycle_event_handler(event)
+        elif 'conn' in event and 'reason' in event:
+            conn = event['conn']
+            reason = str(event['reason'])
+            msg = _("Connection to libvirt lost: %s") % reason
+            self._conn_event_handler(conn, False, msg)
+
+    def _native_thread(self):
+        """Receives async events coming in from libvirtd.
+
+        This is a native thread which runs the default
+        libvirt event loop implementation. This processes
+        any incoming async events from libvirtd.
+        """
+
+        while True:
+            libvirt.virEventRunDefaultImpl()
+
+
 class Host(object):
 
     def __init__(self, uri, read_only=False,
@@ -129,7 +321,14 @@ class Host(object):
         self._uri = uri
         self._read_only = read_only
         self._initial_connection = True
+
+        self._event_handler = LibvirtEventHandler.create(
+            self._connection_closed, self._event_emit_delayed)
+
         self._conn_event_handler = conn_event_handler
+        # This queue is just for the async handling of connection closed
+        # events. In eventlet mode this only pass events within the main
+        # native thread with the eventlet hub, so no proxying is needed.
         self._conn_event_handler_queue: queue.Queue[
             Callable[[], None]
         ] = queue.Queue()
@@ -141,9 +340,6 @@ class Host(object):
 
         self._wrapped_conn = None
         self._wrapped_conn_lock = threading.Lock()
-        self._event_queue: queue.Queue[
-            virtevent.InstanceEvent | Mapping[str, ty.Any]
-        ] | None = None
 
         self._events_delayed = {}
         # Note(toabctl): During a reboot of a domain, STOPPED and
@@ -195,38 +391,11 @@ class Host(object):
         # executing proxied calls in a native thread.
         return utils.tpool_wrap(obj, autowrap=self._libvirt_proxy_classes)
 
-    def _native_thread(self):
-        """Receives async events coming in from libvirtd.
-
-        This is a native thread which runs the default
-        libvirt event loop implementation. This processes
-        any incoming async events from libvirtd and queues
-        them for later dispatch. This thread is only
-        permitted to use libvirt python APIs, and the
-        driver.queue_event method. In particular any use
-        of logging is forbidden, since it will confuse
-        eventlet's greenthread integration
-        """
-
-        while True:
-            libvirt.virEventRunDefaultImpl()
-
-    def _dispatch_thread(self):
-        """Dispatches async events coming in from libvirtd.
-
-        This is a green thread which waits for events to
-        arrive from the libvirt event loop thread. This
-        then dispatches the events to the compute manager.
-        """
-
-        while True:
-            self._dispatch_events()
-
     def _conn_event_thread(self):
         """Dispatches async connection events"""
         # NOTE(mdbooth): This thread doesn't need to jump through the same
-        # hoops as _dispatch_thread because it doesn't interact directly
-        # with the libvirt native thread.
+        # hoops as the lifecycle event handling because it doesn't interact
+        # directly with the libvirt native thread.
         while True:
             self._dispatch_conn_event()
 
@@ -248,12 +417,13 @@ class Host(object):
 
         NB: this method is executing in a native thread, not
         an eventlet coroutine. It can only invoke other libvirt
-        APIs, or use self._queue_event(). Any use of logging APIs
-        in particular is forbidden.
+        APIs, or use self._event_handler._queue_event(). Any use of logging
+        APIs in particular is forbidden.
         """
         self = opaque
         uuid = dom.UUIDString()
-        self._queue_event(libvirtevent.DeviceRemovedEvent(uuid, dev))
+        self._event_handler._queue_event(
+            libvirtevent.DeviceRemovedEvent(uuid, dev))
 
     @staticmethod
     def _event_device_removal_failed_callback(conn, dom, dev, opaque):
@@ -261,12 +431,13 @@ class Host(object):
 
         NB: this method is executing in a native thread, not
         an eventlet coroutine. It can only invoke other libvirt
-        APIs, or use self._queue_event(). Any use of logging APIs
-        in particular is forbidden.
+        APIs, or use self._event_handler._queue_event(). Any use of logging
+        APIs in particular is forbidden.
         """
         self = opaque
         uuid = dom.UUIDString()
-        self._queue_event(libvirtevent.DeviceRemovalFailedEvent(uuid, dev))
+        self._event_handler._queue_event(
+            libvirtevent.DeviceRemovalFailedEvent(uuid, dev))
 
     @staticmethod
     def _event_lifecycle_callback(conn, dom, event, detail, opaque):
@@ -274,8 +445,8 @@ class Host(object):
 
         NB: this method is executing in a native thread, not
         an eventlet coroutine. It can only invoke other libvirt
-        APIs, or use self._queue_event(). Any use of logging APIs
-        in particular is forbidden.
+        APIs, or use self._event_handler._queue_event(). Any use of logging
+        APIs in particular is forbidden.
         """
 
         self = opaque
@@ -316,11 +487,12 @@ class Host(object):
             transition = virtevent.EVENT_LIFECYCLE_RESUMED
 
         if transition is not None:
-            self._queue_event(virtevent.LifecycleEvent(uuid, transition))
+            self._event_handler._queue_event(
+                virtevent.LifecycleEvent(uuid, transition))
 
     def _close_callback(self, conn, reason, opaque):
         close_info = {'conn': conn, 'reason': reason}
-        self._queue_event(close_info)
+        self._event_handler._queue_event(close_info)
 
     @staticmethod
     def _test_connection(conn):
@@ -359,77 +531,22 @@ class Host(object):
             flags = libvirt.VIR_CONNECT_RO
         return self._libvirt_proxy.openAuth(uri, auth, flags)
 
-    def _queue_event(self, event):
-        """Puts an event on the queue for dispatch.
-
-        This method is called by the native event thread to
-        put events on the queue for later dispatch by the
-        green thread. Any use of logging APIs is forbidden.
-        """
-
-        if self._event_queue is None:
-            return
-
-        # Queue the event...
-        self._event_queue.put(event)
-
-        # ...then wakeup the green thread to dispatch it
-        c = ' '.encode()
-        self._event_notify_send.write(c)
-        self._event_notify_send.flush()
-
-    def _dispatch_events(self):
-        """Wait for & dispatch events from native thread
-
-        Blocks until native thread indicates some events
-        are ready. Then dispatches all queued events.
-        """
-
-        # Wait to be notified that there are some
-        # events pending
-        try:
-            _c = self._event_notify_recv.read(1)
-            assert _c
-        except ValueError:
-            return  # will be raised when pipe is closed
-
-        # Process as many events as possible without
-        # blocking
-        last_close_event = None
-        # required for mypy
-        if self._event_queue is None:
-            return
-        while not self._event_queue.empty():
-            try:
-                event: virtevent.InstanceEvent | Mapping[str, ty.Any] = self._event_queue.get(block=False)  # noqa: E501
-                if issubclass(type(event), virtevent.InstanceEvent):
-                    # call possibly with delay
-                    self._event_emit_delayed(event)
-
-                elif 'conn' in event and 'reason' in event:
-                    last_close_event = event
-            except native_Queue.Empty:
-                pass
-        if last_close_event is None:
-            return
-        conn = last_close_event['conn']
+    def _connection_closed(self, conn, *args, **kwargs):
         # get_new_connection may already have disabled the host,
         # in which case _wrapped_conn is None.
         with self._wrapped_conn_lock:
             if conn == self._wrapped_conn:
-                reason = str(last_close_event['reason'])
-                msg = _("Connection to libvirt lost: %s") % reason
                 self._wrapped_conn = None
-                self._queue_conn_event_handler(False, msg)
+
+        self._queue_conn_event_handler(*args, **kwargs)
 
     def _event_emit_delayed(self, event):
         """Emit events - possibly delayed."""
-        def event_cleanup(gt, *args, **kwargs):
+        def event_cleanup(event):
             """Callback function for greenthread. Called
             to cleanup the _events_delayed dictionary when an event
             was called.
             """
-            event = args[0]
             self._events_delayed.pop(event.uuid, None)
 
         # Cleanup possible delayed stop events.
@@ -442,12 +559,12 @@ class Host(object):
             event.transition == virtevent.EVENT_LIFECYCLE_STOPPED):
             # Delay STOPPED event, as they may be followed by a STARTED
             # event in case the instance is rebooting
-            id_ = greenthread.spawn_after(self._lifecycle_delay,
-                                          self._event_emit, event)
+            id_ = utils.spawn_after(
+                self._lifecycle_delay, self._event_emit, event)
             self._events_delayed[event.uuid] = id_
             # add callback to cleanup self._events_delayed dict after
             # event was called
-            id_.link(event_cleanup, event)
+            id_.add_done_callback(lambda _: event_cleanup(event))
         else:
             self._event_emit(event)
 
@@ -455,37 +572,14 @@ class Host(object):
         if self._lifecycle_event_handler is not None:
             self._lifecycle_event_handler(event)
 
-    def _init_events_pipe(self):
-        """Create a self-pipe for the native thread to synchronize on.
-
-        This code is taken from the eventlet tpool module, under terms
-        of the Apache License v2.0.
-        """
-
-        self._event_queue = native_Queue.Queue()
-        rpipe, wpipe = os.pipe()
-        self._event_notify_send = greenio.GreenPipe(wpipe, 'wb', 0)
-        self._event_notify_recv = greenio.GreenPipe(rpipe, 'rb', 0)
-
     def _init_events(self):
         """Initializes the libvirt events subsystem.
-
-        This requires running a native thread to provide the
-        libvirt event loop integration. This forwards events
-        to a green thread which does the actual dispatching.
         """
+        self._event_handler.start()
 
-        self._init_events_pipe()
-
-        LOG.debug("Starting native event thread")
-        self._event_thread = native_threading.Thread(
-            target=self._native_thread)
-        self._event_thread.daemon = True
-        self._event_thread.start()
-
-        LOG.debug("Starting green dispatch thread")
-        utils.spawn(self._dispatch_thread)
-
+        # This thread is just for async connection closed event handling.
+        # In eventlet mode it only handles tasks within the main thread with
+        # the eventlet hub.
         LOG.debug("Starting connection event dispatch thread")
         utils.spawn(self._conn_event_thread)
 
@@ -605,7 +699,6 @@ class Host(object):
         #                connection is used for the first time.  Otherwise, the
         #                handler does not get registered.
         libvirt.registerErrorHandler(self._libvirt_error_handler, None)
-        libvirt.virEventRegisterDefaultImpl()
         self._init_events()
 
         self._initialized = True

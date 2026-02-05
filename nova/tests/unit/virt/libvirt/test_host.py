@@ -19,7 +19,6 @@ from unittest import mock
 
 import ddt
 import eventlet
-from eventlet import greenthread
 from eventlet import tpool
 from lxml import etree
 from oslo_serialization import jsonutils
@@ -119,10 +118,18 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(log_mock.method_calls),
                          'LOG should not be used in _connect_auth_cb.')
 
-    @mock.patch.object(greenthread, 'spawn_after')
+    @mock.patch.object(utils, 'spawn_after')
     def test_event_dispatch(self, mock_spawn_after):
         # Validate that the libvirt self-pipe for forwarding
         # events between threads is working sanely
+
+        # Simulate that the dispatch thread runs.
+        # In threading mode we don't have such thread as we don't need it
+        # so for threading this is noop.
+        def run_dispatch(hostimpl):
+            if not utils.concurrency_mode_threading():
+                hostimpl._event_handler._dispatch_events()
+
         def handler(event):
             got_events.append(event)
 
@@ -130,17 +137,15 @@ class HostTestCase(test.NoDBTestCase):
                              lifecycle_event_handler=handler)
         got_events = []
 
-        hostimpl._init_events_pipe()
-
         event1 = event.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
             event.EVENT_LIFECYCLE_STARTED)
         event2 = event.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
             event.EVENT_LIFECYCLE_PAUSED)
-        hostimpl._queue_event(event1)
-        hostimpl._queue_event(event2)
-        hostimpl._dispatch_events()
+        hostimpl._event_handler._queue_event(event1)
+        hostimpl._event_handler._queue_event(event2)
+        run_dispatch(hostimpl)
 
         want_events = [event1, event2]
         self.assertEqual(want_events, got_events)
@@ -152,9 +157,9 @@ class HostTestCase(test.NoDBTestCase):
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
             event.EVENT_LIFECYCLE_STOPPED)
 
-        hostimpl._queue_event(event3)
-        hostimpl._queue_event(event4)
-        hostimpl._dispatch_events()
+        hostimpl._event_handler._queue_event(event3)
+        hostimpl._event_handler._queue_event(event4)
+        run_dispatch(hostimpl)
 
         want_events = [event1, event2, event3]
         self.assertEqual(want_events, got_events)
@@ -163,21 +168,13 @@ class HostTestCase(test.NoDBTestCase):
         mock_spawn_after.assert_called_once_with(
             hostimpl._lifecycle_delay, hostimpl._event_emit, event4)
 
-    def test_event_lifecycle(self):
-        got_events = []
-
-        # Validate that libvirt events are correctly translated
-        # to Nova events
-        def spawn_after(seconds, func, *args, **kwargs):
-            got_events.append(args[0])
-            return mock.Mock(spec=greenthread.GreenThread)
-
-        greenthread.spawn_after = mock.Mock(side_effect=spawn_after)
+    @mock.patch('nova.virt.libvirt.host.Host._event_emit_delayed')
+    def test_event_lifecycle(self, mock_emit):
         hostimpl = host.Host("qemu:///system",
                              lifecycle_event_handler=lambda e: None)
+
         conn = hostimpl.get_connection()
 
-        hostimpl._init_events_pipe()
         fake_dom_xml = """
                 <domain type='kvm'>
                   <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
@@ -194,13 +191,18 @@ class HostTestCase(test.NoDBTestCase):
 
         hostimpl._event_lifecycle_callback(
             conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_STOPPED, 0, hostimpl)
-        hostimpl._dispatch_events()
-        self.assertEqual(len(got_events), 1)
-        self.assertIsInstance(got_events[0], event.LifecycleEvent)
-        self.assertEqual(got_events[0].uuid,
-                         "cef19ce0-0ca2-11df-855d-b19fbce37686")
-        self.assertEqual(got_events[0].transition,
-                         event.EVENT_LIFECYCLE_STOPPED)
+        # Simulate that the dispatch thread runs.
+        # In threading mode we don't have such thread as we don't need it
+        if not utils.concurrency_mode_threading():
+            hostimpl._event_handler._dispatch_events()
+
+        mock_emit.assert_called_once()
+        args, _ = mock_emit.call_args
+        got_event = args[0]
+        self.assertIsInstance(got_event, event.LifecycleEvent)
+        self.assertEqual(
+            got_event.uuid, "cef19ce0-0ca2-11df-855d-b19fbce37686")
+        self.assertEqual(got_event.transition, event.EVENT_LIFECYCLE_STOPPED)
 
     def test_event_lifecycle_callback_suspended_postcopy(self):
         """Tests the suspended lifecycle event with libvirt with post-copy"""
@@ -216,7 +218,7 @@ class HostTestCase(test.NoDBTestCase):
             conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
             detail=fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY,
             opaque=hostimpl)
-        expected_event = hostimpl._queue_event.call_args[0][0]
+        expected_event = hostimpl._event_handler._queue_event.call_args[0][0]
         self.assertEqual(event.EVENT_LIFECYCLE_POSTCOPY_STARTED,
                          expected_event.transition)
 
@@ -238,7 +240,7 @@ class HostTestCase(test.NoDBTestCase):
             conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
             detail=fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED,
             opaque=hostimpl)
-        expected_event = hostimpl._queue_event.call_args[0][0]
+        expected_event = hostimpl._event_handler._queue_event.call_args[0][0]
         self.assertEqual(event.EVENT_LIFECYCLE_MIGRATION_COMPLETED,
                          expected_event.transition)
         get_job_info.assert_called_once_with()
@@ -265,7 +267,7 @@ class HostTestCase(test.NoDBTestCase):
             conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
             detail=fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED,
             opaque=hostimpl)
-        expected_event = hostimpl._queue_event.call_args[0][0]
+        expected_event = hostimpl._event_handler._queue_event.call_args[0][0]
         self.assertEqual(event.EVENT_LIFECYCLE_PAUSED,
                          expected_event.transition)
         get_job_info.assert_called_once_with()
@@ -273,30 +275,30 @@ class HostTestCase(test.NoDBTestCase):
             test.MatchType(libvirt_guest.Guest), instance=None,
             logging_ok=False)
 
-    def test_event_emit_delayed_call_delayed(self):
+    @mock.patch.object(utils, 'spawn_after')
+    def test_event_emit_delayed_call_delayed(self, mock_spawn_after):
         ev = event.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
             event.EVENT_LIFECYCLE_STOPPED)
-        spawn_after_mock = mock.Mock()
-        greenthread.spawn_after = spawn_after_mock
         hostimpl = host.Host(
             'qemu:///system', lifecycle_event_handler=lambda e: None)
         hostimpl._event_emit_delayed(ev)
-        spawn_after_mock.assert_called_once_with(
+        mock_spawn_after.assert_called_once_with(
             15, hostimpl._event_emit, ev)
 
-    @mock.patch.object(greenthread, 'spawn_after')
+    @mock.patch.object(utils, 'spawn_after')
     def test_event_emit_delayed_call_delayed_pending(self, spawn_after_mock):
         hostimpl = host.Host(
             'qemu:///system', lifecycle_event_handler=lambda e: None)
         uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
-        gt_mock = mock.Mock()
-        hostimpl._events_delayed[uuid] = gt_mock
+
         ev = event.LifecycleEvent(
             uuid, event.EVENT_LIFECYCLE_STOPPED)
         hostimpl._event_emit_delayed(ev)
-        gt_mock.cancel.assert_called_once_with()
+        mock_future = spawn_after_mock.return_value
+        mock_future.add_done_callback.assert_called_once()
         self.assertTrue(spawn_after_mock.called)
+        self.assertIs(mock_future, hostimpl._events_delayed[uuid])
 
     def test_event_delayed_cleanup(self):
         hostimpl = host.Host(
@@ -321,7 +323,7 @@ class HostTestCase(test.NoDBTestCase):
         dom = fakelibvirt.Domain(conn, fake_dom_xml, running=True)
         host.Host._event_device_removed_callback(
             conn, dom, dev='virtio-1', opaque=hostimpl)
-        expected_event = hostimpl._queue_event.call_args[0][0]
+        expected_event = hostimpl._event_handler._queue_event.call_args[0][0]
         self.assertEqual(
             libvirtevent.DeviceRemovedEvent, type(expected_event))
         self.assertEqual(
@@ -339,7 +341,7 @@ class HostTestCase(test.NoDBTestCase):
         dom = fakelibvirt.Domain(conn, fake_dom_xml, running=True)
         host.Host._event_device_removal_failed_callback(
             conn, dom, dev='virtio-1', opaque=hostimpl)
-        expected_event = hostimpl._queue_event.call_args[0][0]
+        expected_event = hostimpl._event_handler._queue_event.call_args[0][0]
         self.assertEqual(
             libvirtevent.DeviceRemovalFailedEvent, type(expected_event))
         self.assertEqual(
