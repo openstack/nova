@@ -1228,6 +1228,10 @@ class Domain(object):
         if emulator_pin is not None:
             definition['emulator_pin'] = emulator_pin.get('cpuset')
 
+        iothreads = tree.find('./iothreads')
+        if iothreads is not None:
+            definition['iothreads'] = iothreads.text
+
         iothread_pin = tree.find('./cputune/iothreadpin')
         if iothread_pin is not None:
             definition['iothread_pin'] = iothread_pin.get('cpuset')
@@ -1711,6 +1715,10 @@ class Domain(object):
             cputune = '<cputune>%s%s%s</cputune>' % (
                 emulatorpin, iothreadpin, cputune)
 
+        iothreads = ''
+        if 'iothreads' in self._def:
+            iothreads = '<iothreads>%s</iothreads>' % self._def['iothreads']
+
         numatune = ''
         for cellid, nodeset in self._def['memnodes'].items():
             numatune += '<memnode cellid="%d" nodeset="%s"/>' % (int(cellid),
@@ -1736,6 +1744,7 @@ class Domain(object):
   <memory>%(memory)s</memory>
   <currentMemory>%(memory)s</currentMemory>
   <vcpu%(vcpuset)s>%(vcpu)s</vcpu>
+  %(iothreads)s
   <os>
     <type arch='%(arch)s' machine='pc-0.12'>hvm</type>
     %(loader)s
@@ -1787,6 +1796,7 @@ class Domain(object):
                 'memory': self._def['memory'],
                 'vcpuset': vcpuset,
                 'vcpu': self._def['vcpu']['number'],
+                'iothreads': iothreads,
                 'arch': self._def['os']['arch'],
                 'loader': loader,
                 'disks': disks,
@@ -2080,6 +2090,27 @@ class Connection(object):
         callback(self, dom, event, detail, opaque)
 
     def defineXML(self, xml):
+        dom = Domain(connection=self, running=False, transient=False, xml=xml)
+        self._vms[dom.name()] = dom
+        self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_DEFINED, 0)
+        return dom
+
+    # TODO(lajoskatona): Move this validation to defineXML once fix for
+    # bug/2140537 is merged.
+    # This method is only used temporarily from
+    # nova/tests/functional/regressions/test_bug_2140537.py
+    def _defineXMLIOThreads(self, xml):
+        xml_doc = etree.fromstring(xml.encode('utf-8'))
+        iothreadpin = xml_doc.find('./cputune/iothreadpin')
+
+        if iothreadpin is not None and iothreadpin.get('iothread') is None:
+            raise make_libvirtError(
+                libvirtError,
+                "XML error: Missing required attribute 'iothread' "
+                "in element 'iothreadpin'",
+                error_code=VIR_ERR_XML_ERROR,
+                error_domain=VIR_FROM_DOMAIN)
+
         dom = Domain(connection=self, running=False, transient=False, xml=xml)
         self._vms[dom.name()] = dom
         self._emit_lifecycle(dom, VIR_DOMAIN_EVENT_DEFINED, 0)
