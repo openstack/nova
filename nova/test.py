@@ -740,7 +740,15 @@ class APICoverage(object):
             testtools.matchers.ContainsAll(api_methods))
 
 
-class SubclassSignatureTestCase(testtools.TestCase, metaclass=abc.ABCMeta):
+class NoDBTestCase(TestCase):
+    """`NoDBTestCase` differs from TestCase in that DB access is not supported.
+    This makes tests run significantly faster. If possible, all new tests
+    should derive from this class.
+    """
+    USES_DB = False
+
+
+class SubclassSignatureTestCase(NoDBTestCase, metaclass=abc.ABCMeta):
     """Ensure all overridden methods of all subclasses of the class
     under test exactly match the signature of the base class.
 
@@ -759,10 +767,8 @@ class SubclassSignatureTestCase(testtools.TestCase, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     def setUp(self):
-        self.useFixture(nova_fixtures.ConfFixture(CONF))
-        self.base = self._get_base_class()
-
         super(SubclassSignatureTestCase, self).setUp()
+        self.base = self._get_base_class()
 
     @staticmethod
     def _get_argspecs(cls):
@@ -839,14 +845,6 @@ class TimeOverride(fixtures.Fixture):
         super(TimeOverride, self).setUp()
         timeutils.set_time_override(override_time=self.override_time)
         self.addCleanup(timeutils.clear_time_override)
-
-
-class NoDBTestCase(TestCase):
-    """`NoDBTestCase` differs from TestCase in that DB access is not supported.
-    This makes tests run significantly faster. If possible, all new tests
-    should derive from this class.
-    """
-    USES_DB = False
 
 
 class MatchType(object):
