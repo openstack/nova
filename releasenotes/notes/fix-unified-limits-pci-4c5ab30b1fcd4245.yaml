@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    `Bug 2140631`_ has been fixed. When using unified limits, the quota
+    check now includes resource groups requested through PCI aliases
+    (``pci_passthrough:alias`` extra specs), neutron port bandwidth resources
+    (``NET_BW_IGR_KILOBIT_PER_SEC``, ``NET_BW_EGR_KILOBIT_PER_SEC``), and
+    Cyborg device profile resources (for example, ``FPGA``). Simple custom
+    resources requested directly from flavor ``resources:`` extra specs, such
+    as GPU resources, were already included. The enforcement chain now uses a
+    full ``RequestSpec`` so these additional resource groups are counted in
+    unified-limits quota checks.
+
+    .. _Bug 2140631: https://bugs.launchpad.net/nova/+bug/2140631

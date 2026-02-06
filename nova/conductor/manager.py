@@ -1019,8 +1019,8 @@ class ComputeTaskManager:
             compute_utils.check_num_instances_quota(
                 context, flavor, 0, 0, project_id=project_id,
                 user_id=user_id, orig_num_req=orig_num_req)
-            placement_limits.enforce_num_instances_and_flavor(
-                context, project_id, flavor, request_spec.is_bfv, 0, 0)
+            placement_limits.enforce_num_instances_and_resources(
+                context, project_id, request_spec, 0, 0)
 
     # TODO(mriedem): Make request_spec required in ComputeTaskAPI RPC v2.0.
     @targets_cell

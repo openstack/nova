@@ -2603,7 +2603,7 @@ class _ComputeAPIUnitTestMixIn(object):
         else:
             self.fail("Exception not raised")
 
-    @mock.patch.object(placement_limit, 'enforce_num_instances_and_flavor')
+    @mock.patch.object(placement_limit, 'enforce_num_instances_and_resources')
     @mock.patch.object(compute_utils, 'is_volume_backed_instance',
                        new=mock.Mock(return_value=False))
     @mock.patch('nova.servicegroup.api.API.service_is_up',
@@ -2628,7 +2628,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                 ctxt=self.context,
                                                 read_deleted="no")
         mock_enforce.assert_called_once_with(
-            self.context, "fake", mock_get_flavor.return_value, False, 1, 1)
+            self.context, "fake", mock.ANY, 1, 1)
 
     # TODO(huaqiang): Remove in Wallaby
     @mock.patch('nova.servicegroup.api.API.service_is_up',
@@ -5439,6 +5439,43 @@ class _ComputeAPIUnitTestMixIn(object):
             flavor, [], prev_groups)
         mock_get_dp.assert_not_called()
         self.assertEqual(prev_groups, fake_rs.requested_resources)
+
+    @mock.patch(
+        'nova.compute.api.placement_limits.'
+        'enforce_num_instances_and_resources')
+    @mock.patch('nova.compute.api.scheduler_utils.request_spec_for_limits')
+    @mock.patch('nova.objects.RequestSpec.from_components')
+    @mock.patch('nova.objects.BuildRequest')
+    @mock.patch('nova.objects.Instance')
+    @mock.patch('nova.objects.InstanceMapping.create')
+    def test_provision_instances_unified_limits_disabled_skips_limits_spec(
+            self, mock_im, mock_instance, mock_br, mock_rs,
+            mock_req_spec_for_limits, mock_enforce):
+        flavor = self._create_flavor()
+
+        @mock.patch.object(self.compute_api, '_get_volumes_for_bdms')
+        @mock.patch.object(
+            self.compute_api, '_create_reqspec_buildreq_instmapping',
+            new=mock.MagicMock())
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
+        @mock.patch('nova.network.security_group_api')
+        @mock.patch.object(
+            self.compute_api, '_populate_instance_for_create',
+            new=mock.MagicMock())
+        @mock.patch.object(self.compute_api,
+                           '_bdm_validate_set_size_and_instance')
+        def do_test(mock_bdm_v, mock_sg, mock_cniq, mock_get_vols):
+            mock_cniq.return_value = 1
+            self.flags(driver="nova.quota.NoopQuotaDriver", group="quota")
+            self.compute_api._provision_instances(
+                self.context, flavor, 1, 1, mock.MagicMock(), {}, None, None,
+                None, None, {}, None, None, objects.TagList(), None, False)
+
+        fake_rs = fake_request_spec.fake_spec_obj()
+        mock_rs.return_value = fake_rs
+        do_test()
+        mock_req_spec_for_limits.assert_not_called()
+        mock_enforce.assert_not_called()
 
     def test_provision_instances_creates_build_request(self):
         @mock.patch.object(self.compute_api, '_get_volumes_for_bdms')

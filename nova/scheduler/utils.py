@@ -34,6 +34,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields as obj_fields
 from nova.objects import instance as obj_instance
+from nova.pci import request as pci_request
 from nova import rpc
 from nova.scheduler.filters import utils as filters_utils
 from nova.virt import hardware
@@ -655,26 +656,66 @@ def resources_from_flavor(instance, flavor):
     """
     is_bfv = compute_utils.is_volume_backed_instance(instance._context,
                                                      instance)
-    return _get_resources(flavor, is_bfv)
+    return resources_from_flavor_and_bfv(flavor, is_bfv)
 
 
-def _get_resources(flavor, is_bfv):
-    # create a fake RequestSpec as a wrapper to the caller
+def resources_from_flavor_and_bfv(flavor, is_bfv):
+    """Convert a flavor into a dict of requested resources.
+
+    This includes resources requested directly by the flavor and its extra
+    specs. It does not include image metadata or external request groups such
+    as neutron ports or Cyborg device profiles.
+    """
     req_spec = objects.RequestSpec(flavor=flavor, is_bfv=is_bfv)
 
     # TODO(efried): This method is currently only used from places that
     # assume the compute node is the only resource provider.  So for now, we
     # just merge together all the resources specified in the flavor and pass
     # them along.  This will need to be adjusted when nested and/or shared RPs
-    # are in play.
+    # are in play.  Note: unified limits quota checks use
+    # request_spec_for_limits() plus ResourceRequest.from_request_spec() on a
+    # fully-populated RequestSpec, which does account for PCI and other extra
+    # resource groups for delta calculation.
     res_req = ResourceRequest.from_request_spec(req_spec)
 
     return res_req.merged_resources()
 
 
-def resources_for_limits(flavor, is_bfv):
-    """Work out what unified limits may be exceeded."""
-    return _get_resources(flavor, is_bfv)
+def request_spec_for_limits(
+    flavor, is_bfv, port_resource_requests=None,
+    dp_request_groups=None,
+):
+    """Build a RequestSpec for unified limits quota enforcement.
+
+    Returns a RequestSpec populated with resource requests from the flavor
+    (including PCI when pci_in_placement is enabled), neutron port bandwidth,
+    and cyborg device profile resources, so the unified limits check covers
+    all requested resource classes.
+
+    :param flavor: The instance Flavor object.
+    :param is_bfv: True if the instance is boot-from-volume.
+    :param port_resource_requests: RequestGroup list from neutron port
+        resource requests, or None.
+    :param dp_request_groups: RequestGroup list from cyborg device profile,
+        or None.
+    :returns: A RequestSpec with requested_resources and PCI groups set.
+    """
+    req_spec = objects.RequestSpec(flavor=flavor, is_bfv=is_bfv)
+    req_spec.requested_resources = []
+    if CONF.filter_scheduler.pci_in_placement:
+        req_spec.pci_requests = pci_request.get_pci_requests_from_flavor(
+            flavor)
+        req_spec.generate_request_groups_from_pci_requests()
+    if port_resource_requests:
+        req_spec.requested_resources.extend(port_resource_requests)
+    if dp_request_groups:
+        req_spec.requested_resources.extend(dp_request_groups)
+    if LOG.isEnabledFor(logging.DEBUG):
+        resources = ResourceRequest.from_request_spec(
+            req_spec).merged_resources()
+        LOG.debug(
+            "Unified limits quota request includes resources: %s", resources)
+    return req_spec
 
 
 def resources_from_request_spec(ctxt, spec_obj, host_manager,
