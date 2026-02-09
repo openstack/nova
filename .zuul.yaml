@@ -845,7 +845,6 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-            voting: false
         - cyborg-tempest:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
@@ -880,7 +879,6 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-            voting: false
         - nova-tox-py312-threading
         - nova-alt-configurations
     periodic-weekly:
