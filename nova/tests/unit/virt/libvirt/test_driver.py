@@ -38,6 +38,7 @@ import ddt
 import eventlet
 from eventlet import greenthread
 import fixtures
+import futurist
 from lxml import etree
 from os_brick import encryptors
 from os_brick import exception as brick_exception
@@ -14531,7 +14532,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr.active_migrations[instance.uuid] = collections.deque()
         dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", True)
         guest = libvirt_guest.Guest(dom)
-        finish_event = threading.Event()
+        migration_thread_future = futurist.Future()
 
         def fake_job_info():
             while True:
@@ -14540,7 +14541,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
                 if type(rec) is str:
                     if rec == "thread-finish":
-                        finish_event.set()
+                        migration_thread_future.set_result(
+                            mock.sentinel.result)
                     elif rec == "domain-stop":
                         dom.destroy()
                     elif rec == "force_complete":
@@ -14582,7 +14584,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      fake_recover_method,
                                      False,
                                      migrate_data,
-                                     finish_event,
+                                     migration_thread_future,
                                      [])
         if scheduled_action_executed:
             if scheduled_action == 'pause':
@@ -14670,8 +14672,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_live_migration_handle_pause_on_start(self):
         # A normal sequence where see all the normal job states, and pause
-        # scheduled in case of job type VIR_DOMAIN_JOB_NONE and finish_event is
-        # not ready yet
+        # scheduled in case of job type VIR_DOMAIN_JOB_NONE and the migration
+        # thread is not finished yet.
         domain_info_records = [
             "force_complete",
             libvirt_guest.JobInfo(
@@ -14696,8 +14698,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_live_migration_handle_pause_on_finish(self):
         # A normal sequence where see all the normal job states, and pause
-        # scheduled in case of job type VIR_DOMAIN_JOB_NONE and finish_event is
-        # ready
+        # scheduled in case of job type VIR_DOMAIN_JOB_NONE and the migration
+        # thread is not finished yet.
         domain_info_records = [
             libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
@@ -14805,7 +14807,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_postcopy_enabled):
         # A normal sequence where see all the normal job states, and postcopy
         # switch scheduled in case of job type VIR_DOMAIN_JOB_NONE and
-        # finish_event is not ready yet
+        # the migration thread is not finished yet.
         mock_postcopy_enabled.return_value = True
         domain_info_records = [
             "force_complete",
@@ -15178,7 +15180,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver, "live_migration_abort")
     def _test_live_migration_main(self, mock_abort, mock_copy_disk_path,
                                   mock_running, mock_guest, mock_monitor,
-                                  mock_thread, mock_conn,
+                                  mock_spawn, mock_conn,
                                   mon_side_effect=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
@@ -15212,18 +15214,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_copy_disk_path.assert_called_once_with(self.context, instance,
                                                     guest)
 
-        class AnyEvent(object):
-            def __eq__(self, other):
-                return type(other) is threading.Event
-
-        mock_thread.assert_called_once_with(
+        mock_spawn.assert_called_once_with(
             drvr._live_migration_operation,
             self.context, instance, "fakehost", True,
             migrate_data, guest, disks_to_copy[1])
         mock_monitor.assert_called_once_with(
             self.context, instance, guest, "fakehost",
             fake_post, fake_recover, True,
-            migrate_data, AnyEvent(), disks_to_copy[0])
+            migrate_data, mock_spawn.return_value, disks_to_copy[0])
 
     def test_live_migration_main(self):
         self._test_live_migration_main()
@@ -15232,13 +15230,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self._test_live_migration_main(mon_side_effect=Exception)
 
     @mock.patch.object(host.Host, "get_connection", new=mock.Mock())
-    @mock.patch.object(utils, "spawn", new=mock.Mock())
+    @mock.patch.object(utils, "spawn")
     @mock.patch.object(host.Host, "get_guest")
     @mock.patch.object(
         libvirt_driver.LibvirtDriver, "_live_migration_copy_disk_paths")
     def _test_live_migration_monitor_job_stats_exception(
-        self, exc, mock_copy_disk_paths, mock_get_guest, expect_success=True
+        self, exc, mock_copy_disk_paths, mock_get_guest, mock_spawn,
+        expect_success=True
     ):
+        mock_spawn.return_value.done.return_value = False
         # Verify behavior when various exceptions are raised inside of
         # Guest.get_job_info() during live migration monitoring.
         mock_domain = mock.Mock(fakelibvirt.virDomain)
