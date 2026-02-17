@@ -207,26 +207,6 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
                                         check_exit_code=True)
 
     @mock.patch('oslo_concurrency.processutils.execute')
-    def _test_list_partitions(self, meth, mock_execute):
-        parted_return = "BYT;\n...\n"
-        parted_return += "1:2s:11s:10s:ext3::boot;\n"
-        parted_return += "2:20s:11s:10s::bob:;\n"
-        mock_execute.return_value = (parted_return, None)
-
-        partitions = meth("abc")
-
-        self.assertEqual(2, len(partitions))
-        self.assertEqual((1, 2, 10, "ext3", "", "boot"), partitions[0])
-        self.assertEqual((2, 20, 10, "", "bob", ""), partitions[1])
-
-    def test_privileged_list_partitions(self):
-        self._test_list_partitions(nova.privsep.fs.list_partitions)
-
-    def test_unprivileged_list_partitions(self):
-        self._test_list_partitions(
-            nova.privsep.fs.unprivileged_list_partitions)
-
-    @mock.patch('oslo_concurrency.processutils.execute')
     def test_resize_partition(self, mock_execute):
         nova.privsep.fs.resize_partition('/dev/nosuch', 0, 100, True)
         mock_execute.assert_has_calls([
