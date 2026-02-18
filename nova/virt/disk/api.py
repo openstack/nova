@@ -123,7 +123,21 @@ def extend(image, size):
         nova.privsep.libvirt.ploop_resize(image.path, size)
         return
 
-    processutils.execute('qemu-img', 'resize', image.path, size)
+    # NOTE(danms): We should not call qemu-img without a format, and
+    # only qcow2 and raw are supported. So check which one we're being
+    # told this is supposed to be and pass that to qemu-img. Also note
+    # that we need to pass the qemu format string to this command, which
+    # may or may not be the same as the FORMAT_* constant, so be
+    # explicit here.
+    if image.format == imgmodel.FORMAT_RAW:
+        format = 'raw'
+    elif image.format == imgmodel.FORMAT_QCOW2:
+        format = 'qcow2'
+    else:
+        LOG.warning('Attempting to resize image %s with format %s, '
+        'which is not supported', image.path, image.format)
+        raise exception.InvalidDiskFormat(disk_format=image.format)
+    processutils.execute('qemu-img', 'resize', '-f', format, image.path, size)
 
     if (image.format != imgmodel.FORMAT_RAW and
         not CONF.resize_fs_using_block_device):
