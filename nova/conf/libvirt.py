@@ -1323,12 +1323,6 @@ Possible values:
 libvirt_volume_quobyte_opts = [
     cfg.StrOpt('quobyte_mount_point_base',
                default=paths.state_path_def('mnt'),
-               deprecated_for_removal=True,
-               deprecated_since="31.0.0",
-               deprecated_reason="""
-Quobyte volume driver in cinder was marked unsupported. Quobyte volume support
-will be removed from nova when the volume driver is removed from cinder.
-""",
                help="""
 Directory where the Quobyte volume is mounted on the compute node.
 
@@ -1341,12 +1335,6 @@ Possible values:
 * A string representing absolute path of mount point.
 """),
     cfg.StrOpt('quobyte_client_cfg',
-               deprecated_for_removal=True,
-               deprecated_since="31.0.0",
-               deprecated_reason="""
-Quobyte volume driver in cinder was marked unsupported. Quobyte volume support
-will be removed from nova when the volume driver is removed from cinder.
-""",
                help='Path to a Quobyte Client configuration file.'),
 ]
 
