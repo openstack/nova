@@ -1,0 +1,7 @@
+---
+name: Tox Continuous Integration
+'on':
+  pull_request:
+jobs:
+  tox:
+    uses: stackhpc/.github/.github/workflows/tox.yml@main
