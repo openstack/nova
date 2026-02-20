@@ -19,6 +19,7 @@ from unittest import mock
 from oslo_concurrency import processutils
 from oslo_utils import units
 
+from nova import exception
 from nova import test
 from nova.virt.disk import api
 from nova.virt.disk.mount import api as mount
@@ -128,7 +129,7 @@ class APITestCase(test.NoDBTestCase):
 
             mock_can_resize.assert_called_once_with(imgfile, imgsize)
             mock_exec.assert_called_once_with('qemu-img', 'resize',
-                                              imgfile, imgsize)
+                                              '-f', 'qcow2', imgfile, imgsize)
             mock_extendable.assert_called_once_with(image)
             mock_inst.assert_called_once_with(image, None, None)
             mock_resize.assert_called_once_with(mounter.device,
@@ -154,8 +155,8 @@ class APITestCase(test.NoDBTestCase):
         api.extend(image, imgsize)
 
         mock_can_resize_image.assert_called_once_with(imgfile, imgsize)
-        mock_execute.assert_called_once_with('qemu-img', 'resize', imgfile,
-                                             imgsize)
+        mock_execute.assert_called_once_with('qemu-img', 'resize', '-f',
+                                             'qcow2', imgfile, imgsize)
         self.assertFalse(mock_extendable.called)
 
     @mock.patch.object(api, 'can_resize_image', autospec=True,
@@ -186,8 +187,34 @@ class APITestCase(test.NoDBTestCase):
         api.extend(image, imgsize)
 
         mock_exec.assert_has_calls(
-            [mock.call('qemu-img', 'resize', imgfile, imgsize),
+            [mock.call('qemu-img', 'resize', '-f', 'raw', imgfile, imgsize),
              mock.call('e2label', image.path)])
         mock_resize.assert_called_once_with(imgfile, run_as_root=False,
                                             check_exit_code=[0])
         mock_can_resize.assert_called_once_with(imgfile, imgsize)
+
+    @mock.patch.object(api, 'can_resize_image', autospec=True,
+                       return_value=True)
+    @mock.patch.object(api, 'resize2fs', autospec=True)
+    @mock.patch('oslo_concurrency.processutils.execute', autospec=True)
+    def test_extend_vmdk_failure(self, mock_exec, mock_resize,
+                                 mock_can_resize):
+
+        imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
+        imgsize = 10
+        # NOTE(danms): There is no image.model.FORMAT_VMDK, but since the
+        # code initializes this directly from Image.disk_format without using
+        # the constant (tsk), this can actually happen at runtime.
+        self.assertRaises(exception.InvalidImageFormat,
+                          imgmodel.LocalFileImage, imgfile, 'vmdk')
+
+        # Patch ALL_FORMATS to include vmdk as if it got added at some point
+        with mock.patch('nova.virt.image.model.ALL_FORMATS',
+                        new=['vmdk']):
+            image = imgmodel.LocalFileImage(imgfile, 'vmdk')
+
+        # Make sure that we still don't call qemu-img resize on the image
+        self.assertRaises(exception.InvalidDiskFormat,
+                          api.extend, image, imgsize)
+        mock_exec.assert_not_called()
