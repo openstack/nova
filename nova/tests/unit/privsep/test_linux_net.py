@@ -47,7 +47,7 @@ class LinuxNetTestCase(test.NoDBTestCase):
         nova.privsep.linux_net.set_device_mtu('fake-dev', 1500)
         mock_execute.assert_has_calls([
             mock.call('ip', 'link', 'set', 'fake-dev', 'mtu',
-                      1500, check_exit_code=[0, 2, 254])])
+                      '1500', check_exit_code=[0, 2, 254])])
 
     @mock.patch('nova.privsep.linux_net._set_device_enabled_inner')
     def test_create_tap_dev(self, mock_enabled, mock_execute):
@@ -119,5 +119,5 @@ class LinuxNetTestCase(test.NoDBTestCase):
     def test_add_vlan(self, mock_execute):
         nova.privsep.linux_net.add_vlan('eth0', 'vlan_name', 1)
         cmd = ['ip', 'link', 'add', 'link', 'eth0', 'name', 'vlan_name',
-               'type', 'vlan', 'id', 1]
+               'type', 'vlan', 'id', '1']
         mock_execute.assert_called_once_with(*cmd, check_exit_code=[0, 2, 254])
