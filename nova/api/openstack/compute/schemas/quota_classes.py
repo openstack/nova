@@ -126,7 +126,7 @@ show_response = {
     'additionalProperties': False,
 }
 show_response['properties']['quota_class_set']['properties'].update({
-    'id': {'type': 'string', 'const': 'default'},
+    'id': {'type': 'string'},
 })
 show_response['properties']['quota_class_set']['required'].append('id')
 
@@ -135,7 +135,7 @@ show_response_v250['properties']['quota_class_set'] = copy.deepcopy(
     _quota_response_v250
 )
 show_response_v250['properties']['quota_class_set']['properties'].update({
-    'id': {'type': 'string', 'const': 'default'},
+    'id': {'type': 'string'},
 })
 show_response_v250['properties']['quota_class_set']['required'].append('id')
 
@@ -144,7 +144,7 @@ show_response_v257['properties']['quota_class_set'] = copy.deepcopy(
     _quota_response_v257
 )
 show_response_v257['properties']['quota_class_set']['properties'].update({
-    'id': {'type': 'string', 'const': 'default'},
+    'id': {'type': 'string'},
 })
 show_response_v257['properties']['quota_class_set']['required'].append('id')
 
