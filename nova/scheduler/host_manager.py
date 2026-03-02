@@ -103,7 +103,7 @@ class HostState(object):
         self.host = host
         self.nodename = node
         self.uuid = None
-        self._lock_name = (host, node)
+        self._lock_name = '-'.join((host, node))
 
         # Mutable available resources.
         # These will change as resources are virtually "consumed".

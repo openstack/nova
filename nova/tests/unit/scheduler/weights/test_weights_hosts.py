@@ -28,7 +28,7 @@ from nova.tests.unit.scheduler import fakes
 
 class TestWeighedHost(test.NoDBTestCase):
     def test_dict_conversion(self):
-        host_state = fakes.FakeHostState('somehost', None, {})
+        host_state = fakes.FakeHostState('somehost', 'somenode', {})
         host = weights.WeighedHost(host_state, 'someweight')
         expected = {'weight': 'someweight',
                     'host': 'somehost'}

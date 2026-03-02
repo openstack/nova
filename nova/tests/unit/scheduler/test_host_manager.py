@@ -804,7 +804,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         cn1 = objects.ComputeNode(host='host1')
         hm._instance_info = {'host1': {'instances': {uuids.instance: inst1},
                                        'updated': True}}
-        host_state = host_manager.HostState('host1', cn1, uuids.cell)
+        host_state = host_manager.HostState('host1', 'node1', uuids.cell)
         self.assertFalse(host_state.instances)
         mock_get_by_host.return_value = None
         host_state.update(
@@ -821,7 +821,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         cn1 = objects.ComputeNode(host='host1')
         hm._instance_info = {'host1': {'instances': {uuids.instance: inst1},
                                        'updated': False}}
-        host_state = host_manager.HostState('host1', cn1, uuids.cell)
+        host_state = host_manager.HostState('host1', 'node1', uuids.cell)
         self.assertFalse(host_state.instances)
         mock_get_by_host.return_value = [uuids.instance]
         host_state.update(
@@ -1449,7 +1449,7 @@ class HostStateTestCase(test.NoDBTestCase):
         host = host_manager.HostState("fakehost", "fakenode", uuids.cell)
         host.update(compute=compute)
 
-        sync_mock.assert_called_once_with(("fakehost", "fakenode"))
+        sync_mock.assert_called_once_with("fakehost-fakenode")
         self.assertEqual(5, host.num_instances)
         self.assertEqual(42, host.num_io_ops)
         self.assertEqual(10, len(host.stats))
@@ -1572,7 +1572,7 @@ class HostStateTestCase(test.NoDBTestCase):
         )
         numa_usage_mock.assert_called_once_with(fake_host_numa_topology,
                                                 fake_numa_topology)
-        sync_mock.assert_called_once_with(("fakehost", "fakenode"))
+        sync_mock.assert_called_once_with("fakehost-fakenode")
         self.assertEqual(fake_host_numa_topology, host.numa_topology)
         self.assertIsNotNone(host.updated)
 

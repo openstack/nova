@@ -399,7 +399,7 @@ class Image(metaclass=abc.ABCMeta):
                         {'line': line, 'error': e})
                 raise exception.InvalidDiskInfo(reason=msg)
 
-        @utils.synchronized(self.disk_info_path, external=False,
+        @utils.synchronized(self.disk_info_path or '', external=False,
                             lock_path=self.lock_path)
         def write_to_disk_info_file():
             # Use os.open to create it without group or world write permission.
