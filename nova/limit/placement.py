@@ -28,9 +28,6 @@ from nova.scheduler import utils
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
-# Cache to avoid repopulating ksa state
-PLACEMENT_CLIENT = None
-
 LEGACY_LIMITS = {
     "servers": "instances",
     "class:VCPU": "cores",

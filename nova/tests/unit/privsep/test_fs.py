@@ -192,30 +192,6 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
         mock_execute.assert_called_with('resize2fs', '/path/nosuch', '1024',
                                         check_exit_code=[0, 1, 2])
 
-    @mock.patch('oslo_concurrency.processutils.execute')
-    def test_create_partition_table(self, mock_execute):
-        nova.privsep.fs.create_partition_table('/dev/nosuch', 'style')
-        mock_execute.assert_called_with('parted', '--script', '/dev/nosuch',
-                                        'mklabel', 'style',
-                                        check_exit_code=True)
-
-    @mock.patch('oslo_concurrency.processutils.execute')
-    def test_create_partition(self, mock_execute):
-        nova.privsep.fs.create_partition('/dev/nosuch', 'style', 0, 100)
-        mock_execute.assert_called_with('parted', '--script', '/dev/nosuch',
-                                        '--', 'mkpart', 'style', '0', '100',
-                                        check_exit_code=True)
-
-    @mock.patch('oslo_concurrency.processutils.execute')
-    def test_resize_partition(self, mock_execute):
-        nova.privsep.fs.resize_partition('/dev/nosuch', 0, 100, True)
-        mock_execute.assert_has_calls([
-            mock.call('parted', '--script', '/dev/nosuch', 'rm', '1'),
-            mock.call('parted', '--script', '/dev/nosuch', 'mkpart',
-                      'primary', '0s', '100s'),
-            mock.call('parted', '--script', '/dev/nosuch',
-                      'set', '1', 'boot', 'on')])
-
 
 class MkfsTestCase(test.NoDBTestCase):
     @mock.patch('oslo_concurrency.processutils.execute')

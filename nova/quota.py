@@ -35,9 +35,6 @@ from nova.scheduler.client import report
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
-# Lazy-loaded on first access.
-# Avoid constructing the KSA adapter and provider tree on every access.
-PLACEMENT_CLIENT = None
 # If user_id and queued_for_delete are populated for a project, cache the
 # result to avoid doing unnecessary EXISTS database queries.
 UID_QFD_POPULATED_CACHE_BY_PROJECT = set()
