@@ -136,6 +136,6 @@ def confirm_dir(fsdir, uid_mappings, gid_mappings, nobody):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def shift(path, uid_map, gid_map):
-    if confirm_dir(uid_map, gid_map, path, NOBODY_ID):
+    if confirm_dir(path, uid_map, gid_map, NOBODY_ID):
         return
     shift_dir(path, uid_map, gid_map, NOBODY_ID)
