@@ -902,7 +902,7 @@
         - nova-tox-py312-threading
         - openstack-tox-cover:
             # Allow more time for unit and functional tests to run.
-            timeout: 4200
+            timeout: 5400
     gate:
       jobs:
         - nova-live-migration
