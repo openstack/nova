@@ -690,7 +690,7 @@ class FakeDriver(driver.ComputeDriver):
 
 class FakeVirtAPI(virtapi.VirtAPI):
     @contextlib.contextmanager
-    def wait_for_instance_event(self, instance, event_names, deadline=300,
+    def wait_for_instance_event(self, instance, event_names, timeout=300,
                                 error_callback=None):
         # NOTE(danms): Don't actually wait for any events, just
         # fall through

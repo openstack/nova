@@ -504,7 +504,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                 break
 
     @contextlib.contextmanager
-    def wait_for_instance_event(self, instance, event_names, deadline=300,
+    def wait_for_instance_event(self, instance, event_names, timeout=300,
                                 error_callback=None):
         """Plan to wait for some events, run some code, then wait.
 
@@ -542,7 +542,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         :param event_names: A list of event names. Each element is a
                             tuple of strings to indicate (name, tag),
                             where name is required, but tag may be None.
-        :param deadline: Maximum number of seconds we should wait for all
+        :param timeout: Maximum number of seconds we should wait for all
                          of the specified events to arrive.
         :param error_callback: A function to be called if an event arrives
 
@@ -564,7 +564,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                 # NOTE(danms): Don't wait for any of the events. They
                 # should all be canceled and fired immediately below,
                 # but don't stick around if not.
-                deadline = 0
+                timeout = 0
         try:
             yield
         except self._exit_early_exc as e:
@@ -581,7 +581,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         sw.start()
         try:
             self._wait_for_instance_events(
-                    instance, events, error_callback, timeout=deadline)
+                    instance, events, error_callback, timeout=timeout)
         except exception.InstanceEventTimeout:
             LOG.warning(
                 'Timeout waiting for %(events)s for instance with '
@@ -3129,7 +3129,7 @@ class ComputeManager(manager.Manager):
 
         timeout = CONF.arq_binding_timeout
         with self.virtapi.wait_for_instance_event(
-                instance, events, deadline=timeout):
+                instance, events, timeout=timeout):
             resolved_arqs = cyclient.get_arqs_for_instance(
                     instance.uuid, only_resolved=True)
             # Events for these resolved ARQs may have already arrived.
@@ -3863,14 +3863,14 @@ class ComputeManager(manager.Manager):
             raise exception.BuildAbortException(
                 instance_uuid=instance.uuid, reason=msg)
         image_size = int(math.ceil(float(image.get('size')) / units.Gi))
-        deadline = CONF.reimage_timeout_per_gb * image_size
+        timeout = CONF.reimage_timeout_per_gb * image_size
         error_cb = self._reimage_failed_callback
 
         # Call cinder to perform reimage operation and wait until an
         # external event is triggered.
         try:
             with self.virtapi.wait_for_instance_event(instance, events,
-                                                      deadline=deadline,
+                                                      timeout=timeout,
                                                       error_callback=error_cb):
                 self.volume_api.reimage_volume(
                     context, root_bdm.volume_id, image_id,
@@ -9711,7 +9711,7 @@ class ComputeManager(manager.Manager):
             else:
                 disk = None
 
-            deadline = CONF.vif_plugging_timeout
+            timeout = CONF.vif_plugging_timeout
             error_cb = self._neutron_failed_live_migration_callback
             # In order to avoid a race with the vif plugging that the virt
             # driver does on the destination host, we register our events
@@ -9719,7 +9719,7 @@ class ComputeManager(manager.Manager):
             # dest host reports back that we shouldn't wait, we can break
             # out of the context manager using _BreakWaitForInstanceEvent.
             with self.virtapi.wait_for_instance_event(
-                    instance, events, deadline=deadline,
+                    instance, events, timeout=timeout,
                     error_callback=error_cb):
                 with timeutils.StopWatch() as timer:
                     # TODO(mriedem): The "block_migration" parameter passed

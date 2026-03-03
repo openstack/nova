@@ -286,7 +286,7 @@ class ZVMDriver(driver.ComputeDriver):
         try:
             event = self._get_neutron_event(network_info)
             with self.virtapi.wait_for_instance_event(
-                    instance, event, deadline=timeout,
+                    instance, event, timeout=timeout,
                     error_callback=self._neutron_failed_callback):
                 self._setup_network(vm_name, os_distro, network_info, instance)
         except exception.InstanceEventTimeout:
