@@ -85,14 +85,14 @@ libvirt to unlock the emulated TPM data any time the server is booted.
        Existing servers that were created before 33.0.0 (2026.1 Gazpacho) will
        also have this mode.
    * - ``host``
-     - The passphrase in the key manager is associated with the credentials of
-       the owner of the server (the user who initially created it). The libvirt
+     - The passphrase in the key manager is created using the credentials of
+       the server owner (the user who initially created it). The libvirt
        secret is not ``private`` and not ``ephemeral``, which means it can be
        retrieved via the libvirt API or ``virsh`` and it exists on disk. A
        server with this security mode can be live migrated, including by users
-       other than the owner of the server, such as admin, if API policy allows.
-       To transport the TPM secret to the destination host during a live
-       migration, the libvirt secret is sent over RPC.
+       other than the server owner, if API policy allows. The key manager
+       service is not accessed during live migration in this mode; the libvirt
+       secret is sent to the destination host over RPC.
 
 Although the above ``user`` mechanism uses a libvirt secret__ that is both
 ``private`` (can't be displayed via the libvirt API or ``virsh``) and
@@ -155,7 +155,7 @@ A legacy server can be converted to a TPM secret security mode capable of live
 migration via a resize to a flavor that has the ``hw:tpm_secret_security``
 extra spec set to ``host``.
 
-For example:
+For example, set the extra spec in the flavor:
 
 .. code-block:: console
 
@@ -164,9 +164,20 @@ For example:
        --property hw:tpm_model=tpm-crb \
        --property hw:tpm_secret_security=host
 
+Then, resize the server to the flavor:
+
+.. code-block:: console
+
    $ openstack server resize --flavor $FLAVOR $SERVER
 
    $ openstack server resize confirm $SERVER
+
+.. important::
+
+   Access to the TPM secret in the key manager service is required to perform
+   a resize. Whether a user other than the server owner has access depends on
+   the key manager service's access control policy. See the key manager
+   service documentation for details.
 
 
 Limitations
@@ -193,10 +204,9 @@ Limitations
    * - ``host``
      - Certain server operations performed by users other than the server
        owner are supported. Hard reboot, start from stopped, and live migration
-       are supported if API policy allows, without need of key manager service
-       ACLs. This is because nova-compute can read the locally stored Libvirt
-       secret from the server's compute host in this mode and the server
-       owner's credentials are not required.
+       are supported if API policy allows, without accessing the key manager
+       service. This is because nova-compute can read the locally stored
+       libvirt secret from the server's compute host in this mode.
 
 
 References
