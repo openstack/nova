@@ -2852,8 +2852,8 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
         self.assertXmlEqual(fake_libvirt_data.FAKE_KVM_GUEST, xml)
 
-    def _test_config_uefi(self):
-        obj = config.libvirtconfigguest()
+    def test_config_uefi(self):
+        obj = config.LibvirtConfigGuest()
         obj.virt_type = "kvm"
         obj.memory = 100 * units.Mi
         obj.vcpus = 1
@@ -2867,9 +2867,10 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_loader_secure = True
         obj.os_loader_stateless = True
         obj.os_nvram = '/foo/bar/instance-00000012_VARS.fd'
+        obj.os_nvram_template = '/tmp/OVMF_VARS.fd'
         xml = obj.to_xml()
 
-        self.assertxmlequal(
+        self.assertXmlEqual(
             """
             <domain type="kvm">
               <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
@@ -2879,7 +2880,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <os>
                 <type machine="pc-q35-5.1">hvm</type>
                 <loader stateless='yes' secure='yes' readonly='yes' type='pflash'>/tmp/OVMF_CODE.secboot.fd</loader>
-                <nvram>/foo/bar/instance-00000012_VARS.fd</nvram>
+                <nvram template='/tmp/OVMF_VARS.fd'>/foo/bar/instance-00000012_VARS.fd</nvram>
               </os>
             </domain>""",  # noqa: E501
             xml,
