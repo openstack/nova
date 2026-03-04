@@ -142,9 +142,7 @@ class Claim(NopClaim):
             host_topology = objects.NUMATopology.obj_from_db_obj(
                     host_topology)
             pci_requests = self._pci_requests
-            pci_stats = None
-            if pci_requests.requests:
-                pci_stats = self.tracker.pci_tracker.stats
+            pci_stats = self.tracker.pci_tracker.stats
 
             instance_topology = hardware.numa_fit_instance_to_host(
                 host_topology,
