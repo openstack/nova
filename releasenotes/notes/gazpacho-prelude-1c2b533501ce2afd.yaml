@@ -1,0 +1,64 @@
+---
+prelude: |
+  The OpenStack 2026.1 Gazpacho (Nova 33.0.0) release includes many new features and
+  bug fixes. Please be sure to read the upgrade section which describes the
+  required actions to upgrade your cloud from 32.0.0 (2025.2) to 33.0.0
+  (2026.1).
+  As a reminder, OpenStack 2026.1 is a
+  `Skip-Level-Upgrade Release <https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html>`_
+  (starting from now, we name it a `SLURP release`) meaning that you can
+  do rolling-upgrades from 2025.1 Epoxy directly by skipping to upgrade to
+  2025.2 Flamingo release.
+
+  There are a few major changes worth mentioning. This is not an exhaustive
+  list:
+
+  - The latest Compute API microversion supported for 2026.1 is
+    `v2.103 <https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-2026-1-gazpacho>`_.
+
+  - Nova now supports parallel live migrations via a new
+    ``[libvirt] live_migration_parallel_connections`` config option,
+    enabling multiple connections for memory transfer during live migration
+    to improve speed.
+
+  - Nova now enables one IOThread per QEMU instance by default, offloading
+    disk I/O processing from vCPU threads to improve performance. For
+    real-time instances, the IOThread is pinned to the same cores as the
+    emulator thread to avoid impacting dedicated vCPUs.
+
+  - Nova now supports live migration of instances with vTPM devices when
+    using ``host`` secret security mode. A new ``hw:tpm_secret_security`` extra
+    spec allows operators to select this mode, where the TPM secret is
+    persisted in libvirt and transferred over RPC to the destination during
+    migration. Instance owners can resize existing legacy vTPM instances to
+    a flavor with ``hw:tpm_secret_security=host`` to opt in to live
+    migration. Note that this resize must be performed by the instance owner
+    due to Barbican secret ownership constraints, unless the admin has been
+    granted appropriate ACLs in Barbican. The legacy ``user`` secret security
+    mode does not yet support live migration but may do so in a future
+    release once additional deployment and API changes are completed.
+
+  - Starting from microversion 2.101, the volume-attach API is now
+    asynchronous, returning HTTP 202 instead of blocking until completion. This
+    reduces API response time by offloading the operation to nova-conductor.
+
+  - Nova's libvirt driver now delegates UEFI firmware selection to libvirt
+    instead of handling it internally. Libvirt's built-in auto-selection
+    picks the best firmware file based on requested features (including Secure
+    Boot and AMD SEV), and supports additional firmware types like ROM.
+
+  - Nova now has full OpenAPI schema coverage, with JSON Schema for request and
+    response bodies across all API endpoints, enabling future auto-generation
+    of OpenAPI specifications.
+
+  - Experimental feature: Nova services now supports graceful shutdown
+    (part 1 of a larger effort). A second RPC server is introduced in
+    compute service to handle in-progress operations during shutdown. The
+    configurable timeouts controls how long the service waits for ongoing
+    tasks to complete before fully stopping, preventing operations from
+    being left in an unrecoverable state.
+
+  - Experimental feature: Nova services can run in native threading mode
+    as an alternative to eventlet. Please try it in non-production environment
+    and share your success or failure with us on the openstack-discuss mailing
+    list or via the Nova bug tracker.
