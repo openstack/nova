@@ -294,6 +294,7 @@ SERVICE_VERSION_ALIASES = {
     'Dalmatian': 67,
     'Epoxy': 68,
     'Flamingo': 70,
+    'Gazpacho': 72,
 }
 
 
