@@ -442,6 +442,7 @@ class ComputeAPI(object):
         'dalmatian': '6.3',
         'epoxy': '6.4',
         'flamingo': '6.4',
+        'gazpacho': '6.5',
     }
 
     @property
