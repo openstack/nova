@@ -281,7 +281,7 @@ NODE_IDENTITY_VERSION = 65
 # service startup can be skipped by setting the
 # [workarounds]/[workarounds]/disable_compute_service_check_for_ffu
 # configuration option to True, like grenade-skip-level jobs do.
-OLDEST_SUPPORTED_SERVICE_VERSION = 'Epoxy'
+OLDEST_SUPPORTED_SERVICE_VERSION = 'Gazpacho'
 SERVICE_VERSION_ALIASES = {
     'Victoria': 52,
     'Wallaby': 54,
