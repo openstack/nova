@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Fixed slow nova-compute startup caused by lazy-loading instance
+    attributes. During init_host(), the _validate_vtpm_configuration()
+    method accesses instance.flavor and instance.image_meta, which
+    triggered 2*N sequential database queries for N instances. These
+    attributes are now pre-loaded in the initial InstanceList query,
+    reducing startup time significantly for hosts with many instances.
