@@ -65,6 +65,12 @@ class MemEncryptionConfig(metaclass=abc.ABCMeta):
     def required_trait(self) -> str:
         pass
 
+    @abc.abstractmethod
+    def check_constraints(self, image_meta: 'objects.ImageMeta',
+                          machine_type: str | None,
+                          requesters: list[str]) -> None:
+        pass
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, MemEncryptionConfig):
             return False
@@ -102,6 +108,72 @@ class MemEncryptionConfigSev(MemEncryptionConfig):
     @property
     def required_trait(self) -> str:
         return os_traits.HW_CPU_X86_AMD_SEV
+
+    def _check_firmware_type(self, image_meta: 'objects.ImageMeta',
+                             requesters: list[str]) -> None:
+        if image_meta.properties.get('hw_firmware_type') == 'uefi':
+            return
+
+        emsg = _(
+            "Memory encryption requested by %(requesters)s but image "
+            "metadata doesn't have 'hw_firmware_type' property set to "
+            "'uefi' "
+        )
+        # image_meta.name is not set if image object represents root Cinder
+        # volume, for this case FlavorImageConflict should be raised, but
+        # image_meta.name can't be extracted.
+        image_name = (image_meta.name if 'name' in image_meta else None)
+        data = {'requesters': " and ".join(requesters),
+                'image_name': image_name}
+        raise exception.FlavorImageConflict(emsg % data)
+
+    def _check_machine_type(self, image_meta: 'objects.ImageMeta',
+                            machine_type: str | None) -> None:
+        # NOTE(aspiers): As explained in the SEV spec, SEV needs a q35
+        # machine type in order to bind all the virtio devices to the PCIe
+        # bridge so that they use virtio 1.0 and not virtio 0.9, since
+        # QEMU's iommu_platform feature was added in virtio 1.0 only:
+        #
+        # http://specs.openstack.org/openstack/nova-specs/specs/train/approved/amd-sev-libvirt-support.html
+        #
+        # So if the image explicitly requests a machine type which is not
+        # in the q35 family, raise an exception.
+        #
+        # This check can be triggered both at API-level, at which point we
+        # can't check here what value of CONF.libvirt.hw_machine_type may
+        # have been configured on the compute node, and by the libvirt
+        # driver, in which case the driver can check that config option
+        # and will pass the machine_type parameter.
+        mach_type = machine_type or image_meta.properties.get(
+            'hw_machine_type')
+
+        # If hw_machine_type is not specified on the image and is not
+        # configured correctly on SEV compute nodes, then a separate check
+        # in the driver will catch that and potentially retry on other
+        # compute nodes.
+        if mach_type is None:
+            LOG.debug(
+                "Machine type not specified, will be validated by driver.")
+            return
+
+        # image_meta.name is not set if image object represents root Cinder
+        # volume.
+        image_name = (image_meta.name if 'name' in image_meta else None)
+        # image_meta.id is not set when booting from volume.
+        image_id = (image_meta.id if 'id' in image_meta else '<no-id>')
+        # Could be something like pc-q35-2.11 if a specific version of the
+        # machine type is required, so do substring matching.
+        if 'q35' not in mach_type:
+            raise exception.InvalidMachineType(
+                mtype=mach_type,
+                image_id=image_id, image_name=image_name,
+                reason=_("q35 type is required for SEV to work"))
+
+    def check_constraints(self, image_meta: 'objects.ImageMeta',
+                          machine_type: str | None,
+                          requesters: list[str]) -> None:
+        self._check_firmware_type(image_meta, requesters)
+        self._check_machine_type(image_meta, machine_type)
 
 
 class MemEncryptionConfigSevEs(MemEncryptionConfigSev):
@@ -1288,9 +1360,6 @@ def get_mem_encryption_constraint(
         enc_requesters.append("hw_mem_encryption property of image %s" %
                               image_id)
 
-    _check_mem_encryption_uses_uefi_image(enc_requesters, image_meta)
-    _check_mem_encryption_machine_type(image_meta, machine_type)
-
     LOG.debug("Memory encryption requested by %s",
               " and ".join(enc_requesters))
 
@@ -1317,7 +1386,10 @@ def get_mem_encryption_constraint(
         LOG.debug("Memory encryption model requested by %s",
                   " and ".join(model_requesters))
 
-    return MemEncryptionConfig.create(mem_enc_model)
+    mem_enc_config = MemEncryptionConfig.create(mem_enc_model)
+    mem_enc_config.check_constraints(image_meta, machine_type, enc_requesters)
+
+    return mem_enc_config
 
 
 def _check_for_mem_encryption_requirement_conflicts(
@@ -1367,62 +1439,6 @@ def _check_for_mem_encryption_model_conflicts(
             'image_val': image_mem_enc_model,
         }
         raise exception.FlavorImageConflict(emsg % data)
-
-
-def _check_mem_encryption_uses_uefi_image(requesters, image_meta):
-    if image_meta.properties.get('hw_firmware_type') == 'uefi':
-        return
-
-    emsg = _(
-        "Memory encryption requested by %(requesters)s but image "
-        "%(image_name)s doesn't have 'hw_firmware_type' property set to "
-        "'uefi' or volume-backed instance was requested"
-    )
-    # image_meta.name is not set if image object represents root Cinder
-    # volume, for this case FlavorImageConflict should be raised, but
-    # image_meta.name can't be extracted.
-    image_name = (image_meta.name if 'name' in image_meta else None)
-    data = {'requesters': " and ".join(requesters),
-            'image_name': image_name}
-    raise exception.FlavorImageConflict(emsg % data)
-
-
-def _check_mem_encryption_machine_type(image_meta, machine_type=None):
-    # NOTE(aspiers): As explained in the SEV spec, SEV needs a q35
-    # machine type in order to bind all the virtio devices to the PCIe
-    # bridge so that they use virtio 1.0 and not virtio 0.9, since
-    # QEMU's iommu_platform feature was added in virtio 1.0 only:
-    #
-    # http://specs.openstack.org/openstack/nova-specs/specs/train/approved/amd-sev-libvirt-support.html
-    #
-    # So if the image explicitly requests a machine type which is not
-    # in the q35 family, raise an exception.
-    #
-    # This check can be triggered both at API-level, at which point we
-    # can't check here what value of CONF.libvirt.hw_machine_type may
-    # have been configured on the compute node, and by the libvirt
-    # driver, in which case the driver can check that config option
-    # and will pass the machine_type parameter.
-    mach_type = machine_type or image_meta.properties.get('hw_machine_type')
-
-    # If hw_machine_type is not specified on the image and is not
-    # configured correctly on SEV compute nodes, then a separate check
-    # in the driver will catch that and potentially retry on other
-    # compute nodes.
-    if mach_type is None:
-        return
-
-    # image_meta.name is not set if image object represents root Cinder volume.
-    image_name = (image_meta.name if 'name' in image_meta else None)
-    # image_meta.id is not set when booting from volume.
-    image_id = (image_meta.id if 'id' in image_meta else '<no-id>')
-    # Could be something like pc-q35-2.11 if a specific version of the
-    # machine type is required, so do substring matching.
-    if 'q35' not in mach_type:
-        raise exception.InvalidMachineType(
-            mtype=mach_type,
-            image_id=image_id, image_name=image_name,
-            reason=_("q35 type is required for SEV to work"))
 
 
 def _get_numa_pagesize_constraint(
