@@ -335,9 +335,7 @@ class ResourceRequest(object):
         LOG.debug("Added %s=1 to requested resources",
                   orc.MEM_ENCRYPTION_CONTEXT)
 
-        me_trait = os_traits.HW_CPU_X86_AMD_SEV
-        if mem_enc_config.model == obj_fields.MemEncryptionModel.AMD_SEV_ES:
-            me_trait = os_traits.HW_CPU_X86_AMD_SEV_ES
+        me_trait = mem_enc_config.required_trait
         self._add_trait(me_trait, 'required')
         LOG.debug("Requiring memory encryption model %s via trait %s",
                   mem_enc_config.model, me_trait)

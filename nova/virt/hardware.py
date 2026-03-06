@@ -60,6 +60,11 @@ class MemEncryptionConfig(metaclass=abc.ABCMeta):
     def needs_locked_memory(self) -> bool:
         pass
 
+    @property
+    @abc.abstractmethod
+    def required_trait(self) -> str:
+        pass
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, MemEncryptionConfig):
             return False
@@ -94,11 +99,19 @@ class MemEncryptionConfigSev(MemEncryptionConfig):
     def needs_locked_memory(self) -> bool:
         return True
 
+    @property
+    def required_trait(self) -> str:
+        return os_traits.HW_CPU_X86_AMD_SEV
+
 
 class MemEncryptionConfigSevEs(MemEncryptionConfigSev):
     @property
     def model(self) -> str:
         return fields.MemEncryptionModel.AMD_SEV_ES
+
+    @property
+    def required_trait(self) -> str:
+        return os_traits.HW_CPU_X86_AMD_SEV_ES
 
 
 def get_vcpu_pin_set():
