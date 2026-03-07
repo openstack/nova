@@ -3051,6 +3051,7 @@ class ComputeManager(manager.Manager):
                 self._build_resources_cleanup(instance, network_info)
         except (exception.UnexpectedTaskStateError,
                 exception.InstanceUnacceptable,
+                exception.ExternalNetworkAttachForbidden,
                 exception.OverQuota, exception.InvalidBDM) as e:
             self._build_resources_cleanup(instance, network_info)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
