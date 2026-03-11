@@ -9237,43 +9237,39 @@ class LibvirtDriver(driver.ComputeDriver):
                             That code is supporting Placement API version 1.12
         """
         vgpu_allocations = self._vgpu_allocations(allocations)
-        if not vgpu_allocations:
-            return
-        # TODO(sbauza): For the moment, we only support allocations for only
-        # one pGPU.
-        if len(vgpu_allocations) > 1:
-            LOG.warning('More than one allocation was passed over to libvirt '
-                        'while at the moment libvirt only supports one. Only '
-                        'the first allocation will be looked up.')
-        rp_uuid, alloc = next(iter(vgpu_allocations.items()))
-        # We only have one allocation with a supported resource class
-        vgpus_asked = list(alloc['resources'].values())[0]
 
-        # Find if we allocated against a specific pGPU (and then the allocation
-        # is made against a child RP) or any pGPU (in case the VGPU inventory
-        # is still on the root RP)
-        try:
-            allocated_rp = self.provider_tree.data(rp_uuid)
-        except ValueError:
-            # The provider doesn't exist, return a better understandable
-            # exception
-            raise exception.ComputeResourcesUnavailable(
-                reason='mdev-capable resource is not available')
-        # FIXME(sbauza): The functional reshape test assumes that we could
-        # run _allocate_mdevs() against non-nested RPs but this is impossible
-        # as all inventories have been reshaped *before now* since it's done
-        # on init_host() (when the compute restarts or whatever else calls it).
-        # That said, since fixing the functional test isn't easy yet, let's
-        # assume we still support a non-nested RP for now.
-        if allocated_rp.parent_uuid is None:
-            # We are on a root RP
-            parent_device = None
-        else:
+        chosen_mdevs = []
+        for rp_uuid, alloc in vgpu_allocations.items():
+            # We only have one allocation with a supported resource class
+            # FIXME(sbauza): If a new vfio-mdev usage supports more than one
+            # type per PCI device, we would need to modify this. For the
+            # moment, all of the vfio-mdev drivers that we know only support
+            # one type per mdev-supported device.
+            vgpus_asked = list(alloc['resources'].values())[0]
+
+            try:
+                allocated_rp = self.provider_tree.data(rp_uuid)
+            except ValueError:
+                # The provider doesn't exist, return a better understandable
+                # exception
+                raise exception.ComputeResourcesUnavailable(
+                    reason='Resource Provider %s is missing' % rp_uuid)
             rp_name = allocated_rp.name
             # There can be multiple roots, we need to find the root name
             # to guess the physical device name
             roots = list(self.provider_tree.roots)
             for root in roots:
+                # FIXME(sbauza): The functional reshape test assumes that we
+                # could run _allocate_mdevs() against non-nested RPs but this
+                # is impossible as all inventories have been reshaped *before
+                # now* since it's done on init_host() (when the compute
+                # restarts or whatever else calls it). That said, since fixing
+                # the functional test isn't easy yet, let's assume we still
+                # support a non-nested RP for now.
+                if allocated_rp.parent_uuid is None:
+                    # We are on a root RP
+                    parent_device = None
+                    break
                 if rp_name.startswith(root.name + '_'):
                     # The RP name convention is :
                     #    root_name + '_' + parent_device
@@ -9290,28 +9286,29 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.ComputeResourcesUnavailable(
                     reason='mdev-capable resource is not available')
 
-        supported_types = self.supported_vgpu_types
-        # Which mediated devices are created but not assigned to a guest ?
-        mdevs_available = self._get_existing_mdevs_not_assigned(
-            parent_device, supported_types)
+            supported_types = self.supported_vgpu_types
+            # Which mediated devices are created but not assigned to a guest ?
+            mdevs_available = self._get_existing_mdevs_not_assigned(
+                parent_device, supported_types)
 
-        chosen_mdevs = []
-        for c in range(vgpus_asked):
-            chosen_mdev = None
-            if mdevs_available:
-                # Take the first available mdev
-                chosen_mdev = mdevs_available.pop()
-            else:
-                LOG.debug('No available mdevs where found. '
-                          'Creating an new one...')
-                chosen_mdev = self._create_new_mediated_device(parent_device)
-            if not chosen_mdev:
-                # If we can't find devices having available VGPUs, just raise
-                raise exception.ComputeResourcesUnavailable(
-                    reason='mdev-capable resource is not available')
-            else:
-                chosen_mdevs.append(chosen_mdev)
-                LOG.info('Allocated mdev: %s.', chosen_mdev)
+            for c in range(vgpus_asked):
+                chosen_mdev = None
+                if mdevs_available:
+                    # Take the first available mdev
+                    chosen_mdev = mdevs_available.pop()
+                else:
+                    LOG.debug('No available mdevs where found. '
+                              'Creating a new one...')
+                    chosen_mdev = self._create_new_mediated_device(
+                        parent_device)
+                if not chosen_mdev:
+                    # If we can't find devices having available VGPUs, just
+                    # raise
+                    raise exception.ComputeResourcesUnavailable(
+                        reason='mdev-capable resource is not available')
+                else:
+                    chosen_mdevs.append(chosen_mdev)
+                    LOG.info('Allocated mdev: %s.', chosen_mdev)
         return chosen_mdevs
 
     def _detach_mediated_devices(self, guest):

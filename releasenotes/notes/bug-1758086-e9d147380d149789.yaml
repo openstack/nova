@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    You can now request different resource groups in your flavor for VGPU or
+    generic mediated device custom resource classes. Previously, only the
+    first resource request group was honored. See `bug #1758086`_ for more
+    details.
+
+    .. _bug #1758086: https://bugs.launchpad.net/nova/+bug/1758086

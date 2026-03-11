@@ -321,10 +321,16 @@ class VGPUTests(VGPUTestBase):
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=flavor, networks='auto', host=self.compute1.host)
 
-        # FIXME(sbauza): Unfortunately, we only accept one allocation per
-        # instance by the libvirt driver as you can see in _allocate_mdevs().
-        # So, eventually, we only have one vGPU for this instance.
-        self.assert_mdev_usage(self.compute1, expected_amount=1)
+        # Eventually, we have two allocations and two mdevs
+        self.assert_mdev_usage(self.compute1, expected_amount=2)
+        # Let's verify those are spread between both GPU RPs
+        rp_uuid = self.compute_rp_uuids['host1']
+        rp_uuids = self._get_all_rp_uuids_in_a_tree(rp_uuid)
+        for rp in rp_uuids:
+            inventory = self._get_provider_inventory(rp)
+            if orc.VGPU in inventory:
+                usage = self._get_provider_usages(rp)
+                self.assertEqual(1, usage[orc.VGPU])
 
 
 class VGPUMultipleTypesTests(VGPUTestBase):

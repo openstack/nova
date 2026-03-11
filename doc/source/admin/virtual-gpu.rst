@@ -172,6 +172,39 @@ provided by compute nodes.
    $ openstack server create --flavor vgpu_1 --image cirros-0.3.5-x86_64-uec --wait test-vgpu
 
 
+Ask for more than one vGPU per instance by the flavor
+-----------------------------------------------------
+
+.. versionchanged:: 33.0.0
+
+We have an open bug report `bug 1758086`_ explaining that the nvidia driver
+doesn't support more than one vGPU per instance (and per GPU resource - which
+can be a physical GPU or a virtual function, see nvidia docs for more details).
+In order to alleviate this problem, this is mandatory to require in the flavor
+to have all the vGPUs to be spread between multiple GPU resource providers.
+
+For example, you can request two groups of vGPUs this way :
+
+.. code-block:: console
+
+   $ openstack flavor set vgpu_2 --property "resources1:VGPU=1" \
+                                 --property "resources2:VGPU=1" \
+
+
+With SR-IOV GPUs (you may need to refer to nvidia documentation to know the
+distinction), this will work without requiring further attributes as every
+single VGPU Resource Provider only provides a single VGPU resource.
+
+For non-SRIOV GPUs, you may require other properties in order to request
+Placement to allocate you some host with two distinct GPUs.
+You may need to create distinct custom traits per GPU or custom resource
+classes for explicitly telling in your flavor that you would want resources
+from distinct entities, or you could use ``group_policy=isolate`` as a property
+but you would need to make sure that you don't ask for other resources but
+virtual GPUs in your flavor or Placement would shard all the allocations for
+*all* resource groups.
+
+
 How to discover a GPU type
 --------------------------
 
@@ -490,6 +523,7 @@ For nested vGPUs:
 .. _bug 1762688: https://bugs.launchpad.net/nova/+bug/1762688
 .. _bug 1948705: https://bugs.launchpad.net/nova/+bug/1948705
 .. _supports vGPU live-migrations: https://specs.openstack.org/openstack/nova-specs/specs/2024.1/approved/libvirt-mdev-live-migrate.html
+.. _bug 1758086: https://bugs.launchpad.net/nova/+bug/1758086
 
 .. Links
 .. _Intel GVT-g: https://01.org/igvt-g
