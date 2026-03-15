@@ -742,3 +742,75 @@ class TestProviderTree(test.NoDBTestCase):
         # Verify that deep copy behaves the same so the copy uses the same
         # shared lock
         self.assertIs(pt.lock, cpt.lock)
+
+    def test_subtree_returns_root_only(self):
+        """subtree() on a single-node tree returns an equivalent tree."""
+        pt = provider_tree.ProviderTree()
+        cn_uuid = uuids.cn1
+        pt.new_root('cn1', cn_uuid)
+        pt.update_inventory(cn_uuid, {'VCPU': {'total': 4}})
+        pt.update_traits(cn_uuid, {'TRAIT_A'})
+
+        sub = pt.subtree(cn_uuid)
+
+        self.assertEqual([cn_uuid], sub.get_provider_uuids())
+        self.assertEqual({'VCPU': {'total': 4}}, sub.data(cn_uuid).inventory)
+        self.assertEqual({'TRAIT_A'}, sub.data(cn_uuid).traits)
+
+    def test_subtree_includes_children(self):
+        """subtree() includes child providers of the requested root."""
+        pt = provider_tree.ProviderTree()
+        root_uuid = uuids.root
+        child_uuid = uuids.child
+        pt.new_root('root', root_uuid)
+        pt.new_child('child', root_uuid, uuid=child_uuid)
+        pt.update_inventory(child_uuid, {'CUSTOM_FOO': {'total': 2}})
+
+        sub = pt.subtree(root_uuid)
+
+        self.assertIn(root_uuid, sub.get_provider_uuids())
+        self.assertIn(child_uuid, sub.get_provider_uuids())
+        self.assertEqual(2, len(sub.get_provider_uuids()))
+
+    def test_subtree_excludes_other_roots(self):
+        """subtree() does not include providers from sibling trees."""
+        pt = provider_tree.ProviderTree()
+        cn1_uuid = uuids.cn1
+        cn2_uuid = uuids.cn2
+        pt.new_root('cn1', cn1_uuid)
+        pt.new_root('cn2', cn2_uuid)
+        pt.update_inventory(cn2_uuid, {'VCPU': {'total': 8}})
+
+        sub = pt.subtree(cn1_uuid)
+
+        self.assertEqual([cn1_uuid], sub.get_provider_uuids())
+        self.assertFalse(sub.exists(cn2_uuid))
+
+    def test_subtree_is_deep_copy(self):
+        """Mutations to the subtree do not affect the original tree."""
+        pt = provider_tree.ProviderTree()
+        cn_uuid = uuids.cn1
+        pt.new_root('cn1', cn_uuid)
+        pt.update_inventory(cn_uuid, {'VCPU': {'total': 4}})
+
+        sub = pt.subtree(cn_uuid)
+        sub.update_inventory(cn_uuid, {'VCPU': {'total': 99}})
+
+        # Original tree must be unchanged
+        self.assertEqual({'VCPU': {'total': 4}},
+                         pt.data(cn_uuid).inventory)
+
+    def test_subtree_raises_for_non_root(self):
+        """subtree() raises ValueError when called on a non-root provider."""
+        pt = provider_tree.ProviderTree()
+        root_uuid = uuids.root
+        child_uuid = uuids.child
+        pt.new_root('root', root_uuid)
+        pt.new_child('child', root_uuid, uuid=child_uuid)
+
+        self.assertRaises(ValueError, pt.subtree, child_uuid)
+
+    def test_subtree_raises_for_missing_provider(self):
+        """subtree() raises ValueError for an unknown name/UUID."""
+        pt = provider_tree.ProviderTree()
+        self.assertRaises(ValueError, pt.subtree, uuids.nonexistent)

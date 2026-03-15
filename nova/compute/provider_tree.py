@@ -20,6 +20,7 @@ no remoteable methods nor is there any interaction with the nova.db modules.
 
 import collections
 import copy
+from typing import Final
 
 import os_traits
 from oslo_concurrency import lockutils
@@ -728,6 +729,32 @@ class ProviderTree(object):
             provider = self._find_with_lock(name_or_uuid)
             return provider.update_resources(resources)
 
+    def subtree(self, name_or_uuid):
+        """Return a new ProviderSubTree containing only the subtree rooted at
+        the provider identified by name_or_uuid.
+
+        For the Ironic (1:N) driver this is a single root provider.
+        Callers that only need to inspect or mutate one node's data should use
+        this instead of copy.deepcopy(whole_tree) to avoid O(N²) behaviour.
+
+        :param name_or_uuid: Either the name or UUID of the root of the
+                             desired subtree.  The provider must be a root in
+                             the current tree (i.e. have no parent_uuid).
+        :returns: A new ProviderSubTree containing a deep-copy of that subtree.
+        :raises: ValueError if name_or_uuid is not found, or if the identified
+                 provider is not a root provider.
+        """
+        with self.lock:
+            found = self._find_with_lock(name_or_uuid)
+            if found.parent_uuid is not None:
+                raise ValueError(
+                    _("Provider %s is not a root provider") % name_or_uuid)
+            new_root = copy.deepcopy(found)
+        new_sub_tree = ProviderSubTree(name_or_uuid)
+        new_sub_tree.roots_by_uuid[new_root.uuid] = new_root
+        new_sub_tree.roots_by_name[new_root.name] = new_root
+        return new_sub_tree
+
     def __getstate__(self):
         """Define how pickle and therefore deepcopy works.
 
@@ -747,3 +774,21 @@ class ProviderTree(object):
         """
         state["lock"] = lockutils.internal_lock(_LOCK_NAME)
         self.__dict__.update(state)
+
+
+class ProviderSubTree(ProviderTree):
+    """Represents a subtree of a ProviderTree.
+
+    Represents the subtree rooted at rp_uuid (a deep-copy of
+    O(K) providers where K is the subtree size) rather than a deep-copy
+    of the entire shared tree. This helps avoid large, unnecessary deep-copies
+    of an entire shared tree which cost on the order of O(N²).
+    """
+
+    def __init__(self, scope_rp_uuid: str):
+        super(ProviderSubTree, self).__init__()
+        self._scope_rp_uuid: Final = scope_rp_uuid
+
+    @property
+    def scope_rp_uuid(self) -> str:
+        return self._scope_rp_uuid

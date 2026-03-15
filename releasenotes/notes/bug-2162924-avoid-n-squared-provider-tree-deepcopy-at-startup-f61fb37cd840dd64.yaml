@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fixes an ``O(N^2)`` provider tree deep-copy that occurred each time a
+    provider was inserted during `ProviderTree.populate_from_iterable()`.
+    Now a provider sub-tree is used and only the `K` rooted providers at the
+    requested node are copied.

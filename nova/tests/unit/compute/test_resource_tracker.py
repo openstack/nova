@@ -585,6 +585,24 @@ class BaseTestCase(test.NoDBTestCase):
 
         return ptree
 
+    def _setup_subtree(self, compute, ptree):
+        """Set up a ProviderSubTree a compute node root, and mock the
+        ReportClient's get_provider_subtree_and_ensure_root() to return
+        it.
+        """
+        subtree = provider_tree.ProviderSubTree(compute.uuid)
+        found = ptree._find_with_lock(compute.uuid)
+        new_root = copy.deepcopy(found)
+        subtree.roots_by_uuid[new_root.uuid] = new_root
+        subtree.roots_by_name[new_root.name] = new_root
+        subtree.update_traits = mock.Mock()
+
+        rc_mock = self.rt.reportclient
+        gpstaer_mock = rc_mock.get_provider_subtree_and_ensure_root
+        gpstaer_mock.return_value = subtree
+
+        return subtree
+
 
 class TestUpdateAvailableResources(BaseTestCase):
 
@@ -1708,13 +1726,14 @@ class TestUpdateComputeNode(BaseTestCase):
         new_compute = orig_compute.obj_clone()
 
         ptree = self._setup_ptree(orig_compute)
+        subtree = self._setup_subtree(orig_compute, ptree)
 
         self.rt._update(mock.sentinel.ctx, new_compute)
         self.driver_mock.capabilities_as_traits.assert_called_once()
         # We always decorate with COMPUTE_NODE
         exp_traits = {mock.sentinel.trait, os_traits.COMPUTE_NODE}
         # Can't predict the order of the traits list, so use ItemsMatcher
-        ptree.update_traits.assert_called_once_with(
+        subtree.update_traits.assert_called_once_with(
             new_compute.hypervisor_hostname, utils.ItemsMatcher(exp_traits))
         mock_sync_disabled.assert_called_once_with(
             mock.sentinel.ctx, exp_traits)
@@ -1775,19 +1794,21 @@ class TestUpdateComputeNode(BaseTestCase):
         new_compute.local_gb = 210000
 
         ptree = self._setup_ptree(orig_compute)
+        subtree = self._setup_subtree(orig_compute, ptree)
 
         self.rt._update(mock.sentinel.ctx, new_compute)
 
         save_mock.assert_called_once_with()
-        gptaer_mock = self.rt.reportclient.get_provider_tree_and_ensure_root
-        gptaer_mock.assert_called_once_with(
+        gpstaer_mock = \
+            self.rt.reportclient.get_provider_subtree_and_ensure_root
+        gpstaer_mock.assert_called_once_with(
             mock.sentinel.ctx, new_compute.uuid,
             name=new_compute.hypervisor_hostname)
         self.driver_mock.update_provider_tree.assert_called_once_with(
-            ptree, new_compute.hypervisor_hostname)
+            subtree, new_compute.hypervisor_hostname)
         self.rt.reportclient.update_from_provider_tree.assert_called_once_with(
-            mock.sentinel.ctx, ptree, allocations=None)
-        ptree.update_traits.assert_called_once_with(
+            mock.sentinel.ctx, subtree, allocations=None)
+        subtree.update_traits.assert_called_once_with(
             new_compute.hypervisor_hostname,
             [os_traits.COMPUTE_NODE]
         )
@@ -1800,7 +1821,7 @@ class TestUpdateComputeNode(BaseTestCase):
         exp_inv[orc.MEMORY_MB]['reserved'] = 512
         # 1024MB in GB
         exp_inv[orc.DISK_GB]['reserved'] = 1
-        self.assertEqual(exp_inv, ptree.data(new_compute.uuid).inventory)
+        self.assertEqual(exp_inv, subtree.data(new_compute.uuid).inventory)
         mock_sync_disabled.assert_called_once()
 
     @ddt.data(
@@ -1887,6 +1908,7 @@ class TestUpdateComputeNode(BaseTestCase):
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
         ptree = self._setup_ptree(compute_obj)
+        subtree = self._setup_subtree(compute_obj, ptree)
         # simulate that pci reporting did not touch allocations
         mock_update_provider_tree_for_pci.return_value = False
 
@@ -1897,14 +1919,15 @@ class TestUpdateComputeNode(BaseTestCase):
         mock_get_allocs.assert_called_once_with(
             mock.sentinel.ctx, compute_obj.hypervisor_hostname)
         mock_update_provider_tree_for_pci.assert_called_once_with(
-            ptree,
+            subtree,
             compute_obj.hypervisor_hostname,
             self.rt.pci_tracker,
             mock_get_allocs.return_value,
             [],
         )
         upt = self.rt.reportclient.update_from_provider_tree
-        upt.assert_called_once_with(mock.sentinel.ctx, ptree, allocations=None)
+        upt.assert_called_once_with(mock.sentinel.ctx, subtree,
+                                    allocations=None)
 
     @mock.patch(
         'nova.compute.resource_tracker.ResourceTracker.'
@@ -1927,6 +1950,7 @@ class TestUpdateComputeNode(BaseTestCase):
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
         ptree = self._setup_ptree(compute_obj)
+        subtree = self._setup_subtree(compute_obj, ptree)
         # simulate that pci reporting changed some allocations
         mock_update_provider_tree_for_pci.return_value = True
 
@@ -1937,7 +1961,7 @@ class TestUpdateComputeNode(BaseTestCase):
         mock_get_allocs.assert_called_once_with(
             mock.sentinel.ctx, compute_obj.hypervisor_hostname)
         mock_update_provider_tree_for_pci.assert_called_once_with(
-            ptree,
+            subtree,
             compute_obj.hypervisor_hostname,
             self.rt.pci_tracker,
             mock_get_allocs.return_value,
@@ -1945,7 +1969,8 @@ class TestUpdateComputeNode(BaseTestCase):
         )
         upt = self.rt.reportclient.update_from_provider_tree
         upt.assert_called_once_with(
-            mock.sentinel.ctx, ptree, allocations=mock_get_allocs.return_value)
+            mock.sentinel.ctx, subtree,
+            allocations=mock_get_allocs.return_value)
 
     @ddt.data(True, False)
     @mock.patch(
@@ -1971,6 +1996,7 @@ class TestUpdateComputeNode(BaseTestCase):
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
         ptree = self._setup_ptree(compute_obj)
+        subtree = self._setup_subtree(compute_obj, ptree)
         # simulate that the driver requests reshape
         self.driver_mock.update_provider_tree.side_effect = [
             exc.ReshapeNeeded, None]
@@ -1983,7 +2009,7 @@ class TestUpdateComputeNode(BaseTestCase):
         mock_get_allocs.assert_called_once_with(
             mock.sentinel.ctx, compute_obj.hypervisor_hostname)
         mock_update_provider_tree_for_pci.assert_called_once_with(
-            ptree,
+            subtree,
             compute_obj.hypervisor_hostname,
             self.rt.pci_tracker,
             mock_get_allocs.return_value,
@@ -1991,7 +2017,9 @@ class TestUpdateComputeNode(BaseTestCase):
         )
         upt = self.rt.reportclient.update_from_provider_tree
         upt.assert_called_once_with(
-            mock.sentinel.ctx, ptree, allocations=mock_get_allocs.return_value)
+            mock.sentinel.ctx,
+            subtree,
+            allocations=mock_get_allocs.return_value)
 
     @mock.patch(
         'nova.compute.resource_tracker.ResourceTracker.'
@@ -2014,6 +2042,7 @@ class TestUpdateComputeNode(BaseTestCase):
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
         ptree = self._setup_ptree(compute_obj)
+        subtree = self._setup_subtree(compute_obj, ptree)
         # simulate that pci reporting did not touch allocations
         mock_update_provider_tree_for_pci.return_value = False
         self.rt.tracked_migrations = {
@@ -2044,14 +2073,15 @@ class TestUpdateComputeNode(BaseTestCase):
         mock_get_allocs.assert_called_once_with(
             mock.sentinel.ctx, compute_obj.hypervisor_hostname)
         mock_update_provider_tree_for_pci.assert_called_once_with(
-            ptree,
+            subtree,
             compute_obj.hypervisor_hostname,
             self.rt.pci_tracker,
             mock_get_allocs.return_value,
             [uuids.inst1],
         )
         upt = self.rt.reportclient.update_from_provider_tree
-        upt.assert_called_once_with(mock.sentinel.ctx, ptree, allocations=None)
+        upt.assert_called_once_with(mock.sentinel.ctx, subtree,
+                                    allocations=None)
 
     @mock.patch(
         'nova.compute.resource_tracker.ResourceTracker.'
@@ -2860,6 +2890,7 @@ class TestResize(BaseTestCase):
         self._setup_rt(virt_resources=virt_resources)
         cn = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.provider_tree = self._setup_ptree(cn)
+        self._setup_subtree(cn, self.rt.provider_tree)
 
         # not using mock.sentinel.ctx because resize_claim calls #elevated
         ctx = mock.MagicMock()
