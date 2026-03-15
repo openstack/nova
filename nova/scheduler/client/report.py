@@ -888,7 +888,7 @@ class SchedulerReportClient(object):
             return False
         return (time.time() - refresh_time) > rpar
 
-    def get_provider_tree_and_ensure_root(self, context, rp_uuid, name=None,
+    def get_provider_tree_and_ensure_root(self, context, rp_uuid, *, name=None,
                                           parent_provider_uuid=None):
         """Returns a fresh ProviderTree representing all providers which are in
         the same tree or in the same aggregate as the specified provider,
@@ -916,8 +916,46 @@ class SchedulerReportClient(object):
         self._ensure_resource_provider(
             context, rp_uuid, name=name,
             parent_provider_uuid=parent_provider_uuid)
-        # Return a *copy* of the tree.
         return copy.deepcopy(self._provider_tree)
+
+    def get_provider_subtree_and_ensure_root(self, context, rp_uuid, *,
+                                             name=None,
+                                             parent_provider_uuid=None):
+        """Returns a ProviderSubTree representing the providers rooted at
+        rp_uuid, which are in the same subtree or in the same aggregate as the
+        specified provider, including their aggregates, traits, and
+        inventories.
+
+        The subtree rooted at rp_uuid is a deep-copy of O(K) providers where K
+        is the subtree size rather than a deep-copy of the entire shared tree.
+        This benefits callers that will only modify one node's sub-tree (e.g.
+        the resource tracker's per-node Placement sync).
+
+        If the specified provider does not exist, it is created with the
+        specified UUID, name, and parent provider (which *must* already exist).
+
+        :param context: The security context
+        :param rp_uuid: UUID of the resource provider for which to populate the
+                        tree.  (This doesn't need to be the UUID of the root.)
+        :param name: Optional name for the resource provider if the record
+                     does not exist. If empty, the name is set to the UUID
+                     value
+        :param parent_provider_uuid: Optional UUID of the immediate parent,
+                                     which must have been previously _ensured.
+        :return: A new ProviderSubTree object.
+        """
+        # TODO(efried): We would like to have the caller handle create-and/or-
+        # cache-if-not-already, but the resource tracker is currently
+        # structured to handle initialization and update in a single path.  At
+        # some point this should be refactored, and this method can *just*
+        # return a deep copy of the local _provider_tree cache.
+        # (Re)populate the local ProviderTree
+        self._ensure_resource_provider(
+            context, rp_uuid, name=name,
+            parent_provider_uuid=parent_provider_uuid)
+
+        # Return a *copy* of the requested sub-tree.
+        return self._provider_tree.subtree(rp_uuid)
 
     def set_inventory_for_provider(self, context, rp_uuid, inv_data):
         """Given the UUID of a provider, set the inventory records for the
@@ -1353,7 +1391,9 @@ class SchedulerReportClient(object):
 
         :param context: The security context
         :param new_tree: A ProviderTree instance representing the desired state
-                         of providers in placement.
+                         of providers in placement. If new_tree is a
+                         ProviderSubTree then providers outside of subtree that
+                         new_tree represents will be left untouched.
         :param allocations: A dict, keyed by consumer UUID, of allocation
                             records of the form returned by
                             GET /allocations/{consumer_uuid} representing the
@@ -1420,7 +1460,13 @@ class SchedulerReportClient(object):
         # intentional) so we need to grab up front any data we need to operate
         # on in its "original" form.
         old_tree = self._provider_tree
-        old_uuids = old_tree.get_provider_uuids()
+        if isinstance(new_tree, provider_tree.ProviderSubTree):
+            # Limit the diff to just this sub-tree so that providers from
+            # other nodes are not incorrectly treated as removals when the
+            # caller supplied a subtree-only new_tree.
+            old_uuids = old_tree.get_provider_uuids(new_tree.scope_rp_uuid)
+        else:
+            old_uuids = old_tree.get_provider_uuids()
         new_uuids = new_tree.get_provider_uuids()
         uuids_to_add = set(new_uuids) - set(old_uuids)
         uuids_to_remove = set(old_uuids) - set(new_uuids)

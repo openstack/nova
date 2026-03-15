@@ -1311,7 +1311,7 @@ class ResourceTracker(object):
         # Retrieve the provider tree associated with this compute node.  If
         # it doesn't exist yet, this will create it with a (single, root)
         # provider corresponding to the compute node.
-        prov_tree = self.reportclient.get_provider_tree_and_ensure_root(
+        prov_tree = self.reportclient.get_provider_subtree_and_ensure_root(
             context, compute_node.uuid, name=compute_node.hypervisor_hostname)
         # Let the virt driver rearrange the provider tree and set/update
         # the inventory, traits, and aggregates throughout.
