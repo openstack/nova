@@ -115,6 +115,7 @@ class ExecutorType(enum.Enum):
     LONG_TASK = "long_task"
     SYNC_POWER = "sync_power_state"
     LIVE_MIGRATION = "live_migration"
+    UPDATE_RESOURCES = "update_resources"
 
 
 class ExecutorsPoolSize:
@@ -165,6 +166,10 @@ class ExecutorsPoolSize:
             return max_builds + max_snapshots
         return max_tasks
 
+    @staticmethod
+    def _update_resources_pool_size():
+        return CONF.compute.update_resources_max_workers
+
     _EXECUTOR_POOL_SIZE = {
         ExecutorType.DEFAULT: _default_pool_size,
         ExecutorType.SCATTER_GATHER: _scatter_gather_pool_size,
@@ -172,6 +177,7 @@ class ExecutorsPoolSize:
         ExecutorType.LONG_TASK: _long_task_pool_size,
         ExecutorType.SYNC_POWER: _sync_power_pool_size,
         ExecutorType.LIVE_MIGRATION: get_max_concurrent_live_migrations,
+        ExecutorType.UPDATE_RESOURCES: _update_resources_pool_size,
     }
 
     @classmethod

@@ -1079,6 +1079,28 @@ Possible values:
 * ``False``: Spreading VM's NUMA cell on host's NUMA cells with more resources
   available.
 """),
+    cfg.IntOpt(
+        'update_resources_max_workers',
+        default=1,
+        min=1,
+        help="""
+Maximum number of worker threads used to run per-node
+update_available_resource() calls in parallel during the
+update_available_resource periodic task.
+
+For drivers that manage a single compute node (most hypervisors) the
+default of 1 is optimal.  For the Ironic driver, which manages hundreds
+or thousands of baremetal nodes under a single nova-compute service,
+increasing this value allows node updates to proceed concurrently and
+dramatically reduces startup and periodic-task latency.
+
+Setting this to 1 (the default) preserves the original sequential
+behaviour.
+
+Related options:
+
+* update_resources_interval
+"""),
 ]
 
 interval_opts = [

@@ -11554,9 +11554,40 @@ class ComputeManager(manager.Manager):
                             "Failed to delete compute node resource provider "
                             "for compute node %s: %s", cn.uuid, str(e))
 
-        for nodename in nodenames:
-            self._update_available_resource_for_node(context, nodename,
-                                                     startup=startup)
+        # Run per-node updates in parallel.  Each node's update touches
+        # only its own ResourceTracker state and its own ProviderTree
+        # subtree (protected by the report client's lock), so concurrent
+        # execution is safe.
+        futures = [
+            (
+                nodename,
+                thread_pool_factory.spawn_on(
+                    thread_pool_factory.ExecutorType.UPDATE_RESOURCES,
+                    self._update_available_resource_for_node,
+                    context, nodename, startup=startup),
+            )
+            for nodename in nodenames
+        ]
+        # Drain all futures so errors are re-raised in this thread rather
+        # than being silently lost. Keep draining after the first failure
+        # so all scheduled per-node updates finish before we preserve the
+        # sequential path's exception propagation semantics.
+        first_exc: Exception | None = None
+        failed_nodes = []
+        for nodename, fut in futures:
+            try:
+                fut.result()
+            except Exception as exc:
+                failed_nodes.append(nodename)
+                if first_exc is None:
+                    first_exc = exc
+
+        if first_exc is not None:
+            LOG.error(
+                "update_available_resource failed for %(count)d nodes; "
+                "re-raising the first failure from node %(node)s.",
+                {'count': len(failed_nodes), 'node': failed_nodes[0]})
+            raise first_exc
 
     def _get_compute_nodes_in_db(self, context, nodenames, use_slave=False,
                                  startup=False):

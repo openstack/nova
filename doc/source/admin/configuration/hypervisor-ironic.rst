@@ -56,10 +56,19 @@ Scaling and performance issues
   a conductor group within your deployment.
 - The ``update_available_resource`` periodic task reports all the resources
   managed by Ironic. Depending the number of nodes, it can take a lot of time.
-  The nova-compute will not perform any other operations when this task is
-  running. You can use conductor groups to help shard your deployment
-  between multiple nova-compute processes by setting
-  :oslo.config:option:`ironic.conductor_group`.
+  You can use Ironic shards to help shard your deployment between multiple
+  nova-compute processes by setting :oslo.config:option:`ironic.shard` on a
+  per nova-compute basis. Setting the shard key restricts a nova-compute
+  instance to only manage a subset of Ironic nodes.
+
+  Large Ironic deployments can also tune
+  :oslo.config:option:`compute.update_resources_max_workers` to update
+  multiple nodes concurrently within a single nova-compute service. The
+  default value of ``1`` preserves the previous sequential behavior. Increasing
+  the value can reduce nova-compute startup and periodic resource-reporting
+  latency, but also increases nova-compute CPU usage and concurrent Placement
+  API traffic. Increase it gradually and monitor nova-compute and Placement
+  service load.
 - The nova-compute process using the Ironic driver can be moved between
   different physical servers using active/passive failover. But when doing
   this failover, you must ensure :oslo.config:option:`host` is the same
