@@ -12,10 +12,10 @@
 
 from oslo_policy import policy
 
+# TODO(gmaan): Below alias are deprecated and needs to be removed once we stop
+# supporting the old defaults.
 RULE_ADMIN_OR_OWNER = 'rule:admin_or_owner'  # Admins or owners of the resource
 RULE_ADMIN_API = 'rule:admin_api'  # Allow only users with the admin role
-RULE_ANY = '@'  # Any user is allowed to perform the action.
-RULE_NOBODY = '!'  # No users are allowed to perform the action.
 
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
@@ -37,19 +37,23 @@ DEPRECATED_ADMIN_OR_OWNER_POLICY = policy.DeprecatedRule(
     deprecated_since='21.0.0'
 )
 
+# NOTE(gmaan): We should use the below alias in the policy rule defaults.
+# This will help to keep the definition of admin and various project
+# personas in a consistent way. If any policy rule needs different access
+# permission than what is defined in the existing alias, you can define the
+# new alias.
 ADMIN = 'rule:context_is_admin'
-PROJECT_MEMBER = 'rule:project_manager_api'
-PROJECT_MEMBER = 'rule:project_member_api'
-PROJECT_READER = 'rule:project_reader_api'
+PROJECT_MANAGER_OR_ADMIN = 'rule:project_manager_or_admin'
+PROJECT_MEMBER_OR_ADMIN = 'rule:project_member_or_admin'
+PROJECT_READER_OR_ADMIN = 'rule:project_reader_or_admin'
+RULE_ANY = '@'  # Any user is allowed to perform the action.
+RULE_NOBODY = '!'  # No users are allowed to perform the action.
 # TODO(gmaan): Remove the admin role from the service rule in 2026.2. We are
 # continue allowing admin to access the service APIs, otherwise it will break
 # deployment where nova service users in other services are not assigned
 # 'service' role. After one SLURP (2026.1), we can make service APIs only
 # allowed for the 'service' role.
 SERVICE_ROLE = 'rule:service_or_admin'
-PROJECT_MANAGER_OR_ADMIN = 'rule:project_manager_or_admin'
-PROJECT_MEMBER_OR_ADMIN = 'rule:project_member_or_admin'
-PROJECT_READER_OR_ADMIN = 'rule:project_reader_or_admin'
 
 # NOTE(gmann): Below is the mapping of new roles with legacy roles::
 

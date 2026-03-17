@@ -181,10 +181,10 @@ class MigrateServerOverridePolicyTest(
         # NOTE(gmann): override the rule to project member and verify it
         # work as policy is system and project scoped.
         self.policy.set_rules({
-            rule_migrate: base_policy.PROJECT_MEMBER,
-            rule_migrate_host: base_policy.PROJECT_MEMBER,
-            rule_live_migrate: base_policy.PROJECT_MEMBER,
-            rule_live_migrate_host: base_policy.PROJECT_MEMBER},
+            rule_migrate: "rule:project_member_api",
+            rule_migrate_host: "rule:project_member_api",
+            rule_live_migrate: "rule:project_member_api",
+            rule_live_migrate_host: "rule:project_member_api"},
             overwrite=False)
 
         # Check that project member role as override above

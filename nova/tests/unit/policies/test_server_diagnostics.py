@@ -17,7 +17,6 @@ from oslo_utils import timeutils
 from nova.api.openstack.compute import server_diagnostics
 from nova.compute import vm_states
 from nova import objects
-from nova.policies import base as base_policy
 from nova.policies import server_diagnostics as policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -127,7 +126,7 @@ class ServerDiagnosticsOverridePolicyTest(
         # NOTE(gmann): override the rule to project member and verify it
         # work as policy is project scoped.
         self.policy.set_rules({
-            rule: base_policy.PROJECT_MEMBER},
+            rule: "rule:project_member_api"},
             overwrite=False)
 
         # Check that project member role as override above
