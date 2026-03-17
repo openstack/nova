@@ -2885,6 +2885,7 @@ class LibvirtDriver(driver.ComputeDriver):
         on the nova-specified alias. If not, or we do not find it that way,
         fall back to the old way of using the disk_dev.
         """
+        dev_alias = None
         if volume_uuid is not None:
             dev_alias = vconfig.make_libvirt_device_alias(volume_uuid)
             dev = guest.get_device_by_alias(
@@ -2900,6 +2901,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # worked. Since we call this method after detach is done to
             # ensure it is gone, we will always "fall back" to make sure it
             # is gone by the "old way" and thus shouldn't announce it.
+            if dev_alias is None:
+                dev_alias = "(no volume UUID given)"
             LOG.info('Device %s not found by alias %s, falling back',
                         disk_dev, dev_alias)
         return dev
