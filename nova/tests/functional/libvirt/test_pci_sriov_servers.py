@@ -41,6 +41,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
+from nova.virt import hardware
 from nova.virt.libvirt import driver
 
 CONF = cfg.CONF
@@ -6866,4 +6867,220 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
                 'card_serial_number': 'MT0000X00042',
             },
             port['binding:profile'],
+        )
+
+
+class TestPackNUMACellsWithPCIDevices(_PCIServersTestBase):
+    """Regression test for bug #2144660.
+
+    When using the 'pack' NUMA cell allocation strategy, a VM that does NOT
+    request any PCI device should be placed on a NUMA node that does NOT
+    hold PCI devices, leaving PCI-equipped nodes free for VMs that need them.
+
+    The bug is that the compute claim (claims.py) only passes pci_stats to
+    numa_fit_instance_to_host when the VM has PCI requests. For non-PCI VMs,
+    pci_stats is None, so the PCI-aware sort is skipped and the VM may land
+    on the NUMA node that holds all PCI devices.
+    """
+
+    ADMIN_API = True
+    microversion = 'latest'
+
+    PCI_DEVICE_SPEC = [jsonutils.dumps({
+        'vendor_id': fakelibvirt.PCI_VEND_ID,
+        'product_id': fakelibvirt.PCI_PROD_ID,
+    })]
+    PCI_ALIAS = [jsonutils.dumps({
+        'vendor_id': fakelibvirt.PCI_VEND_ID,
+        'product_id': fakelibvirt.PCI_PROD_ID,
+        'name': 'a1',
+        'device_type': fields.PciDeviceType.STANDARD,
+    })]
+
+    def setUp(self):
+        super().setUp()
+        self.ctxt = context.get_admin_context()
+
+        # Enable pack strategy (default, but be explicit)
+        self.flags(
+            packing_host_numa_cells_allocation_strategy=True,
+            group='compute',
+        )
+
+        # Allow CPU pinning on all 4 NUMA nodes (CPUs 0-7)
+        self.flags(cpu_dedicated_set='0-7', group='compute')
+
+    def _start_compute_with_pci(self, pci_numa_node):
+        """Start a compute with 4 NUMA nodes and PCI devices on a given node.
+
+        :param pci_numa_node: int, the NUMA node index (0-3) where the PCI
+            device will be created.
+
+        - 4 NUMA nodes (0-3), each with 2 CPUs and 4GB RAM with 1GB hugepages
+        - PCI device only on the specified NUMA node
+        """
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=4, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
+            kB_mem=(16 * units.Gi) // units.Ki,
+        )
+
+        for cell in host_info.numa_topology.cells:
+            cell.mempages = fakelibvirt.create_mempages([
+                (4, 0),               # no small pages
+                (units.Mi, 4),        # 4 x 1GB hugepages
+            ])
+
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, numa_node=pci_numa_node)
+
+        self.start_compute(
+            hostname='compute1',
+            host_info=host_info,
+            pci_info=pci_info,
+        )
+
+        # Assert that PCI devices are on the expected NUMA node
+        devices = objects.PciDeviceList.get_by_compute_node(
+            self.ctxt,
+            objects.ComputeNode.get_by_nodename(self.ctxt, 'compute1').id,
+        )
+        self.assertTrue(
+            all(d.numa_node == pci_numa_node for d in devices),
+            f"All PCI devices should be on NUMA node {pci_numa_node}.",
+        )
+
+    def test_scheduler_and_claim_agree_on_non_pci_vm_placement(self):
+        """Verify that the scheduler and compute claim agree for non-PCI VMs.
+
+        The scheduler (NUMATopologyFilter) and the compute claim both call
+        numa_fit_instance_to_host. This test spies on both calls to verify
+        they produce the same NUMA placement for a VM that does NOT request
+        any PCI device.
+
+        Setup:
+        - 4 NUMA nodes (0-3), each with 2 CPUs and 4GB RAM with 1GB hugepages
+        - PCI device only on NUMA node 0
+        - Pack strategy enabled
+
+        Expected:
+        - Both the scheduler and the claim should avoid NUMA node 0 (which
+          holds PCI devices) and place the VM on node 1, 2, or 3.
+
+        Bug #2144660: the compute claim does not pass pci_stats when the VM
+        has no PCI requests, so the PCI-aware sort is skipped in the claim
+        and it overrides the scheduler's correct decision, landing the VM
+        on NUMA node 0.
+        """
+        self._start_compute_with_pci(pci_numa_node=0)
+
+        # Wrap numa_fit_instance_to_host to capture the scheduler's result
+        # (first call) separately from the compute claim's result.
+        orig_fit = hardware.numa_fit_instance_to_host
+        fit_results = []
+
+        def spy_numa_fit(*args, **kwargs):
+            result = orig_fit(*args, **kwargs)
+            fit_results.append(result)
+            return result
+
+        with mock.patch(
+            'nova.virt.hardware.numa_fit_instance_to_host',
+            side_effect=spy_numa_fit,
+        ):
+            extra_spec = {
+                'hw:cpu_policy': 'dedicated',
+                'hw:mem_page_size': '1GB',
+            }
+            flavor_id = self._create_flavor(extra_spec=extra_spec)
+            server = self._create_server(
+                flavor_id=flavor_id, networks='none')
+
+        # The scheduler (NUMATopologyFilter) calls numa_fit_instance_to_host
+        # first, then the compute claim calls it again. Both should agree
+        # and avoid the PCI NUMA node.
+        scheduler_result = fit_results[0]
+        self.assertIsNotNone(scheduler_result)
+        self.assertNotEqual(
+            0, scheduler_result.cells[0].id,
+            "The scheduler correctly avoided the PCI NUMA node.",
+        )
+
+        # Verify the final placement matches the scheduler's decision
+        inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
+        self.assertIsNotNone(inst.numa_topology)
+        self.assertEqual(1, len(inst.numa_topology.cells))
+
+        placed_on_node = inst.numa_topology.cells[0].id
+        # Bug #2144660: the compute claim does not pass pci_stats to
+        # numa_fit_instance_to_host when the VM has no PCI requests,
+        # so it overrides the scheduler's correct decision and lands on
+        # NUMA node 0.
+        self.assertEqual(0, placed_on_node)
+        # After the fix the following should pass:
+        # self.assertNotEqual(0, placed_on_node)
+
+    def test_non_pci_vm_pack_sequential_avoids_pci_node(self):
+        """Launch 3 non-PCI VMs sequentially - none should land on NUMA 0.
+
+        With 4 NUMA nodes (only node 0 has PCI devices) and the pack
+        strategy, all 3 VMs should be placed on nodes 1, 2, 3 — avoiding
+        node 0 which holds PCI devices.
+        """
+        self._start_compute_with_pci(pci_numa_node=0)
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'hw:mem_page_size': '1GB',
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        placed_nodes = []
+        for i in range(3):
+            server = self._create_server(
+                flavor_id=flavor_id, networks='none')
+            inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
+            self.assertIsNotNone(inst.numa_topology)
+            placed_nodes.append(inst.numa_topology.cells[0].id)
+
+        # Bug #2144660: the compute claim skips PCI-aware sort, so VMs
+        # land on NUMA 0 despite the scheduler's correct decision.
+        self.assertIn(0, placed_nodes)
+        # After the fix the following should pass:
+        # for node_id in placed_nodes:
+        #     self.assertNotEqual(0, node_id)
+
+    def test_pci_vm_lands_on_pci_numa_node_with_pack(self):
+        """A VM that requests a PCI device should land on the PCI NUMA node.
+
+        This is the positive control: when a VM explicitly requests a PCI
+        device, the PCI-aware sort should place it on the NUMA node that
+        holds the PCI devices (node 1 in this setup). PCI devices are
+        placed on node 1 (not node 0) to ensure the test validates active
+        selection rather than relying on a default to node 0.
+
+        This path works correctly because claims.py does pass pci_stats
+        when pci_requests.requests is non-empty.
+        """
+        self._start_compute_with_pci(pci_numa_node=1)
+
+        # Create a VM that DOES request a PCI device
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'hw:mem_page_size': '1GB',
+            'pci_passthrough:alias': 'a1:1',
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=flavor_id, networks='none')
+
+        inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
+        self.assertIsNotNone(inst.numa_topology)
+        self.assertEqual(1, len(inst.numa_topology.cells))
+
+        # The VM SHOULD be placed on NUMA node 1 (the PCI node)
+        placed_on_node = inst.numa_topology.cells[0].id
+        self.assertEqual(
+            1, placed_on_node,
+            f"PCI VM was placed on NUMA node {placed_on_node} instead of "
+            f"node 1 which holds the PCI devices."
         )
