@@ -103,9 +103,7 @@ class _PCIServersTestBase(base.ServersTestBase):
     def setUp(self):
         self.ctxt = context.get_admin_context()
         self.flags(
-            device_spec=self.PCI_DEVICE_SPEC,
-            alias=self.PCI_ALIAS,
-            group='pci'
+            device_spec=self.PCI_DEVICE_SPEC, alias=self.PCI_ALIAS, group="pci"
         )
 
         super(_PCIServersTestBase, self).setUp()
@@ -791,11 +789,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -870,11 +864,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -944,11 +934,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -1029,11 +1015,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -1103,11 +1085,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -1177,11 +1155,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -1251,11 +1225,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -1334,11 +1304,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -1417,11 +1383,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -1506,11 +1468,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=3, numa_node=0
@@ -1617,11 +1575,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=3, numa_node=0
@@ -1718,11 +1672,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=3, numa_node=0
@@ -1820,11 +1770,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=3, numa_node=0
@@ -1916,11 +1862,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=4, numa_node=0,
@@ -2007,11 +1949,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -2113,11 +2051,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -2225,11 +2159,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=3, numa_node=0
@@ -2372,11 +2302,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         networks = "none"
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=3, numa_node=0,
@@ -2545,11 +2471,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
         extra_spec.update({'hw:cpu_policy': 'dedicated'})
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -2750,11 +2672,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
         extra_spec.update({'hw:cpu_policy': 'dedicated'})
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -2897,11 +2815,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
         extra_spec.update({'hw:cpu_policy': 'dedicated'})
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -3086,11 +3000,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
         extra_spec.update({'hw:cpu_policy': 'dedicated'})
 
-        self.flags(
-        device_spec=PCI_DEVICE_SPEC,
-            alias=PCI_ALIAS,
-            group='pci'
-        )
+        self.flags(device_spec=PCI_DEVICE_SPEC, alias=PCI_ALIAS, group="pci")
 
         src_pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pfs=1, num_vfs=1, numa_node=0
@@ -3841,7 +3751,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         )
 
     def test_get_server_diagnostics_server_with_VF(self):
-        """Ensure server disagnostics include info on VF-type PCI devices."""
+        """Ensure server diagnostics include info on VF-type PCI devices."""
 
         pci_info = fakelibvirt.HostPCIDevicesInfo()
         self.start_compute(pci_info=pci_info)
@@ -4448,7 +4358,7 @@ class VDPAServersTest(_PCIServersWithMigrationTestBase):
         port = self.neutron.show_port(vdpa_port['id'])['port']
         self.assertEqual(dest, port['binding:host_id'])
 
-    def test_evacute(self):
+    def test_evacuate(self):
         source = self.start_vdpa_compute(hostname='source')
         dest = self.start_vdpa_compute(hostname='dest')
 
@@ -5448,7 +5358,7 @@ class PCIServersTest(_PCIServersTestBase):
                 'name': 'a2',
             },
         )]
-        self.flags(group='pci', alias=alias)
+        self.flags(group="pci", alias=alias)
         # request two PCI devices both are individually matching with the
         # single available device on the host
         extra_spec = {'pci_passthrough:alias': 'a1:1,a2:1'}
@@ -6044,7 +5954,7 @@ class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
                 },
             ]
         )
-        self.flags(group='pci', device_spec=device_spec)
+        self.flags(group="pci", device_spec=device_spec)
         # both numa 0 and numa 1 has 4 PCPUs
         self.flags(cpu_dedicated_set='0-7', group='compute')
         self.start_compute(pci_info=pci_info)
@@ -6216,11 +6126,7 @@ class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
             }
         )]
 
-        self.flags(
-            device_spec=self.PCI_DEVICE_SPEC,
-            alias=alias,
-            group='pci'
-        )
+        self.flags(device_spec=self.PCI_DEVICE_SPEC, alias=alias, group="pci")
 
         self._test_policy(pci_numa_node, status, 'required')
 
@@ -6436,11 +6342,7 @@ class PCIServersWithPortNUMAPoliciesTest(_PCIServersTestBase):
             }
         )]
 
-        self.flags(
-            device_spec=self.PCI_DEVICE_SPEC,
-            alias=alias,
-            group='pci'
-        )
+        self.flags(device_spec=self.PCI_DEVICE_SPEC, alias=alias, group="pci")
 
         self._test_policy(pci_numa_node, status, 'required')
 
