@@ -118,16 +118,12 @@ class TestCrossCellResizeKeypairLoss(
         self.api.post_server_action(server['id'], {'confirmResize': None})
         server = self._wait_for_state_change(server, 'ACTIVE')
 
-        # Verify keypair in the destination cell.
-        # BUG 2108974: keypairs is NULL in the destination cell's
-        # instance_extra table after cross-cell resize confirm, so the
-        # keypair data is lost. The server's key_name is still visible via
-        # the API but the actual keypair object is gone from the DB.
+        # Verify keypair is still accessible in the destination cell.
         target_cell = self.cell_mappings['cell2']
         with nova_context.target_cell(ctxt, target_cell) as cctxt:
             instance = objects.Instance.get_by_uuid(
                 cctxt, server['id'], expected_attrs=['keypairs'])
-            # TODO(bug #2108974): This should be 1 but keypairs are lost
-            # during cross-cell resize. Once fixed, assert == 1 and check
-            # the public_key matches.
-            self.assertEqual(0, len(instance.keypairs))
+            self.assertEqual(1, len(instance.keypairs))
+            self.assertEqual(
+                keypair['public_key'],
+                instance.keypairs[0].public_key)

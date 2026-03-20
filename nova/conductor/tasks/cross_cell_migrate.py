@@ -141,6 +141,10 @@ class TargetDBSetupTask(base.TaskBase):
         vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
             self.context, self.instance.uuid)
         tags = self.instance.tags
+        # Ensure keypairs are loaded from the source cell DB so they are
+        # included when cloning the instance to the target cell (bug 2108974).
+        if 'keypairs' not in self.instance:
+            self.instance.obj_load_attr('keypairs')
         # We copy instance actions to preserve the history of the instance
         # in case the resize is confirmed.
         actions = objects.InstanceActionList.get_by_instance_uuid(

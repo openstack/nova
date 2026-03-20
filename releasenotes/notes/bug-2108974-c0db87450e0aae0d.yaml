@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    `Bug #2108974`_: Fix keypairs lost during cross-cell resize. When an
+    instance was resized across cells, the keypairs stored in the
+    ``instance_extra`` table were not loaded from the source cell before
+    cloning the instance to the destination cell. As a result, the keypairs
+    column was written as NULL in the target cell database, effectively
+    losing the server's keypair data after confirming the resize.
+
+    .. _Bug #2108974: https://launchpad.net/bugs/2108974
