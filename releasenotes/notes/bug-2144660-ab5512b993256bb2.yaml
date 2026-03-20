@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    `Bug #2144660`_: Fix NUMA cell sorting for non-PCI VMs with pack strategy.
+    When using the ``pack`` NUMA cell allocation strategy, the compute claim
+    was not passing ``pci_stats`` to ``numa_fit_instance_to_host`` for VMs
+    without PCI requests. This caused the PCI-aware NUMA cell sort to be
+    skipped, allowing non-PCI VMs to land on NUMA nodes holding PCI devices
+    instead of being steered away from them.
+
+    .. _Bug #2144660: https://launchpad.net/bugs/2144660

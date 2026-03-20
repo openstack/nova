@@ -2235,6 +2235,13 @@ class TestInstanceClaim(BaseTestCase):
         self.rt.compute_nodes[_NODENAME] = cn
         self.rt.provider_tree = self._setup_ptree(cn)
 
+        mock_pci_tracker = mock.create_autospec(
+            pci_manager.PciDevTracker, instance=True)
+        mock_pci_tracker.stats = mock.MagicMock()
+        mock_pci_tracker.stats.to_device_pools_obj.return_value = (
+            objects.PciDevicePoolList())
+        self.rt.pci_tracker = mock_pci_tracker
+
         # not using mock.sentinel.ctx because instance_claim calls #elevated
         self.ctx = mock.MagicMock()
         self.elevated = mock.MagicMock()
