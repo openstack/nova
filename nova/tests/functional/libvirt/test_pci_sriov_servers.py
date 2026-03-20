@@ -1970,6 +1970,117 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assertPCIDeviceCounts(self.comp1, total=8, free=6)
         self._assertDeviceAddressesMapped(src_xml, dst_xml)
 
+    def test_live_migrate_VF_fails_with_pci_in_placement_no_lm(self):
+        """Live migration should fail when device is not live migratable
+        and PCI in placement is enabled. The HW_PCI_LIVE_MIGRATABLE trait
+        should not be present on the resource provider.
+        """
+
+        PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "live_migratable": "no",
+                "address": {
+                    "domain": "00",
+                    "bus": "8[1-2]",
+                    "slot": "00",
+                    "function": "1",
+                },
+                "resource_class": "CUSTOM_A16_16A",
+            },
+        )]
+
+        PCI_ALIAS = [jsonutils.dumps(x) for x in (
+            {
+                "name": f"{self.VFS_ALIAS_NAME}",
+                "resource_class": "CUSTOM_A16_16A",
+                "device_type": fields.PciDeviceType.SRIOV_VF,
+                "live_migratable": "no",
+            },
+        )]
+
+        self.flags(group="pci", report_in_placement=True)
+        self.flags(group='filter_scheduler', pci_in_placement=True)
+
+        extra_spec = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+
+        networks = "none"
+
+        self.flags(
+        device_spec=PCI_DEVICE_SPEC,
+            alias=PCI_ALIAS,
+            group='pci'
+        )
+
+        src_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0
+        )
+
+        dst_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1, bus=0x82
+        )
+
+        self.comp0 = self.start_compute(
+            hostname="test_compute0",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=src_pci_info,
+        )
+
+        self.comp1 = self.start_compute(
+            hostname="test_compute1",
+            libvirt_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
+            ),
+            qemu_version=versionutils.convert_version_to_int(
+                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
+            ),
+            pci_info=dst_pci_info,
+        )
+
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        server = self._create_server(
+            host=self.comp0, flavor_id=flavor_id, networks=networks
+        )
+
+        # Verify HW_PCI_LIVE_MIGRATABLE trait is NOT present
+        self.assert_placement_pci_view(
+            self.comp0,
+            inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
+            traits={"0000:81:00.0": []},
+            usages={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
+            allocations={server['id']: {
+                "0000:81:00.0": {'CUSTOM_A16_16A': 1}}},
+        )
+        self.assert_placement_pci_view(
+            self.comp1,
+            inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
+            traits={"0000:82:00.0": []},
+            usages={"0000:82:00.0": {'CUSTOM_A16_16A': 0}},
+        )
+        self.assertPCIDeviceCounts(self.comp0, total=1, free=0)
+        self.assertPCIDeviceCounts(self.comp1, total=1, free=1)
+
+        # Live migration should fail
+        exc = self.assertRaises(
+            client.OpenStackApiException,
+            self._live_migrate,
+            server,
+            "completed",
+        )
+        self.assertEqual(500, exc.response.status_code)
+        self.assertIn('NoValidHost', str(exc))
+
+        self.assertPCIDeviceCounts(self.comp0, total=1, free=0)
+        self.assertPCIDeviceCounts(self.comp1, total=1, free=1)
+        self._wait_for_state_change(server, 'ACTIVE')
+
     def test_live_migrate_VF_success_with_pci_in_placement(self):
         PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
             {
@@ -2047,7 +2158,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
-            traits={"0000:81:00.0": []},
+            traits={"0000:81:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
             allocations={server['id']: {
                 "0000:81:00.0": {'CUSTOM_A16_16A': 1}}},
@@ -2055,7 +2166,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp1,
             inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
-            traits={"0000:82:00.0": []},
+            traits={"0000:82:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:82:00.0": {'CUSTOM_A16_16A': 0}},
         )
         src_xml = self._get_xml(self.comp0, server)
@@ -2066,13 +2177,13 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
-            traits={"0000:81:00.0": []},
+            traits={"0000:81:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:81:00.0": {'CUSTOM_A16_16A': 0}},
         )
         self.assert_placement_pci_view(
             self.comp1,
             inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
-            traits={"0000:82:00.0": []},
+            traits={"0000:82:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
             allocations={server['id']: {
                 "0000:82:00.0": {'CUSTOM_A16_16A': 1}}},
@@ -2159,7 +2270,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 3}},
-            traits={"0000:81:00.0": []},
+            traits={"0000:81:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:81:00.0": {'CUSTOM_A16_16A': 2}},
             allocations={server['id']: {
                 "0000:81:00.0": {'CUSTOM_A16_16A': 2}}},
@@ -2167,7 +2278,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp1,
             inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 3}},
-            traits={"0000:82:00.0": []},
+            traits={"0000:82:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:82:00.0": {'CUSTOM_A16_16A': 0}},
         )
         src_xml = self._get_xml(self.comp0, server)
@@ -2178,13 +2289,13 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 3}},
-            traits={"0000:81:00.0": []},
+            traits={"0000:81:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:81:00.0": {'CUSTOM_A16_16A': 0}},
         )
         self.assert_placement_pci_view(
             self.comp1,
             inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 3}},
-            traits={"0000:82:00.0": []},
+            traits={"0000:82:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:82:00.0": {'CUSTOM_A16_16A': 2}},
             allocations={server['id']: {
                 "0000:82:00.0": {'CUSTOM_A16_16A': 2}}},
@@ -2310,7 +2421,10 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
                 "0000:81:00.0": {"CUSTOM_A16_16A": 3},
                 "0000:81:01.0": {"CUSTOM_A16_8A": 3},
             },
-            traits={"0000:81:00.0": [], "0000:81:01.0": []},
+            traits={
+                "0000:81:00.0": ["HW_PCI_LIVE_MIGRATABLE"],
+                "0000:81:01.0": ["HW_PCI_LIVE_MIGRATABLE"],
+            },
             usages={
                 "0000:81:00.0": {"CUSTOM_A16_16A": 1},
                 "0000:81:01.0": {"CUSTOM_A16_8A": 1},
@@ -2328,7 +2442,10 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
                 "0000:82:00.0": {"CUSTOM_A16_16A": 3},
                 "0000:82:01.0": {"CUSTOM_A16_8A": 3},
             },
-            traits={"0000:82:00.0": [], "0000:82:01.0": []},
+            traits={
+                "0000:82:00.0": ["HW_PCI_LIVE_MIGRATABLE"],
+                "0000:82:01.0": ["HW_PCI_LIVE_MIGRATABLE"],
+            },
             usages={
                 "0000:82:00.0": {"CUSTOM_A16_16A": 0},
                 "0000:82:01.0": {"CUSTOM_A16_8A": 0},
@@ -2345,7 +2462,10 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
                 "0000:81:00.0": {"CUSTOM_A16_16A": 3},
                 "0000:81:01.0": {"CUSTOM_A16_8A": 3},
             },
-            traits={"0000:81:00.0": [], "0000:81:01.0": []},
+            traits={
+                "0000:81:00.0": ["HW_PCI_LIVE_MIGRATABLE"],
+                "0000:81:01.0": ["HW_PCI_LIVE_MIGRATABLE"],
+            },
             usages={
                 "0000:81:00.0": {"CUSTOM_A16_16A": 0},
                 "0000:81:01.0": {"CUSTOM_A16_8A": 0},
@@ -2357,7 +2477,10 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
                 "0000:82:00.0": {"CUSTOM_A16_16A": 3},
                 "0000:82:01.0": {"CUSTOM_A16_8A": 3},
             },
-            traits={"0000:82:00.0": [], "0000:82:01.0": []},
+            traits={
+                "0000:82:00.0": ["HW_PCI_LIVE_MIGRATABLE"],
+                "0000:82:01.0": ["HW_PCI_LIVE_MIGRATABLE"],
+            },
             usages={
                 "0000:82:00.0": {"CUSTOM_A16_16A": 1},
                 "0000:82:01.0": {"CUSTOM_A16_8A": 1},
@@ -3060,7 +3183,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
-            traits={"0000:81:00.0": []},
+            traits={"0000:81:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
             allocations={server['id']: {
                 "0000:81:00.0": {'CUSTOM_A16_16A': 1}}},
@@ -3068,7 +3191,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp1,
             inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
-            traits={"0000:82:00.0": []},
+            traits={"0000:82:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:82:00.0": {'CUSTOM_A16_16A': 0}},
         )
         src_xml = self._get_xml(self.comp0, server)
@@ -3106,13 +3229,13 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assert_placement_pci_view(
             self.comp0,
             inventories={"0000:81:00.0": {'CUSTOM_A16_16A': 1}},
-            traits={"0000:81:00.0": []},
+            traits={"0000:81:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:81:00.0": {'CUSTOM_A16_16A': 0}},
         )
         self.assert_placement_pci_view(
             self.comp1,
             inventories={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
-            traits={"0000:82:00.0": []},
+            traits={"0000:82:00.0": ["HW_PCI_LIVE_MIGRATABLE"]},
             usages={"0000:82:00.0": {'CUSTOM_A16_16A': 1}},
             allocations={server['id']: {
                 "0000:82:00.0": {'CUSTOM_A16_16A': 1}}},
