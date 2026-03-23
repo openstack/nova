@@ -52,12 +52,12 @@
     timeout: 3600
 
 - job:
-    name: nova-tox-py312-threading
-    parent: openstack-tox-py312
+    name: nova-tox-py313-threading
+    parent: openstack-tox-py313
     description: |
       Run tox-based unit tests for the OpenStack Nova project
-      under cPython version 3.12 with eventlet disabled.
-      Uses tox with the ``py312-threading`` environment.
+      under cPython version 3.13 with eventlet disabled.
+      Uses tox with the ``py313-threading`` environment.
 
     required-projects:
       # including nova here makes this job reusable by other projects and
@@ -68,8 +68,8 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py312
-      tox_envlist: py312-threading
+      bindep_profile: test py313
+      tox_envlist: py313-threading
 
 - job:
     name: nova-tox-validate-backport
@@ -899,7 +899,7 @@
         - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
-        - nova-tox-py312-threading
+        - nova-tox-py313-threading
         - openstack-tox-cover:
             # Allow more time for unit and functional tests to run.
             timeout: 5400
@@ -930,7 +930,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-        - nova-tox-py312-threading
+        - nova-tox-py313-threading
         - nova-alt-configurations
     periodic-weekly:
       jobs:
