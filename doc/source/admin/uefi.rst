@@ -40,6 +40,16 @@ architectures, you can request UEFI support with libvirt by setting the
 
     $ openstack image set --property hw_firmware_type=uefi $IMAGE
 
+For x86_64 guests, using the ``q35`` machine type is recommended when
+enabling UEFI, as it provides better compatibility with modern firmware
+and device models (native PCIe, SATA instead of IDE). Note that ``q35``
+is **required** when combining UEFI with Secure Boot.
+
+.. code-block:: bash
+
+    $ openstack image set --property hw_firmware_type=uefi \
+                          --property hw_machine_type=q35 $IMAGE
+
 References
 ----------
 
