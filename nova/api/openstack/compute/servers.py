@@ -509,12 +509,11 @@ class ServersController(wsgi.Controller):
             create_kwargs['legacy_bdm'] = True
         elif block_device_mapping_v2:
             # Have to check whether --image is given, see bug 1433609
-            image_href = server_dict.get('imageRef')
-            image_uuid_specified = image_href is not None
+            image_ref = server_dict.get('imageRef')
             try:
                 block_device_mapping = [
                     block_device.BlockDeviceDict.from_api(bdm_dict,
-                        image_uuid_specified)
+                        image_uuid_specified=image_ref not in {None, ''})
                     for bdm_dict in block_device_mapping_v2]
             except exception.InvalidBDMFormat as e:
                 raise exc.HTTPBadRequest(explanation=e.format_message())
