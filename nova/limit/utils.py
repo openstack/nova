@@ -70,17 +70,17 @@ def _identity_client():
                     'Either endpoint_service_type or endpoint_service_name '
                     'must be set')
             # Get the service_id for registered limits calls.
-            services = connection.services(
+            services = list(connection.services(
                 type=CONF.oslo_limit.endpoint_service_type,
-                name=CONF.oslo_limit.endpoint_service_name)
+                name=CONF.oslo_limit.endpoint_service_name))
             if len(services) > 1:
                 raise ValueError('Multiple services found')
             service_id = services[0].id
             # Get the region_id if region name is configured.
             # endpoint_region_name was added in oslo.limit 2.6.0.
             if CONF.oslo_limit.endpoint_region_name:
-                regions = connection.regions(
-                    name=CONF.oslo_limit.endpoint_region_name)
+                regions = list(connection.regions(
+                    id=CONF.oslo_limit.endpoint_region_name))
                 if len(regions) > 1:
                     raise ValueError('Multiple regions found')
                 region_id = regions[0].id

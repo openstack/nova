@@ -437,13 +437,31 @@ class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual(403, e.response.status_code)
 
 
-class EndpointDiscoveryTest(UnifiedLimitsTest):
+class EndpointDiscoveryTest(integrated_helpers._IntegratedTestBase):
+    """Test behavior when [oslo_limit]endpoint_id is not set.
+
+    The Nova API endpoint discovery code is only reached when:
+
+      1. A requested resource has no registered limit set in Keystone
+      2. [oslo_limit]endpoint_id is not set
+
+    So we will use an empty UnifiedLimitsFixture with no limits set in it
+    along with a resource strategy of 'require' and an empty required
+    resource list.
+    """
 
     def setUp(self):
         super().setUp()
         if 'endpoint_service_type' not in CONF.oslo_limit:
             self.skipTest(
                 'oslo.limit < 2.6.0, skipping endpoint discovery tests')
+
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group='quota')
+        self.useFixture(nova_fixtures.UnifiedLimitsFixture())
+
+        self.flags(unified_limits_resource_strategy='require', group='quota')
+        self.flags(unified_limits_resource_list=[], group='quota')
+
         # endpoint_id has a default value in the ConfFixture but we want it to
         # be None so that we do endpoint discovery.
         self.flags(endpoint_id=None, group='oslo_limit')

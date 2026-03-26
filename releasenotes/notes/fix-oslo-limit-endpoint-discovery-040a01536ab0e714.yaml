@@ -1,0 +1,5 @@
+fixes:
+  - |
+    [`bug 2123895 <https://bugs.launchpad.net/nova/+bug/2123895>`__]
+    Fixed service endpoint discovery with ``[oslo_limit]`` configuration when
+    unified limits quotas are enabled.
