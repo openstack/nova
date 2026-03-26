@@ -19229,10 +19229,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_guest = mock.Mock()
         mock_get.return_value = fake_guest
 
-        drvr._undefine_domain(instance, keep_vtpm=True)
+        drvr._undefine_domain(instance, keep_vtpm=True, keep_nvram=False)
 
         fake_guest.delete_configuration.assert_called_once_with(
             keep_vtpm=False,
+            keep_nvram=False,
         )
 
         # Check that it truly forces it to False and doesn't do a `not` or
@@ -19242,6 +19243,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         fake_guest.delete_configuration.assert_called_once_with(
             keep_vtpm=False,
+            keep_nvram=False,
         )
 
     @mock.patch.object(host.Host, "get_guest")
@@ -19252,9 +19254,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_guest = mock.Mock()
         mock_get.return_value = fake_guest
 
-        drvr._undefine_domain(instance, keep_vtpm=True)
+        drvr._undefine_domain(instance, keep_vtpm=True, keep_nvram=False)
 
-        fake_guest.delete_configuration.assert_called_once_with(keep_vtpm=True)
+        fake_guest.delete_configuration.assert_called_once_with(
+                keep_vtpm=True,
+                keep_nvram=False)
 
         # Check that it does not force keep_vtpm to true, just because it is
         # supported.
@@ -19263,7 +19267,26 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         fake_guest.delete_configuration.assert_called_once_with(
             keep_vtpm=False,
+            keep_nvram=False,
         )
+
+    @mock.patch.object(host.Host, "get_guest")
+    def test_undefine_domain_passes_keep_nvram_if_supported(self, mock_get):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        fake_guest = mock.Mock()
+        mock_get.return_value = fake_guest
+        drvr._undefine_domain(instance, keep_nvram=True)
+        fake_guest.delete_configuration.assert_called_once_with(
+            keep_vtpm=False, keep_nvram=True)
+        # Check that it does not force keep_nvram to true, just because it is
+        # supported.
+        fake_guest.reset_mock()
+        drvr._undefine_domain(instance, keep_nvram=False)
+        fake_guest.delete_configuration.assert_called_once_with(
+            keep_vtpm=False,
+            keep_nvram=False,
+            )
 
     @mock.patch.object(host.Host, "list_instance_domains")
     @mock.patch.object(objects.BlockDeviceMappingList, "bdms_by_instance_uuid")
@@ -19564,7 +19587,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disk_actual_size = 3687091200
         disk_actual_size_blocks = disk_actual_size / 512
         expected_over_committed_disk_size = disk_virtual_size -\
-                                                disk_actual_size
+                disk_actual_size
 
         mock_getsize.return_value = disk_virtual_size
         mock_stat.return_value = mock.Mock(st_blocks=disk_actual_size_blocks)
@@ -21836,7 +21859,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_delete_files.assert_called_once_with(fake_inst)
         # vTPM secret should not be deleted until instance is deleted.
         mock_delete_vtpm.assert_not_called()
-        mock_undefine.assert_called_once_with(fake_inst, keep_vtpm=False)
+        mock_undefine.assert_called_once_with(
+                fake_inst,
+                keep_vtpm=False,
+                keep_nvram=False)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
     @mock.patch('nova.crypto.delete_vtpm_secret')
@@ -21862,7 +21888,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_mapping.assert_called_once_with(None)
         mock_delete_files.assert_not_called()
         mock_delete_vtpm.assert_not_called()
-        mock_undefine.assert_called_once_with(fake_inst, keep_vtpm=True)
+        mock_undefine.assert_called_once_with(fake_inst, keep_vtpm=True,
+                                              keep_nvram=True)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
     @mock.patch('nova.crypto.delete_vtpm_secret')
@@ -21887,7 +21914,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             drvr.cleanup('ctxt', fake_inst, 'netinfo')
         # vTPM secret should not be deleted until instance is deleted.
         mock_delete_vtpm.assert_not_called()
-        mock_undefine.assert_called_once_with(fake_inst, keep_vtpm=False)
+        mock_undefine.assert_called_once_with(fake_inst, keep_vtpm=False,
+                                              keep_nvram=False)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
                        return_value=True)

@@ -2838,6 +2838,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_mach_type = "pc-q35-5.1"
         obj.os_loader = '/tmp/OVMF_CODE.secboot.fd'
         obj.os_loader_type = 'pflash'
+        obj.os_nvram = '/foo/bar/instance-00000012_VARS.fd'
         obj.os_loader_secure = True
         obj.os_loader_stateless = True
         xml = obj.to_xml()
@@ -2852,6 +2853,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <os>
                 <type machine="pc-q35-5.1">hvm</type>
                 <loader stateless='yes' secure='yes' readonly='yes' type='pflash'>/tmp/OVMF_CODE.secboot.fd</loader>
+                 <nvram>/foo/bar/instance-00000012_VARS.fd</nvram>
               </os>
             </domain>""",  # noqa: E501
             xml,
