@@ -21,25 +21,29 @@ up support for the native threading mode.
 Selecting concurrency mode for a service
 ----------------------------------------
 
-Since nova 33.0.0 (2026.1 Gazpacho) the nova-scheduler, nova-api, and
-nova-metadata are using native threading by default. The rest of the
-services are using eventlet by default in this release. The concurrency mode
-can be configured per service via setting the environment variable
-``OS_NOVA_DISABLE_EVENTLET_PATCHING``. Setting that variable to ``true``
-requests the native threading mode while setting it to ``false`` requests the
-eventlet mode. If the variable is not set the above default is applied.
+Since nova 34.0.0 (2026.2 Hibiscus) the nova-scheduler, nova-api,
+nova-metadata, nova-conductor, and nova-compute are using native threading by
+default. The rest of the services are using eventlet by default in this
+release. The concurrency mode can be configured per service via setting the
+environment variable ``OS_NOVA_DISABLE_EVENTLET_PATCHING``. Setting that
+variable to ``true`` requests the native threading mode while setting it to
+``false`` requests the eventlet mode. If the variable is not set the above
+default is applied.
 
 .. note::
 
-   Since nova 32.0.0 (2025.2 Flamingo) the nova-scheduler, nova-metadata, and
-   nova-api can be switched to native threading mode.
+   Nova is transitioning from ``eventlet`` to native threading across all
+   services:
 
-   Since nova 33.0.0 (2026.1 Gazpacho) the nova-conductor and nova-compute
-   can also be switched to native threading mode.
+   * **Nova 32.0.0 (2025.2 Flamingo):** Optional native threading support added
+     for ``nova-scheduler``, ``nova-metadata``, and ``nova-api``.
+   * **Nova 33.0.0 (2026.1 Gazpacho):** Native threading became the **default**
+     for the above services. Support was also added for ``nova-conductor`` and
+     ``nova-compute``.
+   * **Nova 34.0.0 (2026.2 Hibiscus):** Native threading became the **default**
+     for ``nova-conductor`` and ``nova-compute``.
 
-   Since nova 33.0.0 (2026.1. Gazpacho) the nova-scheduler, nova-metadata, and
-   nova-api using native threading mode by default but still can be switched
-   back to eventlet if needed.
+   Operators can still manually revert to ``eventlet`` mode if needed.
 
 
 Tunables for the native threading mode
@@ -143,13 +147,18 @@ adding the `read_timeout`__ connection parameter to the connection string.
 We recommend using both in deployments where Nova services are running in
 native threading mode.
 
-Upgrading to nova 33.0.0 (2026.1. Gazpacho) or newer
-----------------------------------------------------
+Upgrading to Nova 33.0.0 (2026.1 Gazpacho) or newer
+---------------------------------------------------
 
-In nova 33.0.0 (2026.1. Gazpacho) the default concurrency mode of
-nova-scheduler, nova-api, and nova-metadata service are switched to native
-threading. We recommend to decouple the upgrade from the concurrency mode
-change to reduce the risk of issues. To do that either test and tune the native
-threading mode of these services already in 2025.2 (Flamingo) or ensure that
-your service configuration is explicitly using the eventlet mode before you
-upgrade and only change to threading mode after the upgrade was successful.
+In Nova 33.0.0 (2026.1 Gazpacho), the default concurrency mode of
+nova-scheduler, nova-api, and nova-metadata services has been switched to
+native threading. We recommend decoupling the upgrade from the concurrency
+mode change to reduce the risk of issues. To do that either test and tune the
+native threading mode of these services already in 2025.2 (Flamingo), or ensure
+that your service configuration is explicitly using the eventlet mode before
+you upgrade and only change to threading mode after the upgrade was successful.
+In Nova 34.0.0 (2026.2 Hibiscus), the default concurrency mode of
+nova-conductor and nova-compute services has also been switched to native
+threading. So similar precaution is needed when planning an upgrade. These
+services can be tested in native threading mode already in the 33.0.0
+(2026.1 Gazpacho) release.
