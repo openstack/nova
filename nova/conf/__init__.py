@@ -18,6 +18,7 @@
 # For more background see the blueprint "centralize-config-options"
 
 from oslo_config import cfg
+from oslo_middleware import tracing
 
 from nova.conf import api
 from nova.conf import availability_zone
@@ -112,3 +113,5 @@ vnc.register_opts(CONF)
 workarounds.register_opts(CONF)
 wsgi.register_opts(CONF)
 zvm.register_opts(CONF)
+
+tracing.set_defaults(service_name='nova-api')

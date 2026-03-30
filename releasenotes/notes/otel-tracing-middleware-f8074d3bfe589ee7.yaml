@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Added support for the OpenTelemetry tracing middleware provided by
+    ``oslo.middleware``. The middleware is wired into the Nova API paste
+    pipeline and is disabled by default, acting as a zero-overhead passthrough
+    when off. To enable distributed tracing, set ``enabled = True`` under the
+    ``[oslo_middleware_tracing]`` group in ``nova.conf`` and install the
+    optional OpenTelemetry exporter packages, which ship as extras of
+    ``oslo.middleware``: ``oslo.middleware[tracing-http]`` for the OTLP HTTP
+    exporter or ``oslo.middleware[tracing-grpc]`` for the OTLP gRPC exporter.
+    Enabling the middleware without these packages installed will cause the
+    service to fail at startup.
