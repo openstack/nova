@@ -3,10 +3,6 @@ nova.tests.unit.console.rfb.test_authvencrypt.RFBAuthSchemeVeNCryptTestCase.test
 nova.tests.unit.console.rfb.test_authvencrypt.RFBAuthSchemeVeNCryptTestCase.test_security_handshake_with_x509
 nova.tests.unit.test_context.ContextTestCase.test_scatter_gather_cells_queued_task_cancelled
 
-# Wait until eventlet.Event is removed by https://review.opendev.org/c/openstack/nova/+/949754
-nova.tests.unit.virt.libvirt.test_driver.CacheConcurrencyTestCase.test_different_fname_concurrency
-nova.tests.unit.virt.libvirt.test_driver.CacheConcurrencyTestCase.test_same_fname_concurrency
-
 #  File "/home/gibi/upstream/git/nova/nova/tests/unit/virt/libvirt/volume/test_mount.py", line 144, in runto
 #  assert time.time() - wait_since < MAX_WAIT
 # Wait until eventlet.Event is removed by https://review.opendev.org/c/openstack/nova/+/949754

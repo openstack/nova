@@ -569,7 +569,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait1 = threading.Event()
         done1 = threading.Event()
         sig1 = threading.Event()
-        thr1 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
+        thr1 = utils.spawn(backend.by_name(self._fake_instance(uuid),
                                               'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig1, wait=wait1, done=done1)
@@ -580,7 +580,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2 = threading.Event()
         done2 = threading.Event()
         sig2 = threading.Event()
-        thr2 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
+        thr2 = utils.spawn(backend.by_name(self._fake_instance(uuid),
                                               'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig2, wait=wait2, done=done2)
@@ -592,12 +592,12 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         finally:
             wait1.set()
         done1.wait()
-        utils.cooperative_yield()
+        done2.wait()
         self.assertTrue(done2.is_set())
-        # Wait on greenthreads to assert they didn't raise exceptions
+        # Wait on threads to assert they didn't raise exceptions
         # during execution
-        thr1.wait()
-        thr2.wait()
+        thr1.result()
+        thr2.result()
 
     def test_different_fname_concurrency(self):
         # Ensures that two different fname caches are concurrent.
@@ -607,7 +607,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait1 = threading.Event()
         done1 = threading.Event()
         sig1 = threading.Event()
-        thr1 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
+        thr1 = utils.spawn(backend.by_name(self._fake_instance(uuid),
                                               'name').cache,
                 _concurrency, 'fname2', None,
                 signal=sig1, wait=wait1, done=done1)
@@ -618,7 +618,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2 = threading.Event()
         done2 = threading.Event()
         sig2 = threading.Event()
-        thr2 = eventlet.spawn(backend.by_name(self._fake_instance(uuid),
+        thr2 = utils.spawn(backend.by_name(self._fake_instance(uuid),
                                               'name').cache,
                 _concurrency, 'fname1', None,
                 signal=sig2, wait=wait2, done=done2)
@@ -629,17 +629,17 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2.set()
         tries = 0
         while not done2.is_set() and tries < 10:
-            utils.cooperative_yield()
+            time.sleep(0.1)
             tries += 1
         try:
             self.assertTrue(done2.is_set())
         finally:
             wait1.set()
             utils.cooperative_yield()
-        # Wait on greenthreads to assert they didn't raise exceptions
+        # Wait on hreads to assert they didn't raise exceptions
         # during execution
-        thr1.wait()
-        thr2.wait()
+        thr1.result()
+        thr2.result()
 
 
 class FakeInvalidVolumeDriver(object):
