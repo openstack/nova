@@ -76,6 +76,9 @@ class MemEncryptionConfig(metaclass=abc.ABCMeta):
             return False
         return self.model == other.model
 
+    def __hash__(self) -> int:
+        return hash(self.model)
+
     @classmethod
     def create(cls, model: str) -> 'MemEncryptionConfig':
         """Factory returning a MemEncryptionConfig class object
@@ -117,14 +120,9 @@ class MemEncryptionConfigSev(MemEncryptionConfig):
         emsg = _(
             "Memory encryption requested by %(requesters)s but image "
             "metadata doesn't have 'hw_firmware_type' property set to "
-            "'uefi' "
+            "'uefi'"
         )
-        # image_meta.name is not set if image object represents root Cinder
-        # volume, for this case FlavorImageConflict should be raised, but
-        # image_meta.name can't be extracted.
-        image_name = (image_meta.name if 'name' in image_meta else None)
-        data = {'requesters': " and ".join(requesters),
-                'image_name': image_name}
+        data = {'requesters': " and ".join(requesters)}
         raise exception.FlavorImageConflict(emsg % data)
 
     def _check_machine_type(self, image_meta: 'objects.ImageMeta',
@@ -1325,7 +1323,7 @@ def get_mem_encryption_constraint(
     :param machine_type: a string representing the machine type (optional)
     :raises: nova.exception.FlavorImageConflict
     :raises: nova.exception.InvalidMachineType
-    :returns: A named tuple containing the memory encryption model, else None.
+    :returns: A MemEncryptionConfig object, else None.
     """
 
     flavor_mem_enc_str, image_mem_enc = _get_flavor_image_meta(
@@ -1522,7 +1520,7 @@ def get_locked_memory_constraint(
     :raises: exception.LockMemoryForbidden if mem_page_size is not set
         while provide locked_memory value in image or flavor.
     :raises: exception.FlavorImageLockedMemoryConflict if memory locking
-        constraints  between flavor and image conflicts
+        constraints between flavor and image conflicts
     :raises: exception.FlavorImageConflict if memory encryption constraints
         between flavor and image conflicts
     :raises: exception.InvalidMachineType if the machine type does not

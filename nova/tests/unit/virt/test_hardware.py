@@ -28,6 +28,7 @@ from nova import test
 from nova.tests.unit import fake_pci_device_pools as fake_pci
 from nova.tests.unit.image.fake import fake_image_obj
 from nova.virt import hardware as hw
+import os_traits as ot
 
 CONF = nova.conf.CONF
 
@@ -5395,7 +5396,7 @@ class GetMemEncryptionConfigTestCase(test.NoDBTestCase):
         self.assertIs(hw.MemEncryptionConfigSev, type(me_config))
         self.assertTrue(me_config.needs_locked_memory)
         self.assertEqual(fields.MemEncryptionModel.AMD_SEV, me_config.model)
-        self.assertEqual('HW_CPU_X86_AMD_SEV', me_config.required_trait)
+        self.assertEqual(ot.HW_CPU_X86_AMD_SEV, me_config.required_trait)
 
     def test_sev_es(self):
         me_config = hw.MemEncryptionConfig.create(
@@ -5403,7 +5404,7 @@ class GetMemEncryptionConfigTestCase(test.NoDBTestCase):
         self.assertIs(hw.MemEncryptionConfigSevEs, type(me_config))
         self.assertTrue(me_config.needs_locked_memory)
         self.assertEqual(fields.MemEncryptionModel.AMD_SEV_ES, me_config.model)
-        self.assertEqual('HW_CPU_X86_AMD_SEV_ES', me_config.required_trait)
+        self.assertEqual(ot.HW_CPU_X86_AMD_SEV_ES, me_config.required_trait)
 
 
 class MemEncryptionFlavorImageConflictTestCase(test.NoDBTestCase):
@@ -5489,7 +5490,7 @@ class MemEncryptionRequestedWithoutUEFITestCase(
     expected_error = (
         "Memory encryption requested by %(requesters)s but image "
         "metadata doesn't have 'hw_firmware_type' property "
-        "set to 'uefi' "
+        "set to 'uefi'"
     )
 
     def _test_encrypted_memory_support_no_uefi(self, enc_extra_spec,
