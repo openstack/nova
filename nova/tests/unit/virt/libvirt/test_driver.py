@@ -22310,6 +22310,41 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 cleanup_instance_disks=mock.sentinel.cleanup_instance_disks)
         the_test()
 
+    def test_create_guest_with_network__fatal_timeout_cleans_vtpm_secret(self):
+        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
+
+        @mock.patch.object(drvr, 'plug_vifs')
+        @mock.patch.object(drvr, '_create_guest')
+        @mock.patch.object(drvr, '_cleanup')
+        @mock.patch.object(drvr._host, 'delete_secret')
+        def _test(mock_delete_secret, mock_cleanup, mock_create, mock_plug):
+            instance = objects.Instance(**self.test_instance)
+            mock_create.side_effect = exception.VirtualInterfaceCreateException
+            self.assertRaises(
+                exception.VirtualInterfaceCreateException,
+                drvr._create_guest_with_network,
+                self.context, 'xml', instance, [], None)
+            mock_delete_secret.assert_called_once_with(
+                'vtpm', instance.uuid)
+        _test()
+
+    def test_create_guest_with_network__other_error_cleans_vtpm_secret(self):
+        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
+
+        @mock.patch.object(drvr, 'plug_vifs')
+        @mock.patch.object(drvr, '_create_guest')
+        @mock.patch.object(drvr, '_cleanup')
+        @mock.patch.object(drvr._host, 'delete_secret')
+        def _test(mock_delete_secret, mock_cleanup, mock_create, mock_plug):
+            instance = objects.Instance(**self.test_instance)
+            mock_create.side_effect = test.TestingException
+            self.assertRaises(
+                test.TestingException, drvr._create_guest_with_network,
+                self.context, 'xml', instance, [], None)
+            mock_delete_secret.assert_called_once_with(
+                'vtpm', instance.uuid)
+        _test()
+
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
     def test_create_guest_with_network__with_bdm(
