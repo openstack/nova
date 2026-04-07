@@ -23,6 +23,7 @@ from unittest import mock
 from castellan.common import exception as castellan_exception
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
+import ddt
 from oslo_concurrency import processutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import paramiko
@@ -232,6 +233,7 @@ class FakePassphrase():
         return b'foo'
 
 
+@ddt.ddt
 class VTPMTest(test.NoDBTestCase):
 
     def setUp(self):
@@ -350,19 +352,53 @@ class VTPMTest(test.NoDBTestCase):
             self.ctxt, instance)
 
     @mock.patch.object(crypto, '_get_key_manager')
-    def test_ensure_vtpm_secret_other_keymanager_error(self, mock_get_manager):
+    def test_delete_vtpm_secret_get_forbidden(self, mock_get_manager):
+        """Check when we fail access to retrieve a secret via castellan.
+
+        We should bubble up the error.
+        """
+        instance = objects.Instance(uuid=uuids.instance)
+        instance.system_metadata = {'vtpm_secret_uuid': uuids.vtpm}
+        mock_get_manager.return_value.delete.side_effect = (
+            castellan_exception.KeyManagerError(
+                'Forbidden: Secret payload retrieval attempt not allowed'))
+
+        self.assertRaises(
+            exception.VTPMSecretForbidden,
+            crypto.delete_vtpm_secret,
+            self.ctxt, instance)
+
+    @mock.patch.object(crypto, '_get_key_manager')
+    @ddt.data('store', 'get')
+    def test_ensure_vtpm_secret_other_keymanager_error(self, method,
+                                                       mock_get_manager):
         """Check when we fail for any other key manager error via castellan.
 
         We should bubble up the error.
         """
-        instance = objects.Instance()
-        instance.system_metadata = {'vtpm_secret_uuid': uuids.vtpm}
-        mock_get_manager.return_value.get.side_effect = (
+        instance = objects.Instance(uuid=uuids.instance, system_metadata={})
+        if method == 'get':
+            instance.system_metadata['vtpm_secret_uuid'] = uuids.vtpm
+        getattr(mock_get_manager.return_value, method).side_effect = (
             castellan_exception.KeyManagerError('Something else'))
 
         self.assertRaises(
-            castellan_exception.KeyManagerError,
-            crypto.ensure_vtpm_secret,
+            castellan_exception.KeyManagerError, crypto.ensure_vtpm_secret,
+            self.ctxt, instance)
+
+    @mock.patch.object(crypto, '_get_key_manager')
+    def test_delete_vtpm_secret_other_keymanager_error(self, mock_get_manager):
+        """Check when we fail for any other key manager error via castellan.
+
+        We should bubble up the error.
+        """
+        instance = objects.Instance(uuid=uuids.instance)
+        instance.system_metadata = {'vtpm_secret_uuid': uuids.vtpm}
+        mock_get_manager.return_value.delete.side_effect = (
+            castellan_exception.KeyManagerError('Something else'))
+
+        self.assertRaises(
+            castellan_exception.KeyManagerError, crypto.delete_vtpm_secret,
             self.ctxt, instance)
 
 
