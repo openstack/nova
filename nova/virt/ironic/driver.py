@@ -1259,12 +1259,19 @@ class IronicDriver(virt_driver.ComputeDriver):
                 config_drive=configdrive_value,
             )
         except Exception as e:
-            with excutils.save_and_reraise_exception():
-                LOG.error("Failed to request Ironic to provision instance "
-                          "%(inst)s: %(reason)s",
-                          {'inst': instance.uuid,
-                           'reason': str(e)})
-                self._cleanup_deploy(node, instance, network_info)
+            LOG.error("Failed to request Ironic to provision instance "
+                        "%(inst)s: %(reason)s",
+                        {'inst': instance.uuid,
+                        'reason': str(e)})
+            self._cleanup_deploy(node, instance, network_info)
+
+            if 'InvalidImage' in str(e):
+                raise exception.BuildAbortException(
+                    instance_uuid=instance.uuid,
+                    reason=str(e)
+                ) from e
+
+            raise
 
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
                                                      instance)
