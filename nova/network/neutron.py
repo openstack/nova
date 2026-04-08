@@ -1319,7 +1319,9 @@ class API:
         port_client = admin_client
 
         preexisting_port_ids = []
-        created_port_ids = []
+        created_port_ids = [
+            port_id for _, port_id in requests_and_created_ports
+            if port_id is not None]
         ports_in_requested_order = []
         nets_in_requested_order = []
         created_vifs = []   # this list is for cleanups if we fail
@@ -1362,7 +1364,6 @@ class API:
 
                 if created_port_id:
                     port_id = created_port_id
-                    created_port_ids.append(port_id)
                 else:
                     port_id = request.port_id
                 ports_in_requested_order.append(port_id)

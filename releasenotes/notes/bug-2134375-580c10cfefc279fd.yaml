@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    `Bug #2134375`_: Fix ports remain during creating instance
+    with multiple network when error occurs updating first port.
+
+    .. _bug #2134375: https://launchpad.net/bugs/2134375
