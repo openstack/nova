@@ -76,6 +76,6 @@ class TestPortErrorDuringCreateServer(
                       {'uuid': self.neutron.network_2['id']}],
             expected_state='ERROR')
 
-        # FIXME should delete all created ports
-        self.assertEqual(3, len(self.neutron.list_ports(
+        # Created ports deleted and 2 ports remain
+        self.assertEqual(2, len(self.neutron.list_ports(
             is_admin=True)['ports']))
