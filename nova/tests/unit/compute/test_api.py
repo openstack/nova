@@ -1576,15 +1576,18 @@ class _ComputeAPIUnitTestMixIn(object):
 
         test()
 
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch('nova.compute.utils.notify_about_instance_delete')
     @mock.patch('nova.objects.Instance.destroy')
-    def test_delete_instance_from_cell0(self, destroy_mock, notify_mock):
+    def test_delete_instance_from_cell0(self, destroy_mock, notify_mock,
+                                        mock_bdm_get):
         """Tests the case that the instance does not have a host and was not
         deleted while building, so conductor put it into cell0 so the API has
         to delete the instance from cell0.
         """
         instance = self._create_instance_obj({'host': None})
         cell0 = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID)
+        mock_bdm_get.return_value = objects.BlockDeviceMappingList()
 
         with test.nested(
             mock.patch.object(self.compute_api, '_delete_while_booting',
@@ -1603,6 +1606,8 @@ class _ComputeAPIUnitTestMixIn(object):
             notify_mock.assert_called_once_with(
                 self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
+            mock_bdm_get.assert_called_once_with(
+                self.context, instance.uuid)
 
     def test_delete_instance_while_booting_host_changes_lookup_fails(self):
         """Tests the case where the instance become scheduled while being
@@ -1631,6 +1636,68 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance.uuid)
             _local_delete_cleanup.assert_called_once_with(
                 self.context, instance.uuid)
+
+    @mock.patch('nova.objects.Instance.destroy')
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    @mock.patch('nova.compute.utils.notify_about_instance_delete')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_delete_instance_while_scheduling_with_bdm(self, mock_bdm_get,
+                                                       notify_mock,
+                                                       mock_bdm_destroy,
+                                                       instance_destroy):
+        """Tests the scenario where an instance is destroyed during scheduling.
+        This checks that we call Cinder to delete the volume attachment for any
+        existing Block Device Mappings (BDMs). This can occur when the instance
+        is in BUILDING state and has a BDM with a volume attachment
+        (volume state reserved on cinder side).
+        """
+        instance = self._create_instance_obj({'host': None,
+                    'vm_state': vm_states.BUILDING,
+                    'task_state': task_states.SCHEDULING,
+                    })
+        cell1 = objects.CellMapping(uuid=uuids.cell1)
+
+        bdm = objects.BlockDeviceMapping(
+                        **fake_block_device.FakeDbBlockDeviceDict(
+                        {'no_device': False, 'volume_id': '1', 'boot_index': 0,
+                         'connection_info': 'inf', 'device_name': '/dev/vda',
+                         'source_type': 'volume', 'destination_type': 'volume',
+                         'tag': None, 'attachment_id': uuids.attachment_id,
+                         'instance_uuid': instance.uuid,
+                         'delete_on_termination': 0}, anon=True))
+        bdms = objects.BlockDeviceMappingList(objects=[bdm])
+
+        instance.block_device_mapping = bdms
+        mock_bdm_get.return_value = bdms
+
+        with test.nested(
+            mock.patch.object(
+                self.compute_api, '_delete_while_booting',
+                return_value=False),
+            mock.patch.object(
+                self.compute_api, '_lookup_instance',
+                return_value=(cell1, instance)),
+            mock.patch.object(self.compute_api, '_local_delete_cleanup'),
+            mock.patch.object(
+                self.compute_api.volume_api, 'attachment_delete'),
+        ) as (
+            _delete_while_booting, _lookup_instance, _local_delete_cleanup,
+            _mock_attachment_delete
+        ):
+            self.compute_api._delete(
+                self.context, instance, 'delete', mock.NonCallableMock())
+
+            _delete_while_booting.assert_called_once_with(
+                self.context, instance)
+            _lookup_instance.assert_called_once_with(
+                self.context, instance.uuid)
+            _local_delete_cleanup.assert_called_once_with(
+                self.context, instance.uuid)
+            _mock_attachment_delete.assert_called_once_with(
+                self.context, uuids.attachment_id)
+            notify_mock.assert_called_once_with(
+                self.compute_api.notifier, self.context, instance)
+            instance_destroy.assert_called_once_with()
 
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',

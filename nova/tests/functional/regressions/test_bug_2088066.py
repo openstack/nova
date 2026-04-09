@@ -91,8 +91,8 @@ class TestDeleteInstanceWhileSchedulingWithBDM(
         final_attachments = list(
             self.cinder.volume_ids_for_instance(server_id)
         )
-        # FIXME: This is a regression check before the fix for bug 2088066
-        self.assertNotEqual(
+
+        self.assertEqual(
             [], final_attachments, "Volume attachments should be cleaned up"
         )
 

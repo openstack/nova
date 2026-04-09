@@ -2479,8 +2479,17 @@ class API:
 
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if cell and instance:
+                    bdms = instance.get_bdms()
+                    # If there are any block device mappings, clean them up.
+                    if len(bdms) > 0:
+                        # ensure any bdms and cinder attachments are cleaned up
+                        self._local_cleanup_bdm_volumes(
+                            bdms, instance, context)
                     try:
                         # Now destroy the instance from the cell it lives in.
+                        # The instance.destroy will wipe all related BDMs from
+                        # the database. Therefore we need to notify cinder with
+                        # the _local_cleanup_bdm_volumes() call before.
                         with compute_utils.notify_about_instance_delete(
                                 self.notifier, context, instance):
                             instance.destroy()

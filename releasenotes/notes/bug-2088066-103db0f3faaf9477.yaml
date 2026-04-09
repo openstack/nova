@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Fixes an bug where deleting a volume backed server during the creation
+    phase(building) could leave its cinder volume attachment behind.
+    We will now check for already created BDMs during this deletion phase
+    and will call/notify cinder for deleting these attachments.
+
+    .. _bug #2088066: https://launchpad.net/bugs/2088066
