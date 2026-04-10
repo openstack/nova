@@ -30,6 +30,21 @@ variable to ``true`` requests the native threading mode while setting it to
 ``false`` requests the eventlet mode. If the variable is not set the above
 default is applied.
 
+CLI commands (nova-manage and nova-status)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``nova-manage`` and ``nova-status`` CLI commands also support native
+threading mode via the same ``OS_NOVA_DISABLE_EVENTLET_PATCHING`` environment
+variable. This is particularly useful for commands that perform cross-cell
+operations using scatter-gather patterns (e.g., ``nova-manage cell_v2 list_hosts``,
+``nova-status upgrade check``, ``nova-manage placement heal_allocations``) as
+these benefit from the concurrent execution provided by native threading.
+
+To run CLI commands in native threading mode::
+
+    OS_NOVA_DISABLE_EVENTLET_PATCHING=true nova-manage cell_v2 list_hosts
+    OS_NOVA_DISABLE_EVENTLET_PATCHING=true nova-status upgrade check
+
 .. note::
 
    Nova is transitioning from ``eventlet`` to native threading across all

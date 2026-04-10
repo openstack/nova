@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The ``nova-manage`` and ``nova-status`` CLI commands now support native
+    threading mode via the ``OS_NOVA_DISABLE_EVENTLET_PATCHING`` environment
+    variable. This allows CLI commands that perform cross-cell operations using
+    scatter-gather patterns (e.g., ``nova-manage cell_v2 list_hosts``,
+    ``nova-status upgrade check``, ``nova-manage placement heal_allocations``)
+    to benefit from concurrent execution with native threading. For more details,
+    see the concurrency guide:
+    `<https://docs.openstack.org/nova/latest/admin/concurrency.html>`__

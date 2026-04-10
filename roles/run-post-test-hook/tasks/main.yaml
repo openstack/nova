@@ -1,3 +1,5 @@
 - name: Run post_test_hook.sh
   command: "{{ devstack_base_dir }}/nova/gate/post_test_hook.sh"
   become: yes
+  environment:
+    OS_NOVA_DISABLE_EVENTLET_PATCHING: "{{ nova_cli_threading_mode | default('') }}"
