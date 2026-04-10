@@ -514,7 +514,8 @@ class TestServiceVersionCells(test.TestCase):
                                       binary='nova-compute')
             service.version = version
             cell = cells[index % len(cells)]
-            with context.target_cell(self.context, cell):
+            with context.target_cell(self.context, cell) as cctxt:
+                service.context = cctxt
                 service.create()
             index += 1
 
