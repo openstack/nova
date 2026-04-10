@@ -161,6 +161,12 @@
         NOVA_ALLOW_MOVE_TO_SAME_HOST: false
         LIVE_MIGRATION_AVAILABLE: true
         USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION: true
+        'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-cond-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
     group-vars:
       subnode:
         devstack_services:
@@ -175,6 +181,25 @@
           NOVA_ALLOW_MOVE_TO_SAME_HOST: false
           LIVE_MIGRATION_AVAILABLE: true
           USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION: true
+          'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+
+- job:
+    name: nova-graceful-shutdown-eventlet
+    parent: nova-graceful-shutdown
+    description: |
+      Run Nova graceful shutdown tests in eventlet mode.
+    vars:
+      devstack_localrc:
+        'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-cond-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+    group-vars:
+      subnode:
+        devstack_localrc:
+          'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
 
 - job:
     name: nova-alt-configurations
@@ -974,6 +999,7 @@
         - tempest-centos9-stream-fips
         - whitebox-devstack-multinode
         - tempest-integrated-compute-rbac-old-defaults
+        - nova-graceful-shutdown-eventlet
     experimental:
       jobs:
         - ironic-tempest-bfv:
@@ -1007,3 +1033,4 @@
         - whitebox-devstack-multinode
         - tempest-integrated-compute-rbac-old-defaults:
             irrelevant-files: *policies-irrelevant-files
+        - nova-graceful-shutdown-eventlet
