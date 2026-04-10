@@ -45,8 +45,11 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
         self.compute_sock.recv.side_effect = (
             list(self.compute_sock.recv.side_effect) + [ret_val])
 
-    @mock.patch.object(ssl, "wrap_socket", return_value="wrapped")
-    def test_security_handshake_with_x509(self, mock_socket):
+    @mock.patch.object(ssl, "SSLContext")
+    def test_security_handshake_with_x509(self, mock_create_context):
+        mock_ssl_context = mock_create_context.return_value
+        mock_ssl_context.wrap_socket.return_value = "wrapped"
+
         self.flags(vencrypt_client_key='/certs/keyfile',
                    vencrypt_client_cert='/certs/cert.pem',
                    group="vnc")
@@ -70,18 +73,23 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
         self.assertEqual("wrapped", self.scheme.security_handshake(
             self.compute_sock))
 
-        mock_socket.assert_called_once_with(
+        mock_ssl_context.wrap_socket.assert_called_once_with(
             self.compute_sock,
+            server_side=False)
+        mock_ssl_context.load_cert_chain.assert_called_once_with(
             keyfile='/certs/keyfile',
-            certfile='/certs/cert.pem',
-            server_side=False,
-            cert_reqs=ssl.CERT_REQUIRED,
-            ca_certs='/certs/ca.pem')
+            certfile='/certs/cert.pem')
+        mock_ssl_context.load_verify_locations.assert_called_once_with(
+            cafile='/certs/ca.pem')
+        self.assertEqual(ssl.CERT_REQUIRED, mock_ssl_context.verify_mode)
 
         self.assertEqual(self.expected_calls, self.compute_sock.mock_calls)
 
-    @mock.patch.object(ssl, "wrap_socket", return_value="wrapped")
-    def test_security_handshake_without_x509(self, mock_socket):
+    @mock.patch.object(ssl, "SSLContext")
+    def test_security_handshake_without_x509(self, mock_create_context):
+        mock_ssl_context = mock_create_context.return_value
+        mock_ssl_context.wrap_socket.return_value = "wrapped"
+
         self._expect_recv(1, "\x00")
         self._expect_recv(1, "\x02")
 
@@ -100,14 +108,15 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
 
         self.assertEqual("wrapped", self.scheme.security_handshake(
             self.compute_sock))
-        mock_socket.assert_called_once_with(
+        mock_ssl_context.wrap_socket.assert_called_once_with(
             self.compute_sock,
+            server_side=False)
+        mock_ssl_context.load_cert_chain.assert_called_once_with(
             keyfile=None,
-            certfile=None,
-            server_side=False,
-            cert_reqs=ssl.CERT_REQUIRED,
-            ca_certs='/certs/ca.pem'
-        )
+            certfile=None)
+        mock_ssl_context.load_verify_locations.assert_called_once_with(
+            cafile='/certs/ca.pem')
+        self.assertEqual(ssl.CERT_REQUIRED, mock_ssl_context.verify_mode)
 
         self.assertEqual(self.expected_calls, self.compute_sock.mock_calls)
 
@@ -165,8 +174,13 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
 
         self._test_security_handshake_fails()
 
-    @mock.patch.object(ssl, "wrap_socket")
-    def test_security_handshake_fails_on_ssl_failure(self, mock_socket):
+    @mock.patch.object(ssl, "SSLContext")
+    def test_security_handshake_fails_on_ssl_failure(
+        self, mock_create_context
+    ):
+        mock_ssl_context = mock_create_context.return_value
+        mock_ssl_context.wrap_socket.return_value = "wrapped"
+
         self._expect_recv(1, "\x00")
         self._expect_recv(1, "\x02")
 
@@ -183,18 +197,19 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
 
         self._expect_recv(1, "\x01")
 
-        mock_socket.side_effect = ssl.SSLError("cheese")
+        mock_ssl_context.wrap_socket.side_effect = ssl.SSLError("cheese")
 
         self._test_security_handshake_fails()
 
-        mock_socket.assert_called_once_with(
+        mock_ssl_context.wrap_socket.assert_called_once_with(
             self.compute_sock,
+            server_side=False)
+        mock_ssl_context.load_cert_chain.assert_called_once_with(
             keyfile=None,
-            certfile=None,
-            server_side=False,
-            cert_reqs=ssl.CERT_REQUIRED,
-            ca_certs='/certs/ca.pem'
-        )
+            certfile=None)
+        mock_ssl_context.load_verify_locations.assert_called_once_with(
+            cafile='/certs/ca.pem')
+        self.assertEqual(ssl.CERT_REQUIRED, mock_ssl_context.verify_mode)
 
     def test_types(self):
         scheme = authvencrypt.RFBAuthSchemeVeNCrypt()
