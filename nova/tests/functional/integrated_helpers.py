@@ -1081,8 +1081,10 @@ class PlacementHelperMixin:
         # the peek behind the curtains here to keep it out of the tests.
         # TODO(danms): Get the migration uuid from the API once it is exposed
         ctxt = context.get_admin_context()
-        migrations = db.migration_get_all_by_filters(
-            ctxt, {'instance_uuid': instance_uuid})
+        im = objects.InstanceMapping.get_by_instance_uuid(ctxt, instance_uuid)
+        with context.target_cell(ctxt, im.cell_mapping) as cctxt:
+            migrations = db.migration_get_all_by_filters(
+                cctxt, {'instance_uuid': instance_uuid})
         self.assertEqual(
             1, len(migrations),
             'Test expected a single migration but found %i' % len(migrations))

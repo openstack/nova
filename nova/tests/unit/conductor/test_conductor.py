@@ -2480,8 +2480,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         get_az.assert_called_once_with(mock.ANY, 'host1')
 
         instance_uuid = details['instance'].uuid
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.ctxt, instance_uuid)
+        with context.target_cell(self.ctxt,
+                                 self.cell_mappings['cell1']) as cctxt:
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                cctxt, instance_uuid)
         ephemeral = list(filter(block_device.new_format_is_ephemeral, bdms))
         self.assertEqual(1, len(ephemeral))
         swap = list(filter(block_device.new_format_is_swap, bdms))
@@ -2665,9 +2667,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.start_service('compute', host='fake-host')
         self.conductor.schedule_and_build_instances(**self.params)
         with conductor_manager.try_target_cell(self.ctxt,
-                                               self.cell_mappings['cell0']):
+                                               self.cell_mappings['cell0']
+                                               ) as cctxt:
             instance = objects.Instance.get_by_uuid(
-                self.ctxt, self.params['build_requests'][0].instance_uuid)
+                cctxt, self.params['build_requests'][0].instance_uuid)
         self.assertEqual('error', instance.vm_state)
         self.assertIsNone(instance.task_state)
 
@@ -3493,10 +3496,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                       instances=[inst, deleted_inst])
 
         with conductor_manager.try_target_cell(self.ctxt,
-                                               self.cell_mappings['cell0']):
-            self.ctxt.read_deleted = 'yes'
-            build_requests = objects.BuildRequestList.get_all(self.ctxt)
-            instances = objects.InstanceList.get_all(self.ctxt)
+                                               self.cell_mappings['cell0']
+                                               ) as cctxt:
+            cctxt.read_deleted = 'yes'
+            build_requests = objects.BuildRequestList.get_all(cctxt)
+            instances = objects.InstanceList.get_all(cctxt)
 
         # Verify instance mappings.
         inst_mappings = objects.InstanceMappingList.get_by_cell_id(

@@ -1106,10 +1106,11 @@ class TestNovaManagePlacementHealAllocations(
         # instance.flavor directly after the boot to simulate an instance with
         # VGPU request
         server, _ = self._boot_and_remove_allocations(self.flavor, 'cell1')
-        instance = objects.Instance.get_by_uuid(
-            context.get_admin_context(), server['id'])
-        instance.flavor.extra_specs["resources:VGPU"] = 1
-        instance.save()
+        with context.target_cell(context.get_admin_context(),
+                                 self.cell_mappings['cell1']) as cctxt:
+            instance = objects.Instance.get_by_uuid(cctxt, server['id'])
+            instance.flavor.extra_specs["resources:VGPU"] = 1
+            instance.save()
 
         result = self.cli.heal_allocations(
             verbose=True, instance_uuid=server['id'],
@@ -1128,10 +1129,11 @@ class TestNovaManagePlacementHealAllocations(
         # instance.flavor directly after the boot to simulate an instance with
         # cyborg request
         server, _ = self._boot_and_remove_allocations(self.flavor, 'cell1')
-        instance = objects.Instance.get_by_uuid(
-            context.get_admin_context(), server['id'])
-        instance.flavor.extra_specs["accel:device_profile"] = "foo"
-        instance.save()
+        with context.target_cell(context.get_admin_context(),
+                                 self.cell_mappings['cell1']) as cctxt:
+            instance = objects.Instance.get_by_uuid(cctxt, server['id'])
+            instance.flavor.extra_specs["accel:device_profile"] = "foo"
+            instance.save()
 
         result = self.cli.heal_allocations(
             verbose=True, instance_uuid=server['id'],
@@ -2431,7 +2433,7 @@ class TestDBArchiveDeletedRowsMultiCellTaskLog(
                 self.compute1.manager._instance_usage_audit(cctxt)
             with context.target_cell(
                     ctxt, self.cell_mappings['cell2']) as cctxt:
-                self.compute2.manager._instance_usage_audit(ctxt)
+                self.compute2.manager._instance_usage_audit(cctxt)
             # Audit period defaults to 1 month, the last audit period will
             # be the previous calendar month.
             begin, end = nova_utils.last_completed_audit_period()
