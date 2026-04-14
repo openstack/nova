@@ -16,11 +16,3 @@ nova.tests.unit.api.openstack.compute.test_services.ServicesTestV275.test_servic
 # not from nova.compute.api.HostAPI._service_get_all_cells but from the db api
 # _instance_get_by_uuid
 nova.tests.unit.conductor.test_conductor.ConductorTaskRPCAPITestCase.test_evacuate_old_rpc_without_target_state
-
-
-# This test has an eventlet and a threading version we
-# should either combine them and make the dynamic or
-# have the two variant executed conditionally
-nova.tests.unit.test_rpc.TestRPC.test_get_server
-nova.tests.unit.test_utils.ExecutorStatsTestCase.test_stats_logged_eventlet
-nova.tests.unit.test_utils.OsloServiceBackendSelectionTestCase.test_eventlet_selected
