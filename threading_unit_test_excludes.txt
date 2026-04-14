@@ -24,8 +24,3 @@ nova.tests.unit.conductor.test_conductor.ConductorTaskRPCAPITestCase.test_evacua
 nova.tests.unit.test_rpc.TestRPC.test_get_server
 nova.tests.unit.test_utils.ExecutorStatsTestCase.test_stats_logged_eventlet
 nova.tests.unit.test_utils.OsloServiceBackendSelectionTestCase.test_eventlet_selected
-
-# This is exactly the same test as nova.tests.unit.test_rpc.TestRPC.test_get_server
-# we should delete it
-nova.tests.unit.test_rpc.TestRPC.test_get_server_profiler_enabled
-
