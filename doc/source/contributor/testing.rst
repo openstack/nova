@@ -35,7 +35,20 @@ Running tests and reporting results
 Running tests locally
 ---------------------
 
-Please see
+To run the unit tests::
+
+    tox -e py3
+
+To run the functional tests::
+
+    tox -e functional
+
+To run a specific test or subset of tests, pass a regex to stestr via tox::
+
+    tox -e py3 -- TestWSGIServer
+    tox -e py3 -- nova.tests.unit.compute.test_api
+
+For the full set of options and environment setup details, see
 https://opendev.org/openstack/nova/src/branch/master/HACKING.rst#running-tests
 
 
@@ -48,9 +61,13 @@ For more details, please see:
 http://docs.openstack.org/infra/manual/developers.html#automated-testing
 
 Before merging any code, there is an integrate gate test queue, to ensure
-master is always passing all tests.
+master is always passing all tests. Nova uses Zuul gating, where each approved
+change is tested together with other changes ahead of it before merging.
 For more details, please see:
-http://docs.openstack.org/infra/zuul/user/gating.html
+https://zuul-ci.org/docs/zuul/latest/gating.html
+
+Because Nova review series are not squashed before merge, each commit in a
+series should be independently correct and testable.
 
 Infra vs Third-Party
 --------------------
