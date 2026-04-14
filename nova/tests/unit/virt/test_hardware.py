@@ -5395,6 +5395,7 @@ class GetMemEncryptionConfigTestCase(test.NoDBTestCase):
         self.assertIs(hw.MemEncryptionConfigSev, type(me_config))
         self.assertTrue(me_config.needs_locked_memory)
         self.assertEqual(fields.MemEncryptionModel.AMD_SEV, me_config.model)
+        self.assertEqual('HW_CPU_X86_AMD_SEV', me_config.required_trait)
 
     def test_sev_es(self):
         me_config = hw.MemEncryptionConfig.create(
@@ -5402,6 +5403,7 @@ class GetMemEncryptionConfigTestCase(test.NoDBTestCase):
         self.assertIs(hw.MemEncryptionConfigSevEs, type(me_config))
         self.assertTrue(me_config.needs_locked_memory)
         self.assertEqual(fields.MemEncryptionModel.AMD_SEV_ES, me_config.model)
+        self.assertEqual('HW_CPU_X86_AMD_SEV_ES', me_config.required_trait)
 
 
 class MemEncryptionFlavorImageConflictTestCase(test.NoDBTestCase):
