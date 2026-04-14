@@ -7034,12 +7034,9 @@ class LibvirtDriver(driver.ComputeDriver):
             membacking.sharedaccess = True
             membacking.allocateimmediate = True
             membacking.discard = True
-        if self._get_mem_encryption_config(flavor, image_meta):
-            if not membacking:
-                membacking = vconfig.LibvirtConfigGuestMemoryBacking()
-            membacking.locked = True
 
-        if hardware.get_locked_memory_constraint(flavor, image_meta):
+        mtype = libvirt_utils.get_machine_type(image_meta)
+        if hardware.get_locked_memory_constraint(flavor, image_meta, mtype):
             if not membacking:
                 membacking = vconfig.LibvirtConfigGuestMemoryBacking()
             membacking.locked = True
