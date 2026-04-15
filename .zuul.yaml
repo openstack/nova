@@ -455,7 +455,13 @@
     irrelevant-files: *nova-base-irrelevant-files
     vars:
       tox_envlist: all
-      tempest_concurrency: 4
+      # NOTE(melwitt): These tests cannot run in parallel due to
+      # test_vtpm_creation_after_virtqemud_restart, which involves a libvirt
+      # restart, which can and will cause other tests to fail if the timing is
+      # unfortunate. Loss of libvirt connection will cause the
+      # COMPUTE_STATUS_DISABLED trait to be automatically added, which can
+      # result in NoValidHost, for example.
+      tempest_concurrency: 1
       tempest_test_regex: ^(tempest\.api\.compute\.admin\.test_live_migration\.LiveMigrationWithVTPMTest|whitebox_tempest_plugin\.api\.compute\.test_vtpm)
       # revert this when bug #1940425 is fixed in neutron
       tempest_exclude_regex: (test_live_migration_with_trunk)
