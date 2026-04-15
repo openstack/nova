@@ -32186,7 +32186,7 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
             }
         }, self.driver._get_memory_encryption_inventories())
 
-    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    @mock.patch.object(host.LOG, 'warning')
     def test_get_memory_encryption_inventories_config_non_zero_unsupported(
             self, mock_log):
         self.flags(num_memory_encrypted_guests=16, group='libvirt')
@@ -32297,7 +32297,7 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
 
     """Libvirt driver tests for when AMD SEV support is present."""
     @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    @mock.patch.object(host.LOG, 'warning')
     def test_get_memory_encryption_inventories_no_override(self, mock_log):
         self.assertEqual({
             'amd_sev': {
@@ -32316,7 +32316,7 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
         mock_log.assert_not_called()
 
     @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    @mock.patch.object(host.LOG, 'warning')
     def test_get_memory_encryption_inventories_override_more(self, mock_log):
         self.flags(num_memory_encrypted_guests=120, group='libvirt')
         self.assertEqual({
@@ -32338,7 +32338,7 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
             'set to %d, but supports only %d.', 120, 100)
 
     @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    @mock.patch.object(host.LOG, 'warning')
     def test_get_memory_encryption_inventories_override_less(self, mock_log):
         self.flags(num_memory_encrypted_guests=80, group='libvirt')
         self.assertEqual({

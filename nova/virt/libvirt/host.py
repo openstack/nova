@@ -38,6 +38,7 @@ import threading
 import typing as ty
 
 from lxml import etree
+import os_traits as ot
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import strutils
@@ -47,6 +48,7 @@ from oslo_utils import versionutils
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context as nova_context
+from nova.db import constants as db_const
 from nova import exception
 from nova.i18n import _
 from nova.objects import fields
@@ -2136,6 +2138,67 @@ class Host(object):
         """
 
         return self.supports_amd_sev
+
+    def get_mem_encryption_inventories(self) -> dict[str, ty.Any]:
+        """Return a dictionary of memory encryption information.
+
+        The return value contains total slots and required traits for
+        each memory encryption model supported by this host.
+        """
+        inventories: dict[str, ty.Any] = {}
+        for model in fields.MemEncryptionModel.ALL:
+            modelsym = model.replace('-', '_')
+            prop_supports = 'supports_%s' % modelsym
+            func_slots = '_get_mem_encryption_slots_%s' % modelsym
+            func_traits = '_get_mem_encryption_traits_%s' % modelsym
+            inv = {'supported': getattr(self, prop_supports)}
+            if inv['supported']:
+                inv.update(
+                    total=getattr(self, func_slots)(),
+                    traits=getattr(self, func_traits)())
+            else:
+                slots = getattr(self, func_slots)()
+                if slots > 0:
+                    LOG.debug("Host does not support %s but function %s "
+                              "returns number of slots %d.",
+                              model, func_slots, slots)
+
+            inventories[modelsym] = inv
+
+        return inventories
+
+    def _get_mem_encryption_slots_amd_sev(self) -> int:
+        conf_slots = CONF.libvirt.num_memory_encrypted_guests
+        if self.supports_amd_sev:
+            slots = db_const.MAX_INT
+            if self.max_sev_guests is not None:
+                slots = self.max_sev_guests
+            if conf_slots is not None:
+                if conf_slots > slots:
+                    LOG.warning("Host is configured with "
+                                "libvirt.num_memory_encrypted_guests set "
+                                "to %d, but supports only %d.",
+                                conf_slots, slots)
+                slots = min(slots, conf_slots)
+            return slots
+        else:
+            if conf_slots is not None:
+                LOG.warning("Host is configured with "
+                            "libvirt.num_memory_encrypted_guests set to "
+                            "%d, but is not SEV-capable.", conf_slots)
+            return 0
+
+    def _get_mem_encryption_traits_amd_sev(self) -> list[str]:
+        return [ot.HW_CPU_X86_AMD_SEV]
+
+    def _get_mem_encryption_slots_amd_sev_es(self) -> int:
+        if self.supports_amd_sev_es and self.max_sev_es_guests is not None:
+            return self.max_sev_es_guests
+        else:
+            return 0
+
+    def _get_mem_encryption_traits_amd_sev_es(self) -> list[str]:
+        return [ot.HW_CPU_X86_AMD_SEV_ES]
 
     @property
     def supports_remote_managed_ports(self) -> bool:
