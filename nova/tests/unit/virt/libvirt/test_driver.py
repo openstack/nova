@@ -4100,6 +4100,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_designer.assert_called_once_with(cfg)
 
+    @mock.patch.object(hardware.MemEncryptionConfigSev, 'model',
+                       new_callable=mock.PropertyMock)
+    @mock.patch.object(host.Host, 'get_domain_capabilities')
+    @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
+    def test_get_guest_config_invalid_mem_enc_model(
+            self, mock_designer, fake_domain_caps, fake_me_model):
+        self._setup_fake_domain_caps(fake_domain_caps)
+        fake_me_model.return_value = 'invalid'
+        self.assertRaisesRegex(exception.Invalid,
+                               'Unknown MemEncryptionModel: invalid',
+                               self._setup_sev_guest,
+                               model='amd-sev')
+
     @mock.patch.object(host.Host, 'get_domain_capabilities')
     def test__get_cpu_emulation_arch_traits(self, fake_domain_caps):
         self._setup_fake_domain_caps(fake_domain_caps)
