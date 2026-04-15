@@ -17,7 +17,6 @@
 import collections
 from unittest import mock
 
-from oslo_service import fixture as oslo_svc_fixture
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
@@ -28,6 +27,7 @@ from oslo_vmware import vim_util as vutil
 from nova import exception
 from nova.network import model as network_model
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.tests.unit.virt.vmwareapi import stubs
@@ -1004,7 +1004,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         unrecognised guestId
         """
         # avoid real sleeps during test due to the retry decorator on create_vm
-        self.useFixture(oslo_svc_fixture.SleepFixture())
+        self.useFixture(fixtures.NoSleepRetryDecoratorFixture())
 
         found = [False]
 

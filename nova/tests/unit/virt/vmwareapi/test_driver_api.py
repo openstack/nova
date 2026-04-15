@@ -280,6 +280,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                           self.conn._validate_configuration)
 
     def test_login_retries(self):
+        self.useFixture(nova_fixtures.NoSleepRetryDecoratorFixture())
         self.attempts = 0
         self.login_session = vmwareapi_fake.FakeVim()._login()
 

@@ -14,9 +14,8 @@
 
 from unittest import mock
 
-from oslo_service import fixture as service_fixture
-
 from nova import test
+from nova.tests import fixtures
 from nova.virt.disk.mount import api
 from nova.virt.disk.mount import block
 from nova.virt.disk.mount import loop
@@ -34,7 +33,7 @@ class MountTestCase(test.NoDBTestCase):
     def setUp(self):
         super(MountTestCase, self).setUp()
         # Make RetryDecorator not actually sleep on retries
-        self.useFixture(service_fixture.SleepFixture())
+        self.useFixture(fixtures.NoSleepRetryDecoratorFixture())
 
     def _test_map_dev(self, partition):
         mount = api.Mount(mock.sentinel.image, mock.sentinel.mount_dir)

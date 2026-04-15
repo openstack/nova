@@ -2272,3 +2272,18 @@ class DelayingExecutorWrapperCleanupFixture(fixtures.Fixture):
                 'the wrapper before the end of the test case e.g. by using '
                 'self.addCleanup(...). The test instantiated the wrapper at '
                 'the following place:\n%s' % stack)
+
+
+class NoSleepRetryDecoratorFixture(fixtures.Fixture):
+    def setUp(self):
+        super().setUp()
+        if utils.concurrency_mode_threading():
+            self.useFixture(
+                fixtures.MockPatch(
+                    "oslo_service.backend._threading.loopingcall."
+                    "LoopingCallBase._sleep"))
+        else:
+            self.useFixture(
+                fixtures.MockPatch(
+                    "oslo_service.backend._eventlet.loopingcall."
+                    "LoopingCallBase._sleep"))
