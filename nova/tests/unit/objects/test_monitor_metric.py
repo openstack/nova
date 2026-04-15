@@ -16,27 +16,28 @@ from oslo_utils import timeutils
 from nova import objects
 from nova.objects import fields
 from nova.tests.unit.objects import test_objects
+from nova import utils
 
 _ts_now = timeutils.utcnow()
 
 _monitor_metric_spec = {
     'name': fields.MonitorMetricType.CPU_FREQUENCY,
     'value': 1000,
-    'timestamp': _ts_now.isoformat(),
+    'timestamp': utils.strtime(_ts_now),
     'source': 'nova.virt.libvirt.driver'
 }
 
 _monitor_metric_perc_spec = {
     'name': fields.MonitorMetricType.CPU_PERCENT,
     'value': 0.17,
-    'timestamp': _ts_now.isoformat(),
+    'timestamp': utils.strtime(_ts_now),
     'source': 'nova.virt.libvirt.driver'
 }
 
 _monitor_numa_metric_spec = {
     'name': fields.MonitorMetricType.NUMA_MEM_BW_CURRENT,
     'numa_membw_values': {"0": 10, "1": 43},
-    'timestamp': _ts_now.isoformat(),
+    'timestamp': utils.strtime(_ts_now),
     'source': 'nova.virt.libvirt.driver'
 }
 
@@ -89,7 +90,7 @@ class _TestMonitorMetricObject(object):
         monitormetric_obj = objects.MonitorMetric(
             name=fields.MonitorMetricType.NUMA_MEM_BW_CURRENT,
             numa_membw_values={"0": 10, "1": 43},
-            timestamp=_ts_now.isoformat(),
+            timestamp=utils.strtime(_ts_now),
             source='nova.virt.libvirt.driver')
         primitive = monitormetric_obj.obj_to_primitive()
         self.assertIn('numa_membw_values', primitive['nova_object.data'])
