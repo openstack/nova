@@ -178,7 +178,12 @@ class VirtDiskTest(test.NoDBTestCase):
                          "bin:x:1:1:bin:/bin:/sbin/nologin\n" +
                          "daemon:x:2:2:daemon:/sbin:/sbin/nologin\n")
 
-        diskapi._inject_admin_password_into_fs("123456", vfs)
+        try:
+            diskapi._inject_admin_password_into_fs("123456", vfs)
+        except RuntimeError as e:
+            if 'libcrypt is not available' in str(e):
+                self.skipTest('libcrypt is not available')
+            raise
 
         self.assertEqual(vfs.handle.files["/etc/passwd"],
                          {'content': "root:x:0:0:root:/root:/bin/bash\n" +
