@@ -1160,6 +1160,10 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
 
     @mock.patch('psutil.net_if_addrs')
     def test_get_machine_ips(self, mock_addrs):
+        if not hasattr(socket, 'AF_PACKET'):
+            # AF_PACKET is linux-specific
+            self.skipTest('AF_PACKET not supported on this system')
+
         fakeaddr = collections.namedtuple('fakeaddr', ['family', 'address'])
         mock_addrs.return_value = {
             'eth0': [
