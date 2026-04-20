@@ -95,11 +95,10 @@ class ResourceClass(fields.StringPattern):
     PATTERN = r"^[A-Z0-9_]+$"
     _REGEX = re.compile(PATTERN)
 
-    @staticmethod
-    def coerce(obj, attr, value):
+    def coerce(self, obj, attr, value):
         if isinstance(value, str):
             uppered = value.upper()
-            if ResourceClass._REGEX.match(uppered):
+            if self._REGEX.match(uppered):
                 return uppered
         raise ValueError(_("Malformed Resource Class %s") % value)
 
@@ -1153,8 +1152,7 @@ class InstancePowerState(Enum):
 
 
 class NetworkModel(FieldType):
-    @staticmethod
-    def coerce(obj, attr, value):
+    def coerce(self, obj, attr, value):
         if isinstance(value, network_model.NetworkInfo):
             return value
         elif isinstance(value, str):
@@ -1183,12 +1181,11 @@ class NetworkModel(FieldType):
 class NetworkVIFModel(FieldType):
     """Represents a nova.network.model.VIF object, which is a dict of stuff."""
 
-    @staticmethod
-    def coerce(obj, attr, value):
+    def coerce(self, obj, attr, value):
         if isinstance(value, network_model.VIF):
             return value
         elif isinstance(value, str):
-            return NetworkVIFModel.from_primitive(obj, attr, value)
+            return self.from_primitive(obj, attr, value)
         else:
             raise ValueError(_('A nova.network.model.VIF object is required '
                                'in field %s') % attr)
@@ -1206,12 +1203,13 @@ class NetworkVIFModel(FieldType):
 
 
 class AddressBase(FieldType):
-    @staticmethod
-    def coerce(obj, attr, value):
-        if re.match(obj.PATTERN, str(value)):
+    PATTERN: str
+
+    def coerce(self, obj, attr, value):
+        if re.match(self.PATTERN, str(value)):
             return str(value)
         else:
-            raise ValueError(_('Value must match %s') % obj.PATTERN)
+            raise ValueError(_('Value must match %s') % self.PATTERN)
 
     def get_schema(self):
         return {'type': ['string'], 'pattern': self.PATTERN}
@@ -1220,33 +1218,17 @@ class AddressBase(FieldType):
 class USBAddress(AddressBase):
     PATTERN = '[a-f0-9]+:[a-f0-9]+'
 
-    @staticmethod
-    def coerce(obj, attr, value):
-        return AddressBase.coerce(USBAddress, attr, value)
-
 
 class SCSIAddress(AddressBase):
     PATTERN = '[a-f0-9]+:[a-f0-9]+:[a-f0-9]+:[a-f0-9]+'
-
-    @staticmethod
-    def coerce(obj, attr, value):
-        return AddressBase.coerce(SCSIAddress, attr, value)
 
 
 class IDEAddress(AddressBase):
     PATTERN = '[0-1]:[0-1]'
 
-    @staticmethod
-    def coerce(obj, attr, value):
-        return AddressBase.coerce(IDEAddress, attr, value)
-
 
 class XenAddress(AddressBase):
     PATTERN = '(00[0-9]{2}00)|[1-9][0-9]+'
-
-    @staticmethod
-    def coerce(obj, attr, value):
-        return AddressBase.coerce(XenAddress, attr, value)
 
 
 class USBAddressField(AutoTypedField):

@@ -1350,12 +1350,13 @@ class TestObjEqualPrims(_BaseTestCase):
 
 class TestObjMethodOverrides(test.NoDBTestCase):
     def test_obj_reset_changes(self):
-        args = inspect.getfullargspec(base.NovaObject.obj_reset_changes)
+        # ignore annotations
+        args = inspect.getfullargspec(base.NovaObject.obj_reset_changes)[:-1]
         obj_classes = base.NovaObjectRegistry.obj_classes()
         for obj_name in obj_classes:
             obj_class = obj_classes[obj_name][0]
-            self.assertEqual(args,
-                inspect.getfullargspec(obj_class.obj_reset_changes))
+            self.assertEqual(
+                args, inspect.getfullargspec(obj_class.obj_reset_changes)[:-1])
 
 
 class TestObjectsDefaultingOnInit(test.NoDBTestCase):
