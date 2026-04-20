@@ -3945,6 +3945,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             expected, host_sev_enabled=True, enc_extra_spec=True,
             hw_firmware_type='uefi', hw_machine_type='q35')
 
+    @mock.patch.object(hardware.LOG, 'debug')
+    @mock.patch.object(libvirt_driver.libvirt_utils, 'get_machine_type',
+                       return_value=None)
+    def test_get_mem_encryption_config_host_support_force_no_machine_type(
+            self, fake_machine_type, mock_log):
+        expected = hardware.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.AMD_SEV)
+        self._test_get_mem_encryption_config(
+            expected, host_sev_enabled=True, enc_extra_spec=True,
+            hw_firmware_type='uefi')
+        mock_log.assert_called_with(
+            "Machine type not specified, will be validated by driver.")
+
     def test_get_mem_encryption_config_host_support_image_requested(self):
         expected = hardware.MemEncryptionConfig.create(
             fields.MemEncryptionModel.AMD_SEV)
@@ -3971,9 +3984,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                 host_sev_enabled=True, enc_extra_spec=True)
         self.assertEqual(
             "Memory encryption requested by hw:mem_encryption extra spec in "
-            "m1.fake flavor but image fake_image doesn't have "
-            "'hw_firmware_type' property set to 'uefi' or volume-backed "
-            "instance was requested", str(exc))
+            "m1.fake flavor but image metadata doesn't have "
+            "'hw_firmware_type' property set to 'uefi' ", str(exc))
 
     def test_get_mem_encryption_config_host_extra_spec_no_machine_type(self):
         exc = self.assertRaises(exception.InvalidMachineType,

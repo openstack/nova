@@ -5488,8 +5488,8 @@ class MemEncryptionRequestedWithoutUEFITestCase(
     expected_exception = exception.FlavorImageConflict
     expected_error = (
         "Memory encryption requested by %(requesters)s but image "
-        "%(image_name)s doesn't have 'hw_firmware_type' property "
-        "set to 'uefi' or volume-backed instance was requested"
+        "metadata doesn't have 'hw_firmware_type' property "
+        "set to 'uefi' "
     )
 
     def _test_encrypted_memory_support_no_uefi(self, enc_extra_spec,
