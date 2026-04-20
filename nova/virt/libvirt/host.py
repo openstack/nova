@@ -2182,7 +2182,7 @@ class Host(object):
                 slots = min(slots, conf_slots)
             return slots
         else:
-            if conf_slots is not None:
+            if conf_slots is not None and conf_slots > 0:
                 LOG.warning("Host is configured with "
                             "libvirt.num_memory_encrypted_guests set to "
                             "%d, but is not SEV-capable.", conf_slots)
