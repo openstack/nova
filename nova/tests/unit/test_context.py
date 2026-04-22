@@ -16,7 +16,6 @@ import threading
 from unittest import mock
 
 import ddt
-import futurist.waiters
 from keystoneauth1.fixture import plugin as ks_plugin_fixture
 from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
@@ -511,8 +510,7 @@ class ContextTestCase(test.NoDBTestCase):
     def test_scatter_gather_cells_queued_task_cancelled(self, mock_warning):
         # ensure that only one task can run at a time so we can simulate
         # queued tasks
-        utils.SCATTER_GATHER_EXECUTOR = futurist.GreenThreadPoolExecutor(
-            max_workers=1)
+        utils.SCATTER_GATHER_EXECUTOR = utils.create_executor(max_workers=1)
 
         work = threading.Event()
 
@@ -559,13 +557,24 @@ class ContextTestCase(test.NoDBTestCase):
         # The task that was started is finished after the scatter-gather
         # timeout
         self.assertEqual(1, stats.executed)
-
-        mock_warning.assert_has_calls([
+        mock_calls = [
             mock.call(
                 'Timed out waiting for response from cell %s. Left the cell '
-                'worker thread to finish in the background.', mock.ANY),
-            mock.call(
-                'Timed out waiting for response from cell %s.', mock.ANY)])
+                'worker thread to finish in the background.', mock.ANY)]
+
+        if utils.concurrency_mode_threading():
+            mock_calls.append(mock.call(
+                'Timed out waiting for response from cell %s. '
+                'The cell worker thread did not start and is now '
+                'cancelled. The cell_worker_thread_pool_size is too '
+                'small for the load or there are stuck worker threads '
+                'filling the pool.', mock.ANY))
+        else:
+            mock_calls.append(
+                mock.call(
+                    'Timed out waiting for response from cell %s.', mock.ANY))
+
+        mock_warning.assert_has_calls(mock_calls)
 
     @mock.patch('nova.context.LOG.exception')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
