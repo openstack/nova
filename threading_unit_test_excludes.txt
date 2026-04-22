@@ -29,5 +29,3 @@ nova.tests.unit.test_utils.OsloServiceBackendSelectionTestCase.test_eventlet_sel
 # we should delete it
 nova.tests.unit.test_rpc.TestRPC.test_get_server_profiler_enabled
 
-# webob.exc.HTTPBadRequest: Invalid start time. The start time cannot occur after the end time.
-nova.tests.unit.policies.test_simple_tenant_usage.SimpleTenantUsageNoLegacyNoScopePolicyTest.test_show_simple_tenant_usage_policy
