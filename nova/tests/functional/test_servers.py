@@ -3524,8 +3524,12 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                 usage = self._get_provider_usages(target_uuid)
                 self.assertEqual(empty_usage, usage)
         else:
+            # Use a higher max_retries value to allow enough time for
+            # finish_resize to complete after multiple reschedules,
+            # especially under coverage (testenv:cover) where
+            # instrumentation overhead slows things down.
             server = self._wait_for_state_change(created_server,
-                    "VERIFY_RESIZE")
+                    "VERIFY_RESIZE", max_retries=30)
             # Verify that the selected host failed, and was rescheduled to
             # an alternate host.
             new_server_host = server.get("OS-EXT-SRV-ATTR:host")
