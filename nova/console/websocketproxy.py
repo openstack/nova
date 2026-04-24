@@ -36,6 +36,8 @@ from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova import utils
+
 
 from oslo_utils import timeutils
 import threading
@@ -163,10 +165,11 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
 
     def new_websocket_client(self):
         """Called after a new WebSocket connection has been established."""
-        # Reopen the eventlet hub to make sure we don't share an epoll
-        # fd with parent and/or siblings, which would be bad
-        from eventlet import hubs
-        hubs.use_hub()
+        if not utils.concurrency_mode_threading():
+            # Reopen the eventlet hub to make sure we don't share an epoll
+            # fd with parent and/or siblings, which would be bad
+            from eventlet import hubs
+            hubs.use_hub()
 
         # The nova expected behavior is to have token
         # passed to the method GET of the request
