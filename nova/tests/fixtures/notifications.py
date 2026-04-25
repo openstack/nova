@@ -14,7 +14,6 @@ import collections
 import functools
 import threading
 
-import eventlet
 import fixtures
 from oslo_log import log as logging
 import oslo_messaging
@@ -23,6 +22,7 @@ from oslo_utils import excutils
 from oslo_utils import timeutils
 
 from nova import rpc
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -149,9 +149,10 @@ class FakeVersionedNotifier(FakeNotifier):
         else:
             self.subscriptions = collections.defaultdict(_Sub)
 
-    @staticmethod
-    def _get_sender_test_case_id():
-        current = eventlet.getcurrent()
+        self.eventlet = utils.get_eventlet()
+
+    def _get_sender_test_case_id(self):
+        current = self.eventlet.getcurrent()
         # NOTE(gibi) not all eventlet spawn is under our control, so there can
         # be senders without test_case_id set, find the first ancestor that
         # was spawned from nova.utils.spawn[_n] and therefore has the id set.
@@ -160,19 +161,23 @@ class FakeVersionedNotifier(FakeNotifier):
         return current.test_case_id
 
     def _notify(self, priority, ctxt, event_type, payload):
-        sender_test_case_id = self._get_sender_test_case_id()
-        # NOTE(gibi): this is here to prevent late notifications from already
-        # finished test cases to break the currently running test case. See
-        # more in https://bugs.launchpad.net/nova/+bug/1946339
-        if sender_test_case_id != self.test_case_id:
-            raise RuntimeError(
-                'FakeVersionedNotifier received %s notification emitted by %s '
-                'test case which is different from the currently running test '
-                'case %s. This notification is ignored. The sender test case '
-                'probably leaked a running eventlet that emitted '
-                'notifications after the test case finished. Now this '
-                'eventlet is terminated by raising this exception.' %
-                (event_type, sender_test_case_id, self.test_case_id))
+        # TODO(gibi): reimplement this to support both threading and eventlet
+        # selectively
+        if not utils.concurrency_mode_threading():
+            sender_test_case_id = self._get_sender_test_case_id()
+            # NOTE(gibi): this is here to prevent late notifications from
+            # already finished test cases to break the currently running test
+            # case. See more in https://bugs.launchpad.net/nova/+bug/1946339
+            if sender_test_case_id != self.test_case_id:
+                raise RuntimeError(
+                    'FakeVersionedNotifier received %s notification emitted '
+                    'by %s test case which is different from the currently '
+                    'running test case %s. This notification is ignored. The '
+                    'sender test case probably leaked a running eventlet that '
+                    'emitted notifications after the test case finished. '
+                    'Now this eventlet is terminated by raising this '
+                    'exception.' %
+                    (event_type, sender_test_case_id, self.test_case_id))
 
         payload = self._serializer.serialize_entity(ctxt, payload)
         notification = {

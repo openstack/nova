@@ -108,11 +108,10 @@ class _EventletLibvirtEventHandler(LibvirtEventHandler):
     def __init__(self, conn_event_handler=None, lifecycle_event_handler=None):
         super().__init__(conn_event_handler, lifecycle_event_handler)
 
-        from eventlet import greenio
-        from eventlet import patcher
+        eventlet = utils.get_eventlet()
 
-        self.native_threading = patcher.original("threading")
-        self.native_queue = patcher.original("queue")
+        self.native_threading = eventlet.patcher.original("threading")
+        self.native_queue = eventlet.patcher.original("queue")
 
         self._event_thread = None
         # This is a Queue between the native libvirt event thread
@@ -127,8 +126,8 @@ class _EventletLibvirtEventHandler(LibvirtEventHandler):
         # This code is taken from the eventlet tpool module, under terms
         # of the Apache License v2.0.
         rpipe, wpipe = os.pipe()
-        self._event_notify_send = greenio.GreenPipe(wpipe, 'wb', 0)
-        self._event_notify_recv = greenio.GreenPipe(rpipe, 'rb', 0)
+        self._event_notify_send = eventlet.greenio.GreenPipe(wpipe, 'wb', 0)
+        self._event_notify_recv = eventlet.greenio.GreenPipe(rpipe, 'rb', 0)
 
     def start(self):
         """Initializes the libvirt events subsystem.

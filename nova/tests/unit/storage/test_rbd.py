@@ -12,7 +12,6 @@
 
 from unittest import mock
 
-from eventlet import tpool
 from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -151,7 +150,8 @@ class RbdTestCase(test.NoDBTestCase):
         if utils.concurrency_mode_threading():
             self.assertEqual(proxy._rbd, self.mock_rbd.RBD.return_value)
         else:
-            self.assertIsInstance(proxy._rbd, tpool.Proxy)
+            eventlet = utils.get_eventlet()
+            self.assertIsInstance(proxy._rbd, eventlet.tpool.Proxy)
 
     def test_rbdproxy_attribute_access_proxying(self):
         client = mock.MagicMock(ioctx='fake_ioctx')

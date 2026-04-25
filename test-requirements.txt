@@ -1,4 +1,4 @@
-hacking==6.1.0 # Apache-2.0
+hacking==8.0.0 # Apache-2.0
 coverage>=4.4.1 # Apache-2.0
 ddt>=1.2.1 # MIT
 fixtures>=3.0.0 # Apache-2.0/BSD

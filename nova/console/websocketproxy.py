@@ -168,8 +168,7 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
         if not utils.concurrency_mode_threading():
             # Reopen the eventlet hub to make sure we don't share an epoll
             # fd with parent and/or siblings, which would be bad
-            from eventlet import hubs
-            hubs.use_hub()
+            utils.get_eventlet().hubs.use_hub()
 
         # The nova expected behavior is to have token
         # passed to the method GET of the request

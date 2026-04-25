@@ -18,8 +18,6 @@ import os
 from unittest import mock
 
 import ddt
-import eventlet
-from eventlet import tpool
 from lxml import etree
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -441,14 +439,14 @@ class HostTestCase(test.NoDBTestCase):
         mock_event.side_effect = fake_register
 
         # call concurrently
-        thr1 = eventlet.spawn(get_conn_currency, self.host)
-        thr2 = eventlet.spawn(get_conn_currency, self.host)
+        thr1 = utils.spawn(get_conn_currency, self.host)
+        thr2 = utils.spawn(get_conn_currency, self.host)
 
         # let threads run
         utils.cooperative_yield()
 
-        thr1.wait()
-        thr2.wait()
+        thr1.result()
+        thr2.result()
         self.assertEqual(self.connect_calls, 1)
         self.assertEqual(self.register_calls, 3)
 
@@ -2409,6 +2407,8 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
                 "are returning Proxy objects. So these test cases are not "
                 "valid.")
 
+        self.tpool = utils.get_eventlet().tpool
+
         super(LibvirtTpoolProxyTestCase, self).setUp()
 
         self.useFixture(nova_fixtures.LibvirtFixture())
@@ -2446,12 +2446,12 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
 
     def test_tpool_get_connection(self):
         # Test that Host.get_connection() returns a tpool.Proxy
-        self.assertIsInstance(self.conn, tpool.Proxy)
+        self.assertIsInstance(self.conn, self.tpool.Proxy)
 
     def test_tpool_instance_lookup(self):
         # Test that domains returns by our libvirt connection are also proxied
         dom = self.conn.lookupByUUIDString(uuids.vm1)
-        self.assertIsInstance(dom, tpool.Proxy)
+        self.assertIsInstance(dom, self.tpool.Proxy)
 
     def test_tpool_list_all_connections(self):
         # Test that Host.list_all_connections() returns a list of proxied
@@ -2460,7 +2460,7 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
         domains = self.host.list_instance_domains()
         self.assertEqual(2, len(domains))
         for domain in domains:
-            self.assertIsInstance(domain, tpool.Proxy)
+            self.assertIsInstance(domain, self.tpool.Proxy)
             self.assertIn(domain.UUIDString(), (uuids.vm1, uuids.vm2))
 
     def _add_fake_host_devices(self):
@@ -2482,7 +2482,7 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
             fakelibvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV)
         self.assertEqual(8, len(devs))
         for dev in devs:
-            self.assertIsInstance(dev, tpool.Proxy)
+            self.assertIsInstance(dev, self.tpool.Proxy)
 
     def test_tpool_list_pci_devices(self):
         self._add_fake_host_devices()
