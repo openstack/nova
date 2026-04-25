@@ -1277,8 +1277,8 @@ Possible values:
 
 * A string representing absolute path of mount point.
 """),
-    cfg.StrOpt('nfs_mount_options',
-               help="""
+    cfg.ListOpt('nfs_mount_options',
+                help="""
 Mount options passed to the NFS client. See section of the nfs man page
 for details.
 
