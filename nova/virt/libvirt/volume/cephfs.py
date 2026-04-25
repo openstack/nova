@@ -36,7 +36,7 @@ class LibvirtCEPHFSVolumeDriver(fs.LibvirtMountedFileSystemVolumeDriver):
     def _mount_options(self, connection_info):
         options = []
         conn_options = connection_info['data'].get('options')
-        if CONF.libvirt.ceph_mount_options is not None:
+        if CONF.libvirt.ceph_mount_options:
             options.extend(CONF.libvirt.ceph_mount_options)
             if conn_options:
                 options.extend(conn_options)
