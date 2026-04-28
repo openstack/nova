@@ -1839,7 +1839,12 @@ class ServerMoveWithPortResourceRequestTest(
                     server['id'], {'resize': {"flavorRef": new_flavor['id']}})
             else:
                 self.api.post_server_action(server['id'], {'migrate': None})
-            self._wait_for_state_change(server, 'VERIFY_RESIZE')
+            # Use a higher max_retries value to allow enough time for
+            # finish_resize to complete after multiple reschedules,
+            # especially under coverage (testenv:cover) where
+            # instrumentation overhead slows things down.
+            self._wait_for_state_change(
+                server, "VERIFY_RESIZE", max_retries=30)
 
         # ensure that resize is tried on two hosts, so we had a re-schedule
         self.assertEqual(['host2', 'host3'], prep_resize_calls)
