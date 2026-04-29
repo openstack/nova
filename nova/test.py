@@ -67,6 +67,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import matchers
 from nova import utils
 from nova.virt import images
+from nova.virt.libvirt import driver as libvirt_driver
 
 CONF = cfg.CONF
 
@@ -191,6 +192,7 @@ class TestCase(base.BaseTestCase):
         # Ensure that the pci alias is reset between test cases running in
         # the same process
         request.get_alias_from_config.cache_clear()
+        libvirt_driver.LibvirtDriver._get_pci_passthrough_devices.cache_clear()
 
         # How many of which service we've started. {$service-name: $count}
         self._service_fixture_count = collections.defaultdict(int)
