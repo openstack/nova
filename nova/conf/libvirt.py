@@ -1526,20 +1526,18 @@ Related options:
 # The queue size requires value to be a power of two from [256, 1024]
 # range.
 # https://libvirt.org/formatdomain.html#elementsDriverBackendOptions
-QueueSizeType = types.Integer(choices=(256, 512, 1024))
-
 libvirt_virtio_queue_sizes = [
-    cfg.Opt('rx_queue_size',
-            type=QueueSizeType,
-            help="""
+    cfg.IntOpt('rx_queue_size',
+               choices=(256, 512, 1024),
+               help="""
 Configure virtio rx queue size.
 
 This option is only usable for virtio-net device with vhost and
 vhost-user backend. Available only with QEMU/KVM. Requires libvirt
 v2.3 QEMU v2.7."""),
-    cfg.Opt('tx_queue_size',
-            type=QueueSizeType,
-            help="""
+    cfg.IntOpt('tx_queue_size',
+               choices=(256, 512, 1024),
+               help="""
 Configure virtio tx queue size.
 
 This option is only usable for virtio-net device with vhost-user
