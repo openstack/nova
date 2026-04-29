@@ -214,16 +214,13 @@ index_response = {
                 'properties': {
                     'keypair': {
                         'type': 'object',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'fingerprint': {'type': 'string'},
-                                'name': parameter_types.keypair_name_special_chars,  # noqa: E501
-                                'public_key': {'type': 'string'},
-                            },
-                            'required': ['fingerprint', 'name', 'public_key'],
-                            'additionalProperties': False,
+                        'properties': {
+                            'fingerprint': {'type': 'string'},
+                            'name': parameter_types.keypair_name_special_chars,  # noqa: E501
+                            'public_key': {'type': 'string'},
                         },
+                        'required': ['fingerprint', 'name', 'public_key'],
+                        'additionalProperties': False,
                     },
                 },
                 'required': ['keypair'],
@@ -238,7 +235,7 @@ index_response = {
 index_response_v22 = copy.deepcopy(index_response)
 index_response_v22['properties']['keypairs']['items']['properties'][
     'keypair'
-]['items']['properties'].update({
+]['properties'].update({
     'type': {
         'type': 'string',
         'enum': ['ssh', 'x509']
@@ -246,7 +243,7 @@ index_response_v22['properties']['keypairs']['items']['properties'][
 })
 index_response_v22['properties']['keypairs']['items']['properties'][
     'keypair'
-]['items']['required'].append(
+]['required'].append(
     'type'
 )
 
