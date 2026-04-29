@@ -17,9 +17,7 @@ import pbr.version
 NOVA_VENDOR = "OpenStack Foundation"
 NOVA_PRODUCT = "OpenStack Nova"
 NOVA_PACKAGE = None  # OS distro package version suffix
-NOVA_SUPPORT = (
-    "Please report this at http://bugs.launchpad.net/nova/ "
-    "and attach the Nova API log if possible.")
+NOVA_SUPPORT = "Please contact the administrator"
 
 loaded = False
 version_info = pbr.version.VersionInfo('nova')
