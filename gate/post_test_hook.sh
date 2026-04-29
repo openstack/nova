@@ -1,6 +1,17 @@
 #!/bin/bash -x
 
-MANAGE="/usr/local/bin/nova-manage"
+BASE=${BASE:-/opt/stack}
+
+# Find nova-manage and nova-status commands.
+# Try multiple locations as DevStack installs them differently depending on
+# GLOBAL_VENV/USE_VENV settings:
+# - GLOBAL_VENV=True (default): commands in /opt/stack/data/venv/bin/
+#   with only nova-manage symlinked to /usr/local/bin
+# - USE_VENV=True: commands in /opt/stack/nova.venv/bin/
+# We use 'which' to find the actual location, falling back to common paths.
+
+MANAGE=$(which nova-manage 2>/dev/null || echo "${BASE}/data/venv/bin/nova-manage")
+STATUS=$(which nova-status 2>/dev/null || echo "${BASE}/data/venv/bin/nova-status")
 
 function archive_deleted_rows {
     # NOTE(danms): Run this a few times to make sure that we end
@@ -42,10 +53,6 @@ function purge_db {
         return $RET
     fi
 }
-
-BASE=${BASE:-/opt/stack}
-source ${BASE}/devstack/functions-common
-source ${BASE}/devstack/lib/nova
 
 # This needs to go before 'set -e' because otherwise the intermediate runs of
 # 'nova-manage db archive_deleted_rows' returning 1 (normal and expected) would
@@ -358,8 +365,10 @@ done <<< "$missing_limits"
 # Run migrate_to_unified_limits again. There should be a success message in the
 # output because there should be no resources found that are missing registered
 # limits.
+set +e
 $MANAGE limits migrate_to_unified_limits --region-id $ul_test_region --verbose
 rc=$?
+set -e
 
 if [[ ${rc} -ne 0 ]]; then
     echo "nova-manage should have output a success message; failing"
@@ -372,3 +381,118 @@ registered_limit_ids=$(openstack --os-cloud devstack registered limit list \
 openstack --os-cloud devstack-system-admin registered limit delete $registered_limit_ids
 
 openstack --os-cloud devstack-admin region delete $ul_test_region
+
+# ==============================================================================
+# Test nova CLI commands with threading mode
+# ==============================================================================
+# When OS_NOVA_DISABLE_EVENTLET_PATCHING is set via nova_cli_threading_mode,
+# these tests verify that nova-manage and nova-status work correctly with
+# native threading instead of eventlet.
+
+echo "=========================================="
+echo "Testing nova CLI commands in threading mode"
+echo "=========================================="
+
+# Test nova-status upgrade check command with threading mode.
+# This verifies that nova-status works correctly with native threading.
+echo "Testing nova-status upgrade check"
+set +e
+$STATUS upgrade check
+rc=$?
+set -e
+
+if [[ ${rc} -ne 0 ]]; then
+    echo "nova-status upgrade check failed; failing"
+    exit 2
+fi
+
+echo "nova-status upgrade check succeeded"
+
+# Test cell_v2 commands - these are commonly used for multi-cell deployments
+echo "Testing nova-manage cell_v2 list_cells"
+set +e
+$MANAGE cell_v2 list_cells --verbose
+rc=$?
+set -e
+
+if [[ ${rc} -ne 0 ]]; then
+    echo "nova-manage cell_v2 list_cells failed; failing"
+    exit 2
+fi
+
+echo "Testing nova-manage cell_v2 list_hosts"
+set +e
+$MANAGE cell_v2 list_hosts
+rc=$?
+set -e
+
+if [[ ${rc} -ne 0 ]]; then
+    echo "nova-manage cell_v2 list_hosts failed; failing"
+    exit 2
+fi
+
+echo "Testing nova-manage cell_v2 discover_hosts"
+set +e
+$MANAGE cell_v2 discover_hosts --verbose
+rc=$?
+set -e
+
+if [[ ${rc} -ne 0 ]]; then
+    echo "nova-manage cell_v2 discover_hosts failed; failing"
+    exit 2
+fi
+
+# Test api_db version command
+echo "Testing nova-manage api_db version"
+set +e
+$MANAGE api_db version
+rc=$?
+set -e
+
+if [[ ${rc} -ne 0 ]]; then
+    echo "nova-manage api_db version failed; failing"
+    exit 2
+fi
+
+# Test db version command
+echo "Testing nova-manage db version"
+set +e
+$MANAGE db version
+rc=$?
+set -e
+
+if [[ ${rc} -ne 0 ]]; then
+    echo "nova-manage db version failed; failing"
+    exit 2
+fi
+
+# Test placement heal_allocations - this is safe to run as it only fixes
+# any inconsistencies between nova and placement
+echo "Testing nova-manage placement heal_allocations"
+set +e
+$MANAGE placement heal_allocations --verbose
+rc=$?
+set -e
+
+# heal_allocations returns 4 when no instances needed healing, which is success
+if [[ ${rc} -ne 0 && ${rc} -ne 4 ]]; then
+    echo "nova-manage placement heal_allocations failed; failing"
+    exit 2
+fi
+
+# Test placement sync_aggregates - this is safe to run as it syncs host
+# aggregates between nova and placement
+echo "Testing nova-manage placement sync_aggregates"
+set +e
+$MANAGE placement sync_aggregates --verbose
+rc=$?
+set -e
+
+if [[ ${rc} -ne 0 ]]; then
+    echo "nova-manage placement sync_aggregates failed; failing"
+    exit 2
+fi
+
+echo "=========================================="
+echo "All nova CLI threading tests passed!"
+echo "=========================================="
