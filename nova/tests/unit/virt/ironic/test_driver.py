@@ -1679,6 +1679,51 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver,
                        'get_instance_driver_metadata')
     @mock.patch.object(configdrive, 'required_by')
+    @mock.patch.object(ironic_driver.IronicDriver, '_add_volume_target_info')
+    @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
+    def test_spawn_node_trigger_deploy_fail_invalid_image(
+        self, mock_cleanup_deploy, mock_avti, mock_required_by,
+        mock_metadata):
+        mock_required_by.return_value = False
+        node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = _get_cached_node(driver='fake', id=node_id)
+        flavor = ironic_utils.get_test_flavor()
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node_id)
+        instance.flavor = flavor
+        image_meta = ironic_utils.get_test_image_meta()
+        mock_metadata.return_value = (
+            ironic_utils.get_test_instance_driver_metadata()
+        )
+
+        self.mock_conn.get_node.return_value = node
+        self.mock_conn.validate_node.return_value = \
+            ironic_utils.get_test_validation()
+
+        error_msg = (
+            'ironic.common.exception.InvalidImage: '
+            'The requested image is not valid'
+        )
+
+        self.mock_conn.set_node_provision_state.side_effect = (
+            sdk_exc.SDKException(error_msg)
+        )
+
+        self.assertRaises(
+            exception.BuildAbortException,
+            self.driver.spawn,
+            self.ctx, instance, image_meta, [], None, {},
+        )
+
+        self.mock_conn.get_node.assert_called_once_with(
+            node_id, fields=ironic_driver._NODE_FIELDS)
+        self.mock_conn.validate_node.assert_called_once_with(
+            node_id, required=None,
+        )
+        mock_cleanup_deploy.assert_called_once_with(node, instance, None)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       'get_instance_driver_metadata')
+    @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_volume_target_info')
