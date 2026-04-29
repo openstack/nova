@@ -11,7 +11,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+import collections
 import ddt
+import os_traits
 from oslo_utils.fixture import uuidsentinel as uuids
 from unittest import mock
 
@@ -60,14 +63,15 @@ class TestTranslator(test.NoDBTestCase):
         # So we have a device but there is no spec for it
         pci_tracker.dev_filter.get_devspec = mock.Mock(return_value=None)
         pci_tracker.dev_filter.specs = []
-        # we expect that the provider_tree is not touched as the device without
-        # spec is skipped, we assert that with the NonCallableMock
-        provider_tree = mock.NonCallableMock()
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
 
-        ppt.update_provider_tree_for_pci(
-            provider_tree, "fake-node", pci_tracker, {}, [])
+        with mock.patch.object(pt, "remove", new=mock.NonCallableMock()):
+            ppt.update_provider_tree_for_pci(
+                pt, "fake-node", pci_tracker, {}, [])
 
         self.assertIn(
+            "WARNING [nova.compute.pci_placement_translator] "
             "Device spec is not found for device 0000:81:00.0 in "
             "[pci]device_spec. Ignoring device in Placement resource view. "
             "This should not happen. Please file a bug.",
@@ -261,7 +265,7 @@ class TestTranslator(test.NoDBTestCase):
 
         pv._add_dev(vf, {})
         pv._add_dev(pf, {})
-        pv.update_provider_tree(pt)
+        pv.update_provider_tree(pt, {})
 
         self.assertEqual(
             pt.data("fake-node_0000:71:00.0").uuid, vf.extra_info["rp_uuid"]
@@ -289,3 +293,237 @@ class TestTranslator(test.NoDBTestCase):
 
         pci_tracker.stats.populate_pools_metadata_from_assigned_devices.\
             assert_called_once_with()
+
+    def _convert_defaultdict_to_dict(self, d):
+        if not isinstance(d, collections.defaultdict):
+            return d
+        return {k: self._convert_defaultdict_to_dict(v) for k, v in d.items()}
+
+    def test_get_usage_per_rc_and_rp_no_allocations(self):
+        actual = ppt.PlacementView.get_usage_per_rc_and_rp({})
+
+        self.assertEqual({}, self._convert_defaultdict_to_dict(actual))
+
+    def test_get_usage_per_rc_and_rp_empty_consumer(self):
+        actual = ppt.PlacementView.get_usage_per_rc_and_rp({
+            uuids.consumer1: {"allocations": {}}
+        })
+
+        self.assertEqual({}, self._convert_defaultdict_to_dict(actual))
+
+    def test_get_usage_per_rc_and_rp(self):
+        allocations = {
+            uuids.consumer1: {
+                "allocations": {
+                    uuids.rp1: {
+                        "resources": {
+                            "RC1": 1,
+                            "RC2": 3,
+                        },
+                    },
+                    uuids.rp2: {
+                        "resources": {
+                            "RC2": 5,
+                            "RC3": 1,
+                        },
+                    },
+                },
+            },
+            uuids.consumer2: {
+                "allocations": {
+                    uuids.rp2: {
+                        "resources": {
+                            "RC2": 1,
+                            "RC3": 3,
+                        },
+                    },
+                    uuids.rp3: {
+                        "resources": {
+                            "RC1": 1,
+                        },
+                    },
+                },
+            },
+            uuids.consumer3: {
+                "allocations": {
+                    uuids.rp1: {
+                        "resources": {
+                            "RC2": 3,
+                        },
+                    },
+                },
+            },
+        }
+        actual = ppt.PlacementView.get_usage_per_rc_and_rp(allocations)
+
+        expected = {
+            uuids.rp1: {
+                "RC1": 1,  # only from consumer1
+                "RC2": 6,  # from consumer1 (3) + consumer3 (3)
+            },
+            uuids.rp2: {
+                "RC2": 6,  # from consumer1 (5) + consumer2 (1)
+                "RC3": 4,  # from consumer1 (1) + consumer2 (3)
+            },
+            uuids.rp3: {
+                "RC1": 1  # only from consumer2
+            },
+        }
+        self.assertEqual(expected, self._convert_defaultdict_to_dict(actual))
+
+    def test_remove_managed_rps_empty_view(self):
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+        pt.new_child("no-pci", uuids.compute_rp, uuids.non_pci)
+
+        pv = ppt.PlacementView("fake-node", [])
+        pv._remove_managed_rps_from_tree_not_in_view(pt)
+
+        # No changes expected in the tree
+        self.assertTrue(pt.exists("fake-node"))
+        self.assertTrue(pt.exists("no-pci"))
+
+    def test_remove_managed_rps_new_rp_in_view(self):
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+        pt.new_child("no-pci", uuids.compute_rp, uuids.non_pci)
+
+        pv = ppt.PlacementView("fake-node", [])
+        pf = pci_device.PciDevice(
+            address="0000:72:00.0",
+            parent_addr=None,
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
+            status=fields.PciDeviceStatus.AVAILABLE,
+        )
+
+        pv.process_dev(pf, devspec.PciDeviceSpec({}))
+        pv._remove_managed_rps_from_tree_not_in_view(pt)
+
+        # No RPs is removed
+        self.assertTrue(pt.exists("fake-node"))
+        self.assertTrue(pt.exists("no-pci"))
+
+    def test_remove_managed_rps_no_rp_change(self):
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+        pt.new_child("no-pci", uuids.compute_rp, uuids.non_pci)
+        pt.new_child("fake-node_0000:72:00.0", uuids.compute_rp, uuids.pci)
+        pt.add_traits(
+            "fake-node_0000:72:00.0", os_traits.COMPUTE_MANAGED_PCI_DEVICE)
+
+        pv = ppt.PlacementView("fake-node", [])
+        pf = pci_device.PciDevice(
+            address="0000:72:00.0",
+            parent_addr=None,
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
+            status=fields.PciDeviceStatus.AVAILABLE,
+        )
+
+        pv.process_dev(pf, devspec.PciDeviceSpec({}))
+        pv._remove_managed_rps_from_tree_not_in_view(pt)
+
+        # The existing PCI RP is kept as it exists in the View as well
+        self.assertTrue(pt.exists("fake-node"))
+        self.assertTrue(pt.exists("no-pci"))
+        self.assertTrue(pt.exists("fake-node_0000:72:00.0"))
+
+    def test_remove_managed_rps_rp_removed_from_view(self):
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+        pt.new_child("no-pci", uuids.compute_rp, uuids.non_pci)
+        pt.new_child("fake-node_0000:72:00.0", uuids.compute_rp, uuids.pci)
+        pt.add_traits(
+            "fake-node_0000:72:00.0", os_traits.COMPUTE_MANAGED_PCI_DEVICE)
+
+        pv = ppt.PlacementView("fake-node", [])
+        pv._remove_managed_rps_from_tree_not_in_view(pt)
+
+        self.assertTrue(pt.exists("fake-node"))
+        self.assertTrue(pt.exists("no-pci"))
+        # The PCI RP is removed as it is not in the View anymore
+        self.assertFalse(pt.exists("fake-node_0000:72:00.0"))
+
+    def test_adjust_for_removals_no_allocation_no_adjustment(self):
+        rp = ppt.PciResourceProvider("pci")
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+        pt.new_child("pci", uuids.compute_rp, uuids.pci)
+        usage = {uuids.pci: {}}
+
+        rp._adjust_for_removals_and_held_devices(pt, usage)
+
+        self.assertEqual(0, rp.adjustment)
+
+    def test_adjust_for_removals_allocated_configured_no_adjustment(self):
+        rp = ppt.PciResourceProvider("fake-node_0000:72:00.0")
+        pf = pci_device.PciDevice(
+            address="0000:72:00.0",
+            parent_addr=None,
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
+            status=fields.PciDeviceStatus.ALLOCATED,
+        )
+        rp.add_parent(pf, {})
+
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+        pt.new_child("fake-node_0000:72:00.0", uuids.compute_rp, uuids.pci)
+
+        usage = {uuids.pci: {"CUSTOM_PCI_DEAD_BEEF": 1}}
+
+        rp._adjust_for_removals_and_held_devices(pt, usage)
+
+        self.assertEqual(0, rp.adjustment)
+        self.assertEqual(1, rp.total)
+
+    def test_adjust_for_removals_allocated_removed(self):
+        rp = ppt.PciResourceProvider("fake-node_0000:72:00.0")
+        vf = pci_device.PciDevice(
+            address="0000:72:00.1",
+            parent_addr="0000:72:00.0",
+            dev_type=fields.PciDeviceType.SRIOV_VF,
+            vendor_id="dead",
+            product_id="beef",
+            status=fields.PciDeviceStatus.ALLOCATED,
+        )
+        rp.add_child(vf, {})
+
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+        pt.new_child("fake-node_0000:72:00.0", uuids.compute_rp, uuids.pci)
+
+        # We have two allocations but only one VF left so one VF inventory
+        # is missing. We expect an adjustment for that
+        usage = {uuids.pci: {"CUSTOM_PCI_DEAD_BEEF": 2}}
+
+        rp._adjust_for_removals_and_held_devices(pt, usage)
+
+        self.assertEqual(1, len(rp.devs))
+        self.assertEqual(1, rp.adjustment)
+        self.assertEqual(2, rp.total)
+        self.assertIn(
+            "Needed to adjust inventories", self.stdlog.logger.output)
+
+    def test_adjust_for_removals_allocated_removed_no_inventory(self):
+        rp = ppt.PciResourceProvider("fake-node_0000:72:00.0")
+
+        pt = provider_tree.ProviderTree()
+        pt.new_root("fake-node", uuids.compute_rp)
+        pt.new_child("fake-node_0000:72:00.0", uuids.compute_rp, uuids.pci)
+
+        # One allocation exists but no inventory at all. The RC will be
+        # inferred from the allocation and the inventory is adjusted
+        usage = {uuids.pci: {"CUSTOM_PCI_DEAD_BEEF": 1}}
+
+        rp._adjust_for_removals_and_held_devices(pt, usage)
+
+        self.assertEqual(0, len(rp.devs))
+        self.assertEqual(1, rp.adjustment)
+        self.assertEqual(1, rp.total)
+        self.assertIn(
+            "Needed to adjust inventories", self.stdlog.logger.output)
