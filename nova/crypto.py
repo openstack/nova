@@ -167,6 +167,19 @@ def _create_x509_openssl_config(conffile: str, upn: str):
         file.write(content % upn)
 
 
+def _handle_key_manager_error_forbidden(e, instance):
+    # Castellan catches the HTTPClientError from barbicanclient and
+    # re-raises it without its status_code attribute. It also does not
+    # include the status code in its exception message, so the best we can
+    # do is look for the word "Forbidden". Example error message:
+    #   "Key manager error: Forbidden: Secret payload retrieval attempt not
+    #   allowed - please review your user/project privileges"
+    if 'Forbidden' not in str(e):
+        raise
+    LOG.error(str(e), instance=instance)
+    raise exception.VTPMSecretForbidden(str(e)) from None
+
+
 def ensure_vtpm_secret(
     context: nova_context.RequestContext,
     instance: 'objects.Instance',
@@ -185,19 +198,6 @@ def ensure_vtpm_secret(
         the instance's system metadata but could not be found in the key
         manager service.
     """
-
-    def handle_key_manager_error_forbidden(e):
-        # Castellan catches the HTTPClientError from barbicanclient and
-        # re-raises it without its status_code attribute. It also does not
-        # include the status code in its exception message, so the best we can
-        # do is look for the word "Forbidden". Example error message:
-        #   "Key manager error: Forbidden: Secret payload retrieval attempt not
-        #   allowed - please review your user/project privileges"
-        if 'Forbidden' not in str(e):
-            raise
-        LOG.error(str(e), instance=instance)
-        raise exception.VTPMSecretForbidden(str(e)) from None
-
     key_mgr = _get_key_manager()
 
     secret_uuid = instance.system_metadata.get('vtpm_secret_uuid')
@@ -219,7 +219,7 @@ def ensure_vtpm_secret(
                 secret_uuid, instance=instance)
             raise
         except castellan_exception.KeyManagerError as e:
-            handle_key_manager_error_forbidden(e)
+            _handle_key_manager_error_forbidden(e, instance)
 
     # If we get here, the instance has no vtpm_secret_uuid. Create a new one
     # and register it with the key manager.
@@ -232,7 +232,7 @@ def ensure_vtpm_secret(
         LOG.debug("Created vTPM secret with UUID %s",
                   secret_uuid, instance=instance)
     except castellan_exception.KeyManagerError as e:
-        handle_key_manager_error_forbidden(e)
+        _handle_key_manager_error_forbidden(e, instance)
 
     instance.system_metadata['vtpm_secret_uuid'] = secret_uuid
     instance.save()
@@ -270,6 +270,8 @@ def delete_vtpm_secret(
     except castellan_exception.ManagedObjectNotFoundError:
         LOG.debug("vTPM secret with UUID %s already deleted or never existed.",
                   secret_uuid, instance=instance)
+    except castellan_exception.KeyManagerError as e:
+        _handle_key_manager_error_forbidden(e, instance)
 
     del instance.system_metadata['vtpm_secret_uuid']
     instance.save()
