@@ -8443,6 +8443,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     destroy_vifs=True,
                     cleanup_instance_dir=cleanup_instance_dir,
                     cleanup_instance_disks=cleanup_instance_disks)
+                self._host.delete_secret('vtpm', instance.uuid)
                 raise exception.VirtualInterfaceCreateException()
         except Exception:
             # Any other error, be sure to clean up
@@ -8453,6 +8454,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     destroy_vifs=True,
                     cleanup_instance_dir=cleanup_instance_dir,
                     cleanup_instance_disks=cleanup_instance_disks)
+                self._host.delete_secret('vtpm', instance.uuid)
 
         # Resume only if domain has been paused
         if pause:
