@@ -58,14 +58,10 @@ class BasePolicyTest(test.TestCase):
 
     def setUp(self):
         super(BasePolicyTest, self).setUp()
-        # TODO(gmann): enforce_scope and enforce_new_defaults are enabled
-        # by default in the code so disable them in base test class until
-        # we have deprecated rules and their tests. We have enforce_scope
-        # and no-legacy tests which are explicitly enabling scope and new
-        # defaults to test the new defaults and scope. In future, once
-        # we remove the deprecated rules, along with refactoring the unit
-        # tests we can remove overriding the oslo policy flags.
-        self.flags(enforce_scope=False, group="oslo_policy")
+        # TODO(gmann): enforce_new_defaults are enabled by default in the
+        # code so disable them for legacy deprecated rule tests. In future,
+        # once we remove the deprecated rules, along with refactoring the
+        # unit tests we can remove overriding the oslo policy flags.
         if not self.without_deprecated_rules:
             self.flags(enforce_new_defaults=False, group="oslo_policy")
         self.useFixture(fixtures.NeutronFixture(self))
@@ -160,6 +156,7 @@ class BasePolicyTest(test.TestCase):
             self.other_project_manager_context,
             self.other_project_member_context,
             self.other_project_reader_context,
+            self.service_context
         ])
         # All the system contexts for easy access.
         self.all_system_contexts = set([
@@ -168,28 +165,6 @@ class BasePolicyTest(test.TestCase):
         ])
         # A few common set of contexts to be used in tests
         #
-        # With scope disable and no legacy rule, any admin,
-        # project members have access. No other role in that project
-        # will have access.
-        self.project_member_or_admin_with_no_scope_no_legacy = set([
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_manager_context,
-            self.project_member_context,
-        ])
-        # With scope disable and no legacy rule, any admin,
-        # project managers have access. No other role in that project
-        # will have access.
-        self.project_manager_or_admin_with_no_scope_no_legacy = set([
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_manager_context,
-        ])
-        # With scope enable and legacy rule, only admin with a project
-        # scope token and any role in that project will have access.
-        self.project_m_r_or_admin_with_scope_and_legacy = set([
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context
-        ])
         # With scope enable and no legacy rule, only admin with a
         # project scope token and project managers have access. No
         # other role in that project or system scoped token will

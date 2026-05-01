@@ -56,25 +56,21 @@ class FloatingIPPolicyTest(base.BasePolicyTest):
         # policy and always pass. If requester is not admin or owner
         # of FIP then neutron will be returning the appropriate error.
         self.member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
             self.service_context
         ]
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
             self.service_context
@@ -84,7 +80,7 @@ class FloatingIPPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to add,
         # delete FIP to server.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -166,9 +162,8 @@ class FloatingIPPolicyTest(base.BasePolicyTest):
                                 self.req, self.instance.uuid, body=body)
 
 
-class FloatingIPNoLegacyNoScopePolicyTest(FloatingIPPolicyTest):
-    """Test Floating IP APIs policies with system scope disabled,
-    and no more deprecated rules.
+class FloatingIPNoLegacyPolicyTest(FloatingIPPolicyTest):
+    """Test Floating IP APIs policies with no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
@@ -186,106 +181,25 @@ class FloatingIPNoLegacyNoScopePolicyTest(FloatingIPPolicyTest):
             base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
-        super(FloatingIPNoLegacyNoScopePolicyTest, self).setUp()
+        super(FloatingIPNoLegacyPolicyTest, self).setUp()
         # With no legacy rule, only project admin or member will be
         # able to add/remove FIP to server.
         self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
+            self.project_member_or_admin_with_scope_no_legacy)
         # With no legacy, project other roles like foo will not be able
         # to operate on FIP.
         self.member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
-            self.project_member_context, self.system_member_context,
+            self.project_member_context,
             self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
             self.other_project_manager_context,
-            self.other_project_member_context
-        ]
-
-
-class FloatingIPScopeTypePolicyTest(FloatingIPPolicyTest):
-    """Test Floating IP APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(FloatingIPScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # Scope enable will not allow system users.
-        self.project_member_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-        self.member_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_manager_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_manager_context,
-            self.other_project_reader_context,
-            self.other_project_member_context,
-            self.service_context
-        ]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_manager_context,
-            self.other_project_reader_context,
-            self.other_project_member_context,
-            self.service_context
-        ]
-
-
-class FloatingIPScopeTypeNoLegacyPolicyTest(FloatingIPScopeTypePolicyTest):
-    """Test Floating IP APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        fip_policies.BASE_POLICY_NAME % 'list':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        fip_policies.BASE_POLICY_NAME % 'show':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        fip_policies.BASE_POLICY_NAME % 'create':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        fip_policies.BASE_POLICY_NAME % 'delete':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        fip_policies.BASE_POLICY_NAME % 'add':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        fip_policies.BASE_POLICY_NAME % 'remove':
-            base_policy.PROJECT_MEMBER_OR_ADMIN}
-
-    def setUp(self):
-        super(FloatingIPScopeTypeNoLegacyPolicyTest, self).setUp()
-        # Check that system admin or owner is able to
-        # add/delete FIP to server.
-        self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_scope_no_legacy)
-        # With no legacy and scope enabled, system users and project
-        # other roles like foo will not be able to operate FIP.
-        self.member_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.other_project_manager_context,
-            self.other_project_member_context
-        ]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_reader_context,
             self.other_project_member_context
         ]

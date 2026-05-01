@@ -49,8 +49,7 @@ class AdminActionsPolicyTest(base.BasePolicyTest):
         # system admin, legacy admin, and project admin is able to perform
         # server admin actions
         self.project_action_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
+            self.legacy_admin_context, self.project_admin_context]
 
     @mock.patch('nova.objects.Instance.save')
     def test_reset_state_policy(self, mock_save):
@@ -71,38 +70,10 @@ class AdminActionsPolicyTest(base.BasePolicyTest):
                                     body={'injectNetworkInfo': None})
 
 
-class AdminActionsNoLegacyNoScopePolicyTest(AdminActionsPolicyTest):
+class AdminActionsNoLegacyPolicyTest(AdminActionsPolicyTest):
     """Test Admin Actions APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
 
-    without_deprecated_rules = True
-
-
-class AdminActionsScopeTypePolicyTest(AdminActionsPolicyTest):
-    """Test Admin Actions APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scopped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(AdminActionsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With scope enable, system admin will not be able to
-        # perform server admin actions.
-        self.project_action_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-
-
-class AdminActionsScopeTypeNoLegacyPolicyTest(AdminActionsScopeTypePolicyTest):
-    """Test Admin Actions APIs policies with system scope enabled,
-    and no more deprecated rules which means scope + new defaults so
-    only project admin is able to perform admin action on their server.
-    """
     without_deprecated_rules = True

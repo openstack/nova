@@ -30,8 +30,8 @@ class ExtensionsPolicyTest(base.BasePolicyTest):
         self.req = fakes.HTTPRequest.blank('')
 
         # Check that everyone is able to get extension info.
-        self.everyone_authorized_contexts = self.all_contexts
-        self.everyone_unauthorized_contexts = []
+        self.everyone_authorized_contexts = self.all_project_contexts
+        self.everyone_unauthorized_contexts = self.all_system_contexts
 
     def test_list_extensions_policy(self):
         rule_name = policies.BASE_POLICY_NAME
@@ -50,36 +50,7 @@ class ExtensionsPolicyTest(base.BasePolicyTest):
                                  self.req, 'os-volumes')
 
 
-class ExtensionsScopeTypePolicyTest(ExtensionsPolicyTest):
-    """Test Extensions APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ExtensionsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        self.everyone_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context, self.project_manager_context,
-            self.project_member_context, self.project_reader_context,
-            self.project_foo_context,
-            self.other_project_manager_context,
-            self.other_project_reader_context,
-            self.other_project_member_context,
-            self.service_context
-        ]
-        self.everyone_unauthorized_contexts = [
-            self.system_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context]
-
-
-class ExtensionsNoLegacyPolicyTest(ExtensionsScopeTypePolicyTest):
-    """Test Extensions APIs policies with system scope enabled,
-    and no more deprecated rules.
+class ExtensionsNoLegacyPolicyTest(ExtensionsPolicyTest):
+    """Test Extensions APIs policies with no more deprecated rules.
     """
     without_deprecated_rules = True

@@ -50,7 +50,7 @@ class SuspendServerPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to suspend
         # resume the server.
         self.project_action_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -96,51 +96,17 @@ class SuspendServerPolicyTest(base.BasePolicyTest):
                                  body={'suspend': {}})
 
 
-class SuspendServerNoLegacyNoScopePolicyTest(SuspendServerPolicyTest):
+class SuspendServerNoLegacyPolicyTest(SuspendServerPolicyTest):
     """Test suspend server APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
 
     without_deprecated_rules = True
 
     def setUp(self):
-        super(SuspendServerNoLegacyNoScopePolicyTest, self).setUp()
+        super(SuspendServerNoLegacyPolicyTest, self).setUp()
         # With no legacy rule, only project admin or member will be
         # able to suspend/resume the server.
-        self.project_action_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
-
-
-class SuspendServerScopeTypePolicyTest(SuspendServerPolicyTest):
-    """Test Suspend Server APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(SuspendServerScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # Scope enable will not allow system admin to suspend/resume server.
-        self.project_action_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-
-class SuspendServerScopeTypeNoLegacyTest(SuspendServerScopeTypePolicyTest):
-    """Test suspend/resume server APIs policies with system scope enabled,
-    and no more deprecated rules which means scope + new defaults so
-    only project admin and member is able to suspend/resume server.
-    """
-
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super(SuspendServerScopeTypeNoLegacyTest, self).setUp()
-        # With scope enable and no legacy rule only project admin/member
-        # will be able to suspend/resume the server.
         self.project_action_authorized_contexts = (
             self.project_member_or_admin_with_scope_no_legacy)

@@ -32,8 +32,8 @@ class FloatingIPPoolsPolicyTest(base.BasePolicyTest):
         self.req = fakes.HTTPRequest.blank('')
 
         # Check that everyone is able to list FIP pools.
-        self.everyone_authorized_contexts = self.all_contexts
-        self.everyone_unauthorized_contexts = set([])
+        self.everyone_authorized_contexts = self.all_project_contexts
+        self.everyone_unauthorized_contexts = self.all_system_contexts
 
     @mock.patch('nova.network.neutron.API.get_floating_ip_pools')
     def test_floating_ip_pools_policy(self, mock_get):
@@ -44,29 +44,7 @@ class FloatingIPPoolsPolicyTest(base.BasePolicyTest):
                                  self.req)
 
 
-class FloatingIPPoolsScopeTypePolicyTest(FloatingIPPoolsPolicyTest):
-    """Test Floating IP Pools APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(FloatingIPPoolsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        self.reduce_set('everyone_authorized', self.all_project_contexts |
-                set([self.service_context]))
-        self.everyone_unauthorized_contexts = (
-            self.all_contexts - self.everyone_authorized_contexts)
-
-
-class FloatingIPPoolsNoLegacyPolicyTest(FloatingIPPoolsScopeTypePolicyTest):
-    """Test Floating IP Pools APIs policies with system scope enabled,
-    and no more deprecated rules.
+class FloatingIPPoolsNoLegacyPolicyTest(FloatingIPPoolsPolicyTest):
+    """Test Floating IP Pools APIs policies with no more deprecated rules.
     """
     without_deprecated_rules = True

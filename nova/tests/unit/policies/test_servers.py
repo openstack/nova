@@ -152,7 +152,7 @@ class ServersPolicyTest(base.BasePolicyTest):
 
         # Users that can take action on *our* project resources
         self.project_action_authorized_contexts = set([
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
@@ -163,14 +163,15 @@ class ServersPolicyTest(base.BasePolicyTest):
             self.project_action_authorized_contexts)
 
         # Users that _see_ project-scoped resources that they own
-        self.everyone_authorized_contexts = set(self.all_contexts)
+        self.everyone_authorized_contexts = set(self.all_project_contexts)
 
         # Users that can _do_ things to project-scoped resources they own
-        self.project_member_authorized_contexts = set(self.all_contexts)
+        self.project_member_authorized_contexts = set(
+            self.all_project_contexts)
 
         # Users able to do admin things on project resources
         self.project_admin_authorized_contexts = set([
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context])
 
         # Admin (for APIs does not pass the project id as policy target
@@ -181,7 +182,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         # servers(unless all-tenant policy is allowed) of their own
         # project only.
         self.all_projects_admin_authorized_contexts = set([
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context])
 
         # Users able to do cross-cell migrations
@@ -227,11 +228,8 @@ class ServersPolicyTest(base.BasePolicyTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        if not CONF.oslo_policy.enforce_scope:
-            check_rule = rule_name
-        else:
-            check_rule = functools.partial(
-                base.rule_if_system, rule, rule_name)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, rule_name)
 
         self.common_policy_auth(self.all_projects_admin_authorized_contexts,
                                 check_rule,
@@ -279,11 +277,8 @@ class ServersPolicyTest(base.BasePolicyTest):
 
         self.mock_get_all.side_effect = fake_get_all
 
-        if not CONF.oslo_policy.enforce_scope:
-            check_rule = rule_name
-        else:
-            check_rule = functools.partial(
-                base.rule_if_system, rule, rule_name)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, rule_name)
 
         self.common_policy_auth(self.all_projects_admin_authorized_contexts,
                                 check_rule,
@@ -476,10 +471,12 @@ class ServersPolicyTest(base.BasePolicyTest):
         # fail for unauthorized contexts here.
         rule = policies.SERVERS % 'create'
         self.policy.set_rules({rule: "@"}, overwrite=False)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, self.rule_forced_host)
         mock_create.return_value = ([self.instance], '')
         mock_az.return_value = ('test', 'host', None)
         self.common_policy_auth(self.all_projects_admin_authorized_contexts,
-                                self.rule_forced_host,
+                                check_rule,
                                 self.controller.create,
                                 self.req, body=self.body)
 
@@ -490,6 +487,8 @@ class ServersPolicyTest(base.BasePolicyTest):
         # fail for unauthorized contexts here.
         rule = policies.SERVERS % 'create'
         self.policy.set_rules({rule: "@"}, overwrite=False)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, self.rule_attach_volume)
         mock_create.return_value = ([self.instance], '')
         body = {
             'server': {
@@ -500,7 +499,7 @@ class ServersPolicyTest(base.BasePolicyTest):
             },
         }
         self.common_policy_auth(self.project_member_authorized_contexts,
-                                self.rule_attach_volume,
+                                check_rule,
                                 self.controller.create,
                                 self.req, body=body)
 
@@ -511,6 +510,9 @@ class ServersPolicyTest(base.BasePolicyTest):
         # fail for unauthorized contexts here.
         rule = policies.SERVERS % 'create'
         self.policy.set_rules({rule: "@"}, overwrite=False)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, self.rule_attach_network)
+
         mock_create.return_value = ([self.instance], '')
         body = {
             'server': {
@@ -523,7 +525,7 @@ class ServersPolicyTest(base.BasePolicyTest):
             },
         }
         self.common_policy_auth(self.project_member_authorized_contexts,
-                                self.rule_attach_network,
+                                check_rule,
                                 self.controller.create,
                                 self.req, body=body)
 
@@ -534,6 +536,9 @@ class ServersPolicyTest(base.BasePolicyTest):
         # fail for unauthorized contexts here.
         rule = policies.SERVERS % 'create'
         self.policy.set_rules({rule: "@"}, overwrite=False)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, self.rule_trusted_certs)
+
         req = fakes.HTTPRequest.blank('', version='2.63')
         mock_create.return_value = ([self.instance], '')
         body = {
@@ -549,7 +554,7 @@ class ServersPolicyTest(base.BasePolicyTest):
             },
         }
         self.common_policy_auth(self.project_member_authorized_contexts,
-                                self.rule_trusted_certs,
+                                check_rule,
                                 self.controller.create,
                                 req, body=body)
 
@@ -782,11 +787,8 @@ class ServersPolicyTest(base.BasePolicyTest):
             },
         }
 
-        if not CONF.oslo_policy.enforce_scope:
-            check_rule = rule_name
-        else:
-            check_rule = functools.partial(
-                base.rule_if_system, rule, rule_name)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, rule_name)
 
         self.common_policy_auth(self.project_action_authorized_contexts,
                                 check_rule,
@@ -859,11 +861,8 @@ class ServersPolicyTest(base.BasePolicyTest):
         self.policy.set_rules({rule: "@"}, overwrite=False)
 
         rule_name = policies.SERVERS % 'create_image:allow_volume_backed'
-        if not CONF.oslo_policy.enforce_scope:
-            check_rule = rule_name
-        else:
-            check_rule = functools.partial(
-                base.rule_if_system, rule, rule_name)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, rule_name)
         self.common_policy_auth(self.project_action_authorized_contexts,
                                 check_rule,
                                 self.controller._create_image,
@@ -1247,6 +1246,9 @@ class ServersPolicyTest(base.BasePolicyTest):
         # fail for unauthorized contexts here.
         rule = policies.SERVERS % 'create'
         self.policy.set_rules({rule: "@"}, overwrite=False)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, self.rule_requested_destination)
+
         req = fakes.HTTPRequest.blank('', version='2.74')
 
         def fake_create(context, *args, **kwargs):
@@ -1272,7 +1274,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         }
 
         self.common_policy_auth(self.all_projects_admin_authorized_contexts,
-                                self.rule_requested_destination,
+                                check_rule,
                                 self.controller.create,
                                 req, body=body)
 
@@ -1374,9 +1376,8 @@ class ServersPolicyTest(base.BasePolicyTest):
                 context, image, flavor, None)
 
 
-class ServersNoLegacyNoScopeTest(ServersPolicyTest):
-    """Test Servers API policies with deprecated rules disabled, but scope
-    checking still disabled.
+class ServersNoLegacyTest(ServersPolicyTest):
+    """Test Servers API policies with deprecated rules disabled.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
@@ -1385,141 +1386,31 @@ class ServersNoLegacyNoScopeTest(ServersPolicyTest):
     }
 
     def setUp(self):
-        super(ServersNoLegacyNoScopeTest, self).setUp()
+        super(ServersNoLegacyTest, self).setUp()
 
         # Disabling legacy rule support means that we no longer allow
         # random roles on our project to take action on our
         # resources. Legacy admin will have access.
         self.project_action_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
+            self.project_member_or_admin_with_scope_no_legacy)
 
         # The only additional role that can read our resources is our
         # own project_reader.
         self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
+            self.project_reader_or_admin_with_scope_no_legacy)
 
         # Disabling legacy support means random roles lose power to
         # see everything in their project.
         self.reduce_set('everyone_authorized',
-                        self.all_contexts - set([self.project_foo_context,
-                                                 self.system_foo_context,
-                                                 self.service_context]))
-
-        # Disabling legacy support means readers and random roles lose
-        # power to create things on their own projects. Note that
-        # system_admin and system_member are still here because we are
-        # not rejecting them by scope, even though these operations
-        # with those tokens are likely to fail because they have no
-        # project.
-        self.reduce_set('project_member_authorized',
-                        self.all_contexts - set([
-                            self.system_reader_context,
-                            self.system_foo_context,
-                            self.project_reader_context,
+                        self.all_project_contexts - set([
                             self.project_foo_context,
-                            self.other_project_reader_context,
                             self.service_context]))
-
-
-class ServersScopeTypePolicyTest(ServersPolicyTest):
-    """Test Servers APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServersScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # These policy are project scoped only and 'create' policy is checked
-        # first so even we allow it for everyone the system scoped context
-        # cannot validate these as they fail on 'create' policy due to
-        # scope_type. So we need to set rule name as None to skip the policy
-        # error message assertion in base class. These rule name are only used
-        # for error message assertion.
-        self.rule_trusted_certs = None
-        self.rule_attach_network = None
-        self.rule_attach_volume = None
-        self.rule_requested_destination = None
-        self.rule_forced_host = None
-
-        # With scope checking enabled, system admins no longer have
-        # admin-granted project resource access.
-        self.reduce_set('project_action_authorized',
-                        set([self.legacy_admin_context,
-                             self.project_admin_context,
-                             self.project_manager_context,
-                             self.project_member_context,
-                             self.project_reader_context,
-                             self.project_foo_context]))
-
-        # No change from the base behavior here, but we need to
-        # re-build this from project_action_authorized, since we
-        # changed it above.
-        self.project_reader_authorized_contexts = (
-            self.project_action_authorized_contexts)
-
-        # With scope checking enabled, system users no longer have
-        # project access, even to create their own resources.
-        self.reduce_set('project_member_authorized',
-                self.all_project_contexts | set([self.service_context]))
-
-        # With scope checking enabled, system admin is no longer an
-        # admin of project resources.
-        self.reduce_set('project_admin_authorized',
-                        set([self.legacy_admin_context,
-                             self.project_admin_context]))
-        self.reduce_set('all_projects_admin_authorized',
-                        set([self.legacy_admin_context,
-                             self.project_admin_context]))
-
-        # With scope checking enabled, system users also lose access to read
-        # project resources.
-        self.reduce_set('everyone_authorized',
-                        self.all_contexts - self.all_system_contexts)
-
-
-class ServersNoLegacyPolicyTest(ServersScopeTypePolicyTest):
-    """Test Servers APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.SERVERS % 'show:flavor-extra-specs':
-            base_policy.PROJECT_READER_OR_ADMIN,
-    }
-
-    def setUp(self):
-        super(ServersNoLegacyPolicyTest, self).setUp()
-
-        # Disabling legacy support means legacy_admin is no longer
-        # powerful on our project. Also, we drop the "any role on the
-        # project means you can do stuff" behavior, so project_reader
-        # and project_foo lose power.
-        self.project_action_authorized_contexts = (
-            self.project_member_or_admin_with_scope_no_legacy)
-
-        # Only project_reader has additional read access to our
-        # project resources.
-        self.project_reader_authorized_contexts = (
-            self.project_action_authorized_contexts |
-            set([self.project_reader_context]))
-
-        # Disabling legacy support means random roles lose power to
-        # see everything in their project.
-        self.reduce_set(
-            'everyone_authorized',
-            self.all_project_contexts - set([self.project_foo_context]))
 
         # Disabling legacy support means readers and random roles lose
         # power to create things on their own projects.
         self.reduce_set('project_member_authorized',
                         self.all_project_contexts - set([
-                            self.project_foo_context,
                             self.project_reader_context,
+                            self.project_foo_context,
                             self.other_project_reader_context,
-                        ]))
+                            self.service_context]))

@@ -14,8 +14,6 @@ import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import baremetal_nodes
-from nova.policies import baremetal_nodes as policies
-from nova.policies import base as base_policy
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
 from nova.tests.unit.virt.ironic import utils as ironic_utils
@@ -45,7 +43,6 @@ class BaremetalNodesPolicyTest(base.BasePolicyTest):
         # legacy admin, and project admin will be able to get baremetal nodes.
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context,
-            self.system_admin_context,
             self.project_admin_context,
         ]
 
@@ -71,48 +68,11 @@ class BaremetalNodesPolicyTest(base.BasePolicyTest):
                                 self.req, uuids.fake_id)
 
 
-class BaremetalNodesNoLegacyNoScopePolicyTest(BaremetalNodesPolicyTest):
+class BaremetalNodesNoLegacyPolicyTest(BaremetalNodesPolicyTest):
     """Test Baremetal Nodes APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only. In that case
-    system admin, legacy admin, and project admin will be able to get
-    Baremetal nodes Legacy admin will be allowed as policy is just admin if
-    no scope checks.
+    which means new defaults only. In that case, legacy admin and project
+    admin will be able to get Baremetal nodes.
 
     """
 
     without_deprecated_rules = True
-
-
-class BaremetalNodesScopeTypePolicyTest(BaremetalNodesPolicyTest):
-    """Test Baremetal Nodes APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scopped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(BaremetalNodesScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope checks enable, only project-scoped admins are
-        # able to get baremetal nodes.
-        self.project_admin_authorized_contexts = [self.legacy_admin_context,
-                                                 self.project_admin_context]
-
-
-class BNScopeTypeNoLegacyPolicyTest(BaremetalNodesScopeTypePolicyTest):
-    """Test Baremetal Nodes APIs policies with no legacy deprecated rules
-    and scope checks enabled which means scope + new defaults so
-    only system admin is able to get baremetal nodes.
-    """
-
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.BASE_POLICY_NAME % 'list':
-            base_policy.ADMIN,
-        policies.BASE_POLICY_NAME % 'show':
-            base_policy.ADMIN}

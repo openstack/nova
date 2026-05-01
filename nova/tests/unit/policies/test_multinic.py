@@ -51,7 +51,7 @@ class MultinicPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to
         # add/remove fixed ip.
         self.project_action_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -75,9 +75,9 @@ class MultinicPolicyTest(base.BasePolicyTest):
                                 body=body)
 
 
-class MultinicNoLegacyNoScopePolicyTest(MultinicPolicyTest):
+class MultinicNoLegacyPolicyTest(MultinicPolicyTest):
     """Test Multinic APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
 
@@ -89,47 +89,8 @@ class MultinicNoLegacyNoScopePolicyTest(MultinicPolicyTest):
             base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
-        super(MultinicNoLegacyNoScopePolicyTest, self).setUp()
+        super(MultinicNoLegacyPolicyTest, self).setUp()
         # With no legacy rule, only project admin or member will be
         # able to add/remove the fixed ip.
-        self.project_action_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
-
-
-class MultinicScopeTypePolicyTest(MultinicPolicyTest):
-    """Test Multinic APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(MultinicScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # Scope enable will not allow system admin to add/remove
-        # the fixed ip.
-        self.project_action_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-
-class MultinicScopeTypeNoLegacyPolicyTest(MultinicScopeTypePolicyTest):
-    """Test Multinic APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.BASE_POLICY_NAME % 'add':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        policies.BASE_POLICY_NAME % 'remove':
-            base_policy.PROJECT_MEMBER_OR_ADMIN}
-
-    def setUp(self):
-        super(MultinicScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With scope enable and no legacy rule, only project admin/member
-        # will be able to add/remove the fixed ip.
         self.project_action_authorized_contexts = (
             self.project_member_or_admin_with_scope_no_legacy)

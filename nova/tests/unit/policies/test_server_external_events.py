@@ -37,7 +37,7 @@ class ServerExternalEventsPolicyTest(base.BasePolicyTest):
         # With legacy rule and no scope checks, all admin and service user
         # can create the server external events.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.service_context
         ]
 
@@ -56,39 +56,10 @@ class ServerExternalEventsPolicyTest(base.BasePolicyTest):
                                 self.req, body=body)
 
 
-class ServerExternalEventsNoLegacyNoScopeTest(
+class ServerExternalEventsNoLegacyTest(
         ServerExternalEventsPolicyTest):
     """Test Server External Events API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
-    without_deprecated_rules = True
-
-
-class ServerExternalEventsScopeTypePolicyTest(ServerExternalEventsPolicyTest):
-    """Test Server External Events APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerExternalEventsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope checks, system admin is not allowed.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.service_context]
-
-
-class ServerExternalEventsScopeTypeNoLegacyPolicyTest(
-        ServerExternalEventsScopeTypePolicyTest):
-    """Test Server External Events APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
     without_deprecated_rules = True

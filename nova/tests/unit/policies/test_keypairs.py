@@ -53,12 +53,12 @@ class KeypairsPolicyTest(base.BasePolicyTest):
 
         # Check that everyone is able to create, delete and get
         # their keypairs.
-        self.everyone_authorized_contexts = self.all_contexts
+        self.everyone_authorized_contexts = self.all_project_contexts
 
         # Check that admin is able to create, delete and get
         # other users keypairs.
         self.admin_authorized_contexts = set([
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context])
 
     @mock.patch('nova.compute.api.KeypairAPI.get_key_pairs')
@@ -141,42 +141,12 @@ class KeypairsPolicyTest(base.BasePolicyTest):
                                 req, fakes.FAKE_UUID)
 
 
-class KeypairsNoLegacyNoScopeTest(KeypairsPolicyTest):
+class KeypairsNoLegacyTest(KeypairsPolicyTest):
     """Test Keypairs API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
     without_deprecated_rules = True
 
     def setUp(self):
-        super(KeypairsNoLegacyNoScopeTest, self).setUp()
-
-
-class KeypairsScopeTypePolicyTest(KeypairsPolicyTest):
-    """Test Keypairs APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(KeypairsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope checking, only project-scoped users are allowed
-        self.reduce_set('everyone_authorized', self.all_project_contexts |
-                set([self.service_context]))
-        self.admin_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context]
-
-
-class KeypairsNoLegacyPolicyTest(KeypairsScopeTypePolicyTest):
-    """Test Keypairs APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system APIs.
-    """
-    without_deprecated_rules = True
+        super(KeypairsNoLegacyTest, self).setUp()

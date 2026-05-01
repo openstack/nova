@@ -64,11 +64,11 @@ class LimitsPolicyTest(base.BasePolicyTest):
         mock_get_project_quotas.start()
 
         # Check that everyone is able to get their limits
-        self.everyone_authorized_contexts = self.all_contexts
+        self.everyone_authorized_contexts = self.all_project_contexts
 
         # With legacy rule, any admin is able to get other projects limit.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     def test_get_limits_policy(self):
@@ -82,19 +82,16 @@ class LimitsPolicyTest(base.BasePolicyTest):
         self.policy.set_rules({rule: "@"}, overwrite=False)
         req = fakes.HTTPRequest.blank('/?tenant_id=faketenant')
         rule_name = limits_policies.OTHER_PROJECT_LIMIT_POLICY_NAME
-        if not CONF.oslo_policy.enforce_scope:
-            check_rule = rule_name
-        else:
-            check_rule = functools.partial(base.rule_if_system,
-                rule, rule_name)
+        check_rule = functools.partial(base.rule_if_system,
+            rule, rule_name)
         self.common_policy_auth(self.project_admin_authorized_contexts,
                                 check_rule, self.controller.index,
                                 req)
 
 
-class LimitsNoLegacyNoScopeTest(LimitsPolicyTest):
+class LimitsNoLegacyTest(LimitsPolicyTest):
     """Test Flavor Access API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
     without_deprecated_rules = True
@@ -103,66 +100,10 @@ class LimitsNoLegacyNoScopeTest(LimitsPolicyTest):
             base_policy.ADMIN}
 
     def setUp(self):
-        super(LimitsNoLegacyNoScopeTest, self).setUp()
+        super(LimitsNoLegacyTest, self).setUp()
 
         # Even with no legacy rule, any admin can get other project
         # limits.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
-
-
-class LimitsScopeTypePolicyTest(LimitsPolicyTest):
-    """Test Limits APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(LimitsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With Scope enable, system users no longer allowed.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-        self.everyone_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.other_project_reader_context,
-            self.service_context,
-        ]
-
-
-class LimitsScopeTypeNoLegacyPolicyTest(LimitsScopeTypePolicyTest):
-    """Test Limits APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system APIs.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        limits_policies.OTHER_PROJECT_LIMIT_POLICY_NAME:
-            base_policy.ADMIN}
-
-    def setUp(self):
-        super(LimitsScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With no legacy and scope enable, only project level admin
-        # will get other projects limit.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-        self.everyone_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.other_project_reader_context,
-            self.service_context,
-        ]

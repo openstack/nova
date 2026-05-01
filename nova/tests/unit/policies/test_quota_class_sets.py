@@ -36,7 +36,7 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
         # legacy admin, and project admin will be able to get, update quota
         # class.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     def test_update_quota_class_sets_policy(self):
@@ -66,41 +66,10 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
                                 self.req, 'default')
 
 
-class QuotaClassSetsNoLegacyNoScopePolicyTest(QuotaClassSetsPolicyTest):
+class QuotaClassSetsNoLegacyPolicyTest(QuotaClassSetsPolicyTest):
     """Test QuotaClassSets APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only. In this case
-    system admin, legacy admin, and project admin will be able to get
-    update quota class. Legacy admin will be allowed as policy
-    is just admin if no scope checks.
-
-    """
-    without_deprecated_rules = True
-
-
-class QuotaClassSetsScopeTypePolicyTest(QuotaClassSetsPolicyTest):
-    """Test Quota Class Sets APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(QuotaClassSetsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope checks enable, only project admins are able to
-        # update and get quota class.
-        self.project_admin_authorized_contexts = [self.legacy_admin_context,
-                                                  self.project_admin_context]
-
-
-class QuotaClassScopeTypeNoLegacyPolicyTest(QuotaClassSetsScopeTypePolicyTest):
-    """Test QuotaClassSets APIs policies with no legacy deprecated rules
-    and scope checks enabled which means scope + new defaults so
-    only system admin is able to update and get quota class.
+    which means new defaults only. In this case, legacy admin and project
+    admin will be able to get update quota class.
 
     """
     without_deprecated_rules = True

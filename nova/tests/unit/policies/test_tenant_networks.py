@@ -40,13 +40,11 @@ class TenantNetworksPolicyTest(base.BasePolicyTest):
         # policy and always pass. If requester is not admin or owner
         # of networks then neutron will be returning the appropriate error.
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
             self.service_context
@@ -68,9 +66,8 @@ class TenantNetworksPolicyTest(base.BasePolicyTest):
                                 self.req, uuids.fake_id)
 
 
-class TenantNetworksNoLegacyNoScopePolicyTest(TenantNetworksPolicyTest):
-    """Test Tenant Networks APIs policies with no legacy deprecated rules
-    and no scope checks.
+class TenantNetworksNoLegacyPolicyTest(TenantNetworksPolicyTest):
+    """Test Tenant Networks APIs policies with no legacy deprecated rules.
 
     """
     without_deprecated_rules = True
@@ -81,63 +78,14 @@ class TenantNetworksNoLegacyNoScopePolicyTest(TenantNetworksPolicyTest):
             base_policy.PROJECT_READER_OR_ADMIN}
 
     def setUp(self):
-        super(TenantNetworksNoLegacyNoScopePolicyTest, self).setUp()
+        super(TenantNetworksNoLegacyPolicyTest, self).setUp()
         # With no legacy, project other roles like foo will not be able
         # to get tenant network.
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
             self.other_project_manager_context,
             self.other_project_member_context
-        ]
-
-
-class TenantNetworksScopeTypePolicyTest(TenantNetworksPolicyTest):
-    """Test Tenant Networks APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(TenantNetworksScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context, self.service_context
-        ]
-
-
-class TenantNetworksScopeTypeNoLegacyPolicyTest(
-        TenantNetworksScopeTypePolicyTest):
-    """Test Tenant Networks APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.POLICY_NAME % 'list':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        policies.POLICY_NAME % 'show':
-            base_policy.PROJECT_READER_OR_ADMIN}
-
-    def setUp(self):
-        super(TenantNetworksScopeTypeNoLegacyPolicyTest, self).setUp()
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
         ]

@@ -67,11 +67,11 @@ class InstanceActionsPolicyTest(base.BasePolicyTest):
         # get server action and all admin is able to get server action
         # with event details.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
         # and project reader can get their server topology without host info.
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -131,10 +131,52 @@ class InstanceActionsPolicyTest(base.BasePolicyTest):
         for action in unauthorize_res:
             self.assertNotIn('events', action['instanceAction'])
 
+    @mock.patch('nova.objects.InstanceActionEventList.get_by_action')
+    @mock.patch('nova.objects.InstanceAction.get_by_request_id')
+    def test_show_instance_action_policy_with_show_details(
+            self, mock_get_action, mock_get_events):
+        """Test to ensure skip checking policy rule
+        'os_compute_api:os-instance-actions:show'.
+        """
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.84')
+        fake_action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
+        mock_get_action.return_value = fake_action
+        fake_events = self.fake_events[fake_action['id']]
+        fake_action['events'] = fake_events
+        mock_get_events.return_value = fake_events
+        fake_action_fmt = test_instance_actions.format_action(
+            copy.deepcopy(fake_action))
 
-class InstanceActionsNoLegacyNoScopePolicyTest(InstanceActionsPolicyTest):
-    """Test os-instance-actions APIs policies with no legacy deprecated rules
-    and no scope checks.
+        self._set_policy_rules(overwrite=False)
+        rule_name = ia_policies.BASE_POLICY_NAME % "events:details"
+        authorize_res, unauthorize_res = self.common_policy_auth(
+            self.project_admin_authorized_contexts,
+            rule_name, self.controller.show,
+            self.req, self.instance['uuid'],
+            fake_action['request_id'], fatal=False)
+
+        for action in authorize_res:
+            # Ensure the 'details' field in the action events
+            for event in action['instanceAction']['events']:
+                self.assertIn('details', event)
+            # In order to unify the display forms of 'start_time' and
+            # 'finish_time', format the results returned by the show api.
+            res_fmt = test_instance_actions.format_action(
+                action['instanceAction'])
+            self.assertEqual(fake_action_fmt['events'], res_fmt['events'])
+
+        # Because of the microversion > '2.51', that will be contain
+        # 'events' in the os-instance-actions show api response, but the
+        # 'details' should not contain in the action events.
+        for action in unauthorize_res:
+            # Ensure the 'details' field not in the action events
+            for event in action['instanceAction']['events']:
+                self.assertNotIn('details', event)
+
+
+class InstanceActionsNoLegacyPolicyTest(InstanceActionsPolicyTest):
+    """Test os-instance-actions APIs policies with no legacy deprecated rules.
 
     """
 
@@ -149,9 +191,9 @@ class InstanceActionsNoLegacyNoScopePolicyTest(InstanceActionsPolicyTest):
     }
 
     def setUp(self):
-        super(InstanceActionsNoLegacyNoScopePolicyTest, self).setUp()
+        super(InstanceActionsNoLegacyPolicyTest, self).setUp()
         self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
+            self.project_reader_or_admin_with_scope_no_legacy)
 
 
 class InstanceActionsDeprecatedPolicyTest(base.BasePolicyTest):
@@ -210,91 +252,3 @@ class InstanceActionsDeprecatedPolicyTest(base.BasePolicyTest):
         self.assertEqual(
             "Policy doesn't allow os_compute_api:os-instance-actions:list "
             "to be performed.", exc.format_message())
-
-
-class InstanceActionsScopeTypePolicyTest(InstanceActionsPolicyTest):
-    """Test os-instance-actions APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True,
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token which are allowed
-    and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(InstanceActionsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With Scope enable, system users no longer allowed.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-    @mock.patch('nova.objects.InstanceActionEventList.get_by_action')
-    @mock.patch('nova.objects.InstanceAction.get_by_request_id')
-    def test_show_instance_action_policy_with_show_details(
-            self, mock_get_action, mock_get_events):
-        """Test to ensure skip checking policy rule
-        'os_compute_api:os-instance-actions:show'.
-        """
-        self.req.api_version_request = api_version_request.APIVersionRequest(
-            '2.84')
-        fake_action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
-        mock_get_action.return_value = fake_action
-        fake_events = self.fake_events[fake_action['id']]
-        fake_action['events'] = fake_events
-        mock_get_events.return_value = fake_events
-        fake_action_fmt = test_instance_actions.format_action(
-            copy.deepcopy(fake_action))
-
-        self._set_policy_rules(overwrite=False)
-        rule_name = ia_policies.BASE_POLICY_NAME % "events:details"
-        authorize_res, unauthorize_res = self.common_policy_auth(
-            self.project_admin_authorized_contexts,
-            rule_name, self.controller.show,
-            self.req, self.instance['uuid'],
-            fake_action['request_id'], fatal=False)
-
-        for action in authorize_res:
-            # Ensure the 'details' field in the action events
-            for event in action['instanceAction']['events']:
-                self.assertIn('details', event)
-            # In order to unify the display forms of 'start_time' and
-            # 'finish_time', format the results returned by the show api.
-            res_fmt = test_instance_actions.format_action(
-                action['instanceAction'])
-            self.assertEqual(fake_action_fmt['events'], res_fmt['events'])
-
-        # Because of the microversion > '2.51', that will be contain
-        # 'events' in the os-instance-actions show api response, but the
-        # 'details' should not contain in the action events.
-        for action in unauthorize_res:
-            # Ensure the 'details' field not in the action events
-            for event in action['instanceAction']['events']:
-                self.assertNotIn('details', event)
-
-
-class InstanceActionsScopeTypeNoLegacyPolicyTest(
-    InstanceActionsScopeTypePolicyTest):
-    """Test os-instance-actions APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        ia_policies.BASE_POLICY_NAME % 'list':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        ia_policies.BASE_POLICY_NAME % 'show':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        ia_policies.BASE_POLICY_NAME % 'events':
-            base_policy.ADMIN,
-    }
-
-    def setUp(self):
-        super(InstanceActionsScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With no legacy and scope enable, only project admin, member,
-        # and reader will be able to get server action and only admin
-        # with event details.
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_scope_no_legacy)

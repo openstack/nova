@@ -36,8 +36,8 @@ class AssistedVolumeSnapshotPolicyTest(base.BasePolicyTest):
         # By default, legacy rule are enable and scope check is disabled.
         # admin and service user is able to manage volume snapshot.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.service_context]
+            self.legacy_admin_context, self.project_admin_context,
+            self.service_context]
 
     @mock.patch('nova.compute.api.API.volume_snapshot_create')
     def test_assisted_create_policy(self, mock_create):
@@ -70,40 +70,10 @@ class AssistedVolumeSnapshotPolicyTest(base.BasePolicyTest):
                                 req, 1)
 
 
-class AssistedSnapshotNoLegacyNoScopePolicyTest(
+class AssistedSnapshotNoLegacyPolicyTest(
         AssistedVolumeSnapshotPolicyTest):
-    """Test Assisted Snapshot APIs policies with no legacy deprecated rules
-    and no scope checks.
+    """Test Assisted Snapshot APIs policies with no legacy deprecated rules.
 
     """
 
-    without_deprecated_rules = True
-
-
-class AssistedSnapshotScopeTypePolicyTest(AssistedVolumeSnapshotPolicyTest):
-    """Test Assisted Volume Snapshots APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scopped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(AssistedSnapshotScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope check enabled, system admin is not able to
-        # take volume snapshot.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.service_context]
-
-
-class AssistedSnapshotScopeTypeNoLegacyPolicyTest(
-        AssistedSnapshotScopeTypePolicyTest):
-    """Test os-volume-attachments APIs policies with system scope enabled,
-    and no legacy deprecated rules.
-    """
     without_deprecated_rules = True

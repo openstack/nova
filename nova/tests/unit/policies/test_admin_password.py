@@ -53,7 +53,7 @@ class AdminPasswordPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to change
         # the password for their server.
         self.project_action_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -90,53 +90,17 @@ class AdminPasswordPolicyTest(base.BasePolicyTest):
                                               mock.ANY, '1234pass')
 
 
-class AdminPasswordNoLegacyNoScopePolicyTest(AdminPasswordPolicyTest):
+class AdminPasswordNoLegacyTest(AdminPasswordPolicyTest):
     """Test Admin Password APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
 
     without_deprecated_rules = True
 
     def setUp(self):
-        super(AdminPasswordNoLegacyNoScopePolicyTest, self).setUp()
+        super(AdminPasswordNoLegacyTest, self).setUp()
         # With no legacy rule, only project admin or member will be
         # able to change the server password.
-        self.project_action_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
-
-
-class AdminPasswordScopeTypePolicyTest(AdminPasswordPolicyTest):
-    """Test Admin Password APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(AdminPasswordScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # Scope enable will not allow system admin to change password.
-        self.project_action_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-
-class AdminPasswordScopeTypeNoLegacyTest(AdminPasswordScopeTypePolicyTest):
-    """Test Admin Password APIs policies with system scope enabled,
-    and no more deprecated rules which means scope + new defaults so
-    only project admin and member is able to change their server password.
-    """
-
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super(AdminPasswordScopeTypeNoLegacyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope enable and no legacy rule only project admin/member
-        # will be able to change password for the server.
         self.project_action_authorized_contexts = (
             self.project_member_or_admin_with_scope_no_legacy)
