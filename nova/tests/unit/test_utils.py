@@ -1578,6 +1578,12 @@ class ExecutorStatsTestCase(test.NoDBTestCase):
         utils, 'concurrency_mode_threading', new=mock.Mock(return_value=False))
     @mock.patch.object(utils.LOG, 'debug')
     def test_stats_logged_eventlet(self, mock_debug):
+        env = os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', '').lower()
+        if env in ('1', 'true', 'yes'):
+            self.skipTest(
+                "In native threading mode this case is covered by "
+                "test_stats_logged_threading")
+
         # ensure that each task submission triggers stats printing
         self.flags(thread_pool_statistic_period=0)
 
@@ -1613,6 +1619,11 @@ class ExecutorStatsTestCase(test.NoDBTestCase):
         utils, 'concurrency_mode_threading', new=mock.Mock(return_value=True))
     @mock.patch.object(utils.LOG, 'debug')
     def test_stats_logged_threading(self, mock_debug):
+        if not utils.concurrency_mode_threading():
+            self.skipTest(
+                "In eventlet mode this case is covered by "
+                "test_stats_logged_eventlet")
+
         # ensure that each task submission triggers stats printing
         self.flags(thread_pool_statistic_period=0)
         # make the tasks sequential to help simulating queued task
@@ -1687,6 +1698,12 @@ class OsloServiceBackendSelectionTestCase(test.NoDBTestCase):
 
     @mock.patch('oslo_service.backend.init_backend')
     def test_eventlet_selected(self, init_backend):
+        env = os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', '').lower()
+        if env in ('1', 'true', 'yes'):
+            self.skipTest(
+                "In native threading mode this is covered by "
+                "test_threading_selected*")
+
         monkey_patch.patch()
 
         init_backend.assert_called_once_with(oslo_backend.BackendType.EVENTLET)
