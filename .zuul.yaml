@@ -2,12 +2,12 @@
 # for job naming conventions.
 
 - job:
-    name: nova-tox-functional-py310
-    parent: openstack-tox-functional-py310
+    name: nova-tox-functional-py311
+    parent: openstack-tox-functional-py311
     description: |
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.10 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py310`` environment.
+      Uses tox with the ``functional-py311`` environment.
 
       This job also provides a parent for other projects to run the nova
       functional tests on their own changes.
@@ -26,7 +26,7 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py310
+      bindep_profile: test py311
     timeout: 3600
 
 - job:
@@ -948,7 +948,7 @@
         - nova-alt-configurations
         - nova-tox-validate-backport:
             voting: false
-        - nova-tox-functional-py310
+        - nova-tox-functional-py311
         - nova-tox-functional-py313
         - tempest-integrated-compute:
            # NOTE(gmann): Policies changes do not need to run all the
@@ -977,7 +977,7 @@
     gate:
       jobs:
         - nova-live-migration
-        - nova-tox-functional-py310
+        - nova-tox-functional-py311
         - nova-tox-functional-py313
         - nova-multi-cell
         - nova-next
