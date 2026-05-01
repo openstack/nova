@@ -159,7 +159,8 @@ class GlanceClientWrapper(object):
         """
         args = args or []
         kwargs = kwargs or {}
-        retry_excs = (glanceclient.exc.ServiceUnavailable,
+        retry_excs = (
+                glanceclient.exc.HTTPServiceUnavailable,
                 glanceclient.exc.InvalidEndpoint,
                 glanceclient.exc.CommunicationError,
                 IOError)
@@ -725,7 +726,7 @@ class GlanceImageServiceV2(object):
         """
         try:
             self._client.call(context, 2, 'delete', args=(image_id,))
-        except glanceclient.exc.NotFound:
+        except glanceclient.exc.HTTPNotFound:
             raise exception.ImageNotFound(image_id=image_id)
         except glanceclient.exc.HTTPForbidden:
             raise exception.ImageNotAuthorized(image_id=image_id)
@@ -757,7 +758,7 @@ class GlanceImageServiceV2(object):
             self._client.call(context, 2, 'image_import', args=(image_id,),
                               kwargs={'method': 'copy-image',
                                       'stores': stores})
-        except glanceclient.exc.NotFound:
+        except glanceclient.exc.HTTPNotFound:
             raise exception.ImageNotFound(image_id=image_id)
         except glanceclient.exc.HTTPForbidden:
             raise exception.ImageNotAuthorized(image_id=image_id)
@@ -1042,12 +1043,12 @@ def _reraise_translated_exception():
 
 
 def _translate_image_exception(image_id, exc_value):
-    if isinstance(exc_value, (glanceclient.exc.Forbidden,
-                    glanceclient.exc.Unauthorized)):
+    if isinstance(exc_value, (glanceclient.exc.HTTPForbidden,
+                    glanceclient.exc.HTTPUnauthorized)):
         return exception.ImageNotAuthorized(image_id=image_id)
-    if isinstance(exc_value, glanceclient.exc.NotFound):
+    if isinstance(exc_value, glanceclient.exc.HTTPNotFound):
         return exception.ImageNotFound(image_id=image_id)
-    if isinstance(exc_value, glanceclient.exc.BadRequest):
+    if isinstance(exc_value, glanceclient.exc.HTTPBadRequest):
         return exception.ImageBadRequest(image_id=image_id,
                                          response=str(exc_value))
     if isinstance(exc_value, glanceclient.exc.HTTPOverLimit):
@@ -1056,12 +1057,12 @@ def _translate_image_exception(image_id, exc_value):
 
 
 def _translate_plain_exception(exc_value):
-    if isinstance(exc_value, (glanceclient.exc.Forbidden,
-                    glanceclient.exc.Unauthorized)):
+    if isinstance(exc_value, (glanceclient.exc.HTTPForbidden,
+                    glanceclient.exc.HTTPUnauthorized)):
         return exception.Forbidden(str(exc_value))
-    if isinstance(exc_value, glanceclient.exc.NotFound):
+    if isinstance(exc_value, glanceclient.exc.HTTPNotFound):
         return exception.NotFound(str(exc_value))
-    if isinstance(exc_value, glanceclient.exc.BadRequest):
+    if isinstance(exc_value, glanceclient.exc.HTTPBadRequest):
         return exception.Invalid(str(exc_value))
     return exc_value
 

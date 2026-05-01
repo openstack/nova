@@ -289,7 +289,7 @@ class TestConversions(test.NoDBTestCase):
 class TestExceptionTranslations(test.NoDBTestCase):
 
     def test_client_forbidden_to_imagenotauthed(self):
-        in_exc = glanceclient.exc.Forbidden('123')
+        in_exc = glanceclient.exc.HTTPForbidden('123')
         out_exc = glance._translate_image_exception('123', in_exc)
         self.assertIsInstance(out_exc, exception.ImageNotAuthorized)
 
@@ -299,7 +299,7 @@ class TestExceptionTranslations(test.NoDBTestCase):
         self.assertIsInstance(out_exc, exception.ImageNotAuthorized)
 
     def test_client_notfound_converts_to_imagenotfound(self):
-        in_exc = glanceclient.exc.NotFound('123')
+        in_exc = glanceclient.exc.HTTPNotFound('123')
         out_exc = glance._translate_image_exception('123', in_exc)
         self.assertIsInstance(out_exc, exception.ImageNotFound)
 
@@ -419,7 +419,7 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
     @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_static_client_without_retries(self, create_client_mock,
                                            sleep_mock):
-        side_effect = glanceclient.exc.ServiceUnavailable
+        side_effect = glanceclient.exc.HTTPServiceUnavailable
         self._mock_client_images_response(create_client_mock, side_effect)
         self.flags(num_retries=0, group='glance')
         client = self._get_static_client(create_client_mock)
@@ -430,7 +430,7 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
     def test_static_client_with_retries(self, create_client_mock,
                                         sleep_mock):
         side_effect = [
-            glanceclient.exc.ServiceUnavailable,
+            glanceclient.exc.HTTPServiceUnavailable,
             None
         ]
         self._mock_client_images_response(create_client_mock, side_effect)
@@ -444,7 +444,7 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
     def test_default_client_with_retries(self, create_client_mock,
                                          sleep_mock, shuffle_mock):
         side_effect = [
-            glanceclient.exc.ServiceUnavailable,
+            glanceclient.exc.HTTPServiceUnavailable,
             None
         ]
         self._mock_client_images_response(create_client_mock, side_effect)
@@ -473,7 +473,7 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
                                          sleep_mock, shuffle_mock):
         def some_generator(exception):
             if exception:
-                raise glanceclient.exc.ServiceUnavailable('Boom!')
+                raise glanceclient.exc.HTTPServiceUnavailable('Boom!')
             yield 'something'
 
         side_effect = [
@@ -490,7 +490,7 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
     @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_default_client_without_retries(self, create_client_mock,
                                             sleep_mock, shuffle_mock):
-        side_effect = glanceclient.exc.ServiceUnavailable
+        side_effect = glanceclient.exc.HTTPServiceUnavailable
         self._mock_client_images_response(create_client_mock, side_effect)
         self.flags(num_retries=0, group='glance')
         client = glance.GlanceClientWrapper()
@@ -1450,7 +1450,7 @@ class TestShow(test.NoDBTestCase):
                                  reraise_mock):
         raised = exception.ImageNotAuthorized(image_id=123)
         client = mock.MagicMock()
-        client.call.side_effect = glanceclient.exc.Forbidden
+        client.call.side_effect = glanceclient.exc.HTTPForbidden
         ctx = mock.sentinel.ctx
         reraise_mock.side_effect = raised
         service = glance.GlanceImageServiceV2(client)
@@ -1638,7 +1638,7 @@ class TestDetail(test.NoDBTestCase):
         ext_query_mock.return_value = params
         raised = exception.Forbidden()
         client = mock.MagicMock()
-        client.call.side_effect = glanceclient.exc.Forbidden
+        client.call.side_effect = glanceclient.exc.HTTPForbidden
         ctx = mock.sentinel.ctx
         reraise_mock.side_effect = raised
         service = glance.GlanceImageServiceV2(client)
@@ -1842,7 +1842,7 @@ class TestCreate(test.NoDBTestCase):
         image_mock = mock.MagicMock(spec=dict)
         raised = exception.Invalid()
         client = mock.MagicMock()
-        client.call.side_effect = glanceclient.exc.BadRequest
+        client.call.side_effect = glanceclient.exc.HTTPBadRequest
         ctx = mock.sentinel.ctx
         reraise_mock.side_effect = raised
         service = glance.GlanceImageServiceV2(client)
@@ -2022,7 +2022,7 @@ class TestUpdate(test.NoDBTestCase):
         trans_from_mock.return_value = mock.sentinel.trans_from
         raised = exception.ImageNotAuthorized(image_id=123)
         client = mock.MagicMock()
-        client.call.side_effect = glanceclient.exc.Forbidden
+        client.call.side_effect = glanceclient.exc.HTTPForbidden
         ctx = mock.sentinel.ctx
         reraise_mock.side_effect = raised
         show_mock.return_value = {
@@ -2060,7 +2060,7 @@ class TestDelete(test.NoDBTestCase):
 
     def test_delete_client_failure_v2(self):
         client = mock.MagicMock()
-        client.call.side_effect = glanceclient.exc.NotFound
+        client.call.side_effect = glanceclient.exc.HTTPNotFound
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageServiceV2(client)
         self.assertRaises(exception.ImageNotFound, service.delete, ctx,
@@ -2305,7 +2305,7 @@ class TestImportCopy(test.NoDBTestCase):
     def test_image_import_copy_not_found(self):
         self.assertRaises(exception.ImageNotFound,
                           self._test_import,
-                          glanceclient.exc.NotFound)
+                          glanceclient.exc.HTTPNotFound)
 
     def test_image_import_copy_not_authorized(self):
         self.assertRaises(exception.ImageNotAuthorized,
