@@ -222,7 +222,7 @@
         br-int-flows: false
         ovn-controller: false
         ovn-northd: false
-        q-ovn-metadata-agent: false
+        q-ovn-agent: false
         # Neutron services
         q-agt: true
         q-dhcp: true
@@ -283,7 +283,7 @@
           ovn-northd: false
           ovs-vswitchd: false
           ovsdb-server: false
-          q-ovn-metadata-agent: false
+          q-ovn-agent: false
           # Neutron services
           q-agt: true
           # NOTE(sean-k-mooney) this job is testing ml2/ovs with
@@ -688,7 +688,7 @@
         br-int-flows: false
         ovn-controller: false
         ovn-northd: false
-        q-ovn-metadata-agent: false
+        q-ovn-agent: false
         # Neutron services
         q-agt: true
         q-dhcp: true
@@ -730,7 +730,7 @@
           ovn-northd: false
           ovs-vswitchd: false
           ovsdb-server: false
-          q-ovn-metadata-agent: false
+          q-ovn-agent: false
           # Neutron services
           q-agt: true
           tls-proxy: true
