@@ -2109,6 +2109,43 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
+    def test_resize_with_private_flavor(self):
+        """Ensure a non-admin user cannot resize to a private flavor that
+        has not been granted access to their project.
+        """
+        source_hostname = self.compute1.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        # Create a private flavor and grant access to a different project.
+        private_flavor_body = {'flavor': {
+            'name': 'private_flavor',
+            'ram': 1024,
+            'vcpus': 1,
+            'disk': 10,
+            'os-flavor-access:is_public': False,
+        }}
+        private_flavor = self.admin_api.post_flavor(private_flavor_body)
+        self.admin_api.api_post(
+            'flavors/%s/action' % private_flavor['id'],
+            {'addTenantAccess': {'tenant': 'other-project'}})
+
+        # Use a non-admin API client to attempt the resize.
+        non_admin_api = self.api_fixture.api
+        non_admin_api.microversion = self.microversion
+
+        resize_req = {
+            'resize': {
+                'flavorRef': private_flavor['id']
+            }
+        }
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            non_admin_api.post_server_action,
+            server['id'], resize_req)
+        self.assertEqual(400, ex.response.status_code)
+
     def test_resize_delete_while_verify(self):
         """Test scenario where the server is deleted while in the
         VERIFY_RESIZE state and ensures the allocations are properly
