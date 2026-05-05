@@ -104,6 +104,13 @@ def patch(backend='eventlet'):
             from oslo_log import log as logging
             LOG = logging.getLogger(__name__)
             LOG.info("Service is starting with Eventlet based service backend")
+            LOG.warning(
+                "Eventlet based concurrency mode is deprecated and will be "
+                "removed in a future release, not earlier than 2027.2. "
+                "Please migrate to native threading mode. See the concurrency "
+                "guide for details: "
+                "https://docs.openstack.org/nova/latest/admin/concurrency"
+                ".html")
     else:
         # We asked not to monkey patch so we will run in native threading mode
         import oslo_service.backend as service
@@ -117,10 +124,7 @@ def patch(backend='eventlet'):
 
         from oslo_log import log as logging
         LOG = logging.getLogger(__name__)
-        LOG.warning(
-            "Service is starting with native threading. This is currently "
-            "experimental. Do not use it in production without first "
-            "testing it in pre-production.")
+        LOG.info("Service is starting with native threading.")
 
 
 def _poison(*args, **kwargs):
