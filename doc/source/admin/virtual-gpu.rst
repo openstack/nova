@@ -113,8 +113,19 @@ Enable GPU types (Compute)
 
       [mdev_nvidia-36]
       device_addresses = 0000:86:00.0
+      mdev_class = CUSTOM_NVIDIA_36
 
    where you have to define which physical GPUs are supported per GPU type.
+   The ``mdev_class`` option sets the resource class used in Placement for
+   the device. It must be either ``VGPU`` (the default) or a custom name
+   prefixed with ``CUSTOM_``. In the above example, ``nvidia-35`` will use
+   the ``VGPU`` resource class, while ``nvidia-36`` will use
+   ``CUSTOM_NVIDIA_36``.
+
+   .. versionchanged:: 24.0.0
+
+      The ``mdev_class`` option was added in the Xena release to allow
+      differentiating between mediated device types.
 
    If the same PCI address is provided for two different types, nova-compute
    will refuse to start and issue a specific error in the logs.
