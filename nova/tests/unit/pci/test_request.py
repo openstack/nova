@@ -120,6 +120,28 @@ class PciRequestTestCase(test.NoDBTestCase):
             }])
         self.assertEqual(expected_result, result['QuickAssist'])
 
+    def test_get_alias_from_config_multispec_rejected_pci_in_placement(self):
+        _fake_alias = jsonutils.dumps({
+            "name": "QuickAssist",
+            "capability_type": "pci",
+            "product_id": "4444",
+            "vendor_id": "8086",
+            "device_type": "type-PCI",
+        })
+
+        self.flags(pci_in_placement=True, group='filter_scheduler')
+        self.flags(alias=[_fake_alias1, _fake_alias], group='pci')
+
+        ex = self.assertRaises(
+            exception.PciInvalidAlias, request._get_alias_from_config)
+        self.assertEqual(
+            "The PCI alias(es) QuickAssist have multiple specs but "
+            "[filter_scheduler]pci_in_placement is True. The PCI in Placement "
+            "feature only supports one spec per alias. You can assign the "
+            "same resource_class to multiple [pci]device_spec matchers to "
+            "allow using different devices for the same alias.",
+            str(ex))
+
     def _test_get_alias_from_config_invalid(self, alias):
         self.flags(alias=[alias], group='pci')
         self.assertRaises(
