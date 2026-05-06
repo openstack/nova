@@ -173,7 +173,7 @@ def _validate_aliases(aliases):
     _validate_required_ids(aliases)
 
 
-def _get_alias_from_config() -> Alias:
+def get_alias_from_config() -> Alias:
     """Parse and validate PCI aliases from the nova config.
 
     :returns: A dictionary where the keys are alias names and the values are
@@ -237,7 +237,7 @@ def _translate_alias_to_requests(
     alias_spec: str, affinity_policy: ty.Optional[str] = None,
 ) -> ty.List['objects.InstancePCIRequest']:
     """Generate complete pci requests from pci aliases in extra_spec."""
-    pci_aliases = _get_alias_from_config()
+    pci_aliases = get_alias_from_config()
 
     pci_requests: ty.List[objects.InstancePCIRequest] = []
     for name, count in [spec.split(':') for spec in alias_spec.split(',')]:

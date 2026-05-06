@@ -26,6 +26,7 @@ from nova import config
 from nova import context
 from nova import exception
 from nova import objects
+from nova.pci import request
 from nova import service
 from nova import utils
 from nova import version
@@ -51,6 +52,11 @@ def _get_config_files(env=None):
 
 
 def _setup_service(host, name):
+
+    # NOTE(gibi): validate the [pci]alias config early to avoid late failures
+    # at instance creation due to config errors.
+    request.get_alias_from_config()
+
     try:
         utils.raise_if_old_compute()
     except exception.TooOldComputeService as e:
