@@ -121,10 +121,7 @@ _ALIAS_SCHEMA = {
 }
 
 
-def _validate_aliases(aliases):
-    """Checks the parsed aliases for common mistakes and raise easy to parse
-    error messages
-    """
+def _validate_multispec(aliases):
     if CONF.filter_scheduler.pci_in_placement:
         alias_with_multiple_specs = [
             name for name, spec in aliases.items() if len(spec[1]) > 1]
@@ -136,6 +133,44 @@ def _validate_aliases(aliases):
                 "assign the same resource_class to multiple [pci]device_spec "
                 "matchers to allow using different devices for the same alias."
                 % ",".join(alias_with_multiple_specs))
+
+
+def _validate_required_ids(aliases):
+    if CONF.filter_scheduler.pci_in_placement:
+        alias_without_ids_or_rc = set()
+        for name, alias in aliases.items():
+            for spec in alias[1]:
+                ids = "vendor_id" in spec and "product_id" in spec
+                rc = "resource_class" in spec
+                if not ids and not rc:
+                    alias_without_ids_or_rc.add(name)
+
+        if alias_without_ids_or_rc:
+            raise exception.PciInvalidAlias(
+                "The PCI alias(es) %s does not have vendor_id and product_id "
+                "fields set or resource_class field set."
+                % ",".join(sorted(alias_without_ids_or_rc)))
+    else:
+        alias_without_ids = set()
+        for name, alias in aliases.items():
+            for spec in alias[1]:
+                ids = "vendor_id" in spec and "product_id" in spec
+                if not ids:
+                    alias_without_ids.add(name)
+
+        if alias_without_ids:
+            raise exception.PciInvalidAlias(
+                "The PCI alias(es) %s does not have vendor_id and product_id "
+                "fields set."
+                % ",".join(sorted(alias_without_ids)))
+
+
+def _validate_aliases(aliases):
+    """Checks the parsed aliases for common mistakes and raise easy to parse
+    error messages
+    """
+    _validate_multispec(aliases)
+    _validate_required_ids(aliases)
 
 
 def _get_alias_from_config() -> Alias:
