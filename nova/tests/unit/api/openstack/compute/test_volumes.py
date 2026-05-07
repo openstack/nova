@@ -49,7 +49,7 @@ class BootFromVolumeTest(test.TestCase):
                 'block_device_mapping')
             self._legacy_bdm_seen = kwargs.get('legacy_bdm')
 
-            flavor = flavors.get_flavor_by_flavor_id(2)
+            flavor = flavors.get_flavor_by_flavor_id(context, 2)
             resv_id = None
             return ([{'id': 1,
                       'display_name': 'test_server',

@@ -808,7 +808,7 @@ class ServersController(wsgi.Controller):
         flavor_id = self._flavor_id_from_req_data(body)
         try:
             flavor = flavors.get_flavor_by_flavor_id(
-                flavor_id, ctxt=context, read_deleted="no")
+                context, flavor_id, read_deleted="no")
 
             supports_multiattach = common.supports_multiattach_volume(req)
             supports_port_resource_request = \
