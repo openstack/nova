@@ -1,0 +1,13 @@
+---
+deprecations:
+  - |
+    Eventlet based concurrency mode is now deprecated and will be removed in a
+    future release, not earlier than 2027.2. Nova services that are still
+    configured to run with eventlet will log a deprecation warning at startup.
+    Operators should migrate to native threading mode. All Nova services except
+    the console proxy services (nova-novncproxy, nova-serialproxy,
+    nova-spicehtml5proxy) already run in native threading mode by default. The
+    console proxy services still default to eventlet mode and require explicit
+    configuration to enable native threading. Please read the
+    `concurrency <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__
+    guide for details on how to configure native threading mode.

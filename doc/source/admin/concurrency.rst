@@ -13,10 +13,22 @@ up support for the native threading mode.
 
 .. note::
 
-   The native threading mode is experimental. Do not use it in production
-   without first testing it in pre-production. If you do so please let us now
-   how it went on the mailing list openstack-discuss@lists.openstack.org.
+   Native threading mode is now the default and considered production-ready for
+   all services except the console proxy services (nova-novncproxy,
+   nova-serialproxy, nova-spicehtml5proxy). For the console proxy services,
+   native threading mode is available but still experimental. Please ensure
+   you test the threading mode in pre-production before deploying to a production
+   environment. If you do so please let us know how it went on the mailing list
+   openstack-discuss@lists.openstack.org.
 
+.. warning::
+
+   Eventlet based concurrency mode is deprecated and will be removed in a
+   future release, not earlier than 2027.2. Native threading is now the default
+   and recommended mode for all Nova services except the console proxy services
+   (nova-novncproxy, nova-serialproxy, nova-spicehtml5proxy) which still
+   default to eventlet mode and require explicit configuration to enable native
+   threading.
 
 Selecting concurrency mode for a service
 ----------------------------------------
@@ -61,7 +73,9 @@ To run CLI commands in native threading mode::
      ``nova-spicehtml5proxy``, though these services require manual
      configuration to enable it.
 
-   Operators can still manually revert to ``eventlet`` mode if needed.
+   Operators can still manually revert to ``eventlet`` mode if needed,
+   however eventlet mode is now deprecated and will be removed in a future
+   release.
 
 Tunables for the native threading mode
 --------------------------------------
