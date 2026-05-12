@@ -2240,6 +2240,10 @@ class API:
                 msg = _('The requested availability zone is not available')
                 raise exception.InvalidRequest(msg)
 
+        if scheduler_hints:
+            scheduler_hints = {k: v for k, v in scheduler_hints.items()
+                               if not k.startswith('_nova')}
+
         filter_properties = scheduler_utils.build_filter_properties(
             scheduler_hints, forced_host, forced_node, flavor)
 
