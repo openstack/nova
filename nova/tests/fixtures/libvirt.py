@@ -2721,6 +2721,11 @@ class LibvirtFixture(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.sys.platform', 'linux'))
 
+        # mock /proc/meminfo access
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.host.Host._get_avail_memory_kb',
+            return_value=10 * 1024 * 1024))  # 10 GB
+
         real_exists = os.path.exists
 
         def fake_exists(path):
