@@ -180,6 +180,10 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
             # Used by tests. Note that image_init is a closure over image_type.
             setattr(disk, 'image_type', image_type)
 
+            # Mimic the real backend's is_file_in_instance_path behavior.
+            disk.is_file_in_instance_path.return_value = (
+                image_type not in ('rbd', 'lvm'))
+
             # Used by tests to manipulate which disks exist.
             if self._exists is not None:
                 # We don't just cache the return value here because the
