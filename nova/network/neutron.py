@@ -3550,16 +3550,19 @@ class API:
                                   'for port %s.', refresh_vif_id,
                                   instance=instance)
                 else:
-                    # This port is no longer associated with the instance, so
-                    # simply remove it from the nw_info cache.
-                    for index, vif in enumerate(nw_info):
+                    # This port is no longer associated with the instance in
+                    # Neutron, but the compute still needs the cached VIF
+                    # model to unplug the host-side interface when handling a
+                    # network-vif-deleted event or deleting the instance.
+                    for vif in nw_info:
                         if vif['id'] == refresh_vif_id:
                             LOG.info('Port %s from network info_cache is no '
                                      'longer associated with instance in '
-                                     'Neutron. Removing from network '
-                                     'info_cache.', refresh_vif_id,
+                                     'Neutron. Keeping it in network '
+                                     'info_cache until detach or instance '
+                                     'delete cleanup can unplug it.',
+                                     refresh_vif_id,
                                      instance=instance)
-                            del nw_info[index]
                             break
                 return nw_info
             # else there is no existing cache and we need to build it

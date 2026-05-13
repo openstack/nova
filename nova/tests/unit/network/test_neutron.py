@@ -9963,10 +9963,10 @@ class TestGetInstanceNetworkInfo(test.NoDBTestCase):
         self.assertIsNotNone(new_vif)
         self.assertFalse(new_vif['active'])
 
-    def test_get_nw_info_refresh_vif_id_remove_vif(self):
+    def test_get_nw_info_refresh_vif_id_preserves_missing_vif(self):
         """Tests that a network-changed event occurred on a single port
-        which is already in the cache but not in the current list of ports
-        for the instance, so it's removed from the cache.
+        which is already in the cache but not in the current list of ports for
+        the instance, so it is kept for detach or delete cleanup.
         """
         # The cache has two existing VIFs.
         self.instance.info_cache = self._get_fake_info_cache(
@@ -9980,11 +9980,13 @@ class TestGetInstanceNetworkInfo(test.NoDBTestCase):
                 new_callable=mock.NonCallableMock):
             nwinfo = self.api._get_instance_nw_info(
                 self.context, self.instance, refresh_vif_id=uuids.removed_port)
-        # Assert that only the old port is still in the cache.
+        # Assert that both ports are still in the cache. The removed port is
+        # preserved so compute can still unplug it if a network-vif-deleted
+        # event arrives or the instance is deleted.
         old_vif = self._get_vif_in_cache(nwinfo, uuids.old_port)
         self.assertIsNotNone(old_vif)
         removed_vif = self._get_vif_in_cache(nwinfo, uuids.removed_port)
-        self.assertIsNone(removed_vif)
+        self.assertIsNotNone(removed_vif)
 
     def test_get_instance_nw_info_force_refresh(self):
         """Tests a full refresh of the instance info cache using information
