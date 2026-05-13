@@ -177,7 +177,7 @@ Finalize installation
 
    .. code-block:: console
 
-      # service nova-compute restart
+      # systemctl restart nova-compute
 
 .. note::
 
