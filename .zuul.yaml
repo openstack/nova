@@ -255,9 +255,11 @@
       - ^tox.ini$
     vars:
       tox_envlist: all
-      # bug #1940425  only affect ml2/ovn so we execute
-      # test_live_migration_with_trunk in this job to keep
-      tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot|spice).*)
+      # The goal is to have enough test coverage with eventlet mode here as the rest of
+      # the jobs are now running with native threading.
+      # Keep the regex sync with nova-next at least.
+      tempest_test_regex: ^tempest\.((scenario|api\.compute)|(.*\.(novnc|spice).*))
+      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|tempest.api.compute.servers.test_device_tagging.TaggedAttachmentsTest.test_tagged_attachment|test_live_migration_with_trunk
       devstack_localrc:
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
