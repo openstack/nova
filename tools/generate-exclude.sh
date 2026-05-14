@@ -1,1 +1,3 @@
-grep -v "#" threading_unit_test_excludes.txt > /tmp/exclude.txt
+#!/usr/bin/env bash
+# Args: <excludes.txt> <output for stestr --exclude-list>
+grep -v '^#' "$1" | grep -v '^$' > "$2" || true

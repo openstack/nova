@@ -23,7 +23,10 @@ import functools
 from importlib.abc import MetaPathFinder
 import logging as std_logging
 import os
+import sqlite3
 import sys
+import tempfile
+import threading
 import time
 import traceback
 from unittest import mock
@@ -74,6 +77,43 @@ LOG = logging.getLogger(__name__)
 
 DB_SCHEMA = collections.defaultdict(str)
 PROJECT_ID = '6f70656e737461636b20342065766572'
+
+
+def _use_file_backed_sqlite_with_wal(name):
+    """Create a temp SQLite file with WAL; return (sqlalchemy_url, abs_path).
+
+    Expects fixtures.NestedTempfile() so tempfile paths
+    live under a directory that is removed on test end. The file is created
+    empty; WAL (Write-Ahead Logging) mode is set on the file with
+    :mod:`sqlite3` before SQLAlchemy opens it.
+    """
+    # Sanitize name for filename (/ would be treated as path separator)
+    name = name.replace('/', '_').replace(':', '_')
+    fd, path = tempfile.mkstemp(
+        prefix='nova-test-%s-' % name,
+        suffix='.sqlite',
+    )
+    os.close(fd)
+    abs_path = os.path.abspath(path)
+    with sqlite3.connect(abs_path) as conn:
+        conn.execute('PRAGMA journal_mode=WAL')
+    return 'sqlite:///%s' % abs_path, abs_path
+
+
+def _bind_database_fixture_to_file_wal_sqlite(
+    database_fixture, file_label, db_api_module,
+):
+    """Point the fixture at temp file SQLite (WAL);"""
+    url, db_path = _use_file_backed_sqlite_with_wal(file_label)
+    new_engine = enginefacade.transaction_context()
+    database_fixture.useFixture(
+        db_fixtures.ReplaceEngineFacadeFixture(
+            db_api_module.context_manager, new_engine))
+    # Apply all database configuration from CONF (pool size, timeouts, etc.)
+    # before overriding just the connection URL
+    db_api_module.configure(CONF)
+    new_engine.configure(connection=url)
+    database_fixture.get_engine = db_api_module.get_engine
 
 
 class ServiceFixture(fixtures.Fixture):
@@ -389,8 +429,49 @@ class CheatingSerializer(rpc.RequestContextSerializer):
         return ctxt
 
 
+_DB_WRITE_LOCK = threading.RLock()
+
+
+class DatabaseWriteLock(fixtures.Fixture):
+    """Serialize writer transactions across threads in tests.
+
+    SQLite allows only a single writer at a time. Patches
+    _TransactionContextManager._transaction_scope to acquire a process-global
+    reentrant lock around every writer transaction so concurrent threads within
+    a test cannot race on the same connection.
+
+    An RLock is used because a single test installs both a 'main' and an
+    'api' Database fixture, each of which installs this fixture. The writer
+    path therefore acquires the lock twice from the same thread; RLock allows
+    that without deadlocking.
+    """
+
+    def _setUp(self):
+        original = (
+            enginefacade._TransactionContextManager._transaction_scope)
+
+        @contextmanager
+        def _locked_scope(tcm_self, context):
+            if tcm_self._mode is enginefacade._WRITER:
+                with _DB_WRITE_LOCK:
+                    with original(tcm_self, context) as resource:
+                        yield resource
+            else:
+                with original(tcm_self, context) as resource:
+                    yield resource
+
+        self.useFixture(fixtures.MockPatchObject(
+            enginefacade._TransactionContextManager,
+            '_transaction_scope',
+            _locked_scope))
+
+
 class CellDatabases(fixtures.Fixture):
     """Create per-cell databases for testing.
+
+    Installs fixtures.NestedTempfile() so file-backed SQLite databases (see
+    _use_file_backed_sqlite_with_wal under threading) live under a single
+    temp directory that is removed automatically when the fixture ends.
 
     How to use::
 
@@ -416,16 +497,21 @@ class CellDatabases(fixtures.Fixture):
         self._cell_lock = ReaderWriterLock()
 
     def _cache_schema(self, connection_str):
-        # NOTE(melwitt): See the regular Database fixture for why
-        # we do this.
+        """Apply the main DB schema to a cell and cache it for reuse.
+
+        The first cell DB in this process is migrated with db_sync and the
+        resulting SQL is stored in DB_SCHEMA. Each later cell replays that
+        cached SQL via executescript on an empty database.
+        """
+        ctxt_mgr = self._ctxt_mgrs[connection_str]
+        engine = ctxt_mgr.writer.get_engine()
+        conn = engine.connect()
         if not DB_SCHEMA[('main', None)]:
-            ctxt_mgr = self._ctxt_mgrs[connection_str]
-            engine = ctxt_mgr.writer.get_engine()
-            conn = engine.connect()
             migration.db_sync(database='main')
             DB_SCHEMA[('main', None)] = "".join(line for line
-                                        in conn.connection.iterdump())
-            engine.dispose()
+                                                in conn.connection.iterdump())
+        else:
+            conn.connection.executescript(DB_SCHEMA[('main', None)])
 
     @contextmanager
     def _wrap_target_cell(self, context, cell_mapping):
@@ -581,11 +667,17 @@ class CellDatabases(fixtures.Fixture):
         in the corresponding CellMapping.
         """
 
-        # NOTE(danms): Create a new context manager for the cell, which
-        # will house the sqlite:// connection for this cell's in-memory
-        # database. Store/index it by the connection string, which is
-        # how we identify cells in CellMapping.
-        ctxt_mgr = main_db_api.create_context_manager()
+        # NOTE: Under native threading, use a file-backed SQLite DB with
+        # WAL (see _use_file_backed_sqlite_with_wal).
+        if utils.concurrency_mode_threading():
+            cell_url, _path = _use_file_backed_sqlite_with_wal(connection_str)
+            ctxt_mgr = main_db_api.create_context_manager(connection=cell_url)
+        else:
+            # NOTE(danms): Create a new context manager for the cell, which
+            # will house the sqlite:// connection for this cell's in-memory
+            # database. Store/index it by the connection string, which is
+            # how we identify cells in CellMapping.
+            ctxt_mgr = main_db_api.create_context_manager()
         self._ctxt_mgrs[connection_str] = ctxt_mgr
 
         # NOTE(melwitt): The first DB access through service start is
@@ -613,11 +705,12 @@ class CellDatabases(fixtures.Fixture):
             engine = ctxt_mgr.writer.get_engine()
             engine.dispose()
             self._cache_schema(connection_str)
-            conn = engine.connect()
-            conn.connection.executescript(DB_SCHEMA[('main', None)])
 
     def setUp(self):
         super(CellDatabases, self).setUp()
+        if utils.concurrency_mode_threading():
+            self.useFixture(DatabaseWriteLock())
+        self.useFixture(fixtures.NestedTempfile())
         self.addCleanup(self.cleanup)
         self._real_target_cell = context.target_cell
 
@@ -668,6 +761,10 @@ class Database(fixtures.Fixture):
 
     def setUp(self):
         super().setUp()
+        # File-backed SQLite DB paths land under this tree (see
+        # _use_file_backed_sqlite_with_wal for main/api default connections and
+        # CellDatabases).
+        self.useFixture(fixtures.NestedTempfile())
 
         if self.database == 'main':
 
@@ -675,6 +772,9 @@ class Database(fixtures.Fixture):
                 ctxt_mgr = main_db_api.create_context_manager(
                     connection=self.connection)
                 self.get_engine = ctxt_mgr.writer.get_engine
+            elif utils.concurrency_mode_threading():
+                _bind_database_fixture_to_file_wal_sqlite(
+                    self, 'main', main_db_api)
             else:
                 # NOTE(gibi): this injects a new factory for each test and
                 # cleans it up at then end of the test case. This way we can
@@ -685,18 +785,23 @@ class Database(fixtures.Fixture):
                     db_fixtures.ReplaceEngineFacadeFixture(
                         main_db_api.context_manager, new_engine))
                 main_db_api.configure(CONF)
-
                 self.get_engine = main_db_api.get_engine
         elif self.database == 'api':
-            # NOTE(gibi): similar note applies here as for the main_db_api
-            # above
-            new_engine = enginefacade.transaction_context()
-            self.useFixture(
-                db_fixtures.ReplaceEngineFacadeFixture(
-                    api_db_api.context_manager, new_engine))
-            api_db_api.configure(CONF)
+            if utils.concurrency_mode_threading():
+                _bind_database_fixture_to_file_wal_sqlite(
+                    self, 'api', api_db_api)
+            else:
+                # NOTE(gibi): similar note applies here as for the main_db_api
+                # above
+                new_engine = enginefacade.transaction_context()
+                self.useFixture(
+                    db_fixtures.ReplaceEngineFacadeFixture(
+                        api_db_api.context_manager, new_engine))
+                api_db_api.configure(CONF)
+                self.get_engine = api_db_api.get_engine
 
-            self.get_engine = api_db_api.get_engine
+        if utils.concurrency_mode_threading():
+            self.useFixture(DatabaseWriteLock())
 
         self._apply_schema()
 
