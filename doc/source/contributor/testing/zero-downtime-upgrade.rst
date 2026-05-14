@@ -138,13 +138,13 @@ Restart keepalived service.
 
 .. code-block:: bash
 
-   # service keepalived restart
+   # systemctl restart keepalived
 
 Add ``ENABLED=1`` in ``/etc/default/haproxy`` and then restart HAProxy service.
 
 .. code-block:: bash
 
-   # service haproxy restart
+   # systemctl restart haproxy
 
 When both the services have restarted, node with the highest priority for keepalived
 claims the virtual IP. You can check which node claimed the virtual IP using:

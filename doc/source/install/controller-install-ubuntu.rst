@@ -371,7 +371,7 @@ Finalize installation
 
   .. code-block:: console
 
-     # service nova-api restart
-     # service nova-scheduler restart
-     # service nova-conductor restart
-     # service nova-novncproxy restart
+     # systemctl restart nova-api
+     # systemctl restart nova-scheduler
+     # systemctl restart nova-conductor
+     # systemctl restart nova-novncproxy
