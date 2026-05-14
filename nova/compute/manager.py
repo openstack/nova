@@ -2544,15 +2544,20 @@ class ComputeManager(manager.Manager):
                         # self._do_build_and_run_instance().
                         self.reportclient.delete_allocation_for_instance(
                             context, instance.uuid, force=True)
-
-                    if result in (build_results.FAILED_BY_POLICY,
-                                  build_results.RESCHEDULED_BY_POLICY):
-                        return
-                    if result in (build_results.FAILED,
-                                  build_results.RESCHEDULED):
                         self._build_failed(node)
-                    else:
-                        self._build_succeeded(node)
+
+                if result in (
+                    build_results.FAILED_BY_POLICY,
+                    build_results.RESCHEDULED_BY_POLICY,
+                    build_results.FAILED,
+                ):
+                    # NOTE(pas-ha): FAILED already handled above, so there's
+                    # nothing more to do for it
+                    return
+                elif result == build_results.RESCHEDULED:
+                    self._build_failed(node)
+                else:
+                    self._build_succeeded(node)
 
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't
