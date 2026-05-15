@@ -630,6 +630,17 @@ class IronicDriver(virt_driver.ComputeDriver):
         else:
             return list(node_generator)
 
+    def get_num_instances(self):
+        """Return the total number of instances.
+
+        Overrides the virt driver implementation for a
+        more efficient lookup
+
+        :returns: a count of instances
+
+        """
+        return len(self.list_instance_uuids())
+
     def list_instances(self):
         """Return the names of all the instances provisioned.
 
@@ -662,7 +673,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         if not self.node_cache:
             # Empty cache, try to populate it. If we cannot populate it, this
-            # is OK. This information is only used to cleanup deleted nodes;
+            # is OK. This information is used to cleanup deleted nodes and
+            # to log a warning in the sync_power_states periodic task;
             # if Ironic has no deleted nodes; we're good.
             self._refresh_cache()
 
