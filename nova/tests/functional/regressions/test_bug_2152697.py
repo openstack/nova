@@ -94,10 +94,15 @@ class TestLiveMigrationIOThreadPinningPreExistingInstance(
         self.assertIsNone(src_iothreadpin)
 
         # Live migrate
-        # It expected to fail due to
-        # https://bugs.launchpad.net/nova/+bug/2152697
-        self._live_migrate(self.server, 'error', 'ERROR')
-        self.assertEqual('src', self.get_host(self.server['id']))
-        self._wait_for_log(r"iothreadpin.set.'cpuset'")
-        self._wait_for_log(
-            r"AttributeError: 'NoneType' object has no attribute 'set'")
+        self._live_migrate(self.server, 'completed')
+        self.assertEqual('dest', self.get_host(self.server['id']))
+
+        # Get dest XML
+        conn = self.dest.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        dest_xml = dom.XMLDesc(0)
+
+        # Verify iothreadpin is not defined
+        dest_iothreadpin = self._get_xml_element(
+            dest_xml, './cputune/iothreadpin')
+        self.assertIsNone(dest_iothreadpin)

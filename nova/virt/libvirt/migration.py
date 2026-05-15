@@ -271,8 +271,11 @@ def _update_numa_xml(xml_doc, migrate_data):
                         hardware.format_cpu_spec(info.emulator_pins))
 
         iothreadpin = xml_doc.find('./cputune/iothreadpin')
-        iothreadpin.set('cpuset',
-                        hardware.format_cpu_spec(info.emulator_pins))
+        # Pre-Gazpacho VMs that wasn't rebooted yet does not have iothreads
+        # and iothreadpins.
+        if iothreadpin is not None:
+            iothreadpin.set('cpuset',
+                            hardware.format_cpu_spec(info.emulator_pins))
 
         all_cells = []
         for guest_id, host_ids in info.cell_pins.items():
