@@ -648,14 +648,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :raises: VirtDriverNotReady
 
         """
-        # NOTE(JayF): As of this writing, November 2023, this is only called
-        #             one place; in compute/manager.py, and only if
-        #             list_instance_uuids is not implemented. This means that
-        #             this is effectively dead code in the Ironic driver.
         if not self.node_cache:
-            # Empty cache, try to populate it. If we cannot populate it, this
-            # is OK. This information is only used to cleanup deleted nodes;
-            # if Ironic has no deleted nodes; we're good.
             self._refresh_cache()
 
         context = nova_context.get_admin_context()
@@ -672,10 +665,6 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         if not self.node_cache:
-            # Empty cache, try to populate it. If we cannot populate it, this
-            # is OK. This information is used to cleanup deleted nodes and
-            # to log a warning in the sync_power_states periodic task;
-            # if Ironic has no deleted nodes; we're good.
             self._refresh_cache()
 
         return [node.instance_id
