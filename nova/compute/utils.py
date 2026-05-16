@@ -1350,7 +1350,7 @@ def delete_image(context, instance, image_api, image_id, log_exc_info=False):
         block and traceback should be logged at DEBUG level, False otherwise.
     """
     LOG.debug("Cleaning up image %s", image_id, instance=instance,
-              log_exc_info=log_exc_info)
+              exc_info=log_exc_info)
     try:
         image_api.delete(context, image_id)
     except exception.ImageNotFound:
