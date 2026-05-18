@@ -3310,9 +3310,11 @@ class API:
                                       CONF.neutron.ovs_bridge)
             ovs_interfaceid = port['id']
         elif vif_type == network_model.VIF_TYPE_BRIDGE:
-            bridge = port_details.get(network_model.VIF_DETAILS_BRIDGE_NAME,
-                                      "brq" + port['network_id'])
-            should_create_bridge = True
+            # Linux bridge networking has been removed from Nova. Fail fast.
+            raise exception.NovaException(
+                "Neutron reported binding:vif_type=bridge, but Linux bridge "
+                "VIFs are no longer supported by Nova. Please migrate to a "
+                "supported backend (e.g. OVS/OVN) before upgrading.")
         elif vif_type == network_model.VIF_TYPE_DVS:
             # The name of the DVS port group will contain the neutron
             # network id

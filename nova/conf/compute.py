@@ -938,7 +938,7 @@ destination host before starting the guest transfer in the hypervisor.
    The compute service cannot reliably determine which types of virtual
    interfaces (``port.binding:vif_type``) will send ``network-vif-plugged``
    events without an accompanying port ``binding:host_id`` change.
-   Open vSwitch and linuxbridge should be OK, but OpenDaylight is at least
+   Open vSwitch should be OK, but OpenDaylight is at least
    one known backend that will not currently work in this case, see bug
    https://launchpad.net/bugs/1755890 for more details.
 

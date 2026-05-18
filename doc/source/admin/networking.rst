@@ -126,16 +126,22 @@ For all other types of ports, some manual configuration is required.
    How this should be achieved varies depending on the switching solution used
    and whether the network is a L2-type network or an L3-type networks.
 
-   Consider an L2-type network using the Linux Bridge mechanism driver. As
+   Consider an L2-type network using the Open vSwitch mechanism driver. As
    noted in the :neutron-doc:`neutron documentation
-   <admin/deploy-lb-selfservice.html>`, *physnets* are mapped to interfaces
-   using the ``[linux_bridge] physical_interface_mappings`` configuration
-   option. For example:
+   <admin/deploy-ovs-selfservice.html>`, *physnets* are mapped to bridges
+   using the ``[ovs] bridge_mappings`` configuration option. For example:
 
    .. code-block:: ini
 
-      [linux_bridge]
-      physical_interface_mappings = provider:PROVIDER_INTERFACE
+      [ovs]
+      bridge_mappings = provider:br-provider
+
+   You can then determine which interface is attached to the bridge using
+   :command:`ovs-vsctl`:
+
+   .. code-block:: shell
+
+      $ ovs-vsctl list-ports br-provider
 
    Once you have the device name, you can query *sysfs* to retrieve the NUMA
    affinity for this device. For example:
@@ -144,7 +150,7 @@ For all other types of ports, some manual configuration is required.
 
       $ cat /sys/class/net/PROVIDER_INTERFACE/device/numa_node
 
-   For an L3-type network using the Linux Bridge mechanism driver, the device
+   For an L3-type network using the Open vSwitch mechanism driver, the device
    used will be configured using protocol-specific endpoint IP configuration
    option. For VXLAN, this is the ``[vxlan] local_ip`` option. For example:
 

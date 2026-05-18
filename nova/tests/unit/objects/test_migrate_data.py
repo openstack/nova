@@ -186,7 +186,7 @@ class _TestLibvirtLiveMigrateData(object):
         vif_data = objects.VIFMigrateData(
             port_id=uuids.port_id,
             vnic_type=network_model.VNIC_TYPE_NORMAL,
-            vif_type=network_model.VIF_TYPE_BRIDGE,
+            vif_type=network_model.VIF_TYPE_OVS,
             vif_details=vif_details_dict, profile=profile_dict,
             host='dest-host', source_vif=source_vif)
         # Make sure the vif_details and profile fields are converted and
@@ -290,7 +290,7 @@ class TestVIFMigrateData(test.NoDBTestCase):
             ovs_interfaceid=uuids.ovs_interfaceid)
         migrate_vif = objects.VIFMigrateData(
             port_id=uuids.port_id, vnic_type=network_model.VNIC_TYPE_NORMAL,
-            vif_type=network_model.VIF_TYPE_BRIDGE, vif_details={'bar': 'baz'},
+            vif_type=network_model.VIF_TYPE_OVS, vif_details={'bar': 'baz'},
             profile={}, host='fake-dest-host', source_vif=source_vif)
         dest_vif = migrate_vif.get_dest_vif()
         self.assertEqual(migrate_vif.port_id, dest_vif['id'])

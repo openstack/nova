@@ -312,18 +312,6 @@ def _get_ovs_representor_port_profile(vif):
         representor_address=vif["profile"]['pci_slot'])
 
 
-# VIF_TYPE_BRIDGE = 'bridge'
-def _nova_to_osvif_vif_bridge(vif):
-    obj = _get_vif_instance(
-        vif,
-        objects.vif.VIFBridge,
-        plugin="linux_bridge",
-        vif_name=_get_vif_name(vif))
-    if vif["network"]["bridge"] is not None:
-        obj.bridge_name = vif["network"]["bridge"]
-    return obj
-
-
 # VIF_TYPE_OVS = 'ovs'
 def _nova_to_osvif_vif_ovs(vif):
     vif_name = _get_vif_name(vif)
@@ -547,7 +535,9 @@ def nova_to_osvif_vif(vif):
     elif vif_type == model.VIF_TYPE_IVS:
         vif_obj = _nova_to_osvif_vif_ivs(vif)
     elif vif_type == model.VIF_TYPE_BRIDGE:
-        vif_obj = _nova_to_osvif_vif_bridge(vif)
+        # Linux bridge support has been removed from Nova
+        raise exception.NovaException(
+            'Linux bridge VIF type is no longer supported')
     elif vif_type == model.VIF_TYPE_AGILIO_OVS:
         vif_obj = _nova_to_osvif_vif_agilio_ovs(vif)
     elif vif_type == model.VIF_TYPE_VHOSTUSER:
