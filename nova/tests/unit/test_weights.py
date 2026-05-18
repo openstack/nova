@@ -16,7 +16,11 @@
 Tests For weights.
 """
 
+import io
+import logging
 from unittest import mock
+
+from oslo_log import formatters
 
 from nova.scheduler import weights as scheduler_weights
 from nova.scheduler.weights import ram
@@ -56,6 +60,39 @@ class TestWeigher(test.NoDBTestCase):
         for seq, result, minval, maxval in map_:
             ret = weights.normalize(seq, minval=minval, maxval=maxval)
             self.assertEqual(tuple(ret), result)
+
+    def test_debug_log_with_json_formatter(self):
+        """Regression test for bug 2028518 via the real JSONFormatter.
+
+        When use_json=True is configured, oslo.log's JSONFormatter calls
+        json.dumps() on log record args. With tuple dict keys this raises
+        TypeError because json.dumps() requires string keys.
+        """
+        self.flags(use_json=True)
+
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        handler.setFormatter(formatters.JSONFormatter())
+
+        log = weights.LOG.logger
+        original_level = log.level
+        log.addHandler(handler)
+        log.setLevel(logging.DEBUG)
+        self.addCleanup(log.removeHandler, handler)
+        self.addCleanup(log.setLevel, original_level)
+
+        host_values = [
+            ('host1', 'node1', {'free_ram_mb': 512}),
+            ('host2', 'node2', {'free_ram_mb': 1024}),
+        ]
+        hostinfo = [fakes.FakeHostState(host, node, values)
+                    for host, node, values in host_values]
+
+        weight_handler = scheduler_weights.HostWeightHandler()
+        weighers = [ram.RAMWeigher()]
+        self.assertRaises(
+            TypeError,
+            weight_handler.get_weighed_objects, weighers, hostinfo, {})
 
     @mock.patch('nova.weights.BaseWeigher.weigh_objects')
     def test_only_one_host(self, mock_weigh):
