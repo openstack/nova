@@ -6403,6 +6403,52 @@ class TestAPI(TestAPIBase):
         mock_delete_ports.assert_called_once_with(
             ntrn, instance, [uuids.created_port_id])
 
+    @mock.patch('nova.network.neutron.API.has_dns_extension',
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.network.neutron.API._populate_neutron_extension_values')
+    @mock.patch('nova.network.neutron.API._update_port',
+                # fails on the 1st call and triggers the cleanup
+                side_effect=exception.PortInUse(
+                    port_id=uuids.created_port_id))
+    @mock.patch('nova.network.neutron.API._unbind_ports')
+    @mock.patch('nova.network.neutron.API._delete_ports')
+    def test_update_ports_for_instance_fails_delete_all_created_ports(self,
+            mock_delete_ports,
+            mock_unbind_ports,
+            mock_update_port,
+            mock_populate_ext_values):
+        """Makes sure we delete created ports if we fail updating ports"""
+        ctxt = context.get_admin_context()
+        instance = fake_instance.fake_instance_obj(ctxt)
+        ntrn = mock.Mock(spec=client.Client)
+        # we have two requests, all ports where nova
+        # created the port (on the same network)
+        requests_and_created_ports = [
+            (objects.NetworkRequest(network_id=uuids.network_id,
+                                    port_id=uuids.created_port_id),
+             uuids.created_port_id),
+            (objects.NetworkRequest(network_id=uuids.network_id,
+                                    port_id=uuids.created_port_id2),
+             uuids.created_port_id2),
+        ]
+        network = {'id': uuids.network_id}
+        nets = {uuids.network_id: network}
+        self.assertRaises(exception.PortInUse,
+                          neutronapi.API()._update_ports_for_instance,
+                          ctxt, instance, ntrn, ntrn,
+                          requests_and_created_ports, nets, bind_host_id=None,
+                          requested_ports_dict=None,
+                          network_arqs=None)
+        # assert the calls
+        mock_update_port.assert_has_calls([
+            mock.call(ntrn, instance, uuids.created_port_id, mock.ANY)
+        ])
+        mock_unbind_ports.assert_called_once_with(
+            ctxt, [], ntrn, ntrn)
+        # should delete all ports
+        mock_delete_ports.assert_called_once_with(
+            ntrn, instance, [uuids.created_port_id, uuids.created_port_id2])
+
     @mock.patch('nova.network.neutron.API._get_floating_ip_by_address',
                 return_value={"port_id": "1"})
     @mock.patch('nova.network.neutron.API._show_port',
