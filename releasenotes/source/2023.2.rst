@@ -2,5 +2,457 @@
 2023.2 Series Release Notes
 ===========================
 
-.. release-notes::
-   :branch: stable/2023.2
+.. _Release Notes_2023.2-eol_2023.2-eol:
+
+2023.2-eol
+==========
+
+.. _Release Notes_2023.2-eol_2023.2-eol_Upgrade Notes:
+
+Upgrade Notes
+-------------
+
+.. releasenotes/notes/instance-numa-object-upgrade-afa5bb96149ca2f5.yaml @ b'e7d61fef6e13078e20071e435a7d868ec497cbee'
+
+- In the victoria release, the instance_numa_topology object
+  was extended to enabled mix cpus (pinned and unpinned cpus)
+  in the same instance. This change added a new field pcpuset
+  to the instance_numa_topology object. While the change included
+  object conversion code to handle the upgrade, it did not account
+  for instances that have a numa_topology but were not pinned.
+  i.e. a flavor with hw:mem_page_size or hw:numa_nodes set but
+  without hw:cpu_policy set to dedicated. As a result, instances
+  created between liberty and victoria releases with such a flavor
+  cannot be started  after upgrade to victoria. This has now
+  been fixed. instances created post victoria are not affected by
+  this issue. see: https://bugs.launchpad.net/nova/+bug/2080556
+  for more details.
+
+
+.. _Release Notes_2023.2-eol_2023.2-eol_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2080436-568b03b5b5ba5760.yaml @ b'0e4406a33e6907d3b335455a3f3c3ff80045ea0f'
+
+- Fixes a regression for live migration on shared storage that
+  was removing the backing disk and instance folder during the
+  cleanup of a virtual machine post live migration.
+  `bug 2080436
+  <https://bugs.launchpad.net/nova/+bug/2080436>`__ for details.
+
+.. releasenotes/notes/cinder-catalog-info-hyphen-842f02febcfff041.yaml @ b'b2ceff2e895437c59270b0a2eb72f8b1bf39d41e'
+
+- Nova now allows to use a hyphen in the ``[cinder]catalog_info``
+  service-type field, so in particular the official
+  ``block-storage`` type is now valid.
+  `Bug 2092194 <https://bugs.launchpad.net/nova/+bug/2092194>`_
+
+.. releasenotes/notes/nova-manage-image-property-bug-2078999-c493fc259d316c24.yaml @ b'ee30457accabcea10a62652d14d2cf08a6d57ac0'
+
+- Before the `Bug 2078999 <https://bugs.launchpad.net/nova/+bug/2078999>`_ was fixed,
+  the ``nova-manage image_property set`` command would update the image properties
+  embedded in the instance but would not update the ones in the request specs. This
+  led to an unexpected rollback of the image properties that were updated by the
+  command after an instance migration.
+
+.. releasenotes/notes/sharing-providers-max-uuids-per-request-f05da20c697e0922.yaml @ b'91805854af9fa20cb502c7243d2f9258cc58b045'
+
+- Introduced a new compute configuration option
+  ``sharing_providers_max_uuids_per_request`` and applied a fix to
+  handle the "Request-Too-Long" error that can occur when querying
+  the placement API with a large number of aggregate UUIDs.
+
+.. releasenotes/notes/unproxied-libvirt-list-devices-7cd218c1a33535c9.yaml @ b'021ea3f9d640bc2438ce28de70f1b556b49fb8c2'
+
+- `Bug #2091033`_: Fixed calls to libvirt ``listDevices()`` and
+  ``listAllDevices()`` from potentially blocking all other greenthreads
+  in ``nova-compute``. Under certain circumstances, it was possible for
+  the ``nova-compute`` service to freeze with all other greenthreads
+  blocked and unable to perform any other activities including logging.
+  This issue has been fixed by wrapping the libvirt ``listDevices()``
+  and ``listAllDevices()`` calls with ``eventlet.tpool.Proxy``.
+
+  .. _Bug #2091033: https://bugs.launchpad.net/nova/+bug/2091033
+
+
+.. _Release Notes_28.2.0_2023.2-eol:
+
+28.2.0
+======
+
+.. _Release Notes_28.2.0_2023.2-eol_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/ironic-list-instance-respect-partition-key-339ff653eaa00753.yaml @ b'555d7d0ad02d31476e2d751aa52be4087878f1a2'
+
+- Ironic virt driver now uses the node cache and respects partition keys, such as conductor group, for list_instances and list_instance_uuids calls. This fix will improve performance of the periodic queries which use these driver methods and reduce API and DB load on the backing Ironic service.
+
+
+.. _Release Notes_28.1.0_2023.2-eol:
+
+28.1.0
+======
+
+.. _Release Notes_28.1.0_2023.2-eol_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2023018-0f93ca1f679ce259.yaml @ b'891d1773a26082e3f24ec6583f843b39a50bf76d'
+
+- Some OS platforms don't provide by default cpufreq resources in sysfs, so
+  they don't have CPU scaling governors. That's why we should let the governor
+  strategy to be optional for `CPU power management`_.
+
+  .. _CPU power management: https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-cpu-power-management-for-dedicated-cores
+
+.. releasenotes/notes/bug-2055245-fix-nova-metadata-api-f60b18b1b594bec0.yaml @ b'45a926156c863b468318cce462a21027685d07a6'
+
+- With the change from ml2/ovs DHCP agents towards OVN implementation
+  in neutron there is no port with device_owner ``network:dhcp`` anymore.
+  Instead DHCP is provided by ``network:distributed`` port.
+  Fix relies on enable_dhcp provided by neutron-api if no port with
+  ``network:dhcp`` owner is found. See `bug 2055245
+  <https://bugs.launchpad.net/nova/+bug/2055245>`__ for details.
+
+.. releasenotes/notes/libvirt-enlightenments-stop-unconditionally-enabling-evmcs-993a825641c4b9f3.yaml @ b'0b7a59ad2812c3501332155211b18f224cd55bca'
+
+- Bug 2009280 has been fixed by no longer enabling the evmcs enlightenment in
+  the libvirt driver. evmcs only works on Intel CPUs, and domains with that
+  enlightenment cannot be started on AMD hosts. There is a possible future
+  feature to enable support for generating this enlightenment only when
+  running on Intel hosts.
+
+
+.. _Release Notes_28.0.1_2023.2-eol:
+
+28.0.1
+======
+
+.. _Release Notes_28.0.1_2023.2-eol_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2043707-power-management-no-pcpu-28dd7d07d0473ea2.yaml @ b'4549e3479250cec7889c7809e719f77d19514222'
+
+- Relaxed the config option checking of the cpu_power_management feature of
+  the libvirt driver. The nova-compute service will start with
+  [libvirt]cpu_power_management=True and an empty [compute]cpu_dedicated_set
+  configuration. The power management is still only applied to dedicated CPUs.
+  So the above configuration only allowed to ensure that cpu_power_management
+  can be enabled independently for configuring cpu_dedicated_set during
+  deployment.
+
+.. releasenotes/notes/translate_vf_network_capabilities_to_port_binding-48abbfe0ce2923cf.yaml @ b'7e4f45df91f33fa8b75feec95e5636db06fda443'
+
+- Previously ``switchdev`` capabilities should be configured manually by a
+  user with admin privileges using port's binding profile. This blocked
+  regular users from managing ports with Open vSwitch hardware offloading
+  as providing write access to a port's binding profile to non-admin users
+  introduces security risks. For example, a binding profile may contain a
+  ``pci_slot`` definition, which denotes the host PCI address of the
+  device attached to the VM. A malicious user can use this parameter to
+  passthrough any host device to a guest, so it is impossible to provide
+  write access to a binding profile to regular users in many scenarios.
+
+  This patch fixes this situation by translating VF capabilities reported
+  by Libvirt to Neutron port binding profiles. Other VF capabilities are
+  translated as well for possible future use.
+
+
+.. _Release Notes_28.0.0_2023.2-eol:
+
+28.0.0
+======
+
+.. _Release Notes_28.0.0_2023.2-eol_Prelude:
+
+Prelude
+-------
+
+.. releasenotes/notes/bobcat-prelude-1bd68dd5133fe4dd.yaml @ b'10ea7a4fb20e31c979c5e36024808cb3539183ae'
+
+The OpenStack 2023.2 (Nova 28.0.0) release includes many new features and
+bug fixes. Please be sure to read the upgrade section which describes the
+required actions to upgrade your cloud from 27.0.0 (2023.1) to 28.0.0
+(2023.2).
+As a reminder, OpenStack 2023.2 is a non-`Skip-Level-Upgrade Release`__
+(starting from now, we name it a ``non-SLURP release``) meaning that you can
+only do rolling-upgrade from 2023.1. Next SLURP release will be 2024.1 where
+you will be able to upgrade from 2023.1 directly by skipping this release.
+
+.. __: https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html
+
+There are a few major changes worth mentioning. This is not an exhaustive
+list:
+
+- The latest Compute API microversion supported for 2023.2 is `v2.95`__.
+
+  .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-2023-1-antelope-and-2023-2-bobcat
+
+- The Ironic driver ``[ironic]/peer_list`` configuration option has been
+  deprecated. The Ironic driver now more closely models other Nova drivers by
+  having a single compute have exclusive control over assigned nodes.
+  If high availability of a single compute service is required, operators
+  should use active/passive failover.
+
+- The legacy quota driver is now deprecated and a
+  `nova-manage limits command <https://docs.openstack.org/nova/latest/cli/nova-manage.html#limits-migrate-to-unified-limits>`_
+  is provided in order to migrate the legacy limits into Keystone. We plan
+  to change the default quota driver to the unified limits driver in an
+  upcoming release (hopefully 2024.1 Caracal). It is recommended that you
+  begin planning and executing a migration to unified limits as soon as
+  possible.
+
+- QEMU in its TCG mode (i.e. full system emulation) uses a translation
+  block (TB) cache as an optimization during dynamic code translation.
+  The libvirt driver can now configure the tb-cache size when the virt type is
+  ``qemu``. This helps running VMs with small memory size.
+  In order to use this feature, a configuration option
+  ``[libvirt]/tb_cache_size`` has been introduced.
+
+- Two new scheduler weighers have been introduced. One helps `sorting the nodes
+  by the number of active instances they run <https://docs.openstack.org/nova/latest/configuration/config.html#filter_scheduler.num_instances_weight_multiplier>`_,
+  the other helps `sorting by the hypervisor version each compute runs <https://docs.openstack.org/nova/latest/configuration/config.html#filter_scheduler.hypervisor_version_weight_multiplier>`_.
+  Accordingly, you can place your instances with different strategies, eg.
+  by allocating them to more recent nodes or by reducing the number of noisy
+  instance neighbors.
+
+- It is now possible to define different authorization policies for migration
+  with and without a target host.
+
+- A couple of other improvements target reducing the number of bugs we have,
+  one `checking at reboot if stale volume attachments still reside <https://specs.openstack.org/openstack/nova-specs/specs/2023.2/approved/cleanup-dangling-volume-attachments.html>`_
+  and another one ensuring a `strict linkage between a compute, a service and the instances
+  it runs <https://specs.openstack.org/openstack/nova-specs/specs/2023.2/approved/compute-object-ids.html>`_.
+
+
+.. _Release Notes_28.0.0_2023.2-eol_New Features:
+
+New Features
+------------
+
+.. releasenotes/notes/bp-cold-migrate-to-host-policy-a28b648dc16d2e3b.yaml @ b'2d320f9b00338032be1561c9f75340bf5a47180b'
+
+- A new ``os_compute_api:os-migrate-server:migrate:host`` policy is created, being by default only an admin-only policy. This will help operators to have different policies between cold-migrate without providing a host or not.
+
+.. releasenotes/notes/bp-num_instances_weigher-bba342c82aac5509.yaml @ b'ca3fbb4d1595011e87b011153942c8b204971389'
+
+- A new ``num_instances_weigher`` weigher has been added. This weigher will
+  compare the number of instances between each node and order the list of
+  filtered results by its number, By default, this weigher is enabled but with
+  a default of 0.0 which doesn't change the current behavior.
+  In order to use it, please change the value of
+  ``[filter_scheduler]/num_instances_weight_multiplier`` config option where
+  a positive value will favor the host with the higher number of instances
+  (ie. packing strategy) vs. a negative value that will spread instances
+  between hosts. As a side note, this weigher will count *all* of the existing
+  instances on the host, even the stopped or shelved ones.
+
+.. releasenotes/notes/delete-dangling-volumes-2615100187fe29fb.yaml @ b'9d5935d007e5a50a4fd61ad033cd0135fdcaa2eb'
+
+- This change ensures the synchronization of volume attachments
+  between Nova and Cinder, by deleting any dangling volume attachments
+  and maintaining consistency between two databases.
+
+  Block device mapping (BDM) table in the Nova database, stores
+  information about volume attachments, image attachments
+  and swap attachments. Similarly, each volume attachment had a
+  corresponding entry in the Cinder database volume attachment table.
+
+  With this change, on instance reboot, Nova will checks for all volume
+  attachments associated with the instance and verifies their availability
+  in the Cinder database. If attachments are not found they will get deleted
+  from Nova database too.
+
+  After Nova database cleanup, similarly Cinder database is checked for
+  attachments related to instance. If attachments found in Cinder DB that
+  are not present in Nova DB, they will get deleted from Cinder database.
+
+  See `spec`__ for more details.
+
+  __ https://specs.openstack.org/openstack/nova-specs/specs/2023.2/approved/cleanup-dangling-volume-attachments.html
+
+.. releasenotes/notes/hypervisor-version-weigher-d0bba77e720edafe.yaml @ b'e38d6a356b8238038f11565662eaacff2ec2c2df'
+
+- A new hypervisor version weigher has been added to prefer selecting hosts
+  with newer hypervisors installed. For the libvirt driver, this is the version
+  of libvirt on the compute node not the version of qemu. As with all
+  weighers this is enabled by default and its behavior can be modified using
+  the new ``hypervisor_version_weight_multiplier`` config option in the
+  ``filter_scheduler`` section.
+
+.. releasenotes/notes/libvirt-tb-cache-size-c0d0d672c0950393.yaml @ b'3f7cc63d942bbb7cbda3aae9718fa21f61deecf0'
+
+- Qemu>=5.0.0 bumped the default tb-cache size to 1GiB(from 32MiB) and this
+  made it difficult to run multiple guest VMs on systems running with lower
+  memory. With Libvirt>=8.0.0 it's possible to configure lower tb-cache
+  size. A new config option is introduced:
+
+  ``[libvirt]tb_cache_size``
+
+  This config option can be used to configure tb_cache size
+  for guest VMs, it's only applicable with ``virt_type=qemu``.
+
+.. releasenotes/notes/nova-manage-limits-migrate-d1de95d20991674c.yaml @ b'395501c8766d3c1fefabd54ac9ebc363eabce3ea'
+
+- A new command ``nova-manage limits migrate_to_unified_limits`` has been
+  added to make migration from the ``nova.quota.DbQuotaDriver`` to the
+  ``nova.quota.UnifiedLimitsDriver`` easier. This will enable operators to
+  have their existing quota limits copied from the Nova database to Keystone
+  automatically.
+
+
+.. _Release Notes_28.0.0_2023.2-eol_Upgrade Notes:
+
+Upgrade Notes
+-------------
+
+.. releasenotes/notes/az-filter-removal-587f7337040b6216.yaml @ b'5edd805fe2395f35ecdfe5b589a51dc00565852f'
+
+- The ``AvailabilityZoneFilter`` was deprecated for removal
+  in 24.0.0 (Xena) and has now been removed.
+  The functionality of the ``AvailabilityZoneFilter`` has been
+  replaced by the ``map_az_to_placement_aggregate`` pre-filter.
+  The  pre-filter was introduced in 18.0.0 (Rocky) and enabled
+  by default in 24.0.0 (Xena). This pre-filter is now always
+  enabled and the ``[scheduler] query_placement_for_availability_zone``
+  config option has been removed.
+
+.. releasenotes/notes/bobcat-libvirt-QEMU-version-bump-720b2528d521dfb1.yaml @ b'b6cf8e6128a87fce1d59acec3cae629d540f4ac2'
+
+- The minimum required version of libvirt by the ``nova-compute``
+  service is now 7.0.0, and the minimum required version of QEMU is
+  5.2.0. Failing to meet these minimum versions when using the libvirt
+  compute driver will result in the ``nova-compute`` service not
+  starting.
+
+  The next minimum required version of libvirt to be used in a future
+  release is 8.0.0, while the next minimum QEMU is 6.2.0.
+
+.. releasenotes/notes/hypervisor-version-weigher-d0bba77e720edafe.yaml @ b'e38d6a356b8238038f11565662eaacff2ec2c2df'
+
+- A new hypervisor version weigher has been added that will prefer selecting
+  hosts with a newer hypervisor installed. This can help simplify rolling
+  upgrades by preferring the already upgraded hosts when moving workloads around
+  using live or cold migration. To restore the old behavior either remove
+  the weigher from the list of enabled weighers or set
+  ``[filter_scheduler] hypervisor_version_weight_multiplier=0``. The default
+  value of the hypervisor_version_weight_multiplier is 1 so only a mild
+  preference is given to new hosts, higher values will make the effect
+  more pronounced and negative values will prefer older hosts.
+
+.. releasenotes/notes/remove-sqlalchemy-migrate-907c200314884d81.yaml @ b'fd39e4b4be9ddb18b96d5f8086955b91232f25e9'
+
+- The legacy ``sqlalchemy-migrate`` migrations, which have been deprecated
+  since Wallaby, have been removed. There should be no end-user impact.
+
+.. releasenotes/notes/service-user-token-421d067c16257782.yaml @ b'db455548a12beac1153ce04eca5e728d7b773901'
+
+- Configuration of service user tokens is now **required** for all Nova services
+  to ensure security of block-storage volume data.
+
+  All Nova configuration files must configure the ``[service_user]`` section as
+  described in the `documentation`__.
+
+  See https://bugs.launchpad.net/nova/+bug/2004555 for more details.
+
+  __ https://docs.openstack.org/nova/latest/admin/configuration/service-user-token.html
+
+
+.. _Release Notes_28.0.0_2023.2-eol_Deprecation Notes:
+
+Deprecation Notes
+-----------------
+
+.. releasenotes/notes/deprecate-ironic-peer-list-ff8a502935faa045.yaml @ b'cbf400df1dc3e26f4f2e655ca47db7fb097b3531'
+
+- We have renamed ``[ironic]partition_key`` to ``[ironic]conductor_group``.
+  The config option is still used to specify which Ironic conductor group
+  the ironic driver in the nova compute process should target.
+
+.. releasenotes/notes/deprecate-ironic-peer-list-ff8a502935faa045.yaml @ b'cbf400df1dc3e26f4f2e655ca47db7fb097b3531'
+
+- We have deprecated the configuration ``[ironic]peer_list``, along with
+  our support for a group of ironic nova-compute processes targeting
+  a shared set of Ironic nodes.
+  There are so many bugs in this support we now prefer statically
+  sharding the nodes between multiple nova-compute processes.
+  Note that the ironic nova-compute process is stateless, and the
+  identity of the service is defined by the config option ``[DEFAULT]host``.
+  As such, you can use an active-passive HA solution to ensure at most
+  one nova-compute process is running for each Ironic node shard.
+
+.. releasenotes/notes/deprecate-legacy-quota-driver-56906ca0e2842839.yaml @ b'8f0817f078308ffd98031e48f82f7de32ed5d9ab'
+
+- The ``nova.quota.DbQuotaDriver`` is marked as deprecated and the default
+  quota driver configuration is planned to be changed to the
+  ``nova.quota.UnifiedLimitsDriver`` in the 29.0.0 (2024.1 Caracal) release.
+
+.. releasenotes/notes/hyperv-experimental-antelope-372e18a05cafc295.yaml @ b'9baade7ea16d8273c6cd139d6a0c4cdb9de716f7'
+
+- The hyperv driver is marked as experimental and may be removed in a
+  future release. The driver is not tested by the OpenStack project and
+  does not have a clear maintainer.
+
+.. releasenotes/notes/vmware-experimental-antelope-16a1342dd5e6ba09.yaml @ b'713ef7839670bd5d73af52c211a14932adc933ba'
+
+- The vmwareapi driver is marked as experimental and may be removed in a
+  future release. The driver is not tested by the OpenStack project and
+  does not have a clear maintainer.
+
+
+.. _Release Notes_28.0.0_2023.2-eol_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2022955-eac8b0c8e42e3696.yaml @ b'3fab43786bbdc01087004b973bb0912505150864'
+
+- The `CPU power management`_ feature has been fixed to use privsep to avoid
+  a FileNotFound error when offlining CPUs.
+
+  .. _CPU power management: https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-cpu-power-management-for-dedicated-cores
+
+.. releasenotes/notes/db-archive-performance-degradation-3fdabc43398149b1.yaml @ b'697fa3c000696da559e52b664c04cbd8d261c037'
+
+- `Bug #2024258`_: Fixes an issue with performance degradation archiving
+  databases with large numbers of foreign key related records.
+
+  Previously, deleted rows were archived in batches of max_rows parents +
+  their child rows in a single database transaction. It limited how high
+  a value of max_rows could be specified by the user because of the size of
+  the database transaction it could generate. Symptoms of the behavior were
+  exceeding the maximum configured packet size of the database or timing out
+  due to a deadlock.
+
+  The behavior has been changed to archive batches of complete parent +
+  child rows trees while limiting each batch when it has reached >= max_rows
+  records. This allows the size of the database transaction to be controlled
+  by the user and enables more rows to be archived per invocation of
+  ``nova-manage db archive_deleted_rows`` when there are a large number of
+  foreign key related records.
+
+  .. _Bug #2024258: https://bugs.launchpad.net/nova/+bug/2024258
+
+.. releasenotes/notes/port-binding-removed-shelved-offloaded-f1772a64be007b24.yaml @ b'4eef0fe6354304b4639a3b635e4955457188e4ce'
+
+- [`bug 1983471 <https://bugs.launchpad.net/nova/+bug/1983471>`_]
+  When offloading a shelved instance, the compute will now remove the
+  binding so instance ports will appear as "unbound" in neutron.
+
+.. releasenotes/notes/quota-unshelve-offloaded-e4ea2d6a1449f549.yaml @ b'6f79d6321e7c3edaab2eb911198b7b7f851371b3'
+
+- `Bug #2003991`_: Fixes an issue where quota was not properly enforced
+  during unshelve of a ``SHELVED_OFFLOADED`` server when
+  ``[quota]count_usage_from_placement = true`` or
+  ``[quota]driver = nova.quota.UnifiedLimitsDriver`` are configured.
+
+  .. _Bug #2003991: https://launchpad.net/bugs/2003991
+
+
