@@ -2,5 +2,517 @@
 2023.1 Series Release Notes
 ===========================
 
-.. release-notes::
-   :branch: unmaintained/2023.1
+.. _Release Notes_27.5.1_2023.1-eom:
+
+27.5.1
+======
+
+.. _Release Notes_27.5.1_2023.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2080436-568b03b5b5ba5760.yaml @ b'e8999f0264a20bac56108fbc56e4a8a9fac61ae3'
+
+- Fixes a regression for live migration on shared storage that
+  was removing the backing disk and instance folder during the
+  cleanup of a virtual machine post live migration.
+  `bug 2080436
+  <https://bugs.launchpad.net/nova/+bug/2080436>`__ for details.
+
+.. releasenotes/notes/db-archive-performance-degradation-3fdabc43398149b1.yaml @ b'75e4c86d90ae0229069fc2eb06bfb41436be7319'
+
+- `Bug #2024258`_: Fixes an issue with performance degradation archiving
+  databases with large numbers of foreign key related records.
+
+  Previously, deleted rows were archived in batches of max_rows parents +
+  their child rows in a single database transaction. It limited how high
+  a value of max_rows could be specified by the user because of the size of
+  the database transaction it could generate. Symptoms of the behavior were
+  exceeding the maximum configured packet size of the database or timing out
+  due to a deadlock.
+
+  The behavior has been changed to archive batches of complete parent +
+  child rows trees while limiting each batch when it has reached >= max_rows
+  records. This allows the size of the database transaction to be controlled
+  by the user and enables more rows to be archived per invocation of
+  ``nova-manage db archive_deleted_rows`` when there are a large number of
+  foreign key related records.
+
+  .. _Bug #2024258: https://bugs.launchpad.net/nova/+bug/2024258
+
+
+.. _Release Notes_27.4.0_2023.1-eom:
+
+27.4.0
+======
+
+.. _Release Notes_27.4.0_2023.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/ironic-list-instance-respect-partition-key-339ff653eaa00753.yaml @ b'3226318b534847a5c553f2d94f9df19a631fd617'
+
+- Ironic virt driver now uses the node cache and respects partition keys, such as conductor group, for list_instances and list_instance_uuids calls. This fix will improve performance of the periodic queries which use these driver methods and reduce API and DB load on the backing Ironic service.
+
+
+.. _Release Notes_27.3.0_2023.1-eom:
+
+27.3.0
+======
+
+.. _Release Notes_27.3.0_2023.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2022955-eac8b0c8e42e3696.yaml @ b'bb472db2cd0c277de59a0283c7b9347626b0632a'
+
+- The `CPU power management`_ feature has been fixed to use privsep to avoid
+  a FileNotFound error when offlining CPUs.
+
+  .. _CPU power management: https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-cpu-power-management-for-dedicated-cores
+
+.. releasenotes/notes/bug-2023018-0f93ca1f679ce259.yaml @ b'5c33bd4dfc8c1fcf3eecd656130408fb0a5a3bc5'
+
+- Some OS platforms don't provide by default cpufreq resources in sysfs, so
+  they don't have CPU scaling governors. That's why we should let the governor
+  strategy to be optional for `CPU power management`_.
+
+  .. _CPU power management: https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-cpu-power-management-for-dedicated-cores
+
+.. releasenotes/notes/bug-2055245-fix-nova-metadata-api-f60b18b1b594bec0.yaml @ b'f2adeebdf2ed1fbd2b748d8b95b9f671829d235a'
+
+- With the change from ml2/ovs DHCP agents towards OVN implementation
+  in neutron there is no port with device_owner ``network:dhcp`` anymore.
+  Instead DHCP is provided by ``network:distributed`` port.
+  Fix relies on enable_dhcp provided by neutron-api if no port with
+  ``network:dhcp`` owner is found. See `bug 2055245
+  <https://bugs.launchpad.net/nova/+bug/2055245>`__ for details.
+
+.. releasenotes/notes/libvirt-enlightenments-stop-unconditionally-enabling-evmcs-993a825641c4b9f3.yaml @ b'2bffc53ce8fb5239cb9cbd59f3bbd51577da0c4a'
+
+- Bug 2009280 has been fixed by no longer enabling the evmcs enlightenment in
+  the libvirt driver. evmcs only works on Intel CPUs, and domains with that
+  enlightenment cannot be started on AMD hosts. There is a possible future
+  feature to enable support for generating this enlightenment only when
+  running on Intel hosts.
+
+
+.. _Release Notes_27.2.0_2023.1-eom:
+
+27.2.0
+======
+
+.. _Release Notes_27.2.0_2023.1-eom_Deprecation Notes:
+
+Deprecation Notes
+-----------------
+
+.. releasenotes/notes/hyperv-experimental-antelope-372e18a05cafc295.yaml @ b'fbc3018d3314edb11b9340d49116a097a5060862'
+
+- The hyperv driver is marked as experimental and may be removed in a
+  future release. The driver is not tested by the OpenStack project and
+  does not have a clear maintainer.
+
+
+.. _Release Notes_27.2.0_2023.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2043707-power-management-no-pcpu-28dd7d07d0473ea2.yaml @ b'3ce1bd5225e17bc23b5a2662f1ca8040617b2709'
+
+- Relaxed the config option checking of the cpu_power_management feature of
+  the libvirt driver. The nova-compute service will start with
+  [libvirt]cpu_power_management=True and an empty [compute]cpu_dedicated_set
+  configuration. The power management is still only applied to dedicated CPUs.
+  So the above configuration only allowed to ensure that cpu_power_management
+  can be enabled independently for configuring cpu_dedicated_set during
+  deployment.
+
+.. releasenotes/notes/port-binding-removed-shelved-offloaded-f1772a64be007b24.yaml @ b'e1561573ee86797cd7082a1208890fb7c3df30dc'
+
+- [`bug 1983471 <https://bugs.launchpad.net/nova/+bug/1983471>`_]
+  When offloading a shelved instance, the compute will now remove the
+  binding so instance ports will appear as "unbound" in neutron.
+
+.. releasenotes/notes/quota-unshelve-offloaded-e4ea2d6a1449f549.yaml @ b'c67e69c0e35d837fcefd7e4ea010a956569c3a55'
+
+- `Bug #2003991`_: Fixes an issue where quota was not properly enforced
+  during unshelve of a ``SHELVED_OFFLOADED`` server when
+  ``[quota]count_usage_from_placement = true`` or
+  ``[quota]driver = nova.quota.UnifiedLimitsDriver`` are configured.
+
+  .. _Bug #2003991: https://launchpad.net/bugs/2003991
+
+.. releasenotes/notes/translate_vf_network_capabilities_to_port_binding-48abbfe0ce2923cf.yaml @ b'4fcc8c369f2c580f86dbfc6b1f812516f80262c0'
+
+- Previously ``switchdev`` capabilities should be configured manually by a
+  user with admin privileges using port's binding profile. This blocked
+  regular users from managing ports with Open vSwitch hardware offloading
+  as providing write access to a port's binding profile to non-admin users
+  introduces security risks. For example, a binding profile may contain a
+  ``pci_slot`` definition, which denotes the host PCI address of the
+  device attached to the VM. A malicious user can use this parameter to
+  passthrough any host device to a guest, so it is impossible to provide
+  write access to a binding profile to regular users in many scenarios.
+
+  This patch fixes this situation by translating VF capabilities reported
+  by Libvirt to Neutron port binding profiles. Other VF capabilities are
+  translated as well for possible future use.
+
+
+.. _Release Notes_27.1.0_2023.1-eom:
+
+27.1.0
+======
+
+.. _Release Notes_27.1.0_2023.1-eom_Upgrade Notes:
+
+Upgrade Notes
+-------------
+
+.. releasenotes/notes/service-user-token-421d067c16257782.yaml @ b'efb01985db88d6333897018174649b425feaa1b4'
+
+- Configuration of service user tokens is now **required** for all Nova services
+  to ensure security of block-storage volume data.
+
+  All Nova configuration files must configure the ``[service_user]`` section as
+  described in the `documentation`__.
+
+  See https://bugs.launchpad.net/nova/+bug/2004555 for more details.
+
+  __ https://docs.openstack.org/nova/latest/admin/configuration/service-user-token.html
+
+
+.. _Release Notes_27.0.0_2023.1-eom:
+
+27.0.0
+======
+
+.. _Release Notes_27.0.0_2023.1-eom_Prelude:
+
+Prelude
+-------
+
+.. releasenotes/notes/antelope-prelude-4a99907b00e739f8.yaml @ b'f587685f601bd15c1820c23086c3c68274949d5f'
+
+The OpenStack 2023.1 (Nova 27.0.0) release includes many new features and
+bug fixes. Please be sure to read the upgrade section which describes the
+required actions to upgrade your cloud from 26.0.0 (Zed) to 27.0.0 (2023.1).
+As a reminder, OpenStack 2023.1 is our first `Skip-Level-Upgrade Release`__
+(starting from now, we name it a ``SLURP release``) where you can
+rolling-upgrade your compute services from OpenStack Yoga as an experimental
+feature. Next SLURP release will be 2024.1.
+
+.. __: https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html
+
+There are a few major changes worth mentioning. This is not an exhaustive
+list:
+
+- The latest Compute API microversion supported for 2023.1 is `v2.95`__.
+
+  .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-2023.1
+
+- `PCI devices can now be scheduled <https://docs.openstack.org/nova/latest/admin/pci-passthrough.html#pci-tracking-in-placement>`_
+  by Nova using the Placement API on a opt-in basis. This will help the
+  nova-scheduler service to better schedule flavors that use PCI
+  (non-Neutron related) resources, will generate less reschedules if an
+  instance cannot be created on a candidate and will help the nova-scheduler
+  to not miss valid candidates if the list was too large.
+
+- Operators can now ask Nova to `manage the power consumption of dedicated
+  CPUs <https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-cpu-power-management-for-dedicated-cores>`_
+  so as to either offline them or change their governor if they're
+  currently not in use by any instance or if the instance is stopped.
+
+- Nova will prevent unexpected compute service renames by `persisting a unique
+  compute UUID on local disk <https://docs.openstack.org/nova/latest/admin/compute-node-identification.html>`_.
+  This stored UUID will be considered the source of truth for knowing whether
+  the compute service hostame has been modified or not. As a reminder,
+  changing a compute hostname is forbidden, particularly when this compute is
+  currently running instances on top of it.
+
+- `SPICE consoles <https://docs.openstack.org/nova/latest/admin/remote-console-access.html#spice-console>`_
+  can now be configured with compression settings which include choices of the
+  compression algorithm and the compression mode.
+
+- Fully-Qualified Domain Names are now considered valid for an instance
+  hostname if you use the 2.94 API microversion.
+
+- By opting into 2.95 API microversion, evacuated instances will remain
+  stopped on the destination host until manually started.
+
+- Nova APIs now `by default support new RBAC policies <https://docs.openstack.org/nova/latest/configuration/policy.html>`_
+  and scopes. See our `Policy Concepts documentation <https://docs.openstack.org/nova/latest/configuration/policy-concepts.html>`_
+  for further details.
+
+
+.. _Release Notes_27.0.0_2023.1-eom_New Features:
+
+New Features
+------------
+
+.. releasenotes/notes/add-spice-compression-support-e41676f445544e8d.yaml @ b'b5e0ed248fe0f3250d7f1648f23147d175096fe2'
+
+- The following SPICE-related options are added to the ``spice``
+  configuration group of a Nova configuration:
+
+  - ``image_compression``
+  - ``jpeg_compression``
+  - ``zlib_compression``
+  - ``playback_compression``
+  - ``streaming_mode``
+
+  These configuration options can be used to enable and set the
+  SPICE compression settings for libvirt (QEMU/KVM) provisioned
+  instances. Each configuration option is optional and can be set
+  explicitly to configure the associated SPICE compression setting
+  for libvirt. If all configuration options are not set, then none
+  of the SPICE compression settings will be configured for libvirt,
+  which corresponds to the behavior before this change. In this case,
+  the built-in defaults from the libvirt backend (e.g. QEMU) are used.
+
+  Note that those options are only taken into account if SPICE support
+  is enabled (and the VNC support is disabled).
+
+.. releasenotes/notes/allowing-target-state-for-evacuate-d4c1912c481973d6.yaml @ b'd732ee38a1c596ab2720de51e91f83d6dbc727cf'
+
+- Starting with v2.95 any evacuated instance will be stopped at
+  destination. The required minimum version for Nova computes is
+  27.0.0 (antelope 2023.1).  Operator can still continue using
+  previous behavior by selecting microversion below v2.95.
+
+.. releasenotes/notes/bp-libvirt-cpu-state-mgmt-fbc9c1f9f473003c.yaml @ b'0807b7ae9a0e5ef02dba4e50cf773032c10ace44'
+
+- This is now possible to configure nova-compute services using libvirt driver
+  by setting ``[libvirt]cpu_power_management`` to ``True`` in order to let the
+  service to powering down or up physical CPUs depending on whether those CPUs
+  are pinned or not to instances. In order on to support this feature, the
+  compute service needs to be set with ``[compute]cpu_dedicated_set``. If so,
+  all the related CPUs will be powering down until they are used by an
+  instance where the related pinned CPU will be powering up just before
+  starting the guest. If ``[compute]cpu_dedicated_set`` isn't set, then the
+  compute service will refuse to start.
+  By default the power strategy will offline CPUs when powering down and
+  online the CPUs on powering up but another strategy is possible by using
+  ``[libvirt]cpu_power_management_strategy=governor`` which will rather modify
+  the related CPU governor using ``[libvirt]cpu_power_governor_low`` and
+  ``[libvirt]cpu_power_governor_high`` configuration values (respective
+  defaults being  ``powersave`` and ``performance``)
+
+.. releasenotes/notes/bp-pci-device-tracking-in-placement-antelope-082310a2b0337e0e.yaml @ b'2cb1eedeafbfe0d99f5a7dcdf9c9ad02e735c6df'
+
+- Since 26.0.0 (Zed) Nova supports tracking PCI devices in Placement. Now
+  Nova also supports scheduling flavor based PCI device requests via
+  Placement. This support is disable by default. Please read
+  `documentation <https://docs.openstack.org/nova/latest/admin/pci-passthrough.html#pci-tracking-in-placement>`_
+  for more details on what is supported how this feature can be enabled.
+
+.. releasenotes/notes/microversion-2-94-59649401d5763286.yaml @ b'9980b9ad52a24998bc36fc191118a3d924b0a880'
+
+- The 2.94 microversion has been added. This microversion extends
+  microversion 2.90 by allowing Fully Qualified Domain Names (FQDN) wherever
+  the ``hostname`` is able to be specified. This consists of creating an
+  instance (``POST /servers``), updating an instance
+  (``PUT /servers/{id}``), or rebuilding an instance
+  (``POST /servers/{server_id}/action (rebuild)``). When using an FQDN as the
+  instance hostname, the ``[api]dhcp_domain`` configuration option must be
+  set to the empty string in order for the correct FQDN to appear in the
+  ``hostname`` field in the metadata API.
+
+.. releasenotes/notes/stable-compute-uuid-08663a0955616728.yaml @ b'e258164f5a6c9ce378fc9828b137d68e9adf5bfd'
+
+- The compute manager now uses a local file to provide node uuid persistence
+  to guard against problems with renamed services, among other things.
+  Deployers wishing to ensure that *new* compute services get a predictable
+  uuid before initial startup may provision that file and nova will use it,
+  otherwise nova will generate and write one to a ``compute_id`` file in
+  ``CONF.state_path`` the first time it starts up. Accidental renames of a
+  compute node's hostname will be detected and the manager will exit to avoid
+  database corruption. Note that none of this applies to Ironic computes, as
+  they manage nodes and uuids differently.
+
+.. releasenotes/notes/uwsgi-gmr-c00631db79836340.yaml @ b'4954f3a7babd9a39d3916294d9c0f780cd6dbd5b'
+
+- Guru Meditation Reports can now be generated for the Nova API service
+  when running under uWSGI. Note that uWSGI intercepts SIGUSR2 signals,
+  so a file trigger should be used instead.
+
+
+.. _Release Notes_27.0.0_2023.1-eom_Upgrade Notes:
+
+Upgrade Notes
+-------------
+
+.. releasenotes/notes/allowing-target-state-for-evacuate-d4c1912c481973d6.yaml @ b'd732ee38a1c596ab2720de51e91f83d6dbc727cf'
+
+- Operators will have to consider upgrading compute hosts to Nova
+  27.0.0 (antelope 2023.1) in order to take advantage of the new
+  (microversion v2.95) evacuate API behavior. An exception will be
+  raised for older versions.
+
+.. releasenotes/notes/enable-enforce-scope-and-new-defaults-14db8c75b263b599.yaml @ b'd97af33c0639b548f8a66ab14019259e9b4210be'
+
+- The Nova service enable the API policies (RBAC) new defaults and scope by
+  default. The Default value of config options ``[oslo_policy] enforce_scope``
+  and ``[oslo_policy] oslo_policy.enforce_new_defaults`` have been changed
+  to ``True``.
+
+  This means if you are using system scope token to access Nova API then
+  the request will be failed with 403 error code. Also, new defaults will be
+  enforced by default. To know about the new defaults of each policy
+  rule, refer to the `Policy New Defaults`_. For more detail about the Nova
+  API policies changes, refer to `Policy Concepts`_.
+
+  If you want to disable them then modify the below config options value in
+  ``nova.conf`` file::
+
+    [oslo_policy]
+    enforce_new_defaults=False
+    enforce_scope=False
+
+  .. _`Policy New Defaults`: https://docs.openstack.org/nova/latest/configuration/policy.html
+  .. _`Policy Concepts`: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html
+
+.. releasenotes/notes/microversion-2-94-59649401d5763286.yaml @ b'9980b9ad52a24998bc36fc191118a3d924b0a880'
+
+- In order to make use of microversion's 2.94 FQDN hostnames, the
+  ``[api]dhcp_domain`` config option must be set to the empty string. If
+  this is not done, the ``hostname`` field in the metadata API will be
+  incorrect, as it will include the value of ``[api]dhcp_domain`` appended to
+  the instance's FQDN. Note that simply not setting ``[api]dhcp_domain`` is
+  not enough, as it has a default value of ``novalocal``. It must explicitly
+  be set to the empty string.
+
+.. releasenotes/notes/stable-compute-uuid-08663a0955616728.yaml @ b'e258164f5a6c9ce378fc9828b137d68e9adf5bfd'
+
+- Existing compute nodes will, upon upgrade, persist the uuid of the compute
+  node assigned to their hostname at first startup. Since this must match
+  what is currently in the database, it is important to let nova provision
+  this file from its database. Nova will only persist to a ``compute_id`` file
+  in the ``CONF.state_path`` directory, which should already be writable.
+
+.. releasenotes/notes/update-initial-allocation-defaults-94106033b66b8fa0.yaml @ b'1260cdd49218f8bedf935190e2721422e5b5c6b6'
+
+- In this release the default values for the initial ram and cpu allocation
+  ratios have been updated to 1.0 and 4.0 respectively. This will not
+  affect any existing compute node resource providers but the new default
+  will take effect on the creation of new resource providers.
+
+
+.. _Release Notes_27.0.0_2023.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-1996995-qemu_monitor_announce_self-add-configurables-2b2f19d238442f72.yaml @ b'fba851bf3a34562db9cdb783ae539556b8b7a329'
+
+- Fixes `bug 1996995`_ in which VMs live migrated on certain VXLAN Arista
+  network fabrics were inaccessible until the switch arp cache expired.
+
+  A Nova workaround option of ``enable_qemu_monitor_announce_self`` was added
+  to fix `bug 1815989`_ which when enabled would interact with the QEMU
+  monitor and force a VM to announce itself.
+
+  On certain network fabrics, VMs that are live migrated remain inaccessible
+  via the network despite the QEMU monitor announce_self command successfully
+  being called.
+
+  It was noted that on Arista VXLAN fabrics, testing showed that it required
+  several attempts of running the QEMU announce_self monitor command before
+  the switch would acknowledge a VM's new location on the fabric.
+
+  This fix introduces two operator configurable options.
+  The first option sets the number of times the QEMU monitor announce_self
+  command is called - ``qemu_announce_self_count``
+
+  The second option allows operators to set the delay between the QEMU
+  announce_self commands in seconds for subsequent announce_self commands
+  with  ``qemu_announce_self_interval``
+
+  .. _`bug 1996995`: https://bugs.launchpad.net/nova/+bug/1996995
+  .. _`bug 1815989`: https://bugs.launchpad.net/nova/+bug/1815989
+
+.. releasenotes/notes/fix-ironic-scheduler-race-08cf8aba0365f512.yaml @ b'3c022e968375c1b2eadf3c2dd7190b9434c6d4c1'
+
+- Fixed when placement returns ironic nodes that have just started automatic
+  cleaning as possible valid candidates. This is done by marking all ironic
+  nodes with an instance on them as reserved, such that nova only makes them
+  available once we have double checked Ironic reports the node as available.
+  If you don't have automatic cleaning on, this might mean it takes longer
+  than normal for Ironic nodes to become available for new instances.
+  If you want the old behaviour use the following workaround config:
+  ``[workarounds]skip_reserve_in_use_ironic_nodes=true``
+
+.. releasenotes/notes/multiple-config-files-with-mod_wsgi-f114ea5fdd8b9a51.yaml @ b'73fe84fa0ea6f7c7fa55544f6bce5326d87743a6'
+
+- apache mod_wsgi does not support passing commandline arguments to the wsgi
+  application that it hosts. As a result when the nova api or metadata api
+  where run under mod_wsgi it was not possible to use multiple config files
+  or non-default file names i.e. nova-api.conf
+  This has been addressed by the introduction of a new, optional, environment
+  variable ``OS_NOVA_CONFIG_FILES``. ``OS_NOVA_CONFIG_FILES`` is a ``;``
+  separated list of file path relitive to ``OS_NOVA_CONFIG_DIR``.
+  When unset the default ``api-paste.ini`` and ``nova.conf`` will be used
+  form ``/etc/nova``. This is supported for the nova api and nova metadata
+  wsgi applications.
+
+.. releasenotes/notes/rescue-volume-based-instance-c6e3fba236d90be7.yaml @ b'6eed55bf55469f4ceaa7d4d4eb1be635e14bc73b'
+
+- Fix rescuing volume based instance by adding a check for 'hw_rescue_disk'
+  and 'hw_rescue_device' properties in image metadata before attempting
+  to rescue instance.
+
+.. releasenotes/notes/use-compareHypervisorCPU-b75c8f097cc73556.yaml @ b'468b03e0ee4a917ae26106f6e57081bcd9e7a65b'
+
+- Nova's use of libvirt's compareCPU() API has become error-prone as
+  it doesn't take into account host hypervisor's capabilities.  With
+  QEMU >=2.9 and libvirt >= 4.4.0, libvirt will do the right thing in
+  terms of CPU comparison checks via a new replacement API,
+  compareHypervisorCPU().  Nova satisfies the said minimum version
+  requirements of QEMU and libvirt by a good margin.
+
+  This change replaces the usage of older API, compareCPU(), with the
+  new one, compareHypervisorCPU().
+
+
+.. _Release Notes_27.0.0_2023.1-eom_Other Notes:
+
+Other Notes
+-----------
+
+.. releasenotes/notes/Do-not-send-mtu-value-in-metadata-for-networks-with-enabled-dhcp-641506f2a13b540f.yaml @ b'6bdc79af30151f683c0f462bc6c69da30ebcbcf9'
+
+- For networks which have any subnets with enabled DHCP, MTU value is not send
+  in the metadata. In such case MTU is configured through the DHCP server.
+
+.. releasenotes/notes/bug-1982284-libvirt-handle-no-ram-info-was-set-99784934ed80fd72.yaml @ b'9fea934c71d3c2fa7fdd80c67d94e18466c5cf9a'
+
+- A workaround has been added to the libvirt driver to catch and pass
+  migrations that were previously failing with the error:
+
+  ``libvirt.libvirtError: internal error: migration was active, but no RAM info was set``
+
+  See `bug 1982284`_ for more details.
+
+  .. _bug 1982284: https://bugs.launchpad.net/nova/+bug/1982284
+
+.. releasenotes/notes/update-initial-allocation-defaults-94106033b66b8fa0.yaml @ b'1260cdd49218f8bedf935190e2721422e5b5c6b6'
+
+- The default initial allocation ratios enabled ram over commit by default
+  with a factor of ``1.5``. This value was chosen early in nova's history
+  as the predominant workload was web hosting or other light weight
+  virtualization. Similarly the default initial cpu allocation ratio
+  defaulted to 16. As more demanding workload from telco, enterprise,
+  scientific and governmental users became the norm the initial values we
+  had chosen became less and less correct overtime. These have now been
+  updated to reflect a more reasonable default for the majority of our users.
+  As of this release the initial ram allocation value is 1.0 disabling
+  overcommit by default for new compute nodes and the initial cpu allocation
+  ratio is now 4.0 which is a more reasonable overcommit for non idle
+  workloads.
+
+

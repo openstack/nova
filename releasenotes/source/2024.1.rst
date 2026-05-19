@@ -2,5 +2,582 @@
 2024.1 Series Release Notes
 ===========================
 
-.. release-notes::
-   :branch: unmaintained/2024.1
+.. _Release Notes_2024.1-eom_2024.1-eom:
+
+2024.1-eom
+==========
+
+.. _Release Notes_2024.1-eom_2024.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2098496-move-pci-hostdevs-than-requested-0139018213f1be96.yaml @ b'5a94fac3297d074b2fe1873a35458b941563438e'
+
+- Fixed the issue
+  `bug 2098496 <https://bugs.launchpad.net/nova/+bug/2098496>`__ where nova
+  assigned more PCI hostdevs to a VM than the flavor requested via the
+  pci_passthrough:alias extra_spec. This only affected systems where both
+  ``[filter_scheduler]pci_in_placement`` and ``[pci]report_in_placement``
+  were set to True. This only affected systems where the PCI alias requested
+  type-VF devices and a single PF device on the compute node supported more
+  than one VFs and ``[pci]device_spec`` configuration allowed nova to use
+  multiple VFs from a single PF.
+
+.. releasenotes/notes/bug-2117170-disable-vmcoreinfo-when-memory-encryption-is-enabled-142e64f6b9ef3135.yaml @ b'800d720637ead15c1cd52444d0c95572d632da79'
+
+- [`bug 2117170 <https://bugs.launchpad.net/nova/+bug/2117170>`_] Libvirt
+  driver no longer enables VMCoreInfo device when an instance has memory
+  encryption is enabled, to avoid kernel crash caused by fw_cfg device in
+  guest requiring DMA.
+
+.. releasenotes/notes/bug-2122036-hypervisor-uptime-performance-optimization-6f3a2c8e5d9b1a4e.yaml @ b'267d80cf6e9eba63a2630082f617a29388d10c5c'
+
+- Fixed performance issue with the ``/os-hypervisors/detail`` API endpoint
+  when using microversion 2.88 or higher. The API was making sequential RPC
+  calls to each compute node to gather uptime information, causing significant
+  delays in environments with many compute nodes (LP#2122036).
+
+  The fix optimizes uptime retrieval by:
+
+  * Adding uptime information to the periodic resource updates sent by
+    nova-compute to the database, eliminating the need for synchronous RPC
+    calls during API requests
+  * Only attempting RPC-based uptime retrieval for hypervisor types that
+    actually support it (libvirt and z/VM), avoiding unnecessary calls to
+    other hypervisor types that would always return NotImplementedError
+  * Preferring cached uptime data from the database over RPC calls when
+    available, this updates at the cadence specified by
+    ``[DEFAULT]update_resources_interval`` which is the same interval the
+    other hypervisor stats update.
+
+  This change significantly reduces response times for the hypervisor detail
+  API in large deployments while maintaining backward compatibility.
+
+.. releasenotes/notes/resize-swap-size-1e15e67c436f4b95.yaml @ b'39714c24619b449758a1fe3ce141ef39e951adaf'
+
+- With this change, operators can now resize the instance flavor swap to
+  a smaller swap size, it can be expand and shrunk down to 0 using the same
+  resize API.
+  For more details see: `bug 1552777`_
+
+  .. _`bug 1552777`: https://bugs.launchpad.net/nova/+bug/1552777
+
+
+.. _Release Notes_29.3.0_2024.1-eom:
+
+29.3.0
+======
+
+.. _Release Notes_29.3.0_2024.1-eom_Security Issues:
+
+Security Issues
+---------------
+
+.. releasenotes/notes/bug-2112187-e1c1d40f090e421b.yaml @ b'5a92bb594fd5513158044653ddd6919ae8f0ffb2'
+
+- Nova has documented that the ``update volume attachment`` API
+  PUT /servers/{server_id}/os-volume_attachments/{volume_id}
+  should not be called directly for a very long time.
+
+  "When updating volumeId, this API is typically meant to only
+  be used as part of a larger orchestrated volume migration
+  operation initiated in the block storage service via
+  the os-retype or os-migrate_volume volume actions.
+  Direct usage of this API to update volumeId is not recommended
+  and may result in needing to hard reboot the server
+  to update details within the guest such as block storage serial IDs.
+  Furthermore, updating volumeId via this API is only implemented
+  by certain compute drivers."
+
+  As an admin only api, direct usage has always been limited to admins
+  or service like ``watcher``.
+  This longstanding recommendation is now enforced as a security
+  hardening measure and restricted to only cinder.
+  The prior warning alluded to the fact that directly using this
+  api can result in a guest with a de-synced definition of the volume
+  serial. Before this change it was possible for an admin to unknowingly
+  put a VM in an inconsistent state such that a future live migration may
+  fail or succeed and break tenant isolation. This could not happen
+  when the api was called by cinder so Nova has restricted that api
+  exclusively to that use-case.
+  see: https://bugs.launchpad.net/nova/+bug/2112187 for details.
+
+
+.. _Release Notes_29.3.0_2024.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2095364-ffbf67c0ae3f53b5.yaml @ b'64594ec320ee23f243d5396411d6c156a257d169'
+
+- `Bug #2095364`_: Fixed the List Server API and the List Server Detail API
+  500 Internal Server Error issue in v2.96 or later API microversion if
+  one or more instance has no request spec object. One usecase was when cloud
+  user tried to create instance which exceeded their quota, the request does
+  not create instance request spec. Once the no request spec instance is
+  created in cloud user project, the server list API and the list server
+  details API return 500 Internal Server Error for the project until the
+  cloud user deletes the no request spec object instance.
+  After this fix, the v2.96 or later returns ``null`` at the
+  ``pinned_availability_zone`` value if not specified.
+
+  .. _Bug #2095364: https://launchpad.net/bugs/2095364
+
+.. releasenotes/notes/bug-2112187-e1c1d40f090e421b.yaml @ b'5a92bb594fd5513158044653ddd6919ae8f0ffb2'
+
+- ``Nova`` now strictly enforces that only ``cinder`` can call the
+  ``update volume attachment`` aka ``swap volume`` api. This is part
+  of addressing a security hardening gap identified as part of bug:
+  https://bugs.launchpad.net/nova/+bug/2112187
+
+
+.. _Release Notes_29.2.2_2024.1-eom:
+
+29.2.2
+======
+
+.. _Release Notes_29.2.2_2024.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2074219-937d6404c1cbb04c.yaml @ b'ad1bd175ae57e45dbfa8014f945cbc42d62ad8ce'
+
+- During the Caracal cycle the libvirt driver was enhanced to support using
+  device aliases to detach devices from a domain.
+  I1dfe4ad3df81bc810835af9b09cfc6c06e9a5388
+  This introduced a regression for instance with vgpus.
+  A prior bugfix https://bugs.launchpad.net/nova/+bug/1942345
+  addressed the symptom without correcting the underlying problem.
+  A related bug for mdev devices was later reported.
+  https://bugs.launchpad.net/nova/+bug/2074219
+  When this feature was added nova introduced a helper method
+  to get device via the alias because the libvirt api does not provide one
+  natively. That helper function assumed all devices would have an alias
+  attribute. That assumption was not valid and had now been corrected.
+  As a result detaching a volume from an instance with vgpus should now
+  be possible and this class of bug should no longer happen.
+
+.. releasenotes/notes/pre-live-migration-rollback-7de399d9b3979f79.yaml @ b'0b738435c94386c47ef69e1c675e1372469e0191'
+
+- When live migration fails during pre_live_migration on the destination,
+  during rollback Cinder volumes will now be disconnected from the
+  destination locally instead of remotely over RPC from the source. This
+  should ensure that only connection_info for the destination will be used to
+  disconnect volumes from the destination.
+  See `bug #1899835 <https://bugs.launchpad.net/nova/+bug/1899835>`_ for more
+  details.
+
+
+.. _Release Notes_29.2.1_2024.1-eom:
+
+29.2.1
+======
+
+.. _Release Notes_29.2.1_2024.1-eom_Upgrade Notes:
+
+Upgrade Notes
+-------------
+
+.. releasenotes/notes/instance-numa-object-upgrade-afa5bb96149ca2f5.yaml @ b'13c780ac84574037fa1617249cdee9102278e07d'
+
+- In the victoria release, the instance_numa_topology object
+  was extended to enabled mix cpus (pinned and unpinned cpus)
+  in the same instance. This change added a new field pcpuset
+  to the instance_numa_topology object. While the change included
+  object conversion code to handle the upgrade, it did not account
+  for instances that have a numa_topology but were not pinned.
+  i.e. a flavor with hw:mem_page_size or hw:numa_nodes set but
+  without hw:cpu_policy set to dedicated. As a result, instances
+  created between liberty and victoria releases with such a flavor
+  cannot be started  after upgrade to victoria. This has now
+  been fixed. instances created post victoria are not affected by
+  this issue. see: https://bugs.launchpad.net/nova/+bug/2080556
+  for more details.
+
+
+.. _Release Notes_29.2.1_2024.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2019977-4afe7658394130b8.yaml @ b'd5bda4a795c9b0430467ee923627b570ecf3f92a'
+
+- Fixes an issue seen when using bare metal (Ironic) instances where an
+  instance could fail to delete.  See `Bug 2019977`_ for more details.
+
+  .. _Bug 2019977: https://bugs.launchpad.net/nova/+bug/2019977
+
+.. releasenotes/notes/bug-2080436-568b03b5b5ba5760.yaml @ b'57e037b507e5c31c9057fe463aec9cadaf2e6c63'
+
+- Fixes a regression for live migration on shared storage that
+  was removing the backing disk and instance folder during the
+  cleanup of a virtual machine post live migration.
+  `bug 2080436
+  <https://bugs.launchpad.net/nova/+bug/2080436>`__ for details.
+
+.. releasenotes/notes/cinder-catalog-info-hyphen-842f02febcfff041.yaml @ b'acc46c5871e7163e7ca45e032fde41134509af23'
+
+- Nova now allows to use a hyphen in the ``[cinder]catalog_info``
+  service-type field, so in particular the official
+  ``block-storage`` type is now valid.
+  `Bug 2092194 <https://bugs.launchpad.net/nova/+bug/2092194>`_
+
+.. releasenotes/notes/ironic-validate-node-message-6a8b1eedbddd06fd.yaml @ b'036b022af4c46bbab96ddda27e4dbcfffe623ba5'
+
+- Fix displaying the reason messages from the Ironic validate node operation that
+  is called just before the instance is deployed on the bare metal node. The
+  message from Ironic is now correctly logged.
+  Fixes `bug 2100009 <https://bugs.launchpad.net/nova/+bug/2100009>`_.
+
+.. releasenotes/notes/nova-manage-image-property-bug-2078999-c493fc259d316c24.yaml @ b'ebae97c62f1af6b3b9f6da2abfa920d6528ddb1b'
+
+- Before the `Bug 2078999 <https://bugs.launchpad.net/nova/+bug/2078999>`_ was fixed,
+  the ``nova-manage image_property set`` command would update the image properties
+  embedded in the instance but would not update the ones in the request specs. This
+  led to an unexpected rollback of the image properties that were updated by the
+  command after an instance migration.
+
+.. releasenotes/notes/sharing-providers-max-uuids-per-request-f05da20c697e0922.yaml @ b'f91d1e0565fc62f4715c744eb60f1137001589b1'
+
+- Introduced a new compute configuration option
+  ``sharing_providers_max_uuids_per_request`` and applied a fix to
+  handle the "Request-Too-Long" error that can occur when querying
+  the placement API with a large number of aggregate UUIDs.
+
+.. releasenotes/notes/unproxied-libvirt-list-devices-7cd218c1a33535c9.yaml @ b'c20ed18dd23b759bc37be6344d121fd58a1cc728'
+
+- `Bug #2091033`_: Fixed calls to libvirt ``listDevices()`` and
+  ``listAllDevices()`` from potentially blocking all other greenthreads
+  in ``nova-compute``. Under certain circumstances, it was possible for
+  the ``nova-compute`` service to freeze with all other greenthreads
+  blocked and unable to perform any other activities including logging.
+  This issue has been fixed by wrapping the libvirt ``listDevices()``
+  and ``listAllDevices()`` calls with ``eventlet.tpool.Proxy``.
+
+  .. _Bug #2091033: https://bugs.launchpad.net/nova/+bug/2091033
+
+
+.. _Release Notes_29.0.2_2024.1-eom:
+
+29.0.2
+======
+
+.. _Release Notes_29.0.2_2024.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/reject-az-changes-of-an-instance-during-aggregate-update-64d319d0717ed704.yaml @ b'994358d582e8e8d98a3e8e91ceb77ae354c1e275'
+
+- Nova now ensures that an instance cannot move between availability zones
+  when the host of the instance is added or removed to an aggregate that is
+  part of another availability zone. Moving from or to the default
+  availability zone is also rejected.
+
+  This resolves `bug 1907775`_ where after such move the instance become
+  stuck in between availability zones.
+
+  .. _bug 1907775: https://bugs.launchpad.net/nova/+bug/1907775
+
+
+.. _Release Notes_29.0.1_2024.1-eom:
+
+29.0.1
+======
+
+.. _Release Notes_29.0.1_2024.1-eom_Prelude:
+
+Prelude
+-------
+
+.. releasenotes/notes/caracal-prelude-63fac6e27509930d.yaml @ b'1ddfda5b113c314bea0819a27b3a18cea8f8d5e6'
+
+The OpenStack 2024.1 (Nova 29.0.0) release includes many new features and
+bug fixes. Please be sure to read the upgrade section which describes the
+required actions to upgrade your cloud from 28.0.0 (2023.2) to 29.0.0
+(2024.1).
+As a reminder, OpenStack 2024.1 is a `Skip-Level-Upgrade Release`__
+(starting from now, we name it a ``SLURP release``) meaning that you can
+do rolling-upgrade from 2023.1 and skip 2023.2.
+
+.. __: https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html
+
+There are a few major changes worth mentioning. This is not an exhaustive
+list:
+
+- The latest Compute API microversion supported for 2024.1 is `v2.96`__.
+
+  .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-2024-1-caracal
+
+- The Ironic driver ``[ironic]/peer_list`` configuration option has been
+  deprecated. The Ironic driver now more closely models other Nova drivers
+  where compute nodes do not move between compute service instances. If
+  high availability of a single compute service is required, operators
+  should use active/passive failover between 2 compute service agents
+  configured to share the same compute service host
+  value ``[DEFAULT]/host``. Ironic nova-compute services can now be
+  configured to target a specific shard of ironic nodes by setting the
+  ``[ironic]/shard`` configuration option and a new ``nova-manage db
+  ironic_compute_node_move`` command can help the operators when upgrading
+  their computes to specify which shard they should manage.
+
+- Instances using `vGPUs can now be live-migrated
+  <https://docs.openstack.org/nova/latest/admin/virtual-gpu.html#caveats>`_
+  if both of the compute nodes support libvirt-8.6.0 and QEMU-8.1.0, as the
+  source mediated device will migrate the GPU memory to another target
+  mediated device automatically. In order to do this,
+  ``[libvirt/live_migration_downtime`` config option needs to be modified
+  according to the aforementioned documentation.
+
+- As of the new 2.96 microversion, the ``server show`` and ``server list``
+  APIs now return a new parameter called ``pinned_availability_zone`` that
+  indicates whether the instance is confined to a specific AZ. This field
+  supplements the existing ``availability_zone`` field which reports the
+  availability zone of the host where the service resides. The two values
+  may be different if the service is shelved or is not pinned to an AZ
+  which can help operators plan maintenance and better understand the
+  workload constraints.
+
+- Instances using virtio-net will see an increase in performance between
+  10% and 20% if their image uses a new ``hw_virtio_packed_ring=true``
+  property or their flavor contains ``hw:virtio_packed_ring=true`` extra
+  spec, provided libvirt version is >= 6.3 and QEMU >= 4.2.
+
+- As a security mechanism, a new ``[consoleauth]/enforce_session_timeout``
+  configuration option provides the ability to automatically close a server
+  console session when the token expires. This is disabled by default to
+  preserve the existing behaviour for upgrades.
+
+- The libvirt driver now supports requesting a configurable memory address
+  space for the instances. This allows `instances with large RAM
+  requirements
+  <https://specs.openstack.org/openstack/nova-specs/specs/2024.1/implemented/libvirt-maxphysaddr-support.html#flavor-extra-specs>`_
+  to be created by specifying either ``hw:maxphysaddr_mode=emulate`` and
+  ``hw:maxphysaddr_bits`` flavor extra specs or  ``hw_maxphysaddr_mode``
+  and ``hw_maxphysaddr_bits`` image properties. The
+  ``ImagePropertiesFilter`` and ``ComputeCapabilitiesFilter`` filters are
+  required to support this functionality.
+
+- The Hyper-V virt driver has been removed. It was deprecated in the Nova
+  27.2.0 (Antelope) release. This driver was untested and has no
+  maintainers. In addition, it had a dependency on the OpenStack Winstacker
+  project that also has been retired.
+
+- A couple of other improvements target reducing the number of bugs we
+  have: one automatically detecting the maximum number of instances with
+  memory encryption which can run concurrently, another one allows
+  specifying a specific IP address or hostname for incoming move operations
+  (by setting ``[libvirt]/migration_inbound_addr``) and yet another one
+  that improves stability of block device management using libvirt device
+  aliases.
+
+
+.. _Release Notes_29.0.1_2024.1-eom_New Features:
+
+New Features
+------------
+
+.. releasenotes/notes/bp-libvirt-maxphysaddr-support-7d03db9e0491515f9.yaml @ b'1038a633870b24b2409205cc3c5fe066442dd49f'
+
+- Added new flavor extra_specs and image properties to control the physical
+  address bits of vCPUs in Libvirt guests. This option is used to boot a
+  guest with large RAM.
+
+.. releasenotes/notes/bp-libvirt-mdev-live-migrate-4396dbe4d9a9775f.yaml @ b'8abc7b47fd6f938c1a376fe1a70b233d3c54f781'
+
+- Instances using vGPUs can now be correctly live-migrated by the libvirt
+  driver between compute nodes supporting the same mediated device types used
+  by the instance. In order to be able to do this, the compute hosts need to
+  support at least the minimum versions of libvirt-8.6.0, QEMU-8.1.0 and
+  Linux kernel 5.18.0. If operators use multiple vGPU types per compute, they
+  need to make sure they already use custom traits or custom resource classes
+  for the GPUs resource providers and that the instance was created with a
+  flavor using either a custom resource class or asking for a custom trait in
+  order to make sure that Placement API will provide the right target GPU
+  using the same mdev type for the instance.
+
+.. releasenotes/notes/bp-libvirt-migrate-with-hostname-instead-of-ip-98d42c25575590b1.yaml @ b'6bca37e904e9e56b250b123abde1901e951c8c9a'
+
+- The new config option ``[libvirt]migration_inbound_addr`` is now used to
+  determine the address for incoming move operations (cold migrate, resize,
+  evacuate). This config is defaulted to [DEFAULT]my_ip to keep the
+  configuration backward compatible. However it allows an explicit hostname
+  or FQDN to be specified, or allows to specify '%s' that is then resolved to
+  the hostname of compute host.
+  Note that this config should only be changed from its default after every
+  compute is upgraded.
+
+.. releasenotes/notes/enforce-console-session-timeout-6ee4cdaf130ac011.yaml @ b'5ecf1d324d45e536590aac52f228f22a58a56b7a'
+
+- This is a security-enhancing feature that automatically closes console sessions
+  exceeding a defined timeout period. To enable this functionality, operators are
+  required to set the 'enforce_session_timeout' boolean configuration option to True.
+
+  The enforcement is implemented via a timer mechanism, initiating when users access
+  the console and concluding upon the expiration of the set console token.
+
+  This ensures the graceful closure of console sessions on the server side, aligning
+  with security best practices.
+
+.. releasenotes/notes/max-sev-guests-e3da9adb3f75fbb8.yaml @ b'03055de176c61cd41ec2488bf8ef5eb7abc9dff8'
+
+- Now the libvirt driver is capable to detect maximum number of guests with
+  memory encrypted which can run concurrently in its compute host using
+  the new fields in libvirt API available since version 8.0.0.
+
+.. releasenotes/notes/microversion-2-96-ca56e1e5a4ee4e02.yaml @ b'c98c8d84eec6e65f1b67ae1ab8278d9c507a1a76'
+
+- The 2.96 microversion has been added. This microversion adds
+  pinned_availability_zone in ``server show`` and ``server list --long``
+  responses.
+
+.. releasenotes/notes/packed-virtqueue-filter-43a376674cb5b345.yaml @ b'eb8519d811f1c08bc964146f484367c858b8f0c2'
+
+- Handling packed virtqueue requests for an instance is now supported on
+  the nodes with Qemu v4.2 and Libvirt v6.3.
+
+  VMs using virtio-net will see an increase in performance. The increase
+  can be anywhere between 10/20% (see DPDK Intel Vhost/virtio perf. reports)
+  and 75% (using Napatech SmartNICs).
+
+  Packed Ring can be requested via image property or flavor extra spec.
+  hw_virtio_packed_ring=true|false  (default false)
+  hw:virtio_packed_ring=true|false  (default false)
+
+  Useful references:
+  https://libvirt.org/formatdomain.html#virtio-related-options
+  https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html
+  https://specs.openstack.org/openstack/nova-specs/specs/2023.2/approved/virtio_packedring_configuration_support.html
+
+
+.. _Release Notes_29.0.1_2024.1-eom_Upgrade Notes:
+
+Upgrade Notes
+-------------
+
+.. releasenotes/notes/remove-hyperv-94d5bfd8a539fe9f.yaml @ b'3b4db6408e86302126d6bd27717670594e6fa403'
+
+- The ``HyperV`` virt driver has been removed. It was deprecated in the
+  Nova 27.2.0 (Antelope) release. This driver was untested and has no
+  maintainers. In addition, it has a dependency on the OpenStack Winstacker
+  project that also has been retired.
+
+  The RDP console was only available for the HyperV driver, therefore the
+  RDP console related APIs below will return HTTP ``400 (BadRequest)`` error:
+
+  * GET RDP console:
+
+    * Server Action Get RDP Console:
+      POST /servers/{server_id}/action (os-getRDPConsole Action)
+
+    * RDP protocol support from remote console API:
+      POST /servers/{server_id}/remote-consoles
+
+  * GET RDP console connection information:
+
+    * Show Console Connection Information:
+      GET /os-console-auth-tokens/{console_token}
+
+  The following config options which only apply for the ``HyperV`` virt
+  driver or RDP console APIs also have been removed:
+
+  * ``[hyperv] dynamic_memory_ratio``
+  * ``[hyperv] enable_instance_metrics_collection``
+  * ``[hyperv] instances_path_share``
+  * ``[hyperv] limit_cpu_features``
+  * ``[hyperv] mounted_disk_query_retry_count``
+  * ``[hyperv] mounted_disk_query_retry_interval``
+  * ``[hyperv] power_state_check_timeframe``
+  * ``[hyperv] power_state_event_polling_interval``
+  * ``[hyperv] qemu_img_cmd``
+  * ``[hyperv] vswitch_name``
+  * ``[hyperv] wait_soft_reboot_seconds``
+  * ``[hyperv] config_drive_cdrom``
+  * ``[hyperv] config_drive_inject_password``
+  * ``[hyperv] volume_attach_retry_count``
+  * ``[hyperv] volume_attach_retry_interval``
+  * ``[hyperv] enable_remotefx``
+  * ``[hyperv] use_multipath_io``
+  * ``[hyperv] iscsi_initiator_list``
+  * ``[rdp] enabled``
+  * ``[rdp] html5_proxy_base_url``
+
+  The following extra specs which only apply for the ``HyperV`` virt
+  driver have been removed.
+
+  * ``os:resolution``
+  * ``os:monitors``
+  * ``os:vram``
+
+.. releasenotes/notes/remove-upgrade_levels-cert-5917509f849b1648.yaml @ b'c5fa7cfe207eb5ffb81d2f20c92160178cfdf8ee'
+
+- The deprecated ``[upgrade_levels] cert`` option has been removed.
+
+.. releasenotes/notes/remove-use_forwarded_for-dd89edfa3addb305.yaml @ b'a5f68d355c97baddf2baf46d9630175d65c36968'
+
+- The deprecated ``[api] use_forwarded_for`` option has been removed.
+
+
+.. _Release Notes_29.0.1_2024.1-eom_Bug Fixes:
+
+Bug Fixes
+---------
+
+.. releasenotes/notes/bug-2023018-0f93ca1f679ce259.yaml @ b'2c4421568ea62e66257b55c08092de3e0303fb0a'
+
+- Some OS platforms don't provide by default cpufreq resources in sysfs, so
+  they don't have CPU scaling governors. That's why we should let the governor
+  strategy to be optional for `CPU power management`_.
+
+  .. _CPU power management: https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-cpu-power-management-for-dedicated-cores
+
+.. releasenotes/notes/bug-2043707-power-management-no-pcpu-28dd7d07d0473ea2.yaml @ b'b1a0aee1abca0ed61c156dd99544adeaebaf0960'
+
+- Relaxed the config option checking of the cpu_power_management feature of
+  the libvirt driver. The nova-compute service will start with
+  [libvirt]cpu_power_management=True and an empty [compute]cpu_dedicated_set
+  configuration. The power management is still only applied to dedicated CPUs.
+  So the above configuration only allowed to ensure that cpu_power_management
+  can be enabled independently for configuring cpu_dedicated_set during
+  deployment.
+
+.. releasenotes/notes/bug-2055245-fix-nova-metadata-api-f60b18b1b594bec0.yaml @ b'135af5230e6f30fe158a25f7888e52cf886a7a35'
+
+- With the change from ml2/ovs DHCP agents towards OVN implementation
+  in neutron there is no port with device_owner ``network:dhcp`` anymore.
+  Instead DHCP is provided by ``network:distributed`` port.
+  Fix relies on enable_dhcp provided by neutron-api if no port with
+  ``network:dhcp`` owner is found. See `bug 2055245
+  <https://bugs.launchpad.net/nova/+bug/2055245>`__ for details.
+
+.. releasenotes/notes/ironic-list-instance-respect-partition-key-339ff653eaa00753.yaml @ b'fa3cf7d50cba921ea67eb161e6a199067ea62deb'
+
+- Ironic virt driver now uses the node cache and respects partition keys, such as conductor group, for list_instances and list_instance_uuids calls. This fix will improve performance of the periodic queries which use these driver methods and reduce API and DB load on the backing Ironic service.
+
+.. releasenotes/notes/libvirt-enlightenments-stop-unconditionally-enabling-evmcs-993a825641c4b9f3.yaml @ b'86a35e97d286cbb6e23f8cc7bec5a05f022da0cb'
+
+- Bug 2009280 has been fixed by no longer enabling the evmcs enlightenment in
+  the libvirt driver. evmcs only works on Intel CPUs, and domains with that
+  enlightenment cannot be started on AMD hosts. There is a possible future
+  feature to enable support for generating this enlightenment only when
+  running on Intel hosts.
+
+.. releasenotes/notes/translate_vf_network_capabilities_to_port_binding-48abbfe0ce2923cf.yaml @ b'cef3b5ef2cc1fe983578e4966208cf95fdea5880'
+
+- Previously ``switchdev`` capabilities should be configured manually by a
+  user with admin privileges using port's binding profile. This blocked
+  regular users from managing ports with Open vSwitch hardware offloading
+  as providing write access to a port's binding profile to non-admin users
+  introduces security risks. For example, a binding profile may contain a
+  ``pci_slot`` definition, which denotes the host PCI address of the
+  device attached to the VM. A malicious user can use this parameter to
+  passthrough any host device to a guest, so it is impossible to provide
+  write access to a binding profile to regular users in many scenarios.
+
+  This patch fixes this situation by translating VF capabilities reported
+  by Libvirt to Neutron port binding profiles. Other VF capabilities are
+  translated as well for possible future use.
+
+
