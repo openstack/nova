@@ -4,3 +4,4 @@
 
 .. release-notes::
    :branch: stable/2026.1
+   :earliest-version: 33.0.0
