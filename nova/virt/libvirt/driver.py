@@ -1139,7 +1139,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     self._compare_cpu(cpu, self._get_cpu_info(), None)
                 except exception.InvalidCPUInfo as e:
                     msg = (_("Configured CPU model: %(model)s "
-                             "and CPU Flags %(flags)s ar not "
+                             "and CPU Flags %(flags)s are not "
                              "compatible with host CPU. Please correct your "
                              "config and try again. %(e)s") % {
                                 'model': model, 'e': e,
