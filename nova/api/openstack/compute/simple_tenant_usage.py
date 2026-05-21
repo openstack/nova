@@ -244,7 +244,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         # instance object fields and still maintain backwards compatibility
         # in the API.
         if value.utcoffset() is None:
-            value = value.replace(tzinfo=datetime.timezone.utc)
+            value = value.replace(tzinfo=datetime.UTC)
         return value
 
     def _parse_qs_params(self, req):

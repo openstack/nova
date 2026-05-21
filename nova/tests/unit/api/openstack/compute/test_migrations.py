@@ -394,10 +394,10 @@ class MigrationTestCaseV266(MigrationsTestCaseV259):
         search_opts = {'instance_uuid': uuids.instance_uuid,
                        'changes-before':
                            datetime.datetime(2013, 10, 22, 13, 42, 3,
-                                             tzinfo=datetime.timezone.utc),
+                                             tzinfo=datetime.UTC),
                        'changes-since':
                            datetime.datetime(2013, 10, 22, 13, 42, 2,
-                                             tzinfo=datetime.timezone.utc)}
+                                             tzinfo=datetime.UTC)}
         get_migrations_sorted.assert_called_once_with(
             req.environ['nova.context'], search_opts, sort_dirs=mock.ANY,
             sort_keys=mock.ANY, limit=1000, marker=None)

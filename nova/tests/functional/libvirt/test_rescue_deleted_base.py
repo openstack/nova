@@ -54,7 +54,7 @@ class RescueServerTestWithDeletedBaseImage(base.ServersTestBase):
 
     def _create_test_images(self):
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         base_image = {
             'id': uuids.base_image,

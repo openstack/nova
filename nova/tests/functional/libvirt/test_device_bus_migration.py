@@ -112,7 +112,7 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
             'hw_vif_model': 'e1000',
         }
         timestamp = datetime.datetime(
-            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.UTC
         )
         self.glance.create(
             None,
@@ -334,7 +334,7 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
             'hw_vif_model': 'e1000',
         }
         timestamp = datetime.datetime(
-            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.UTC
         )
         self.glance.create(
             None,

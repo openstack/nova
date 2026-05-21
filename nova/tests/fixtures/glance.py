@@ -31,7 +31,7 @@ class GlanceFixture(fixtures.Fixture):
     # NOTE(justinsb): The OpenStack API can't upload an image?
     # So, make sure we've got one..
     timestamp = datetime.datetime(
-        2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+        2011, 1, 1, 1, 2, 3, tzinfo=datetime.UTC
     )
 
     image1 = {

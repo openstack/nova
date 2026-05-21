@@ -787,7 +787,7 @@ class InstanceHelperMixin:
                                         flavor_id=None, networks=None):
         bfv_image_id = uuids.bfv_image_uuid
         timestamp = datetime.datetime(
-            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.UTC
         )
         image = {
             'id': bfv_image_id,

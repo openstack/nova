@@ -31,7 +31,7 @@ class LibvirtVifModelTest(base.ServersTestBase):
         super().setUp()
 
         timestamp = datetime.datetime(
-            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.UTC
         )
         self.glance.create(
             None,
