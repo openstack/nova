@@ -305,12 +305,10 @@ class MetadataRequestHandler(wsgi.Application):
                 not hmac.compare_digest(expected_signature, signature)):
             if requestor_id:
                 LOG.warning('X-Instance-ID-Signature: %(signature)s does '
-                            'not match the expected value: '
-                            '%(expected_signature)s for id: '
+                            'not match the expected signature for id: '
                             '%(requestor_id)s. Request From: '
                             '%(requestor_address)s',
                             {'signature': signature,
-                             'expected_signature': expected_signature,
                              'requestor_id': requestor_id,
                              'requestor_address': requestor_address})
             msg = _('Invalid proxy request signature.')

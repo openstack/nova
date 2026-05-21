@@ -1204,7 +1204,8 @@ class MetadataHandlerTestCase(test.TestCase):
         raise Exception("Expected instance_id of %r, got %r" %
                         (self.expected_instance_id, instance_id))
 
-    def test_user_data_with_neutron_instance_id(self):
+    @mock.patch.object(handler.LOG, 'warning')
+    def test_user_data_with_neutron_instance_id(self, mock_warning):
         self.expected_instance_id = b'a-b-c-d'
 
         signed = hmac.new(
@@ -1250,9 +1251,15 @@ class MetadataHandlerTestCase(test.TestCase):
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'a-b-c-d',
                      'X-Tenant-ID': 'test',
-                     'X-Instance-ID-Signature': ''})
+                     'X-Instance-ID-Signature': 'mismatched_signature'})
 
         self.assertEqual(response.status_int, 403)
+
+        # bug #2150094: check that valid signature is not logged
+        warning_calls = mock_warning.call_args_list
+        self.assertEqual(4, len(warning_calls))
+        self.assertIn('mismatched_signature', str(warning_calls))
+        self.assertNotIn(signed, str(warning_calls))
 
         # missing X-Tenant-ID from request
         response = fake_request(
