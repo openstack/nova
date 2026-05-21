@@ -249,12 +249,12 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
             if path:
                 tsock.send(encodeutils.safe_encode(
                     'CONNECT %s HTTP/1.1\r\n\r\n' % path))
-                end_token = "\r\n\r\n"
+                end_token = b"\r\n\r\n"
                 while True:
                     data = tsock.recv(4096, socket.MSG_PEEK)
                     token_loc = data.find(end_token)
                     if token_loc != -1:
-                        if data.split("\r\n")[0].find("200") == -1:
+                        if data.split(b"\r\n")[0].find(b"200") == -1:
                             raise exception.InvalidConnectionInfo()
                         # remove the response from recv buffer
                         tsock.recv(token_loc + len(end_token))
