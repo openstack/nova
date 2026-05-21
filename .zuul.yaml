@@ -577,6 +577,10 @@
       "legacy-grenade-dsvm-neutron-multinode-live-migration".
     irrelevant-files: *nova-base-irrelevant-files
     vars:
+      grenade_devstack_localrc:
+        shared:
+          TEMPEST_VENV_UPPER_CONSTRAINTS: '/opt/stack/old/requirements/upper-constraints.txt'
+          TEMPEST_BRANCH: '46.3.0'
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
