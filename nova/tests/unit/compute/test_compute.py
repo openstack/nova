@@ -6081,7 +6081,7 @@ class ComputeTestCase(BaseTestCase,
         instance.numa_topology = numa_topology
         instance.save()
 
-        new_flavor_ref = flavors.get_flavor_by_flavor_id(3)
+        new_flavor_ref = flavors.get_flavor_by_flavor_id(self.context, 3)
         self.compute.prep_resize(self.context,
                 instance=instance,
                 flavor=new_flavor_ref,
@@ -6421,7 +6421,7 @@ class ComputeTestCase(BaseTestCase,
         instance.numa_topology = numa_topology
         instance.save()
 
-        new_flavor_ref = flavors.get_flavor_by_flavor_id(3)
+        new_flavor_ref = flavors.get_flavor_by_flavor_id(self.context, 3)
         self.compute.prep_resize(self.context,
                 instance=instance,
                 flavor=new_flavor_ref,
@@ -6464,7 +6464,7 @@ class ComputeTestCase(BaseTestCase,
             new_flavor_ref.memory_mb)
 
         # Prove that the instance size is now the new size
-        flavor_ref = flavors.get_flavor_by_flavor_id(3)
+        flavor_ref = flavors.get_flavor_by_flavor_id(self.context, 3)
         self.assertEqual(flavor_ref['flavorid'], '3')
         # Prove that the NUMA topology has also been updated to that of the new
         # flavor - meaning None
@@ -6557,7 +6557,7 @@ class ComputeTestCase(BaseTestCase,
                                             request_spec, {},
                                             [], block_device_mapping=[])
 
-        new_flavor_ref = flavors.get_flavor_by_flavor_id(3)
+        new_flavor_ref = flavors.get_flavor_by_flavor_id(self.context, 3)
         self.compute.prep_resize(self.context,
                 instance=instance,
                 flavor=new_flavor_ref,
@@ -6604,7 +6604,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(NODENAME2, migration.dest_compute)
 
     def test_get_by_flavor_id(self):
-        flavor_type = flavors.get_flavor_by_flavor_id(1)
+        flavor_type = flavors.get_flavor_by_flavor_id(self.context, 1)
         self.assertEqual(flavor_type['name'], 'm1.tiny')
 
     def test_resize_instance_handles_migration_error(self):
@@ -8673,7 +8673,7 @@ class ComputeTestCase(BaseTestCase,
             self, mock_pci_mapping):
         instance = self._create_fake_instance_obj()
         old_type = instance.flavor
-        new_type = flavors.get_flavor_by_flavor_id('4')
+        new_type = flavors.get_flavor_by_flavor_id(self.context, '4')
 
         instance.flavor = new_type
         instance.old_flavor = old_type
@@ -11140,7 +11140,7 @@ class ComputeAPITestCase(BaseTestCase):
             wrapped_exc, exception.NetworkInterfaceTaggedAttachNotSupported)
 
     def test_attach_interface_failed(self):
-        new_type = flavors.get_flavor_by_flavor_id('4')
+        new_type = flavors.get_flavor_by_flavor_id(self.context, '4')
         instance = objects.Instance(
                        id=42,
                        uuid=uuids.interface_failed_instance,
@@ -11205,7 +11205,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual([], pci_reqs.requests)
 
     def test_attach_sriov_interface_failed_in_driver(self):
-        new_type = flavors.get_flavor_by_flavor_id('4')
+        new_type = flavors.get_flavor_by_flavor_id(self.context, '4')
         instance = objects.Instance(
             id=42,
             uuid=uuids.interface_failed_instance,
@@ -13783,11 +13783,11 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         orig_get_flavor_by_flavor_id =\
                 flavors.get_flavor_by_flavor_id
 
-        def fake_get_flavor_by_flavor_id(flavor_id, ctxt=None,
+        def fake_get_flavor_by_flavor_id(ctxt, flavor_id,
                                                 read_deleted="yes"):
-            flavor = orig_get_flavor_by_flavor_id(flavor_id,
-                                                                ctxt,
-                                                                read_deleted)
+            flavor = orig_get_flavor_by_flavor_id(ctxt,
+                                                  flavor_id,
+                                                  read_deleted)
             flavor['disabled'] = False
             return flavor
 
@@ -13804,10 +13804,10 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         orig_get_flavor_by_flavor_id = flavors.get_flavor_by_flavor_id
 
         def fake_get_flavor_by_flavor_id(
-            flavor_id, ctxt=None, read_deleted="yes"
+            ctxt, flavor_id, read_deleted="yes"
         ):
             flavor = orig_get_flavor_by_flavor_id(
-                flavor_id, ctxt, read_deleted)
+                ctxt, flavor_id, read_deleted)
             flavor['disabled'] = True
             return flavor
 

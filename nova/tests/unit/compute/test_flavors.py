@@ -45,13 +45,14 @@ class TestGetFlavorByFlavorID(test.TestCase):
         # Ensure get by flavor raises error with wrong flavorid.
         self.assertRaises(exception.FlavorNotFound,
                           flavors.get_flavor_by_flavor_id,
+                          context.get_admin_context(),
                           'unknown_flavor')
 
     def test_will_get_instance_by_flavor_id(self):
-        default_flavor = objects.Flavor.get_by_name(
-            context.get_admin_context(), 'm1.small')
+        ctxt = context.get_admin_context()
+        default_flavor = objects.Flavor.get_by_name(ctxt, 'm1.small')
         flavorid = default_flavor.flavorid
-        fetched = flavors.get_flavor_by_flavor_id(flavorid)
+        fetched = flavors.get_flavor_by_flavor_id(ctxt, flavorid)
         self.assertIsInstance(fetched, objects.Flavor)
         self.assertEqual(default_flavor.flavorid, fetched.flavorid)
 

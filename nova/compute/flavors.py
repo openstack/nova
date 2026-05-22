@@ -128,14 +128,11 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
 
 # TODO(termie): flavor-specific code should probably be in the API that uses
 #               flavors.
-def get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted="yes"):
+def get_flavor_by_flavor_id(ctxt, flavorid, read_deleted="yes"):
     """Retrieve flavor by flavorid.
 
     :raises: FlavorNotFound
     """
-    if ctxt is None:
-        ctxt = context.get_admin_context(read_deleted=read_deleted)
-
     return objects.Flavor.get_by_flavor_id(ctxt, flavorid, read_deleted)
 
 
