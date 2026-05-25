@@ -31,7 +31,7 @@ the default ``DEBUG`` setting).
 
 For more about the logging configuration syntax, including the ``handlers`` and
 ``qualname`` variables, see the `Python documentation
-<https://docs.python.org/release/2.7/library/logging.html#configuration-file-format>`__
+<https://docs.python.org/3/library/logging.config.html#configuration-file-format>`__
 on logging configuration files.
 
 For an example of the ``logging.conf`` file with various defined handlers, see
