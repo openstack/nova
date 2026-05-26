@@ -1335,3 +1335,25 @@ microversion 2.75.
 The ``/os-volumes_boot`` API is an old alias for the ``/servers`` API and was
 undocumented and untested. It has now been removed and will return HTTP 404 for
 all requests.
+
+.. _microversion 2.104:
+
+2.104
+-----
+
+Add support for updating the ``pinned_availability_zone`` field via
+``PUT /servers/{server_id}``. Setting ``pinned_availability_zone`` to ``null``
+will unpin the server from its availability zone, allowing it to be scheduled
+to any availability zone on the next move operation. Setting
+``pinned_availability_zone`` to the server's current
+``OS-EXT-AZ:availability_zone`` value will re-pin the server to that zone.
+
+The following transitions will return an HTTP 409 (Conflict) error:
+
+- Attempting to re-pin (set to a non-``null`` value) to an availability zone
+  that does not match the server's current location
+- Attempting to change from one non-``null`` availability zone to a different
+  non-``null`` value (unpin first, then re-pin)
+
+Setting ``pinned_availability_zone`` to its current value is idempotent and
+returns 200.

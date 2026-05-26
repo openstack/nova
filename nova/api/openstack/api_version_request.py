@@ -286,6 +286,9 @@ REST_API_VERSION_HISTORY = """REST API Version History:
               filters from various flavors APIs and restrict additional query
               string parameters for all APIs.
     * 2.103 - Remove the ``/os-volumes_boot`` API
+    * 2.104 - Add support for updating ``pinned_availability_zone`` via
+              ``PUT /servers/{server_id}`` to unpin or re-pin a server's
+              availability zone.
 """
 
 # The minimum and maximum versions of the API supported
@@ -294,7 +297,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = '2.1'
-_MAX_API_VERSION = '2.103'
+_MAX_API_VERSION = '2.104'
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

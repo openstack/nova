@@ -4259,6 +4259,124 @@ class ServersControllerUpdateTestV290(_ServersControllerUpdateTest):
         self.assertIn('hostname', str(ex))
 
 
+class ServersControllerUpdateTestV2104(_ServersControllerUpdateTest):
+
+    microversion = '2.104'
+
+    def _setup_reqspec_mock(self, availability_zone):
+        mock_reqspec = mock.MagicMock()
+        mock_reqspec.availability_zone = availability_zone
+        objects.RequestSpec.get_by_instance_uuid.return_value = mock_reqspec
+        return mock_reqspec
+
+    @mock.patch('nova.availability_zones.get_instance_availability_zone',
+                return_value='az1')
+    def test_update_server_unpin_az(self, mock_get_az):
+        mock_reqspec = self._setup_reqspec_mock('az1')
+
+        body = {'server': {'pinned_availability_zone': None}}
+        req = self._get_request(body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
+        self.assertIsNone(mock_reqspec.availability_zone)
+        mock_reqspec.save.assert_called_once()
+
+    @mock.patch('nova.availability_zones.get_instance_availability_zone',
+                return_value='az1')
+    def test_update_server_repin_az(self, mock_get_az):
+        mock_reqspec = self._setup_reqspec_mock(None)
+
+        body = {'server': {'pinned_availability_zone': 'az1'}}
+        req = self._get_request(body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
+        self.assertEqual('az1', mock_reqspec.availability_zone)
+        mock_reqspec.save.assert_called_once()
+
+    @mock.patch('nova.availability_zones.get_instance_availability_zone',
+                return_value='az1')
+    def test_update_server_unpin_az_already_unpinned(self, mock_get_az):
+        mock_reqspec = self._setup_reqspec_mock(None)
+
+        body = {'server': {'pinned_availability_zone': None}}
+        req = self._get_request(body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
+        mock_reqspec.save.assert_not_called()
+
+    @mock.patch('nova.availability_zones.get_instance_availability_zone',
+                return_value='az1')
+    def test_update_server_repin_az_already_pinned(self, mock_get_az):
+        mock_reqspec = self._setup_reqspec_mock('az1')
+
+        body = {'server': {'pinned_availability_zone': 'az1'}}
+        req = self._get_request(body)
+        self.controller.update(req, FAKE_UUID, body=body)
+        mock_reqspec.save.assert_not_called()
+
+    @mock.patch('nova.availability_zones.get_instance_availability_zone',
+                return_value='az1')
+    def test_update_server_repin_az_wrong_az(self, mock_get_az):
+        self._setup_reqspec_mock(None)
+
+        body = {'server': {'pinned_availability_zone': 'az2'}}
+        req = self._get_request(body)
+        self.assertRaises(
+            webob.exc.HTTPConflict,
+            self.controller.update,
+            req, FAKE_UUID, body=body)
+
+    @mock.patch('nova.availability_zones.get_instance_availability_zone',
+                return_value='az1')
+    def test_update_server_repin_az_change_pinned(self, mock_get_az):
+        self._setup_reqspec_mock('az1')
+
+        body = {'server': {'pinned_availability_zone': 'az2'}}
+        req = self._get_request(body)
+        self.assertRaises(
+            webob.exc.HTTPConflict,
+            self.controller.update,
+            req, FAKE_UUID, body=body)
+
+    def test_update_server_pinned_az_old_version(self):
+        body = {'server': {'pinned_availability_zone': None}}
+        req = self._get_request(body)
+        req.api_version_request = api_version_request.APIVersionRequest(
+            '2.103')
+        self.assertRaises(
+            exception.ValidationError,
+            self.controller.update,
+            req, FAKE_UUID, body=body)
+
+    def test_update_server_pinned_az_empty_string(self):
+        body = {'server': {'pinned_availability_zone': ''}}
+        req = self._get_request(body)
+        self.assertRaises(
+            exception.ValidationError,
+            self.controller.update,
+            req, FAKE_UUID, body=body)
+
+    @mock.patch('nova.availability_zones.get_instance_availability_zone',
+                return_value='az1')
+    def test_update_server_pinned_az_with_name(self, mock_get_az):
+        mock_reqspec = self._setup_reqspec_mock('az1')
+
+        body = {'server': {
+            'name': 'new-name',
+            'pinned_availability_zone': None,
+        }}
+        req = self._get_request(body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+
+        self.assertEqual(FAKE_UUID, res_dict['server']['id'])
+        self.assertEqual('new-name', res_dict['server']['name'])
+        self.assertIsNone(mock_reqspec.availability_zone)
+        mock_reqspec.save.assert_called_once()
+
+
 class ServersControllerTriggerCrashDumpTest(ControllerTest):
 
     def setUp(self):

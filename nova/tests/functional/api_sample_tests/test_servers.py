@@ -868,6 +868,22 @@ class ServersUpdateSampleJson294Test(ServersUpdateSampleJsonTest):
         self._verify_response('server-action-rebuild-resp', subs, resp, 202)
 
 
+class ServersUpdateSampleJson2104Test(ServersUpdateSampleJsonTest):
+    microversion = '2.104'
+    scenarios = [('v2_104', {'api_major_version': 'v2.1'})]
+    ADMIN_API = False
+
+    def test_update_server(self):
+        uuid = self._post_server()
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-req', subs)
+        self._verify_response('server-update-resp', subs, response, 200)
+
+
 class ServerSortKeysJsonTests(ServersSampleBase):
     sample_dir = 'servers-sort'
 

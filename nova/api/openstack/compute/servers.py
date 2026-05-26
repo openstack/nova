@@ -31,6 +31,7 @@ from nova.api.openstack.compute.schemas import servers as schema
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova import availability_zones as avail_zone
 from nova import block_device
 from nova.compute import api as compute
 from nova.compute import flavors
@@ -952,12 +953,13 @@ class ServersController(wsgi.Controller):
         else:
             self.compute_api.delete(context, instance)
 
-    @wsgi.expected_errors(404)
+    @wsgi.expected_errors((404, 409))
     @validation.schema(schema.update_v20, '2.0', '2.0')
     @validation.schema(schema.update, '2.1', '2.18')
     @validation.schema(schema.update_v219, '2.19', '2.89')
     @validation.schema(schema.update_v290, '2.90', '2.93')
-    @validation.schema(schema.update_v294, '2.94')
+    @validation.schema(schema.update_v294, '2.94', '2.103')
+    @validation.schema(schema.update_v2104, '2.104')
     @validation.response_body_schema(schema.update_response, '2.0', '2.8')
     @validation.response_body_schema(schema.update_response_v29, '2.9', '2.18')
     @validation.response_body_schema(schema.update_response_v219, '2.19', '2.25')  # noqa: E501
@@ -992,6 +994,42 @@ class ServersController(wsgi.Controller):
 
         if 'hostname' in server:
             update_dict['hostname'] = server['hostname']
+
+        if (api_version_request.is_supported(req, '2.104') and
+                'pinned_availability_zone' in server):
+            requested_az = server['pinned_availability_zone']
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                ctxt, instance.uuid)
+            current_pinned_az = request_spec.availability_zone
+
+            if requested_az is None:
+                if current_pinned_az is not None:
+                    request_spec.availability_zone = None
+                    request_spec.save()
+            else:
+                instance_az = (
+                    avail_zone.get_instance_availability_zone(
+                        ctxt, instance))
+                if current_pinned_az is not None:
+                    if requested_az != current_pinned_az:
+                        raise exc.HTTPConflict(
+                            explanation=_(
+                                "Cannot change pinned availability "
+                                "zone directly. Unpin first by "
+                                "setting pinned_availability_zone "
+                                "to null."))
+                elif requested_az != instance_az:
+                    raise exc.HTTPConflict(
+                        explanation=_(
+                            "Server can only be pinned to its "
+                            "current availability zone "
+                            "'%(current_az)s', but "
+                            "'%(requested_az)s' was requested."
+                        ) % {'current_az': instance_az,
+                             'requested_az': requested_az})
+                else:
+                    request_spec.availability_zone = requested_az
+                    request_spec.save()
 
         helpers.translate_attributes(helpers.UPDATE, server, update_dict)
 

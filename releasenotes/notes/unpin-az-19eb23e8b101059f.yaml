@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    A new microversion has been added to allow unpinning and re-pinning the
+    availability zone for an instance. By doing a ``PUT /servers/{server_id}``
+    containing a value for ``pinned_availability_zone``, a user can remove the
+    AZ or add it back. For re-pinning, only the current AZ of the instance is
+    allowed to be set (i.e. equal to the ``OS-EXT-AZ:availability_zone``)
+    value.
