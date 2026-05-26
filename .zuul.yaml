@@ -823,8 +823,6 @@
            # common jobs will be enough along with nova functional
            # and unit tests.
            irrelevant-files: *policies-irrelevant-files
-        - grenade-skip-level-always:
-            irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
@@ -856,8 +854,6 @@
               - ^nova/network/.*$
               - nova/virt/libvirt/vif.py
         - tempest-integrated-compute:
-            irrelevant-files: *policies-irrelevant-files
-        - grenade-skip-level-always:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
            irrelevant-files: *policies-irrelevant-files
