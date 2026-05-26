@@ -570,6 +570,7 @@ class LiveMigrationTask(base.TaskBase):
                         self.context, self.report_client,
                         self.instance.pci_requests.requests, provider_mapping)
             try:
+                self.limits = selection.limits
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host, provider_mapping)
             except (exception.Invalid, exception.MigrationPreCheckError) as e:
@@ -581,6 +582,7 @@ class LiveMigrationTask(base.TaskBase):
                 # those before moving on.
                 self._remove_host_allocations(selection.compute_node_uuid)
                 host = None
+                self.limits = None
         # TODO(artom) We should probably just return the whole selection object
         # at this point.
         return (selection.service_host, selection.nodename, selection.limits)
