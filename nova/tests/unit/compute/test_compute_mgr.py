@@ -5825,13 +5825,37 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         def do_test(detach_interface, update_instance_cache_with_nw_info):
             self.compute._process_instance_vif_deleted_event(
                 self.context, inst_obj, vif['id'])
-            update_instance_cache_with_nw_info.assert_called_once_with(
-                self.compute.network_api, self.context, inst_obj, nw_info=[])
+            update_instance_cache_with_nw_info.assert_not_called()
             detach_interface.assert_called_once_with(
                 self.context, inst_obj, vif)
             # LOG.log should have been called with a DEBUG level message.
             self.assertEqual(1, mock_log.call_count, mock_log.mock_calls)
             self.assertEqual(logging.DEBUG, mock_log.call_args[0][0])
+
+        do_test()
+
+    @mock.patch('nova.compute.manager.LOG.log')
+    def test_process_instance_vif_deleted_event_detach_failure_keeps_cache(
+            self, mock_log):
+        """The cached VIF is needed for a later instance delete to unplug."""
+        vif = fake_network_cache_model.new_vif()
+        nw_info = network_model.NetworkInfo([vif])
+        info_cache = objects.InstanceInfoCache(network_info=nw_info,
+                                               instance_uuid=uuids.instance)
+        inst_obj = objects.Instance(id=3, uuid=uuids.instance,
+                                    info_cache=info_cache)
+
+        @mock.patch.object(manager.neutron,
+                           'update_instance_cache_with_nw_info')
+        @mock.patch.object(self.compute.driver, 'detach_interface',
+                           side_effect=exception.HypervisorUnavailable())
+        def do_test(detach_interface, update_instance_cache_with_nw_info):
+            self.compute._process_instance_vif_deleted_event(
+                self.context, inst_obj, vif['id'])
+            update_instance_cache_with_nw_info.assert_not_called()
+            detach_interface.assert_called_once_with(
+                self.context, inst_obj, vif)
+            self.assertEqual(logging.WARNING, mock_log.call_args[0][0])
 
         do_test()
 
@@ -6156,11 +6180,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             get_instance_nw_info.assert_called_once_with(self.context,
                                                          instances[0],
                                                          refresh_vif_id='tag1')
-            update_instance_cache_with_nw_info.assert_called_once_with(
-                                                   self.compute.network_api,
-                                                   self.context,
-                                                   instances[1],
-                                                   nw_info=[vif1])
+            update_instance_cache_with_nw_info.assert_not_called()
             detach_interface.assert_called_once_with(self.context,
                                                      instances[1], vif2)
             _process_instance_event.assert_called_once_with(instances[2],

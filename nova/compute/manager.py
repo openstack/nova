@@ -11802,9 +11802,6 @@ class ComputeManager(manager.Manager):
                          'rp_uuid': rps,
                          'server_uuid': instance.uuid})
 
-                del network_info[index]
-                neutron.update_instance_cache_with_nw_info(
-                    self.network_api, context, instance, nw_info=network_info)
                 try:
                     self.driver.detach_interface(context, instance, vif)
                 except NotImplementedError:
@@ -11822,6 +11819,11 @@ class ComputeManager(manager.Manager):
                             "port_id=%(port_id)s, reason: %(msg)s",
                             {'port_id': deleted_vif_id, 'msg': ex},
                             instance=instance)
+                    break
+
+                del network_info[index]
+                neutron.update_instance_cache_with_nw_info(
+                    self.network_api, context, instance, nw_info=network_info)
                 break
 
     @wrap_instance_event(prefix='compute')
