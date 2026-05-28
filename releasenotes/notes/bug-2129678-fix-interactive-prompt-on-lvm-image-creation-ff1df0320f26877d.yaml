@@ -1,0 +1,17 @@
+---
+fixes:
+  - |
+    `Bug #2129678 <https://bugs.launchpad.net/nova/+bug/2129678>`_: Setting
+    ``volume_clear = none`` in `nova.conf`_ configures Nova to not clear a
+    deleted volume and to let a external tool to do so. By using this
+    configuration and LVM volume type, when a previous image is deleted and a
+    new one is created, the command ``lvcreate`` detects that a image still
+    exists and asks for interactively wipe the old image in order to create a
+    new one, which the default option is ``no``, e.g., to abort the operation.
+    If a user is creating a new virtual machine this leads to an error and the
+    VM is not created.
+
+    This patch addresses this by adding the ``-y`` flag, which runs
+    ``lvcreate`` in non-interactive mode with the default option being ``yes``.
+
+    .. _nova.conf: https://docs.openstack.org/nova/latest/configuration/config.html#libvirt.volume_clear

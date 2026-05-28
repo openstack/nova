@@ -49,16 +49,26 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_lvcreate_simple(self, mock_execute):
-        nova.privsep.fs.lvcreate(1024, 'lv', 'vg')
-        mock_execute.assert_called_with('lvcreate', '-L', '1024b', '-n', 'lv',
-                                        'vg', attempts=3)
+        nova.privsep.fs.lvcreate(1024, "lv", "vg")
+        mock_execute.assert_called_with(
+            "lvcreate", "-y", "-L", "1024b", "-n", "lv", "vg", attempts=3
+        )
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_lvcreate_preallocated(self, mock_execute):
-        nova.privsep.fs.lvcreate(1024, 'lv', 'vg', preallocated=512)
-        mock_execute.assert_called_with('lvcreate', '-L', '512b',
-                                        '--virtualsize', '1024b',
-                                        '-n', 'lv', 'vg', attempts=3)
+        nova.privsep.fs.lvcreate(1024, "lv", "vg", preallocated=512)
+        mock_execute.assert_called_with(
+            "lvcreate",
+            "-y",
+            "-L",
+            "512b",
+            "--virtualsize",
+            "1024b",
+            "-n",
+            "lv",
+            "vg",
+            attempts=3,
+        )
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_vginfo(self, mock_execute):

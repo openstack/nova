@@ -47,6 +47,8 @@ def umount(mountpoint):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def lvcreate(size, lv, vg, preallocated=None):
     cmd = ['lvcreate']
+    # Disable interactive prompt
+    cmd.extend(['-y'])
     if not preallocated:
         cmd.extend(['-L', '%db' % size])
     else:
