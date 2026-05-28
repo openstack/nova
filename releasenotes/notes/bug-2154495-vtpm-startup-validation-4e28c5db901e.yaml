@@ -1,0 +1,16 @@
+---
+fixes:
+  - |
+    Fixes `bug 2154495`_ by limiting vTPM and pCPU startup validation to the
+    libvirt driver. Drivers that cannot support vTPM, such as Ironic, no
+    longer inspect every local instance's flavor and image metadata during
+    ``nova-compute`` startup to check for persisted vTPM requests.
+
+    .. _bug 2154495: https://bugs.launchpad.net/nova/+bug/2154495
+other:
+  - |
+    The virt driver API has been extended with a new
+    ``process_instances_at_startup`` function. Drivers can optionally
+    override its default no-op implementation to process instances during
+    ``nova-compute`` startup and perform any driver-specific initialization
+    or validation they require.

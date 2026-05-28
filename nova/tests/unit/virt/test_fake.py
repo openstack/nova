@@ -13,6 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from nova import objects
 from nova import test
 from nova.virt import driver
 from nova.virt import fake
@@ -24,3 +25,11 @@ class FakeDriverTest(test.NoDBTestCase):
         baseinst = driver.ComputeDriver(None)
         inst = fake.FakeDriver(fake.FakeVirtAPI(), True)
         self.assertPublicAPISignatures(baseinst, inst)
+
+    def test_process_instances_at_startup(self):
+        instances = objects.InstanceList(objects=[])
+
+        result = driver.ComputeDriver(None).process_instances_at_startup(
+            None, instances)
+
+        self.assertIs(instances, result)

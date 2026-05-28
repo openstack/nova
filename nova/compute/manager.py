@@ -1066,111 +1066,6 @@ class ComputeManager(manager.Manager):
         # Delete the vTPM secret in the key manager service if needed.
         self._complete_deletion_vtpm(context, instance)
 
-    def _validate_pinning_configuration(self, instances):
-        if not self.driver.capabilities.get('supports_pcpus', False):
-            return
-
-        for instance in instances:
-            # ignore deleted instances
-            if instance.deleted:
-                continue
-
-            # if this is an unpinned instance and the host only has
-            # 'cpu_dedicated_set' configured, we need to tell the operator to
-            # correct their configuration
-            if not instance.numa_topology or (
-                instance.numa_topology.cpu_policy in (
-                    None, fields.CPUAllocationPolicy.SHARED
-                )
-            ):
-                # we don't need to check 'vcpu_pin_set' since it can't coexist
-                # alongside 'cpu_dedicated_set'
-                if (CONF.compute.cpu_dedicated_set and
-                        not CONF.compute.cpu_shared_set):
-                    msg = _("This host has unpinned instances but has no CPUs "
-                            "set aside for this purpose; configure '[compute] "
-                            "cpu_shared_set' instead of, or in addition to, "
-                            "'[compute] cpu_dedicated_set'")
-                    raise exception.InvalidConfiguration(msg)
-
-                continue
-
-            # ditto for pinned instances if only 'cpu_shared_set' is configured
-            if (CONF.compute.cpu_shared_set and
-                    not CONF.compute.cpu_dedicated_set and
-                    not CONF.vcpu_pin_set):
-                msg = _("This host has pinned instances but has no CPUs "
-                        "set aside for this purpose; configure '[compute] "
-                        "cpu_dedicated_set' instead of, or in addition to, "
-                        "'[compute] cpu_shared_set'.")
-                raise exception.InvalidConfiguration(msg)
-
-            # if this is a mixed instance with both pinned and unpinned CPUs,
-            # the host must have both 'cpu_dedicated_set' and 'cpu_shared_set'
-            # configured. check if 'cpu_shared_set' is set.
-            if (instance.numa_topology.cpu_policy ==
-                    fields.CPUAllocationPolicy.MIXED and
-                    not CONF.compute.cpu_shared_set):
-                msg = _("This host has mixed instance requesting both pinned "
-                        "and unpinned CPUs but hasn't set aside unpinned CPUs "
-                        "for this purpose; Configure "
-                        "'[compute] cpu_shared_set'.")
-                raise exception.InvalidConfiguration(msg)
-
-            # for mixed instance check if 'cpu_dedicated_set' is set.
-            if (instance.numa_topology.cpu_policy ==
-                    fields.CPUAllocationPolicy.MIXED and
-                    not CONF.compute.cpu_dedicated_set):
-                msg = _("This host has mixed instance requesting both pinned "
-                        "and unpinned CPUs but hasn't set aside pinned CPUs "
-                        "for this purpose; Configure "
-                        "'[compute] cpu_dedicated_set'")
-                raise exception.InvalidConfiguration(msg)
-
-            # also check to make sure the operator hasn't accidentally
-            # dropped some cores that instances are currently using
-            available_dedicated_cpus = (hardware.get_vcpu_pin_set() or
-                                        hardware.get_cpu_dedicated_set())
-            pinned_cpus = instance.numa_topology.cpu_pinning
-            if available_dedicated_cpus and (
-                    pinned_cpus - available_dedicated_cpus):
-                # we can't raise an exception because of bug #1289064,
-                # which meant we didn't recalculate CPU pinning information
-                # when we live migrated a pinned instance
-                LOG.warning(
-                    "Instance is pinned to host CPUs %(cpus)s "
-                    "but one or more of these CPUs are not included in "
-                    "either '[compute] cpu_dedicated_set' or "
-                    "'vcpu_pin_set'; you should update these "
-                    "configuration options to include the missing CPUs "
-                    "or rebuild or cold migrate this instance.",
-                    {'cpus': list(pinned_cpus)},
-                    instance=instance)
-
-    def _validate_vtpm_configuration(self, instances):
-        if self.driver.capabilities.get('supports_vtpm', False):
-            return
-
-        total_instances = len(instances)
-        for i, instance in enumerate(instances):
-            if instance.deleted:
-                continue
-
-            LOG.debug('Checking vTPM constraint for instance %d/%d: %s',
-                      i + 1, total_instances, instance.uuid)
-
-            # NOTE(stephenfin): We don't have an attribute on the instance to
-            # check for this, so we need to inspect the flavor/image metadata
-            if hardware.get_vtpm_constraint(
-                instance.flavor, instance.image_meta,
-            ):
-                msg = _(
-                    'This host has instances with the vTPM feature enabled, '
-                    'but the host is not correctly configured; enable '
-                    'vTPM support.'
-                )
-                raise exception.InvalidConfiguration(msg)
-
     def _reset_live_migration(self, context, instance):
         migration = None
         try:
@@ -1795,31 +1690,38 @@ class ComputeManager(manager.Manager):
 
         self.init_virt_events()
 
-        self._validate_pinning_configuration(instances)
-        self._validate_vtpm_configuration(instances)
-
-        # NOTE(gibi): If ironic and vcenter virt driver slow start time
-        # becomes problematic here then we should consider adding a config
-        # option or a driver flag to tell us if we should thread
-        # _destroy_evacuated_instances and
-        # _error_out_instances_whose_build_was_interrupted out in the
-        # background on startup
+        # NOTE(gibi): Evacuation cleanup is skipped for drivers that do not
+        # support evacuation. If generic interrupted-build cleanup becomes a
+        # demonstrated startup bottleneck, it could be moved to background
+        # processing separately.
         try:
-            # checking that instance was not already evacuated to other host
-            evacuated_instances = self._destroy_evacuated_instances(
-                context, nodes_by_uuid)
+            evacuated_instances = {}
+            if self.driver.capabilities.get('supports_evacuate', False):
+                # Check that instances were not already evacuated to another
+                # host before asking the driver to process their state.
+                evacuated_instances = self._destroy_evacuated_instances(
+                    context, nodes_by_uuid)
 
-            # Initialise instances on the host that are not evacuating
-            for instance in instances:
-                if instance.uuid not in evacuated_instances:
-                    self._init_instance(context, instance)
+            # Allow the virt driver to validate and normalize the persisted
+            # state of local instances before recovering them. This must stay
+            # after the host rename check as drivers may mutate instance
+            # records.
+            instances_to_process = objects.InstanceList(
+                context, objects=[
+                    instance for instance in instances
+                    if instance.uuid not in evacuated_instances])
+            instances_to_process = self.driver.process_instances_at_startup(
+                context, instances_to_process)
 
-            # NOTE(gibi): collect all the instance uuids that is in some way
-            # was already handled above. Either by init_instance or by
-            # _destroy_evacuated_instances. This way we can limit the scope of
-            # the _error_out_instances_whose_build_was_interrupted call to look
-            # only for instances that have allocations on this node and not
-            # handled by the above calls.
+            # Initialise instances on the host that are not evacuating.
+            for instance in instances_to_process:
+                self._init_instance(context, instance)
+
+            # NOTE(gibi): Collect all instance UUIDs that were handled above,
+            # either by init_instance or _destroy_evacuated_instances. This
+            # limits _error_out_instances_whose_build_was_interrupted to
+            # instances that have allocations on this node but were not
+            # handled above.
             already_handled = {instance.uuid for instance in instances}.union(
                 evacuated_instances)
             self._error_out_instances_whose_build_was_interrupted(

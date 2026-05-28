@@ -69,12 +69,9 @@ class FakeDriverVTPMStartupValidationTest(
 ):
     compute_driver = 'fake.SmallFakeDriver'
 
-    def test_incapable_driver_inspects_vtpm_config(self):
-        # FIXME(sean-k-mooney): This reproduces bug 2154495. Drivers that
-        # can never support vTPM should skip the startup vTPM validation, but
-        # today we still inspect each instance's flavor and image metadata.
+    def test_incapable_driver_skips_vtpm_config_inspection(self):
         self._test_compute_restart_vtpm_validation(
-            expected_supports_vtpm=False, expected_call_count=1)
+            expected_supports_vtpm=False, expected_call_count=0)
 
     def _start_compute_for_vtpm_test(self, hostname):
         return self._start_compute(hostname)

@@ -70,7 +70,6 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
-from nova.tests.unit.objects import test_instance_numa
 from nova import utils
 from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
 from nova.virt import driver as virt_driver
@@ -1091,25 +1090,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         @mock.patch.object(manager.ComputeManager,
                            '_error_out_instances_whose_build_was_interrupted')
         @mock.patch.object(fake_driver.FakeDriver, 'init_host')
+        @mock.patch.object(fake_driver.FakeDriver,
+                           'process_instances_at_startup')
         @mock.patch.object(objects.InstanceList, 'get_by_host')
         @mock.patch.object(context, 'get_admin_context')
         @mock.patch.object(manager.ComputeManager,
                            '_destroy_evacuated_instances')
-        @mock.patch.object(manager.ComputeManager,
-                          '_validate_pinning_configuration')
-        @mock.patch.object(manager.ComputeManager,
-                          '_validate_vtpm_configuration')
         @mock.patch.object(manager.ComputeManager, '_init_instance')
         @mock.patch.object(self.compute, '_update_scheduler_instance_info')
         def _do_mock_calls(mock_update_scheduler, mock_inst_init,
-                           mock_validate_vtpm, mock_validate_pinning,
                            mock_destroy, mock_admin_ctxt, mock_host_get,
-                           mock_init_host,
+                           mock_process_instances, mock_init_host,
                            mock_error_interrupted, mock_get_nodes,
                            mock_existing_node, mock_check_new):
             mock_admin_ctxt.return_value = self.context
             inst_list = _make_instance_list(startup_instances)
             mock_host_get.return_value = inst_list
+            mock_destroy.return_value = {}
+            mock_process_instances.return_value = inst_list
             our_node = objects.ComputeNode(
                 host=self.compute.host, uuid=uuids.our_node_uuid,
                 hypervisor_hostname='fake-node')
@@ -1119,8 +1117,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             mock_check_new.assert_called_once_with()
             mock_existing_node.assert_not_called()
-            mock_validate_pinning.assert_called_once_with(inst_list)
-            mock_validate_vtpm.assert_called_once_with(inst_list)
+            mock_process_instances.assert_called_once()
+            processed_instances = mock_process_instances.call_args.args[1]
+            self.assertEqual(list(inst_list), list(processed_instances))
+            self.assertIsNot(inst_list, processed_instances)
             mock_destroy.assert_called_once_with(
                 self.context, {uuids.our_node_uuid: our_node})
             mock_inst_init.assert_has_calls(
@@ -1145,17 +1145,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch('nova.compute.manager.ComputeManager._get_nodes')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_error_out_instances_whose_build_was_interrupted')
+    @mock.patch('nova.objects.MigrationList.get_by_filters',
+                new=mock.NonCallableMock())
     @mock.patch('nova.objects.InstanceList.get_by_host',
                 return_value=objects.InstanceList())
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_destroy_evacuated_instances')
     @mock.patch('nova.compute.manager.ComputeManager._init_instance',
                 mock.NonCallableMock())
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_update_scheduler_instance_info', mock.NonCallableMock())
-    def test_init_host_no_instances(
-            self, mock_destroy_evac_instances, mock_get_by_host,
-            mock_error_interrupted, mock_get_nodes):
+    def test_init_host_no_instances_without_evacuation_support(
+            self, mock_get_by_host, mock_error_interrupted, mock_get_nodes):
         """Tests the case that init_host runs and there are no instances
         on this host yet (it's brand new). Uses NonCallableMock for the
         methods we assert should not be called.
@@ -1165,12 +1164,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 uuid=uuids.cn_uuid1, hypervisor_hostname='node1',
                 host=self.compute.host)}
         self.compute.driver = mock.Mock()
+        self.compute.driver.capabilities = {'supports_evacuate': False}
+        self.compute.driver.process_instances_at_startup.side_effect = (
+            lambda context, instances: instances)
         mock_insts = mock.Mock(return_value=[])
         mock_init_host = mock.Mock()
         self.compute.driver.attach_mock(mock_insts, "list_instance_uuids")
         self.compute.driver.attach_mock(mock_init_host, "init_host")
-        self.compute.init_host(None)
+        with mock.patch.object(
+                self.compute, '_destroy_evacuated_instances',
+                wraps=self.compute._destroy_evacuated_instances
+        ) as mock_destroy_evac_instances:
+            self.compute.init_host(None)
 
+        mock_destroy_evac_instances.assert_not_called()
         mock_error_interrupted.assert_called_once_with(
             test.MatchType(nova.context.RequestContext), set(),
             mock_get_nodes.return_value.keys())
@@ -1211,6 +1218,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_cnlist_get.return_value = []
 
         with mock.patch.object(self.compute, 'driver') as mock_driver:
+            mock_driver.process_instances_at_startup.side_effect = (
+                lambda context, instances: instances)
             self.compute.init_host(None)
             mock_driver.init_host.assert_called_once_with(host='fake-mini')
 
@@ -1330,15 +1339,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch.object(context, 'get_admin_context')
     @mock.patch.object(objects.InstanceList, 'get_by_host')
     @mock.patch.object(fake_driver.FakeDriver, 'init_host')
+    @mock.patch.object(fake_driver.FakeDriver,
+                       'process_instances_at_startup')
     @mock.patch('nova.compute.manager.ComputeManager._init_instance')
     @mock.patch('nova.compute.manager.ComputeManager.'
-                  '_destroy_evacuated_instances')
-    def test_init_host_with_in_progress_evacuations(self, mock_destroy_evac,
-            mock_init_instance, mock_init_host, mock_host_get,
-            mock_admin_ctxt, mock_error_interrupted, mock_get_nodes):
-        """Assert that init_instance is not called for instances that are
-           evacuating from the host during init_host.
-        """
+                '_destroy_evacuated_instances')
+    @mock.patch.object(manager.ComputeManager, 'init_virt_events')
+    @mock.patch.object(manager.ComputeManager,
+                       '_update_scheduler_instance_info')
+    def test_init_host_with_in_progress_evacuations(
+            self, mock_update_scheduler, mock_init_virt, mock_destroy_evac,
+            mock_init_instance, mock_process_instances, mock_init_host,
+            mock_host_get, mock_admin_ctxt, mock_error_interrupted,
+            mock_get_nodes):
+        """Assert that evacuated instances are skipped during startup."""
         active_instance = fake_instance.fake_instance_obj(
             self.context, host=self.compute.host, uuid=uuids.active_instance)
         active_instance.system_metadata = {}
@@ -1347,12 +1361,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         evacuating_instance.system_metadata = {}
         instance_list = objects.InstanceList(self.context,
             objects=[active_instance, evacuating_instance])
+        call_order = []
 
         mock_host_get.return_value = instance_list
         mock_admin_ctxt.return_value = self.context
-        mock_destroy_evac.return_value = {
-            uuids.evac_instance: evacuating_instance
-        }
+        mock_init_virt.side_effect = lambda: call_order.append('events')
+        mock_destroy_evac.side_effect = lambda *args: (
+            call_order.append('evacuations') or {
+                uuids.evac_instance: evacuating_instance})
+        mock_process_instances.side_effect = lambda context, instances: (
+            call_order.append('process') or instances)
+        mock_init_instance.side_effect = lambda *args: call_order.append(
+            'init_instance')
         our_node = objects.ComputeNode(
             host=self.compute.host, uuid=uuids.our_node_uuid,
             hypervisor_hostname='fake-node')
@@ -1360,11 +1380,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         self.compute.init_host(None)
 
+        self.assertEqual(
+            ['events', 'evacuations', 'process', 'init_instance'], call_order)
+        mock_process_instances.assert_called_once()
+        processed_instances = mock_process_instances.call_args.args[1]
+        self.assertEqual([active_instance], list(processed_instances))
         mock_init_instance.assert_called_once_with(
             self.context, active_instance)
         mock_error_interrupted.assert_called_once_with(
             self.context, {active_instance.uuid, evacuating_instance.uuid},
             mock_get_nodes.return_value.keys())
+        mock_update_scheduler.assert_called_once_with(
+            self.context, instance_list)
 
     @mock.patch.object(objects.ComputeNodeList, 'get_all_by_uuids')
     @mock.patch.object(fake_driver.FakeDriver, 'get_nodenames_by_uuid')
@@ -1459,36 +1486,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                        new=mock.Mock())
     @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
                 new=mock.Mock(return_value=[mock.MagicMock()]))
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_validate_pinning_configuration')
-    def test_init_host_pinning_configuration_validation_failure(self,
-            mock_validate_pinning):
-        """Test that we fail init_host if the pinning configuration check
-        fails.
-        """
-        mock_validate_pinning.side_effect = exception.InvalidConfiguration
+    @mock.patch.object(fake_driver.FakeDriver,
+                       'process_instances_at_startup')
+    def test_init_host_startup_instance_processing_failure(self,
+            mock_process_instances):
+        """A driver startup-processing failure still synchronizes instances."""
+        instances = objects.InstanceList(
+            objects=[objects.Instance(uuid=uuids.instance)])
+        objects.InstanceList.get_by_host.return_value = instances
+        self.compute.driver.capabilities = {'supports_evacuate': False}
+        mock_process_instances.side_effect = exception.InvalidConfiguration
 
-        self.assertRaises(exception.InvalidConfiguration,
-                          self.compute.init_host, None)
+        with mock.patch.object(self.compute, '_get_nodes', return_value={}):
+            with mock.patch.object(
+                    self.compute,
+                    '_update_scheduler_instance_info') as mock_sync:
+                self.assertRaises(exception.InvalidConfiguration,
+                                  self.compute.init_host, None)
 
-    @mock.patch.object(objects.InstanceList, 'get_by_host',
-                       new=mock.Mock())
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_validate_pinning_configuration',
-                new=mock.Mock())
-    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
-                new=mock.Mock(return_value=[mock.MagicMock()]))
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_validate_vtpm_configuration')
-    def test_init_host_vtpm_configuration_validation_failure(self,
-            mock_validate_vtpm):
-        """Test that we fail init_host if the vTPM configuration check
-        fails.
-        """
-        mock_validate_vtpm.side_effect = exception.InvalidConfiguration
-
-        self.assertRaises(exception.InvalidConfiguration,
-                          self.compute.init_host, None)
+        mock_sync.assert_called_once_with(
+            test.MatchType(nova.context.RequestContext), instances)
 
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
@@ -1635,174 +1652,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "support such change.",
                 instance=instance
             )
-
-    def _test__validate_pinning_configuration(self, supports_pcpus=True):
-        instance_1 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance_1)
-        instance_2 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance_2)
-        instance_3 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance_3)
-        instance_4 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance_4)
-        instance_5 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance_5)
-
-        instance_1.numa_topology = None
-
-        numa_wo_pinning = test_instance_numa.get_fake_obj_numa_topology(
-            self.context)
-        numa_wo_pinning.cells[0].pcpuset = set()
-        numa_wo_pinning.cells[1].pcpuset = set()
-        instance_2.numa_topology = numa_wo_pinning
-
-        numa_w_pinning = test_instance_numa.get_fake_obj_numa_topology(
-            self.context)
-        numa_w_pinning.cells[0].pin_vcpus((1, 10), (2, 11))
-        numa_w_pinning.cells[0].cpuset = set()
-        numa_w_pinning.cells[0].cpu_policy = (
-            fields.CPUAllocationPolicy.DEDICATED)
-        numa_w_pinning.cells[1].pin_vcpus((3, 0), (4, 1))
-        numa_w_pinning.cells[1].cpuset = set()
-        numa_w_pinning.cells[1].cpu_policy = (
-            fields.CPUAllocationPolicy.DEDICATED)
-        instance_3.numa_topology = numa_w_pinning
-
-        instance_4.deleted = True
-
-        numa_mixed_pinning = test_instance_numa.get_fake_obj_numa_topology(
-            self.context)
-        numa_mixed_pinning.cells[0].cpuset = set([5, 6])
-        numa_mixed_pinning.cells[0].pin_vcpus((1, 8), (2, 9))
-        numa_mixed_pinning.cells[0].cpu_policy = (
-            fields.CPUAllocationPolicy.MIXED)
-        numa_mixed_pinning.cells[1].cpuset = set([7, 8])
-        numa_mixed_pinning.cells[1].pin_vcpus((3, 10), (4, 11))
-        numa_mixed_pinning.cells[1].cpu_policy = (
-            fields.CPUAllocationPolicy.MIXED)
-        instance_5.numa_topology = numa_mixed_pinning
-        instance_5.vcpus = 8
-
-        instances = objects.InstanceList(objects=[
-            instance_1, instance_2, instance_3, instance_4, instance_5])
-
-        with mock.patch.dict(self.compute.driver.capabilities,
-                             supports_pcpus=supports_pcpus):
-            self.compute._validate_pinning_configuration(instances)
-
-    def test__validate_pinning_configuration_valid_config(self):
-        """Test that configuring proper 'cpu_dedicated_set' and
-        'cpu_shared_set', all tests passed.
-        """
-        self.flags(cpu_shared_set='2-7', cpu_dedicated_set='0-1,8-15',
-                   group='compute')
-
-        self._test__validate_pinning_configuration()
-
-    def test__validate_pinning_configuration_invalid_unpinned_config(self):
-        """Test that configuring only 'cpu_dedicated_set' when there are
-        unpinned instances on the host results in an error.
-        """
-        self.flags(cpu_dedicated_set='0-7', group='compute')
-
-        ex = self.assertRaises(
-            exception.InvalidConfiguration,
-            self._test__validate_pinning_configuration)
-        self.assertIn('This host has unpinned instances but has no CPUs '
-                      'set aside for this purpose;',
-                      str(ex))
-
-    def test__validate_pinning_configuration_invalid_pinned_config(self):
-        """Test that configuring only 'cpu_shared_set' when there are pinned
-        instances on the host results in an error
-        """
-        self.flags(cpu_shared_set='0-7', group='compute')
-
-        ex = self.assertRaises(
-            exception.InvalidConfiguration,
-            self._test__validate_pinning_configuration)
-        self.assertIn('This host has pinned instances but has no CPUs '
-                      'set aside for this purpose;',
-                      str(ex))
-
-    @mock.patch.object(manager.LOG, 'warning')
-    def test__validate_pinning_configuration_warning(self, mock_log):
-        """Test that configuring 'cpu_dedicated_set' such that some pinned
-        cores of the instance are outside the range it specifies results in a
-        warning.
-        """
-        self.flags(cpu_shared_set='0-7', cpu_dedicated_set='8-15',
-                   group='compute')
-
-        self._test__validate_pinning_configuration()
-
-        self.assertEqual(1, mock_log.call_count)
-        self.assertIn('Instance is pinned to host CPUs %(cpus)s '
-                      'but one or more of these CPUs are not included in ',
-                      str(mock_log.call_args[0]))
-
-    def test__validate_pinning_configuration_no_config(self):
-        """Test that not configuring 'cpu_dedicated_set' or 'cpu_shared_set'
-         when there are mixed instances on the host results in an error.
-        """
-        ex = self.assertRaises(
-            exception.InvalidConfiguration,
-            self._test__validate_pinning_configuration)
-        self.assertIn("This host has mixed instance requesting both pinned "
-                      "and unpinned CPUs but hasn't set aside unpinned CPUs "
-                      "for this purpose;",
-                      str(ex))
-
-    def test__validate_pinning_configuration_not_supported(self):
-        """Test that the entire check is skipped if the driver doesn't even
-        support PCPUs.
-        """
-        self._test__validate_pinning_configuration(supports_pcpus=False)
-
-    def _test__validate_vtpm_configuration(self, supports_vtpm):
-        instance_1 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance_1)
-        instance_2 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance_2)
-        instance_3 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance_3)
-        image_meta = objects.ImageMeta.from_dict({})
-
-        instance_2.flavor.extra_specs = {'hw:tpm_version': '2.0'}
-
-        instance_3.deleted = True
-
-        instances = objects.InstanceList(objects=[
-            instance_1, instance_2, instance_3])
-
-        with test.nested(
-            mock.patch.dict(
-                self.compute.driver.capabilities, supports_vtpm=supports_vtpm,
-            ),
-            mock.patch.object(
-                objects.ImageMeta, 'from_instance', return_value=image_meta,
-            ),
-        ):
-            self.compute._validate_vtpm_configuration(instances)
-
-    def test__validate_vtpm_configuration_unsupported(self):
-        """Test that the check fails if the driver does not support vTPM and
-        instances request it.
-        """
-        ex = self.assertRaises(
-            exception.InvalidConfiguration,
-            self._test__validate_vtpm_configuration,
-            supports_vtpm=False)
-        self.assertIn(
-            'This host has instances with the vTPM feature enabled, but the '
-            'host is not correctly configured; ',
-            str(ex))
-
-    def test__validate_vtpm_configuration_supported(self):
-        """Test that the entire check is skipped if the driver supports
-        vTPM.
-        """
-        self._test__validate_vtpm_configuration(supports_vtpm=True)
 
     def test__get_power_state_InstanceNotFound(self):
         instance = fake_instance.fake_instance_obj(

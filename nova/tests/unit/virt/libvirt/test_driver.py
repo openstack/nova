@@ -91,6 +91,7 @@ from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_diagnostics
+from nova.tests.unit.objects import test_instance_numa
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
 from nova.tests.unit import utils as test_utils
@@ -751,6 +752,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.libvirt = self.useFixture(nova_fixtures.LibvirtFixture())
         self.cgroups = self.useFixture(nova_fixtures.CGroupsFixture())
+        self.stub_out(
+            'nova.objects.InstanceList.get_by_host',
+            lambda *a, **k: objects.InstanceList(objects=[]))
 
         # ensure tests perform the same on all host architectures; this is
         # already done by the fakelibvirt fixture but we want to change the
@@ -30579,13 +30583,178 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_execute.assert_called_once_with('qemu-img', 'rebase',
                                              '-b', '', 'disk')
 
+    def _test__validate_pinning_configuration(self, supports_pcpus=True):
+        instance_1 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_1)
+        instance_2 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_2)
+        instance_3 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_3)
+        instance_4 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_4)
+        instance_5 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_5)
+
+        instance_1.numa_topology = None
+
+        numa_wo_pinning = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
+        numa_wo_pinning.cells[0].pcpuset = set()
+        numa_wo_pinning.cells[1].pcpuset = set()
+        instance_2.numa_topology = numa_wo_pinning
+
+        numa_w_pinning = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
+        numa_w_pinning.cells[0].pin_vcpus((1, 10), (2, 11))
+        numa_w_pinning.cells[0].cpuset = set()
+        numa_w_pinning.cells[0].cpu_policy = (
+            fields.CPUAllocationPolicy.DEDICATED)
+        numa_w_pinning.cells[1].pin_vcpus((3, 0), (4, 1))
+        numa_w_pinning.cells[1].cpuset = set()
+        numa_w_pinning.cells[1].cpu_policy = (
+            fields.CPUAllocationPolicy.DEDICATED)
+        instance_3.numa_topology = numa_w_pinning
+
+        instance_4.deleted = True
+
+        numa_mixed_pinning = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
+        numa_mixed_pinning.cells[0].cpuset = set([5, 6])
+        numa_mixed_pinning.cells[0].pin_vcpus((1, 8), (2, 9))
+        numa_mixed_pinning.cells[0].cpu_policy = (
+            fields.CPUAllocationPolicy.MIXED)
+        numa_mixed_pinning.cells[1].cpuset = set([7, 8])
+        numa_mixed_pinning.cells[1].pin_vcpus((3, 10), (4, 11))
+        numa_mixed_pinning.cells[1].cpu_policy = (
+            fields.CPUAllocationPolicy.MIXED)
+        instance_5.numa_topology = numa_mixed_pinning
+        instance_5.vcpus = 8
+
+        instances = objects.InstanceList(objects=[
+            instance_1, instance_2, instance_3, instance_4, instance_5])
+
+        with mock.patch.dict(self.drvr.capabilities,
+                             supports_pcpus=supports_pcpus):
+            self.drvr._validate_pinning_configuration(instances)
+
+    def test__validate_pinning_configuration_valid_config(self):
+        """Test that configuring proper 'cpu_dedicated_set' and
+        'cpu_shared_set', all tests passed.
+        """
+        self.flags(cpu_shared_set='2-7', cpu_dedicated_set='0-1,8-15',
+                   group='compute')
+
+        self._test__validate_pinning_configuration()
+
+    def test__validate_pinning_configuration_invalid_unpinned_config(self):
+        """Test that configuring only 'cpu_dedicated_set' when there are
+        unpinned instances on the host results in an error.
+        """
+        self.flags(cpu_dedicated_set='0-7', group='compute')
+
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_pinning_configuration)
+        self.assertIn('This host has unpinned instances but has no CPUs '
+                      'set aside for this purpose;',
+                      str(ex))
+
+    def test__validate_pinning_configuration_invalid_pinned_config(self):
+        """Test that configuring only 'cpu_shared_set' when there are pinned
+        instances on the host results in an error
+        """
+        self.flags(cpu_shared_set='0-7', group='compute')
+
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_pinning_configuration)
+        self.assertIn('This host has pinned instances but has no CPUs '
+                      'set aside for this purpose;',
+                      str(ex))
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test__validate_pinning_configuration_warning(self, mock_log):
+        """Test that configuring 'cpu_dedicated_set' such that some pinned
+        cores of the instance are outside the range it specifies results in a
+        warning.
+        """
+        self.flags(cpu_shared_set='0-7', cpu_dedicated_set='8-15',
+                   group='compute')
+
+        self._test__validate_pinning_configuration()
+
+        self.assertEqual(1, mock_log.call_count)
+        self.assertIn('Instance is pinned to host CPUs %(cpus)s '
+                      'but one or more of these CPUs are not included in ',
+                      str(mock_log.call_args[0]))
+
+    def test__validate_pinning_configuration_no_config(self):
+        """Test that not configuring 'cpu_dedicated_set' or 'cpu_shared_set'
+         when there are mixed instances on the host results in an error.
+        """
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_pinning_configuration)
+        self.assertIn("This host has mixed instance requesting both pinned "
+                      "and unpinned CPUs but hasn't set aside unpinned CPUs "
+                      "for this purpose;",
+                      str(ex))
+
+    def test__validate_pinning_configuration_not_supported(self):
+        """Test that the entire check is skipped if the driver doesn't even
+        support PCPUs.
+        """
+        self._test__validate_pinning_configuration(supports_pcpus=False)
+
+    def test_process_instances_at_startup(self):
+        instances = objects.InstanceList(objects=[])
+
+        with test.nested(
+            mock.patch.object(self.drvr, '_validate_pinning_configuration'),
+            mock.patch.object(self.drvr, '_validate_vtpm_configuration'),
+            mock.patch.object(
+                self.drvr, '_register_all_undefined_instance_details'),
+            mock.patch.object(objects.InstanceList, 'get_by_host'),
+        ) as (mock_pinning, mock_vtpm, mock_register, mock_get_by_host):
+            result = self.drvr.process_instances_at_startup(
+                self.context, instances)
+
+        self.assertIs(instances, result)
+        mock_pinning.assert_called_once_with(instances)
+        mock_vtpm.assert_called_once_with(instances)
+        mock_register.assert_called_once_with(self.context, instances)
+        mock_get_by_host.assert_not_called()
+
+    def test_validate_vtpm_configuration_enabled(self):
+        self.flags(swtpm_enabled=True, group='libvirt')
+        instances = objects.InstanceList(objects=[
+            self._create_instance(
+                params={'flavor': {'extra_specs': {'hw:tpm_version': '2.0'}}}
+            )
+        ])
+
+        with mock.patch.object(hardware, 'get_vtpm_constraint') as mock_vtpm:
+            self.drvr._validate_vtpm_configuration(instances)
+
+        mock_vtpm.assert_not_called()
+
+    def test_validate_vtpm_configuration_disabled(self):
+        instance = self._create_instance(
+            params={'flavor': {'extra_specs': {'hw:tpm_version': '2.0'}}})
+        instances = objects.InstanceList(objects=[instance])
+
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self.drvr._validate_vtpm_configuration,
+            instances)
+        self.assertIn(
+            'This host has instances with the vTPM feature enabled, but the '
+            'host is not correctly configured; ',
+            str(ex))
+
     @mock.patch('nova.objects.instance.Instance.save')
-    @mock.patch('nova.objects.instance.InstanceList.get_by_host')
-    @mock.patch('nova.virt.libvirt.host.Host.get_hostname',
-        new=mock.Mock(return_value=mock.sentinel.hostname))
-    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
     def test_register_machine_type_already_registered_image_metadata(
-        self, mock_get_by_host, mock_instance_save,
+        self, mock_instance_save,
     ):
         instance = self._create_instance(
             params={
@@ -30594,14 +30763,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 }
             }
         )
-        mock_get_by_host.return_value = [instance]
+        instances = objects.InstanceList(objects=[instance])
 
         # We only care about hw_machine_type for this test
         with mock.patch(
             'nova.virt.libvirt.driver.REGISTER_IMAGE_PROPERTY_DEFAULTS',
             ['hw_machine_type']
         ):
-            self.drvr._register_all_undefined_instance_details()
+            self.drvr._register_all_undefined_instance_details(
+                self.context, instances)
 
         # Assert that we don't overwrite the existing type
         self.assertEqual(
@@ -30615,23 +30785,19 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_instance_save.assert_not_called()
 
     @mock.patch('nova.objects.instance.Instance.save')
-    @mock.patch('nova.objects.instance.InstanceList.get_by_host')
     @mock.patch('nova.virt.libvirt.utils.get_machine_type',
         new=mock.Mock(return_value='conf_type'))
-    @mock.patch('nova.virt.libvirt.host.Host.get_hostname', new=mock.Mock())
-    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
-    def test_register_machine_type(
-        self, mock_get_by_host, mock_instance_save,
-    ):
+    def test_register_machine_type(self, mock_instance_save):
         instance = self._create_instance()
-        mock_get_by_host.return_value = [instance]
+        instances = objects.InstanceList(objects=[instance])
 
         # We only care about hw_machine_type for this test
         with mock.patch(
             'nova.virt.libvirt.driver.REGISTER_IMAGE_PROPERTY_DEFAULTS',
             ['hw_machine_type']
         ):
-            self.drvr._register_all_undefined_instance_details()
+            self.drvr._register_all_undefined_instance_details(
+                self.context, instances)
 
         mock_instance_save.assert_called_once()
         self.assertEqual(
@@ -30644,13 +30810,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         )
 
     @mock.patch('nova.virt.libvirt.driver.LOG.exception')
-    @mock.patch('nova.objects.instance.InstanceList.get_by_host')
-    @mock.patch('nova.virt.libvirt.host.Host.get_hostname', new=mock.Mock())
     def test_register_all_undefined_details_unknown_failure(
-        self, mock_get_by_host, mock_log_exc
+        self, mock_log_exc
     ):
         instance = self._create_instance()
-        mock_get_by_host.return_value = [instance]
+        instances = objects.InstanceList(objects=[instance])
 
         # Assert that we swallow anything raised below us
         with mock.patch.object(
@@ -30658,7 +30822,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             '_register_undefined_instance_details',
             side_effect=test.TestingException()
         ):
-            self.drvr._register_all_undefined_instance_details()
+            self.drvr._register_all_undefined_instance_details(
+                self.context, instances)
 
         # Assert that we logged the failure
         self.assertEqual(1, mock_log_exc.call_count)
@@ -30671,13 +30836,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.virt.libvirt.host.Host.get_guest', new=mock.Mock())
     @mock.patch('nova.objects.block_device.BlockDeviceMappingList.'
                 'get_by_instance_uuid')
-    @mock.patch('nova.objects.instance.InstanceList.get_by_host')
-    @mock.patch('nova.virt.libvirt.host.Host.get_hostname', new=mock.Mock())
     def test_register_all_undefined_details_unknown_failure_finding_default(
-        self, mock_get_by_host, mock_get_bdms, mock_save, mock_log_exc
+        self, mock_get_bdms, mock_save, mock_log_exc
     ):
         instance = self._create_instance()
-        mock_get_by_host.return_value = [instance]
+        instances = objects.InstanceList(objects=[instance])
         mock_get_bdms.return_value = []
 
         # Assert that we swallow anything raised below us
@@ -30686,7 +30849,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             '_find_default_for_image_property',
             side_effect=test.TestingException()
         ):
-            self.drvr._register_all_undefined_instance_details()
+            self.drvr._register_all_undefined_instance_details(
+                self.context, instances)
 
         # Assert that we logged the failures (once for each unregistered
         # image property)
