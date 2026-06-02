@@ -3570,8 +3570,8 @@ class LimitsCommands():
                 s for s in flavor.extra_specs if s.startswith('resources:')]:
             resources.add('class:' + spec.lstrip('resources:'))
         try:
-            for resource in scheduler_utils.resources_for_limits(flavor,
-                                                                 is_bfv=False):
+            for resource in scheduler_utils.resources_from_flavor_and_bfv(
+                flavor, is_bfv=False):
                 resources.add('class:' + resource)
         except Exception as e:
             # This is to be resilient about potential extra spec translation

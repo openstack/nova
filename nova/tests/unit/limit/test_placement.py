@@ -163,8 +163,9 @@ class TestGetDeltas(test.NoDBTestCase):
     def test_get_deltas(self):
         flavor = objects.Flavor(memory_mb=100, vcpus=10, swap=0,
                                 ephemeral_gb=2, root_gb=5)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
 
-        deltas = placement_limits._get_deltas_by_flavor(flavor, False, 2)
+        deltas = placement_limits._get_deltas(req_spec, 2)
 
         expected = {'servers': 2,
                     'class:VCPU': 20, 'class:MEMORY_MB': 200,
@@ -174,8 +175,9 @@ class TestGetDeltas(test.NoDBTestCase):
     def test_get_deltas_recheck(self):
         flavor = objects.Flavor(memory_mb=100, vcpus=10, swap=0,
                                 ephemeral_gb=2, root_gb=5)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
 
-        deltas = placement_limits._get_deltas_by_flavor(flavor, False, 0)
+        deltas = placement_limits._get_deltas(req_spec, 0)
 
         expected = {'servers': 0,
                     'class:VCPU': 0, 'class:MEMORY_MB': 0,
@@ -184,12 +186,14 @@ class TestGetDeltas(test.NoDBTestCase):
 
     def test_get_deltas_check_baremetal(self):
         extra_specs = {"resources:VCPU": 0, "resources:MEMORY_MB": 0,
-                       "resources:DISK_GB": 0, "resources:CUSTOM_BAREMETAL": 1}
+                       "resources:DISK_GB": 0,
+                       "resources:CUSTOM_BAREMETAL": 1}
         flavor = objects.Flavor(memory_mb=100, vcpus=10, swap=0,
                                 ephemeral_gb=2, root_gb=5,
                                 extra_specs=extra_specs)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=True)
 
-        deltas = placement_limits._get_deltas_by_flavor(flavor, True, 1)
+        deltas = placement_limits._get_deltas(req_spec, 1)
 
         expected = {'servers': 1, 'class:CUSTOM_BAREMETAL': 1}
         self.assertDictEqual(expected, deltas)
@@ -197,13 +201,100 @@ class TestGetDeltas(test.NoDBTestCase):
     def test_get_deltas_check_bfv(self):
         flavor = objects.Flavor(memory_mb=100, vcpus=10, swap=0,
                                 ephemeral_gb=2, root_gb=5)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=True)
 
-        deltas = placement_limits._get_deltas_by_flavor(flavor, True, 2)
+        deltas = placement_limits._get_deltas(req_spec, 2)
 
         expected = {'servers': 2,
                     'class:VCPU': 20, 'class:MEMORY_MB': 200,
                     'class:DISK_GB': 4}
         self.assertDictEqual(expected, deltas)
+
+    def test_get_deltas_with_port_bandwidth_resources(self):
+        flavor = objects.Flavor(memory_mb=100, vcpus=1, swap=0,
+                                ephemeral_gb=0, root_gb=5)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        # Simulate a neutron port with bandwidth resource request
+        port_rg = objects.RequestGroup(
+            requester_id=uuids.port1,
+            resources={
+                'NET_BW_IGR_KILOBIT_PER_SEC': 10000,
+                'NET_BW_EGR_KILOBIT_PER_SEC': 10000,
+            })
+        req_spec.requested_resources = [port_rg]
+
+        deltas = placement_limits._get_deltas(req_spec, 1)
+
+        expected = {
+            'servers': 1,
+            'class:VCPU': 1, 'class:MEMORY_MB': 100,
+            'class:DISK_GB': 5,
+            'class:NET_BW_IGR_KILOBIT_PER_SEC': 10000,
+            'class:NET_BW_EGR_KILOBIT_PER_SEC': 10000,
+        }
+        self.assertDictEqual(expected, deltas)
+
+    def test_get_deltas_with_cyborg_device_profile(self):
+        flavor = objects.Flavor(memory_mb=100, vcpus=1, swap=0,
+                                ephemeral_gb=0, root_gb=5)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        # Simulate a cyborg device profile request group
+        dp_rg = objects.RequestGroup(
+            requester_id=uuids.device_profile, resources={'FPGA': 1})
+        req_spec.requested_resources = [dp_rg]
+
+        deltas = placement_limits._get_deltas(req_spec, 2)
+
+        expected = {
+            'servers': 2,
+            'class:VCPU': 2, 'class:MEMORY_MB': 200,
+            'class:DISK_GB': 10, 'class:FPGA': 2,
+        }
+        self.assertDictEqual(expected, deltas)
+
+    def test_get_deltas_with_empty_requested_resources(self):
+        flavor = objects.Flavor(memory_mb=100, vcpus=1, swap=0,
+                                ephemeral_gb=0, root_gb=5)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        req_spec.requested_resources = []
+
+        deltas = placement_limits._get_deltas(req_spec, 1)
+
+        expected = {
+            'servers': 1,
+            'class:VCPU': 1, 'class:MEMORY_MB': 100,
+            'class:DISK_GB': 5,
+        }
+        self.assertDictEqual(expected, deltas)
+
+    def test_get_deltas_with_mixed_resources(self):
+        flavor = objects.Flavor(memory_mb=100, vcpus=1, swap=0,
+                                ephemeral_gb=0, root_gb=5)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        # Simulate both port bandwidth and cyborg resources
+        port_rg = objects.RequestGroup(
+            requester_id=uuids.port1,
+            resources={'NET_BW_IGR_KILOBIT_PER_SEC': 5000})
+        dp_rg = objects.RequestGroup(
+            requester_id=uuids.device_profile, resources={'FPGA': 1})
+        req_spec.requested_resources = [port_rg, dp_rg]
+
+        deltas = placement_limits._get_deltas(req_spec, 3)
+
+        expected = {
+            'servers': 3,
+            'class:VCPU': 3, 'class:MEMORY_MB': 300,
+            'class:DISK_GB': 15,
+            'class:NET_BW_IGR_KILOBIT_PER_SEC': 15000,
+            'class:FPGA': 3,
+        }
+        self.assertDictEqual(expected, deltas)
+
+    def test_get_deltas_requires_flavor(self):
+        req_spec = mock.MagicMock()
+        req_spec.flavor = None
+        self.assertRaises(ValueError, placement_limits._get_deltas,
+                          req_spec, 1)
 
 
 class TestEnforce(test.NoDBTestCase):
@@ -215,20 +306,24 @@ class TestEnforce(test.NoDBTestCase):
         placement_limits._ENFORCER = mock.Mock(limit.Enforcer)
         self.flavor = objects.Flavor(memory_mb=100, vcpus=10, swap=0,
                                      ephemeral_gb=2, root_gb=5)
+        self.req_spec = objects.RequestSpec(flavor=self.flavor, is_bfv=False)
+        self.req_spec_bfv = objects.RequestSpec(
+            flavor=self.flavor, is_bfv=True)
 
-    def test_enforce_num_instances_and_flavor_disabled(self):
+    def test_enforce_num_instances_and_resources_disabled(self):
         self.flags(driver="nova.quota.NoopQuotaDriver", group="quota")
-        count = placement_limits.enforce_num_instances_and_flavor(
-            self.context, uuids.project_id, "flavor", False, 0, 42)
+        count = placement_limits.enforce_num_instances_and_resources(
+            self.context, uuids.project_id, "anything", 0, 42)
         self.assertEqual(42, count)
 
     @mock.patch('oslo_limit.limit.Enforcer')
-    def test_enforce_num_instances_and_flavor(self, mock_limit):
+    def test_enforce_num_instances_and_resources_with_request_spec(
+            self, mock_limit):
         mock_enforcer = mock.MagicMock()
         mock_limit.return_value = mock_enforcer
 
-        count = placement_limits.enforce_num_instances_and_flavor(
-            self.context, uuids.project_id, self.flavor, False, 0, 2)
+        count = placement_limits.enforce_num_instances_and_resources(
+            self.context, uuids.project_id, self.req_spec, 0, 2)
 
         self.assertEqual(2, count)
         mock_limit.assert_called_once_with(mock.ANY)
@@ -238,12 +333,12 @@ class TestEnforce(test.NoDBTestCase):
              'class:DISK_GB': 14})
 
     @mock.patch('oslo_limit.limit.Enforcer')
-    def test_enforce_num_instances_and_flavor_recheck(self, mock_limit):
+    def test_enforce_num_instances_and_resources_recheck(self, mock_limit):
         mock_enforcer = mock.MagicMock()
         mock_limit.return_value = mock_enforcer
 
-        count = placement_limits.enforce_num_instances_and_flavor(
-            self.context, uuids.project_id, self.flavor, False, 0, 0)
+        count = placement_limits.enforce_num_instances_and_resources(
+            self.context, uuids.project_id, self.req_spec, 0, 0)
 
         self.assertEqual(0, count)
         mock_limit.assert_called_once_with(mock.ANY)
@@ -253,7 +348,7 @@ class TestEnforce(test.NoDBTestCase):
              'class:DISK_GB': 0})
 
     @mock.patch('oslo_limit.limit.Enforcer')
-    def test_enforce_num_instances_and_flavor_retry(self, mock_limit):
+    def test_enforce_num_instances_and_resources_retry(self, mock_limit):
         mock_enforcer = mock.MagicMock()
         mock_limit.return_value = mock_enforcer
         over_limit_info_list = [
@@ -264,8 +359,8 @@ class TestEnforce(test.NoDBTestCase):
                 uuids.project_id, over_limit_info_list),
             None]
 
-        count = placement_limits.enforce_num_instances_and_flavor(
-            self.context, uuids.project_id, self.flavor, True, 0, 3)
+        count = placement_limits.enforce_num_instances_and_resources(
+            self.context, uuids.project_id, self.req_spec_bfv, 0, 3)
 
         self.assertEqual(2, count)
         self.assertEqual(2, mock_enforcer.enforce.call_count)
@@ -275,7 +370,7 @@ class TestEnforce(test.NoDBTestCase):
              'class:DISK_GB': 4})
 
     @mock.patch('oslo_limit.limit.Enforcer')
-    def test_enforce_num_instances_and_flavor_fails(self, mock_limit):
+    def test_enforce_num_instances_and_resources_fails(self, mock_limit):
         mock_enforcer = mock.MagicMock()
         mock_limit.return_value = mock_enforcer
         over_limit_info_list = [
@@ -290,14 +385,15 @@ class TestEnforce(test.NoDBTestCase):
         # TooManyInstances that the API knows how to handle
         e = self.assertRaises(
             exception.TooManyInstances,
-            placement_limits.enforce_num_instances_and_flavor, self.context,
-            uuids.project_id, self.flavor, True, 2, 4)
+            placement_limits.enforce_num_instances_and_resources,
+            self.context, uuids.project_id, self.req_spec_bfv, 2, 4)
 
         self.assertEqual(str(expected), str(e))
         self.assertEqual(3, mock_enforcer.enforce.call_count)
 
     @mock.patch('oslo_limit.limit.Enforcer')
-    def test_enforce_num_instances_and_flavor_placement_fail(self, mock_limit):
+    def test_enforce_num_instances_and_resources_placement_fail(
+            self, mock_limit):
         mock_enforcer = mock.MagicMock()
         mock_limit.return_value = mock_enforcer
         mock_enforcer.enforce.side_effect = exception.UsagesRetrievalFailed(
@@ -305,8 +401,8 @@ class TestEnforce(test.NoDBTestCase):
 
         e = self.assertRaises(
             exception.UsagesRetrievalFailed,
-            placement_limits.enforce_num_instances_and_flavor, self.context,
-            uuids.project, self.flavor, True, 0, 5)
+            placement_limits.enforce_num_instances_and_resources,
+            self.context, uuids.project, self.req_spec_bfv, 0, 5)
 
         expected = str(mock_enforcer.enforce.side_effect)
         self.assertEqual(expected, str(e))

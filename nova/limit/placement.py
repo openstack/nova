@@ -116,22 +116,27 @@ def _get_usage(
     return resource_counts
 
 
-def _get_deltas_by_flavor(
-    flavor: 'objects.Flavor', is_bfv: bool, count: int
+def _get_deltas(
+    request_spec: 'objects.RequestSpec', count: int
 ) -> dict[str, int]:
-    if flavor is None:
-        raise ValueError("flavor")
+    """Return quota delta dict for unified limits from a RequestSpec.
+
+    Uses :meth:`nova.scheduler.utils.ResourceRequest.from_request_spec` to
+    merge flavor resources with PCI request groups, neutron port bandwidth,
+    and cyborg device profile groups into placement resource classes.
+    """
+    if request_spec is None:
+        raise ValueError("request_spec")
+    if getattr(request_spec, 'flavor', None) is None:
+        raise ValueError("request_spec.flavor must be set")
     if count < 0:
         raise ValueError("count")
 
-    # NOTE(johngarbutt): this skips bfv, port, and cyborg resources
-    # but it still gives us better checks than before unified limits
-    # We need an instance in the DB to use the current is_bfv logic
-    # which doesn't work well for instances that don't yet have a uuid
-    deltas_from_flavor = utils.resources_for_limits(flavor, is_bfv)
+    res_req = utils.ResourceRequest.from_request_spec(request_spec)
+    deltas_from_spec = res_req.merged_resources()
 
     deltas = {"servers": count}
-    for resource, amount in deltas_from_flavor.items():
+    for resource, amount in deltas_from_spec.items():
         if amount != 0:
             deltas["class:%s" % resource] = amount * count
     return deltas
@@ -147,17 +152,34 @@ def _get_enforcer(
     return limit.Enforcer(callback)
 
 
-def enforce_num_instances_and_flavor(
+def enforce_num_instances_and_resources(
     context: 'nova.context.RequestContext',
     project_id: str,
-    flavor: 'objects.Flavor',
-    is_bfvm: bool,
+    request_spec: 'objects.RequestSpec',
     min_count: int,
     max_count: int,
     enforcer: limit.Enforcer | None = None,
     delta_updates: dict[str, int] | None = None,
 ) -> int:
-    """Return max instances possible, else raise TooManyInstances exception."""
+    """Enforce unified limits for all resources in a RequestSpec.
+
+    The request_spec should include the flavor plus any additional resource
+    groups (PCI, neutron port bandwidth, Cyborg device profile) so that quota
+    deltas cover every requested resource class.
+
+    :param context: The request context.
+    :param project_id: The project to enforce limits for.
+    :param request_spec: A RequestSpec populated with all requested resources.
+        Use scheduler_utils.request_spec_for_limits() to build one that
+        includes PCI, port, and Cyborg resources.
+    :param min_count: Minimum acceptable instance count.
+    :param max_count: Requested instance count (will be reduced on
+        over-limit).
+    :param enforcer: Optional pre-built oslo.limit Enforcer.
+    :param delta_updates: Optional extra deltas to merge.
+    :returns: The highest instance count that fits within limits.
+    :raises TooManyInstances: When even min_count exceeds limits.
+    """
     if not limit_utils.use_unified_limits():
         return max_count
 
@@ -167,7 +189,7 @@ def enforce_num_instances_and_flavor(
     if max_count < 0:
         raise ValueError("invalid max_count")
 
-    deltas = _get_deltas_by_flavor(flavor, is_bfvm, max_count)
+    deltas = _get_deltas(request_spec, max_count)
     if delta_updates:
         deltas.update(delta_updates)
 
@@ -181,8 +203,8 @@ def enforce_num_instances_and_flavor(
                 "Limit check failed with count %s retrying with count %s",
                 max_count, max_count - 1)
             try:
-                return enforce_num_instances_and_flavor(
-                    context, project_id, flavor, is_bfvm, min_count,
+                return enforce_num_instances_and_resources(
+                    context, project_id, request_spec, min_count,
                     max_count - 1, enforcer=enforcer)
             except ValueError:
                 # Copy the *original* exception message to a OverQuota to

@@ -1401,6 +1401,18 @@ class API:
                 'instance_az': instance_az, 'volume_az': volume_az}
             raise exception.MismatchVolumeAZException(reason=msg)
 
+    def _enforce_create_unified_limits(
+        self, context, flavor, is_bfv, port_resource_requests,
+        dp_request_groups, min_count, num_instances,
+    ):
+        if not limit_utils.use_unified_limits():
+            return num_instances
+
+        req_spec = scheduler_utils.request_spec_for_limits(
+            flavor, is_bfv, port_resource_requests, dp_request_groups)
+        return placement_limits.enforce_num_instances_and_resources(
+            context, context.project_id, req_spec, min_count, num_instances)
+
     def _provision_instances(
         self, context, flavor, min_count,
         max_count, base_options, boot_meta, security_groups,
@@ -1433,15 +1445,17 @@ class API:
             # If we have no BDMs, we're clearly not BFV
             is_bfv = False
 
-        # NOTE(johngarbutt) when unified limits not used, this just
-        #   returns num_instances back again
-        # NOTE: If we want to enforce quota on port or cyborg resources in the
-        # future, this enforce call will need to move after we have populated
-        # the RequestSpec with all of the requested resources and use the real
-        # RequestSpec to get the overall resource usage of the instance.
-        num_instances = placement_limits.enforce_num_instances_and_flavor(
-                context, context.project_id, flavor,
-                is_bfv, min_count, num_instances)
+        extra_specs = flavor.extra_specs
+        dp_name = extra_specs.get('accel:device_profile')
+        dp_request_groups = []
+        if dp_name:
+            dp_request_groups = cyborg.get_device_profile_request_groups(
+                context, dp_name)
+
+        port_resource_requests = base_options.get('port_resource_requests')
+        num_instances = self._enforce_create_unified_limits(
+            context, flavor, is_bfv, port_resource_requests,
+            dp_request_groups, min_count, num_instances)
 
         security_groups = security_group_api.populate_security_groups(
             security_groups)
@@ -1464,12 +1478,6 @@ class API:
             # base_options to match the volume zone.
             base_options['availability_zone'] = volume_az
         LOG.debug("Going to run %s instances...", num_instances)
-        extra_specs = flavor.extra_specs
-        dp_name = extra_specs.get('accel:device_profile')
-        dp_request_groups = []
-        if dp_name:
-            dp_request_groups = cyborg.get_device_profile_request_groups(
-                context, dp_name)
         try:
             for idx in range(num_instances):
                 # Create a uuid for the instance so we can store the
@@ -2810,8 +2818,9 @@ class API:
         compute_utils.check_num_instances_quota(context, flavor, 1, 1,
                 project_id=project_id, user_id=user_id)
         is_bfv = compute_utils.is_volume_backed_instance(context, instance)
-        placement_limits.enforce_num_instances_and_flavor(context, project_id,
-                                                         flavor, is_bfv, 1, 1)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=is_bfv)
+        placement_limits.enforce_num_instances_and_resources(
+            context, project_id, req_spec, 1, 1)
 
         self._record_action_start(context, instance, instance_actions.RESTORE)
 
@@ -3949,10 +3958,10 @@ class API:
         # But for revert resize, we are just removing claims in placement
         # so we can ignore the quota check
         if not is_revert:
-            placement_limits.enforce_num_instances_and_flavor(context,
-                                                              project_id,
-                                                              new_flavor,
-                                                              is_bfv, 1, 1)
+            req_spec = objects.RequestSpec(
+                flavor=new_flavor, is_bfv=is_bfv)
+            placement_limits.enforce_num_instances_and_resources(
+                context, project_id, req_spec, 1, 1)
 
         # Old quota system only looks at the change in size.
         # Deltas will be empty if the resize is not an upsize.
@@ -4684,8 +4693,8 @@ class API:
             check_user_id=instance.user_id,
         )
         # Do the same for unified limits.
-        placement_limits.enforce_num_instances_and_flavor(
-            context, context.project_id, instance.flavor, request_spec.is_bfv,
+        placement_limits.enforce_num_instances_and_resources(
+            context, context.project_id, request_spec,
             0, 0, delta_updates={'servers': 0})
 
     @block_extended_resource_request

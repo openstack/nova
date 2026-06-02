@@ -504,6 +504,9 @@ class RequestSpec(base.NovaObject):
         if not CONF.filter_scheduler.pci_in_placement:
             return False
 
+        if self.requested_resources is None:
+            self.requested_resources = []
+
         for pci_request in self.pci_requests.requests:
             if pci_request.source == objects.InstancePCIRequest.NEUTRON_PORT:
                 # TODO(gibi): Handle neutron based PCI requests here in a later

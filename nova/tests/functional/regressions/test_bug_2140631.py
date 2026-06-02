@@ -11,12 +11,10 @@
 #    under the License.
 """Regression test for bug 2140631.
 
-When using unified limits, the quota check does NOT include PCI device
-resource classes from the flavor's pci_passthrough:alias extra spec,
-neutron port bandwidth resources (NET_BW_IGR_KILOBIT_PER_SEC,
-NET_BW_EGR_KILOBIT_PER_SEC), or cyborg device profile resources (FPGA).
-This is because the RequestSpec used for limits is built from just the
-flavor without including these additional resource requests.
+When using unified limits, the quota check must include all resource
+classes: PCI device resources, neutron port bandwidth resources, and
+cyborg device profile resources. The fix passes a full RequestSpec
+through the enforcement chain so all requested resources are covered.
 
 https://bugs.launchpad.net/nova/+bug/2140631
 """
@@ -24,6 +22,7 @@ from oslo_limit import fixture as limit_fixture
 
 from nova.limit import local as local_limit
 from nova.tests.fixtures import libvirt as fakelibvirt
+from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import test_pci_in_placement
 from nova.tests.functional import test_servers
 from nova.tests.functional import test_servers_resource_request
@@ -37,6 +36,8 @@ class TestBug2140631PCI(test_pci_in_placement.PlacementPCIReportingTests):
     is enabled.
     """
 
+    # Override the base class PCI config so each test method can set its own
+    # device_spec and alias matching the specific resource_class under test.
     PCI_DEVICE_SPEC = []
     PCI_ALIAS = []
 
@@ -47,17 +48,14 @@ class TestBug2140631PCI(test_pci_in_placement.PlacementPCIReportingTests):
         # Enable unified limits quota driver
         self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
 
-    def test_pci_resource_class_limit_not_enforced(self):
-        """Test that PCI resource class limits are not enforced.
+    def test_pci_resource_class_limit_enforced(self):
+        """Test that PCI resource class limits are enforced.
 
         Scenario:
         1. Configure 2 PCI devices with resource class CUSTOM_GPU
         2. Set unified limit of 1 for class:CUSTOM_GPU
         3. Create flavor requesting 2 GPUs via pci_passthrough:alias
-        4. Attempt to create server
-
-        Expected (when fixed): 403 error mentioning class:CUSTOM_GPU
-        Current (buggy): Server succeeds because quota is not checked
+        4. Attempt to create server - should fail with 403
         """
         # Configure PCI devices with custom resource class
         device_spec = self._to_list_of_json_str([{
@@ -112,12 +110,14 @@ class TestBug2140631PCI(test_pci_in_placement.PlacementPCIReportingTests):
         extra_spec = {"pci_passthrough:alias": "a-gpu:2"}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
-        # BUG: This should fail with 403 (quota exceeded) but succeeds because
-        # the unified limits check does not include PCI resource classes.
-        server = self._create_server(flavor_id=flavor_id, networks=[])
-        self._wait_for_state_change(server, 'ACTIVE')
+        # Server creation should fail with 403 (quota exceeded)
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server,
+            flavor_id=flavor_id, networks=[])
+        self.assertEqual(403, e.response.status_code)
+        self.assertIn('class:CUSTOM_GPU', e.response.text)
 
-    def test_pci_resource_class_limit_not_enforced_multi(self):
+    def test_pci_resource_class_limit_enforced_multi(self):
         """Test PCI limits when multiple instances exceed quota.
 
         Scenario:
@@ -125,9 +125,6 @@ class TestBug2140631PCI(test_pci_in_placement.PlacementPCIReportingTests):
         2. Set project limit of 1 for the PCI resource class
         3. Create first server with 1 PCI device - succeeds
         4. Create second server with 1 PCI device - should fail with 403
-
-        Expected (when fixed): Second server rejected with 403
-        Current (buggy): Second server succeeds
         """
         # Configure 2 PCI devices with custom resource class
         device_spec = self._to_list_of_json_str([{
@@ -174,14 +171,15 @@ class TestBug2140631PCI(test_pci_in_placement.PlacementPCIReportingTests):
         # Verify 1 GPU is now in use
         self.assertPCIDeviceCounts('compute1', total=2, free=1)
 
-        # BUG: Second server should fail with 403 (quota exceeded) but
-        # succeeds because the unified limits check does not include PCI
-        # resource classes.
-        server2 = self._create_server(flavor_id=flavor_id, networks=[])
-        self._wait_for_state_change(server2, 'ACTIVE')
+        # Second server should fail with 403
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server,
+            flavor_id=flavor_id, networks=[])
+        self.assertEqual(403, e.response.status_code)
+        self.assertIn('class:CUSTOM_GPU', e.response.text)
 
-        # Both GPUs used - exceeds quota of 1
-        self.assertPCIDeviceCounts('compute1', total=2, free=0)
+        # Quota prevented second allocation
+        self.assertPCIDeviceCounts('compute1', total=2, free=1)
 
 
 class TestBug2140631Bandwidth(
@@ -199,8 +197,8 @@ class TestBug2140631Bandwidth(
         # Enable unified limits quota driver
         self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
 
-    def test_bandwidth_resource_limit_not_enforced(self):
-        """Test that bandwidth resource limits are not enforced.
+    def test_bandwidth_resource_limit_enforced(self):
+        """Test that bandwidth resource limits are enforced.
 
         Scenario:
         1. The base class sets up SRIOV networking RPs with bandwidth
@@ -208,10 +206,7 @@ class TestBug2140631Bandwidth(
         2. Set unified limit of 1 for NET_BW_IGR_KILOBIT_PER_SEC and
            NET_BW_EGR_KILOBIT_PER_SEC
         3. Create server with SRIOV port requesting 10000 each
-        4. Server succeeds despite exceeding the quota
-
-        Expected (when fixed): 403 error
-        Current (buggy): Server succeeds
+        4. Server should fail with 403 (quota exceeded)
         """
         # Set up unified limits - bandwidth set very low
         reglimits = {
@@ -234,12 +229,11 @@ class TestBug2140631Bandwidth(
 
         sriov_port = self.neutron.port_with_sriov_resource_request
 
-        # BUG: This should fail with 403 (quota exceeded) but succeeds because
-        # the unified limits check does not include port bandwidth resources.
-        server = self._create_server(
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server,
             flavor=self.flavor_with_group_policy,
             networks=[{'port': sriov_port['id']}])
-        self._wait_for_state_change(server, 'ACTIVE')
+        self.assertEqual(403, e.response.status_code)
 
 
 class TestBug2140631Cyborg(test_servers.AcceleratorServerBase):
@@ -254,19 +248,16 @@ class TestBug2140631Cyborg(test_servers.AcceleratorServerBase):
         # Enable unified limits quota driver
         self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
 
-    def test_cyborg_resource_limit_not_enforced(self):
-        """Test that cyborg resource limits are not enforced.
+    def test_cyborg_resource_limit_enforced(self):
+        """Test that cyborg resource limits are enforced.
 
         Scenario:
         1. The base class sets up a device RP with FPGA inventory (total=2)
            and CUSTOM_FAKE_DEVICE trait
         2. Set unified limit of 1 for class:FPGA
         3. Create first server with 1 FPGA - succeeds
-        4. Create second server with 1 FPGA - should fail with 403 but
-           succeeds (bug)
-
-        Expected (when fixed): Second server rejected with 403
-        Current (buggy): Second server succeeds
+        4. Create second server with 1 FPGA - should fail with 403 (quota
+           exceeded)
         """
         # Set up unified limits - FPGA limit is 1
         reglimits = {
@@ -289,18 +280,17 @@ class TestBug2140631Cyborg(test_servers.AcceleratorServerBase):
         # Create flavor with accelerator device profile
         flavor_id = self._create_acc_flavor()
 
-        # First server succeeds
+        # First server should succeed
         server1 = self._create_server(
             'accel_server1', flavor_id=flavor_id,
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none', expected_state='ACTIVE')
         self.assertEqual('ACTIVE', server1['status'])
 
-        # BUG: Second server should fail with 403 (quota exceeded) but
-        # succeeds because the unified limits check does not include cyborg
-        # resources.
-        server2 = self._create_server(
+        # Second server should fail with 403 (quota exceeded)
+        e = self.assertRaises(
+            client.OpenStackApiException, self._create_server,
             'accel_server2', flavor_id=flavor_id,
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            networks='none', expected_state='ACTIVE')
-        self.assertEqual('ACTIVE', server2['status'])
+            networks='none')
+        self.assertEqual(403, e.response.status_code)

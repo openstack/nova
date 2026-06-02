@@ -2912,7 +2912,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     'image'):
             self.assertIn(key, request_spec_dict)
 
-    @mock.patch.object(placement_limit, 'enforce_num_instances_and_flavor')
+    @mock.patch.object(placement_limit, 'enforce_num_instances_and_resources')
     @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     def test_schedule_and_build_over_quota_during_recheck_ul(self, mock_select,
@@ -2946,7 +2946,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.conductor.schedule_and_build_instances, **self.params)
 
         mock_enforce.assert_called_once_with(
-            self.params['context'], project_id, mock.ANY, False, 0, 0)
+            self.params['context'], project_id, mock.ANY, 0, 0)
 
         # Verify we set the instance to ERROR state and set the fault message.
         instances = objects.InstanceList.get_all(self.ctxt)
@@ -3053,7 +3053,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             instance.project_id, user_id=None,
             check_project_id=instance.project_id, check_user_id=None)
 
-    @mock.patch.object(placement_limit, 'enforce_num_instances_and_flavor')
+    @mock.patch.object(placement_limit, 'enforce_num_instances_and_resources')
     @mock.patch('nova.objects.quotas.Quotas.check_deltas', new=mock.Mock())
     def test_unshelve_over_quota_during_recheck_ul(self, mock_enforce):
         self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
@@ -3067,11 +3067,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         # Verify we called the quota check function with expected args.
         mock_enforce.assert_called_once_with(
-            self.context, instance.project_id, instance.flavor,
-            req_spec.is_bfv, 0, 0)
+            self.context, instance.project_id, req_spec, 0, 0)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.unshelve_instance')
-    @mock.patch.object(placement_limit, 'enforce_num_instances_and_flavor')
+    @mock.patch.object(placement_limit, 'enforce_num_instances_and_resources')
     @mock.patch('nova.objects.quotas.Quotas.check_deltas')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     @mock.patch('nova.objects.Instance.save', new=mock.Mock())
@@ -3104,7 +3103,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # check_deltas should not have been called
         mock_check.assert_not_called()
 
-        # Same for enforce_num_instances_and_flavor
+        # Same for enforce_num_instances_and_resources
         mock_enforce.assert_not_called()
 
         # We should have called the compute API unshelve()
