@@ -405,8 +405,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                        lambda *a, **kw: None)
         self.stub_out('nova.volume.cinder.API.check_availability_zone',
                        lambda *a, **kw: None)
-        self.stub_out('eventlet.greenthread.sleep',
-                       lambda *a, **kw: None)
+        self.useFixture(fixtures.NoSleepRetryDecoratorFixture())
 
         def store_cinfo(context, *args, **kwargs):
             self.cinfo = jsonutils.loads(args[-1].get('connection_info'))

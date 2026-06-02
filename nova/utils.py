@@ -32,7 +32,6 @@ import threading
 import time
 import typing as ty
 
-from eventlet import tpool
 import futurist
 from keystoneauth1 import loading as ks_loading
 import netaddr
@@ -95,6 +94,14 @@ def cooperative_yield():
     #  support.
     if not concurrency_mode_threading():
         time.sleep(0)  # noqa: N374
+
+
+def get_eventlet():
+    if concurrency_mode_threading():
+        return None
+
+    import eventlet  # noqa
+    return eventlet
 
 
 def destroy_default_executor():
@@ -1429,7 +1436,8 @@ def tpool_wrap(target, autowrap=()):
     if concurrency_mode_threading():
         return target
     else:
-        return tpool.Proxy(target, autowrap=autowrap)
+
+        return get_eventlet().tpool.Proxy(target, autowrap=autowrap)
 
 
 class StaticallyDelayingCancellableTaskExecutorWrapper:

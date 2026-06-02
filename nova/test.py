@@ -186,6 +186,8 @@ class TestCase(base.BaseTestCase):
         with fixtures.EnvironmentVariable('OS_LOG_CAPTURE', '0'):
             super(TestCase, self).setUp()
 
+        # TODO(gibi): reimplement it to selectively support eventlet and
+        # native threading as well
         self.useFixture(
             nova_fixtures.PropagateTestCaseIdToChildEventlets(self.id()))
 

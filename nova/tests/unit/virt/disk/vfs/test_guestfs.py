@@ -20,6 +20,7 @@ import fixtures
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.disk.vfs import fakeguestfs
+from nova import utils
 from nova.virt.disk.vfs import guestfs as vfsimpl
 from nova.virt.image import model as imgmodel
 
@@ -357,6 +358,10 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         """Asserts that we do not use an eventlet thread pool when guestfs
         debug logging is enabled.
         """
+        if utils.concurrency_mode_threading():
+            self.skipTest(
+                "In native threading mode this case cannot be tested.")
+
         # We can't actually mock guestfs.GuestFS because it's an optional
         # native package import. All we really care about here is that
         # eventlet isn't used.

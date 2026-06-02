@@ -36,7 +36,7 @@ def _monkey_patch():
     # patching.
     # NOTE(artom) eventlet processes environment variables at import-time.
     # as such any eventlet configuration should happen here if needed.
-    import eventlet
+    import eventlet  # noqa
     import sys
 
     # Note any modules with known monkey-patching issues which have been
@@ -112,43 +112,38 @@ def patch(backend='eventlet'):
                 "https://docs.openstack.org/nova/latest/admin/concurrency"
                 ".html")
     else:
+        # NOTE(gibi): We were asked not to monkey patch. Let's enforce it by
+        # removing the possibility to monkey_patch accidentally
+        poison_eventlet()
+
         # We asked not to monkey patch so we will run in native threading mode
         import oslo_service.backend as service
         # NOTE(gibi): This will raise if the backend is already initialized
         # with Eventlet
         service.init_backend(service.BackendType.THREADING)
 
-        # NOTE(gibi): We were asked not to monkey patch. Let's enforce it by
-        # removing the possibility to monkey_patch accidentally
-        poison_eventlet()
-
         from oslo_log import log as logging
         LOG = logging.getLogger(__name__)
         LOG.info("Service is starting with native threading.")
 
 
-def _poison(*args, **kwargs):
-    raise RuntimeError(
-        "The service is started with native threading via "
-        "OS_NOVA_DISABLE_EVENTLET_PATCHING set to '%s', but then the "
-        "service tried to call eventlet.monkey_patch(). This is a bug."
-        % os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', ''))
-
-
 def poison_eventlet():
-    import eventlet
-    eventlet.monkey_patch = _poison
-    eventlet.patcher.monkey_patch = _poison
+    import sys
 
-    # We want to have this but cannot have this yet as we still have common
-    # code that imports eventlet like nova.utils.tpool
-    #
-    # class PoisonEventletImport:
-    #     def find_spec(self, fullname, path, target=None):
-    #         if fullname.startswith('eventlet'):
-    #             raise ImportError(
-    #                 "The service started in threading mode so it should "
-    #                 "not import eventlet")
+    if 'eventlet' in sys.modules:
+        # We are too late, something imported eventlet already. Give up.
+        raise RuntimeError(
+            "The service is started with native threading via "
+            "OS_NOVA_DISABLE_EVENTLET_PATCHING set to '%s', but eventlet "
+            "library imported early preventing the service to forbid that "
+            "import. This is a bug."
+            % os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', ''))
 
-    # import sys
-    # sys.meta_path.insert(0, PoisonEventletImport())
+    class PoisonEventletImport:
+        def find_spec(self, fullname, path, target=None):
+            if fullname.startswith('eventlet'):
+                raise ImportError(
+                    "The service started in native threading mode so it "
+                    "should not import eventlet")
+
+    sys.meta_path.insert(0, PoisonEventletImport())

@@ -23,7 +23,6 @@ import collections
 import datetime
 from unittest import mock
 
-from eventlet import greenthread
 import os_resource_classes as orc
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel
@@ -299,8 +298,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                        'fake.FakeVim._check_session',
                        _fake_check_session)
 
-        with mock.patch.object(greenthread, 'sleep'):
-            self.conn = session.VMwareAPISession()
+        self.conn = session.VMwareAPISession()
         self.assertEqual(2, self.attempts)
 
     def _get_flavor_by_name(self, type):

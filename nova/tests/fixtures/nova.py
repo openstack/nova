@@ -17,7 +17,6 @@
 """Fixtures for Nova tests."""
 
 import collections
-import contextlib
 from contextlib import contextmanager
 import copy
 import functools
@@ -30,7 +29,6 @@ import traceback
 from unittest import mock
 import warnings
 
-import eventlet
 import fixtures
 import futurist
 from openstack.cloud import _utils
@@ -59,7 +57,6 @@ from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api
 from nova.db import migration
 from nova import exception
-from nova import monkey_patch
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
@@ -1293,6 +1290,7 @@ class IsolatedExecutorFixture(fixtures.Fixture):
                 # what we can do here.
                 pass
             else:
+                eventlet = utils.get_eventlet()
                 # kill all greenthreads in the pool before raising to prevent
                 # them from interfering with other tests.
                 for gt in list(executor._pool.coroutines_running):
@@ -1309,6 +1307,7 @@ class IsolatedExecutorFixture(fixtures.Fixture):
                 self._raise_on_green_pool(executor._pool)
 
     def _raise_on_green_pool(self, pool):
+        eventlet = utils.get_eventlet()
         if any(
                 isinstance(gt, eventlet.greenthread.GreenThread)
                 for gt in pool.coroutines_running
@@ -1880,6 +1879,12 @@ class PropagateTestCaseIdToChildEventlets(fixtures.Fixture):
     def setUp(self):
         super().setUp()
 
+        if utils.concurrency_mode_threading():
+            # TODO(gibi): reimplement this to native threading mode
+            return
+
+        eventlet = utils.get_eventlet()
+
         # set the id on the main eventlet
         c = eventlet.getcurrent()
         c.test_case_id = self.test_case_id
@@ -1942,10 +1947,14 @@ class ReaderWriterLock(lockutils.ReaderWriterLock):
     """
 
     def __init__(self, *a, **kw):
-        eventlet_patched = monkey_patch.is_patched()
-        mpatch = fixtures.MonkeyPatch(
-            'threading.current_thread', eventlet.getcurrent)
-        with mpatch if eventlet_patched else contextlib.ExitStack():
+        if not utils.concurrency_mode_threading():
+            eventlet = utils.get_eventlet()
+            mpatch = fixtures.MonkeyPatch(
+                'threading.current_thread', eventlet.getcurrent)
+            with mpatch:
+                super().__init__(*a, **kw)
+        else:
+            # in netive threading mode this fixture is no-op
             super().__init__(*a, **kw)
 
 

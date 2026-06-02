@@ -229,15 +229,17 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         project_id = '9b9e3c847e904b0686e8ffb20e4c6381'
         self.assertEqual('', utils.generate_hostid(None, project_id))
 
-    @mock.patch('nova.utils.concurrency_mode_threading', return_value=False)
-    @mock.patch('nova.utils.tpool.Proxy')
-    def test_tpool_wrap_eventlet(self, mock_tpool, mock_concurrency_mode):
+    def test_tpool_wrap_eventlet(self):
+        if utils.concurrency_mode_threading():
+            self.skipTest(
+                "In native threading mode this case cannot be tested.")
+
         mock_target = mock.MagicMock()
-        target = utils.tpool_wrap(mock_target)
+        with mock.patch('eventlet.tpool.Proxy') as mock_tpool:
+            target = utils.tpool_wrap(mock_target)
 
         mock_tpool.assert_called_once_with(mock_target, autowrap=())
         self.assertEqual(mock_tpool.return_value, target)
-        mock_concurrency_mode.assert_called_once_with()
 
     @mock.patch('nova.utils.concurrency_mode_threading', return_value=True)
     def test_tpool_wrap_threading(self, mock_concurrency_mode):
@@ -1411,9 +1413,10 @@ class ScatterGatherExecutorTestCase(test.NoDBTestCase):
             "nova.tests.unit.test_utils.ScatterGatherExecutor.*"
             "test_executor_is_named.cell_worker")
 
-    @mock.patch.object(
-        utils, 'concurrency_mode_threading', new=mock.Mock(return_value=False))
     def test_executor_type_eventlet(self):
+        if utils.concurrency_mode_threading():
+            self.skipTest("This test can only be run in eventlet mode.")
+
         executor = utils.get_scatter_gather_executor()
 
         self.assertEqual('GreenThreadPoolExecutor', type(executor).__name__)
@@ -1448,9 +1451,10 @@ class DefaultExecutorTestCase(test.NoDBTestCase):
             "nova.tests.unit.test_utils.DefaultExecutor.*"
             "test_executor_is_named.default")
 
-    @mock.patch.object(
-        utils, 'concurrency_mode_threading', new=mock.Mock(return_value=False))
     def test_executor_type_and_size_eventlet(self):
+        if utils.concurrency_mode_threading():
+            self.skipTest("This test can only be run in eventlet mode.")
+
         self.flags(default_green_pool_size=113)
         executor = utils._get_default_executor()
 
@@ -1709,22 +1713,32 @@ class OsloServiceBackendSelectionTestCase(test.NoDBTestCase):
         init_backend.assert_called_once_with(oslo_backend.BackendType.EVENTLET)
 
     @mock.patch('oslo_service.backend.init_backend')
-    @mock.patch.dict(os.environ, {"OS_NOVA_DISABLE_EVENTLET_PATCHING": "true"})
-    def test_threading_selected_monkey_patching_poisoned(self, init_backend):
-        monkey_patch.patch()
+    def test_threading_eventlet_poisoned(self, init_backend):
+        env = os.environ.get(
+            'OS_NOVA_DISABLE_EVENTLET_PATCHING', 'false').lower()
+        if env == 'false':
+            self.skipTest("This test can only be run in native threaded mode")
+
+        monkey_patch.patch(backend="threading")
 
         init_backend.assert_called_once_with(
             oslo_backend.BackendType.THREADING)
-        import eventlet
-        ex = self.assertRaises(RuntimeError, eventlet.monkey_patch)
+
+        def eventlet_import():
+            import eventlet  # noqa
+
+        ex = self.assertRaises(ImportError, eventlet_import)
         self.assertEqual(
-            "The service is started with native threading via "
-            "OS_NOVA_DISABLE_EVENTLET_PATCHING set to 'true', but then the "
-            "service tried to call eventlet.monkey_patch(). This is a bug.",
-            str(ex))
+            "The service started in native threading mode so it should not "
+            "import eventlet", str(ex))
 
     @mock.patch('oslo_service.backend.init_backend')
     def test_threading_selected_by_default(self, init_backend):
+        env = os.environ.get(
+            'OS_NOVA_DISABLE_EVENTLET_PATCHING', 'false').lower()
+        if env == 'false':
+            self.skipTest("This test can only be run in native threaded mode")
+
         with mock.patch.dict(os.environ):
             del os.environ["OS_NOVA_DISABLE_EVENTLET_PATCHING"]
             monkey_patch.patch(backend='threading')

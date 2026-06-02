@@ -18,7 +18,6 @@ import os
 import tempfile
 from unittest import mock
 
-import eventlet
 import fixtures
 
 from nova import test
@@ -325,10 +324,10 @@ class NbdTestCase(test.NoDBTestCase):
             n.get_dev()
             chosen_devices.append(n.device)
 
-        thread1 = eventlet.spawn(get_a_device)
-        thread2 = eventlet.spawn(get_a_device)
-        thread1.wait()
-        thread2.wait()
+        thread1 = utils.spawn(get_a_device)
+        thread2 = utils.spawn(get_a_device)
+        thread1.result()
+        thread2.result()
 
         self.assertEqual(2, len(chosen_devices))
         self.assertNotEqual(chosen_devices[0], chosen_devices[1])
