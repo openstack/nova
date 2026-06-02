@@ -174,6 +174,36 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
 
         self._assert_expected_calls()
 
+    def test_fails_on_sec_type_cnt_zero_oversized_reason(self):
+        """Validate behavior if a server returns an oversized reason string.
+
+        If the server sends a reason length greater than 256 bytes, we should
+        not attempt to read the full payload (which could be up to 2^32 bytes)
+        and instead substitute a generic failure message.
+        """
+        import struct
+
+        self.proxy._fail = mock.Mock()
+
+        self._version_handshake()
+
+        self._expect_compute_recv(1, "\x00")
+        # Send a reason length of 1000, which exceeds the 256-byte limit
+        self._expect_compute_recv(4, struct.pack('!I', 1000))
+
+        generic_reason = b'Unable to negotiate security with server'
+        generic_reason_len = struct.pack('!I', len(generic_reason))
+        self._expect_tenant_send(
+            auth.AUTH_STATUS_FAIL + generic_reason_len + generic_reason)
+
+        ex = self.assertRaises(exception.SecurityProxyNegotiationFailed,
+                               self.proxy.connect,
+                               self.tenant_sock,
+                               self.compute_sock)
+        self.assertIn('Unable to negotiate security', str(ex))
+
+        self._assert_expected_calls()
+
     @mock.patch.object(authnone.RFBAuthSchemeNone, "security_handshake")
     def test_full_run(self, mock_handshake):
         """Validate correct behavior."""

@@ -134,7 +134,14 @@ class RFBSecurityProxy(base.SecurityProxy):
             # Decode the reason why the request failed
             reason_len_raw = recv(compute_sock, 4)
             reason_len = struct.unpack('!I', reason_len_raw)[0]
-            reason = recv(compute_sock, reason_len)
+            if reason_len <= 256:
+                reason = recv(compute_sock, reason_len)
+            else:
+                # NOTE(danms): If the reason is too long, we just assume
+                # a generic failure instead of reading up to 2^32 bytes
+                # to avoid a potential exhaustion attack.
+                reason = b'Unable to negotiate security with server'
+                reason_len_raw = struct.pack('!I', len(reason))
 
             tenant_sock.sendall(auth.AUTH_STATUS_FAIL +
                                 reason_len_raw + reason)
