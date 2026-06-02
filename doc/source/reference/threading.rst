@@ -71,6 +71,15 @@ are used to run concurrent tasks and both the oslo.service and the
 oslo.messaging libraries are configured to use native threads to execute tasks
 like periodics and RPC message handlers.
 
+New code should avoid adding eventlet-specific primitives or spawning APIs.
+Nova is transitioning toward native threading, and ``tox -e pep8`` enforces
+several related rules, including N340, N373, and N374. Prefer Nova
+compatibility helpers and standard-library primitives where applicable.
+
+New code should not introduce ``asyncio``. Nova services use native threading
+(via futurist and oslo libraries) or, during transition, eventlet. Mixing
+``asyncio`` into this model is unsupported.
+
 .. _futurist: https://docs.openstack.org/futurist/latest/
 
 To see how to configure and tune the native threading mode read the

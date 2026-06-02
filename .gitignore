@@ -56,3 +56,13 @@ releasenotes/build
 # Files created by alembic
 /nova.db
 /nova_api.db
+
+# agentic tools and files
+.tmp/
+.pi/
+.cursor/
+.cursorrules
+.claude/
+.vscode/
+.codex/
+CLAUDE.md

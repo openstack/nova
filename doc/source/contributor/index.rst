@@ -22,6 +22,13 @@ Getting Started
 * :doc:`/contributor/development-environment`: Get your computer setup to
   contribute
 
+* :doc:`/contributor/repo-overview`: Terse map of the Nova repository
+  layout, package structure, and documentation sections.
+
+* :doc:`/contributor/agentic-coding`: Conventions for AI-assisted
+  development, including the ``AGENTS.md`` routing layer and local scratch
+  files.
+
 .. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
@@ -29,6 +36,8 @@ Getting Started
 
    how-to-get-involved
    development-environment
+   repo-overview
+   agentic-coding
 
 Nova Process
 ============
@@ -71,17 +80,53 @@ while keeping users happy and keeping developers productive.
    blueprints
    ptl-guide
 
-Reviewing
-=========
+Code Conventions
+================
+
+* `OpenStack code and documentation guide`_: General OpenStack contributor
+  conventions covering style, testing, and documentation standards.
+
+* `Nova HACKING.rst`_: Nova-specific style rules and N-check descriptions;
+  enforced by ``tox -e pep8``.
+
+* :doc:`/contributor/dependencies`: Where to declare Python, documentation,
+  and system package dependencies.
+
+* :doc:`/contributor/commit-messages`: Nova commit message guidance,
+  including Gerrit footers, DCO sign-off, and AI attribution trailers.
 
 * :doc:`/contributor/releasenotes`: When we need a release note for a
   contribution.
 
+* :doc:`/reference/i18n`: What we require for i18n in patches.
+
+* :doc:`/reference/database-migrations`: How to write schema and data
+  migrations when adding a feature or bugfix.
+
+* :doc:`/reference/upgrade-checks`: How to write automated upgrade checks
+  when adding a feature or bugfix.
+
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   dependencies
+   commit-messages
+   releasenotes
+   /reference/i18n
+   /reference/database-migrations
+   /reference/upgrade-checks
+
+.. _OpenStack code and documentation guide: https://docs.openstack.org/contributors/code-and-documentation/index.html
+.. _Nova HACKING.rst: https://opendev.org/openstack/nova/src/branch/master/HACKING.rst
+
+Reviewing
+=========
+
 * :doc:`/contributor/code-review`: Important cheat sheet for what's important
   when doing code review in Nova, especially some things that are hard to test
   for, but need human eyes.
-
-* :doc:`/reference/i18n`: What we require for i18n in patches
 
 * :doc:`/contributor/documentation`: Guidelines for handling documentation
   contributions
@@ -91,9 +136,7 @@ Reviewing
 .. toctree::
    :hidden:
 
-   releasenotes
    code-review
-   /reference/i18n
    documentation
 
 Testing

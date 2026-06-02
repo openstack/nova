@@ -2,13 +2,21 @@
 Profiling With Eventlet
 =======================
 
+.. note::
+
+   As of Nova 34.0.0 (2026.2 Hibiscus), most Nova services run in native threading
+   mode by default. This guide applies only to services running in eventlet
+   mode (``OS_NOVA_DISABLE_EVENTLET_PATCHING=False``). For services running
+   in native threading mode, the standard Python profiling tool cProfile_ can
+   be used directly instead.
+
 When performance of one of the Nova services is worse than expected, and other
 sorts of analysis do not lead to candidate fixes, profiling is an excellent
 tool for producing detailed analysis of what methods in the code are called the
 most and which consume the most time.
 
-Because most Nova services use eventlet_, the standard profiling tool provided
-with Python, cProfile_, will not work. Something is required to keep track of
+When a service is running in eventlet mode, the standard profiling tool
+provided with Python, cProfile_, will not work. Something is required to keep track of
 changing tasks. Thankfully eventlet comes with
 ``eventlet.green.profile.Profile``, a mostly undocumented class that provides a
 similar (but not identical) API to the one provided by Python's ``Profile``
