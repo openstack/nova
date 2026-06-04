@@ -5066,6 +5066,22 @@ class LibvirtDriver(driver.ComputeDriver):
         nova.privsep.fs.unprivileged_mkfs('swap', target)
 
     @staticmethod
+    def _refresh_nfs_swap_cache(swap_path):
+        """Force NFS attribute cache refresh for a swap file path.
+
+        Uses O_CREAT|O_EXCL to force a server-side lookup bypassing
+        the NFS client attribute cache. If the file does not exist on
+        the server, the probe file is removed so the client cache is
+        updated for subsequent os.path.exists() calls.
+        """
+        try:
+            fd = os.open(swap_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+            os.unlink(swap_path)
+        except FileExistsError:
+            pass
+
+    @staticmethod
     def _get_console_log_path(instance):
         return os.path.join(libvirt_utils.get_instance_path(instance),
                             'console.log')
@@ -5336,6 +5352,16 @@ class LibvirtDriver(driver.ComputeDriver):
             size = swap_mb * units.Mi
             disk_info_mapping = disk_mapping['disk.swap']
             swap = image('disk.swap', disk_info_mapping=disk_info_mapping)
+            if swap.is_file_in_instance_path():
+                # NOTE(melwitt): Swap is the only disk not copied to
+                # the destination during resize/cold migration (it is
+                # skipped in migrate_disk_and_power_off and recreated
+                # here). On NFS, os.path.exists() can return stale
+                # results after the instance directory is renamed,
+                # causing swap creation to be incorrectly skipped.
+                # Non-file backends like RBD and LVM are not subject
+                # to NFS attribute caching. See bug 2152581.
+                self._refresh_nfs_swap_cache(swap.path)
             # Short circuit the exists() tests if we already created a disk
             created_disks = created_disks or not swap.exists()
             swap.cache(

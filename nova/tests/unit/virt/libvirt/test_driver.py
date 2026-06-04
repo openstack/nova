@@ -17810,6 +17810,56 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             size=expected * units.Mi, context=self.context, swap_mb=expected,
             safe=True)
 
+    @mock.patch('os.open',
+                side_effect=OSError(errno.EEXIST, 'File exists'))
+    def test_refresh_nfs_swap_cache_file_exists(self, mock_open):
+        """O_CREAT|O_EXCL returns EEXIST: swap file truly exists."""
+        libvirt_driver.LibvirtDriver._refresh_nfs_swap_cache('/swap')
+        mock_open.assert_called_once_with(
+            '/swap', os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+
+    @mock.patch('os.open', return_value=99)
+    @mock.patch('os.close')
+    @mock.patch('os.unlink')
+    def test_refresh_nfs_swap_cache_stale(self, mock_unlink, mock_close,
+                                          mock_open):
+        """O_CREAT|O_EXCL succeeds: NFS cache was stale, file removed."""
+        libvirt_driver.LibvirtDriver._refresh_nfs_swap_cache('/swap')
+        mock_open.assert_called_once_with(
+            '/swap', os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        mock_close.assert_called_once_with(99)
+        mock_unlink.assert_called_once_with('/swap')
+
+    @mock.patch('os.open',
+                side_effect=OSError(errno.EACCES, 'Permission denied'))
+    def test_refresh_nfs_swap_cache_error(self, mock_open):
+        """Non-EEXIST OSError from O_CREAT|O_EXCL propagates."""
+        self.assertRaises(OSError,
+                          libvirt_driver.LibvirtDriver._refresh_nfs_swap_cache,
+                          '/swap')
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_refresh_nfs_swap_cache')
+    def test_create_image_swap_calls_nfs_cache_refresh(self, mock_refresh):
+        """_create_image calls _refresh_nfs_swap_cache for file-backed swap."""
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = ''
+        instance = objects.Instance(**instance_ref)
+        instance.flavor.swap = 512
+
+        bdi = {'block_device_mapping': [{'boot_index': 0}]}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance, image_meta,
+                                            block_device_info=bdi)
+
+        backend = self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
+        drvr._create_image(self.context, instance, disk_info['mapping'],
+                           block_device_info=bdi)
+
+        mock_refresh.assert_called_once_with(backend.disks['disk.swap'].path)
+        backend.disks['disk.swap'].cache.assert_called_once()
+
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
     def test_create_vz_container_with_swap(self, mock_cache):
         self.flags(virt_type='parallels', group='libvirt')

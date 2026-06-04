@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    `Bug #2152581`_: Fixed swap disk creation being skipped during resize
+    or cold migration when the instance directory is on NFS shared storage.
+    The NFS client attribute cache could retain stale lookup results after
+    the instance directory rename, causing Nova to incorrectly determine
+    that the swap file already existed.
+
+    .. _Bug #2152581: https://bugs.launchpad.net/nova/+bug/2152581
