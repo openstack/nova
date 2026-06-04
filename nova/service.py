@@ -118,6 +118,7 @@ class Service(service.Service):
             conductor_api.wait_until_ready(context.get_admin_context())
         self.manager = manager_class(host=self.host, *args, **kwargs)
         self.rpcserver = None
+        self.rpcserver_alt = None
         self.report_interval = report_interval
         self.periodic_enable = periodic_enable
         self.periodic_fuzzy_delay = periodic_fuzzy_delay
@@ -327,7 +328,8 @@ class Service(service.Service):
         # graceful shutdown, we limit the RPC requests the service can handle.
         # So we stop the main RPC server here and let the alternative RPC
         # server handle the remaining requests for the ongoing operations.
-        self._shutdown_rpc_server(self.rpcserver, self.topic)
+        if self.rpcserver is not None:
+            self._shutdown_rpc_server(self.rpcserver, self.topic)
         try:
             LOG.debug('%s manager graceful shutdown started.',
                       self.binary)
