@@ -9433,6 +9433,100 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             [mock.call(fields=['id', 'name'], tenant_id=uuids.project_id),
              mock.call(fields=['id', 'name'], shared=True)])
 
+    def test__process_security_groups_unique_uuids(self):
+        instance = objects.Instance(project_id=uuids.project_id)
+        mock_neutron = mock.Mock(spec=client.Client)
+        mock_neutron.list_security_groups.side_effect = [
+            {
+                'security_groups': [
+                    {
+                        'id': uuids.sg1,
+                        'name': 'nonunique-name',
+                    }
+                ]
+            },
+            {
+                'security_groups': [
+                    {
+                        'id': uuids.sg2,
+                        'name': 'nonunique-name',
+                    }
+                ]
+            }
+        ]
+        mock_neutron.list_extensions.return_value = {
+            'extensions': [{'alias': constants.SG_SHARED_FILTER}]}
+        api = neutronapi.API()
+
+        # FIXME(sean-k-mooney): this is bug 2105896
+        # it is ok for security groups to have the same name if we
+        # request them by uuid.
+        ex = self.assertRaises(
+            exception.NoUniqueMatch, api._process_security_groups,
+            instance, mock_neutron, [uuids.sg1, uuids.sg2])
+
+        self.assertIn("nonunique-name", str(ex))
+        mock_neutron.list_security_groups.assert_has_calls(
+            [mock.call(fields=['id', 'name'], tenant_id=uuids.project_id),
+             mock.call(fields=['id', 'name'], shared=True)])
+
+    def test__process_security_groups_non_unique_match_same_tenant(self):
+        """Test that duplicate names within the same tenant raise
+        NoUniqueMatch when requested by name.
+        """
+        instance = objects.Instance(project_id=uuids.project_id)
+        mock_neutron = mock.Mock(spec=client.Client)
+        mock_neutron.list_security_groups.return_value = {
+            'security_groups': [
+                {
+                    'id': uuids.sg1,
+                    'name': 'nonunique-name',
+                },
+                {
+                    'id': uuids.sg2,
+                    'name': 'nonunique-name',
+                }
+            ]
+        }
+        mock_neutron.list_extensions.return_value = {
+            'extensions': [{'alias': constants.SG_SHARED_FILTER}]}
+        api = neutronapi.API()
+
+        ex = self.assertRaises(
+            exception.NoUniqueMatch, api._process_security_groups,
+            instance, mock_neutron, ["nonunique-name"])
+        self.assertIn("nonunique-name", str(ex))
+
+    def test__process_security_groups_unique_uuids_same_tenant(self):
+        """Test that duplicate names within the same tenant are handled
+        when requested by UUID.
+        """
+        instance = objects.Instance(project_id=uuids.project_id)
+        mock_neutron = mock.Mock(spec=client.Client)
+        mock_neutron.list_security_groups.return_value = {
+            'security_groups': [
+                {
+                    'id': uuids.sg1,
+                    'name': 'nonunique-name',
+                },
+                {
+                    'id': uuids.sg2,
+                    'name': 'nonunique-name',
+                }
+            ]
+        }
+        mock_neutron.list_extensions.return_value = {
+            'extensions': [{'alias': constants.SG_SHARED_FILTER}]}
+        api = neutronapi.API()
+
+        # FIXME(sean-k-mooney): this is bug 2105896
+        # it is ok for security groups to have the same name if we
+        # request them by uuid.
+        ex = self.assertRaises(
+            exception.NoUniqueMatch, api._process_security_groups,
+            instance, mock_neutron, [uuids.sg1, uuids.sg2])
+        self.assertIn("nonunique-name", str(ex))
+
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
     @mock.patch.object(neutronapi.API, '_create_port_minimal')
