@@ -266,7 +266,8 @@ Install and configure components
 
    * Configure the ``[neutron]`` section of **/etc/nova/nova.conf**. Refer to
      the :neutron-doc:`Networking service install guide
-     <install/compute-install-rdo.html>` for more details.
+     <install/controller-install-rdo.html#configure-the-compute-service-to-use-the-networking-service>`
+     for more details.
 
    * In the ``[vnc]`` section, configure the VNC proxy to use the management
      interface IP address of the controller node:
