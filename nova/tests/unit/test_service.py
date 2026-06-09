@@ -378,6 +378,29 @@ class ServiceTestCase(test.NoDBTestCase):
         rpcserver_alt.wait.assert_called_with()
         serv.manager.graceful_shutdown.assert_called_once_with()
 
+    def test_stop_before_start_initialize_RPC_does_not_raise(self):
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager')
+        # Neither rpcserver nor rpcserver_alt has been set by start() yet.
+        self.assertIsNone(serv.rpcserver)
+        self.assertIsNone(serv.rpcserver_alt)
+        with mock.patch.object(serv.manager, 'graceful_shutdown'):
+            # Should not raise AttributeError.
+            serv.stop()
+
+    def test_stop_with_topic_alt_before_start_does_not_raise(self):
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager',
+                               topic_alt='fake_alt')
+        self.assertIsNone(serv.rpcserver)
+        self.assertIsNone(serv.rpcserver_alt)
+        with mock.patch.object(serv.manager, 'graceful_shutdown'):
+            serv.stop()
+
     def test_shutdown_rpc_server(self):
         serv = service.Service(self.host,
                                self.binary,
