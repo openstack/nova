@@ -862,7 +862,7 @@ Updates the editable attributes of an existing server.
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401),
-forbidden(403), itemNotFound(404)
+forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -877,11 +877,17 @@ Request
   - hostname: server_hostname_req
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - description: server_description
+  - pinned_availability_zone: pinned_availability_zone_update
 
 .. note::
 
    You can specify parameters to update independently.
    e.g. ``name`` only, ``description`` only, ``name`` and ``description``, etc.
+
+**Example Update Server (2.104)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.104/server-update-req.json
+   :language: javascript
 
 **Example Update Server (2.63)**
 
