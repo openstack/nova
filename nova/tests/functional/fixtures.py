@@ -17,7 +17,9 @@ from keystoneauth1 import session as ks
 from placement.tests.functional.fixtures import placement as placement_fixtures
 from requests import adapters
 
+from nova.tests.fixtures.nova import _use_file_backed_sqlite_with_wal
 from nova.tests.functional.api import client
+from nova import utils
 
 
 class PlacementApiClient(object):
@@ -59,6 +61,18 @@ class PlacementFixture(placement_fixtures.PlacementFixture):
 
         self.useFixture(placement_fixtures.Database(set_config=True))
     """
+
+    def _configure_placement(self, conf_fixture):
+        super()._configure_placement(conf_fixture)
+        if utils.concurrency_mode_threading() and self.db:
+            # Per-test temp file under NestedTempfile, same pattern as the
+            # Nova Database/CellDatabases fixtures.
+            self.useFixture(fixtures.NestedTempfile())
+            placement_db_url, _path = (
+                _use_file_backed_sqlite_with_wal('placement'))
+            conf_fixture.config(
+                connection=placement_db_url,
+                group='placement_database')
 
     def setUp(self):
         super(PlacementFixture, self).setUp()
