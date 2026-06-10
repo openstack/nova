@@ -1238,16 +1238,6 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.info(f'Starting inactive mdev: {mdev.name()}')
             self._host.device_start(mdev)
 
-    @staticmethod
-    def _is_existing_mdev(uuid):
-        # FIXME(sbauza): Some kernel can have a uevent race meaning that the
-        # libvirt daemon won't know when a mediated device is created unless
-        # you restart that daemon. Until all kernels we support are not having
-        # that possible race, check the sysfs directly instead of asking the
-        # libvirt API.
-        # See https://bugzilla.redhat.com/show_bug.cgi?id=1376907 for ref.
-        return os.path.exists('/sys/bus/mdev/devices/{0}'.format(uuid))
-
     def _check_my_ip(self):
         ips = compute_utils.get_machine_ips()
         if CONF.my_ip not in ips:
