@@ -4240,7 +4240,7 @@ class API:
             new_flavor = current_flavor
         else:
             new_flavor = flavors.get_flavor_by_flavor_id(
-                flavor_id, read_deleted="no")
+                flavor_id, ctxt=context, read_deleted="no")
             # NOTE(wenping): We use this instead of the 'block_accelerator'
             # decorator since the operation can differ depending on args,
             # and for resize we have two flavors to worry about, we should
