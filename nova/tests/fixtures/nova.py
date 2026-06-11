@@ -429,31 +429,30 @@ class CheatingSerializer(rpc.RequestContextSerializer):
         return ctxt
 
 
-_DB_WRITE_LOCK = threading.RLock()
-
-
 class DatabaseWriteLock(fixtures.Fixture):
-    """Serialize writer transactions across threads in tests.
+    """Serialize writer transactions per database across threads in tests.
 
-    SQLite allows only a single writer at a time. Patches
-    _TransactionContextManager._transaction_scope to acquire a process-global
-    reentrant lock around every writer transaction so concurrent threads within
-    a test cannot race on the same connection.
+    SQLite allows only a single writer at a time per database file. Patches
+    _TransactionContextManager._transaction_scope to acquire a reentrant lock
+    keyed by the engine facade root (``tcm_self._root``) around every writer
+    transaction so concurrent threads within a test cannot race on the same
+    connection, while writes to different databases (e.g. cell0 and cell1)
+    can still proceed in parallel.
 
-    An RLock is used because a single test installs both a 'main' and an
-    'api' Database fixture, each of which installs this fixture. The writer
-    path therefore acquires the lock twice from the same thread; RLock allows
-    that without deadlocking.
+    An RLock is used per database because a single thread may nest writer
+    transactions against the same engine facade.
     """
 
     def _setUp(self):
+        self._locks_guard = threading.Lock()
+        self._locks = collections.defaultdict(threading.RLock)
         original = (
             enginefacade._TransactionContextManager._transaction_scope)
 
         @contextmanager
         def _locked_scope(tcm_self, context):
             if tcm_self._mode is enginefacade._WRITER:
-                with _DB_WRITE_LOCK:
+                with self._get_lock(tcm_self):
                     with original(tcm_self, context) as resource:
                         yield resource
             else:
@@ -464,6 +463,11 @@ class DatabaseWriteLock(fixtures.Fixture):
             enginefacade._TransactionContextManager,
             '_transaction_scope',
             _locked_scope))
+
+    def _get_lock(self, transaction_context_manager):
+        """Return a reentrant lock for the given engine facade root."""
+        with self._locks_guard:
+            return self._locks[transaction_context_manager._root]
 
 
 class CellDatabases(fixtures.Fixture):
