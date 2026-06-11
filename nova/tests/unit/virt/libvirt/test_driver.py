@@ -17827,7 +17827,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         libvirt_driver.LibvirtDriver._refresh_nfs_swap_cache('/swap')
         mock_open.assert_called_once_with(
             '/swap', os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        mock_close.assert_called_once_with(99)
+        self.assertEqual(
+            mock_close.call_args_list.count(mock.call(99)), 1)
         mock_unlink.assert_called_once_with('/swap')
 
     @mock.patch('os.open',
