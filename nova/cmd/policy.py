@@ -20,6 +20,7 @@
 from nova import monkey_patch; monkey_patch.patch()  # noqa
 # autopep8: on
 
+import atexit
 import functools
 import os
 import sys
@@ -34,6 +35,7 @@ from nova.db.main import api as db
 from nova import exception
 from nova.i18n import _
 from nova import policies
+from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
@@ -177,3 +179,14 @@ def main():
     except Exception as ex:
         print(_("error: %s") % ex)
         return 1
+
+
+# NOTE(gibi): This is needed for >= py3.14 and eventlet otherwise when the
+# CLI exists the logging module prints and ugly stack trace with the message
+#     RuntimeError: greenlet is being finalized
+# Drop this when eventlet is finally removed
+@atexit.register
+def _at_exit():
+    if not utils.concurrency_mode_threading():
+        import logging
+        logging._handlerList = []
