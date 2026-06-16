@@ -947,6 +947,27 @@ Related options:
 * ``live_migration_inbound_addr``
 
 """),
+    cfg.IntOpt('num_intel_tdx_guests',
+        default=None,
+        min=0,
+        help="""
+Maximum number of guests with Intel TDX (Intel Trust Domain Extensions) memory
+encryption that this compute host can run concurrently.
+
+Intel TDX capacity is normally determined automatically by reading the number
+of available keys exposed by the kernel's misc cgroup controller (``tdx``
+entry in ``misc.capacity``), and this option does not need to be set in that
+case.
+
+However cgroup detection is not always possible, for example when nova-compute
+is deployed inside a container without visibility of the host's cgroup
+hierarchy. If the cgroup value cannot be read, this option becomes the only
+source of the limit and **must** be set, or Nova will assume the host does not
+support Intel TDX.
+
+If the cgroup value *can* be read and this option is also set, the lower
+of the two values is used.
+"""),
 ]
 
 libvirt_imagebackend_opts = [

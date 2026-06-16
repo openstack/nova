@@ -207,15 +207,21 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.41: Added 'hw_usb_model' and 'hw_redirected_usb_ports' fields
     # Version 1.42: Added 'hw_mem_encryption_model' field
     # Version 1.43: Added 'amd-sev-snp' as an option to hw_mem_encryption_model
+    # Version 1.44: Added 'intel-tdx' as an option to hw_mem_encryption_model
 
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.43'
+    VERSION = '1.44'
 
     def obj_make_compatible(self, primitive, target_version):  # noqa: C901
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 44):
+            base.raise_on_too_new_values(
+                target_version, primitive,
+                'hw_mem_encryption_model',
+                (fields.MemEncryptionModel.INTEL_TDX,))
         if target_version < (1, 43):
             base.raise_on_too_new_values(
                 target_version, primitive,

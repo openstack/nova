@@ -337,6 +337,8 @@ class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):
             feature = None
             if c.tag == "sev":
                 feature = LibvirtConfigDomainCapsFeatureSev()
+            if c.tag == "tdx":
+                feature = LibvirtConfigDomainCapsFeatureTDX()
             if c.tag == "launchSecurity":
                 feature = LibvirtConfigDomainCapsFeatureLaunchSecurity()
             if feature:
@@ -395,6 +397,19 @@ class LibvirtConfigDomainCapsFeatureLaunchSecurity(LibvirtConfigObject):
                 if c.get('name') == 'sectype':
                     self.sectypes = [
                         child.text for child in c if child.tag == 'value']
+
+
+class LibvirtConfigDomainCapsFeatureTDX(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super().__init__(root_name='tdx', **kwargs)
+        self.supported = False
+
+    def parse_dom(self, xmldoc):
+        super().parse_dom(xmldoc)
+
+        if xmldoc.get('supported') == 'yes':
+            self.supported = True
 
 
 class LibvirtConfigDomainCapsOS(LibvirtConfigObject):

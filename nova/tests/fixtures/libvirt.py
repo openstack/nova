@@ -2475,6 +2475,18 @@ class Connection(object):
       </enum>
     </launchSecurity>'''
 
+    _domain_capability_features_with_TDX = '''\
+    <features>
+      <gic supported='no'/>
+      <tdx supported='yes'/>
+    </features>'''
+
+    _domain_capability_features_with_TDX_unsupported = '''\
+    <features>
+      <gic supported='no'/>
+      <tdx supported='no'/>
+    </features>'''
+
     def getCapabilities(self):
         """Return spoofed capabilities."""
         numa_topology = self.host_info.numa_topology

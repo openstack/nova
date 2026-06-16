@@ -565,8 +565,9 @@ class MemEncryptionModel(BaseNovaEnum):
     AMD_SEV = "amd-sev"
     AMD_SEV_ES = "amd-sev-es"
     AMD_SEV_SNP = "amd-sev-snp"
+    INTEL_TDX = "intel-tdx"
 
-    ALL = (AMD_SEV, AMD_SEV_ES, AMD_SEV_SNP)
+    ALL = (AMD_SEV, AMD_SEV_ES, AMD_SEV_SNP, INTEL_TDX)
 
 
 class MaxPhyAddrMode(BaseNovaEnum):
