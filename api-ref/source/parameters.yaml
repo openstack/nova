@@ -5734,7 +5734,8 @@ personality:
   max_version: 2.56
 pinned_availability_zone:
   description: |
-    This is the availability zone requested during server creation.
+    This is the availability zone requested during server creation or later
+    via update request.
     Also when cross_az_attach option is false and booting an instance from
     volume, the instance can be pinned to AZ and in that case, instance will
     be scheduled on host belonging to pinned AZ.
@@ -5745,6 +5746,19 @@ pinned_availability_zone:
   in: body
   type: string
   min_version: 2.96
+pinned_availability_zone_update:
+  description: |
+    This is the availability zone the server is pinned to, either at creation
+    or via update request.
+    To unpin, set to ``null``. The server will then be free to move to any
+    availability zone on the next move operation. To re-pin, set to the
+    server's current ``OS-EXT-AZ:availability_zone`` value. A server can
+    only be pinned to the zone it currently resides in. Setting to a
+    different zone or changing directly from one non-null value to another
+    will result in a 409 error.
+  in: body
+  type: string
+  min_version: 2.104
 policies:
   description: |
     A list of exactly one policy name to associate with the server group. The

@@ -184,8 +184,15 @@ With respect to availability zones, a server is restricted to a zone if:
    :oslo.config:option:`default_availability_zone`. See `Resource affinity`_
    for details.
 
-If the server was not created in a specific zone then it is free to be moved
-to other zones.
+5. The server was pinned to a specific availability zone using the
+   ``PUT /servers/{server_id}`` request with ``pinned_availability_zone``
+   using microversion 2.104 or greater.
+
+A server that is restricted to an availability zone can be unpinned using the
+``PUT /servers/{server_id}`` request by setting ``pinned_availability_zone``
+to ``null`` using microversion 2.104 or greater. Once unpinned, the server is
+free to be moved to other zones. If the server was not created in a specific
+zone and has not been pinned, it is free to be moved to other zones.
 
 Resource affinity
 ~~~~~~~~~~~~~~~~~
