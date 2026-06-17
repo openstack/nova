@@ -174,6 +174,8 @@
       This job also explicitly sets eventlet mode for all nova services to keep
       testing eventlet mode even after the default is set to native threading
       for some services.
+    required-projects:
+      - novnc/novnc
     irrelevant-files: &nova-base-irrelevant-files
       - ^api-.*$
       - ^(test-|)requirements.txt$
@@ -192,17 +194,20 @@
       - ^tox.ini$
     vars:
       tox_envlist: all
-      # The goal is to have enough test coverage with eventlet mode here as the rest of
-      # the jobs are now running with native threading.
-      # Keep the regex sync with nova-next at least.
-      tempest_test_regex: ^tempest\.((scenario|api\.compute)|(.*\.(novnc|spice).*))
-      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|tempest.api.compute.servers.test_device_tagging.TaggedAttachmentsTest.test_tagged_attachment|test_live_migration_with_trunk
+      # bug #1940425  only affect ml2/ovn so we execute
+      # test_live_migration_with_trunk in this job to keep
+      tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot|spice|novnc).*)
       devstack_localrc:
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
         Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
         ML2_L3_PLUGIN: router
-        NOVA_VNC_ENABLED: False
+        NOVA_VNC_ENABLED: True
+        NOVA_SPICE_ENABLED: True
+        # Enable TLS between the noVNC/SPICE proxy & compute nodes; this requires
+        # the tls-proxy service to be enabled.
+        NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
+        NOVNC_FROM_PACKAGE: false
         'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
@@ -210,6 +215,7 @@
         'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         'SYSTEMD_ENV_VARS["n-novnc-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        'SYSTEMD_ENV_VARS["n-spice-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
@@ -237,8 +243,9 @@
         s-object: false
         s-proxy: false
         openstack-cli-server: true
-        # disable vnc and enable spice
-        n-novnc: false
+        # Enable TLS infrastructure before console proxies
+        tls-proxy: true
+        n-novnc: true
         n-spice: true
       devstack_local_conf:
         post-config:
@@ -251,6 +258,11 @@
           $NOVA_CPU_CONF:
               compute:
                 heal_instance_info_cache_interval: 60
+          $NOVA_CONF:
+            vnc:
+              ssl_only: true
+            spice:
+              ssl_only: true
     group-vars:
       subnode:
         devstack_localrc:
@@ -258,8 +270,10 @@
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
           Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
           ML2_L3_PLUGIN: router
-          NOVA_VNC_ENABLED: False
+          NOVA_CONSOLE_PROXY_COMPUTE_TLS: true
+          NOVA_VNC_ENABLED: true
           NOVA_SPICE_ENABLED: true
+          NOVNC_FROM_PACKAGE: false
           'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         devstack_services:
           # Disable OVN services
@@ -286,6 +300,7 @@
           s-container: false
           s-object: false
           s-proxy: false
+          tls-proxy: true
         devstack_local_conf:
           post-config:
             "/$NEUTRON_CORE_PLUGIN_CONF":
@@ -297,6 +312,11 @@
             $NOVA_CPU_CONF:
               compute:
                 heal_instance_info_cache_interval: 60
+            $NOVA_CONF:
+              vnc:
+                ssl_only: true
+              spice:
+                ssl_only: true
     post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
