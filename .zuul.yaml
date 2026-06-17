@@ -208,14 +208,6 @@
         # the tls-proxy service to be enabled.
         NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
         NOVNC_FROM_PACKAGE: false
-        'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-cond-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-novnc-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-spice-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
@@ -263,6 +255,8 @@
               ssl_only: true
             spice:
               ssl_only: true
+            DEFAULT:
+              concurrency_backend: eventlet
     group-vars:
       subnode:
         devstack_localrc:
@@ -274,7 +268,6 @@
           NOVA_VNC_ENABLED: true
           NOVA_SPICE_ENABLED: true
           NOVNC_FROM_PACKAGE: false
-          'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
         devstack_services:
           # Disable OVN services
           br-ex-tcpdump: false
@@ -317,6 +310,8 @@
                 ssl_only: true
               spice:
                 ssl_only: true
+              DEFAULT:
+                concurrency_backend: eventlet
     post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
@@ -343,12 +338,11 @@
         NOVA_ALLOW_MOVE_TO_SAME_HOST: false
         LIVE_MIGRATION_AVAILABLE: true
         USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION: true
-        'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
-        'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
-        'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
-        'SYSTEMD_ENV_VARS["n-cond-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
-        'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
-        'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+      devstack_local_conf:
+        post-config:
+          $NOVA_CONF:
+            DEFAULT:
+              concurrency_backend: threading
     group-vars:
       subnode:
         devstack_services:
@@ -363,7 +357,11 @@
           NOVA_ALLOW_MOVE_TO_SAME_HOST: false
           LIVE_MIGRATION_AVAILABLE: true
           USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION: true
-          'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        devstack_local_conf:
+          post-config:
+            $NOVA_CONF:
+              DEFAULT:
+                concurrency_backend: threading
 
 - job:
     name: nova-graceful-shutdown-eventlet
@@ -371,17 +369,18 @@
     description: |
       Run Nova graceful shutdown tests in eventlet mode.
     vars:
-      devstack_localrc:
-        'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-cond-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-super-cond"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
-        'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+      devstack_local_conf:
+        post-config:
+          $NOVA_CONF:
+            DEFAULT:
+              concurrency_backend: eventlet
     group-vars:
       subnode:
-        devstack_localrc:
-          'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=false
+        devstack_local_conf:
+          post-config:
+            $NOVA_CONF:
+              DEFAULT:
+                concurrency_backend: eventlet
 
 - job:
     name: nova-live-migration-ceph

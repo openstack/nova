@@ -1751,6 +1751,66 @@ class OsloServiceBackendSelectionTestCase(test.NoDBTestCase):
         self.assertEqual(
             "the backend can only be 'eventlet' or 'threading'", str(ex))
 
+    @mock.patch('nova.monkey_patch.poison_eventlet')
+    @mock.patch('oslo_service.backend.init_backend')
+    @mock.patch('nova.monkey_patch._get_concurrency_from_config',
+                return_value='threading')
+    def test_config_threading_overrides_eventlet_default(
+            self, mock_cfg, init_backend, mock_poison):
+        # When the env var is absent and concurrency_backend=threading in
+        # config, native threading must be selected even if the binary default
+        # is eventlet.
+        with mock.patch.dict(os.environ,
+                             {'OS_NOVA_DISABLE_EVENTLET_PATCHING': ''}):
+            monkey_patch.patch(backend='eventlet')
+
+        init_backend.assert_called_once_with(
+            oslo_backend.BackendType.THREADING)
+        mock_poison.assert_called_once()
+
+    @mock.patch('oslo_service.backend.init_backend')
+    @mock.patch('nova.monkey_patch._get_concurrency_from_config',
+                return_value='eventlet')
+    def test_config_eventlet_overrides_threading_default(
+            self, mock_cfg, init_backend):
+        # When the env var is absent and concurrency_backend=eventlet in
+        # config, eventlet must be selected even if the binary default is
+        # threading.
+        with mock.patch.dict(os.environ,
+                             {'OS_NOVA_DISABLE_EVENTLET_PATCHING': ''}):
+            monkey_patch.patch(backend='threading')
+
+        init_backend.assert_called_once_with(oslo_backend.BackendType.EVENTLET)
+
+    @mock.patch('nova.monkey_patch.poison_eventlet')
+    @mock.patch('oslo_service.backend.init_backend')
+    @mock.patch('nova.monkey_patch._get_concurrency_from_config',
+                return_value='auto')
+    def test_config_auto_defers_to_binary_default_threading(
+            self, mock_cfg, init_backend, mock_poison):
+        # When concurrency_backend=auto the per-binary default (backend=)
+        # must be honoured. Test the threading branch.
+        with mock.patch.dict(os.environ,
+                             {'OS_NOVA_DISABLE_EVENTLET_PATCHING': ''}):
+            monkey_patch.patch(backend='threading')
+
+        init_backend.assert_called_once_with(
+            oslo_backend.BackendType.THREADING)
+        mock_poison.assert_called_once()
+
+    @mock.patch('oslo_service.backend.init_backend')
+    @mock.patch('nova.monkey_patch._get_concurrency_from_config',
+                return_value='auto')
+    def test_config_auto_defers_to_binary_default_eventlet(
+            self, mock_cfg, init_backend):
+        # When concurrency_backend=auto the per-binary default (backend=)
+        # must be honoured. Test the eventlet branch.
+        with mock.patch.dict(os.environ,
+                             {'OS_NOVA_DISABLE_EVENTLET_PATCHING': ''}):
+            monkey_patch.patch(backend='eventlet')
+
+        init_backend.assert_called_once_with(oslo_backend.BackendType.EVENTLET)
+
 
 class TestFairLockGuard(test.NoDBTestCase):
 

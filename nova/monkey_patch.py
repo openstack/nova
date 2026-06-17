@@ -19,8 +19,54 @@
 """Enable eventlet monkey patching."""
 
 import os
+import sys
 
 MONKEY_PATCHED = False
+
+
+def _config_file_args(argv):
+    """Return only --config-file and --config-dir args from argv.
+
+    oslo_config only needs these to locate config files. Subcommand tokens
+    (e.g. "api_db sync" for nova-manage) and test-runner arguments are unknown
+    to a bare ConfigOpts instance and would cause argparse to call sys.exit(2).
+    """
+    result = []
+    it = iter(argv)
+    for arg in it:
+        if arg in ('--config-file', '--config-dir'):
+            result.append(arg)
+            try:
+                result.append(next(it))
+            except StopIteration:
+                pass
+        elif (arg.startswith('--config-file=') or
+              arg.startswith('--config-dir=')):
+            result.append(arg)
+    return result
+
+
+def _get_concurrency_from_config():
+    # NOTE(ksambor): We intentionally define the concurrency_backend option
+    # inline here rather than importing it from nova.conf.base. This is a
+    # narrow, early parse whose sole purpose is to read concurrency_backend
+    # before any other imports occur, so that eventlet monkey patching can be
+    # applied (or suppressed) at the very first opportunity. Importing
+    # nova.conf.base would pull in oslo_service.opts which transitively imports
+    # eventlet, defeating the purpose of this early-parse. The normal, full
+    # config parsing (including the canonical option registration in
+    # nova.conf.base) will happen later in the service startup process.
+    from oslo_config import cfg
+
+    concurrency_backend_opt = cfg.StrOpt(  # noqa: N342
+        'concurrency_backend',
+        default='auto',
+        choices=['auto', 'threading', 'eventlet'],
+    )
+    conf = cfg.ConfigOpts()
+    conf.register_opt(concurrency_backend_opt)
+    conf(_config_file_args(sys.argv[1:]))
+    return conf.concurrency_backend
 
 
 def is_patched():
@@ -37,7 +83,6 @@ def _monkey_patch():
     # NOTE(artom) eventlet processes environment variables at import-time.
     # as such any eventlet configuration should happen here if needed.
     import eventlet  # noqa
-    import sys
 
     # Note any modules with known monkey-patching issues which have been
     # imported before monkey patching.
@@ -88,7 +133,15 @@ def patch(backend='eventlet'):
 
     env = os.environ.get('OS_NOVA_DISABLE_EVENTLET_PATCHING', '').lower()
     if env == '':
-        should_patch = (backend == 'eventlet')
+        cfg_val = _get_concurrency_from_config()
+        if cfg_val == 'threading':
+            should_patch = False
+        elif cfg_val == 'eventlet':
+            should_patch = True
+        else:
+            # 'auto' or unrecognised: apply the per-binary deployment
+            # default passed in via the ``backend`` parameter.
+            should_patch = (backend == 'eventlet')
     elif env in ('1', 'true', 'yes'):
         should_patch = False
     else:
@@ -128,8 +181,6 @@ def patch(backend='eventlet'):
 
 
 def poison_eventlet():
-    import sys
-
     if 'eventlet' in sys.modules:
         # We are too late, something imported eventlet already. Give up.
         raise RuntimeError(

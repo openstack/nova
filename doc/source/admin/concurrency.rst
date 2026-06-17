@@ -36,7 +36,50 @@ Selecting concurrency mode for a service
 Since nova 34.0.0 (2026.2 Hibiscus) the nova-scheduler, nova-api,
 nova-metadata, nova-conductor, and nova-compute are using native threading by
 default. The rest of the services are using eventlet by default in this
-release. The concurrency mode can be configured per service via setting the
+release.
+
+The concurrency mode can be configured in two ways: via a configuration option
+or an environment variable. When both are set the environment variable takes
+precedence.
+
+Using the ``concurrency_backend`` config option
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :oslo.config:option:`concurrency_backend` option under ``[DEFAULT]``
+allows operators to select the concurrency backend in the Nova configuration
+file. It accepts the following values:
+
+``auto`` (default)
+    Each Nova binary applies its own built-in deployment default. On Nova
+    master all services default to native threading except the novnc/serial/
+    spice console proxy services (nova-novncproxy, nova-serialproxy,
+    nova-spicehtml5proxy) and CLI entry points (nova-manage, nova-policy,
+    nova-status) which still default to eventlet.
+
+``threading``
+    Start the service with native threading. Eventlet monkey patching is not
+    applied. Use this to switch a service to native threading without changing
+    the environment.
+
+``eventlet``
+    Start the service with eventlet coroutine-based concurrency. Eventlet
+    monkey patching is applied. This value is **deprecated** and will be
+    removed no earlier than the 2027.2 release.
+
+Example — switch a service to threading in ``/etc/nova/nova.conf``::
+
+    [DEFAULT]
+    concurrency_backend = threading
+
+This option is read very early at startup, before oslo.config is fully
+initialised, so it takes effect before any other imports occur. The
+``OS_NOVA_DISABLE_EVENTLET_PATCHING`` environment variable takes precedence
+over this option.
+
+Using the ``OS_NOVA_DISABLE_EVENTLET_PATCHING`` environment variable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The concurrency mode can also be configured per service via setting the
 environment variable ``OS_NOVA_DISABLE_EVENTLET_PATCHING``. Setting that
 variable to ``true`` requests the native threading mode while setting it to
 ``false`` requests the eventlet mode. If the variable is not set the above
