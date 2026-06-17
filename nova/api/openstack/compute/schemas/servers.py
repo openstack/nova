@@ -401,6 +401,10 @@ update_v294 = copy.deepcopy(update_v290)
 update_v294['properties']['server'][
     'properties']['hostname'] = parameter_types.fqdn
 
+update_v2104 = copy.deepcopy(update_v294)
+update_v2104['properties']['server'][
+    'properties']['pinned_availability_zone'] = parameter_types.name_or_none
+
 rebuild = {
     'type': 'object',
     'properties': {
