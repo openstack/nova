@@ -1210,7 +1210,8 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
         return
 
     policies = set(('anti-affinity', 'affinity', 'soft-affinity',
-                    'soft-anti-affinity'))
+                    'soft-anti-affinity', 'network-group-affinity',
+                    'network-group-anti-affinity'))
     if group.policy in policies:
         if not _SUPPORTS_AFFINITY and 'affinity' == group.policy:
             msg = _("ServerGroupAffinityFilter not configured")

@@ -235,14 +235,28 @@ class ServerGroupController(wsgi.Controller):
         if api_version_request.is_supported(req, "2.64"):
             policy = vals['policy']
             rules = vals.get('rules', {})
-            if policy != 'anti-affinity' and rules:
-                msg = _("Only anti-affinity policy supports rules.")
+            if policy == 'anti-affinity':
+                # NOTE(yikun): This should be removed in Stein version.
+                if not _should_enable_custom_max_server_rules(context, rules):
+                    msg = _("Creating an anti-affinity group with rule "
+                            "max_server_per_host > 1 is not yet supported.")
+                    raise exc.HTTPConflict(explanation=msg)
+            elif policy in ('network-group-affinity',
+                            'network-group-anti-affinity'):
+                if 'max_server_per_host' in rules:
+                    msg = _("network-group-affinity and "
+                            "network-group-anti-affinity policies do not "
+                            "support the max_server_per_host rule.")
+                    raise exc.HTTPBadRequest(explanation=msg)
+                if 'network_group' not in rules:
+                    msg = _("network-group-affinity and "
+                            "network-group-anti-affinity policies require "
+                            "a network_group rule.")
+                    raise exc.HTTPBadRequest(explanation=msg)
+            elif rules:
+                msg = _("Only anti-affinity, network-group-affinity, and "
+                        "network-group-anti-affinity policies support rules.")
                 raise exc.HTTPBadRequest(explanation=msg)
-            # NOTE(yikun): This should be removed in Stein version.
-            if not _should_enable_custom_max_server_rules(context, rules):
-                msg = _("Creating an anti-affinity group with rule "
-                        "max_server_per_host > 1 is not yet supported.")
-                raise exc.HTTPConflict(explanation=msg)
             sg = objects.InstanceGroup(context, policy=policy,
                                        rules=rules)
         else:
