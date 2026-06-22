@@ -9979,7 +9979,8 @@ class LibvirtDriver(driver.ComputeDriver):
             me_traits = inventory.pop('traits', [])
             me_inventory = {orc.MEM_ENCRYPTION_CONTEXT: inventory}
             provider_tree.update_inventory(me_rp_name, me_inventory)
-            provider_tree.add_traits(me_rp_name, *me_traits)
+            provider_tree.add_traits(
+                me_rp_name, ot.OWNER_NOVA, *me_traits)
         return me_rps
 
     def _reshape_memory_encryption_resources(
@@ -10167,6 +10168,7 @@ class LibvirtDriver(driver.ComputeDriver):
             mdev_rc = self._get_resource_class_for_device(pgpu_dev_id)
             pgpu_inventory = {mdev_rc: inventory}
             provider_tree.update_inventory(pgpu_rp_name, pgpu_inventory)
+            provider_tree.add_traits(pgpu_rp_name, ot.OWNER_NOVA)
         return pgpu_rps
 
     @staticmethod

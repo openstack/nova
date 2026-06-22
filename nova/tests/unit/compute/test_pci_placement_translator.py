@@ -347,6 +347,16 @@ class TestTranslator(test.NoDBTestCase):
                       pt.data("fake-node_0000:73:00.0").traits)
         self.assertNotIn('HW_PCI_ONE_TIME_USE',
                       pt.data("fake-node_0000:74:00.0").traits)
+        # All PCI providers should have OWNER_NOVA
+        for rp_name in (
+            "fake-node_0000:71:00.0",
+            "fake-node_0000:72:00.0",
+            "fake-node_0000:73:00.0",
+            "fake-node_0000:74:00.0",
+        ):
+            self.assertIn(
+                os_traits.OWNER_NOVA,
+                pt.data(rp_name).traits)
 
     def test_otu_reservation_workflow(self):
         pv = ppt.PlacementView(

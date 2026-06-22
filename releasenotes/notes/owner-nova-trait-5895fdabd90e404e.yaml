@@ -1,0 +1,19 @@
+---
+features:
+  - |
+    Nova now reports the ``OWNER_NOVA`` trait on all resource providers
+    it manages in Placement. This includes root compute node providers
+    and child providers for pGPUs, memory encryption, and PCI devices.
+    The owner_nova_filter request prefilter adds ``OWNER_NOVA`` as a
+    required trait during scheduling if all nova-compute services are
+    upgraded. This ensures the scheduler only considers
+    Nova-managed resource providers, distinguishing them from
+    providers managed by other services such as Cyborg.
+upgrade:
+  - |
+    The ``OWNER_NOVA`` trait scheduling requirement is version-gated
+    and only activates when all nova-compute services report service
+    version 73 or higher. The version check is performed per
+    scheduling request. During a rolling upgrade, a warning is logged
+    for each request where the trait cannot be added because not all
+    computes are upgraded.

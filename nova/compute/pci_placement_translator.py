@@ -359,6 +359,7 @@ class PciResourceProvider:
             self._get_inventories(),
         )
         provider_tree.update_traits(self.name, self.traits)
+        provider_tree.add_traits(self.name, os_traits.OWNER_NOVA)
 
         # Here we are sure the RP exists in the provider_tree. So, we can
         # record the RP UUID in each PciDevice this RP represents

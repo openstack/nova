@@ -1711,8 +1711,12 @@ class TestUpdateComputeNode(BaseTestCase):
 
         self.rt._update(mock.sentinel.ctx, new_compute)
         self.driver_mock.capabilities_as_traits.assert_called_once()
-        # We always decorate with COMPUTE_NODE
-        exp_traits = {mock.sentinel.trait, os_traits.COMPUTE_NODE}
+        # We always decorate with COMPUTE_NODE and OWNER_NOVA
+        exp_traits = {
+            mock.sentinel.trait,
+            os_traits.COMPUTE_NODE,
+            os_traits.OWNER_NOVA,
+        }
         # Can't predict the order of the traits list, so use ItemsMatcher
         ptree.update_traits.assert_called_once_with(
             new_compute.hypervisor_hostname, utils.ItemsMatcher(exp_traits))
@@ -1789,7 +1793,8 @@ class TestUpdateComputeNode(BaseTestCase):
             mock.sentinel.ctx, ptree, allocations=None)
         ptree.update_traits.assert_called_once_with(
             new_compute.hypervisor_hostname,
-            [os_traits.COMPUTE_NODE]
+            utils.ItemsMatcher(
+                {os_traits.COMPUTE_NODE, os_traits.OWNER_NOVA})
         )
         exp_inv = copy.deepcopy(fake_inv)
         # These ratios and reserved amounts come from fake_upt
@@ -4478,6 +4483,7 @@ class ProviderConfigTestCases(BaseTestCase):
                                          uuids.cn1: provider}, self.p_tree)
 
         expected_traits = {os_traits.COMPUTE_NODE,
+                           os_traits.OWNER_NOVA,
                            *provider['traits']['additional']}
         actual_traits = self.p_tree.data(uuids.cn1).traits
         self.assertEqual(expected_traits, actual_traits)
@@ -4578,6 +4584,20 @@ class ProviderConfigTestCases(BaseTestCase):
                     "' must be removed from 'test_provider_config.yaml'.")
 
         self.assertEqual(expected, str(actual))
+
+    def test_merge_provider_configs_adds_owner_nova(self):
+        """Test that OWNER_NOVA is added to all providers processed
+        by _merge_provider_configs, even if they don't already have it.
+        """
+        child_name = uuids.child1
+        self.p_tree.new_child(child_name, uuids.cn1, uuid=uuids.child1)
+        provider = self._get_provider_config(uuid=uuids.child1)
+
+        self.rt._merge_provider_configs(
+            {uuids.child1: provider}, self.p_tree)
+
+        child_traits = self.p_tree.data(uuids.child1).traits
+        self.assertIn(os_traits.OWNER_NOVA, child_traits)
 
     def test__get_providers_to_update(self):
         """Test specified provider will be found from provide tree.

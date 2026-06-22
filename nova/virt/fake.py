@@ -30,6 +30,7 @@ import uuid
 
 import fixtures
 import os_resource_classes as orc
+import os_traits
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -777,6 +778,8 @@ class MediumFakeDriverWithNestedCustomResources(MediumFakeDriver):
 
         provider_tree.update_inventory(nodename + '-child',
                                        self.child_resources)
+        provider_tree.add_traits(
+            nodename + '-child', os_traits.OWNER_NOVA)
 
 
 class FakeFinishMigrationFailDriver(FakeDriver):
