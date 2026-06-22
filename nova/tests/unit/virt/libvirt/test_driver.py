@@ -22186,6 +22186,28 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         for fs in supported_fs:
             self.assertFalse(drvr.is_supported_fs_format(fs))
 
+    def test_is_supported_mem_encryption_model(self):
+        valid_models = [
+            fields.MemEncryptionModel.AMD_SEV,
+            fields.MemEncryptionModel.AMD_SEV_ES,
+        ]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._host._supports_amd_sev = False
+        drvr._host._supports_amd_sev_es = False
+        for model in valid_models:
+            self.assertFalse(drvr._is_supported_mem_encryption_model(model))
+
+        invalid_models = [
+            'invalid',
+        ]
+        for model in invalid_models:
+            ex = self.assertRaises(
+                exception.Invalid,
+                drvr._is_supported_mem_encryption_model,
+                model)
+            self.assertIn("Invalid memory encryption model: '%s'" % model,
+                          str(ex))
+
     @mock.patch("nova.objects.instance.Instance.image_meta",
                 new_callable=mock.PropertyMock)
     @mock.patch("nova.virt.libvirt.driver.LibvirtDriver.attach_interface")
@@ -30713,15 +30735,19 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock.patch.object(self.drvr, '_validate_pinning_configuration'),
             mock.patch.object(self.drvr, '_validate_vtpm_configuration'),
             mock.patch.object(
+                self.drvr, '_validate_mem_encryption_configuration'),
+            mock.patch.object(
                 self.drvr, '_register_all_undefined_instance_details'),
             mock.patch.object(objects.InstanceList, 'get_by_host'),
-        ) as (mock_pinning, mock_vtpm, mock_register, mock_get_by_host):
+        ) as (mock_pinning, mock_vtpm, mock_me, mock_register,
+              mock_get_by_host):
             result = self.drvr.process_instances_at_startup(
                 self.context, instances)
 
         self.assertIs(instances, result)
         mock_pinning.assert_called_once_with(instances)
         mock_vtpm.assert_called_once_with(instances)
+        mock_me.assert_called_once_with(instances)
         mock_register.assert_called_once_with(self.context, instances)
         mock_get_by_host.assert_not_called()
 
@@ -30751,6 +30777,87 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             'This host has instances with the vTPM feature enabled, but the '
             'host is not correctly configured; ',
             str(ex))
+
+    def _test__validate_mem_encryption_configuration(self, sev, sev_es):
+        instance_1 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_1)
+        instance_2 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_2)
+        instance_3 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_3)
+        instance_4 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_4)
+        image_meta = objects.ImageMeta.from_dict({
+            'properties': {
+                'hw_firmware_type': 'uefi'
+            }
+        })
+
+        # SEV
+        instance_2.flavor.extra_specs = {
+            'hw:mem_encryption': True,
+            'hw:mem_encryption_model': 'amd-sev',
+        }
+        # SEV-ES
+        instance_3.flavor.extra_specs = {
+            'hw:mem_encryption': True,
+            'hw:mem_encryption_model': 'amd-sev-es',
+        }
+
+        instance_4.deleted = True
+
+        instances = objects.InstanceList(objects=[
+            instance_1, instance_2, instance_3, instance_4])
+
+        def fake_is_supported_mem_encryption_model(me_model):
+            if me_model == 'amd-sev-es':
+                return sev_es
+            return sev
+
+        with test.nested(
+            mock.patch.object(
+                self.drvr, '_is_supported_mem_encryption_model',
+                side_effect=fake_is_supported_mem_encryption_model
+            ),
+            mock.patch.object(
+                objects.ImageMeta, 'from_instance', return_value=image_meta,
+            ),
+        ):
+            self.drvr._validate_mem_encryption_configuration(instances)
+
+    def test__validate_mem_encryption_configuration_sev_unsupported(self):
+        """Test that the check fails if the driver does not support amd-sev
+        and instances request it.
+        """
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_mem_encryption_configuration,
+            False, False)
+        self.assertIn(
+            'This host has instances with the memory encryption feature by '
+            'amd-sev enabled but the host is configured not to support '
+            'this feature any more.',
+            str(ex))
+
+    def test__validate_mem_encryption_configuration_sev_es_unsupported(self):
+        """Test that the check fails if the driver does not support amd-sev-es
+        and instances request it.
+        """
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_mem_encryption_configuration,
+            True, False)
+        self.assertIn(
+            'This host has instances with the memory encryption feature by '
+            'amd-sev-es enabled but the host is configured not to support '
+            'this feature any more.',
+            str(ex))
+
+    def test__validate_mem_encryption_configuration_supported(self):
+        """Test that the entire check pass if the driver supports all models
+        instances request
+        """
+        self._test__validate_mem_encryption_configuration(True, True)
 
     @mock.patch('nova.objects.instance.Instance.save')
     def test_register_machine_type_already_registered_image_metadata(
