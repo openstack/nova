@@ -63,7 +63,7 @@ class LibvirtReportTraitsTestBase(
         }
 
     @contextlib.contextmanager
-    def _patch_sev_exists(self, sev, sev_es):
+    def _patch_sev_exists(self, sev, sev_es, sev_snp):
         real_exists = os.path.exists
 
         def fake_exists(path):
@@ -71,6 +71,8 @@ class LibvirtReportTraitsTestBase(
                 return sev
             elif path == libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es':
                 return sev_es
+            elif path == libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp':
+                return sev_snp
             return real_exists(path)
 
         with mock.patch('os.path.exists') as mock_exists:
@@ -82,12 +84,15 @@ class LibvirtReportTraitsTestBase(
         real_open = builtins.open
         sev_open = mock.mock_open(read_data='1\n')
         sev_es_open = mock.mock_open(read_data='1\n')
+        sev_snp_open = mock.mock_open(read_data='1\n')
 
         def fake_open(path, *args, **kwargs):
             if path == libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev':
                 return sev_open(path)
             elif path == libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es':
                 return sev_es_open(path)
+            elif path == libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp':
+                return sev_snp_open(path)
             return real_open(path, *args, **kwargs)
 
         with mock.patch('builtins.open') as mock_open:
@@ -160,7 +165,7 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
     STUB_INIT_HOST = False
 
     def setUp(self):
-        with self._patch_sev_exists(False, False):
+        with self._patch_sev_exists(False, False, False):
             super(LibvirtReportNoSevTraitsTests, self).setUp()
             self.start_compute()
 
@@ -203,7 +208,7 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         sev_features = (fakelibvirt.virConnect.
                         _domain_capability_features_with_SEV)
         with test.nested(
-                self._patch_sev_exists(True, False),
+                self._patch_sev_exists(True, False, False),
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
@@ -262,7 +267,7 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         sev_features = (fakelibvirt.virConnect.
                         _domain_capability_features_with_SEV_max_guests)
         with test.nested(
-                self._patch_sev_exists(True, True),
+                self._patch_sev_exists(True, True, False),
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
@@ -284,7 +289,8 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
 
             mock_exists.assert_has_calls([
                 mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
-                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es')
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp')
             ])
             mock_open.assert_has_calls([
                 mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
@@ -331,11 +337,11 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
     def setUp(self):
         super(LibvirtReportSevTraitsTests, self).setUp()
 
-    def _init_compute(self, sev, sev_es):
+    def _init_compute(self, sev, sev_es, sev_snp):
         sev_features = (fakelibvirt.virConnect.
                         _domain_capability_features_with_SEV_max_guests)
         with test.nested(
-                self._patch_sev_exists(sev, sev_es),
+                self._patch_sev_exists(sev, sev_es, sev_snp),
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
@@ -361,7 +367,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         MEM_ENCRYPTION_CONTEXT resource class on the compute host
         corresponds to the absence or presence of the SEV capability.
         """
-        self._init_compute(True, False)
+        self._init_compute(True, False, False)
 
         # Make sure that SEV is enabled but SEV-ES is not enabled
         self.assertTrue(self.compute.driver._host.supports_amd_sev)
@@ -393,7 +399,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         sev_features = (fakelibvirt.virConnect.
                         _domain_capability_features_with_SEV)
         with test.nested(
-                self._patch_sev_exists(False, False),
+                self._patch_sev_exists(False, False, False),
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
@@ -445,7 +451,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         MEM_ENCRYPTION_CONTEXT resource class on the compute host
         corresponds to the absence or presence of the SEV-ES capability.
         """
-        self._init_compute(True, True)
+        self._init_compute(True, True, False)
 
         # Make sure that both SEV and SEV-ES are enabled
         self.assertTrue(self.compute.driver._host.supports_amd_sev)
@@ -483,7 +489,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         sev_features = (fakelibvirt.virConnect.
                         _domain_capability_features_with_SEV)
         with test.nested(
-                self._patch_sev_exists(True, False),
+                self._patch_sev_exists(True, False, False),
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
@@ -539,7 +545,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         MEM_ENCRYPTION_CONTEXT resource class on the compute host
         corresponds to the absence or presence of the SEV/SEV-ES capability.
         """
-        self._init_compute(True, True)
+        self._init_compute(True, True, False)
 
         # Make sure that both SEV and SEV-ES are enabled
         self.assertTrue(self.compute.driver._host.supports_amd_sev)
@@ -576,7 +582,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         sev_features = (fakelibvirt.virConnect.
                         _domain_capability_features_with_SEV)
         with test.nested(
-                self._patch_sev_exists(False, False),
+                self._patch_sev_exists(False, False, False),
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',

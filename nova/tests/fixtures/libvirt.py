@@ -29,7 +29,6 @@ from nova.objects import fields as obj_fields
 from nova.tests.fixtures import libvirt_data as fake_libvirt_data
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
-from nova.virt.libvirt import host
 
 
 # Allow passing None to the various connect methods
@@ -2724,17 +2723,6 @@ class LibvirtFixture(fixtures.Fixture):
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.host.Host._get_avail_memory_kb',
             return_value=10 * 1024 * 1024))  # 10 GB
-
-        real_exists = os.path.exists
-
-        def fake_exists(path):
-            if path == (host.SEV_KERNEL_PARAM_FILE % 'sev'):
-                return False
-            if path == (host.SEV_KERNEL_PARAM_FILE % 'sev-es'):
-                return False
-            return real_exists(path)
-
-        self.useFixture(fixtures.MonkeyPatch('os.path.exists', fake_exists))
 
         disable_event_thread(self)
 
