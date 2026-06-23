@@ -313,9 +313,11 @@ class SevResphapeTests(base.ServersTestBase):
 
         # restart the compute service to trigger reshape
         with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
-                        return_value=True), \
+                        new_callable=mock.PropertyMock) as mock_sev, \
                 mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
-                           return_value=False):
+                           new_callable=mock.PropertyMock) as mock_sev_es:
+            mock_sev.return_value = True
+            mock_sev_es.return_value = False
             self.compute = self.restart_compute_service(self.hostname)
 
         # verify that the inventory, usages and allocation are correct after
@@ -337,9 +339,11 @@ class SevResphapeTests(base.ServersTestBase):
 
         # create a new server after reshape
         with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
-                        return_value=True), \
+                        new_callable=mock.PropertyMock) as mock_sev, \
                 mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
-                           return_value=False):
+                           new_callable=mock.PropertyMock) as mock_sev_es:
+            mock_sev.return_value = True
+            mock_sev_es.return_value = False
             post_server = self._create_server(
                 image_uuid=uuidsentinel.mem_enc_image_id)
         self.addCleanup(self._delete_server, post_server)
@@ -401,9 +405,11 @@ class SevResphapeTests(base.ServersTestBase):
 
         # restart the compute service in compute1 to trigger reshape
         with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
-                        return_value=True), \
+                        new_callable=mock.PropertyMock) as mock_sev, \
                 mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
-                           return_value=False):
+                           new_callable=mock.PropertyMock) as mock_sev_es:
+            mock_sev.return_value = True
+            mock_sev_es.return_value = False
             self.compute1 = self.restart_compute_service(self.hostname1)
 
         # compute1 should have its RP reshaped
@@ -428,9 +434,11 @@ class SevResphapeTests(base.ServersTestBase):
 
         # create new servers to both compute nodes
         with mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev',
-                        return_value=True), \
+                        new_callable=mock.PropertyMock) as mock_sev, \
                 mock.patch('nova.virt.libvirt.host.Host.supports_amd_sev_es',
-                           return_value=False):
+                           new_callable=mock.PropertyMock) as mock_sev_es:
+            mock_sev.return_value = True
+            mock_sev_es.return_value = False
             post_server1 = self._create_server(
                 host='compute1', networks='none',
                 image_uuid=uuidsentinel.mem_enc_image_id)
