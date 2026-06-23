@@ -3938,7 +3938,8 @@ class TestAPI(TestAPIBase):
 
         instance_networks = [{"id": "instance_network_1",
                               "name": "fake_network",
-                              "tenant_id": "fake_tenant_id"}]
+                              "tenant_id": "fake_tenant_id",
+                              "mtu": 1450}]
         instance_port_ids = ["instance_port_1"]
 
         network_info = model.NetworkInfo(
@@ -3948,7 +3949,10 @@ class TestAPI(TestAPIBase):
               'network': model.Network(
                   id=instance_networks[0]["id"],
                   label=instance_networks[0]["name"],
-                  meta={"tenant_id": instance_networks[0]["tenant_id"]})}]
+                  meta={
+                     "tenant_id": instance_networks[0]["tenant_id"],
+                     "mtu": 1450
+                  })}]
         )
 
         instance_uuid = uuids.fake
