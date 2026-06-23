@@ -2098,7 +2098,8 @@ class API:
             networks = networks + [
                 {'id': iface['network']['id'],
                  'name': iface['network']['label'],
-                 'tenant_id': iface['network']['meta']['tenant_id']}
+                 'tenant_id': iface['network']['meta']['tenant_id'],
+                 'mtu': iface['network']['meta'].get('mtu')}
                 for iface in ifaces
                 if _is_not_duplicate(iface['network']['id'],
                                      networks_ids,
