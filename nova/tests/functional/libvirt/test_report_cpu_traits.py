@@ -59,7 +59,9 @@ class LibvirtReportTraitsTestBase(
             'sev': [rp for rp in rps
                     if rp['name'] == '%s_amd_sev' % root_rp['name']],
             'sev-es': [rp for rp in rps
-                       if rp['name'] == '%s_amd_sev_es' % root_rp['name']]
+                       if rp['name'] == '%s_amd_sev_es' % root_rp['name']],
+            'sev-snp': [rp for rp in rps
+                        if rp['name'] == '%s_amd_sev_snp' % root_rp['name']],
         }
 
     @contextlib.contextmanager
@@ -165,40 +167,55 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
     STUB_INIT_HOST = False
 
     def setUp(self):
-        with self._patch_sev_exists(False, False, False):
+        with test.nested(
+                self._patch_sev_exists(False, False, False),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getLibVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
+        ) as (mock_exists, mock_lib_version, mock_get_version):
             super(LibvirtReportNoSevTraitsTests, self).setUp()
             self.start_compute()
 
     def test_sev_trait_off_on(self):
-        """Test that the compute service reports the SEV/SEV-ES trait in
-        the list of global traits, but doesn't immediately register it on the
-        compute host resource provider in the placement API, due to
-        the kvm-amd kernel module's sev/sev-es parameter file being (mocked
-        as) absent.
+        """Test that the compute service reports the SEV/SEV-ES/SEV-SNP trait
+        in the list of global traits, but doesn't immediately register it on
+        the compute host resource provider in the placement API, due to
+        the kvm-amd kernel module's sev/sev-es/sev-snp parameter file being
+        (mocked as) absent.
 
-        Then test that if the SEV/SEV-ES capability appears (again via
+        Then test that if the SEV/SEV-ES/SEV-SNP capability appears (again via
         mocking), after a restart of the compute service, the trait
         gets registered on the compute host.
 
         Also test that on both occasions, the inventory of the
         MEM_ENCRYPTION_CONTEXT resource class on the compute host
-        corresponds to the absence or presence of the SEV/SEV-ES capability.
+        corresponds to the absence or presence of the SEV/SEV-ES/SEV-SNP
+        capability.
         """
         self.assertFalse(self.compute.driver._host.supports_amd_sev)
         self.assertFalse(self.compute.driver._host.supports_amd_sev_es)
+        self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
 
         global_traits = self._get_all_traits()
         self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
         self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
 
         traits = self._get_provider_traits(self.host_uuid)
         self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
         self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
         self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
 
         sev_rps = self._get_amd_sev_rps()
         self.assertEqual(0, len(sev_rps['sev']))
         self.assertEqual(0, len(sev_rps['sev-es']))
+        self.assertEqual(0, len(sev_rps['sev-snp']))
 
         # Now simulate the host gaining SEV functionality.  Here we
         # simulate a kernel update or reconfiguration which causes the
@@ -221,12 +238,15 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             self.compute.driver._host._domain_caps = None
             self.compute.driver._host._supports_amd_sev = None
             self.compute.driver._host._supports_amd_sev_es = None
+            self.compute.driver._host._supports_amd_sev_snp = None
             self.assertTrue(self.compute.driver._host.supports_amd_sev)
             self.assertFalse(self.compute.driver._host.supports_amd_sev_es)
+            self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
 
             mock_exists.assert_has_calls([
                 mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
-                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es')
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp')
             ])
             mock_open.assert_has_calls([
                 mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev')
@@ -243,12 +263,14 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             global_traits = self._get_all_traits()
             self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
             self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
 
             # sev capabilities are managed by sub rp and are not present in
             # root rp
             traits = self._get_provider_traits(self.host_uuid)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
             self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
 
             sev_rps = self._get_amd_sev_rps()
@@ -259,6 +281,7 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             self.assertMemEncryptionSlotsEqual(sev_rp_uuid, db_const.MAX_INT)
 
             self.assertEqual(0, len(sev_rps['sev-es']))
+            self.assertEqual(0, len(sev_rps['sev-snp']))
 
         # Now simulate the host gaining SEV-ES functionality.  Here we
         # simulate a kernel update or reconfiguration which causes the
@@ -273,10 +296,15 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
                                   '_domain_capability_features',
                                   new=sev_features),
                 mock.patch.object(
+                    fakelibvirt.Connection, 'getLibVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
+                mock.patch.object(
                     fakelibvirt.Connection, 'getVersion',
                     return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
-        ) as (mock_exists, mock_open, mock_features, mock_get_version):
+                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
+        ) as (mock_exists, mock_open, mock_features,
+              mock_lib_version, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             # As we are changing the domain caps we need to clear the
@@ -284,8 +312,10 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             self.compute.driver._host._domain_caps = None
             self.compute.driver._host._supports_amd_sev = None
             self.compute.driver._host._supports_amd_sev_es = None
+            self.compute.driver._host._supports_amd_sev_snp = None
             self.assertTrue(self.compute.driver._host.supports_amd_sev)
             self.assertTrue(self.compute.driver._host.supports_amd_sev_es)
+            self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
 
             mock_exists.assert_has_calls([
                 mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
@@ -308,12 +338,14 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             global_traits = self._get_all_traits()
             self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
             self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
 
             # sev capabilities are managed by sub rp and are not present in
             # root rp
             traits = self._get_provider_traits(self.host_uuid)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
             self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
 
             sev_rps = self._get_amd_sev_rps()
@@ -329,6 +361,88 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             sev_es_rp_traits = self._get_provider_traits(sev_es_rp_uuid)
             self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, sev_es_rp_traits)
             self.assertMemEncryptionSlotsEqual(sev_es_rp_uuid, 15)
+
+        # Now simulate the host gaining SEV-SNP functionality.  Here we
+        # simulate a kernel update or reconfiguration which causes the
+        # kvm-amd kernel module's "sev-snp" parameter to become available
+        # and set to 1 .
+        sev_features = (fakelibvirt.virConnect.
+                        _domain_capability_features_with_SEV_max_guests)
+        with test.nested(
+                self._patch_sev_exists(True, True, True),
+                self._patch_sev_open(),
+                mock.patch.object(fakelibvirt.virConnect,
+                                  '_domain_capability_features',
+                                  new=sev_features),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getLibVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
+        ) as (mock_exists, mock_open, mock_features,
+              mock_lib_version, mock_get_version):
+            # Retrigger the detection code.  In the real world this
+            # would be a restart of the compute service.
+            # As we are changing the domain caps we need to clear the
+            # cache in the host object.
+            self.compute.driver._host._domain_caps = None
+            self.compute.driver._host._supports_amd_sev = None
+            self.compute.driver._host._supports_amd_sev_es = None
+            self.compute.driver._host._supports_amd_sev_snp = None
+            self.assertTrue(self.compute.driver._host.supports_amd_sev)
+            self.assertFalse(self.compute.driver._host.supports_amd_sev_es)
+            self.assertTrue(self.compute.driver._host.supports_amd_sev_snp)
+
+            mock_exists.assert_has_calls([
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp')
+            ])
+            mock_open.assert_has_calls([
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp')
+            ])
+
+            # However it won't disappear in the provider tree and get synced
+            # back to placement until we force a reinventory:
+            self.compute.manager.reset()
+            # reset cached traits so they are recalculated.
+            self.compute.driver._static_traits = None
+            self._run_periodics()
+
+            # Sanity check that we've still got the trait globally.
+            global_traits = self._get_all_traits()
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
+
+            # sev capabilities are managed by sub rp and are not present in
+            # root rp
+            traits = self._get_provider_traits(self.host_uuid)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
+            self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
+
+            sev_rps = self._get_amd_sev_rps()
+
+            self.assertEqual(1, len(sev_rps['sev']))
+            sev_rp_uuid = sev_rps['sev'][0]['uuid']
+            sev_rp_traits = self._get_provider_traits(sev_rp_uuid)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV, sev_rp_traits)
+            self.assertMemEncryptionSlotsEqual(sev_rp_uuid, 100)
+
+            self.assertEqual(0, len(sev_rps['sev-es']))
+
+            self.assertEqual(1, len(sev_rps['sev-snp']))
+            sev_snp_rp_uuid = sev_rps['sev-snp'][0]['uuid']
+            sev_snp_rp_traits = self._get_provider_traits(sev_snp_rp_uuid)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, sev_snp_rp_traits)
+            self.assertMemEncryptionSlotsEqual(sev_snp_rp_uuid, 15)
 
 
 class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
@@ -347,10 +461,15 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
                                   '_domain_capability_features',
                                   new=sev_features),
                 mock.patch.object(
+                    fakelibvirt.Connection, 'getLibVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
+                mock.patch.object(
                     fakelibvirt.Connection, 'getVersion',
                     return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
-        ) as (mock_exists, mock_open, mock_features, mock_get_version):
+                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
+        ) as (mock_exists, mock_open, mock_features,
+              mock_lib_version, mock_get_version):
             self.start_compute()
 
     def test_sev_trait_on_off(self):
@@ -369,13 +488,15 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         """
         self._init_compute(True, False, False)
 
-        # Make sure that SEV is enabled but SEV-ES is not enabled
+        # Make sure that SEV is enabled but SEV-ES and SEV-SNP are not enabled
         self.assertTrue(self.compute.driver._host.supports_amd_sev)
         self.assertFalse(self.compute.driver._host.supports_amd_sev_es)
+        self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
 
         global_traits = self._get_all_traits()
         self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
         self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
 
         # sev capabilities are managed by sub rp and are not present in root rp
         traits = self._get_provider_traits(self.host_uuid)
@@ -391,6 +512,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         self.assertMemEncryptionSlotsEqual(sev_rp_uuid, 100)
 
         self.assertEqual(0, len(sev_rps['sev-es']))
+        self.assertEqual(0, len(sev_rps['sev-snp']))
 
         # Now simulate the host losing SEV functionality.  Here we
         # simulate a kernel downgrade or reconfiguration which causes
@@ -410,8 +532,10 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             self.compute.driver._host._domain_caps = None
             self.compute.driver._host._supports_amd_sev = None
             self.compute.driver._host._supports_amd_sev_es = None
+            self.compute.driver._host._supports_amd_sev_snp = None
             self.assertFalse(self.compute.driver._host.supports_amd_sev)
             self.assertFalse(self.compute.driver._host.supports_amd_sev_es)
+            self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
 
             mock_exists.assert_has_calls([
                 mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
@@ -428,14 +552,17 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             global_traits = self._get_all_traits()
             self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
             self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
 
             traits = self._get_provider_traits(self.host_uuid)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
 
             sev_rps = self._get_amd_sev_rps()
             self.assertEqual(0, len(sev_rps['sev']))
             self.assertEqual(0, len(sev_rps['sev-es']))
+            self.assertEqual(0, len(sev_rps['sev-snp']))
 
     def test_sev_es_trait_on_off(self):
         """Test that the compute service reports the SEV-ES trait in
@@ -453,13 +580,15 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         """
         self._init_compute(True, True, False)
 
-        # Make sure that both SEV and SEV-ES are enabled
+        # Make sure that SEV and SEV-ES are enabled but SEV-SNP is disabled
         self.assertTrue(self.compute.driver._host.supports_amd_sev)
         self.assertTrue(self.compute.driver._host.supports_amd_sev_es)
+        self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
 
         global_traits = self._get_all_traits()
         self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
         self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
 
         # sev capabilities are managed by sub rp and are not present in root rp
         traits = self._get_provider_traits(self.host_uuid)
@@ -479,7 +608,8 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         sev_es_rp_traits = self._get_provider_traits(sev_es_rp_uuid)
         self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, sev_es_rp_traits)
         self.assertMemEncryptionSlotsEqual(sev_es_rp_uuid, 15)
-        self.assertEqual(1, len(sev_rps['sev']))
+
+        self.assertEqual(0, len(sev_rps['sev-snp']))
 
         # Now simulate the host losing SEV-ES functionality.  Here we
         # simulate a kernel downgrade or reconfiguration which causes
@@ -487,7 +617,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         # unavailable, however it could also happen via a libvirt
         # downgrade, for instance.
         sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV)
+                        _domain_capability_features_with_SEV_max_guests)
         with test.nested(
                 self._patch_sev_exists(True, False, False),
                 self._patch_sev_open(),
@@ -500,12 +630,13 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             self.compute.driver._host._domain_caps = None
             self.compute.driver._host._supports_amd_sev = None
             self.compute.driver._host._supports_amd_sev_es = None
+            self.compute.driver._host._supports_amd_sev_snp = None
             self.assertTrue(self.compute.driver._host.supports_amd_sev)
             self.assertFalse(self.compute.driver._host.supports_amd_sev_es)
+            self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
 
             mock_exists.assert_has_calls([
-                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
-                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es')
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev')
             ])
             mock_open.assert_has_calls([
                 mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev')
@@ -526,12 +657,139 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             traits = self._get_provider_traits(self.host_uuid)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
             self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
 
             sev_rps = self._get_amd_sev_rps()
             self.assertEqual(1, len(sev_rps['sev']))
             self.assertEqual(0, len(sev_rps['sev-es']))
+            self.assertEqual(0, len(sev_rps['sev-snp']))
 
-    def test_sev_all_trait_on_off(self):
+    def test_sev_snp_trait_on_off(self):
+        """Test that the compute service reports the SEV-SNP trait in
+        the list of global traits, and immediately registers it on the compute
+        host resource provider in the placement API, due to the SEV-SNP
+        capability being (mocked as) present.
+
+        Then test that if the SEV-SNP capability disappears (again via
+        mocking), after a restart of the compute service, the trait
+        gets removed from the compute host.
+
+        Also test that on both occasions, the inventory of the
+        MEM_ENCRYPTION_CONTEXT resource class on the compute host
+        corresponds to the absence or presence of the SEV-SNP capability.
+        """
+        self._init_compute(True, True, True)
+
+        # Make sure that SEV and SEV-SNP are enabled. SEV-ES is disabled due
+        # to SEV-SNP enabled
+        self.assertTrue(self.compute.driver._host.supports_amd_sev)
+        self.assertFalse(self.compute.driver._host.supports_amd_sev_es)
+        self.assertTrue(self.compute.driver._host.supports_amd_sev_snp)
+
+        global_traits = self._get_all_traits()
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
+
+        # sev capabilities are managed by sub rp and are not present in root rp
+        traits = self._get_provider_traits(self.host_uuid)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
+        self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
+
+        sev_rps = self._get_amd_sev_rps()
+
+        self.assertEqual(1, len(sev_rps['sev']))
+        sev_rp_uuid = sev_rps['sev'][0]['uuid']
+        sev_rp_traits = self._get_provider_traits(sev_rp_uuid)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV, sev_rp_traits)
+        self.assertMemEncryptionSlotsEqual(sev_rp_uuid, 100)
+
+        self.assertEqual(0, len(sev_rps['sev-es']))
+
+        self.assertEqual(1, len(sev_rps['sev-snp']))
+        sev_snp_rp_uuid = sev_rps['sev-snp'][0]['uuid']
+        sev_snp_rp_traits = self._get_provider_traits(sev_snp_rp_uuid)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, sev_snp_rp_traits)
+        self.assertMemEncryptionSlotsEqual(sev_snp_rp_uuid, 15)
+
+        # Now simulate the host losing SEV-SNP functionality.  Here we
+        # simulate a kernel downgrade or reconfiguration which causes
+        # the kvm-amd kernel module's "sev-snp" parameter to become
+        # unavailable, however it could also happen via a libvirt
+        # downgrade, for instance.
+        sev_features = (fakelibvirt.virConnect.
+                        _domain_capability_features_with_SEV_max_guests)
+        with test.nested(
+                self._patch_sev_exists(True, True, False),
+                self._patch_sev_open(),
+                mock.patch.object(fakelibvirt.virConnect,
+                                  '_domain_capability_features',
+                                  new=sev_features),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getLibVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
+        ) as (mock_exists, mock_open, mock_features,
+              mock_lib_version, mock_get_version):
+            # Retrigger the detection code.  In the real world this
+            # would be a restart of the compute service.
+            # Here sev-es is enabled because sev-snp is disabled
+            self.compute.driver._host._domain_caps = None
+            self.compute.driver._host._supports_amd_sev = None
+            self.compute.driver._host._supports_amd_sev_es = None
+            self.compute.driver._host._supports_amd_sev_snp = None
+            self.assertTrue(self.compute.driver._host.supports_amd_sev)
+            self.assertTrue(self.compute.driver._host.supports_amd_sev_es)
+            self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
+
+            mock_exists.assert_has_calls([
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp'),
+            ])
+            mock_open.assert_has_calls([
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
+            ])
+
+            # However it won't disappear in the provider tree and get synced
+            # back to placement until we force a reinventory:
+            self.compute.manager.reset()
+            # reset cached traits so they are recalculated.
+            self.compute.driver._static_traits = None
+            self._run_periodics()
+
+            # Sanity check that we've still got the trait globally.
+            global_traits = self._get_all_traits()
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
+
+            traits = self._get_provider_traits(self.host_uuid)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
+            self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
+
+            sev_rps = self._get_amd_sev_rps()
+
+            self.assertEqual(1, len(sev_rps['sev']))
+
+            self.assertEqual(1, len(sev_rps['sev-es']))
+            sev_es_rp_uuid = sev_rps['sev-es'][0]['uuid']
+            sev_es_rp_traits = self._get_provider_traits(sev_es_rp_uuid)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, sev_es_rp_traits)
+            self.assertMemEncryptionSlotsEqual(sev_es_rp_uuid, 15)
+
+            self.assertEqual(0, len(sev_rps['sev-snp']))
+
+    def test_sev_and_sev_es_trait_on_off(self):
         """Test that the compute service reports the SEV/SEV-ES trait in
         the list of global traits, and immediately registers it on the compute
         host resource provider in the placement API, due to the SEV/SEV-ES
@@ -557,6 +815,8 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         # sev capabilities are managed by sub rp and are not present in root rp
         traits = self._get_provider_traits(self.host_uuid)
         self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
         self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
 
         sev_rps = self._get_amd_sev_rps()
@@ -619,3 +879,127 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             sev_rps = self._get_amd_sev_rps()
             self.assertEqual(0, len(sev_rps['sev']))
             self.assertEqual(0, len(sev_rps['sev-es']))
+
+    def test_sev_snp_trait_off_on(self):
+        """Test that the compute service reports the SEV-ES trait in
+        the list of global traits, and immediately registers it on the compute
+        host resource provider in the placement API, due to the SEV-ES
+        capability being (mocked as) present.
+
+        Then test that if the SEV-SNP capability appears (again via
+        mocking), after a restart of the compute service, the SEV-ES trait
+        gets removed from the compute host.
+
+        Also test that on both occasions, the inventory of the
+        MEM_ENCRYPTION_CONTEXT resource class on the compute host
+        corresponds to the absence or presence of the SEV-SNP capability.
+        """
+        self._init_compute(True, True, False)
+
+        self.assertTrue(self.compute.driver._host.supports_amd_sev)
+        self.assertTrue(self.compute.driver._host.supports_amd_sev_es)
+        self.assertFalse(self.compute.driver._host.supports_amd_sev_snp)
+
+        global_traits = self._get_all_traits()
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
+
+        # sev capabilities are managed by sub rp and are not present in root rp
+        traits = self._get_provider_traits(self.host_uuid)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+        self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
+        self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
+
+        sev_rps = self._get_amd_sev_rps()
+
+        self.assertEqual(1, len(sev_rps['sev']))
+        sev_rp_uuid = sev_rps['sev'][0]['uuid']
+        sev_rp_traits = self._get_provider_traits(sev_rp_uuid)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV, sev_rp_traits)
+        self.assertMemEncryptionSlotsEqual(sev_rp_uuid, 100)
+
+        self.assertEqual(1, len(sev_rps['sev-es']))
+        sev_es_rp_uuid = sev_rps['sev-es'][0]['uuid']
+        sev_es_rp_traits = self._get_provider_traits(sev_es_rp_uuid)
+        self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, sev_es_rp_traits)
+        self.assertMemEncryptionSlotsEqual(sev_es_rp_uuid, 15)
+
+        self.assertEqual(0, len(sev_rps['sev-snp']))
+
+        # Now simulate the host gaining SEV-SNP functionality.  Here we
+        # simulate a kernel upgrade or reconfiguration which causes
+        # the kvm-amd kernel module's "sev-snp" parameter to become
+        # available, however it could also happen via a libvirt
+        # upgrade, for instance.
+        sev_features = (fakelibvirt.virConnect.
+                        _domain_capability_features_with_SEV_max_guests)
+        with test.nested(
+                self._patch_sev_exists(True, True, True),
+                self._patch_sev_open(),
+                mock.patch.object(fakelibvirt.virConnect,
+                                  '_domain_capability_features',
+                                  new=sev_features),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getLibVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
+        ) as (mock_exists, mock_open, mock_features,
+              mock_lib_version, mock_get_version):
+            # Retrigger the detection code.  In the real world this
+            # would be a restart of the compute service.
+            # Here sev-es is disabled because sev-snp is enabled
+            self.compute.driver._host._domain_caps = None
+            self.compute.driver._host._supports_amd_sev = None
+            self.compute.driver._host._supports_amd_sev_es = None
+            self.compute.driver._host._supports_amd_sev_snp = None
+            self.assertTrue(self.compute.driver._host.supports_amd_sev)
+            self.assertFalse(self.compute.driver._host.supports_amd_sev_es)
+            self.assertTrue(self.compute.driver._host.supports_amd_sev_snp)
+
+            mock_exists.assert_has_calls([
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp'),
+            ])
+            mock_open.assert_has_calls([
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
+                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp'),
+            ])
+
+            # However it won't disappear in the provider tree and get synced
+            # back to placement until we force a reinventory:
+            self.compute.manager.reset()
+            # reset cached traits so they are recalculated.
+            self.compute.driver._static_traits = None
+            self._run_periodics()
+
+            # Sanity check that we've still got the trait globally.
+            global_traits = self._get_all_traits()
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_ES, global_traits)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, global_traits)
+
+            traits = self._get_provider_traits(self.host_uuid)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_ES, traits)
+            self.assertNotIn(ost.HW_CPU_X86_AMD_SEV_SNP, traits)
+            self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
+
+            sev_rps = self._get_amd_sev_rps()
+
+            self.assertEqual(1, len(sev_rps['sev']))
+
+            self.assertEqual(0, len(sev_rps['sev-es']))
+
+            self.assertEqual(1, len(sev_rps['sev-snp']))
+            sev_snp_rp_uuid = sev_rps['sev-snp'][0]['uuid']
+            sev_snp_rp_traits = self._get_provider_traits(sev_snp_rp_uuid)
+            self.assertIn(ost.HW_CPU_X86_AMD_SEV_SNP, sev_snp_rp_traits)
+            self.assertMemEncryptionSlotsEqual(sev_snp_rp_uuid, 15)

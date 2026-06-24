@@ -695,7 +695,8 @@ class TestMemEncryptionModel(TestField):
         super(TestMemEncryptionModel, self).setUp()
         self.field = fields.MemEncryptionModel()
         self.coerce_good_values = [('amd-sev', 'amd-sev'),
-                                   ('amd-sev-es', 'amd-sev-es')]
+                                   ('amd-sev-es', 'amd-sev-es'),
+                                   ('amd-sev-snp', 'amd-sev-snp')]
         self.coerce_bad_values = ['amd-sev-foo']
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]
