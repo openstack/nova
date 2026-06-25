@@ -474,7 +474,9 @@ def _get_ports_from_server_list(servers, neutron):
     for ids in _chunk_by_ids(servers, MAX_SEARCH_IDS):
         search_opts = {'device_id': ids}
         try:
-            ports.extend(neutron.list_ports(**search_opts).get('ports'))
+            ports.extend(neutron.list_ports(
+                fields=['security_groups', 'device_id'],
+                **search_opts).get('ports'))
         except n_exc.PortNotFoundClient:
             # There could be a race between deleting an instance and
             # retrieving its port groups from Neutron. In this case
