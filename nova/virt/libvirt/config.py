@@ -3107,6 +3107,36 @@ class LibvirtConfigGuestSEVLaunchSecurity(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestSEVSNPLaunchSecurity(LibvirtConfigObject):
+    SEV_SNP_POLICY_SMT = 0x00010000
+    SEV_SNP_POLICY_RESERVED = 0x00020000
+
+    DEFAULT_SEV_SNP_POLICY = (
+        SEV_SNP_POLICY_SMT | SEV_SNP_POLICY_RESERVED)
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestSEVSNPLaunchSecurity, self).__init__(
+            root_name='launchSecurity', **kwargs)
+        self.authorKey = False
+        self.vcek = True
+        self.kernelHashes = False
+        self.policy = self.DEFAULT_SEV_SNP_POLICY
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestSEVSNPLaunchSecurity, self).format_dom()
+
+        root.set('type', 'sev-snp')
+        policy = etree.Element('policy')
+        policy.text = '0x%08x' % self.policy
+        root.append(policy)
+
+        root.set('authorKey', self.get_yes_no_str(self.authorKey))
+        root.set('vcek', self.get_yes_no_str(self.vcek))
+        root.set('kernelHashes', self.get_yes_no_str(self.kernelHashes))
+
+        return root
+
+
 class LibvirtConfigGuestFeatureVMCoreInfo(LibvirtConfigGuestFeature):
 
     def __init__(self, **kwargs):
