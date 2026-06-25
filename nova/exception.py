@@ -2105,6 +2105,10 @@ class FirmwareSMMNotSupported(Invalid):
     msg_fmt = _("This firmware doesn't require (support) SMM")
 
 
+class StatelessFirmwareRequired(Invalid):
+    msg_fmt = _("%(feature)s requires stateless firmware")
+
+
 class TriggerCrashDumpNotSupported(Invalid):
     msg_fmt = _("Triggering crash dump is not supported")
 

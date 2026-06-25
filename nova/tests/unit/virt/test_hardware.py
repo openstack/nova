@@ -5406,6 +5406,15 @@ class GetMemEncryptionConfigTestCase(test.NoDBTestCase):
         self.assertEqual(fields.MemEncryptionModel.AMD_SEV_ES, me_config.model)
         self.assertEqual(ot.HW_CPU_X86_AMD_SEV_ES, me_config.required_trait)
 
+    def test_sev_snp(self):
+        me_config = hw.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.AMD_SEV_SNP)
+        self.assertIs(hw.MemEncryptionConfigSevSnp, type(me_config))
+        self.assertFalse(me_config.needs_locked_memory)
+        self.assertEqual(fields.MemEncryptionModel.AMD_SEV_SNP,
+                         me_config.model)
+        self.assertEqual(ot.HW_CPU_X86_AMD_SEV_SNP, me_config.required_trait)
+
 
 class MemEncryptionFlavorImageConflictTestCase(test.NoDBTestCase):
     def _test_encrypted_memory_support_conflict(self, extra_spec,
@@ -5488,8 +5497,8 @@ class MemEncryptionRequestedWithoutUEFITestCase(
         MemEncryptionRequestedInvalidImagePropsTestCase):
     expected_exception = exception.FlavorImageConflict
     expected_error = (
-        "Memory encryption requested by %(requesters)s but image "
-        "metadata doesn't have 'hw_firmware_type' property "
+        "Memory encryption is requested by %(requesters)s but the image "
+        "metadata doesn't have the 'hw_firmware_type' property "
         "set to 'uefi'"
     )
 
@@ -5594,6 +5603,24 @@ class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
                       'mtype': 'pc'}
         self._test_encrypted_memory_support_pc_image_id(image_meta,
                                                         error_data)
+
+
+class MemEncryptionRequestedWithoutStatelessFirmware(
+       MemEncryptionRequestedInvalidImagePropsTestCase):
+    expected_exception = exception.StatelessFirmwareRequired
+    expected_error = (
+        "The %(model)s memory encryption model requires stateless firmware "
+        "but the image metadata doesn't have the 'hw_firmware_stateless' "
+        "property set to True")
+
+    def test_encrypted_memory_support_without_stateless(self):
+        error_data = {'model': 'amd-sev-snp'}
+        image_props = {'hw_firmware_type': 'uefi',
+                       'hw_machine_type': 'q35',
+                       'hw_mem_encryption': True,
+                       'hw_mem_encryption_model': 'amd-sev-snp'}
+        self._test_encrypted_memory_support_raises(None, None,
+                                                   image_props, error_data)
 
 
 class MemEncryptionRequiredTestCase(test.NoDBTestCase):

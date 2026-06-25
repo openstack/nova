@@ -7078,3 +7078,21 @@ class CreateServerConstraintsTest(integrated_helpers._IntegratedTestBase):
             '(False) conflict. A consistent value is expected if '
             'both specified.',
             cm.exception.response.json()['badRequest']['message'])
+
+    def test_create_server_amd_sev_snp_non_stateless_firmware(self):
+        image = self._create_image(metadata={
+            'hw_mem_encryption': 'true',
+            'hw_mem_encryption_model': 'amd-sev-snp',
+            'hw_firmware_type': 'uefi',
+            'hw_machine_type': 'q35',
+        })
+
+        with self.assertRaisesRegex(client.OpenStackApiException,
+                                    ".*Unexpected status code.*") as cm:
+            self._create_server(image_uuid=image['id'])
+        self.assertEqual(400, cm.exception.response.status_code)
+        self.assertEqual(
+            "The amd-sev-snp memory encryption model requires stateless "
+            "firmware but the image metadata doesn't have "
+            "the 'hw_firmware_stateless' property set to True",
+            cm.exception.response.json()['badRequest']['message'])

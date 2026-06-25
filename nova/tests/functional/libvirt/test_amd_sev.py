@@ -46,6 +46,16 @@ class TestSEV(base.ServersTestBase):
         sev_es_image['properties']['hw_mem_encryption_model'] = 'amd-sev-es'
         self.glance.create(None, sev_es_image)
 
+        # Create a SEV-SNP enabled image for the test
+        sev_snp_image = copy.deepcopy(self.glance.image1)
+        sev_snp_image['id'] = uuids.sev_snp_image_id
+        sev_snp_image['properties']['hw_firmware_type'] = 'uefi'
+        sev_snp_image['properties']['hw_firmware_stateless'] = 'True'
+        sev_snp_image['properties']['hw_machine_type'] = 'q35'
+        sev_snp_image['properties']['hw_mem_encryption'] = 'True'
+        sev_snp_image['properties']['hw_mem_encryption_model'] = 'amd-sev-snp'
+        self.glance.create(None, sev_snp_image)
+
         self.sev = True
         self.sev_es = True
         self.sev_snp = False
@@ -61,8 +71,10 @@ class TestSEV(base.ServersTestBase):
             'nova.virt.libvirt.host.Host._kernel_supports_amd_sev',
             side_effect=mock_kernel))
 
+        self.libvirt_version = versionutils.convert_version_to_int(
+            host.MIN_LIBVIRT_SEV_SNP_VERSION)
         self.qemu_version = versionutils.convert_version_to_int(
-            host.MIN_QEMU_SEV_ES_VERSION)
+            host.MIN_QEMU_SEV_SNP_VERSION)
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
@@ -71,7 +83,9 @@ class TestSEV(base.ServersTestBase):
     def test_sev_lost_after_restart(self):
         """Compute should fail if sev instance exists but sev is lost
         """
-        self.hostname = self.start_compute(qemu_version=self.qemu_version)
+        self.hostname = self.start_compute(
+            libvirt_version=self.libvirt_version,
+            qemu_version=self.qemu_version)
 
         # create sev instance
         self._create_server(
@@ -102,7 +116,9 @@ class TestSEV(base.ServersTestBase):
     def test_sev_es_lost_after_restart(self):
         """Compute should fail if sev-es instance exists but sev-es is lost
         """
-        self.hostname = self.start_compute(qemu_version=self.qemu_version)
+        self.hostname = self.start_compute(
+            libvirt_version=self.libvirt_version,
+            qemu_version=self.qemu_version)
 
         # create sev-es instance
         self._create_server(
@@ -129,7 +145,9 @@ class TestSEV(base.ServersTestBase):
         """Compute should fail if sev-es instance exists but sev-snp is
         detected
         """
-        self.hostname = self.start_compute(qemu_version=self.qemu_version)
+        self.hostname = self.start_compute(
+            libvirt_version=self.libvirt_version,
+            qemu_version=self.qemu_version)
 
         # create sev-es instance
         self._create_server(
@@ -145,5 +163,36 @@ class TestSEV(base.ServersTestBase):
         self.assertIn(
             'This host has instances with the memory encryption feature by '
             'amd-sev-es enabled but the host is configured not to support '
+            'this feature any more.',
+            str(ex))
+
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_features',
+        new=fakelibvirt.virConnect.
+            _domain_capability_features_with_SEV_max_guests)
+    def test_sev_snp_lost_after_restart(self):
+        """Compute should fail if sev-snp instance exists but sev-snp is lost
+        """
+        self.sev_es = False
+        self.sev_snp = True
+        self.hostname = self.start_compute(
+            libvirt_version=self.libvirt_version,
+            qemu_version=self.qemu_version)
+
+        # create sev-snp instance
+        self._create_server(
+            image_uuid=uuids.sev_snp_image_id,
+            networks='none'
+        )
+
+        # now sev-snp is lost, so compute should fail
+        self.sev_es = True
+        self.sev_snp = False
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self.restart_compute_service, self.hostname)
+        self.assertIn(
+            'This host has instances with the memory encryption feature by '
+            'amd-sev-snp enabled but the host is configured not to support '
             'this feature any more.',
             str(ex))

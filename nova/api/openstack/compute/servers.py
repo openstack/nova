@@ -87,6 +87,7 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.RealtimeMaskNotFoundOrInvalid,
     exception.RequiredMixedInstancePolicy,
     exception.RequiredMixedOrRealtimeCPUMask,
+    exception.StatelessFirmwareRequired,
     exception.InvalidMixedInstanceDedicatedMask,
 )
 
