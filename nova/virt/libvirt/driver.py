@@ -7989,12 +7989,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 feature='sev')
 
         designer.set_driver_iommu_for_all_devices(guest)
-        self._guest_add_sev_launch_security(guest, sev, model)
+        self._guest_add_sev_launch_security(guest, model)
 
-    def _guest_add_sev_launch_security(self, guest, sev, model):
+    def _guest_add_sev_launch_security(self, guest, model):
         launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
-        launch_security.cbitpos = sev.cbitpos
-        launch_security.reduced_phys_bits = sev.reduced_phys_bits
         # NOTE(tkajinam): Default policy is for SEV
         if model == fields.MemEncryptionModel.AMD_SEV_ES:
             launch_security.policy = launch_security.DEFAULT_SEV_ES_POLICY

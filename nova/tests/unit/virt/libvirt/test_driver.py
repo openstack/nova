@@ -4014,8 +4014,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def _setup_fake_domain_caps(self, fake_domain_caps):
         sev_feature = vconfig.LibvirtConfigDomainCapsFeatureSev()
-        sev_feature.cbitpos = 47
-        sev_feature.reduced_phys_bits = 1
         domain_caps = vconfig.LibvirtConfigDomainCaps()
         domain_caps._features = vconfig.LibvirtConfigDomainCapsFeatures()
         domain_caps._features.features = [sev_feature]
@@ -4044,8 +4042,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         feature = drvr._find_sev_feature('x86_64', 'q35')
         self.assertIsInstance(feature,
                               vconfig.LibvirtConfigDomainCapsFeatureSev)
-        self.assertEqual(47, feature.cbitpos)
-        self.assertEqual(1, feature.reduced_phys_bits)
 
     def _setup_sev_guest(self, extra_image_properties=None, model=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
