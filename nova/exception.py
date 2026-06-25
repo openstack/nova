@@ -2460,11 +2460,6 @@ class FlavorImageLockedMemoryConflict(FlavorImageConflict):
                 "both specified.")
 
 
-class MissingDomainCapabilityFeatureException(NovaException):
-    msg_fmt = _("Guest config could not be built without domain capabilities "
-                "including <%(feature)s> feature.")
-
-
 class HealAllocationException(NovaException):
     msg_fmt = _("Healing instance allocation failed.")
 

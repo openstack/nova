@@ -4012,37 +4012,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "(150d530b-1c57-4367-b754-1f1b5237923d): q35 type is required "
             "for SEV to work", str(exc))
 
-    def _setup_fake_domain_caps(self, fake_domain_caps):
-        sev_feature = vconfig.LibvirtConfigDomainCapsFeatureSev()
-        domain_caps = vconfig.LibvirtConfigDomainCaps()
-        domain_caps._features = vconfig.LibvirtConfigDomainCapsFeatures()
-        domain_caps._features.features = [sev_feature]
-        domain_caps._os = vconfig.LibvirtConfigDomainCapsOS()
-        domain_caps._os.loader_paths = ['foo']
-
-        fake_domain_caps.return_value = collections.defaultdict(
-            dict, {'x86_64': {'q35': domain_caps}})
-
-    @mock.patch.object(host.Host, 'get_domain_capabilities')
-    def test_find_sev_feature_missing_arch(self, fake_domain_caps):
-        self._setup_fake_domain_caps(fake_domain_caps)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertIsNone(drvr._find_sev_feature('arm1', 'q35'))
-
-    @mock.patch.object(host.Host, 'get_domain_capabilities')
-    def test_find_sev_feature_missing_mach_type(self, fake_domain_caps):
-        self._setup_fake_domain_caps(fake_domain_caps)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertIsNone(drvr._find_sev_feature('x86_64', 'g3beige'))
-
-    @mock.patch.object(host.Host, 'get_domain_capabilities')
-    def test_find_sev_feature(self, fake_domain_caps):
-        self._setup_fake_domain_caps(fake_domain_caps)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        feature = drvr._find_sev_feature('x86_64', 'q35')
-        self.assertIsInstance(feature,
-                              vconfig.LibvirtConfigDomainCapsFeatureSev)
-
     def _setup_sev_guest(self, extra_image_properties=None, model=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_uefi = True
@@ -4085,22 +4054,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       image_meta, disk_info,
                                       context=ctxt)
 
-    @ddt.data(None, 'amd-sev', 'amd-sev-es')
-    def test_get_guest_config_sev_no_feature(self, sev_model):
-        self.assertRaises(exception.MissingDomainCapabilityFeatureException,
-                          self._setup_sev_guest, model=sev_model)
-
     @ddt.unpack
     @ddt.data(
         {'sev_model': None, 'sev_policy': 0x0033},
         {'sev_model': 'amd-sev', 'sev_policy': 0x0033},
         {'sev_model': 'amd-sev-es', 'sev_policy': 0x0037}
     )
-    @mock.patch.object(host.Host, 'get_domain_capabilities')
     @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
-    def test_get_guest_config_sev(self, mock_designer, fake_domain_caps,
-                                  sev_model, sev_policy):
-        self._setup_fake_domain_caps(fake_domain_caps)
+    def test_get_guest_config_sev(self, mock_designer, sev_model, sev_policy):
         cfg = self._setup_sev_guest(model=sev_model)
 
         # SEV-related tag should be set
@@ -4115,16 +4076,23 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(hardware.MemEncryptionConfigSev, 'model',
                        new_callable=mock.PropertyMock)
-    @mock.patch.object(host.Host, 'get_domain_capabilities')
     @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
     def test_get_guest_config_invalid_mem_enc_model(
-            self, mock_designer, fake_domain_caps, fake_me_model):
-        self._setup_fake_domain_caps(fake_domain_caps)
+        self, mock_designer, fake_me_model
+    ):
         fake_me_model.return_value = 'invalid'
         self.assertRaisesRegex(exception.Invalid,
                                'Unknown MemEncryptionModel: invalid',
                                self._setup_sev_guest,
                                model='amd-sev')
+
+    def _setup_fake_domain_caps(self, fake_domain_caps):
+        domain_caps = vconfig.LibvirtConfigDomainCaps()
+        domain_caps._os = vconfig.LibvirtConfigDomainCapsOS()
+        domain_caps._os.loader_paths = ['foo']
+
+        fake_domain_caps.return_value = collections.defaultdict(
+            dict, {'x86_64': {'q35': domain_caps}})
 
     @mock.patch.object(host.Host, 'get_domain_capabilities')
     def test__get_cpu_emulation_arch_traits(self, fake_domain_caps):
@@ -7932,12 +7900,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         {'sev_model': 'amd-sev'},
         {'sev_model': 'amd-sev-es'}
     )
-    @mock.patch.object(host.Host, 'get_domain_capabilities')
     @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
     def test_get_guest_config_with_qga_through_image_meta_with_sev(
-        self, mock_designer, fake_domain_caps, sev_model
+        self, mock_designer, sev_model
     ):
-        self._setup_fake_domain_caps(fake_domain_caps)
         extra_properties = {"hw_qemu_guest_agent": "yes"}
         cfg = self._setup_sev_guest(extra_properties, model=sev_model)
 
