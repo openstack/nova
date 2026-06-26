@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The libvirt driver can now support requests for guest RAM to be encrypted
+    using the AMD SEV-SNP(Secure Nested Paging), in addition to AMD SEV and
+    AMD SEV-ES.
+
+    Usage of AMD SEV-SNP for memory encryption can be required either via
+    a flavor which has the ``hw:mem_encryption_model`` extra spec set to
+    ``amd-sev-snp``, or via an image which has the ``hw_mem_encryption_model``
+    property set to ``amd-sev-snp``.

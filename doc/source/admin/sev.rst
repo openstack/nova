@@ -120,8 +120,8 @@ steps:
      running guests which is less than or equal to the SEV limit.
 
 - Configure :oslo.config:option:`ram_allocation_ratio` on all SEV-capable
-  compute hosts to ``1.0``. Use of SEV requires locking guest memory, meaning
-  it is not possible to overcommit host memory.
+  compute hosts to ``1.0``. Use of SEV requires that guest memory is not
+  swapped out to disks, meaning it is not possible to overcommit host memory.
 
   Alternatively, you can explicitly configure small pages for instances using
   the :nova:extra-spec:`hw:mem_page_size` flavor extra spec and equivalent
@@ -157,6 +157,19 @@ steps:
 
   __ https://bugs.launchpad.net/nova/+bug/1780138
 
+- Configure :oslo.config:option:`libvirt.cpu_mode` and
+  :oslo.config:option:`libvirt.cpu_models` properly so that the cpu model for
+  instances is capable to support the required SEV feature.
+
+  .. note::
+
+     It is also required that the appropriate QEMU firmware descriptor file is
+     present in the host operating system. These files are provided by
+     the ovmf package from distributions in most cases, but it is known that
+     Ubuntu 26.04 does not yet provide the content required to launch SEV-SNP
+     instances properly. See `bug 2160129
+     <https://bugs.launchpad.net/ubuntu/+source/edk2/+bug/2160129>`_ for
+     details.
 
 .. _extra-specs-memory-encryption:
 
@@ -174,18 +187,19 @@ enable SEV for a flavor:
    $ openstack flavor set FLAVOR-NAME \
        --property hw:mem_encryption=true
 
-It is also possible to use SEV-ES, instead of SEV, by setting
-the :nova:extra-spec:`hw:mem_encryption_model` extra spec to ``amd-sev-es``, or
-by using an image with the ``hw_mem_encryption_model`` property set to
-``amd-sev-es``. In case the extra spec and the property are unset or set to
-``amd-sev`` then SEV is used.
+It is also possible to use SEV-ES or SEV-SNP, instead of SEV, by setting
+the :nova:extra-spec:`hw:mem_encryption_model` extra spec, or by using an image
+with the ``hw_mem_encryption_model`` property. Use ``amd-sev-es`` for SEV-ES
+and ``amd-sev-snp`` for SEV-SNP. In case the extra spec and the property are
+unset or set to ``amd-sev`` then SEV is used.
 
 In all cases, SEV instances can only be booted from images which have
 the ``hw_firmware_type`` property set to ``uefi``, and only when the
 machine type is set to ``q35``.  This can be set per image by setting
 the image property ``hw_machine_type=q35``, or per compute node by
 the operator via :oslo.config:option:`libvirt.hw_machine_type` as
-explained above.
+explained above. SEV-SNP instances also require stateless firmware, which is
+enabled by the ``hw_firmware_stateless`` property set to ``true``.
 
 
 Limitations
@@ -228,8 +242,17 @@ The following limitations are expected long-term:
 
   __ https://www.redhat.com/archives/libvir-list/2019-January/msg00652.html
 
+- The number of SEV-ES guests and SEV-SNP guests allowed to run concurrently
+  will always be limited. The total ASID slots are divided into the two pools
+  (one for SEV and the other for SEV-ES and SEV-SNP), according to
+  the ``Minimum ASID for SEV`` option in BIOS.
+
 - The operating system running in an encrypted virtual machine must
   contain SEV support.
+
+- SEV-ES and SEV-SNP are mutually-exclusive in a single host, due to firmware
+  update to resolve
+  `CVE-2025-48514 <https://nvd.nist.gov/vuln/detail/CVE-2025-48514>`_ .
 
 Non-limitations
 ~~~~~~~~~~~~~~~
