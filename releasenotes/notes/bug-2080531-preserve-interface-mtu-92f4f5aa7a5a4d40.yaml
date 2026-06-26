@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    The instance info cache now preserves the existing interface network MTU
+    metadata when an interface from a new network is attached to an instance.
+    Previously the MTU for already-attached interfaces could be dropped from
+    the cache, which could cause live migration to fail with a source and
+    destination network card MTU mismatch. See `Bug 2080531`_ for more
+    details.
+
+    .. _Bug 2080531: https://bugs.launchpad.net/nova/+bug/2080531

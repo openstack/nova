@@ -91,7 +91,7 @@ class InterfaceAttachMtuRegressionTest(
         nw_info = instance.get_network_info()
         return {vif['id']: vif for vif in nw_info}
 
-    def test_attach_interface_from_new_network_drops_existing_mtu(self):
+    def test_attach_interface_from_new_network_preserves_existing_mtu(self):
         server = self._create_server_and_attach_interface_from_new_network()
 
         nw_info = self._get_network_info_by_port(server['id'])
@@ -101,16 +101,11 @@ class InterfaceAttachMtuRegressionTest(
         self.assertEqual(
             1450,
             nw_info[self.attached_port['id']]['network']['meta']['mtu'])
-
-        # FIXME bug 2080531: once fixed, this should be:
-        # self.assertEqual(
-        #     1450,
-        #     nw_info[self.neutron.port_1['id']]['network']['meta']['mtu'])
-        self.assertNotEqual(
+        self.assertEqual(
             1450,
-            nw_info[self.neutron.port_1['id']]['network']['meta'].get('mtu'))
+            nw_info[self.neutron.port_1['id']]['network']['meta']['mtu'])
 
-    def test_live_migration_fails_after_interface_attach_drops_mtu(self):
+    def test_live_migration_succeeds_after_interface_attach(self):
         server = self._create_server_and_attach_interface_from_new_network()
 
         def fake_live_migration(
@@ -128,9 +123,6 @@ class InterfaceAttachMtuRegressionTest(
         with mock.patch.object(
                 self.src.driver, 'live_migration',
                 side_effect=fake_live_migration):
-            # FIXME bug 2080531: once fixed, the migration should complete and
-            # the server should move to dest.
-            server = self._live_migrate(
-                server, 'error', server_expected_state='ERROR')
+            server = self._live_migrate(server, 'completed')
 
-        self.assertEqual('src', server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual('dest', server['OS-EXT-SRV-ATTR:host'])
