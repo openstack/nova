@@ -48,7 +48,6 @@ from oslo_utils import versionutils
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context as nova_context
-from nova.db import constants as db_const
 from nova import exception
 from nova.i18n import _
 from nova.objects import fields
@@ -328,8 +327,8 @@ class Host(object):
         self._supports_amd_sev: bool | None = None
         self._supports_amd_sev_es: bool | None = None
         self._supports_amd_sev_snp: bool | None = None
-        self._max_sev_guests: int | None = None
-        self._max_sev_es_guests: int | None = None
+        self._max_sev_guests: int = 0
+        self._max_sev_es_guests: int = 0
         self._supports_uefi: bool | None = None
         self._supports_secure_boot: bool | None = None
 
@@ -2148,22 +2147,6 @@ class Host(object):
         return self._supports_amd_sev_snp
 
     @property
-    def max_sev_guests(self) -> int | None:
-        """Determine maximum number of guests with AMD SEV.
-        """
-        if not self.supports_amd_sev:
-            return None
-        return self._max_sev_guests
-
-    @property
-    def max_sev_es_guests(self) -> int | None:
-        """Determine maximum number of guests with AMD SEV-ES.
-        """
-        if not self.supports_amd_sev:
-            return None
-        return self._max_sev_es_guests
-
-    @property
     def supports_mem_encryption(self) -> bool:
         """Determine if the host supports memory encryption for guests.
 
@@ -2206,32 +2189,17 @@ class Host(object):
         return inventories
 
     def _get_mem_encryption_slots_amd_sev(self) -> int:
-        conf_slots = CONF.libvirt.num_memory_encrypted_guests
         if self.supports_amd_sev:
-            slots = db_const.MAX_INT
-            if self.max_sev_guests is not None:
-                slots = self.max_sev_guests
-            if conf_slots is not None:
-                if conf_slots > slots:
-                    LOG.warning("Host is configured with "
-                                "libvirt.num_memory_encrypted_guests set "
-                                "to %d, but supports only %d.",
-                                conf_slots, slots)
-                slots = min(slots, conf_slots)
-            return slots
+            return self._max_sev_guests
         else:
-            if conf_slots is not None and conf_slots > 0:
-                LOG.warning("Host is configured with "
-                            "libvirt.num_memory_encrypted_guests set to "
-                            "%d, but is not SEV-capable.", conf_slots)
             return 0
 
     def _get_mem_encryption_traits_amd_sev(self) -> list[str]:
         return [ot.HW_CPU_X86_AMD_SEV]
 
     def _get_mem_encryption_slots_amd_sev_es(self) -> int:
-        if self.supports_amd_sev_es and self.max_sev_es_guests is not None:
-            return self.max_sev_es_guests
+        if self.supports_amd_sev_es:
+            return self._max_sev_es_guests
         else:
             return 0
 
@@ -2239,8 +2207,8 @@ class Host(object):
         return [ot.HW_CPU_X86_AMD_SEV_ES]
 
     def _get_mem_encryption_slots_amd_sev_snp(self) -> int:
-        if self.supports_amd_sev_snp and self.max_sev_es_guests is not None:
-            return self.max_sev_es_guests
+        if self.supports_amd_sev_snp:
+            return self._max_sev_es_guests
         else:
             return 0
 

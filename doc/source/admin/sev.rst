@@ -71,54 +71,6 @@ perform the following steps:
 Additionally the cloud operator should consider the following optional
 steps:
 
-.. _num_memory_encrypted_guests:
-
-- Configure the :oslo.config:option:`libvirt.num_memory_encrypted_guests`
-  option in :file:`nova.conf` to represent the number of guests an SEV
-  compute node can host concurrently with memory encrypted at the
-  hardware level.  For example:
-
-  .. code-block:: ini
-
-     [libvirt]
-     num_memory_encrypted_guests = 15
-
-  This option exists because on AMD SEV-capable hardware, the memory
-  controller has a fixed number of slots for holding encryption keys,
-  one per guest.  For example, at the time of writing, earlier
-  generations of hardware only have 15 slots, thereby limiting the
-  number of SEV guests which can be run concurrently to 15.  Nova
-  needs to track how many slots are available and used in order to
-  avoid attempting to exceed that limit in the hardware.
-
-  Since version 8.0.0, libvirt exposes maximum number of SEV guests
-  which can run concurrently in its host, so the limit is automatically
-  detected using this feature. So it is not necessary to configure this option.
-
-  However in case an older version of libvirt is used, it is not possible for
-  Nova to programmatically detect the correct value and Nova imposes no limit.
-  So this configuration option serves as a stop-gap, allowing the cloud
-  operator the option of providing this value manually.
-
-  This option has been deprecated and will be removed in a future release.
-
-  .. note::
-
-     If libvirt older than 8.0.0 is used, operators should carefully weigh
-     the benefits vs. the risk when deciding whether to use the default of
-     ``None`` or manually impose a limit.
-     The benefits of using the default are a) immediate convenience since
-     nothing needs to be done now, and b) convenience later when upgrading
-     compute hosts to future versions of libvirt, since again nothing will
-     need to be done for the correct limit to be automatically imposed.
-     However the risk is that until auto-detection is implemented, users may
-     be able to attempt to launch guests with encrypted memory on hosts which
-     have already reached the maximum number of guests simultaneously running
-     with encrypted memory.  This risk may be mitigated by other limitations
-     which operators can impose, for example if the smallest RAM
-     footprint of any flavor imposes a maximum number of simultaneously
-     running guests which is less than or equal to the SEV limit.
-
 - Configure :oslo.config:option:`ram_allocation_ratio` on all SEV-capable
   compute hosts to ``1.0``. Use of SEV requires that guest memory is not
   swapped out to disks, meaning it is not possible to overcommit host memory.

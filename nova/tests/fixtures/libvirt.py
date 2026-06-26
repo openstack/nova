@@ -2382,21 +2382,13 @@ class Connection(object):
     <sev supported='yes'>
       <cbitpos>47</cbitpos>
       <reducedPhysBits>1</reducedPhysBits>
+      <maxGuests>100</maxGuests>
+      <maxESGuests>15</maxESGuests>
     </sev>
   </features>'''
 
     _domain_capability_features_with_SEV_unsupported = \
         _domain_capability_features_with_SEV.replace('yes', 'no')
-
-    _domain_capability_features_with_SEV_max_guests = '''  <features>
-    <gic supported='no'/>
-    <sev supported='yes'>
-      <cbitpos>47</cbitpos>
-      <reducedPhysBits>1</reducedPhysBits>
-      <maxGuests>100</maxGuests>
-      <maxESGuests>15</maxESGuests>
-    </sev>
-  </features>'''
 
     def getCapabilities(self):
         """Return spoofed capabilities."""

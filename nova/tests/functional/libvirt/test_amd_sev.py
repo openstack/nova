@@ -78,8 +78,7 @@ class TestSEV(base.ServersTestBase):
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
-        new=fakelibvirt.virConnect.
-            _domain_capability_features_with_SEV_max_guests)
+        new=fakelibvirt.virConnect._domain_capability_features_with_SEV)
     def test_sev_lost_after_restart(self):
         """Compute should fail if sev instance exists but sev is lost
         """
@@ -111,8 +110,7 @@ class TestSEV(base.ServersTestBase):
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
-        new=fakelibvirt.virConnect.
-            _domain_capability_features_with_SEV_max_guests)
+        new=fakelibvirt.virConnect._domain_capability_features_with_SEV)
     def test_sev_es_lost_after_restart(self):
         """Compute should fail if sev-es instance exists but sev-es is lost
         """
@@ -139,8 +137,7 @@ class TestSEV(base.ServersTestBase):
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
-        new=fakelibvirt.virConnect.
-            _domain_capability_features_with_SEV_max_guests)
+        new=fakelibvirt.virConnect._domain_capability_features_with_SEV)
     def test_sev_snp_detected_after_restart(self):
         """Compute should fail if sev-es instance exists but sev-snp is
         detected
@@ -168,8 +165,7 @@ class TestSEV(base.ServersTestBase):
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
-        new=fakelibvirt.virConnect.
-            _domain_capability_features_with_SEV_max_guests)
+        new=fakelibvirt.virConnect._domain_capability_features_with_SEV)
     def test_sev_snp_lost_after_restart(self):
         """Compute should fail if sev-snp instance exists but sev-snp is lost
         """
