@@ -161,7 +161,7 @@ def resize2fs(image, check_exit_code, size=None):
 # not require elevated permissions when calling this.
 def unprivileged_resize2fs(image, check_exit_code, size=None):
     if size:
-        cmd = ['resize2fs', image, size]
+        cmd = ['resize2fs', image, str(size)]
     else:
         cmd = ['resize2fs', image]
 
@@ -177,7 +177,7 @@ def create_partition_table(device, style, check_exit_code=True):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def create_partition(device, style, start, end, check_exit_code=True):
     processutils.execute('parted', '--script', device, '--',
-                         'mkpart', style, start, end,
+                         'mkpart', style, str(start), str(end),
                          check_exit_code=check_exit_code)
 
 

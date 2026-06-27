@@ -56,7 +56,7 @@ def delete_net_dev_escalated(dev):
 def set_device_mtu(dev, mtu):
     if mtu:
         processutils.execute('ip', 'link', 'set', dev, 'mtu',
-                             mtu, check_exit_code=[0, 2, 254])
+                             str(mtu), check_exit_code=[0, 2, 254])
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -76,8 +76,8 @@ def set_device_trust(dev, vf_num, trusted):
 
 def _set_device_trust_inner(dev, vf_num, trusted):
     processutils.execute('ip', 'link', 'set', dev,
-                         'vf', vf_num,
-                         'trust', bool(trusted) and 'on' or 'off',
+                         'vf', str(vf_num),
+                         'trust', 'on' if trusted else 'off',
                          check_exit_code=[0, 2, 254])
 
 
@@ -98,9 +98,9 @@ def _set_device_macaddr_inner(dev, mac_addr, port_state=None):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def set_device_macaddr_and_vlan(dev, vf_num, mac_addr, vlan):
     processutils.execute('ip', 'link', 'set', dev,
-                         'vf', vf_num,
+                         'vf', str(vf_num),
                          'mac', mac_addr,
-                         'vlan', vlan,
+                         'vlan', str(vlan),
                          run_as_root=True,
                          check_exit_code=[0, 2, 254])
 
@@ -134,4 +134,4 @@ def create_tap_dev(dev, mac_address=None, multiqueue=False):
 def add_vlan(bridge_interface, interface, vlan_num):
     processutils.execute('ip', 'link', 'add', 'link', bridge_interface,
                          'name', interface, 'type', 'vlan',
-                         'id', vlan_num, check_exit_code=[0, 2, 254])
+                         'id', str(vlan_num), check_exit_code=[0, 2, 254])

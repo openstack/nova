@@ -187,7 +187,7 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_privileged_resize2fs_with_size(self, mock_execute):
         nova.privsep.fs.resize2fs('/path/nosuch', [0, 1, 2], 1024)
-        mock_execute.assert_called_with('resize2fs', '/path/nosuch', 1024,
+        mock_execute.assert_called_with('resize2fs', '/path/nosuch', '1024',
                                         check_exit_code=[0, 1, 2])
 
     @mock.patch('oslo_concurrency.processutils.execute')
@@ -199,7 +199,7 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_unprivileged_resize2fs_with_size(self, mock_execute):
         nova.privsep.fs.unprivileged_resize2fs('/path/nosuch', [0, 1, 2], 1024)
-        mock_execute.assert_called_with('resize2fs', '/path/nosuch', 1024,
+        mock_execute.assert_called_with('resize2fs', '/path/nosuch', '1024',
                                         check_exit_code=[0, 1, 2])
 
     @mock.patch('oslo_concurrency.processutils.execute')
@@ -213,7 +213,7 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
     def test_create_partition(self, mock_execute):
         nova.privsep.fs.create_partition('/dev/nosuch', 'style', 0, 100)
         mock_execute.assert_called_with('parted', '--script', '/dev/nosuch',
-                                        '--', 'mkpart', 'style', 0, 100,
+                                        '--', 'mkpart', 'style', '0', '100',
                                         check_exit_code=True)
 
     @mock.patch('oslo_concurrency.processutils.execute')
