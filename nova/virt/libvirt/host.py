@@ -2354,20 +2354,3 @@ class Host(object):
 
     def _get_mem_encryption_traits_intel_tdx(self) -> list[str]:
         return [ot.HW_CPU_X86_INTEL_TDX]
-
-    @property
-    def supports_remote_managed_ports(self) -> bool:
-        """Determine if the host supports remote managed ports.
-
-        Returns a boolean indicating whether remote managed ports are
-        possible to use on this host.
-
-        The check is based on a Libvirt version which added support for
-        parsing and exposing PCI VPD since a card serial number (if present in
-        the VPD) since the use of remote managed ports depends on this.
-        https://libvirt.org/news.html#v7-9-0-2021-11-01
-
-        The actual presence of a card serial number for a particular device
-        is meant to be checked elsewhere.
-        """
-        return self.has_min_version(lv_ver=(7, 9, 0))
