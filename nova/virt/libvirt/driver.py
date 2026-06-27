@@ -6483,11 +6483,13 @@ class LibvirtDriver(driver.ComputeDriver):
             online_pcpus = self._host.get_online_cpus()
             cpuset = shared_ids & online_pcpus
             if not cpuset:
-                msg = (_("Invalid cpu_shared_set config, one or more of the "
-                         "specified cpuset is not online. Online cpuset(s): "
-                         "%(online)s, requested cpuset(s): %(req)s"),
-                       {'online': sorted(online_pcpus),
-                        'req': sorted(shared_ids)})
+                msg = _(
+                    "Invalid cpu_shared_set config, one or more of the "
+                    "specified cpuset is not online. Online cpuset(s): "
+                    "%(online)s, requested cpuset(s): %(req)s"
+                ) % {
+                    'online': sorted(online_pcpus), 'req': sorted(shared_ids)
+                }
                 raise exception.Invalid(msg)
             emulatorpin_cpuset = cpuset
         elif not vcpus_rt or vcpu not in vcpus_rt:
