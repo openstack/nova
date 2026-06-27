@@ -182,37 +182,6 @@ def create_partition(device, style, start, end, check_exit_code=True):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def list_partitions(device):
-    return unprivileged_list_partitions(device)
-
-
-# NOTE(mikal): this method is deliberately not wrapped in a privsep
-# entrypoint. This is not for unit testing, there are some callers who do
-# not require elevated permissions when calling this.
-def unprivileged_list_partitions(device):
-    """Return partition information (num, size, type) for a device."""
-
-    out, _err = processutils.execute('parted', '--script', '--machine',
-                                     device, 'unit s', 'print')
-    lines = [line for line in out.split('\n') if line]
-    partitions = []
-
-    LOG.debug('Partitions:')
-    for line in lines[2:]:
-        line = line.rstrip(';')
-        num, start, end, size, fstype, name, flags = line.split(':')
-        num = int(num)
-        start = int(start.rstrip('s'))
-        end = int(end.rstrip('s'))
-        size = int(size.rstrip('s'))
-        LOG.debug('  %(num)s: %(fstype)s %(size)d sectors',
-                  {'num': num, 'fstype': fstype, 'size': size})
-        partitions.append((num, start, size, fstype, name, flags))
-
-    return partitions
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
 def resize_partition(device, start, end, bootable):
     processutils.execute('parted', '--script', device, 'rm', '1')
     processutils.execute('parted', '--script', device, 'mkpart',
