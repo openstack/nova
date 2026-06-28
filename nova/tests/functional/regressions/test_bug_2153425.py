@@ -109,5 +109,4 @@ class NUMALiveMigrationCPUAllocationTests(
 
         # Verify that the instance has landed on Cell 1
         dest_usage = self._get_host_numa_usage('dest')
-        # FIXME(masan4444) The instance should landed on Cell 1, not Cell 0
-        self.assertEqual([(0, 4), (1, 0)], dest_usage)
+        self.assertEqual([(0, 2), (1, 2)], dest_usage)

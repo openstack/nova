@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    `Bug #2153425`_: Fix scheduler limits not being honored during
+    live migration compute claims, causing allocation ratios to be
+    ignored.
+
+    .. _bug #2153425: https://launchpad.net/bugs/2153425
