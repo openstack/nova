@@ -9344,8 +9344,7 @@ class ComputeAPITestCase(BaseTestCase):
             1,
             security_groups=objects.SecurityGroupList(),
             flavor=self.tiny_flavor,
-            num_instances=num_instances,
-            shutdown_terminate=False)
+            num_instances=num_instances)
         self.assertEqual(str(base_options['image_ref']),
                          instance['system_metadata']['image_base_image_ref'])
         self.assertEqual(vm_states.BUILDING, instance['vm_state'])
@@ -9379,8 +9378,7 @@ class ComputeAPITestCase(BaseTestCase):
             index,
             security_groups=objects.SecurityGroupList(),
             flavor=self.tiny_flavor,
-            num_instances=num_instances,
-            shutdown_terminate=False)
+            num_instances=num_instances)
         self.assertIsNotNone(instance.ephemeral_key_uuid)
 
     def test_default_hostname_generator(self):

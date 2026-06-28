@@ -1416,7 +1416,7 @@ class API:
     def _provision_instances(
         self, context, flavor, min_count,
         max_count, base_options, boot_meta, security_groups,
-        block_device_mapping, shutdown_terminate,
+        block_device_mapping,
         instance_group, check_server_group_quota, filter_properties,
         key_pair, tags, trusted_certs, supports_multiattach,
         network_metadata=None, requested_host=None,
@@ -1525,7 +1525,7 @@ class API:
                 self._populate_instance_for_create(
                     context, instance, boot_meta, idx,
                     security_groups, flavor,
-                    num_instances, shutdown_terminate)
+                    num_instances)
 
                 block_device_mapping = (
                     self._bdm_validate_set_size_and_instance(context,
@@ -1709,7 +1709,7 @@ class API:
                admin_password, access_ip_v4, access_ip_v6,
                requested_networks, config_drive,
                block_device_mapping, auto_disk_config, filter_properties,
-               reservation_id=None, legacy_bdm=True, shutdown_terminate=False,
+               reservation_id=None, legacy_bdm=True,
                check_server_group_quota=False, tags=None,
                supports_multiattach=False, trusted_certs=None,
                supports_port_resource_request=False,
@@ -1811,7 +1811,7 @@ class API:
         instances_to_build = self._provision_instances(
             context, flavor, min_count, max_count, base_options,
             boot_meta, security_groups, block_device_mapping,
-            shutdown_terminate, instance_group, check_server_group_quota,
+            instance_group, check_server_group_quota,
             filter_properties, key_pair, tags, trusted_certs,
             supports_multiattach, network_metadata,
             requested_host, requested_hypervisor_hostname)
@@ -2138,7 +2138,7 @@ class API:
 
     def _populate_instance_for_create(
         self, context, instance, image, index, security_groups, flavor,
-        num_instances, shutdown_terminate,
+        num_instances,
     ):
         """Build the beginning of a new instance."""
 
@@ -2190,7 +2190,7 @@ class API:
         instance.security_groups = objects.SecurityGroupList()
 
         self._populate_instance_names(instance, num_instances, index)
-        instance.shutdown_terminate = shutdown_terminate
+        instance.shutdown_terminate = False
 
         return instance
 
@@ -2250,7 +2250,7 @@ class API:
         admin_password=None, block_device_mapping=None,
         access_ip_v4=None, access_ip_v6=None, requested_networks=None,
         config_drive=None, auto_disk_config=None, scheduler_hints=None,
-        legacy_bdm=True, shutdown_terminate=False,
+        legacy_bdm=True,
         check_server_group_quota=False, tags=None,
         supports_multiattach=False, trusted_certs=None,
         supports_port_resource_request=False,
@@ -2298,7 +2298,6 @@ class API:
             block_device_mapping, auto_disk_config,
             filter_properties=filter_properties,
             legacy_bdm=legacy_bdm,
-            shutdown_terminate=shutdown_terminate,
             check_server_group_quota=check_server_group_quota,
             tags=tags, supports_multiattach=supports_multiattach,
             trusted_certs=trusted_certs,
