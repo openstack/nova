@@ -1130,7 +1130,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             mock_init_host.assert_called_once_with(host=our_host)
             mock_host_get.assert_called_once_with(self.context, our_host,
-                expected_attrs=['info_cache', 'metadata', 'numa_topology'])
+                expected_attrs=['info_cache', 'metadata', 'system_metadata',
+                                'numa_topology', 'flavor'])
 
             mock_update_scheduler.assert_called_once_with(
                 self.context, inst_list)
@@ -1306,7 +1307,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         mock_init_host.assert_called_once_with(host=our_host)
         mock_host_get.assert_called_once_with(self.context, our_host,
-            expected_attrs=['info_cache', 'metadata', 'numa_topology'])
+            expected_attrs=['info_cache', 'metadata', 'system_metadata',
+                            'numa_topology', 'flavor'])
         mock_init_virt.assert_called_once_with()
         mock_temp_mut.assert_called_once_with(self.context, read_deleted='yes')
         mock_get_inst.assert_called_once_with(self.context)
