@@ -168,39 +168,6 @@ def unprivileged_resize2fs(image, check_exit_code, size=None):
     processutils.execute(*cmd, check_exit_code=check_exit_code)
 
 
-@nova.privsep.sys_admin_pctxt.entrypoint
-def create_partition_table(device, style, check_exit_code=True):
-    processutils.execute('parted', '--script', device, 'mklabel', style,
-                         check_exit_code=check_exit_code)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def create_partition(device, style, start, end, check_exit_code=True):
-    processutils.execute('parted', '--script', device, '--',
-                         'mkpart', style, str(start), str(end),
-                         check_exit_code=check_exit_code)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def resize_partition(device, start, end, bootable):
-    processutils.execute('parted', '--script', device, 'rm', '1')
-    processutils.execute('parted', '--script', device, 'mkpart',
-                         'primary', '%ds' % start, '%ds' % end)
-    if bootable:
-        processutils.execute('parted', '--script', device,
-                             'set', '1', 'boot', 'on')
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def ext_journal_disable(device):
-    processutils.execute('tune2fs', '-O ^has_journal', device)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def ext_journal_enable(device):
-    processutils.execute('tune2fs', '-j', device)
-
-
 # NOTE(mikal): nova allows deployers to configure the command line which is
 # used to create a filesystem of a given type. This is frankly a little bit
 # weird, but its also historical and probably should be in some sort of

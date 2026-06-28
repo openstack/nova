@@ -70,7 +70,6 @@ class SchedulerManager(manager.Manager):
         self.host_manager = host_manager.HostManager()
         self.servicegroup_api = servicegroup.API()
         self.notifier = rpc.get_notifier('scheduler')
-        self._placement_client = None
 
         try:
             # Test our placement client during initialization
