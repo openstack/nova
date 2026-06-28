@@ -106,7 +106,7 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         # resource owner- having same project id and no role check) is
         # able create/delete/update the volume attachment.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -119,10 +119,10 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
             self.project_member_authorized_contexts)
 
         # By default, legacy rule are enable and scope check is disabled.
-        # system admin, legacy admin, project admin, and service user is able
+        # legacy admin project admin, and service user is able
         # to update volume attachment with a different volumeId.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.service_context]
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -215,9 +215,9 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         mock_bdm_save.assert_called()
 
 
-class VolumeAttachNoLegacyNoScopePolicyTest(VolumeAttachPolicyTest):
+class VolumeAttachNoLegacyPolicyTest(VolumeAttachPolicyTest):
     """Test volume attachment APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
 
@@ -227,51 +227,6 @@ class VolumeAttachNoLegacyNoScopePolicyTest(VolumeAttachPolicyTest):
         super().setUp()
         # With no legacy rule, only admin, member, or reader will be
         # able to perform volume attachment operation on its own project.
-        self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
-
-
-class VolumeAttachScopeTypePolicyTest(VolumeAttachPolicyTest):
-    """Test os-volume-attachments APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super().setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Scope enable will not allow system admin to perform the
-        # volume attachments.
-        self.project_member_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.service_context]
-
-
-class VolumeAttachScopeTypeNoLegacyPolicyTest(VolumeAttachScopeTypePolicyTest):
-    """Test os-volume-attachments APIs policies with system scope enabled,
-    and no legacy deprecated rules.
-    """
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super().setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With scope enable and no legacy rule, it will not allow
-        # system users and project admin/member/reader will be able to
-        # perform volume attachment operation on its own project.
         self.project_member_authorized_contexts = (
             self.project_member_or_admin_with_scope_no_legacy)
         self.project_reader_authorized_contexts = (

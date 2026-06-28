@@ -53,7 +53,7 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to attach,
         # detach an interface from a server.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -128,9 +128,8 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
                                 self.req, uuids.fake_id, uuids.fake_id)
 
 
-class AttachInterfacesNoLegacyNoScopePolicyTest(AttachInterfacesPolicyTest):
-    """Test Attach Interfaces APIs policies with no legacy deprecated rules
-    and no scope checks.
+class AttachInterfacesNoLegacyPolicyTest(AttachInterfacesPolicyTest):
+    """Test Attach Interfaces APIs policies with no legacy deprecated rules.
 
     """
 
@@ -146,32 +145,12 @@ class AttachInterfacesNoLegacyNoScopePolicyTest(AttachInterfacesPolicyTest):
             base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
-        super(AttachInterfacesNoLegacyNoScopePolicyTest, self).setUp()
+        super(AttachInterfacesNoLegacyPolicyTest, self).setUp()
         # With no legacy rule, legacy admin loose power.
         self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
+            self.project_member_or_admin_with_scope_no_legacy)
         self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
-
-
-class AttachInterfacesScopeTypePolicyTest(AttachInterfacesPolicyTest):
-    """Test Attach Interfaces APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(AttachInterfacesScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With Scope enable, system users no longer allowed.
-        self.project_member_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
+            self.project_reader_or_admin_with_scope_no_legacy)
 
 
 class AttachInterfacesDeprecatedPolicyTest(base.BasePolicyTest):
@@ -224,29 +203,3 @@ class AttachInterfacesDeprecatedPolicyTest(base.BasePolicyTest):
             "Policy doesn't allow os_compute_api:os-attach-interfaces:list"
             " to be performed.",
             exc.format_message())
-
-
-class AttachInterfacesScopeTypeNoLegacyPolicyTest(
-        AttachInterfacesScopeTypePolicyTest):
-    """Test Attach Interfaces APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        ai_policies.POLICY_ROOT % 'list':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        ai_policies.POLICY_ROOT % 'show':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        ai_policies.POLICY_ROOT % 'create':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        ai_policies.POLICY_ROOT % 'delete':
-            base_policy.PROJECT_MEMBER_OR_ADMIN}
-
-    def setUp(self):
-        super(AttachInterfacesScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With no legacy and scope enable, only project admin, member,
-        # and reader will be able to allowed operation on server interface.
-        self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_scope_no_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_scope_no_legacy)

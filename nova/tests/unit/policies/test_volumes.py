@@ -43,25 +43,21 @@ class VolumesPolicyTest(base.BasePolicyTest):
         # of volume/snapshot then cinder will be returning the appropriate
         # error.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
             self.service_context
         ]
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
             self.service_context
@@ -131,9 +127,9 @@ class VolumesPolicyTest(base.BasePolicyTest):
                                 self.req, uuids.fake_id)
 
 
-class VolumesNoLegacyNoScopePolicyTest(VolumesPolicyTest):
+class VolumesNoLegacyPolicyTest(VolumesPolicyTest):
     """Test Volume APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
 
@@ -166,107 +162,17 @@ class VolumesNoLegacyNoScopePolicyTest(VolumesPolicyTest):
         # With no legacy, project other roles like foo will not be able
         # to operate on volume and snapshot.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
-            self.project_member_context, self.system_member_context,
+            self.project_member_context,
             self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
             self.other_project_manager_context,
-            self.other_project_member_context
-        ]
-
-
-class VolumesScopeTypePolicyTest(VolumesPolicyTest):
-    """Test Volumes APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super().setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With scope enabled, system users will not be able to
-        # operate on volume and snapshot.
-        self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context,
-            self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context, self.service_context
-        ]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context,
-            self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context, self.service_context
-        ]
-
-
-class VolumesScopeTypeNoLegacyPolicyTest(VolumesScopeTypePolicyTest):
-    """Test Volume APIs policies with system scope enabled,
-    and no legacy deprecated rules.
-    """
-    without_deprecated_rules = True
-
-    rules_without_deprecation = {
-        v_policies.POLICY_NAME % 'list':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'detail':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'show':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'create':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'delete':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'snapshots:list':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'snapshots:detail':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'snapshots:delete':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'snapshots:create':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        v_policies.POLICY_NAME % 'snapshots:show':
-            base_policy.PROJECT_READER_OR_ADMIN,
-    }
-
-    def setUp(self):
-        super().setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With no legacy and scope enabled, system users and project
-        # other roles like foo will not be able to operate on volume
-        # and snapshot.
-        self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context,
-            self.project_member_context,
-            self.other_project_manager_context,
-            self.other_project_member_context
-        ]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context,
-            self.project_member_context,
-            self.project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_reader_context,
             self.other_project_member_context
         ]

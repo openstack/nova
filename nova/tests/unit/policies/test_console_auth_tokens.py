@@ -40,7 +40,7 @@ class ConsoleAuthTokensPolicyTest(base.BasePolicyTest):
         # will be able to get console. This make sure that existing
         # tokens will keep working.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
@@ -61,37 +61,9 @@ class ConsoleAuthTokensPolicyTest(base.BasePolicyTest):
                                 self.req, fakes.FAKE_UUID)
 
 
-class ConsoleAuthTokensNoLegacyNoScopeTest(ConsoleAuthTokensPolicyTest):
+class ConsoleAuthTokensNoLegacyTest(ConsoleAuthTokensPolicyTest):
     """Test Console Auth Tokens API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
-    without_deprecated_rules = True
-
-
-class ConsoleAuthTokensScopeTypePolicyTest(ConsoleAuthTokensPolicyTest):
-    """Test Console Auth Tokens APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ConsoleAuthTokensScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope enabled, system admin is not allowed.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-
-
-class ConsoleAuthTokensScopeTypeNoLegacyPolicyTest(
-        ConsoleAuthTokensScopeTypePolicyTest):
-    """Test Console Auth Tokens APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
     without_deprecated_rules = True

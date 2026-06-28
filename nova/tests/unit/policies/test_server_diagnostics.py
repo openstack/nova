@@ -67,7 +67,7 @@ class ServerDiagnosticsPolicyTest(base.BasePolicyTest):
 
         # With legacy rule, any admin is able get server diagnostics.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     def test_server_diagnostics_policy(self):
@@ -77,43 +77,16 @@ class ServerDiagnosticsPolicyTest(base.BasePolicyTest):
                                 self.req, self.instance.uuid)
 
 
-class ServerDiagnosticsNoLegacyNoScopeTest(ServerDiagnosticsPolicyTest):
+class ServerDiagnosticsNoLegacyTest(ServerDiagnosticsPolicyTest):
     """Test Server Diagnostics API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
-    without_deprecated_rules = True
-
-
-class ServerDiagnosticsScopeTypePolicyTest(ServerDiagnosticsPolicyTest):
-    """Test Server Diagnostics APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerDiagnosticsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With scope enabled, system admin is not allowed.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-
-
-class ServerDiagnosticsScopeTypeNoLegacyPolicyTest(
-    ServerDiagnosticsScopeTypePolicyTest):
-    """Test Server Diagnostics APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
     without_deprecated_rules = True
 
 
 class ServerDiagnosticsOverridePolicyTest(
-    ServerDiagnosticsScopeTypeNoLegacyPolicyTest):
+    ServerDiagnosticsNoLegacyTest):
     """Test Server Diagnostics APIs policies with system and project scoped
     but default to system roles only are allowed for project roles
     if override by operators. This test is with system scope enable

@@ -50,10 +50,10 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
         # With legacy rule, any admin is able to perform operations
         # for server migrations.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
         self.project_manager_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context]
 
     @mock.patch('nova.compute.api.API.get_migrations_in_progress_by_instance')
@@ -183,9 +183,9 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
                                 body={"force_complete": None})
 
 
-class ServerMigrationsNoLegacyNoScopeTest(ServerMigrationsPolicyTest):
+class ServerMigrationsNoLegacyTest(ServerMigrationsPolicyTest):
     """Test Server Migrations API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
     without_deprecated_rules = True
@@ -199,55 +199,13 @@ class ServerMigrationsNoLegacyNoScopeTest(ServerMigrationsPolicyTest):
     }
 
     def setUp(self):
-        super(ServerMigrationsNoLegacyNoScopeTest, self).setUp()
-        self.project_manager_authorized_contexts = (
-            self.project_manager_or_admin_with_no_scope_no_legacy)
-
-
-class ServerMigrationsScopeTypePolicyTest(ServerMigrationsPolicyTest):
-    """Test Server Migrations APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerMigrationsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With scope enabled, system admin is not allowed.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-        self.project_manager_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context]
-
-
-class ServerMigrationsScopeTypeNoLegacyPolicyTest(
-        ServerMigrationsScopeTypePolicyTest):
-    """Test Server Migrations APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.POLICY_ROOT % 'force_complete':
-            base_policy.PROJECT_MANAGER_OR_ADMIN,
-        policies.POLICY_ROOT % 'delete':
-            base_policy.PROJECT_MANAGER_OR_ADMIN,
-        policies.POLICY_ROOT % 'index':
-            base_policy.PROJECT_MANAGER_OR_ADMIN,
-    }
-
-    def setUp(self):
-        super(ServerMigrationsScopeTypeNoLegacyPolicyTest, self).setUp()
+        super(ServerMigrationsNoLegacyTest, self).setUp()
         self.project_manager_authorized_contexts = (
             self.project_manager_or_admin_with_scope_no_legacy)
 
 
 class ServerMigrationsOverridePolicyTest(
-        ServerMigrationsScopeTypeNoLegacyPolicyTest):
+        ServerMigrationsNoLegacyTest):
     """Test Server Migrations APIs policies with system and project scoped
     but default to system roles only are allowed for project roles
     if override by operators. This test is with system scope enable

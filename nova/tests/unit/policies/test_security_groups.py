@@ -54,14 +54,14 @@ class ServerSecurityGroupsPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to operate
         # server security groups.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
         # With legacy rule, any admin or project role is able to get their
         # server SG.
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
@@ -96,10 +96,10 @@ class ServerSecurityGroupsPolicyTest(base.BasePolicyTest):
                                       {'name': 'fake'}})
 
 
-class ServerSecurityGroupsNoLegacyNoScopePolicyTest(
+class ServerSecurityGroupsNoLegacyPolicyTest(
         ServerSecurityGroupsPolicyTest):
     """Test Server Security Groups server APIs policies with no legacy
-    deprecated rules and no scope checks.
+    deprecated rules.
 
     """
 
@@ -113,13 +113,13 @@ class ServerSecurityGroupsNoLegacyNoScopePolicyTest(
             base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
-        super(ServerSecurityGroupsNoLegacyNoScopePolicyTest, self).setUp()
+        super(ServerSecurityGroupsNoLegacyPolicyTest, self).setUp()
         # With no legacy rule, only project admin or member will be
         # able to add/remove SG to server and reader to get SG.
         self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
+            self.project_member_or_admin_with_scope_no_legacy)
         self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
+            self.project_reader_or_admin_with_scope_no_legacy)
 
 
 class SecurityGroupsPolicyTest(base.BasePolicyTest):
@@ -144,25 +144,21 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
         # or owner of security groups then neutron will be returning the
         # appropriate error.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
             self.service_context
         ]
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
             self.service_context
@@ -281,134 +277,9 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
                                 self.req, uuids.fake_id)
 
 
-class SecurityGroupsNoLegacyNoScopePolicyTest(
+class SecurityGroupsNoLegacyPolicyTest(
         SecurityGroupsPolicyTest):
-    """Test Security Groups APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.POLICY_NAME % 'get':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        policies.POLICY_NAME % 'show':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        policies.POLICY_NAME % 'create':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        policies.POLICY_NAME % 'update':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        policies.POLICY_NAME % 'delete':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-            policies.POLICY_NAME % 'rule:create':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-            policies.POLICY_NAME % 'rule:delete':
-            base_policy.PROJECT_MEMBER_OR_ADMIN}
-
-    def setUp(self):
-        super(SecurityGroupsNoLegacyNoScopePolicyTest, self).setUp()
-        # With no legacy, project other roles like foo will not be able
-        # to operate on SG.
-        self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_manager_context,
-            self.project_member_context, self.system_member_context,
-            self.other_project_manager_context,
-            self.other_project_member_context
-        ]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_manager_context,
-            self.project_member_context, self.project_reader_context,
-            self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context
-        ]
-
-
-class SecurityGroupsScopeTypePolicyTest(SecurityGroupsPolicyTest):
-    """Test Security Groups APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(SecurityGroupsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With scope enabled, system users will not be able to
-        # operate on SG.
-        self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context,
-            self.project_foo_context, self.other_project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context,
-            self.service_context
-        ]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context,
-            self.project_foo_context, self.other_project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_member_context,
-            self.service_context
-        ]
-
-
-class ServerSecurityGroupsScopeTypePolicyTest(ServerSecurityGroupsPolicyTest):
-    """Test Server Security Groups APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerSecurityGroupsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # Scope enable will not allow system users.
-        self.project_member_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-
-class ServerSecurityGroupsScopeTypeNoLegacyPolicyTest(
-    ServerSecurityGroupsScopeTypePolicyTest):
-    """Test Security Groups APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.POLICY_NAME % 'list':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        policies.POLICY_NAME % 'add':
-            base_policy.PROJECT_MEMBER_OR_ADMIN,
-        policies.POLICY_NAME % 'remove':
-            base_policy.PROJECT_MEMBER_OR_ADMIN}
-
-    def setUp(self):
-        super(ServerSecurityGroupsScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With scope enable and no legacy rule, only project admin/member
-        # will be able to add/remove the SG to their server and reader
-        # will get SG of server.
-        self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_scope_no_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_scope_no_legacy)
-
-
-class SecurityGroupsNoLegacyPolicyTest(SecurityGroupsScopeTypePolicyTest):
-    """Test Security Groups APIs policies with system scope enabled,
-    and no more deprecated.
+    """Test Security Groups APIs policies with no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
@@ -429,19 +300,20 @@ class SecurityGroupsNoLegacyPolicyTest(SecurityGroupsScopeTypePolicyTest):
 
     def setUp(self):
         super(SecurityGroupsNoLegacyPolicyTest, self).setUp()
-        # With no legacy and scope enabled, system users and project
-        # other roles like foo will not be able to operate SG.
+        # With no legacy, project other roles like foo will not be able
+        # to operate on SG.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context,
             self.other_project_manager_context,
             self.other_project_member_context
         ]
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context,
-            self.other_project_manager_context,
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_manager_context,
+            self.project_member_context, self.project_reader_context,
             self.other_project_reader_context,
+            self.other_project_manager_context,
             self.other_project_member_context
         ]

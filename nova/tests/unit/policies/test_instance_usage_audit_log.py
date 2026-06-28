@@ -38,7 +38,7 @@ class InstanceUsageAuditLogPolicyTest(base.BasePolicyTest):
         # With legacy rule, all admin_api will be able to get instance usage
         # audit log.
         self.admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     def test_show_policy(self):
@@ -54,46 +54,11 @@ class InstanceUsageAuditLogPolicyTest(base.BasePolicyTest):
                                 self.req)
 
 
-class InstanceUsageNoLegacyNoScopeTest(InstanceUsageAuditLogPolicyTest):
+class InstanceUsageNoLegacyTest(InstanceUsageAuditLogPolicyTest):
     """Test Instance Usage API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        iual_policies.BASE_POLICY_NAME % 'list':
-            base_policy.ADMIN,
-        iual_policies.BASE_POLICY_NAME % 'show':
-            base_policy.ADMIN,
-    }
-
-
-class InstanceUsageScopeTypePolicyTest(InstanceUsageAuditLogPolicyTest):
-    """Test os-instance-usage-audit-log APIs policies with system scope
-    enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(InstanceUsageScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Scope checks remove project users power.
-        self.admin_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context]
-
-
-class InstanceUsageScopeTypeNoLegacyPolicyTest(
-        InstanceUsageScopeTypePolicyTest):
-    """Test Instance Usage Audit Log APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
     without_deprecated_rules = True
     rules_without_deprecation = {
         iual_policies.BASE_POLICY_NAME % 'list':

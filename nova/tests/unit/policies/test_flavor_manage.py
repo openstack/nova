@@ -36,7 +36,7 @@ class FlavorManagePolicyTest(base.BasePolicyTest):
         # With legacy rule and no scope checks, all admin can manage
         # the flavors.
         self.admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     def test_create_flavor_policy(self):
@@ -96,38 +96,9 @@ class FlavorManagePolicyTest(base.BasePolicyTest):
                                 self.req, uuids.fake_id)
 
 
-class FlavorManageNoLegacyNoScopeTest(FlavorManagePolicyTest):
+class FlavorManageNoLegacyTest(FlavorManagePolicyTest):
     """Test Flavor Access API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
-    without_deprecated_rules = True
-
-
-class FlavorManageScopeTypePolicyTest(FlavorManagePolicyTest):
-    """Test os-flavor-manage APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(FlavorManageScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope enabled, only project admin is able to manage
-        # the flavors.
-        self.admin_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context]
-
-
-class FlavorManageScopeTypeNoLegacyPolicyTest(
-        FlavorManageScopeTypePolicyTest):
-    """Test Flavor Manage APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
     without_deprecated_rules = True

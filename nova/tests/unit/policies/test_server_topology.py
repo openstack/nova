@@ -54,11 +54,11 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
         # With legacy rule and no scope checks, all admin is able to get
         # server topology with host info.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
         # and project reader can get their server topology without host info.
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -89,51 +89,14 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
             self.assertNotIn('cpu_pinning', resp['nodes'][0])
 
 
-class ServerTopologyNoLegacyNoScopePolicyTest(ServerTopologyPolicyTest):
-    """Test Server Topology APIs policies with no legacy deprecated rules
-    and no scope checks.
+class ServerTopologyNoLegacyPolicyTest(ServerTopologyPolicyTest):
+    """Test Server Topology APIs policies with no legacy deprecated rules.
 
     """
 
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServerTopologyNoLegacyNoScopePolicyTest, self).setUp()
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
-
-
-class ServerTopologyScopeTypePolicyTest(ServerTopologyPolicyTest):
-    """Test Server Topology APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerTopologyScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With Scope enable, system users no longer allowed.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-
-class ServerTopologyScopeTypeNoLegacyPolicyTest(
-        ServerTopologyScopeTypePolicyTest):
-    """Test Server Topology APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system APIs.
-    """
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super(ServerTopologyScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With no legacy and scope enable, only project admin, member,
-        # and reader will be able to get server topology.
+        super(ServerTopologyNoLegacyPolicyTest, self).setUp()
         self.project_reader_authorized_contexts = (
             self.project_reader_or_admin_with_scope_no_legacy)

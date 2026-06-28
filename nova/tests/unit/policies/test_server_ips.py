@@ -52,7 +52,7 @@ class ServerIpsPolicyTest(base.BasePolicyTest):
         # With legacy rule, any admin or project role is able to get their
         # server IP addresses.
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
@@ -74,49 +74,16 @@ class ServerIpsPolicyTest(base.BasePolicyTest):
                                 'net1')
 
 
-class ServerIpsNoLegacyNoScopePolicyTest(ServerIpsPolicyTest):
+class ServerIpsNoLegacyPolicyTest(ServerIpsPolicyTest):
     """Test Server Ips APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServerIpsNoLegacyNoScopePolicyTest, self).setUp()
+        super(ServerIpsNoLegacyPolicyTest, self).setUp()
         # With no legacy, only project admin, member, and reader will be able
         # to get their server IP addresses.
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
-
-
-class ServerIpsScopeTypePolicyTest(ServerIpsPolicyTest):
-    """Test Server IPs APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerIpsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With scope enabled, system users will not be able
-        # to get the server IP addresses.
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-
-class ServerIpsScopeTypeNoLegacyPolicyTest(ServerIpsScopeTypePolicyTest):
-    """Test Server IPs APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super(ServerIpsScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With no legacy and scope enable, only admin, member,
-        # and reader will be able to get their server IP addresses.
         self.project_reader_authorized_contexts = (
             self.project_reader_or_admin_with_scope_no_legacy)

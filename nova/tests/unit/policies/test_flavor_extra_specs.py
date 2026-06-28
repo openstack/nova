@@ -48,22 +48,18 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
         self.stub_out('nova.api.openstack.common.get_flavor',
                       get_flavor_extra_specs)
 
-        # In the base/legacy case, all project and system contexts are
+        # In the base/legacy case, all project contexts are
         # authorized in the "anyone" case.
         self.all_authorized_contexts = (self.all_project_contexts |
-                                        self.all_system_contexts |
                                         set([self.service_context]))
 
-        # In the base/legacy case, all project and system contexts are
-        # authorized in the case of things that distinguish between
-        # scopes, since scope checking is disabled.
+        # In the base/legacy case, all project contexts are
+        # authorized.
         self.all_project_authorized_contexts = (self.all_project_contexts |
-                                               self.all_system_contexts |
                                                set([self.service_context]))
 
         # In the base/legacy case, any admin is an admin.
         self.admin_authorized_contexts = set([self.project_admin_context,
-                                              self.system_admin_context,
                                               self.legacy_admin_context])
 
     @mock.patch('nova.objects.Flavor.save')
@@ -198,56 +194,10 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
             self.assertNotIn('extra_specs', resp['flavor'])
 
 
-class FlavorExtraSpecsScopeTypePolicyTest(FlavorExtraSpecsPolicyTest):
-    """Test Flavor Extra Specs APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
+class FlavorExtraSpecsNoLegacyPolicyTest(FlavorExtraSpecsPolicyTest):
+    """Test Flavor Extra Specs APIs policies with no more deprecated rules.
     """
 
-    def setUp(self):
-        super(FlavorExtraSpecsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Only project users are authorized
-        self.reduce_set('all_project_authorized',
-     self.all_project_contexts | set([self.service_context]))
-        self.reduce_set('all_authorized',
-     self.all_project_contexts | set([self.service_context]))
-
-        # Only admins can do admin things
-        self.admin_authorized_contexts = [self.legacy_admin_context,
-                                          self.project_admin_context]
-
-
-class FlavorExtraSpecsNoLegacyNoScopeTest(FlavorExtraSpecsPolicyTest):
-    """Test Flavor Extra Specs API policies with deprecated rules
-    disabled, but scope checking still disabled.
-    """
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super(FlavorExtraSpecsNoLegacyNoScopeTest, self).setUp()
-
-        # Disabling legacy rules means that random roles no longer
-        # have power, but without scope checking there is no
-        # difference between project and system
-        everything_but_foo = (
-            self.all_project_contexts | self.all_system_contexts) - set([
-                self.system_foo_context,
-                self.project_foo_context,
-            ])
-        self.reduce_set('all_project_authorized', everything_but_foo)
-        self.reduce_set('all_authorized', everything_but_foo)
-
-
-class FlavorExtraSpecsNoLegacyPolicyTest(FlavorExtraSpecsScopeTypePolicyTest):
-    """Test Flavor Extra Specs APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
     without_deprecated_rules = True
 
     def setUp(self):

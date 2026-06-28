@@ -35,9 +35,9 @@ class AvailabilityZonePolicyTest(base.BasePolicyTest):
         # legacy admin, and project admin will be able to get AZ with host
         # information.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
-        self.project_authorized_contexts = self.all_contexts
+        self.project_authorized_contexts = self.all_project_contexts
 
     @mock.patch('nova.objects.Instance.save')
     def test_availability_zone_list_policy(self, mock_save):
@@ -53,45 +53,11 @@ class AvailabilityZonePolicyTest(base.BasePolicyTest):
                                 self.req)
 
 
-class AvailabilityZoneNoLegacyNoScopePolicyTest(AvailabilityZonePolicyTest):
+class AvailabilityZoneNoLegacyPolicyTest(AvailabilityZonePolicyTest):
     """Test Availability Zones APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only. In this case
-    system admin, legacy admin, and project admin will be able to get
-    AZ with host information. Legacy admin will be allowed as policy
-    is just admin if no scope checks.
+    which means new defaults only. In this case, legacy admin and project admin
+    will be able to get AZ with host information.
 
-    """
-
-    without_deprecated_rules = True
-
-
-class AvailabilityZoneScopeTypePolicyTest(AvailabilityZonePolicyTest):
-    """Test Availability Zone APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(AvailabilityZoneScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope checks enable, only project-scoped admins are
-        # able to get AZ with host information.
-        self.project_admin_authorized_contexts = [self.legacy_admin_context,
-                                                  self.project_admin_context]
-        self.project_authorized_contexts = (self.all_project_contexts | set([
-            self.service_context]))
-
-
-class AZScopeTypeNoLegacyPolicyTest(AvailabilityZoneScopeTypePolicyTest):
-    """Test Availability Zones APIs policies with no legacy deprecated rules
-    and scope checks enabled which means scope + new defaults so
-    only system admin is able to get AZ with host information.
     """
 
     without_deprecated_rules = True

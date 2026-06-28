@@ -32,11 +32,11 @@ class ServicesPolicyTest(base.BasePolicyTest):
         self.controller = services_v21.ServiceController()
         self.req = fakes.HTTPRequest.blank('/services')
 
-        # With legacy rule and scope check disabled by default, system admin,
-        # legacy admin, and project admin will be able to perform Services
+        # With legacy rule and scope check disabled by default,
+        # legacy admin and project admin will be able to perform Services
         # Operations.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     def test_delete_service_policy(self):
@@ -74,46 +74,14 @@ class ServicesPolicyTest(base.BasePolicyTest):
                                     body={'status': 'enabled'})
 
 
-class ServicesNoLegacyNoScopePolicyTest(ServicesPolicyTest):
+class ServicesNoLegacyPolicyTest(ServicesPolicyTest):
     """Test Services APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only. In this case
-    system admin, legacy admin, and project admin will be able to
-    perform Service Operations. Legacy admin will be allowed as policy
-    is just admin if no scope checks.
+    which means new defaults only. In this case, legacy admin and
+    project admin will be able to perform Service Operations.
 
     """
 
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServicesNoLegacyNoScopePolicyTest, self).setUp()
-
-
-class ServicesScopeTypePolicyTest(ServicesPolicyTest):
-    """Test os-services APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scopped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServicesScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope checks enable, only system admin is able to perform
-        # Service Operations.
-        self.project_admin_authorized_contexts = [self.legacy_admin_context,
-                                                  self.project_admin_context]
-
-
-class ServicesScopeTypeNoLegacyPolicyTest(ServicesScopeTypePolicyTest):
-    """Test Services APIs policies with no legacy deprecated rules
-    and scope checks enabled which means scope + new defaults so
-    only system admin is able to perform Services Operations.
-    """
-
-    without_deprecated_rules = True
+        super(ServicesNoLegacyPolicyTest, self).setUp()

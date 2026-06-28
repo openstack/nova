@@ -49,16 +49,16 @@ class ShelveServerPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to shelve,
         # unshelve the server.
         self.project_action_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
 
         # By default, legacy rule are enable and scope check is disabled.
-        # system admin, legacy admin, and project admin is able to shelve
+        # legacy admin and project admin is able to shelve
         # offload the server.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     @mock.patch('nova.compute.api.API.shelve')
@@ -111,52 +111,17 @@ class ShelveServerPolicyTest(base.BasePolicyTest):
                                 body={'shelve': {}})
 
 
-class ShelveServerNoLegacyNoScopePolicyTest(ShelveServerPolicyTest):
+class ShelveServerNoLegacyPolicyTest(ShelveServerPolicyTest):
     """Test shelve/unshelve server APIs policies with no legacy deprecated
-    rules and no scope checks which means new defaults only.
+    rules which means new defaults only.
 
     """
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ShelveServerNoLegacyNoScopePolicyTest, self).setUp()
+        super(ShelveServerNoLegacyPolicyTest, self).setUp()
         # With no legacy rule, only project admin or member will be
         # able to shelve/unshelve the server and only project admin can
         # shelve offload the server.
-        self.project_action_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
-
-
-class ShelveServerScopeTypePolicyTest(ShelveServerPolicyTest):
-    """Test Shelve Server APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ShelveServerScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # Scope enable will not allow system admin to shelve/unshelve the
-        # server.
-        self.project_action_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-
-
-class ShelveServerScopeTypeNoLegacyPolicyTest(ShelveServerScopeTypePolicyTest):
-    """Test Shelve Server APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super(ShelveServerScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With scope enable and no legacy rule, only project admin/member
-        # will be able to shelve/unshelve the server.
         self.project_action_authorized_contexts = (
             self.project_member_or_admin_with_scope_no_legacy)

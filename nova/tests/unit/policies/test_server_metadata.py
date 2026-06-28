@@ -46,7 +46,7 @@ class ServerMetadataPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to create,
         # update, and delete the server metadata.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -109,55 +109,17 @@ class ServerMetadataPolicyTest(base.BasePolicyTest):
                                 self.req, self.instance.uuid, 'key9')
 
 
-class ServerMetadataNoLegacyNoScopePolicyTest(ServerMetadataPolicyTest):
+class ServerMetadataNoLegacyPolicyTest(ServerMetadataPolicyTest):
     """Test Server Metadata APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
 
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServerMetadataNoLegacyNoScopePolicyTest, self).setUp()
+        super(ServerMetadataNoLegacyPolicyTest, self).setUp()
         # With no legacy rule, legacy admin loose power.
-        self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
-
-
-class ServerMetadataScopeTypePolicyTest(ServerMetadataPolicyTest):
-    """Test Server Metadata APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerMetadataScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With Scope enable, system users no longer allowed.
-        self.project_member_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-
-class ServerMetadataScopeTypeNoLegacyPolicyTest(
-        ServerMetadataScopeTypePolicyTest):
-    """Test Server Metadata APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system APIs.
-    """
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super(ServerMetadataScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With no legacy and scope enable, only project admin, member,
-        # and reader will be able to allowed operation on server metadata.
         self.project_member_authorized_contexts = (
             self.project_member_or_admin_with_scope_no_legacy)
         self.project_reader_authorized_contexts = (

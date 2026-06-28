@@ -45,11 +45,11 @@ class MigrationsPolicyTest(base.BasePolicyTest):
 
         # With legacy rule, any admin is able to list migrations.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
         self.project_manager_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.other_project_manager_context]
 
@@ -177,11 +177,8 @@ class MigrationsPolicyTest(base.BasePolicyTest):
         # will fail first for unauthorized contexts.
         self.policy.set_rules({rule: "@"}, overwrite=False)
         rule_name = migrations_policies.POLICY_ROOT % 'index:all_projects'
-        if not CONF.oslo_policy.enforce_scope:
-            check_rule = rule_name
-        else:
-            check_rule = functools.partial(
-                base.rule_if_system, rule, rule_name)
+        check_rule = functools.partial(
+            base.rule_if_system, rule, rule_name)
         req = fakes.HTTPRequest.blank('/os-migrations', version='2.80')
         authorize_res, _ = self.common_policy_auth(
                 self.project_admin_authorized_contexts,
@@ -269,9 +266,9 @@ class MigrationsPolicyTest(base.BasePolicyTest):
                 exc.format_message())
 
 
-class MigrationsNoLegacyNoScopeTest(MigrationsPolicyTest):
+class MigrationsNoLegacyTest(MigrationsPolicyTest):
     """Test Migrations API policies with deprecated rules
-    disabled, but scope checking still disabled.
+    disabled.
     """
 
     without_deprecated_rules = True
@@ -281,60 +278,13 @@ class MigrationsNoLegacyNoScopeTest(MigrationsPolicyTest):
     }
 
     def setUp(self):
-        super(MigrationsNoLegacyNoScopeTest, self).setUp()
+        super(MigrationsNoLegacyTest, self).setUp()
 
         # NOTE(gmaan): self.other_project_manager_context is in authorized
         # context to list their own project migration only. They will not
         # be able to get other project migration or host info in migrations.
         self.project_manager_authorized_contexts = set([
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
-            self.other_project_manager_context
-        ])
-
-
-class MigrationsScopeTypePolicyTest(MigrationsPolicyTest):
-    """Test Migrations APIs policies with system scope enabled.
-
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(MigrationsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope enabled, system admin is not allowed.
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-        self.project_manager_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context,
-            self.other_project_manager_context]
-
-
-class MigrationsScopeTypeNoLegacyPolicyTest(
-        MigrationsScopeTypePolicyTest):
-    """Test Migrations APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        migrations_policies.POLICY_ROOT % 'index':
-            base_policy.PROJECT_MANAGER_OR_ADMIN,
-    }
-
-    def setUp(self):
-        super(MigrationsScopeTypeNoLegacyPolicyTest, self).setUp()
-        # NOTE(gmaan): This is end goal of new defaults. Only admin can get
-        # all project migrations with host info and manager role can only get
-        # their own project migrations but without host info.
-        self.project_manager_authorized_contexts = set([
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context,
             self.other_project_manager_context
         ])

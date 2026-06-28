@@ -47,7 +47,7 @@ class ServerPasswordPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to delete,
         # the server Password.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context]
@@ -74,9 +74,8 @@ class ServerPasswordPolicyTest(base.BasePolicyTest):
                                 self.req, self.instance.uuid)
 
 
-class ServerPasswordNoLegacyNoScopePolicyTest(ServerPasswordPolicyTest):
-    """Test Server Password APIs policies with no legacy deprecated rules
-    and no scope checks.
+class ServerPasswordNoLegacyPolicyTest(ServerPasswordPolicyTest):
+    """Test Server Password APIs policies with no legacy deprecated rules.
 
     """
 
@@ -88,50 +87,8 @@ class ServerPasswordNoLegacyNoScopePolicyTest(ServerPasswordPolicyTest):
             base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
-        super(ServerPasswordNoLegacyNoScopePolicyTest, self).setUp()
+        super(ServerPasswordNoLegacyPolicyTest, self).setUp()
         # With no legacy rule, legacy admin loose power.
-        self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
-
-
-class ServerPasswordScopeTypePolicyTest(ServerPasswordPolicyTest):
-    """Test Server Password APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerPasswordScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-        # With Scope enable, system users no longer allowed.
-        self.project_member_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-
-class ServerPasswordScopeTypeNoLegacyPolicyTest(
-        ServerPasswordScopeTypePolicyTest):
-    """Test Server Password APIs policies with system scope enabled,
-    and no more deprecated rules.
-    """
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.BASE_POLICY_NAME % 'show':
-            base_policy.PROJECT_READER_OR_ADMIN,
-        policies.BASE_POLICY_NAME % 'clear':
-            base_policy.PROJECT_MEMBER_OR_ADMIN}
-
-    def setUp(self):
-        super(ServerPasswordScopeTypeNoLegacyPolicyTest, self).setUp()
-        # With no legacy and scope enable, only project admin, member,
-        # and reader will be able to allowed operation on server password.
         self.project_member_authorized_contexts = (
             self.project_member_or_admin_with_scope_no_legacy)
         self.project_reader_authorized_contexts = (

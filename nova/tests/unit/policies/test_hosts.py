@@ -14,7 +14,6 @@ from unittest import mock
 
 from nova.api.openstack.compute import hosts
 from nova import objects
-from nova.policies import base as base_policy
 from nova.policies import hosts as policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
@@ -33,11 +32,11 @@ class HostsPolicyTest(base.BasePolicyTest):
         self.controller = hosts.HostController()
         self.req = fakes.HTTPRequest.blank('')
 
-        # With legacy rule and scope check disabled by default, system admin,
-        # legacy admin, and project admin will be able to perform hosts
+        # With legacy rule and scope check disabled by default,
+        # legacy admin and project admin will be able to perform hosts
         # Operations.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
     @mock.patch('nova.compute.api.HostAPI.service_get_all')
@@ -93,55 +92,11 @@ class HostsPolicyTest(base.BasePolicyTest):
                                 self.req, 'hostname')
 
 
-class HostsNoLegacyNoScopePolicyTest(HostsPolicyTest):
+class HostsNoLegacyPolicyTest(HostsPolicyTest):
     """Test Hosts APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only. In this case
-    system admin, legacy admin, and project admin will be able to perform
-    hosts Operations. Legacy admin will be allowed as policy is just admin
-    if no scope checks.
+    which means new defaults only. In this case, legacy admin and
+    project admin will be able to perform hosts Operations.
 
     """
 
     without_deprecated_rules = True
-
-
-class HostsScopeTypePolicyTest(HostsPolicyTest):
-    """Test os-hosts APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(HostsScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope checks enable, only system admin is able to perform
-        # hosts Operations.
-        self.project_admin_authorized_contexts = [self.legacy_admin_context,
-                                                  self.project_admin_context]
-
-
-class HostsScopeTypeNoLegacyPolicyTest(HostsScopeTypePolicyTest):
-    """Test Hosts APIs policies with no legacy deprecated rules
-    and scope checks enabled which means scope + new defaults. So
-    only system admin is able to perform hosts Operations.
-    """
-
-    without_deprecated_rules = True
-    rules_without_deprecation = {
-        policies.POLICY_NAME % 'list':
-            base_policy.ADMIN,
-        policies.POLICY_NAME % 'show':
-            base_policy.ADMIN,
-        policies.POLICY_NAME % 'update':
-            base_policy.ADMIN,
-        policies.POLICY_NAME % 'reboot':
-            base_policy.ADMIN,
-        policies.POLICY_NAME % 'shutdown':
-            base_policy.ADMIN,
-        policies.POLICY_NAME % 'startup':
-            base_policy.ADMIN}

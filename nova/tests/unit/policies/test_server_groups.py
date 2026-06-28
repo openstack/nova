@@ -55,13 +55,13 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
         # owner- having same project id and no role check) is able to
         # delete and get SG.
         self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
         ]
         self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
@@ -70,18 +70,16 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
         # system admin, legacy admin, and project admin is able to get
         # all projects SG.
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
         # List SG can not check for project id so everyone is allowed.
         self.everyone_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
             self.other_project_manager_context,
             self.other_project_member_context,
             self.service_context
@@ -113,11 +111,8 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
         self.policy.set_rules({rule: "@"}, overwrite=False)
         rule_name = policies.POLICY_ROOT % 'index:all_projects'
         req = fakes.HTTPRequest.blank('?all_projects', version='2.13')
-        if not CONF.oslo_policy.enforce_scope:
-            check_rule = rule_name
-        else:
-            check_rule = functools.partial(base.rule_if_system,
-                rule, rule_name)
+        check_rule = functools.partial(base.rule_if_system,
+            rule, rule_name)
         authorize_res, unauthorize_res = self.common_policy_auth(
             self.project_admin_authorized_contexts,
             check_rule, self.controller.index,
@@ -157,111 +152,40 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
                                 self.req, uuids.fake_id)
 
 
-class ServerGroupNoLegacyNoScopePolicyTest(ServerGroupPolicyTest):
+class ServerGroupNoLegacyPolicyTest(ServerGroupPolicyTest):
     """Test Server Groups APIs policies with no legacy deprecated rules
-    and no scope checks which means new defaults only.
+    which means new defaults only.
 
     """
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServerGroupNoLegacyNoScopePolicyTest, self).setUp()
+        super(ServerGroupNoLegacyPolicyTest, self).setUp()
         # With no legacy, only project admin, member will be able to delete
         # the SG and also reader will be able to get the SG.
         self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_no_scope_no_legacy)
+            self.project_member_or_admin_with_scope_no_legacy)
         self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_no_scope_no_legacy)
+            self.project_reader_or_admin_with_scope_no_legacy)
 
         # Even with no legacy rule, legacy admin is allowed to create SG
         # use requesting context's project_id. Same for list SG.
         self.project_create_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
-            self.project_member_context, self.system_member_context,
+            self.project_member_context,
             self.other_project_manager_context,
             self.other_project_member_context]
 
         self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context]
 
         self.everyone_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+            self.legacy_admin_context,
             self.project_admin_context, self.project_manager_context,
             self.project_member_context, self.project_reader_context,
             self.other_project_reader_context,
-            self.system_member_context, self.system_reader_context,
             self.other_project_manager_context,
-            self.other_project_member_context
-        ]
-
-
-class ServerGroupScopeTypePolicyTest(ServerGroupPolicyTest):
-    """Test Server Groups APIs policies with system scope enabled.
-    This class set the nova.conf [oslo_policy] enforce_scope to True
-    so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scoped token
-    which are allowed and not allowed to pass the policy checks.
-    With those set of context, it will run the API operation and
-    verify the expected behaviour.
-    """
-
-    def setUp(self):
-        super(ServerGroupScopeTypePolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # With scope enable, it disallow system users.
-        self.project_member_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-        self.project_reader_authorized_contexts = (
-            self.project_m_r_or_admin_with_scope_and_legacy)
-
-        self.project_create_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_reader_context,
-            self.other_project_member_context,
-            self.other_project_manager_context,
-            self.service_context]
-
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-        self.everyone_authorized_contexts = (
-            self.project_create_authorized_contexts)
-
-
-class ServerGroupScopeTypeNoLegacyPolicyTest(ServerGroupScopeTypePolicyTest):
-    """Test Server Group APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system APIs.
-    """
-    without_deprecated_rules = True
-
-    def setUp(self):
-        super(ServerGroupScopeTypeNoLegacyPolicyTest, self).setUp()
-
-        self.project_member_authorized_contexts = (
-            self.project_member_or_admin_with_scope_no_legacy)
-
-        self.project_create_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.other_project_manager_context,
-            self.other_project_member_context]
-
-        self.project_reader_authorized_contexts = (
-            self.project_reader_or_admin_with_scope_no_legacy)
-
-        self.project_admin_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context]
-
-        self.everyone_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_manager_context, self.project_member_context,
-            self.project_reader_context,
-            self.other_project_manager_context,
-            self.other_project_reader_context,
             self.other_project_member_context
         ]
