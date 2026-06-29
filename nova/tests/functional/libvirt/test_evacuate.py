@@ -224,6 +224,8 @@ class _RbdTest(object):
         self.mock_rbd_driver.get_mon_addrs.return_value = ([], [])
         self.mock_rbd_driver.size.return_value = 10 * units.Gi
         self.mock_rbd_driver.rbd_user = 'rbd'
+        self.mock_rbd_driver.pool = 'rbd'
+        self.mock_rbd_driver.ceph_conf = ''
 
     def _assert_disks(self, server):
         name = server['name']
