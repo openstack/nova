@@ -302,13 +302,15 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
         return uuid
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_dev_addr(cls, context, compute_node_id, dev_addr):
         db_dev = db.pci_device_get_by_addr(
             context, compute_node_id, dev_addr)
         return cls._from_db_object(context, cls(), db_dev)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_dev_id(cls, context, id):
         db_dev = db.pci_device_get_by_id(context, id)
         return cls._from_db_object(context, cls(), db_dev)
@@ -630,19 +632,22 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
             self.objects = []
             self.obj_reset_changes()
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_compute_node(cls, context, node_id):
         db_dev_list = db.pci_device_get_all_by_node(context, node_id)
         return base.obj_make_list(context, cls(context), objects.PciDevice,
                                   db_dev_list)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, uuid):
         db_dev_list = db.pci_device_get_all_by_instance_uuid(context, uuid)
         return base.obj_make_list(context, cls(context), objects.PciDevice,
                                   db_dev_list)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_parent_address(cls, context, node_id, parent_addr):
         db_dev_list = db.pci_device_get_all_by_parent_addr(context,
                                                            node_id,

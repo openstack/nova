@@ -374,17 +374,20 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         self.hosts = self.get_hosts()
         self.obj_reset_changes(['hosts'])
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_uuid(cls, context, uuid):
         db_group = cls._get_from_db_by_uuid(context, uuid)
         return cls._from_db_object(context, cls(), db_group)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_name(cls, context, name):
         db_group = cls._get_from_db_by_name(context, name)
         return cls._from_db_object(context, cls(), db_group)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_group = cls._get_from_db_by_instance(context, instance_uuid)
         return cls._from_db_object(context, cls(), db_group)
@@ -483,7 +486,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
             group=self,
             action=fields.NotificationAction.DELETE)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def add_members(cls, context, group_uuid, instance_uuids):
         payload = {'server_group_id': group_uuid,
                    'instance_uuids': instance_uuids}
@@ -568,19 +572,22 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
             counts['user'] = {'server_groups': query.count()}
         return counts
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_project_id(cls, context, project_id):
         api_db_groups = cls._get_from_db(context, project_id=project_id)
         return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   api_db_groups)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context):
         api_db_groups = cls._get_from_db(context)
         return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   api_db_groups)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_counts(cls, context, project_id, user_id=None):
         """Get the counts of InstanceGroup objects in the database.
 

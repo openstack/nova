@@ -58,7 +58,8 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject,
         fault.obj_reset_changes()
         return fault
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_latest_for_instance(cls, context, instance_uuid):
         db_faults = db.instance_fault_get_by_instance_uuids(context,
                                                             [instance_uuid])
@@ -95,7 +96,8 @@ class InstanceFaultList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('InstanceFault'),
         }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_latest_by_instance_uuids(cls, context, instance_uuids):
         db_faultdict = db.instance_fault_get_by_instance_uuids(context,
                                                                instance_uuids,
@@ -104,7 +106,8 @@ class InstanceFaultList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.InstanceFault,
                                   db_faultlist)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuids(cls, context, instance_uuids):
         db_faultdict = db.instance_fault_get_by_instance_uuids(context,
                                                                instance_uuids)

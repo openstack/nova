@@ -104,7 +104,6 @@ class NovaObjectRegistry(ovoo_base.VersionedObjectRegistry):
             cls.register(notification_cls)
 
 
-remotable_classmethod = ovoo_base.remotable_classmethod
 remotable = ovoo_base.remotable
 obj_make_list = ovoo_base.obj_make_list
 NovaObjectDictCompat = ovoo_base.VersionedObjectDictCompat

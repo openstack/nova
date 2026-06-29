@@ -66,7 +66,8 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
         # Leave the fields dirty
         return info_cache
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_obj = db.instance_info_cache_get(context, instance_uuid)
         if not db_obj:

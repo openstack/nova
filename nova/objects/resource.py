@@ -80,7 +80,8 @@ class ResourceList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('Resource'),
     }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_extra = db.instance_extra_get_by_instance_uuid(
                 context, instance_uuid, columns=['resources'])

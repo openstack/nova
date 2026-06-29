@@ -294,13 +294,15 @@ class Quotas(base.NovaObject):
     def rollback(self):
         pass
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def limit_check(cls, context, project_id=None, user_id=None, **values):
         """Check quota limits."""
         return quota.QUOTAS.limit_check(
             context, project_id=project_id, user_id=user_id, **values)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def limit_check_project_and_user(cls, context, project_values=None,
                                      user_values=None, project_id=None,
                                      user_id=None):
@@ -310,20 +312,23 @@ class Quotas(base.NovaObject):
             project_id=project_id, user_id=user_id)
 
     # NOTE(melwitt): This can be removed once no old code can call count().
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def count(cls, context, resource, *args, **kwargs):
         """Count a resource."""
         count = quota.QUOTAS.count_as_dict(context, resource, *args, **kwargs)
         key = 'user' if 'user' in count else 'project'
         return count[key][resource]
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def count_as_dict(cls, context, resource, *args, **kwargs):
         """Count a resource and return a dict."""
         return quota.QUOTAS.count_as_dict(
             context, resource, *args, **kwargs)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def check_deltas(cls, context, deltas, *count_args, **count_kwargs):
         """Check usage delta against quota limits.
 
@@ -389,7 +394,8 @@ class Quotas(base.NovaObject):
             exc.kwargs['usages'] = count[key]
             raise exc
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def create_limit(cls, context, project_id, resource, limit, user_id=None):
         try:
             main_db_api.quota_get(
@@ -401,7 +407,8 @@ class Quotas(base.NovaObject):
             raise exception.QuotaExists(project_id=project_id,
                                         resource=resource)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def update_limit(cls, context, project_id, resource, limit, user_id=None):
         try:
             cls._update_limit_in_db(context, project_id, resource, limit,

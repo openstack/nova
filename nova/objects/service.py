@@ -450,22 +450,26 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         # the first elem of the list
         self.compute_node = compute_nodes[0]
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id(cls, context, service_id):
         db_service = db.service_get(context, service_id)
         return cls._from_db_object(context, cls(), db_service)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_uuid(cls, context, service_uuid):
         db_service = db.service_get_by_uuid(context, service_uuid)
         return cls._from_db_object(context, cls(), db_service)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_host_and_topic(cls, context, host, topic):
         db_service = db.service_get_by_host_and_topic(context, host, topic)
         return cls._from_db_object(context, cls(), db_service)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_host_and_binary(cls, context, host, binary):
         try:
             db_service = db.service_get_by_host_and_binary(context,
@@ -479,7 +483,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     def _db_service_get_by_compute_host(context, host, use_slave=False):
         return db.service_get_by_compute_host(context, host)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_compute_host(cls, context, host, use_slave=False):
         db_service = cls._db_service_get_by_compute_host(context, host,
                                                          use_slave=use_slave)
@@ -487,7 +492,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
     # NOTE(ndipanov): This is deprecated and should be removed on the next
     # major version bump
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_args(cls, context, host, binary):
         db_service = db.service_get_by_host_and_binary(context, host, binary)
         return cls._from_db_object(context, cls(), db_service)
@@ -580,7 +586,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     def _db_service_get_minimum_version(context, binaries, use_slave=False):
         return db.service_get_minimum_version(context, binaries)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_minimum_version_multi(cls, context, binaries, use_slave=False):
         if not all(binary.startswith('nova-') for binary in binaries):
             LOG.warning('get_minimum_version called with likely-incorrect '
@@ -612,7 +619,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
         return version
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_minimum_version(cls, context, binary, use_slave=False):
         return cls.get_minimum_version_multi(context, [binary],
                                              use_slave=use_slave)
@@ -715,7 +723,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('Service'),
         }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_topic(cls, context, topic):
         db_services = db.service_get_all_by_topic(context, topic)
         return base.obj_make_list(context, cls(context), objects.Service,
@@ -723,20 +732,23 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
 
     # NOTE(paul-carlton2): In v2.0 of the object the include_disabled flag
     # will be removed so both enabled and disabled hosts are returned
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_binary(cls, context, binary, include_disabled=False):
         db_services = db.service_get_all_by_binary(
             context, binary, include_disabled=include_disabled)
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_host(cls, context, host):
         db_services = db.service_get_all_by_host(context, host)
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context, disabled=None, set_zones=False):
         db_services = db.service_get_all(context, disabled=disabled)
         if set_zones:
@@ -745,7 +757,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all_computes_by_hv_type(cls, context, hv_type):
         db_services = db.service_get_all_computes_by_hv_type(
             context, hv_type, include_disabled=False)

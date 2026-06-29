@@ -383,19 +383,22 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
                                    else [])
         return self
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id(cls, context, id):
         db_flavor = cls._flavor_get_from_db(context, id)
         return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_name(cls, context, name):
         db_flavor = cls._flavor_get_by_name_from_db(context, name)
         return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_flavor_id(cls, context, flavor_id, read_deleted=None):
         db_flavor = cls._flavor_get_by_flavor_id_from_db(context,
                                                          flavor_id)
@@ -659,7 +662,8 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('Flavor'),
         }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context, inactive=False, filters=None,
                 sort_key='flavorid', sort_dir='asc', limit=None, marker=None):
         api_db_flavors = _flavor_get_all_from_db(context,

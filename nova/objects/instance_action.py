@@ -79,14 +79,16 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
                   'updated_at': utcnow}
         return values
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_request_id(cls, context, instance_uuid, request_id):
         db_action = db.action_get_by_request_id(context, instance_uuid,
                                                 request_id)
         if db_action:
             return cls._from_db_object(context, cls(), db_action)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def action_start(cls, context, instance_uuid, action_name,
                      want_result=True):
         values = cls.pack_action_start(context, instance_uuid, action_name)
@@ -94,7 +96,8 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
         if want_result:
             return cls._from_db_object(context, cls(), db_action)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def action_finish(cls, context, instance_uuid, want_result=True):
         values = cls.pack_action_finish(context, instance_uuid)
         db_action = db.action_finish(context, values)
@@ -130,7 +133,8 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('InstanceAction'),
         }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid, limit=None,
                              marker=None, filters=None):
         db_actions = db.actions_get(
@@ -210,12 +214,14 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
             values['traceback'] = exc_tb
         return values
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id(cls, context, action_id, event_id):
         db_event = db.action_event_get_by_id(context, action_id, event_id)
         return cls._from_db_object(context, cls(), db_event)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def event_start(cls, context, instance_uuid, event_name, want_result=True,
                     host=None):
         values = cls.pack_action_event_start(context, instance_uuid,
@@ -225,7 +231,8 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
             return cls._from_db_object(context, cls(), db_event)
 
     @base.serialize_args
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def event_finish_with_failure(cls, context, instance_uuid, event_name,
                                   exc_val=None, exc_tb=None, want_result=None):
         values = cls.pack_action_event_finish(context, instance_uuid,
@@ -235,7 +242,8 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
         if want_result:
             return cls._from_db_object(context, cls(), db_event)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def event_finish(cls, context, instance_uuid, event_name,
                      want_result=True):
         return cls.event_finish_with_failure(context, instance_uuid,
@@ -286,7 +294,8 @@ class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
         }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_action(cls, context, action_id):
         db_events = db.action_events_get(context, action_id)
         return base.obj_make_list(context, cls(context),

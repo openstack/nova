@@ -139,7 +139,8 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         return _create_in_db(context, values)
 
     # TODO(stephenfin): Remove the 'localonly' parameter in v2.0
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_name(cls, context, user_id, name, localonly=False):
         if localonly:
             # There is no longer a "local" (main) table for keypairs, so this
@@ -149,7 +150,8 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         db_keypair = cls._get_from_db(context, user_id, name)
         return cls._from_db_object(context, cls(), db_keypair)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def destroy_by_name(cls, context, user_id, name):
         cls._destroy_in_db(context, user_id, name)
 
@@ -193,7 +195,8 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
     def _get_count_from_db(context, user_id):
         return _get_count_from_db(context, user_id)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_user(cls, context, user_id, limit=None, marker=None):
         api_db_keypairs = cls._get_from_db(
             context, user_id, limit=limit, marker=marker)
@@ -202,6 +205,7 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
             context, cls(context), objects.KeyPair, api_db_keypairs,
         )
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_count_by_user(cls, context, user_id):
         return cls._get_count_from_db(context, user_id)
