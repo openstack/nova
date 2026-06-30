@@ -243,7 +243,7 @@ Install and configure components
 
         [service_user]
         send_service_user_token = true
-        auth_url = https://controller/identity
+        auth_url = http://controller:5000/
         auth_type = password
         project_domain_name = Default
         project_name = service
