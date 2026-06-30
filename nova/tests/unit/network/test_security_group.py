@@ -225,7 +225,7 @@ class TestNeutronDriver(test.NoDBTestCase):
                 sg_bindings = {server_id: [{'name': 'wol'}, {'name': 'eor'}]}
         self.assertEqual(sg_bindings, result)
         self.mocked_client.list_ports.assert_called_once_with(
-            device_id=[server_id])
+            fields=['security_groups', 'device_id'], device_id=[server_id])
         expected_search_opts = {'id': mock.ANY}
         if not detailed:
             expected_search_opts['fields'] = ['id', 'name']
@@ -246,7 +246,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         result = sg_api.get_instances_security_groups_bindings(
                                   self.context, servers)
         self.mocked_client.list_ports.assert_called_once_with(
-            device_id=[server_id])
+            fields=['security_groups', 'device_id'], device_id=[server_id])
         self.assertEqual({}, result)
 
     def _test_instances_security_group_bindings_scale(self, num_servers):
@@ -274,7 +274,8 @@ class TestNeutronDriver(test.NoDBTestCase):
         return_values = []
         for x in range(0, num_servers, max_query):
             expected_args.append(
-                mock.call(device_id=device_ids[x:x + max_query]))
+                mock.call(fields=['security_groups', 'device_id'],
+                          device_id=device_ids[x:x + max_query]))
             return_values.append({'ports': ports[x:x + max_query]})
 
         self.mocked_client.list_security_groups.return_value = (
@@ -319,7 +320,7 @@ class TestNeutronDriver(test.NoDBTestCase):
                                   self.context, servers)
         self.assertEqual(sg_bindings, result)
         self.mocked_client.list_ports.assert_called_once_with(
-            device_id=['server_1'])
+            fields=['security_groups', 'device_id'], device_id=['server_1'])
         self.mocked_client.list_security_groups.assert_called_once_with(
             id=mock.ANY, fields=['id', 'name'])
         self.assertEqual(['1', '2'],
@@ -334,6 +335,7 @@ class TestNeutronDriver(test.NoDBTestCase):
             self.context, objects.Instance(uuid=uuids.instance))
         self.assertEqual([], result)
         self.mocked_client.list_ports.assert_called_once_with(
+            fields=['security_groups', 'device_id'],
             device_id=[uuids.instance])
 
     def test_add_to_instance(self):
