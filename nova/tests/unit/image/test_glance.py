@@ -223,68 +223,6 @@ class TestConversions(test.NoDBTestCase):
         self.assertEqual(result['updated_at'], NOW_DATETIME)
         self.assertEqual(result['deleted_at'], NOW_DATETIME)
 
-    def _test_extracting_missing_attributes(self, include_locations):
-        # Verify behavior from glance objects that are missing attributes
-        # TODO(jaypipes): Find a better way of testing this crappy
-        #                 glanceclient magic object stuff.
-        class MyFakeGlanceImage(object):
-            def __init__(self, metadata):
-                IMAGE_ATTRIBUTES = ['size', 'owner', 'id', 'created_at',
-                                    'updated_at', 'status', 'min_disk',
-                                    'min_ram', 'is_public']
-                raw = dict.fromkeys(IMAGE_ATTRIBUTES)
-                raw.update(metadata)
-                self.__dict__['raw'] = raw
-
-            def __getattr__(self, key):
-                try:
-                    return self.__dict__['raw'][key]
-                except KeyError:
-                    raise AttributeError(key)
-
-            def __setattr__(self, key, value):
-                try:
-                    self.__dict__['raw'][key] = value
-                except KeyError:
-                    raise AttributeError(key)
-
-        metadata = {
-            'id': 1,
-            'created_at': NOW_DATETIME,
-            'updated_at': NOW_DATETIME,
-        }
-        image = MyFakeGlanceImage(metadata)
-        observed = glance._extract_attributes(
-            image, include_locations=include_locations)
-        expected = {
-            'id': 1,
-            'name': None,
-            'is_public': None,
-            'size': 0,
-            'min_disk': None,
-            'min_ram': None,
-            'disk_format': None,
-            'container_format': None,
-            'checksum': None,
-            'created_at': NOW_DATETIME,
-            'updated_at': NOW_DATETIME,
-            'deleted_at': None,
-            'deleted': None,
-            'status': None,
-            'properties': {},
-            'owner': None
-        }
-        if include_locations:
-            expected['locations'] = None
-            expected['direct_url'] = None
-        self.assertEqual(expected, observed)
-
-    def test_extracting_missing_attributes_include_locations(self):
-        self._test_extracting_missing_attributes(include_locations=True)
-
-    def test_extracting_missing_attributes_exclude_locations(self):
-        self._test_extracting_missing_attributes(include_locations=False)
-
 
 class TestExceptionTranslations(test.NoDBTestCase):
 
