@@ -340,15 +340,21 @@ Host passthrough (``host-passthrough``)
 Host model (``host-model``)
   In this mode, nested virtualization is automatically enabled once
   the KVM kernel module is loaded with nesting support, **if** the
-  matching CPU model exposes the ``vmx`` feature flag to guests by
+  matching CPU model exposes the ``svm`` or ``vmx`` feature flag to guests by
   default (you can verify this with ``virsh capabilities`` on your
-  compute node). If your CPU model does not pass in the ``vmx`` flag,
-  you can force it with :oslo.config:option:`libvirt.cpu_model_extra_flags`:
+  compute node). If your CPU model does not pass in the ``svm`` or ``vmx``
+  flag, you can force it with
+  :oslo.config:option:`libvirt.cpu_model_extra_flags`:
 
   .. code-block:: ini
 
      [libvirt]
      cpu_mode = host-model
+
+     # For AMD CPUs
+     cpu_model_extra_flags = svm
+
+     # For Intel CPUs
      cpu_model_extra_flags = vmx
 
   Again, consider the other implications that apply to the
@@ -357,7 +363,7 @@ Host model (``host-model``)
 Custom (``custom``)
   In custom mode, the same considerations apply as in host-model mode,
   but you may *additionally* want to ensure that libvirt passes not only
-  the ``vmx``, but also the ``pcid`` flag to its guests:
+  the ``svm`` or ``vmx`` flag, but also the ``pcid`` flag to its guests:
 
   .. code-block:: ini
 
