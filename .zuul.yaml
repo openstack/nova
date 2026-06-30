@@ -959,7 +959,7 @@
       devstack_services:
         openstack-cli-server: true
       devstack_localrc:
-        NOVA_ENFORCE_SCOPE: false
+        NOVA_ENFORCE_NEW_DEFAULTS: false
 
 - project:
     # Please try to keep the list of job names sorted alphabetically.
