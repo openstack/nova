@@ -562,6 +562,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self.mdev_type_max_mapping = collections.defaultdict(str)
         # if we have a wildcard, we default to use this mdev type
         self.pgpu_type_default = None
+        # Addresses of virtual mdev parent devices (e.g. mtty)
+        self.virtual_mdevs = set()
         self.supported_vgpu_types = self._get_supported_vgpu_types()
 
         # This dict is for knowing which mdevs are already claimed by some
@@ -8609,6 +8611,46 @@ class LibvirtDriver(driver.ComputeDriver):
             utils.cooperative_yield()
         return total
 
+    def _is_virtual_mdev(self, device_address):
+        """Check if a device address refers to a virtual mdev parent.
+
+        Virtual mdev parents (e.g. mtty) are not backed by a real PCI
+        device. They reside under /sys/devices/virtual/ and use
+        non-PCI address formats.
+
+        :param device_address: the device address to check
+        :returns: True if the address is a virtual mdev parent
+        """
+        return device_address in self.virtual_mdevs
+
+    def _validate_device_address(self, device_address):
+        """Validate a device address for mdev configuration.
+
+        Checks that the address is either a valid PCI address or a
+        virtual mdev parent present in /sys/devices/virtual/. Only
+        mtty is currently usable as a virtual mdev parent because
+        libvirt hardcodes it as the only sample mdev subsystem [1].
+
+        [1] https://gitlab.com/libvirt/libvirt/-/commit/ab29ddfdf8
+
+        :param device_address: the configured device address
+        :raises: InvalidLibvirtMdevConfig if the address is invalid
+
+        If the address is a virtual mdev parent, it is registered
+        in self.virtual_mdevs for later use.
+        """
+        try:
+            pci_utils.parse_address(device_address)
+        except exception.PciDeviceWrongAddressFormat:
+            device_path = device_address.replace('_', '/')
+            if not os.path.exists(
+                    '/sys/devices/virtual/%s' % device_path):
+                raise exception.InvalidLibvirtMdevConfig(
+                    reason="incorrect device address: %s"
+                    % device_address
+                )
+            self.virtual_mdevs.add(device_address)
+
     def _get_supported_vgpu_types(self):
         if not CONF.devices.enabled_mdev_types:
             return []
@@ -8652,38 +8694,38 @@ class LibvirtDriver(driver.ComputeDriver):
                     raise exception.InvalidLibvirtMdevConfig(
                         reason="duplicate types for PCI ID %s" % device_address
                     )
-                # Just checking whether the operator fat-fingered the address.
-                # If it's wrong, it will return an exception
-                try:
-                    pci_utils.parse_address(device_address)
-                except exception.PciDeviceWrongAddressFormat:
-                    raise exception.InvalidLibvirtMdevConfig(
-                        reason="incorrect PCI address: %s" % device_address
-                    )
+                self._validate_device_address(device_address)
                 self.pgpu_type_mapping[device_address] = vgpu_type
                 self.mdev_class_mapping[device_address] = mdev_class
                 self.mdev_classes.add(mdev_class)
         return enabled_mdev_types
 
-    @staticmethod
-    def _get_pci_id_from_libvirt_name(
-            libvirt_address: str
+    def _get_device_address(
+            self, libvirt_name: str
         ) -> str | None:
-        """Returns a PCI ID from a libvirt pci address name.
+        """Convert a libvirt device name to a device address.
 
-        :param libvirt_address: the libvirt PCI device name,
-                                eg.'pci_0000_84_00_0'
+        For PCI devices, converts a libvirt name like
+        'pci_0000_84_00_0' to the PCI address '0000:84:00.0'.
+        For virtual mdev parents (e.g. mtty), returns the
+        libvirt name unchanged as there is no PCI address.
+
+        :param libvirt_name: the libvirt device name,
+                             eg. 'pci_0000_84_00_0' or 'mtty_mtty'
+        :returns: the device address, or None if invalid
         """
+        if self._is_virtual_mdev(libvirt_name):
+            return libvirt_name
         try:
             device_address = "{}:{}:{}.{}".format(
-                *libvirt_address[4:].split('_'))
+                *libvirt_name[4:].split('_'))
             # Validates whether it's a PCI ID...
             pci_utils.parse_address(device_address)
         # .format() can return IndexError
         except (exception.PciDeviceWrongAddressFormat, IndexError):
             # this is not a valid PCI address
-            LOG.warning("The PCI address %s was invalid for getting the "
-                        "related mdev type", libvirt_address)
+            LOG.warning("The PCI address %s was invalid for getting "
+                        "the related mdev type", libvirt_name)
             return None
         return device_address
 
@@ -8697,7 +8739,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not self.supported_vgpu_types:
             return
 
-        device_address = self._get_pci_id_from_libvirt_name(device_address)
+        device_address = self._get_device_address(device_address)
         if not device_address:
             return
         mdev_type = self.pgpu_type_mapping.get(device_address)
@@ -8713,7 +8755,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                eg.'pci_0000_84_00_0'
         """
 
-        device_address = self._get_pci_id_from_libvirt_name(device_address)
+        device_address = self._get_device_address(device_address)
         if not device_address:
             # By default, we should always support VGPU as the standard RC
             return orc.VGPU
@@ -8982,9 +9024,18 @@ class LibvirtDriver(driver.ComputeDriver):
         device = {
             "dev_id": cfgdev.name,
             "types": {},
-            "vendor_id": cfgdev.pci_capability.vendor_id,
         }
-        for mdev_cap in cfgdev.pci_capability.mdev_capability:
+        if not self._is_virtual_mdev(devname):
+            device["vendor_id"] = cfgdev.pci_capability.vendor_id
+            cap = cfgdev.pci_capability
+        else:
+            # Virtual mdev parents have no PCI capability; their
+            # supported types are exposed via a top-level mdev
+            # capability instead.
+            device["vendor_id"] = None
+            cap = cfgdev.mdev_capability
+
+        for mdev_cap in cap.mdev_capability:
             for cap in mdev_cap.mdev_types:
                 if not types or cap['type'] in types:
                     device["types"].update({cap['type']: {
@@ -9237,9 +9288,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if dev_supported_type and device['types'][
                     dev_supported_type]['availableInstances'] > 0:
                 # That physical GPU has enough room for a new mdev
-                # We need the PCI address, not the libvirt name
-                # The libvirt name is like 'pci_0000_84_00_0'
-                pci_addr = "{}:{}:{}.{}".format(*dev_name[4:].split('_'))
+                pci_addr = self._get_device_address(dev_name)
                 chosen_mdev = self._create_mdev(
                     dev_name, dev_supported_type, uuid=uuid)
                 LOG.info('Created mdev: %s on pGPU: %s.',

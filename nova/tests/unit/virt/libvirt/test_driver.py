@@ -29098,12 +29098,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           libvirt_driver.LibvirtDriver,
                           fake.FakeVirtAPI(), False)
 
-    def test_get_supported_vgpu_types_with_invalid_pci_address(self):
+    @mock.patch('os.path.exists')
+    def test_get_supported_vgpu_types_with_invalid_pci_address(self,
+                                                               mock_exists):
+        mock_exists.return_value = False
         self.flags(enabled_mdev_types=['nvidia-11'], group='devices')
         # we need to call the below again to ensure the updated
         # 'device_addresses' value is read and the new groups created
         nova.conf.devices.register_dynamic_opts(CONF)
-        # Fat-finger the PCI address
+        # Use an invalid device address
         self.flags(device_addresses=['whoops'], group='mdev_nvidia-11')
         self.assertRaises(exception.InvalidLibvirtMdevConfig,
                           libvirt_driver.LibvirtDriver,
@@ -29170,6 +29173,19 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                     'default_type': 'nvidia-11',
                     'this_type': 'nvidia-12'})
         mock_warning.assert_called_once_with(msg)
+
+    @mock.patch('os.path.exists')
+    def test_get_supported_vgpu_types_with_virtual_devices(self, mock_exists):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.flags(enabled_mdev_types=['mtty-1'], group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        # Use a virtual mdev parent address instead of a PCI address
+        self.flags(device_addresses=['mtty_mtty'], group='mdev_mtty-1')
+        self.assertEqual(['mtty-1'], drvr._get_supported_vgpu_types())
+        self.assertEqual({'mtty_mtty': 'mtty-1'}, drvr.pgpu_type_mapping)
+        mock_exists.assert_called_once_with('/sys/devices/virtual/mtty/mtty')
 
     def test_get_vgpu_type_per_pgpu(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -29240,6 +29256,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Any GPU but 0000:84:00.0 defaults now to nvidia-12
         self.assertEqual('nvidia-12',
                          drvr._get_vgpu_type_per_pgpu('pci_0000_85_00_0'))
+
+    @mock.patch('os.path.exists')
+    def test_get_vgpu_type_per_pgpu_with_virtual_devices(self, mock_exists):
+        self.flags(enabled_mdev_types=['mtty-1'], group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        self.flags(device_addresses=['mtty'], group='mdev_mtty-1')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # 'mtty' is a virtual device
+        self.assertEqual('mtty-1', drvr._get_vgpu_type_per_pgpu('mtty'))
 
     def test_get_resource_class_for_device(self):
         self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
