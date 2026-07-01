@@ -494,10 +494,10 @@
       - playbooks/nova-emulation/pre.yaml
 
 - job:
-    name: nova-vtpm
+    name: nova-whitebox
     parent: whitebox-devstack-multinode
     description: |
-      Run tempest vTPM tests against local qcow2 ephemeral storage and shared
+      Run tempest whitebox vTPM and vGPU tests against local qcow2 ephemeral storage and shared
       LVM/iSCSI cinder volumes.
     irrelevant-files: *nova-base-irrelevant-files
     vars:
@@ -509,9 +509,13 @@
       # COMPUTE_STATUS_DISABLED trait to be automatically added, which can
       # result in NoValidHost, for example.
       tempest_concurrency: 1
-      tempest_test_regex: ^(tempest\.api\.compute\.admin\.test_live_migration\.LiveMigrationWithVTPMTest|whitebox_tempest_plugin\.api\.compute\.test_vtpm)
-      # revert this when bug #1940425 is fixed in neutron
-      tempest_exclude_regex: (test_live_migration_with_trunk)
+      # Include vgpu whitebox tests to test vgpu functionality with mtty
+      tempest_test_regex: ^(tempest\.api\.compute\.admin\.test_live_migration\.LiveMigrationWithVTPMTest|whitebox_tempest_plugin\.api\.compute\.(test_vtpm|test_vgpu))
+      # revert the exclusion of test_live_migration_with_trunk when bug
+      # #1940425 is fixed in neutron
+      # only mtty is supported in libvirt so we can't run the VGPUMultiTypes
+      # tests since we can only use one mdev type per device
+      tempest_exclude_regex: (test_live_migration_with_trunk|VGPUMultiTypes)
       devstack_services:
         neutron-trunk: true
         openstack-cli-server: true
@@ -521,7 +525,33 @@
         s-object: false
         s-proxy: false
         barbican: true
+      devstack_local_conf:
+        post-config:
+          $NOVA_CPU_CONF:
+            # Added in Hibiscus. Enable mtty devices
+            devices:
+              enabled_mdev_types: mtty-1
+            mdev_mtty-1:
+              device_addresses: mtty_mtty
+        test-config:
+          $TEMPEST_CONFIG:
+            # Added in Hibiscus
+            compute-feature-enabled:
+              vgpu_cold_migration_supported: True
+            whitebox-hardware:
+              vgpu_vendor_id: "4348"
+            whitebox:
+              # some vms were failing to boot with the default 64 value
+              flavor_ram_size: 128
+      devstack_localrc:
+        # Added in Hibiscus.
+        NOVA_COMPILE_MDEV_SAMPLES: True
     group-vars:
+      # override devstack plugins defined in parent job via the tempest group
+      tempest:
+        devstack_plugins:
+          # Added in Hibiscus. Needed to compile the mtty kernel module
+          nova: https://opendev.org/openstack/nova
       subnode:
         devstack_services:
           c-bak: false
@@ -530,6 +560,20 @@
           s-object: false
           s-proxy: false
           barbican: false
+        devstack_localrc:
+          # Added in Hibiscus.
+          NOVA_COMPILE_MDEV_SAMPLES: True
+        devstack_local_conf:
+          post-config:
+            $NOVA_CPU_CONF:
+              # Added in Hibiscus. Enable mtty devices
+              devices:
+                enabled_mdev_types: mtty-1
+              mdev_mtty-1:
+                device_addresses: mtty_mtty
+        devstack_plugins:
+          # Added in Hibiscus. Needed to compile the mtty kernel module
+          nova: https://opendev.org/openstack/nova
 
 # TODO(lucasagomes): Move this job to ML2/OVN when QoS Minimum Bandwidth
 # support is implemented.
@@ -670,10 +714,6 @@
         NOVNC_FROM_PACKAGE: False
         NOVA_SPICE_ENABLED: True
         NOVA_USE_UNIFIED_LIMITS: True
-        # Added in Caracal.
-        # Temporarly disabled due to
-        # https://bugs.launchpad.net/nova/+bug/2110545
-        NOVA_COMPILE_MDEV_SAMPLES: False
         'SYSTEMD_ENV_VARS["n-sch"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
         'SYSTEMD_ENV_VARS["n-api"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
         'SYSTEMD_ENV_VARS["n-api-meta"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
@@ -707,7 +747,6 @@
       devstack_plugins:
         # Needed for QoS port heal allocation testing.
         neutron: https://opendev.org/openstack/neutron
-        nova: https://opendev.org/openstack/nova
     group-vars:
       subnode:
         devstack_localrc:
@@ -982,7 +1021,7 @@
         - nova-ceph-multistore:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-live-migration
-        - nova-vtpm
+        - nova-whitebox
         # NOTE(gmaan): We will be running the graceful shutdown testing in
         # check pipeline only and not required to test in gate as such.
         - nova-graceful-shutdown
