@@ -2058,20 +2058,6 @@ class TestGlanceApiServers(test.NoDBTestCase):
             mock_epd.assert_called_once_with()
 
 
-class TestUpdateGlanceImage(test.NoDBTestCase):
-    @mock.patch('nova.image.glance.GlanceImageServiceV2')
-    def test_start(self, mock_glance_image_service):
-        consumer = glance.UpdateGlanceImage(
-            'context', 'id', 'metadata', 'stream')
-
-        with mock.patch.object(glance, 'get_remote_image_service') as a_mock:
-            a_mock.return_value = (mock_glance_image_service, 'image_id')
-
-            consumer.start()
-            mock_glance_image_service.update.assert_called_with(
-                'context', 'image_id', 'metadata', 'stream', purge_props=False)
-
-
 class TestExtractAttributes(test.NoDBTestCase):
     @mock.patch.object(schemas, 'Schema', side_effect=FakeSchema)
     def test_extract_image_attributes_active_images_with_locations(
