@@ -80,6 +80,7 @@ import nova.privsep.libvirt
 from nova.storage import rbd_utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import cyborg
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.fixtures import libvirt_data as fake_libvirt_data
 from nova.tests.unit import fake_block_device
@@ -17109,7 +17110,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       '_ensure_console_log_for_instance',
                       lambda *a, **kw: None)
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
-                      '_allocate_mdevs', lambda *a, **kw: None)
+                      '_allocate_mdevs', lambda *a, **kw: [])
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
                       '_create_guest_with_network', lambda *a, **kw: None)
 
@@ -18705,7 +18706,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         backend = self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
 
-        accel_info = [{'k1': 'v1', 'k2': 'v2'}]
+        accel_info = copy.deepcopy(nova_fixtures.CyborgFixture.bound_arq_list)
         share_info = objects.ShareMappingList()
         with mock.patch('os.path.exists', return_value=True):
             drvr._hard_reboot(
@@ -18802,7 +18803,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         backend = self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
 
-        accel_info = [{'k1': 'v1', 'k2': 'v2'}]
+        accel_info = copy.deepcopy(nova_fixtures.CyborgFixture.bound_arq_list)
 
         # Input object
         share_mapping = {}
@@ -23295,8 +23296,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self._test_get_guest_config_parallels_volume(fields.VMMode.HVM, 7)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_guest_add_accel_pci_devices')
-    def test_get_guest_config_accel_pci(self, mock_add_accel):
+                '_guest_add_accel_pci_devices', autospec=True)
+    def test_get_guest_config_accel_pci(self, mock_add_pci):
         # For an ARQ list with attach handle type 'PCI', the list should
         # be passed intact to _guest_add_accel_pci_devices.
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -23311,14 +23312,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             arq['attach_handle_type'] = 'PCI'
         drvr._get_guest_config(instance, network_info=[],
             image_meta=image_meta, disk_info=disk_info, accel_info=accel_info)
-        mock_add_accel.assert_called_once_with(mock.ANY, accel_info)
+        mock_add_pci.assert_called_once_with(mock.ANY, accel_info)
 
-    @mock.patch.object(libvirt_driver.LOG, 'info')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_guest_add_accel_pci_devices')
-    def test_get_guest_config_accel_nonpci(self, mock_add_accel, mock_log):
-        # For an ARQ list with attach handle type != 'PCI',
-        # _guest_add_accel_pci_devices should get [].
+                '_guest_add_accel_pci_devices', autospec=True)
+    def test_get_guest_config_accel_mdev(self, mock_add_pci):
+        # MDEV ARQs are handled before XML generation, so
+        # _get_guest_config should not pass them to PCI handler.
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         instance.image_ref = uuids.image_ref
@@ -23326,14 +23326,173 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         disk_info = {'mapping': {}}
 
-        # This list has ARQs with attach handle type 'TEST_PCI'.
-        accel_info = nova_fixtures.CyborgFixture.bound_arq_list
+        _, mdev_arqs = cyborg.get_mdev_arqs('fakedev-dp')
+        accel_info = copy.deepcopy(mdev_arqs)
+        drvr._get_guest_config(instance, network_info=[],
+            image_meta=image_meta, disk_info=disk_info, accel_info=accel_info)
+        mock_add_pci.assert_called_once_with(mock.ANY, [])
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_guest_add_accel_pci_devices', autospec=True)
+    def test_get_guest_config_accel_mixed_pci_and_mdev(self, mock_add_pci):
+        # Mixed PCI and MDEV ARQs: only PCI should be passed to the
+        # PCI handler; MDEV ARQs are handled before XML generation.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        instance.image_ref = uuids.image_ref
+        instance.config_drive = ''
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = {'mapping': {}}
+
+        pci_arq = copy.deepcopy(nova_fixtures.CyborgFixture.bound_arq_list[0])
+        pci_arq['attach_handle_type'] = 'PCI'
+        _, mdev_arqs = cyborg.get_mdev_arqs('fakedev-dp')
+        mdev_arq = copy.deepcopy(mdev_arqs[0])
+        accel_info = [pci_arq, mdev_arq]
 
         drvr._get_guest_config(instance, network_info=[],
             image_meta=image_meta, disk_info=disk_info, accel_info=accel_info)
-        mock_add_accel.assert_called_once_with(mock.ANY, [])
-        self.assertIn('Ignoring accelerator requests for instance',
-                      str(mock_log.call_args[0]))
+        mock_add_pci.assert_called_once_with(mock.ANY, [pci_arq])
+
+    @mock.patch.object(libvirt_driver.LOG, 'info')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_guest_add_accel_pci_devices', autospec=True)
+    def test_get_guest_config_accel_unsupported_type(
+        self, mock_add_pci, mock_log):
+        # For an ARQ list with attach handle type different than 'PCI' or
+        # 'MDEV', _guest_add_accel_pci_devices should get [].
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        instance.image_ref = uuids.image_ref
+        instance.config_drive = ''
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = {'mapping': {}}
+
+        # This list has ARQs with attach handle type 'TEST_PCI'
+        accel_info = copy.deepcopy(nova_fixtures.CyborgFixture.bound_arq_list)
+        drvr._get_guest_config(instance, network_info=[],
+            image_meta=image_meta, disk_info=disk_info, accel_info=accel_info)
+        mock_add_pci.assert_called_once_with(mock.ANY, [])
+        self.assertIn('unsupported attach handle types',
+                      str(mock_log.call_args_list))
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._create_mdev',
+                autospec=True)
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._warn_if_nova_managed',
+                autospec=True)
+    def test_allocate_cyborg_mdevs(
+        self, mock_warn, mock_create_mdev):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        _, mdev_arqs = cyborg.get_mdev_arqs('fakedev-dp')
+        arqs = copy.deepcopy(mdev_arqs)
+
+        drvr._host.device_lookup_by_name = mock.Mock(
+            side_effect=fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                'device not found',
+                error_code=fakelibvirt.VIR_ERR_NO_NODE_DEVICE))
+
+        result = drvr._allocate_cyborg_mdevs(arqs)
+
+        mock_create_mdev.assert_has_calls([
+            mock.call(
+                'pci_0000_84_00_0', 'nvidia-223',
+                uuid=arqs[0]['attach_handle_uuid']),
+            mock.call(
+                'pci_0000_84_00_0', 'nvidia-223',
+                uuid=arqs[1]['attach_handle_uuid']),
+        ])
+        mock_warn.assert_has_calls([
+            mock.call(arqs[0]['attach_handle_info']),
+            mock.call(arqs[1]['attach_handle_info']),
+        ])
+        self.assertEqual(
+            [arqs[0]['attach_handle_uuid'],
+             arqs[1]['attach_handle_uuid']],
+            result)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._create_mdev',
+                autospec=True)
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._warn_if_nova_managed',
+                autospec=True)
+    def test_allocate_cyborg_mdevs_reuses_existing_devices(
+        self, mock_warn, mock_create_mdev):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        _, mdev_arqs = cyborg.get_mdev_arqs('fakedev-dp')
+        arqs = copy.deepcopy(mdev_arqs)
+
+        drvr._host.device_lookup_by_name = mock.Mock(
+            side_effect=[mock.sentinel.mdev0, mock.sentinel.mdev1])
+
+        result = drvr._allocate_cyborg_mdevs(arqs)
+
+        mock_create_mdev.assert_not_called()
+        mock_warn.assert_has_calls([
+            mock.call(arqs[0]['attach_handle_info']),
+            mock.call(arqs[1]['attach_handle_info']),
+        ])
+        self.assertEqual(
+            [arqs[0]['attach_handle_uuid'],
+             arqs[1]['attach_handle_uuid']],
+            result)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._create_mdev',
+                autospec=True)
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._warn_if_nova_managed',
+                autospec=True)
+    def test_allocate_cyborg_mdevs_reraises_lookup_errors(
+        self, mock_warn, mock_create_mdev):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        _, mdev_arqs = cyborg.get_mdev_arqs('fakedev-dp')
+        arqs = copy.deepcopy(mdev_arqs)
+
+        ex = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            'unexpected lookup failure',
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
+        drvr._host.device_lookup_by_name = mock.Mock(side_effect=ex)
+
+        raised = self.assertRaises(
+            fakelibvirt.libvirtError, drvr._allocate_cyborg_mdevs, arqs)
+        self.assertEqual(
+            fakelibvirt.VIR_ERR_INTERNAL_ERROR, raised.get_error_code())
+        mock_warn.assert_called_once_with(arqs[0]['attach_handle_info'])
+        mock_create_mdev.assert_not_called()
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_warn_if_nova_managed(self, mock_log):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ahi = {
+            'domain': '0000', 'bus': '84',
+            'device': '00', 'function': '0',
+            'asked_type': 'nvidia-223',
+        }
+
+        drvr._warn_if_nova_managed(ahi)
+        mock_log.assert_not_called()
+
+        drvr.pgpu_type_mapping['0000:84:00.0'] = 'nvidia-223'
+        drvr._warn_if_nova_managed(ahi)
+        mock_log.assert_called_once()
+        self.assertIn('0000:84:00.0', str(mock_log.call_args))
+
+        mock_log.reset_mock()
+        drvr.pgpu_type_mapping['0000:84:00.0'] = 'nvidia-555'
+        drvr._warn_if_nova_managed(ahi)
+        mock_log.assert_called_once()
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_warn_if_nova_managed_default(self, mock_log):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ahi = {
+            'domain': '0000', 'bus': '85',
+            'device': '00', 'function': '0',
+            'asked_type': 'nvidia-223',
+        }
+
+        drvr.pgpu_type_default = 'nvidia-223'
+        drvr._warn_if_nova_managed(ahi)
+        mock_log.assert_called_once()
 
     def test_get_guest_disk_config_rbd_older_config_drive_fall_back(self):
         # New config drives are stored in rbd but existing instances have
@@ -29898,6 +30057,79 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             external_events=[])
         # We should have tried to create the guest twice.
         self.assertEqual([call, call], mock_create_guest.mock_calls)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata',
+                       autospec=True)
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_existing_guest_config', autospec=True)
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, 'destroy', new=mock.Mock())
+    @mock.patch('oslo_utils.fileutils.ensure_tree', new=mock.Mock())
+    @mock.patch(
+        'nova.virt.libvirt.blockinfo.get_disk_info',
+        new=mock.Mock(return_value=mock.sentinel.disk_info))
+    @mock.patch('nova.objects.Instance.image_meta')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_guest_xml',
+                       autospec=True)
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_create_images_and_backing',
+        new=mock.Mock())
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_create_guest_with_network',
+        new=mock.Mock())
+    @mock.patch(
+        'oslo_service.loopingcall.FixedIntervalLoopingCall',
+        new=mock.Mock())
+    def test_hard_reboot_cyborg_mdevs_not_duplicated(
+            self, mock_get_xml, mock_image_meta,
+            mock_get_guest, mock_db, mock_build_metadata):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        ctxt = context.get_admin_context()
+        instance = objects.Instance(
+            uuid=uuids.instance,
+            system_metadata={},
+            image_ref=uuids.image,
+            flavor=objects.Flavor(extra_specs={}))
+
+        _, mdev_arqs = cyborg.get_mdev_arqs('fakedev-dp')
+        accel_info = copy.deepcopy(mdev_arqs)
+        cyborg_mdev_uuid_0 = accel_info[0]['attach_handle_uuid']
+        cyborg_mdev_uuid_1 = accel_info[1]['attach_handle_uuid']
+        nova_mdev_uuid = uuids.nova_mdev
+
+        old_guest = mock.Mock()
+        mock_get_guest.return_value = old_guest
+        mock_build_metadata.return_value = (objects.InstanceDeviceMetadata())
+
+        drvr._get_all_assigned_mediated_devices = mock.Mock(
+            return_value={
+                cyborg_mdev_uuid_0: instance.uuid,
+                cyborg_mdev_uuid_1: instance.uuid,
+                nova_mdev_uuid: instance.uuid,
+            })
+        drvr._allocate_cyborg_mdevs = mock.Mock(
+            return_value=[cyborg_mdev_uuid_0, cyborg_mdev_uuid_1])
+
+        share_info = objects.ShareMappingList()
+        drvr._hard_reboot(ctxt, instance, mock.sentinel.network_info,
+            share_info, accel_info=accel_info)
+
+        drvr._allocate_cyborg_mdevs.assert_called_once_with(accel_info)
+        mock_get_xml.assert_called_once_with(
+            ctxt,
+            instance,
+            mock.sentinel.network_info,
+            mock.sentinel.disk_info,
+            mock_image_meta,
+            block_device_info=None,
+            mdevs=[cyborg_mdev_uuid_0,
+                   cyborg_mdev_uuid_1,
+                   nova_mdev_uuid],
+            accel_info=accel_info,
+            share_info=share_info,
+            old_guest=old_guest,
+        )
 
     @mock.patch.object(libvirt_guest.Guest, 'detach_device')
     def _test_detach_mediated_devices(self, side_effect, detach_device):

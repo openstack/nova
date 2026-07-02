@@ -4288,6 +4288,11 @@ class LibvirtDriver(driver.ComputeDriver):
             allocs = self.virtapi.reportclient.get_allocations_for_consumer(
                     context, instance.uuid)
             mdevs = self._allocate_mdevs(allocs)
+        if accel_info:
+            cyborg_mdevs = self._allocate_cyborg_mdevs(accel_info)
+            existing = set(mdevs)
+            mdevs.extend(m for m in cyborg_mdevs if m not in existing)
+
         # NOTE(vish): This could generate the wrong device_format if we are
         #             using the raw backend and the images don't exist yet.
         #             The create_images_and_backing below doesn't properly
@@ -4972,6 +4977,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Does the guest need to be assigned some vGPU mediated devices ?
         mdevs = self._allocate_mdevs(allocations)
+        if accel_info:
+            mdevs.extend(self._allocate_cyborg_mdevs(accel_info))
 
         # If the guest needs a vTPM, _get_guest_xml needs its secret to exist
         # and its uuid to be registered in the instance prior to _get_guest_xml
@@ -7818,22 +7825,19 @@ class LibvirtDriver(driver.ComputeDriver):
 
         pci_arq_list = []
         if accel_info:
-            # NOTE(Sundar): We handle only the case where all attach handles
-            # are of type 'PCI'. The Cyborg fake driver used for testing
-            # returns attach handles of type 'TEST_PCI' and so its ARQs will
-            # not get composed into the VM's domain XML. For now, we do not
-            # expect a mixture of different attach handles for the same
-            # instance; but that case also gets ignored by this logic.
-            ah_types_set = {arq['attach_handle_type'] for arq in accel_info}
-            supported_types_set = {'PCI'}
-            if ah_types_set == supported_types_set:
-                pci_arq_list = accel_info
-            else:
-                LOG.info('Ignoring accelerator requests for instance %s. '
-                         'Supported Attach handle types: %s. '
-                         'But got these unsupported types: %s.',
-                         instance.uuid, supported_types_set,
-                         ah_types_set.difference(supported_types_set))
+            unsupported_types = set()
+            for arq in accel_info:
+                ah_type = arq['attach_handle_type']
+                if ah_type == 'PCI':
+                    pci_arq_list.append(arq)
+                elif ah_type != 'MDEV':
+                    unsupported_types.add(ah_type)
+            if unsupported_types:
+                LOG.info(
+                    'Ignoring accelerator requests with '
+                    'unsupported attach handle types for '
+                    'instance %s: %s',
+                    instance.uuid, unsupported_types)
 
         self._guest_add_accel_pci_devices(guest, pci_arq_list)
 
@@ -7948,6 +7952,61 @@ class LibvirtDriver(driver.ComputeDriver):
             mdev = vconfig.LibvirtConfigGuestHostdevMDEV()
             mdev.uuid = chosen_mdev
             guest.add_device(mdev)
+
+    def _allocate_cyborg_mdevs(self, accel_info):
+        """Create Cyborg-managed MDEV devices from ARQs.
+
+        :param accel_info: list of accelerator requests (ARQs)
+        :returns: list of MDEV UUIDs
+        """
+        mdevs = []
+        for arq in accel_info:
+            if arq['attach_handle_type'] != 'MDEV':
+                continue
+            ahi = arq['attach_handle_info']
+            parent_dev_name = "pci_{}_{}_{}_{}".format(
+                ahi['domain'], ahi['bus'],
+                ahi['device'], ahi['function'])
+            self._warn_if_nova_managed(ahi)
+            mdev_uuid = arq['attach_handle_uuid']
+            dev_name = "{}_{}_{}_{}_{}".format(
+                libvirt_utils.mdev_uuid2name(mdev_uuid),
+                ahi['domain'], ahi['bus'],
+                ahi['device'], ahi['function'])
+            try:
+                self._host.device_lookup_by_name(dev_name)
+            except libvirt.libvirtError as ex:
+                if ex.get_error_code() != libvirt.VIR_ERR_NO_NODE_DEVICE:
+                    raise
+                self._create_mdev(
+                    parent_dev_name, ahi['asked_type'],
+                    uuid=mdev_uuid)
+            mdevs.append(mdev_uuid)
+        return mdevs
+
+    def _warn_if_nova_managed(self, attach_handle_info):
+        """Log a warning if a Cyborg-managed GPU is also Nova-managed.
+
+        :param attach_handle_info: dict with domain, bus, device,
+            function keys from a Cyborg ARQ.
+        """
+        pci_id = "{}:{}:{}.{}".format(
+            attach_handle_info['domain'],
+            attach_handle_info['bus'],
+            attach_handle_info['device'],
+            attach_handle_info['function'])
+        mdev_type = attach_handle_info['asked_type']
+        # the conflict could happen in two scenarios:
+        # the device is configured explicitly under [mdev_<mdev_type>]
+        # the mdev_type is the only type configured in Nova, so it's the
+        # default type
+        if (pci_id in self.pgpu_type_mapping or
+                self.pgpu_type_default == mdev_type):
+            LOG.warning(
+                'GPU %s is managed by both Cyborg and Nova '
+                '(via [mdev_*] configuration). This can lead '
+                'to resource contention. Consider removing this '
+                'device from Nova vGPU configuration.', pci_id)
 
     @staticmethod
     def _guest_add_spice_channel(guest):

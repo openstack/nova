@@ -159,6 +159,62 @@ def get_arqs(dp_name):
     return arqs, bound_arqs
 
 
+def get_mdev_arqs(dp_name):
+    arqs = [
+        {
+            'uuid': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+            'device_profile_name': dp_name,
+            'device_profile_group_id': 0,
+            'state': 'Initial',
+            'device_rp_uuid': None,
+            'hostname': None,
+            'instance_uuid': None,
+            'attach_handle_info': {},
+            'attach_handle_type': '',
+        },
+        {
+            'uuid': 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+            'device_profile_name': dp_name,
+            'device_profile_group_id': 0,
+            'state': 'Initial',
+            'device_rp_uuid': None,
+            'hostname': None,
+            'instance_uuid': None,
+            'attach_handle_info': {},
+            'attach_handle_type': '',
+        },
+    ]
+    attach_handle_list = [
+        {
+            'domain': '0000',
+            'bus': '84',
+            'device': '00',
+            'function': '0',
+            'asked_type': 'nvidia-223',
+            'vgpu_mark': 'nvidia-223_0',
+        },
+        {
+            'domain': '0000',
+            'bus': '84',
+            'device': '00',
+            'function': '0',
+            'asked_type': 'nvidia-223',
+            'vgpu_mark': 'nvidia-223_1',
+        },
+    ]
+    bound_arqs = []
+    for idx, arq in enumerate(arqs):
+        bound_arq = copy.deepcopy(arq)
+        bound_arq.update({
+            'state': 'Bound',
+            'attach_handle_type': 'MDEV',
+            'attach_handle_info': attach_handle_list[idx],
+            'attach_handle_uuid': arq['uuid'],
+        })
+        bound_arqs.append(bound_arq)
+    return arqs, bound_arqs
+
+
 class CyborgFixture(fixtures.Fixture):
     """Fixture that mocks Cyborg APIs used by nova/accelerator/cyborg.py"""
 
