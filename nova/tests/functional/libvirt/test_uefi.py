@@ -19,6 +19,7 @@ import re
 import textwrap
 from unittest import mock
 
+import ddt
 import fixtures
 from lxml import etree
 from oslo_log import log as logging
@@ -28,11 +29,13 @@ import nova.conf
 from nova import context as nova_context
 from nova import objects
 from nova.tests.functional.libvirt import base
+from nova.virt import hardware as hw
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
+@ddt.ddt
 class UEFIServersTest(base.ServersTestBase):
 
     def assertInstanceHasUEFI(
@@ -323,6 +326,100 @@ class UEFIServersTest(base.ServersTestBase):
 
         # ensure our instance's system_metadata field is correct
         self.assertInstanceHasUEFI(server, secure_boot=True, stateless=True)
+
+    @ddt.unpack
+    @ddt.data(
+        (None, True),
+        (None, False),
+        ('bios', True),
+        ('bios', False),
+    )
+    @mock.patch.object(hw, 'LOG')
+    def test_create_server_bios_boot_stateless(
+            self, firmware_type, stateless, mock_log
+    ):
+        """hw_firmware_stateless is ignored when an instance uses bios boot
+
+        See https://bugs.launchpad.net/nova/+bug/2158967 for details.
+        """
+        orig_create = nova.virt.libvirt.guest.Guest.create
+
+        def fake_create(cls, xml, host):
+            xml = re.sub('type arch.*machine',
+                'type machine', xml)
+            tree = etree.fromstring(xml)
+            self.assertXmlEqual(
+                """
+                <os>
+                  <type machine='q35'>hvm</type>
+                  <boot dev='hd'/>
+                  <smbios mode='sysinfo'/>
+                </os>
+                """,
+                etree.tostring(tree.find('./os'), encoding='unicode'))
+
+            return orig_create(xml, host)
+
+        self.stub_out('nova.virt.libvirt.guest.Guest.create', fake_create)
+
+        compute = self.start_compute(libvirt_version=8006000)
+
+        # ensure we are reporting the correct trait
+        traits = self._get_provider_traits(self.compute_rp_uuids[compute])
+        self.assertIn('COMPUTE_SECURITY_STATELESS_FIRMWARE', traits)
+
+        # create a server with UEFI and secure boot
+        timestamp = datetime.datetime(
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+        )
+        stateless_image = {
+            'id': uuids.stateless_image,
+            'name': 'stateless_image',
+            'created_at': timestamp,
+            'updated_at': timestamp,
+            'deleted_at': None,
+            'deleted': False,
+            'status': 'active',
+            'is_public': False,
+            'container_format': 'ova',
+            'disk_format': 'vhd',
+            'size': 74185822,
+            'min_ram': 0,
+            'min_disk': 0,
+            'protected': False,
+            'visibility': 'public',
+            'tags': [],
+            'properties': {
+                'hw_machine_type': 'q35',
+                'hw_firmware_stateless': stateless,
+            }
+        }
+        if firmware_type is not None:
+            stateless_image['properties']['hw_firmware_type'] = firmware_type
+        self.glance.create(None, stateless_image)
+
+        server = self._create_server(image_uuid=uuids.stateless_image)
+
+        ctx = nova_context.get_admin_context()
+        instance = objects.Instance.get_by_uuid(ctx, server['id'])
+        self.assertIn('image_hw_machine_type', instance.system_metadata)
+        self.assertEqual(
+            'q35', instance.system_metadata['image_hw_machine_type'])
+        if firmware_type:
+            self.assertIn('image_hw_firmware_type', instance.system_metadata)
+            self.assertEqual(
+                'bios', instance.system_metadata['image_hw_firmware_type'])
+        else:
+            self.assertNotIn('image_hw_firmware_type',
+                             instance.system_metadata)
+        self.assertIn('image_hw_firmware_stateless', instance.system_metadata)
+        self.assertEqual(
+            str(stateless),
+            instance.system_metadata['image_hw_firmware_stateless'])
+        mock_log.warning.assert_has_calls([
+            mock.call("The image property 'hw_firmware_stateless' is set for "
+                      "non UEFI firmware type. This property is ignored."),
+        ])
 
 
 class UEFIServersFirmwareTest(base.ServersTestBase):

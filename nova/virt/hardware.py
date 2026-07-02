@@ -2257,23 +2257,20 @@ def get_secure_boot_constraint(
 
 def get_stateless_firmware_constraint(
     image_meta: 'objects.ImageMeta',
-) -> bool:
+) -> bool | None:
     """Validate and return the requested statless firmware policy.
 
-    :param flavor: ``nova.objects.Flavor`` instance
     :param image_meta: ``nova.objects.ImageMeta`` instance
-    :raises: nova.exception.Invalid if a value or combination of values is
-        invalid
     """
-    if not image_meta.properties.get('hw_firmware_stateless', False):
-        return False
+    if image_meta.properties.get('hw_firmware_stateless') is None:
+        return None
 
     if image_meta.properties.get('hw_firmware_type') != 'uefi':
-        raise exception.Invalid(_(
-            'Stateless firmware is supported only when UEFI firmware type is '
-            'used.'
-        ))
-    return True
+        LOG.warning("The image property 'hw_firmware_stateless' is set for "
+                    "non UEFI firmware type. This property is ignored.")
+        return None
+
+    return image_meta.properties.get('hw_firmware_stateless', False)
 
 
 def numa_get_constraints(flavor, image_meta):
