@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    `Bug #2158972 <https://bugs.launchpad.net/nova/+bug/2158972>`_: Fixed
+    the wrong status code returned by API when an instance is created with
+    locked memory enabled but mem_page_size unset. It now returns 400 instead
+    of 403.
