@@ -202,7 +202,7 @@ class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
         expected_origin_hostname = self.headers.get('Host')
         expected_origin_hostname = netutils.parse_host_port(
             expected_origin_hostname)[0]
-        expected_origin_hostnames = CONF.console.allowed_origins
+        expected_origin_hostnames = list(CONF.console.allowed_origins)
         expected_origin_hostnames.append(expected_origin_hostname)
         origin_url = self.headers.get('Origin')
         # missing origin header indicates non-browser client which is OK
