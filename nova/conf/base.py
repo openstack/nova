@@ -86,6 +86,55 @@ The total number of coroutines that can be run via nova's default
 greenthread pool concurrently, defaults to 1000, min value is 100. It is only
 used if the service is running in Eventlet mode.
 '''),
+    cfg.StrOpt(
+        'concurrency_backend',
+        default='auto',
+        choices=[
+            ('auto', 'Use the per-binary deployment default. On Nova master '
+                     'all services default to native threading except the '
+                     'novnc/serial/spice console proxy services and CLI entry '
+                     'points (nova-manage, nova-policy, nova-status). '
+                     'This is the same as leaving the option unset.'),
+            ('threading', 'Start the service with native threading. '
+                          'Eventlet monkey patching is not applied.'),
+            ('eventlet', 'Start the service with eventlet coroutine-based '
+                         'concurrency. Eventlet monkey patching is applied. '
+                         'This value is deprecated and will be removed no '
+                         'earlier than the 2027.2 release.'),
+        ],
+        help="""
+  Selects the concurrency backend used by Nova services.
+
+  This option is read early in service startup, before oslo.config is fully
+  initialised, so that eventlet monkey patching can be applied (or suppressed)
+  before any other imports occur.
+
+  When set to ``auto``, each Nova binary applies its own built-in deployment
+  default. On Nova master all services default to native threading except the
+  novnc/serial/spice console proxy services and CLI entry points (nova-manage,
+  nova-policy, nova-status) which still default to eventlet. Setting an
+  explicit value overrides the per-binary default for every service that reads
+  this config file.
+
+  The environment variable ``OS_NOVA_DISABLE_EVENTLET_PATCHING`` takes
+  precedence over this option when both are set.
+
+  See also the `concurrency admin guide`__.
+
+  .. __: https://docs.openstack.org/nova/latest/admin/concurrency.html
+
+  .. warning::
+
+     Eventlet-based concurrency is deprecated and will be removed in a future
+     release, not earlier than 2027.2. Operators should migrate to native
+     threading.
+
+  Related options:
+
+  * ``[DEFAULT]/default_green_pool_size`` (only used in eventlet mode)
+  * ``[DEFAULT]/default_thread_pool_size`` (only used in threading mode)
+  * ``[DEFAULT]/cell_worker_thread_pool_size`` (only used in threading mode)
+  """),
     cfg.IntOpt(
         'default_thread_pool_size',
         default=10,

@@ -1,0 +1,16 @@
+---
+upgrade:
+  - |
+    A new configuration option ``[DEFAULT] concurrency_backend`` has been added
+    to allow operators to explicitly select the concurrency backend used by Nova
+    services. Accepted values are ``auto`` (default), ``threading``, and
+    ``eventlet``. When set to ``auto`` each Nova binary applies its own
+    built-in deployment default: on Nova master all services default to native
+    threading except the novnc/serial/spice console proxy services and CLI
+    entry points (nova-manage, nova-policy, nova-status). Setting an explicit
+    value overrides the per-binary default for every service that reads the
+    config file. The environment variable ``OS_NOVA_DISABLE_EVENTLET_PATCHING``
+    takes precedence over this option when both are set. See the
+    `concurrency admin guide
+    <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__ for
+    details.
