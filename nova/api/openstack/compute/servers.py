@@ -78,6 +78,7 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.InvalidMachineType,
     exception.InvalidNUMANodesNumber,
     exception.InvalidRequest,
+    exception.LockMemoryForbidden,
     exception.MemoryPageSizeForbidden,
     exception.MemoryPageSizeInvalid,
     exception.PciInvalidAlias,

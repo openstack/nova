@@ -2012,15 +2012,9 @@ class MemoryPageSizeNotSupported(Invalid):
     msg_fmt = _("Page size %(pagesize)s is not supported by the host.")
 
 
-class LockMemoryForbidden(Forbidden):
+class LockMemoryForbidden(Invalid):
     msg_fmt = _("locked_memory value in image or flavor is forbidden when "
                 "mem_page_size is not set.")
-
-
-class FlavorImageLockedMemoryConflict(NovaException):
-    msg_fmt = _("locked_memory value in image (%(image)s) and flavor "
-                "(%(flavor)s) conflict. A consistent value is expected if "
-                "both specified.")
 
 
 class CPUPinningInvalid(Invalid):
@@ -2458,6 +2452,12 @@ class ReshapeNeeded(NovaException):
 class FlavorImageConflict(NovaException):
     msg_fmt = _("Conflicting values for %(setting)s found in the flavor "
                 "(%(flavor_val)s) and the image (%(image_val)s).")
+
+
+class FlavorImageLockedMemoryConflict(FlavorImageConflict):
+    msg_fmt = _("locked_memory value in image (%(image)s) and flavor "
+                "(%(flavor)s) conflict. A consistent value is expected if "
+                "both specified.")
 
 
 class MissingDomainCapabilityFeatureException(NovaException):

@@ -7047,3 +7047,34 @@ class PortBindingShelvedServerTest(integrated_helpers._IntegratedTestBase):
 
         # Assert that the port still uses the same DNS name
         self.assertEqual(port['dns_name'], server_name)
+
+
+class CreateServerConstraintsTest(integrated_helpers._IntegratedTestBase):
+
+    def test_create_server_locked_memory_without_mem_page_size(self):
+        image = self._create_image(metadata={'hw_locked_memory': 'true'})
+
+        with self.assertRaisesRegex(client.OpenStackApiException,
+                                    ".*Unexpected status code.*") as cm:
+            self._create_server(image_uuid=image['id'])
+        self.assertEqual(400, cm.exception.response.status_code)
+        self.assertEqual(
+            'locked_memory value in image or flavor is forbidden '
+            'when mem_page_size is not set.',
+            cm.exception.response.json()['badRequest']['message'])
+
+    def test_create_server_locked_memory_conflict(self):
+        image = self._create_image(metadata={'hw_locked_memory': 'true'})
+        flavor_id = self._create_flavor(extra_spec={
+            'hw:locked_memory': 'false',
+            'hw:mem_page_size': 'any'})
+
+        with self.assertRaisesRegex(client.OpenStackApiException,
+                                    ".*Unexpected status code.*") as cm:
+            self._create_server(flavor_id=flavor_id, image_uuid=image['id'])
+        self.assertEqual(400, cm.exception.response.status_code)
+        self.assertEqual(
+            'locked_memory value in image (True) and flavor '
+            '(False) conflict. A consistent value is expected if '
+            'both specified.',
+            cm.exception.response.json()['badRequest']['message'])
