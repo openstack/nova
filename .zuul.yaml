@@ -1049,7 +1049,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-        - cyborg-tempest:
+        - cyborg-tempest-py3:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
         - barbican-tempest-plugin-simple-crypto:
