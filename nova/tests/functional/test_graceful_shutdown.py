@@ -74,6 +74,15 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
         self.flags(manager_shutdown_timeout=0)
         self._start_compute('src')
         self._start_compute('dest')
+        # The servicegroup DB driver waits INITIAL_REPORTING_DELAY (5s)
+        # before sending the first service state report, which is very
+        # close to our 6s service_down_time above. Without waiting here,
+        # a slow test host can see either service as "down" (falling back
+        # to its stale created_at timestamp) before its first heartbeat
+        # lands, causing 409 ServiceUnavailable errors.
+        for host in ('src', 'dest'):
+            self._wait_for_service_parameter(
+                host, 'nova-compute', {'state': 'up'}, max_retries=20)
 
     def _setup_graceful_shutdown_mock(self, compute, operation_complete_event):
         # Manager graceful_shutdown() wait for operation_complete_event to
