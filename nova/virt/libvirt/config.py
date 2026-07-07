@@ -337,6 +337,8 @@ class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):
             feature = None
             if c.tag == "sev":
                 feature = LibvirtConfigDomainCapsFeatureSev()
+            if c.tag == "launchSecurity":
+                feature = LibvirtConfigDomainCapsFeatureLaunchSecurity()
             if feature:
                 feature.parse_dom(c)
                 self.features.append(feature)
@@ -357,14 +359,13 @@ class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):
 class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
-        super(LibvirtConfigDomainCapsFeatureSev, self).__init__(
-            root_name='sev', **kwargs)
+        super().__init__(root_name='sev', **kwargs)
         self.supported = False
         self.max_guests = None
         self.max_es_guests = None
 
     def parse_dom(self, xmldoc):
-        super(LibvirtConfigDomainCapsFeatureSev, self).parse_dom(xmldoc)
+        super().parse_dom(xmldoc)
 
         if xmldoc.get('supported') == 'yes':
             self.supported = True
@@ -374,6 +375,26 @@ class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
                 self.max_guests = int(c.text)
             elif c.tag == 'maxESGuests':
                 self.max_es_guests = int(c.text)
+
+
+class LibvirtConfigDomainCapsFeatureLaunchSecurity(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super().__init__(root_name='launchSecurity', **kwargs)
+        self.supported = False
+        self.sectypes = None
+
+    def parse_dom(self, xmldoc):
+        super().parse_dom(xmldoc)
+
+        if xmldoc.get('supported') == 'yes':
+            self.supported = True
+
+        for c in xmldoc:
+            if c.tag == 'enum':
+                if c.get('name') == 'sectype':
+                    self.sectypes = [
+                        child.text for child in c if child.tag == 'value']
 
 
 class LibvirtConfigDomainCapsOS(LibvirtConfigObject):

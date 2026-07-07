@@ -80,8 +80,6 @@ HV_DRIVER_QEMU = "QEMU"
 SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/%s'
 
 MIN_QEMU_SEV_ES_VERSION = (8, 0, 0)
-MIN_QEMU_SEV_SNP_VERSION = (9, 1, 0)
-MIN_LIBVIRT_SEV_SNP_VERSION = (10, 5, 0)
 
 
 class LibvirtEventHandler:
@@ -2137,13 +2135,25 @@ class Host(object):
             LOG.info("kernel doesn't support AMD SEV-SNP")
             return self._supports_amd_sev_snp
 
-        if not self.has_min_version(lv_ver=MIN_LIBVIRT_SEV_SNP_VERSION,
-                                    hv_ver=MIN_QEMU_SEV_SNP_VERSION):
-            LOG.info("QEMU or libvirt doesn't support AMD SEV-SNP")
-            return self._supports_amd_sev_snp
+        domain_caps = self.get_domain_capabilities()
+        for arch in domain_caps:
+            for machine_type in domain_caps[arch]:
+                LOG.debug("Checking SEV-SNP support for arch %s "
+                          "and machine type %s", arch, machine_type)
+                for feature in domain_caps[arch][machine_type].features:
+                    feature_is_launch_security = isinstance(
+                        feature,
+                        vconfig.LibvirtConfigDomainCapsFeatureLaunchSecurity)
+                    if feature_is_launch_security:
+                        if feature.supported and 'sev-snp' in feature.sectypes:
+                            LOG.info("AMD SEV-SNP support detected")
+                            self._supports_amd_sev_snp = True
+                            return self._supports_amd_sev_snp
+                        else:
+                            break
 
-        LOG.info("AMD SEV-SNP support detected")
-        self._supports_amd_sev_snp = True
+        LOG.info("Libvirt or QEMU doesn't support AMD SEV-SNP")
+        self._supports_amd_sev_snp = False
         return self._supports_amd_sev_snp
 
     @property
