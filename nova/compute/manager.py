@@ -722,6 +722,21 @@ class ComputeManager(manager.Manager):
         # migration object and Future for the queued live migration.
         self._waiting_live_migrations = {}
 
+        # Live migration operations invokes multiple RPC request on destination
+        # compute and at different time. This dict tracks the live migration
+        # in-progress tasks on destination compute. The operation is kept
+        # in-progress until complete set of required tasks are performed on
+        # destination. Once RPC call for pre_live_migration is finished on
+        # dest, the migration is still in-progress and is only completed when
+        # post_live_migration_at_destination or a rollback is completed. This
+        # let graceful shutdown to wait for live migration complete operation.
+        self._pending_dest_live_migrations = {}
+
+        # Similar to live migration, resize/cold migration also involves
+        # multiple RPC calls on destination. This dict tracks full life cycle
+        # of resizes/cold migration on destination compute.
+        self._pending_dest_resizes = {}
+
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -1797,27 +1812,30 @@ class ComputeManager(manager.Manager):
                 self._set_instance_obj_error_state(
                     instance, clean_task_state=True)
 
-    def graceful_shutdown(self):
+    def graceful_shutdown(self, timeout):
         """Gracefully shutdown the manager.
 
         This will be called during graceful shutdown (SIGTERM) and manager
         should transit the in-progress tasks to safe termination point. The
         safe termination point can be either complete or abort them.
         """
-        # TODO(gmaan) Time based wait is temporary solution and it will be
-        # replaced by the better solution to finish in-progress tasks.
-        if CONF.manager_shutdown_timeout > CONF.graceful_shutdown_timeout:
-            LOG.warning('manager_shutdown_timeout (%s) is higher than '
-                        'graceful_shutdown_timeout (%s); the service may be '
-                        'killed before the manager finishes waiting.',
-                        CONF.manager_shutdown_timeout,
-                        CONF.graceful_shutdown_timeout)
-            sleep_time = max(0, CONF.graceful_shutdown_timeout - 10)
-        else:
-            sleep_time = CONF.manager_shutdown_timeout
-        LOG.debug('Compute service manager is waiting for %s seconds to '
-                  'finish in-progress tasks', sleep_time)
-        time.sleep(sleep_time)
+
+        # NOTE(gmaan): This method does two things 1. wait for in-progress
+        # tasks to complete 2. self.cleanup_host where it perform more
+        # cleanup on instance events, live migration cleanup etc. So we need
+        # to divide the overall timeout into two part so that we make sure
+        # in-progress tasks will not consume all the time and would not let
+        # cleanup_host to perform. That is why we need to reserve some time
+        # for that and 20 sec is the max time are reserving out of total
+        # timeout. This is a rough estimated time for cleanup which we can
+        # change if we get to know that it is less.
+        cleanup_reserved_time = min(20, timeout)
+
+        wait_timeout = max(0, timeout - cleanup_reserved_time)
+        LOG.info('Compute manager waiting up to %s seconds for in-progress '
+                  'tasks to complete (%s seconds reserved for cleanup_host).',
+                  wait_timeout, cleanup_reserved_time)
+        self._wait_for_in_progress_tasks(wait_timeout)
 
         # Cleanup host will be the last step of manager graceful_shutdown
         self.cleanup_host()
@@ -2403,6 +2421,35 @@ class ComputeManager(manager.Manager):
     def _build_succeeded(self, node):
         self.rt.build_succeeded(node)
 
+    def _start_recorded_task(self, executor, task_name, instance, context,
+                             func, *args, **kwargs):
+        """Spawn func on executor while tracking it as an in-progress task.
+
+        Wraps the common pattern of recording a task as started, spawning
+        it on an executor, recording it as failed and ended if spawning
+        itself raises, and arranging for it to be recorded as completed or
+        failed (based on the Future's outcome) when it finishes.
+
+        :param executor: the executor to spawn func on
+        :param task_name: task name, most of time it is RPC method name
+        :param instance: the nova.objects.Instance the task is for
+        :param context: the request context, used for the request id
+        :param func: the callable to spawn
+        :param args: positional arguments passed to func
+        :param kwargs: keyword arguments passed to func
+        :returns: the Future returned by utils.spawn_on()
+        """
+        key = self._record_task_start(
+            task_name, instance.uuid, context.request_id)
+        try:
+            future = utils.spawn_on(executor, func, *args, **kwargs)
+        except Exception:
+            self._record_task_end(key, failed=True)
+            raise
+        future.add_done_callback(
+            functools.partial(self._record_task_end, key))
+        return future
+
     # NOTE(gibi): The normal RPC handler decorators are here but please note
     # that build_and_run_instance immediately spawns and returns. So any
     # error from the real work is not propagated back to these decorators.
@@ -2411,6 +2458,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
+    @manager.skip_automatic_rpc_tracking
     def build_and_run_instance(self, context, instance, image, request_spec,
                      filter_properties, accel_uuids, admin_password=None,
                      injected_files=None, requested_networks=None,
@@ -2466,13 +2514,16 @@ class ComputeManager(manager.Manager):
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't
         # want to tie up RPC workers.
-        utils.spawn_on(self._long_task_executor,
-                    _locked_do_build_and_run_instance,
-                    context, instance, image, request_spec,
-                    filter_properties, admin_password, injected_files,
-                    requested_networks, security_groups,
-                    block_device_mapping, node, limits, host_list,
-                    accel_uuids)
+        # NOTE(gmaan): Track this task so that graceful_shutdown() can wait for
+        # the build to complete.
+        self._start_recorded_task(
+            self._long_task_executor, 'build_instance', instance, context,
+            _locked_do_build_and_run_instance,
+            context, instance, image, request_spec,
+            filter_properties, admin_password, injected_files,
+            requested_networks, security_groups,
+            block_device_mapping, node, limits, host_list,
+            accel_uuids)
 
     def _check_device_tagging(self, requested_networks, block_device_mapping):
         tagging_requested = False
@@ -4609,6 +4660,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     @delete_image_on_error
+    @manager.skip_automatic_rpc_tracking
     def snapshot_instance(self, context, image_id, instance):
         """Snapshot an instance on this host.
 
@@ -4646,9 +4698,11 @@ class ComputeManager(manager.Manager):
         # NOTE(gibi): We spawn a separate task as this can be a long-running
         # operation, and we want to return the RPC worker to its executor to
         # avoid blocking RPC traffic.
-        return utils.spawn_on(
-            self._long_task_executor, do_snapshot_instance, context,
-            image_id, instance, task_states.IMAGE_SNAPSHOT)
+        # Track this as an active task for graceful shutdown.
+        return self._start_recorded_task(
+            self._long_task_executor, 'snapshot_instance', instance, context,
+            do_snapshot_instance, context, image_id, instance,
+            task_states.IMAGE_SNAPSHOT)
 
     @wrap_exception()
     @reverts_task_state
@@ -6353,6 +6407,7 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
+    @manager.skip_automatic_rpc_tracking
     def prep_resize(self, context, image, instance, flavor,
                     request_spec, filter_properties, node,
                     clean_shutdown, migration, host_list):
@@ -6366,7 +6421,28 @@ class ComputeManager(manager.Manager):
         destination host and making a claim for resources. If the claim fails
         then a reschedule to another host may be attempted which involves
         calling back to conductor to start the process over again.
+
         """
+        # NOTE(gmaan): This task start is recorded as part of resize operation
+        # but task is not recorded as completed at the end of this method
+        # because resize/cold migration operation is not completed. It will be
+        # recorded as completed in finish_resize where resize/cold migration
+        # is actually completed.
+        key = self._record_task_start(
+            'prep_resize_at_dest', instance.uuid, context.request_id)
+        self._pending_dest_resizes[instance.uuid] = key
+        self._do_prep_resize(
+            context, image, instance, flavor, request_spec,
+            filter_properties, node, clean_shutdown, migration, host_list)
+
+    def _end_pending_dest_resize_task(self, instance_uuid):
+        key = self._pending_dest_resizes.pop(instance_uuid, None)
+        if key is not None:
+            self._record_task_end(key)
+
+    def _do_prep_resize(self, context, image, instance, flavor,
+                        request_spec, filter_properties, node,
+                        clean_shutdown, migration, host_list):
         if node is None:
             node = self._get_nodename(instance, refresh=True)
 
@@ -6406,11 +6482,13 @@ class ComputeManager(manager.Manager):
                 # and fail the migration.
                 with excutils.save_and_reraise_exception():
                     self._revert_allocation(context, instance, migration)
+                    self._end_pending_dest_resize_task(instance.uuid)
             except Exception:
                 # Since we hit a failure, we're either rescheduling or dead
                 # and either way we need to cleanup any allocations created
                 # by the scheduler for the destination node.
                 self._revert_allocation(context, instance, migration)
+                self._end_pending_dest_resize_task(instance.uuid)
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
                 self._reschedule_resize_or_reraise(context, instance,
@@ -7021,6 +7099,10 @@ class ComputeManager(manager.Manager):
                          migration.source_compute, instance=instance)
                 self._delete_allocation_after_move(
                     context, instance, migration)
+        finally:
+            # NOTE(gmaan): finish_resize is the final call for the resize
+            # operation so record its completion.
+            self._end_pending_dest_resize_task(instance.uuid)
 
     def _finish_resize_helper(self, context, disk_info, image, instance,
                               migration, request_spec):
@@ -7432,12 +7514,14 @@ class ComputeManager(manager.Manager):
             return 'enabled' if enabled else 'disabled'
 
     @wrap_exception()
+    @manager.skip_automatic_rpc_tracking
     def get_host_uptime(self, context):
         """Returns the result of calling "uptime" on the target host."""
         return self.driver.get_host_uptime()
 
     @wrap_exception()
     @wrap_instance_fault
+    @manager.skip_automatic_rpc_tracking
     def get_diagnostics(self, context, instance):
         """Retrieve diagnostics for an instance on this host."""
         current_power_state = self._get_power_state(instance)
@@ -7453,6 +7537,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @wrap_instance_fault
+    @manager.skip_automatic_rpc_tracking
     def get_instance_diagnostics(self, context, instance):
         """Retrieve diagnostics for an instance on this host."""
         current_power_state = self._get_power_state(instance)
@@ -9404,6 +9489,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
+    @manager.skip_automatic_rpc_tracking
     def pre_live_migration(self, context, instance, disk, migrate_data):
         """Preparations for live migration at dest host.
 
@@ -9415,6 +9501,27 @@ class ComputeManager(manager.Manager):
                              storage.
         :returns: migrate_data containing additional migration info
         """
+        # NOTE(gmaan): This task start is recorded as part of live migration
+        # operation but task is not recorded as completed at the end of this
+        # method because live migration operation is not completed. It will be
+        # recorded as completed in post_live_migration_at_destination/rollback
+        # where live migration is actually completed.
+        key = self._record_task_start(
+            'live_migration_at_dest', instance.uuid, context.request_id)
+        self._pending_dest_live_migrations[instance.uuid] = key
+        try:
+            return self._do_pre_live_migration(
+                context, instance, disk, migrate_data)
+        except Exception:
+            self._end_pending_dest_live_migration_task(instance.uuid)
+            raise
+
+    def _end_pending_dest_live_migration_task(self, instance_uuid):
+        key = self._pending_dest_live_migrations.pop(instance_uuid, None)
+        if key is not None:
+            self._record_task_end(key)
+
+    def _do_pre_live_migration(self, context, instance, disk, migrate_data):
         LOG.debug('pre_live_migration data is %s', migrate_data)
 
         # Error out if this host cannot accept the new instance due
@@ -9785,6 +9892,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
+    @manager.skip_automatic_rpc_tracking
     def live_migration(self, context, dest, instance, block_migration,
                        migration, migrate_data):
         """Executing live migration.
@@ -9802,12 +9910,13 @@ class ComputeManager(manager.Manager):
         # put the returned Future object into dict mapped with migration.uuid
         # in order to be able to track and abort it in the future.
         self._waiting_live_migrations[instance.uuid] = (None, None)
+        # Track this as an active task for graceful shutdown. The key is
+        # decremented via callback when the future finishes.
         try:
-            future = nova.utils.spawn_on(
-                self._live_migration_executor,
-                self._do_live_migration, context, dest, instance,
+            future = self._start_recorded_task(
+                self._live_migration_executor, 'live_migration', instance,
+                context, self._do_live_migration, context, dest, instance,
                 block_migration, migration, migrate_data)
-            self._waiting_live_migrations[instance.uuid] = (migration, future)
         except RuntimeError:
             # GreenThreadPoolExecutor.submit will raise RuntimeError if the
             # pool is shutdown, which happens in
@@ -9816,6 +9925,7 @@ class ComputeManager(manager.Manager):
                      'is shutting down.', migration.uuid, instance=instance)
             raise exception.LiveMigrationNotSubmitted(
                 migration_uuid=migration.uuid, instance_uuid=instance.uuid)
+        self._waiting_live_migrations[instance.uuid] = (migration, future)
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
@@ -10272,6 +10382,16 @@ class ComputeManager(manager.Manager):
         :param block_migration: if true, prepare for block migration
 
         """
+        try:
+            self._do_post_live_migration_at_destination(
+                context, instance, block_migration)
+        finally:
+            # NOTE(gmaan): This method is the final call for the live migration
+            # operation so record the operation completion.
+            self._end_pending_dest_live_migration_task(instance.uuid)
+
+    def _do_post_live_migration_at_destination(self, context, instance,
+                                               block_migration):
         LOG.info('Post operation of migration started',
                  instance=instance)
 
@@ -10603,6 +10723,18 @@ class ComputeManager(manager.Manager):
         :param destroy_disks: whether to destroy volumes or not
         :param migrate_data: contains migration info
         """
+        try:
+            self._do_rollback_live_migration_at_destination(
+                context, instance, destroy_disks, migrate_data)
+        finally:
+            # NOTE(gmaan): This method is the final call(in case of failure)
+            # for the live migration operation so record the operation
+            # completion.
+            self._end_pending_dest_live_migration_task(instance.uuid)
+
+    def _do_rollback_live_migration_at_destination(self, context, instance,
+                                                    destroy_disks,
+                                                    migrate_data):
         network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(
                       context, instance, "live_migration.rollback.dest.start",
@@ -11980,6 +12112,7 @@ class ComputeManager(manager.Manager):
 
         self.driver.manage_image_cache(context, filtered_instances)
 
+    @manager.skip_automatic_rpc_tracking
     def cache_images(self, context, image_ids):
         """Ask the virt driver to pre-cache a set of base images.
 

@@ -22,7 +22,6 @@ Scheduler Service
 import collections
 import copy
 import random
-import time
 
 from keystoneauth1 import exceptions as ks_exc
 from oslo_log import log as logging
@@ -156,27 +155,16 @@ class SchedulerManager(manager.Manager):
         # cell.
         self.host_manager.refresh_cells_caches()
 
-    def graceful_shutdown(self):
+    def graceful_shutdown(self, timeout):
         """Gracefully shutdown the manager.
 
         This will be called during graceful shutdown (SIGTERM) and manager
         should transit the in-progress tasks to safe termination point. The
         safe termination point can be either complete or abort them.
         """
-        # TODO(gmaan) Time based wait is temporary solution and it will be
-        # replaced by the better solution to finish in-progress tasks.
-        if CONF.manager_shutdown_timeout > CONF.graceful_shutdown_timeout:
-            LOG.warning('manager_shutdown_timeout (%s) is higher than '
-                        'graceful_shutdown_timeout (%s); the service may be '
-                        'killed before the manager finishes waiting.',
-                        CONF.manager_shutdown_timeout,
-                        CONF.graceful_shutdown_timeout)
-            sleep_time = max(0, CONF.graceful_shutdown_timeout - 10)
-        else:
-            sleep_time = CONF.manager_shutdown_timeout
-        LOG.debug('Scheduler service manager is waiting for %s seconds to '
-                  'finish in-progress tasks', sleep_time)
-        time.sleep(sleep_time)
+        LOG.debug('Scheduler manager waiting up to %s seconds for '
+                  'in-progress tasks to complete.', timeout)
+        self._wait_for_in_progress_tasks(timeout)
 
     @messaging.expected_exceptions(exception.NoValidHost)
     def select_destinations(

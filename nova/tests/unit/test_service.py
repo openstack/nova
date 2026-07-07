@@ -18,13 +18,17 @@
 Unit Tests for remote procedure calls using queue
 """
 
+import copy
 import os.path
+import threading
 from unittest import mock
 
 from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_service import service as _service
+from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova import context
 from nova import exception
 from nova import manager
 from nova import objects
@@ -251,7 +255,7 @@ class ServiceTestCase(test.NoDBTestCase):
 
         serv.stop()
         # Check service with one RPC server calls manager graceful_shutdown
-        serv.manager.graceful_shutdown.assert_called_once_with()
+        serv.manager.graceful_shutdown.assert_called_once_with(mock.ANY)
 
     @mock.patch('nova.servicegroup.API')
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
@@ -269,6 +273,38 @@ class ServiceTestCase(test.NoDBTestCase):
         serv.rpcserver.wait.assert_called_once_with()
         self.assertIsNone(serv.rpcserver_alt)
         self.assertEqual(mock_rpc.call_count, 1)
+
+    @mock.patch('nova.servicegroup.API')
+    @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
+    @mock.patch.object(rpc, 'get_server')
+    def test_start_wraps_manager_and_additional_endpoints_for_tracking(
+            self, mock_rpc, mock_svc_get_by_host_and_binary, mock_API):
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager')
+        fake_additional_endpoint = mock.Mock()
+        serv.manager.additional_endpoints = [fake_additional_endpoint]
+
+        serv.start()
+
+        endpoints = mock_rpc.call_args_list[0].args[1]
+
+        # The manager itself is wrapped so its RPC calls are tracked.
+        self.assertIsInstance(endpoints[0], service._TrackingEndpointWrapper)
+        self.assertIs(serv.manager, endpoints[0]._endpoint)
+        self.assertIs(serv.manager, endpoints[0]._tracker)
+
+        # The baserpc ping endpoint is not wrapped as we do not need to track
+        # anything on that.
+        self.assertNotIsInstance(
+            endpoints[1], service._TrackingEndpointWrapper)
+
+        # additional_endpoints are wrapped but reporting into the same
+        # manager tracker rather than tracking themselves.
+        self.assertIsInstance(endpoints[2], service._TrackingEndpointWrapper)
+        self.assertIs(fake_additional_endpoint, endpoints[2]._endpoint)
+        self.assertIs(serv.manager, endpoints[2]._tracker)
 
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
     @mock.patch.object(rpc, 'TRANSPORT')
@@ -318,6 +354,91 @@ class ServiceTestCase(test.NoDBTestCase):
     @mock.patch('nova.servicegroup.API')
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
     @mock.patch.object(rpc, 'get_server')
+    def test_service_stop_marks_shutdown_in_progress_before_rpc_drain(
+            self, mock_rpc, mock_svc_get_by_host_and_binary, mock_API):
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager')
+        serv.start()
+        rpcserver = serv.rpcserver
+
+        def _check_shutdown_flag(*args, **kwargs):
+            self.assertTrue(serv.manager._shutdown_in_progress.is_set())
+
+        rpcserver.stop.side_effect = _check_shutdown_flag
+        self.assertFalse(serv.manager._shutdown_in_progress.is_set())
+        with mock.patch.object(serv.manager, 'graceful_shutdown'):
+            serv.stop()
+
+        self.assertTrue(serv.manager._shutdown_in_progress.is_set())
+
+    def _get_service(self):
+        return service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager')
+
+    def test_get_manager_shutdown_timeout(self):
+        serv = self._get_service()
+        self.flags(manager_shutdown_timeout=10, graceful_shutdown_timeout=30)
+        self.assertEqual(10, serv._get_manager_shutdown_timeout())
+
+    @mock.patch('nova.service.LOG')
+    def test_get_manager_shutdown_timeout_clamped_when_higher(
+            self, mock_log):
+        serv = self._get_service()
+        # If manager_shutdown_timeout > graceful_shutdown_timeout then
+        # timeout will be graceful_shutdown_timeout - 10
+        self.flags(manager_shutdown_timeout=50, graceful_shutdown_timeout=30)
+        self.assertEqual(20, serv._get_manager_shutdown_timeout())
+        mock_log.warning.assert_called_once()
+
+    def test_get_manager_shutdown_timeout_no_negative_value(self):
+        serv = self._get_service()
+        self.flags(manager_shutdown_timeout=50, graceful_shutdown_timeout=5)
+        self.assertEqual(0, serv._get_manager_shutdown_timeout())
+
+    def test_run_manager_graceful_shutdown_passes_timeout(self):
+        serv = self._get_service()
+        self.flags(manager_shutdown_timeout=10, graceful_shutdown_timeout=30)
+        with mock.patch.object(serv.manager, 'graceful_shutdown') as mock_gs:
+            serv._run_manager_graceful_shutdown()
+        mock_gs.assert_called_once_with(10)
+
+    def test_run_manager_graceful_shutdown_handles_exception(self):
+        serv = self._get_service()
+        serv.manager.graceful_shutdown = mock.Mock(side_effect=Exception())
+        # Should not interrupt the overall shutdown even manager's
+        # graceful_shutdown() raise error.
+        serv._run_manager_graceful_shutdown()
+        serv.manager.graceful_shutdown.assert_called_once_with(mock.ANY)
+
+    @mock.patch('nova.service.LOG')
+    def test_run_manager_graceful_shutdown_warns_on_timeout(self, mock_log):
+        serv = self._get_service()
+        self.flags(manager_shutdown_timeout=1, graceful_shutdown_timeout=30)
+
+        # Manager's graceful_shutdown() blocks longer than the timeout so
+        # the shutdown thread is still alive when join() returns.
+        release = threading.Event()
+
+        def slow_graceful_shutdown(timeout):
+            release.wait(3)
+
+        serv.manager.graceful_shutdown = slow_graceful_shutdown
+
+        serv._run_manager_graceful_shutdown()
+
+        mock_log.warning.assert_called_once()
+        msg = mock_log.warning.call_args[0][0]
+        self.assertIn(
+            'manager graceful shutdown did not complete within', msg)
+        release.set()
+
+    @mock.patch('nova.servicegroup.API')
+    @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
+    @mock.patch.object(rpc, 'get_server')
     def test_service_stop_with_two_rpcservers(
             self, mock_rpc, mock_svc_get_by_host_and_binary, mock_API):
         serv = service.Service(self.host,
@@ -337,7 +458,7 @@ class ServiceTestCase(test.NoDBTestCase):
             rpcserver_alt.stop.assert_called_with()
             rpcserver_alt.wait.assert_called_with()
             # Check service with two RPC server calls manager graceful_shutdown
-            mock_gs.assert_called_once_with()
+            mock_gs.assert_called_once_with(mock.ANY)
 
     @mock.patch('nova.servicegroup.API')
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
@@ -353,7 +474,7 @@ class ServiceTestCase(test.NoDBTestCase):
         # service.stop() should proceed even manager graceful_shutdown raise
         # error
         serv.stop()
-        serv.manager.graceful_shutdown.assert_called_once_with()
+        serv.manager.graceful_shutdown.assert_called_once_with(mock.ANY)
 
     @mock.patch('nova.servicegroup.API')
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
@@ -376,7 +497,7 @@ class ServiceTestCase(test.NoDBTestCase):
         rpcserver.wait.assert_called_with()
         rpcserver_alt.stop.assert_called_with()
         rpcserver_alt.wait.assert_called_with()
-        serv.manager.graceful_shutdown.assert_called_once_with()
+        serv.manager.graceful_shutdown.assert_called_once_with(mock.ANY)
 
     def test_stop_before_start_initialize_RPC_does_not_raise(self):
         serv = service.Service(self.host,
@@ -444,7 +565,7 @@ class ServiceTestCase(test.NoDBTestCase):
             rpcserver.wait.assert_not_called()
             # Check if first RPC server stop() raise exception, it still call
             # manager graceful_shutdown() and 2nd RPC server stop/wait.
-            mock_gs.assert_called_once_with()
+            mock_gs.assert_called_once_with(mock.ANY)
             rpcserver_alt.stop.assert_called_once_with()
             rpcserver_alt.wait.assert_called_once_with()
 
@@ -468,7 +589,7 @@ class ServiceTestCase(test.NoDBTestCase):
             serv.stop()
             rpcserver.stop.assert_called_once_with()
             rpcserver.wait.assert_called_once_with()
-            mock_gs.assert_called_once_with()
+            mock_gs.assert_called_once_with(mock.ANY)
             # service.stop() should proceed even 2nd RPC server stop() raise
             # error.
             rpcserver_alt.stop.assert_called_once_with()
@@ -563,3 +684,175 @@ class TestLauncher(test.NoDBTestCase):
         service._launcher = None
         service.serve(mock.sentinel.service)
         self.assertRaises(RuntimeError, service.serve, mock.sentinel.service)
+
+
+class _FakeManager:
+
+    target = mock.sentinel.target
+
+    def __init__(self):
+        self.calls = []
+
+    def task1(self, context, instance=None):
+        self.calls.append(('task1', context, instance))
+        return 'task1 done'
+
+    @manager.skip_automatic_rpc_tracking
+    def skipped_task(self, context, instance=None):
+        self.calls.append(('skipped_task', context, instance))
+        return 'skipped task done'
+
+    def failing_task(self, context, instance=None):
+        self.calls.append(('failing_task', context, instance))
+        raise test.TestingException()
+
+
+class TrackingEndpointWrapperTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TrackingEndpointWrapperTestCase, self).setUp()
+        self.tracker = manager.Manager(host='fake-host',
+                                       service_name='test-service')
+        self.endpoint = _FakeManager()
+        self.wrapper = service._TrackingEndpointWrapper(
+            self.endpoint, self.tracker)
+
+    def test_rpc_target(self):
+        # oslo.messaging's RPC dispatcher read 'target' directly from each
+        # endpoint so check if that stay same.
+        self.assertIs(mock.sentinel.target, self.wrapper.target)
+
+    def test_hasattr_matches_real_endpoint(self):
+        self.assertTrue(hasattr(self.wrapper, 'task1'))
+        self.assertFalse(hasattr(self.wrapper, 'not_task'))
+
+    def test_track_tasks(self):
+        ctxt = context.RequestContext(request_id='req-1')
+        instance = objects.Instance(uuid=uuids.instance)
+
+        _copy_progress_tasks = {}
+        orig_start = self.tracker._record_task_start
+
+        def check_recorded_tasks(*args, **kwargs):
+            nonlocal _copy_progress_tasks
+            key = orig_start(*args, **kwargs)
+            _copy_progress_tasks = copy.deepcopy(
+                    self.tracker._in_progress_tasks)
+            return key
+
+        self.tracker._record_task_start = check_recorded_tasks
+
+        result = self.wrapper.task1(ctxt, instance=instance)
+
+        self.assertEqual('task1 done', result)
+        self.assertEqual([('task1', ctxt, instance)], self.endpoint.calls)
+        # The task was recorded while the task1() was called
+        self.assertEqual(1, len(_copy_progress_tasks))
+        task = list(_copy_progress_tasks.values())[0]
+        self.assertEqual('task1', task['name'])
+        self.assertEqual(uuids.instance, task['instance_uuid'])
+        self.assertEqual('req-1', task['request_id'])
+        # task is removed from tracker once task1 is completed.
+        self.assertEqual({}, self.tracker._in_progress_tasks)
+
+    def test_track_tasks_rpc_method_with_instance_as_arg(self):
+        ctxt = context.RequestContext(request_id='req-1')
+        instance = objects.Instance(uuid=uuids.instance)
+
+        _copy_progress_tasks = {}
+        orig_start = self.tracker._record_task_start
+
+        def check_recorded_tasks(*args, **kwargs):
+            nonlocal _copy_progress_tasks
+            key = orig_start(*args, **kwargs)
+            _copy_progress_tasks = copy.deepcopy(
+                    self.tracker._in_progress_tasks)
+            return key
+
+        self.tracker._record_task_start = check_recorded_tasks
+
+        result = self.wrapper.task1(ctxt, instance)
+
+        self.assertEqual('task1 done', result)
+        self.assertEqual([('task1', ctxt, instance)], self.endpoint.calls)
+        self.assertEqual(1, len(_copy_progress_tasks))
+        task = list(_copy_progress_tasks.values())[0]
+        self.assertEqual('task1', task['name'])
+        self.assertEqual(uuids.instance, task['instance_uuid'])
+        self.assertEqual('req-1', task['request_id'])
+
+    def test_task_removed_from_tracker_when_task_raises(self):
+        ctxt = context.RequestContext(request_id='req-1')
+        instance = objects.Instance(uuid=uuids.instance)
+
+        _copy_progress_tasks = {}
+        orig_start = self.tracker._record_task_start
+
+        def check_recorded_tasks(*args, **kwargs):
+            nonlocal _copy_progress_tasks
+            key = orig_start(*args, **kwargs)
+            _copy_progress_tasks = copy.deepcopy(
+                    self.tracker._in_progress_tasks)
+            return key
+
+        self.tracker._record_task_start = check_recorded_tasks
+
+        self.assertRaises(
+            test.TestingException,
+            self.wrapper.failing_task, ctxt, instance=instance)
+
+        self.assertEqual(
+            [('failing_task', ctxt, instance)], self.endpoint.calls)
+        # The task was recorded while the failing_task() was called
+        self.assertEqual(1, len(_copy_progress_tasks))
+        task = list(_copy_progress_tasks.values())[0]
+        self.assertEqual('failing_task', task['name'])
+        # Recorded task is deleted even task raise exception and not
+        # completed cleanly.
+        self.assertEqual({}, self.tracker._in_progress_tasks)
+
+    def test_track_tasks_records_success_as_completed(self):
+        ctxt = context.RequestContext(request_id='req-1')
+        instance = objects.Instance(uuid=uuids.instance)
+        self.tracker._shutdown_in_progress.set()
+
+        result = self.wrapper.task1(ctxt, instance=instance)
+
+        self.assertEqual('task1 done', result)
+        self.assertEqual(1, self.tracker._completed_task_count)
+        self.assertEqual({}, self.tracker._failed_tasks)
+
+    def test_task_failure_recorded_as_failed(self):
+        ctxt = context.RequestContext(request_id='req-1')
+        instance = objects.Instance(uuid=uuids.instance)
+        self.tracker._shutdown_in_progress.set()
+
+        self.assertRaises(
+            test.TestingException,
+            self.wrapper.failing_task, ctxt, instance=instance)
+
+        self.assertEqual(0, self.tracker._completed_task_count)
+        self.assertEqual(1, len(self.tracker._failed_tasks))
+
+    def test_skip_marked_task_are_not_tracked(self):
+        ctxt = context.RequestContext(request_id='req-1')
+        _copy_progress_tasks = {}
+        orig_start = self.tracker._record_task_start
+
+        def check_recorded_tasks(*args, **kwargs):
+            nonlocal _copy_progress_tasks
+            key = orig_start(*args, **kwargs)
+            _copy_progress_tasks = copy.deepcopy(
+                    self.tracker._in_progress_tasks)
+            return key
+
+        self.tracker._record_task_start = check_recorded_tasks
+
+        result = self.wrapper.skipped_task(ctxt)
+        self.assertEqual('skipped task done', result)
+        self.assertEqual({}, _copy_progress_tasks)
+        self.assertEqual({}, self.tracker._in_progress_tasks)
+
+    def test_default_tracker_is_the_endpoint_itself(self):
+        wrapper = service._TrackingEndpointWrapper(self.tracker)
+        self.assertIs(self.tracker, wrapper._tracker)

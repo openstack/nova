@@ -10,10 +10,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-"""Functional tests for graceful shutdown of the Nova compute service.
+"""Functional tests for graceful shutdown of the Nova compute, conductor,
+and scheduler services.
 
-These tests verify that in-progress operations complete when the compute
-service receives a graceful shutdown (SIGTERM, triggered via service.stop()).
+These tests verify that in-progress operations complete when a service
+receives a graceful shutdown (SIGTERM, triggered via service.stop()).
 
 Scenarios:
   1. Live migration – source compute gracefully shut down mid-migration
@@ -22,41 +23,24 @@ Scenarios:
   4. Cold migration – dest compute gracefully shut down mid-migration
   5. Instance build – compute gracefully shut down during spawn
   6. Revert resize – dest compute gracefully shut down during revert
+  7. Conductor – gracefully shut down with no in-progress tasks
+  8. Scheduler – gracefully shut down with no in-progress tasks
 
   <We can add more operations testing here if needed>
 """
 
 import threading
+import time
 
 import fixtures
 
+from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
+from nova import utils
 
 
-class _WaitableEvent(threading.Event):
-    """threading.Event subclass that tracks the number of active waiters."""
-
-    def __init__(self):
-        super().__init__()
-        self._waiters_lock = threading.Lock()
-        self._waiters = 0
-
-    def wait(self, timeout=None):
-        with self._waiters_lock:
-            self._waiters += 1
-        try:
-            return super().wait(timeout=timeout)
-        finally:
-            with self._waiters_lock:
-                self._waiters -= 1
-
-    def waiter_count(self):
-        with self._waiters_lock:
-            return self._waiters
-
-
-class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
-    """Functional graceful-shutdown tests using the fake driver."""
+class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
 
     compute_driver = 'fake.FakeLiveMigrateDriver'
     microversion = 'latest'
@@ -71,7 +55,7 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
     def setUp(self):
         self.flags(report_interval=1, service_down_time=6)
         super().setUp()
-        self.flags(manager_shutdown_timeout=0)
+        self.flags(manager_shutdown_timeout=30)
         self._start_compute('src')
         self._start_compute('dest')
         # The servicegroup DB driver waits INITIAL_REPORTING_DELAY (5s)
@@ -89,7 +73,7 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
         # be set or MANAGER_GRACEFUL_SHUTDOWN_TIMEOUT.
         shutdown_waiting = threading.Event()
 
-        def coordinated_graceful_shutdown():
+        def coordinated_graceful_shutdown(timeout):
             shutdown_waiting.set()
             operation_complete_event.wait(
                 timeout=self.MANAGER_GRACEFUL_SHUTDOWN_TIMEOUT)
@@ -100,31 +84,12 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
             side_effect=coordinated_graceful_shutdown))
         return shutdown_waiting
 
-    def _block_driver_method(self, compute, method_name):
-        """Pause compute's driver method until explicitly released.
-
-        Returns ``(started_event, proceed_event)``.  The caller waits on
-        ``started_event`` to confirm the method has been entered, then asserts
-        ``proceed_event.waiter_count() > 0`` and sets it to let it finish.
-        ``proceed_event`` is a ``_WaitableEvent`` so callers can verify the
-        driver is genuinely blocking before releasing it.
-        """
-        started = threading.Event()
-        proceed = _WaitableEvent()
-        original = getattr(compute.manager.driver, method_name)
-
-        def _blocking(*args, **kwargs):
-            started.set()
-            proceed.wait(timeout=self.OPERATION_TIMEOUT)
-            return original(*args, **kwargs)
-
-        self.useFixture(fixtures.MockPatchObject(
-            compute.manager.driver, method_name, side_effect=_blocking))
-        return started, proceed
-
-    def _stop_compute_gracefully(self, compute):
+    def _stop_compute_gracefully(self, compute, timeout=30):
         t = threading.Thread(target=compute.stop)
         t.start()
+        self.assertTrue(
+            compute.manager._shutdown_in_progress.wait(timeout=timeout),
+            'manager shutdown is not started yet')
         return t
 
     def _join_stop_thread(self, stop_thread, timeout=60):
@@ -146,6 +111,15 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_service_parameter(
             hostname, 'nova-compute', {'state': 'up'}, max_retries=20)
 
+    def _complete_live_migration(self, context, instance, dest, post_method,
+                                  recover_method, block_migration=False,
+                                  migrate_data=None):
+        post_method(context, instance, dest, block_migration, migrate_data)
+
+
+class TestComputeGracefulShutdown(GracefulShutdownTestBase):
+    """Functional graceful-shutdown tests for the compute manager."""
+
     def test_live_migration_source_compute_graceful_shutdown(self):
         """Live migration completes when the source compute is shut down."""
         server = self._create_server(host='src', networks='none')
@@ -153,19 +127,11 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
         shutdown_waiting = self._setup_graceful_shutdown_mock(
             self.computes['src'], operation_complete_event)
 
-        started = threading.Event()
-        proceed = _WaitableEvent()
-
-        def _live_migration_side_effect(
-                context, instance, dest, post_method, recover_method,
-                block_migration=False, migrate_data=None):
-            started.set()
-            proceed.wait(timeout=self.OPERATION_TIMEOUT)
-            post_method(context, instance, dest, block_migration, migrate_data)
-
-        self.useFixture(fixtures.MockPatchObject(
+        intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
             self.computes['src'].manager.driver, 'live_migration',
-            side_effect=_live_migration_side_effect))
+            side_effect=self._complete_live_migration,
+            timeout=self.OPERATION_TIMEOUT))
+        started, proceed = intercept.started, intercept.proceed
 
         # Kick off live migration asynchronously.
         self.api.post_server_action(
@@ -224,8 +190,11 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
         # Pause post_live_migration_at_destination on dest so we can confirm
         # the migration is finalising there before triggering graceful
         # shutdown.
-        plm_started, plm_proceed = self._block_driver_method(
-            self.computes['dest'], 'post_live_migration_at_destination')
+        plm_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            self.computes['dest'].manager.driver,
+            'post_live_migration_at_destination',
+            timeout=self.OPERATION_TIMEOUT))
+        plm_started, plm_proceed = plm_intercept.started, plm_intercept.proceed
 
         # Kick off live migration asynchronously.
         self.api.post_server_action(
@@ -271,6 +240,53 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
         self._restart_compute('dest')
         self._delete_server(server)
 
+    def test_live_migration_dest_shutdown_before_post_live_migration(self):
+        server = self._create_server(host='src', networks='none')
+
+        # When the driver's live_migration() is invoked on the source,
+        # pre_live_migration has already returned successfully on dest.
+        intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            self.computes['src'].manager.driver, 'live_migration',
+            side_effect=self._complete_live_migration,
+            timeout=self.OPERATION_TIMEOUT))
+        started, proceed = intercept.started, intercept.proceed
+
+        self.api.post_server_action(
+            server['id'],
+            {'os-migrateLive': {'host': 'dest', 'block_migration': 'auto'}})
+
+        self.assertTrue(
+            started.wait(timeout=30),
+            'Timed out waiting for live migration to start on source driver')
+
+        # pre_live_migration has completed on dest; dest must still be
+        # tracking this live migration as in-progress.
+        dest_manager = self.computes['dest'].manager
+        self.assertIn(
+            server['id'], dest_manager._pending_dest_live_migrations,
+            'dest is not tracking the migration as in-progress after '
+            'pre_live_migration returned')
+
+        stop_thread = self._stop_compute_gracefully(self.computes['dest'])
+
+        self.assertTrue(
+            stop_thread.is_alive(),
+            'graceful shutdown should still be waiting for the in-progress '
+            'live migration to reach post_live_migration_at_destination')
+
+        proceed.set()
+
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        self.assertEqual('dest', server['OS-EXT-SRV-ATTR:host'])
+        self._wait_for_migration_status(server, ['completed'])
+        self.assertNotIn(
+            server['id'], dest_manager._pending_dest_live_migrations)
+
+        self.wait_for_service_stop(stop_thread, 'dest')
+
+        self._restart_compute('dest')
+        self._delete_server(server)
+
     def test_cold_migration_source_compute_graceful_shutdown(self):
         """Cold migration completes when the source compute is shut down."""
         server = self._create_server(host='src', networks='none')
@@ -279,8 +295,12 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
             self.computes['src'], operation_complete_event)
 
         # Pause the disk-and-power-off phase on source.
-        mdpo_started, mdpo_proceed = self._block_driver_method(
-            self.computes['src'], 'migrate_disk_and_power_off')
+        mdpo_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            self.computes['src'].manager.driver,
+            'migrate_disk_and_power_off',
+            timeout=self.OPERATION_TIMEOUT))
+        mdpo_started, mdpo_proceed = (
+            mdpo_intercept.started, mdpo_intercept.proceed)
 
         # Start cold migration asynchronously.
         self.api.post_server_action(server['id'], {'migrate': None})
@@ -333,8 +353,10 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Pause finish_migration on dest (invoked inside finish_resize, which
         # is dispatched to dest's alt RPC server by the source compute).
-        fm_started, fm_proceed = self._block_driver_method(
-            self.computes['dest'], 'finish_migration')
+        fm_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            self.computes['dest'].manager.driver, 'finish_migration',
+            timeout=self.OPERATION_TIMEOUT))
+        fm_started, fm_proceed = fm_intercept.started, fm_intercept.proceed
 
         # Start cold migration asynchronously.
         self.api.post_server_action(server['id'], {'migrate': None})
@@ -377,6 +399,52 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
         server = self._wait_for_state_change(server, 'ACTIVE')
         self._delete_server(server)
 
+    def test_cold_migration_dest_shutdown_before_resize_instance_completes(
+            self):
+        server = self._create_server(host='src', networks='none')
+
+        mdpo_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            self.computes['src'].manager.driver,
+            'migrate_disk_and_power_off',
+            timeout=self.OPERATION_TIMEOUT))
+        mdpo_started, mdpo_proceed = (
+            mdpo_intercept.started, mdpo_intercept.proceed)
+
+        self.api.post_server_action(server['id'], {'migrate': None})
+
+        self.assertTrue(
+            mdpo_started.wait(timeout=30),
+            'Timed out waiting for migrate_disk_and_power_off on source')
+
+        # prep_resize has completed on dest; dest must still be tracking
+        # this resize as in-progress.
+        dest_manager = self.computes['dest'].manager
+        self.assertIn(
+            server['id'], dest_manager._pending_dest_resizes,
+            'dest is not tracking the resize as in-progress after prep_resize '
+            'returned')
+
+        stop_thread = self._stop_compute_gracefully(self.computes['dest'])
+
+        self.assertTrue(
+            stop_thread.is_alive(),
+            'graceful shutdown should still be waiting for the in-progress '
+            'resize to reach finish_resize')
+
+        mdpo_proceed.set()
+
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        self.assertEqual('dest', server['OS-EXT-SRV-ATTR:host'])
+        self._wait_for_migration_status(server, ['finished'])
+        self.assertNotIn(server['id'], dest_manager._pending_dest_resizes)
+
+        self.wait_for_service_stop(stop_thread, 'dest')
+
+        self._restart_compute('dest')
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        self._delete_server(server)
+
     def test_instance_build_graceful_shutdown(self):
         """Instance build completes when the compute is stopped."""
         operation_complete_event = threading.Event()
@@ -385,8 +453,11 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Pause spawn on src so we can confirm the build is in-flight before
         # triggering graceful shutdown.
-        spawn_started, spawn_proceed = self._block_driver_method(
-            self.computes['src'], 'spawn')
+        spawn_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            self.computes['src'].manager.driver, 'spawn',
+            timeout=self.OPERATION_TIMEOUT))
+        spawn_started, spawn_proceed = (
+            spawn_intercept.started, spawn_intercept.proceed)
 
         # Post the server create; it returns immediately (CAST_AS_CALL=False).
         server_body = self._build_server(networks='none', host='src')
@@ -442,8 +513,12 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Pause destroy on dest.  revert_resize() calls destroy() to remove
         # the migrated copy before issuing finish_revert_resize to source.
-        destroy_started, destroy_proceed = self._block_driver_method(
-            self.computes['dest'], 'destroy')
+        destroy_intercept = self.useFixture(
+            nova_fixtures.InterceptMethodFixture(
+                self.computes['dest'].manager.driver, 'destroy',
+                timeout=self.OPERATION_TIMEOUT))
+        destroy_started, destroy_proceed = (
+            destroy_intercept.started, destroy_intercept.proceed)
 
         # Start the revert asynchronously.
         self.api.post_server_action(server['id'], {'revertResize': None})
@@ -486,3 +561,370 @@ class TestGracefulShutdown(integrated_helpers.ProviderUsageBaseTestCase):
         # comes up normally and test server is deleted
         self._restart_compute('dest')
         self._delete_server(server)
+
+    def test_build_instance_track_wait_during_shutdown(self):
+        compute = self.computes['src']
+        self.flags(manager_shutdown_timeout=30)
+        cleanup_intercept = self.useFixture(
+            nova_fixtures.InterceptMethodFixture(
+                compute.manager, 'cleanup_host',
+                timeout=self.OPERATION_TIMEOUT))
+        cleanup_called, cleanup_proceed = (
+            cleanup_intercept.started, cleanup_intercept.proceed)
+        cleanup_proceed.set()
+
+        spawn_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            compute.manager.driver, 'spawn', timeout=self.OPERATION_TIMEOUT))
+        spawn_started, spawn_proceed = (
+            spawn_intercept.started, spawn_intercept.proceed)
+
+        server_body = self._build_server(networks='none', host='src')
+        server = self.api.post_server({'server': server_body})
+
+        self.assertTrue(
+            spawn_started.wait(timeout=30),
+            'Timed out waiting for spawn to start on src')
+
+        # Check if build instance task is tracked
+        tracked = list(compute.manager._in_progress_tasks.values())
+        self.assertEqual(1, len(tracked))
+        self.assertEqual('build_instance', tracked[0]['name'])
+
+        stop_thread = self._stop_compute_gracefully(compute)
+
+        # cleanup_host() must not run until the tracked build instance
+        # finishes.
+        self.assertFalse(
+            cleanup_called.is_set(),
+            'cleanup_host ran before the tracked build instance task finished')
+        self.assertTrue(stop_thread.is_alive())
+        self.assertGreater(spawn_proceed.waiter_count(), 0,
+                           'spawn not blocking')
+
+        # Allow the build instance to finish.
+        spawn_proceed.set()
+
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        self.wait_for_service_stop(stop_thread, 'src')
+
+        self.assertTrue(cleanup_called.is_set())
+        # Check tracked task is removed from tracking dict.
+        self.assertEqual({}, compute.manager._in_progress_tasks)
+
+        self._restart_compute('src')
+        self._delete_server(server)
+
+    def test_snapshot_instance_track_and_wait_during_shutdown(self):
+        compute = self.computes['src']
+        self.flags(manager_shutdown_timeout=30)
+        cleanup_intercept = self.useFixture(
+            nova_fixtures.InterceptMethodFixture(
+                compute.manager, 'cleanup_host',
+                timeout=self.OPERATION_TIMEOUT))
+        cleanup_called, cleanup_proceed = (
+            cleanup_intercept.started, cleanup_intercept.proceed)
+        cleanup_proceed.set()
+
+        server = self._create_server(host='src', networks='none')
+
+        snap_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            compute.manager.driver, 'snapshot',
+            timeout=self.OPERATION_TIMEOUT))
+        snap_started, snap_proceed = (
+            snap_intercept.started, snap_intercept.proceed)
+
+        self._snapshot_server(server, 'test-snapshot')
+
+        self.assertTrue(
+            snap_started.wait(timeout=30),
+            'Timed out waiting for snapshot to start on src')
+
+        # Check if snapshot instance task is tracked
+        tracked = list(compute.manager._in_progress_tasks.values())
+        self.assertEqual(1, len(tracked))
+        self.assertEqual('snapshot_instance', tracked[0]['name'])
+
+        stop_thread = self._stop_compute_gracefully(compute)
+
+        self.assertFalse(
+            cleanup_called.is_set(),
+            'cleanup_host ran before the tracked snapshot finished')
+        self.assertTrue(stop_thread.is_alive())
+        self.assertGreater(snap_proceed.waiter_count(), 0,
+                           'snapshot not blocking')
+
+        snap_proceed.set()
+
+        self._wait_for_state_change(server, 'ACTIVE')
+        self.wait_for_service_stop(stop_thread, 'src')
+
+        self.assertTrue(cleanup_called.is_set())
+        # Check tracked task is removed from tracking dict.
+        self.assertEqual({}, compute.manager._in_progress_tasks)
+
+        self._restart_compute('src')
+        self._delete_server(server)
+
+    def test_multiple_build_instance_tracked_and_shutdown_wait_for_all(self):
+        compute = self.computes['src']
+        self.flags(manager_shutdown_timeout=30)
+        cleanup_intercept = self.useFixture(
+            nova_fixtures.InterceptMethodFixture(
+                compute.manager, 'cleanup_host',
+                timeout=self.OPERATION_TIMEOUT))
+        cleanup_called, cleanup_proceed = (
+            cleanup_intercept.started, cleanup_intercept.proceed)
+        cleanup_proceed.set()
+
+        lock = threading.Lock()
+        started_events = {}
+        proceed_events = {}
+        original_spawn = compute.manager.driver.spawn
+
+        def _blocking_spawn(context, instance, *args, **kwargs):
+            with lock:
+                started = started_events[instance.uuid]
+                proceed = proceed_events[instance.uuid]
+            started.set()
+            proceed.wait(timeout=self.OPERATION_TIMEOUT)
+            return original_spawn(context, instance, *args, **kwargs)
+
+        self.useFixture(fixtures.MockPatchObject(
+            compute.manager.driver, 'spawn', side_effect=_blocking_spawn))
+
+        server_body = self._build_server(networks='none', host='src')
+        servers = []
+        for _ in range(2):
+            server = self.api.post_server({'server': server_body})
+            with lock:
+                started_events[server['id']] = threading.Event()
+                proceed_events[server['id']] = nova_fixtures.WaitableEvent()
+            servers.append(server)
+
+        for server in servers:
+            self.assertTrue(
+                started_events[server['id']].wait(timeout=30),
+                'Timed out waiting for spawn to start for %s' % server['id'])
+
+        # Both build instance tasks should be tracked as in-progress tasks.
+        tracked = list(compute.manager._in_progress_tasks.values())
+        self.assertEqual(2, len(tracked))
+        self.assertEqual({'build_instance'}, {t['name'] for t in tracked})
+        self.assertEqual(
+            {s['id'] for s in servers},
+            {t['instance_uuid'] for t in tracked})
+
+        stop_thread = self._stop_compute_gracefully(compute)
+
+        # Event first build instance is finished, shutdown should keep waiting
+        # for the second build instance in progress task.
+        proceed_events[servers[0]['id']].set()
+        self._wait_for_state_change(servers[0], 'ACTIVE')
+
+        self.assertFalse(
+            cleanup_called.is_set(),
+            'cleanup_host ran before all tracked tasks finished')
+        self.assertTrue(
+            stop_thread.is_alive(),
+            'shutdown returned before all tracked tasks finished')
+        self.assertEqual(1, len(compute.manager._in_progress_tasks))
+        remaining = list(compute.manager._in_progress_tasks.values())[0]
+        self.assertEqual(servers[1]['id'], remaining['instance_uuid'])
+
+        self.assertGreater(
+            proceed_events[servers[1]['id']].waiter_count(), 0,
+            'second spawn not blocking')
+        proceed_events[servers[1]['id']].set()
+
+        self._wait_for_state_change(servers[1], 'ACTIVE')
+        self.wait_for_service_stop(stop_thread, 'src')
+
+        self.assertTrue(cleanup_called.is_set())
+        self.assertEqual({}, compute.manager._in_progress_tasks)
+
+        self._restart_compute('src')
+        for server in servers:
+            self._delete_server(server)
+
+    def test_different_concurrent_operations_and_shutdown_wait_for_all(self):
+        compute = self.computes['src']
+        self.flags(manager_shutdown_timeout=30)
+        cleanup_intercept = self.useFixture(
+            nova_fixtures.InterceptMethodFixture(
+                compute.manager, 'cleanup_host',
+                timeout=self.OPERATION_TIMEOUT))
+        cleanup_called, cleanup_proceed = (
+            cleanup_intercept.started, cleanup_intercept.proceed)
+        cleanup_proceed.set()
+
+        snap_server = self._create_server(host='src', networks='none')
+        pause_server = self._create_server(host='src', networks='none')
+        lm_server = self._create_server(host='src', networks='none')
+
+        snap_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            compute.manager.driver, 'snapshot',
+            timeout=self.OPERATION_TIMEOUT))
+        snap_started, snap_proceed = (
+            snap_intercept.started, snap_intercept.proceed)
+        pause_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            compute.manager.driver, 'pause', timeout=self.OPERATION_TIMEOUT))
+        pause_started, pause_proceed = (
+            pause_intercept.started, pause_intercept.proceed)
+
+        lm_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            compute.manager.driver, 'live_migration',
+            side_effect=self._complete_live_migration,
+            timeout=self.OPERATION_TIMEOUT))
+        lm_started, lm_proceed = lm_intercept.started, lm_intercept.proceed
+
+        self._snapshot_server(snap_server, 'test-snapshot')
+        self.api.post_server_action(pause_server['id'], {'pause': None})
+        self.api.post_server_action(
+            lm_server['id'],
+            {'os-migrateLive': {'host': 'dest', 'block_migration': 'auto'}})
+
+        self.assertTrue(
+            snap_started.wait(timeout=30),
+            'Timed out waiting for snapshot to start on src')
+        self.assertTrue(
+            pause_started.wait(timeout=30),
+            'Timed out waiting for pause to start on src')
+        self.assertTrue(
+            lm_started.wait(timeout=30),
+            'Timed out waiting for live migration to start on src')
+
+        # All three tasks should be tracked concurrently.
+        tracked = list(compute.manager._in_progress_tasks.values())
+        self.assertEqual(3, len(tracked))
+        self.assertEqual(
+            {'snapshot_instance', 'pause_instance', 'live_migration'},
+            {t['name'] for t in tracked})
+
+        stop_thread = self._stop_compute_gracefully(compute)
+
+        self.assertFalse(
+            cleanup_called.is_set(),
+            'cleanup_host ran before all tracked tasks finished')
+
+        snap_proceed.set()
+        self._wait_for_state_change(snap_server, 'ACTIVE')
+        self.assertTrue(stop_thread.is_alive())
+        self.assertFalse(cleanup_called.is_set())
+        self.assertEqual(2, len(compute.manager._in_progress_tasks))
+
+        pause_proceed.set()
+        self._wait_for_state_change(pause_server, 'PAUSED')
+        self.assertTrue(stop_thread.is_alive())
+        self.assertFalse(cleanup_called.is_set())
+        tracked = list(compute.manager._in_progress_tasks.values())
+        self.assertEqual(1, len(tracked))
+        self.assertEqual('live_migration', tracked[0]['name'])
+
+        self.assertGreater(lm_proceed.waiter_count(), 0,
+                           'live migration not blocking')
+        lm_proceed.set()
+
+        lm_server = self._wait_for_state_change(lm_server, 'ACTIVE')
+        self.assertEqual('dest', lm_server['OS-EXT-SRV-ATTR:host'])
+        self.wait_for_service_stop(stop_thread, 'src')
+
+        self.assertTrue(cleanup_called.is_set())
+        self.assertEqual({}, compute.manager._in_progress_tasks)
+
+        self._restart_compute('src')
+        self._delete_server(snap_server)
+        self._delete_server(pause_server)
+        self._delete_server(lm_server)
+
+    def test_rpc_call_are_tracked(self):
+        compute = self.computes['src']
+        server = self._create_server(host='src', networks='none')
+
+        pause_intercept = self.useFixture(nova_fixtures.InterceptMethodFixture(
+            compute.manager.driver, 'pause', timeout=self.OPERATION_TIMEOUT))
+        pause_started, pause_proceed = (
+            pause_intercept.started, pause_intercept.proceed)
+
+        self.api.post_server_action(server['id'], {'pause': None})
+
+        self.assertTrue(
+            pause_started.wait(timeout=30),
+            'Timed out waiting for pause to start on src')
+
+        tracked = list(compute.manager._in_progress_tasks.values())
+        self.assertEqual(1, len(tracked))
+        self.assertEqual('pause_instance', tracked[0]['name'])
+        self.assertEqual(server['id'], tracked[0]['instance_uuid'])
+
+        pause_proceed.set()
+        self._wait_for_state_change(server, 'PAUSED')
+
+        self.assertEqual({}, compute.manager._in_progress_tasks)
+        self._delete_server(server)
+
+    def test_periodic_tasks_skipped_once_shutdown_starts(self):
+        compute = self.computes['src']
+        manager = compute.manager
+        manager._shutdown_in_progress.set()
+
+        mock_poll = self.useFixture(fixtures.MockPatchObject(
+            manager, '_poll_rebooting_instances')).mock
+        manager.periodic_tasks(context=None)
+
+        mock_poll.assert_not_called()
+
+
+class TestConductorGracefulShutdown(test.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.flags(manager_shutdown_timeout=5)
+        self.conductor_service = self.start_service('conductor')
+
+    def test_graceful_shutdown_completes_instantly_when_no_tasks(self):
+        manager = self.conductor_service.manager
+        self.assertFalse(manager._shutdown_in_progress.is_set())
+
+        utils.get_cache_images_executor()
+        self.addCleanup(utils.destroy_cache_images_executor)
+
+        start = time.monotonic()
+        self.conductor_service.stop()
+        elapsed = time.monotonic() - start
+
+        self.assertTrue(manager._shutdown_in_progress.is_set())
+        # As there is no tasks in-progress, so _wait_for_in_progress_tasks()
+        # should return instantly rather than waiting out the configured
+        # 5 second timeout.
+        self.assertLess(elapsed, 5)
+
+
+class TestSchedulerGracefulShutdown(test.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.flags(manager_shutdown_timeout=5)
+        self.scheduler_service = self.start_service('scheduler')
+
+    def test_graceful_shutdown_completes_instantly_when_no_tasks(self):
+        manager = self.scheduler_service.manager
+        self.assertFalse(manager._shutdown_in_progress.is_set())
+
+        start = time.monotonic()
+        self.scheduler_service.stop()
+        elapsed = time.monotonic() - start
+
+        self.assertTrue(manager._shutdown_in_progress.is_set())
+        # As there is no tasks in-progress, so _wait_for_in_progress_tasks()
+        # should return instantly rather than waiting out the configured
+        # 5 second timeout.
+        self.assertLess(elapsed, 5)
+
+    def test_periodic_tasks_skipped_once_shutdown_starts(self):
+        manager = self.scheduler_service.manager
+        manager._shutdown_in_progress.set()
+
+        mock_discover = self.useFixture(fixtures.MockPatchObject(
+            manager, '_discover_hosts_in_cells')).mock
+        manager.periodic_tasks(context=None)
+
+        mock_discover.assert_not_called()

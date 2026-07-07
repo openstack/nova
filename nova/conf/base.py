@@ -185,6 +185,15 @@ complete the remaining graceful shutdown steps.
 This timeout must be less than the overall graceful shutdown timeout
 ``[DEFAULT]/graceful_shutdown_timeout``.
 
+Note that the manager reserves up to 20 seconds (or this entire value,
+whichever is smaller) out of this timeout for some clean up tasks to run.
+This means the manager actually waits for in-progress tasks for at most
+``manager_shutdown_timeout - min(20, manager_shutdown_timeout)`` seconds.
+For example, setting this option to 20 or less will make the manager skip
+waiting for in-progress tasks (0 seconds) and proceed straight to run the
+cleanup tasks. Set a value well above 20 to give in-progress tasks a
+good amount of time to complete.
+
 Possible values:
 
 * 0: The compute manager does not wait to finish in-progress tasks.

@@ -305,29 +305,12 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
             self.conductor.reset()
             mock_clear_cache.assert_called_once_with()
 
-    @mock.patch('time.sleep')
-    def test_graceful_shutdown(self, mock_sleep):
-        self.flags(manager_shutdown_timeout=10)
-        self.conductor.graceful_shutdown()
-        mock_sleep.assert_called_once_with(10)
-
-    @mock.patch('nova.conductor.manager.LOG')
-    @mock.patch('time.sleep')
-    def test_graceful_shutdown_manager_timeout_higher(
-            self, mock_sleep, mock_log):
-        # manager_shutdown_timeout > graceful_shutdown_timeout:
-        # warning logged, sleep = graceful_shutdown_timeout - 10 = 20
-        self.flags(manager_shutdown_timeout=50, graceful_shutdown_timeout=30)
-        self.conductor.graceful_shutdown()
-        mock_log.warning.assert_called_once()
-        mock_sleep.assert_called_once_with(20)
-
-    @mock.patch('time.sleep')
-    def test_graceful_shutdown_no_negative_sleep_time(self, mock_sleep):
-        # If sleep time end up with negative value, fallback to slep(0)
-        self.flags(manager_shutdown_timeout=50, graceful_shutdown_timeout=5)
-        self.conductor.graceful_shutdown()
-        mock_sleep.assert_called_once_with(0)
+    @mock.patch('nova.conductor.manager.ConductorManager.'
+                '_wait_for_in_progress_tasks')
+    def test_graceful_shutdown(self, mock_wait):
+        self.conductor.set_shutdown_in_progress()
+        self.conductor.graceful_shutdown(10)
+        mock_wait.assert_called_once_with(10)
 
     def test_provider_fw_rule_get_all(self):
         result = self.conductor.provider_fw_rule_get_all(self.context)

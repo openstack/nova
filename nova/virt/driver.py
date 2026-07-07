@@ -381,6 +381,12 @@ class ComputeDriver(object):
     def cleanup_host(self, host):
         """Clean up anything that is necessary for the driver gracefully stop,
         including ending remote sessions. This is optional.
+
+        This is called synchronously during graceful shutdown and with no
+        timeout of its own. If the cleanup takes time then service graceful
+        shutdown may interrupt it as this is run in a daemon thread bounded
+        by manager_shutdown_timeout/graceful_shutdown_timeout, so a hang here
+        will not block the process from exiting.
         """
         pass
 

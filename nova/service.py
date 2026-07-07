@@ -17,10 +17,13 @@
 
 """Generic Node base class for all workers that run on hosts."""
 
+import functools
+import inspect
 import os
 import os.path
 import random
 import sys
+import threading
 
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -52,6 +55,60 @@ SERVICE_MANAGERS = {
     'nova-conductor': 'nova.conductor.manager.ConductorManager',
     'nova-scheduler': 'nova.scheduler.manager.SchedulerManager',
 }
+
+
+class _TrackingEndpointWrapper:
+    """RPC endpoint wrapper to track the RPC methods
+
+    This is RPC endpoint wrapper to be supplied to RPC server so that
+    each RPC method call can be tracked. `endpoint` is the real object
+    oslo.messaging should dispatch calls to (a service's manager or one
+    of its additional_endpoints); `tracker` is the object whose
+    _record_task_start()/_record_task_end() the call gets recorded on,
+    defaulting to `endpoint` itself. additional_endpoints (e.g. conductor's
+    ComputeTaskManager) are not Manager subclasses and have no tracking
+    dict of their own, so they're wrapped with `tracker` set to the owning
+    manager instead, reporting into its in-progress-task dict.
+    """
+
+    def __init__(self, endpoint, tracker=None):
+        self._endpoint = endpoint
+        self._tracker = tracker if tracker is not None else endpoint
+
+    def __getattr__(self, name):
+        attr = getattr(self._endpoint, name)
+        if (not inspect.ismethod(attr) or
+                getattr(attr, '_skip_automatic_rpc_tracking', False)):
+            setattr(self, name, attr)
+            return attr
+
+        @functools.wraps(attr)
+        def _tracked(*args, **kwargs):
+            instance_uuid = None
+            request_id = None
+            if isinstance(args[0], context.RequestContext):
+                request_id = getattr(args[0], 'request_id', None)
+            if len(args) > 1 and isinstance(args[1], objects.Instance):
+                instance_uuid = args[1].uuid
+            elif 'instance' in kwargs:
+                instance_uuid = kwargs['instance'].uuid
+
+            key = self._tracker._record_task_start(
+                name, instance_uuid, request_id)
+            try:
+                result = attr(*args, **kwargs)
+            except Exception:
+                self._tracker._record_task_end(key, failed=True)
+                raise
+            self._tracker._record_task_end(key)
+            return result
+
+        # NOTE(gmaan): __getattr__ is only called when `name` isn't found on
+        # the object. Setting the _tracked() wrapped method using setattr so
+        # that the next RPC call for same method are called directly without
+        # rebuilding RPC method with _tracked() wrapper.
+        setattr(self, name, _tracked)
+        return _tracked
 
 
 def _create_service_ref(this_service, context):
@@ -185,11 +242,20 @@ class Service(service.Service):
 
         target = messaging.Target(topic=self.topic, server=self.host)
 
+        # Wrap the manager (and its additional_endpoints) so every RPC
+        # call dispatched to them is recorded. additional_endpoints (e.g.
+        # conductor's ComputeTaskManager) are not Manager subclasses, so
+        # they report into the manager's tracking dict instead of their
+        # own via the tracker argument.
+        manager_endpoint = _TrackingEndpointWrapper(self.manager)
+
         endpoints = [
-            self.manager,
+            manager_endpoint,
             baserpc.BaseRPCAPI(self.manager.service_name, self.backdoor_port)
         ]
-        endpoints.extend(self.manager.additional_endpoints)
+        endpoints.extend(
+            _TrackingEndpointWrapper(additional_endpoint, self.manager)
+            for additional_endpoint in self.manager.additional_endpoints)
 
         serializer = objects_base.NovaObjectSerializer()
 
@@ -321,9 +387,54 @@ class Service(service.Service):
         except Exception:
             LOG.exception('Error occurred during RPC server stop & wait.')
 
+    def _get_manager_shutdown_timeout(self):
+        if CONF.manager_shutdown_timeout > CONF.graceful_shutdown_timeout:
+            LOG.warning('manager_shutdown_timeout (%s) is higher than '
+                        'graceful_shutdown_timeout (%s); the service may be '
+                        'killed before the manager finishes waiting.',
+                        CONF.manager_shutdown_timeout,
+                        CONF.graceful_shutdown_timeout)
+            return max(0, CONF.graceful_shutdown_timeout - 10)
+        return CONF.manager_shutdown_timeout
+
+    def _run_manager_graceful_shutdown(self):
+        timeout = self._get_manager_shutdown_timeout()
+        finished = threading.Event()
+
+        def _run():
+            try:
+                LOG.info('%s manager graceful shutdown started.',
+                          self.binary)
+                self.manager.graceful_shutdown(timeout)
+                LOG.info('%s manager graceful shutdown finished.',
+                          self.binary)
+            except Exception:
+                LOG.exception('Error occurred during %s manager graceful '
+                              'shutdown', self.binary)
+            finally:
+                finished.set()
+
+        # NOTE(gmaan): manager's graceful_shutdown does two things 1. wait for
+        # in-progress tasks 2. cleanup_host. First one is controlled with
+        # timeout but latter one is sync call to drivers cleanup_host which
+        # can hang the shutdown so we need to run manager's graceful_shutdown
+        # in a thread with timeout so that we do not hang the overall shutdown.
+        shutdown_thread = threading.Thread(target=_run)
+        shutdown_thread.daemon = True
+        shutdown_thread.start()
+        # NOTE(gmaan): Event.wait(timeout) always returns a bool even on
+        # timeout.
+        if not finished.wait(timeout):
+            LOG.warning(
+                '%s manager graceful shutdown did not complete within '
+                'the %s second, proceeding with service shutdown.',
+                self.binary, timeout)
+
     def stop(self):
         """stop the service and clean up."""
-        LOG.debug('%s service graceful shutdown started.', self.binary)
+        LOG.info('%s service graceful shutdown started.', self.binary)
+
+        self.manager.set_shutdown_in_progress()
 
         # This RPC server handles new requests during normal operation. During
         # graceful shutdown, we limit the RPC requests the service can handle.
@@ -331,15 +442,8 @@ class Service(service.Service):
         # server handle the remaining requests for the ongoing operations.
         if self.rpcserver is not None:
             self._shutdown_rpc_server(self.rpcserver, self.topic)
-        try:
-            LOG.debug('%s manager graceful shutdown started.',
-                      self.binary)
-            self.manager.graceful_shutdown()
-            LOG.debug('%s manager graceful shutdown finished.',
-                      self.binary)
-        except Exception:
-            LOG.exception('Error occurred during %s manager graceful '
-                          'shutdown', self.binary)
+
+        self._run_manager_graceful_shutdown()
 
         if self.rpcserver_alt is not None:
             # During graceful shutdown, manager will use this RPC server to
@@ -348,7 +452,7 @@ class Service(service.Service):
             self._shutdown_rpc_server(
                     self.rpcserver_alt, self.topic_alt)
 
-        LOG.debug('%s service graceful shutdown finished.', self.binary)
+        LOG.info('%s service graceful shutdown finished.', self.binary)
         super(Service, self).stop()
 
     def periodic_tasks(self, raise_on_error=False):

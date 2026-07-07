@@ -2413,3 +2413,75 @@ class NoSleepRetryDecoratorFixture(fixtures.Fixture):
                 fixtures.MockPatch(
                     "oslo_service.backend._eventlet.loopingcall."
                     "LoopingCallBase._sleep"))
+
+
+class WaitableEvent(threading.Event):
+    """threading.Event subclass that tracks the number of active waiters."""
+
+    def __init__(self):
+        super().__init__()
+        self._waiters_lock = threading.Lock()
+        self._waiters = 0
+
+    def wait(self, timeout=None):
+        with self._waiters_lock:
+            self._waiters += 1
+        try:
+            return super().wait(timeout=timeout)
+        finally:
+            with self._waiters_lock:
+                self._waiters -= 1
+
+    def waiter_count(self):
+        with self._waiters_lock:
+            return self._waiters
+
+
+class InterceptMethodFixture(fixtures.Fixture):
+    """Intercept a method call and pause until explicitly released.
+
+    Patches ``method_name`` on ``target`` so that a call blocks until the
+    ``proceed`` event is set, then calls '`side_effect`` (or the
+    original method if ``side_effect`` is not given). This is useful for
+    tests that need to pause an in-progress operation and asserts on things.
+
+    Provides ``started`` and ``proceed`` events. The caller waits on
+    ``started`` to confirm the method has been entered, then can assert
+    ``proceed.waiter_count() > 0`` to verify the method is genuinely
+    blocking before releasing it.
+
+    Usage::
+
+        intercept = self.useFixture(InterceptMethodFixture(
+            target, 'method_name'))
+        < Call method>
+        # Check if method is started>
+        self.assertTrue(intercept.started.is_set())
+        < Check/do more things while the method is in-progress>
+        # Signal method to proceed/complete.
+        intercept.proceed.set()
+    """
+
+    DEFAULT_TIMEOUT = 60
+
+    def __init__(self, target, method_name, side_effect=None, timeout=None):
+        self.target = target
+        self.method_name = method_name
+        self.side_effect = side_effect
+        self.timeout = (
+            self.DEFAULT_TIMEOUT if timeout is None else timeout)
+        self.started = threading.Event()
+        self.proceed = WaitableEvent()
+
+    def setUp(self):
+        super().setUp()
+        original = getattr(self.target, self.method_name)
+        side_effect = self.side_effect or original
+
+        def _blocking(*args, **kwargs):
+            self.started.set()
+            self.proceed.wait(timeout=self.timeout)
+            return side_effect(*args, **kwargs)
+
+        self.useFixture(fixtures.MockPatchObject(
+            self.target, self.method_name, side_effect=_blocking))
