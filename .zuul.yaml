@@ -918,7 +918,6 @@
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
       devstack_localrc:
-        GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
         DEVSTACK_PARALLEL: True
         GLANCE_LIMIT_IMAGE_SIZE_TOTAL: 2048
