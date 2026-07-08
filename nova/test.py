@@ -35,6 +35,7 @@ import sys
 from unittest import mock
 
 import fixtures
+import futurist
 from oslo_cache import core as cache
 from oslo_concurrency import lockutils
 from oslo_config import cfg
@@ -185,6 +186,10 @@ class TestCase(base.BaseTestCase):
         # we're using our own (StandardLogging).
         with fixtures.EnvironmentVariable('OS_LOG_CAPTURE', '0'):
             super(TestCase, self).setUp()
+
+        # XXX(gibi):Hack until https://bugs.launchpad.net/futurist/+bug/2160159
+        # is properly fixed to speed up the functional test in threading mode
+        futurist._thread.ThreadWorker.MAX_IDLE_FOR = 0.01
 
         # TODO(gibi): reimplement it to selectively support eventlet and
         # native threading as well
