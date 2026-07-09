@@ -13,9 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import importlib
 from unittest import mock
 
 import ddt
+from oslo_utils import units
 
 import nova.privsep.qemu
 from nova import test
@@ -203,9 +205,24 @@ class QemuTestCase(test.NoDBTestCase):
         # Assert that the expected command is used
         mock_execute.assert_called_once_with(
             *expected_cmd, prlimit=nova.privsep.qemu.QEMU_IMG_LIMITS)
+        return mock_execute.call_args
 
     def test_privileged_qemu_img_info(self):
         self._test_qemu_img_info(nova.privsep.qemu.privileged_qemu_img_info)
 
     def test_unprivileged_qemu_img_info(self):
         self._test_qemu_img_info(nova.privsep.qemu.unprivileged_qemu_img_info)
+
+    def test_qemu_img_info_limits_config(self):
+        self.flags(images_cpu_time_limit=60, group='libvirt')
+        self.flags(images_address_space_limit=3, group='libvirt')
+        # Reload the nova.privsep.qemu module after setting the conf options
+        # because QEMU_IMG_LIMITS is global.
+        importlib.reload(nova.privsep.qemu)
+        # Save the call args of execute() to assert.
+        call_args = self._test_qemu_img_info(
+                nova.privsep.qemu.unprivileged_qemu_img_info)
+        # Verify that execute() was called with the configured values.
+        self.assertEqual(60, call_args.kwargs['prlimit'].cpu_time)
+        self.assertEqual(3 * units.Gi,
+                         call_args.kwargs['prlimit'].address_space)
