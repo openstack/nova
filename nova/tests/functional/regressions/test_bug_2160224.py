@@ -14,7 +14,6 @@ import threading
 import time
 
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 
 
@@ -53,16 +52,9 @@ class TestAttachVolumeListAttachmentRace(base.ServersTestBase):
         # Attach a volume and monitor the volume attachments. As above we
         # injected a wait() into the attachment create in the cinder fixture
         # the BDM will be created but the attachment_id will not be populated.
-        # So the API tries to return None as attachment_id which fails the
-        # response validation and the API returns HTTP 400 instead. This is bug
-        # https://bugs.launchpad.net/nova/+bug/2160224
-        ex = self.assertRaises(
-            client.OpenStackApiException, self._attach_volume, server,
-            volume_id)
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            "Invalid input for field/attribute attachment_id. Value: None. "
-            "None is not of type 'string'", str(ex))
+        # The API correctly filters the BDMs that has no attachment_id so the
+        # response schema is kept.
+        self._attach_volume(server, volume_id)
 
     def test_attach_and_list_race(self):
         volume_id = self.cinder.IMAGE_BACKED_VOL
@@ -72,20 +64,14 @@ class TestAttachVolumeListAttachmentRace(base.ServersTestBase):
         # Attach a volume and monitor the volume attachments. As above we
         # injected a wait() into the attachment create in the cinder fixture
         # the BDM will be created but the attachment_id will not be populated.
-        # So the API tries to return None as attachment_id which fails the
-        # response validation and the API returns HTTP 400 instead. This is bug
-        # https://bugs.launchpad.net/nova/+bug/2160224
+        # The API correctly filters the BDMs that has no attachment_id so the
+        # response schema is kept.
         self.api.post_server_volume(
             server['id'],
             {'volumeAttachment': {'volumeId': volume_id}}
         )
 
-        def list_attachments():
-            while not self.api.get_server_volumes(server['id']):
-                time.sleep(0.1)
+        while not self.api.get_server_volumes(server['id']):
+            time.sleep(0.1)
 
-        ex = self.assertRaises(client.OpenStackApiException, list_attachments)
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            "Invalid input for field/attribute attachment_id. Value: None. "
-            "None is not of type 'string'", str(ex))
+        self.assertEqual(1, len(self.api.get_server_volumes(server['id'])))
