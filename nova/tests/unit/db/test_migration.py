@@ -23,22 +23,25 @@ from nova.db.main import api as main_db_api
 from nova.db import migration
 from nova import exception
 from nova import test
-from nova.tests import fixtures as nova_fixtures
 
 
 class TestDBURL(test.NoDBTestCase):
-    USES_DB_SELF = True
 
     def test_db_sync_with_special_symbols_in_connection_string(self):
         qargs = 'read_default_group=data with/a+percent_%-and%20symbols!'
         url = f"sqlite:///:memory:?{qargs}"
-        self.flags(connection=url, group='database')
-        self.useFixture(nova_fixtures.Database())
 
         alembic_config = migration._find_alembic_conf()
+        mock_engine = mock.MagicMock()
+        mock_engine.url = sa_url.make_url(url)
+
         with mock.patch.object(
                 migration, '_find_alembic_conf', return_value=alembic_config):
-            migration.db_sync()
+            with mock.patch.object(
+                    migration, '_get_engine', return_value=mock_engine):
+                with mock.patch.object(migration, '_upgrade_alembic'):
+                    migration.db_sync()
+
         actual = alembic_config.get_main_option('sqlalchemy.url')
         expected = (
             "sqlite:///:memory:?read_default_group=data+with%2Fa"
