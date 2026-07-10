@@ -305,7 +305,8 @@ class Service(service.Service):
         """
         self.stop()
         try:
-            self.service_ref.destroy()
+            if self.service_ref:
+                self.service_ref.destroy()
         except exception.NotFound:
             LOG.warning('Service killed that has no database entry')
 
