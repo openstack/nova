@@ -1102,8 +1102,6 @@
         - devstack-plugin-nfs-tempest-full:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-osprofiler-redis
-        - tempest-pg-full:
-            irrelevant-files: *nova-base-irrelevant-files
         - nova-tempest-full-oslo.versionedobjects:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-tempest-v2-api:
