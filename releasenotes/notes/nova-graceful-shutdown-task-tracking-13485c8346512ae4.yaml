@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Graceful shutdown now uses a task tracking mechanism instead of a fixed
+    time based sleep to wait for in-progress tasks to finish. When
+    ``nova-compute``, ``nova-conductor`` or ``nova-scheduler`` receives
+    ``SIGTERM``, the service manager logs all in-progress tasks and waits
+    only until they complete (or until
+    ``[DEFAULT]/manager_shutdown_timeout`` is reached), instead of
+    always sleeping for the full timeout.

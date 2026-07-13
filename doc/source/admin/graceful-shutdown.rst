@@ -12,11 +12,10 @@ If deployment has the multiple worker for the ``nova-conductor`` and
 
 .. important::
 
-     The current implementation waits for the
-     :oslo.config:option:`manager_shutdown_timeout` time for in-progress tasks
-     to complete. A future release will improve this by a proper task tracking
-     system. As a result operations can be interrupted ungracefully if they do
-     not complete within this timeout and can leave instances in a unwanted
+     The service manager tracks in-progress tasks and waits only until they
+     complete or until :oslo.config:option:`manager_shutdown_timeout` is
+     reached, whichever comes first. Operations that do not complete within
+     this timeout are still interrupted and can leave instances in an unwanted
      state.
 
 How graceful shutdown works for nova-compute service
@@ -27,9 +26,8 @@ When ``nova-compute`` receives ``SIGTERM``, the following sequence occurs:
 #. The primary RPC server (``compute`` topic) stops accepting new requests.
 #. The secondary RPC server (``compute-alt`` topic) still active and handles
    the RPC requests needed to finish in-progress tasks.
-#. The service manager waits up to
-   :oslo.config:option:`manager_shutdown_timeout` seconds for in-progress
-   tasks to complete.
+#. The service manager waits for its tracked in-progress tasks to complete,
+   up to :oslo.config:option:`manager_shutdown_timeout` seconds.
 #. The secondary RPC server (``compute-alt`` topic) is stopped.
 #. The service is stopped.
 
@@ -54,8 +52,9 @@ queue named ``compute-alt.<hostname>``.
 Operations handled during shutdown
 ----------------------------------
 
-The following operations use the secondary RPC server so that they will be
-allowed to complete during a graceful shutdown:
+The following operations which require a sequence of multiple RPC calls use
+the secondary RPC server so that they will be allowed to complete during a
+graceful shutdown:
 
 * Live migration
 * Cold migration
@@ -67,6 +66,39 @@ allowed to complete during a graceful shutdown:
 When the compute node's RPC version is older than 6.5, Nova automatically falls
 back to sending all operations to the primary RPC server. The secondary RPC
 server is not used in this case.
+
+Task tracking
+-------------
+
+The service manager tracks in-progress tasks and waits only until they finish,
+or until the timeout is reached, whichever comes first. Tasks are tracked in
+two ways:
+
+* **Synchronous RPC endpoint calls**: Every RPC call dispatched to a
+  manager (and to any additional endpoints it registers, such as the
+  conductor's compute task manager) is tracked automatically for the
+  duration of the call.
+* **Long-running background tasks**: Operations that hand off work to a
+  background thread and return the RPC worker to the pool, such as
+  ``build_instance``, ``snapshot_instance``, live migration, and cold
+  migration/resize, are tracked separately for the duration of the
+  background operation. Live migration and cold migration/resize involve
+  multiple RPC calls across the source and destination compute hosts, so
+  these operations remain tracked from the first call until the final call
+  that completes or reverts them.
+
+.. note::
+
+   As confirm resize and revert resize are called as a separate operations
+   so they are tracked as separate tasks and not part of the cold migration
+   or resize operation task tracking.
+
+Tasks are always tracked, but are only logged once a graceful shutdown has
+been initiated. When shutdown begins, the manager logs the in-progress
+tasks it is waiting on, periodically logs which tasks are still
+outstanding, and logs each task as it completes. If the timeout is reached
+before all tasks finish, the manager logs the tasks that were still
+in-progress at shutdown.
 
 Configuration
 -------------
