@@ -29,7 +29,7 @@ create or rebuild commands, signature verification and certificate validation
 will be performed, regardless of their settings in the Nova configurations.
 See `Using Signature Verification`_ for details.
 
-.. _Cursive: http://opendev.org/x/cursive/
+.. _Cursive: http://opendev.org/openstack/cursive/
 .. _Glance Image Signature Verification documentation: https://docs.openstack.org/glance/latest/user/signature.html
 
 .. note::
