@@ -1065,20 +1065,6 @@ def get_default_image_service():
     return GlanceImageServiceV2()
 
 
-class UpdateGlanceImage(object):
-    def __init__(self, context, image_id, metadata, stream):
-        self.context = context
-        self.image_id = image_id
-        self.metadata = metadata
-        self.image_stream = stream
-
-    def start(self):
-        image_service, image_id = get_remote_image_service(
-            self.context, self.image_id)
-        image_service.update(self.context, image_id, self.metadata,
-                             self.image_stream, purge_props=False)
-
-
 @profiler.trace_cls("nova_image")
 class API(object):
     """API for interacting with the image service."""
