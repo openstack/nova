@@ -6094,16 +6094,19 @@ class StatelessFirmwareConstraintTest(test.NoDBTestCase):
     @ddt.unpack
     @ddt.data(
         # pass: no configuration
-        (None, None, False),
+        (None, None, None, False),
+        # pass: non-uefi with stateless fiemware
+        (True, None, None, True),
+        # pass: non-uefi with statefull fiemware
+        (False, None, None, True),
         # pass: uefi with stateless firmware
-        (True, 'uefi', True),
-        # pass: non-uefi with non-stateless firmware
-        (False, None, False),
-        # fail: non-uefi with stateless fiemware
-        (True, None, exception.Invalid),
+        (True, 'uefi', True, False),
+        # pass: uefi with statefull firmware
+        (False, 'uefi', False, False),
     )
+    @mock.patch.object(hw, 'LOG')
     def test_get_stateless_firmware_constraint(
-        self, firmware_stateless, firmware_type, expected,
+        self, firmware_stateless, firmware_type, expected, warn, mock_log,
     ):
         image_meta_props = {}
         if firmware_stateless is not None:
@@ -6113,14 +6116,16 @@ class StatelessFirmwareConstraintTest(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(
             {'name': 'bar', 'properties': image_meta_props})
 
-        if isinstance(expected, type) and issubclass(expected, Exception):
-            self.assertRaises(
-                expected, hw.get_stateless_firmware_constraint, image_meta,
-            )
+        self.assertEqual(
+            expected, hw.get_stateless_firmware_constraint(image_meta),
+        )
+
+        if warn:
+            mock_log.warning.assert_called_once_with(
+                "The image property 'hw_firmware_stateless' is set for "
+                "non UEFI firmware type. This property is ignored.")
         else:
-            self.assertEqual(
-                expected, hw.get_stateless_firmware_constraint(image_meta),
-            )
+            mock_log.warning.assert_not_called()
 
 
 @ddt.ddt

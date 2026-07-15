@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    `Bug #2158967 <https://bugs.launchpad.net/nova/+bug/2158967>`_: Fixed
+    wrong validation of the ``hw_firmware_stateless`` image property. Now
+    creating a server with BIOS boot and the ``hw_firmware_stateless`` property
+    set to ``True`` is accepted and succeeds, because BIOS is always stateless
+    and this request is valid.
+    Note that ``hw_firmware_statelsss=True`` in image properties is effectively
+    ignored when a server is created with BIOS boot, to preserve the existing
+    behavior.
