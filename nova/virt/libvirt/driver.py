@@ -921,10 +921,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # needs to check specific hypervisor versions
         self._check_pci_whitelist()
 
-        # Set REGISTER_IMAGE_PROPERTY_DEFAULTS in the instance system_metadata
-        # to default values for properties that have not already been set.
-        self._register_all_undefined_instance_details()
-
     def _check_pci_whitelist(self):
 
         need_specific_version = False
@@ -977,18 +973,127 @@ class LibvirtDriver(driver.ComputeDriver):
             'supports_stateless_firmware': supports_stateless_firmware,
         })
 
-    def _register_all_undefined_instance_details(self) -> None:
-        """Register the default image properties of instances on this host
+    def process_instances_at_startup(self, context, instances):
+        self._validate_pinning_configuration(instances)
+        self._validate_vtpm_configuration(instances)
+        self._register_all_undefined_instance_details(context, instances)
+        return instances
 
-        For each instance found on this host by InstanceList.get_by_host ensure
-        REGISTER_IMAGE_PROPERTY_DEFAULTS are registered within the system
-        metadata of the instance
+    def _validate_pinning_configuration(self, instances):
+        if not self.capabilities.get('supports_pcpus', False):
+            return
+
+        for instance in instances:
+            # ignore deleted instances
+            if instance.deleted:
+                continue
+
+            # if this is an unpinned instance and the host only has
+            # 'cpu_dedicated_set' configured, we need to tell the operator to
+            # correct their configuration
+            if not instance.numa_topology or (
+                instance.numa_topology.cpu_policy in (
+                    None, fields.CPUAllocationPolicy.SHARED
+                )
+            ):
+                # we don't need to check 'vcpu_pin_set' since it can't coexist
+                # alongside 'cpu_dedicated_set'
+                if (CONF.compute.cpu_dedicated_set and
+                        not CONF.compute.cpu_shared_set):
+                    msg = _("This host has unpinned instances but has no CPUs "
+                            "set aside for this purpose; configure '[compute] "
+                            "cpu_shared_set' instead of, or in addition to, "
+                            "'[compute] cpu_dedicated_set'")
+                    raise exception.InvalidConfiguration(msg)
+
+                continue
+
+            # ditto for pinned instances if only 'cpu_shared_set' is configured
+            if (CONF.compute.cpu_shared_set and
+                    not CONF.compute.cpu_dedicated_set and
+                    not CONF.vcpu_pin_set):
+                msg = _("This host has pinned instances but has no CPUs "
+                        "set aside for this purpose; configure '[compute] "
+                        "cpu_dedicated_set' instead of, or in addition to, "
+                        "'[compute] cpu_shared_set'.")
+                raise exception.InvalidConfiguration(msg)
+
+            # if this is a mixed instance with both pinned and unpinned CPUs,
+            # the host must have both 'cpu_dedicated_set' and 'cpu_shared_set'
+            # configured. check if 'cpu_shared_set' is set.
+            if (instance.numa_topology.cpu_policy ==
+                    fields.CPUAllocationPolicy.MIXED and
+                    not CONF.compute.cpu_shared_set):
+                msg = _("This host has mixed instance requesting both pinned "
+                        "and unpinned CPUs but hasn't set aside unpinned CPUs "
+                        "for this purpose; Configure "
+                        "'[compute] cpu_shared_set'.")
+                raise exception.InvalidConfiguration(msg)
+
+            # for mixed instance check if 'cpu_dedicated_set' is set.
+            if (instance.numa_topology.cpu_policy ==
+                    fields.CPUAllocationPolicy.MIXED and
+                    not CONF.compute.cpu_dedicated_set):
+                msg = _("This host has mixed instance requesting both pinned "
+                        "and unpinned CPUs but hasn't set aside pinned CPUs "
+                        "for this purpose; Configure "
+                        "'[compute] cpu_dedicated_set'")
+                raise exception.InvalidConfiguration(msg)
+
+            # also check to make sure the operator hasn't accidentally
+            # dropped some cores that instances are currently using
+            available_dedicated_cpus = (hardware.get_vcpu_pin_set() or
+                                        hardware.get_cpu_dedicated_set())
+            pinned_cpus = instance.numa_topology.cpu_pinning
+            if available_dedicated_cpus and (
+                    pinned_cpus - available_dedicated_cpus):
+                # we can't raise an exception because of bug #1289064,
+                # which meant we didn't recalculate CPU pinning information
+                # when we live migrated a pinned instance
+                LOG.warning(
+                    "Instance is pinned to host CPUs %(cpus)s "
+                    "but one or more of these CPUs are not included in "
+                    "either '[compute] cpu_dedicated_set' or "
+                    "'vcpu_pin_set'; you should update these "
+                    "configuration options to include the missing CPUs "
+                    "or rebuild or cold migrate this instance.",
+                    {'cpus': list(pinned_cpus)},
+                    instance=instance)
+
+    def _validate_vtpm_configuration(
+        self,
+        instances: 'objects.InstanceList',
+    ) -> None:
+        if CONF.libvirt.swtpm_enabled:
+            return
+
+        for instance in instances:
+            if instance.deleted:
+                continue
+
+            # NOTE(stephenfin): We don't have an attribute on the instance to
+            # check for this, so we need to inspect the flavor/image metadata
+            if hardware.get_vtpm_constraint(
+                instance.flavor, instance.image_meta,
+            ):
+                msg = _(
+                    'This host has instances with the vTPM feature enabled, '
+                    'but the host is not correctly configured; enable '
+                    'vTPM support.'
+                )
+                raise exception.InvalidConfiguration(msg)
+
+    def _register_all_undefined_instance_details(
+        self,
+        context: nova_context.RequestContext,
+        instances: 'objects.InstanceList',
+    ) -> None:
+        """Register the default image properties of instances on this host.
+
+        Ensure REGISTER_IMAGE_PROPERTY_DEFAULTS are registered within the
+        system metadata of each instance.
         """
-        context = nova_context.get_admin_context()
-        hostname = self._host.get_hostname()
-        for instance in objects.InstanceList.get_by_host(
-            context, hostname, expected_attrs=['flavor', 'system_metadata']
-        ):
+        for instance in instances:
             try:
                 self._register_undefined_instance_details(context, instance)
             except Exception:

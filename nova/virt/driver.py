@@ -365,6 +365,19 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def process_instances_at_startup(self, context, instances):
+        """Process instances during compute service startup.
+
+        Virt drivers can override this to validate or update the local,
+        non-evacuated instances loaded by the compute manager during service
+        startup.
+
+        :param context: security context
+        :param instances: nova.objects.instance.InstanceList
+        :returns: nova.objects.instance.InstanceList
+        """
+        return instances
+
     def cleanup_host(self, host):
         """Clean up anything that is necessary for the driver gracefully stop,
         including ending remote sessions. This is optional.
