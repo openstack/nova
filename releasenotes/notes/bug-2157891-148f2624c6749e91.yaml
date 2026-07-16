@@ -1,0 +1,18 @@
+---
+upgrade:
+  - |
+    The nova-compute service with libvirt driver now fails to start if any
+    instance in its host requires the memory encryption feature by AMD SEV-ES
+    but it also detects AMD SEV-SNP enabled in the host hardware. The detection
+    is based on the sev_snp parameter of the kvm_amd kernel module, exposed at
+    ``/sys/module/kvm_amd/parameters/sev_snp``.
+
+    Existing instances with AMD SEV-ES memory encryption should be migrated or
+    deleted from the host before SEV-SNP is enabled in the hardware.
+
+fixes:
+  - |
+    [`bug 2157891 <https://bugs.launchpad.net/nova/+bug/2157891>`__] Fixed
+    AMD SEV-ES support reported when AMD SEV-SNP is enabled. This is aligned
+    with recent firmware update, which disables AMD SEV-ES when AMD SEV-SNP
+    is enabled.

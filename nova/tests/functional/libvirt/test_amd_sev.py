@@ -13,6 +13,7 @@
 import copy
 from unittest import mock
 
+import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import versionutils
 
@@ -47,17 +48,18 @@ class TestSEV(base.ServersTestBase):
 
         self.sev = True
         self.sev_es = True
+        self.sev_snp = False
 
         def mock_kernel(model='sev'):
+            if model == 'sev-snp':
+                return self.sev_snp
             if model == 'sev-es':
                 return self.sev_es
             return self.sev
 
-        patcher = mock.patch(
+        self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.host.Host._kernel_supports_amd_sev',
-            side_effect=mock_kernel)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+            side_effect=mock_kernel))
 
         self.qemu_version = versionutils.convert_version_to_int(
             host.MIN_QEMU_SEV_ES_VERSION)
@@ -110,6 +112,33 @@ class TestSEV(base.ServersTestBase):
 
         # now sev-es is lost, so compute should fail
         self.sev_es = False
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self.restart_compute_service, self.hostname)
+        self.assertIn(
+            'This host has instances with the memory encryption feature by '
+            'amd-sev-es enabled but the host is configured not to support '
+            'this feature any more.',
+            str(ex))
+
+    @mock.patch.object(
+        fakelibvirt.virConnect, '_domain_capability_features',
+        new=fakelibvirt.virConnect.
+            _domain_capability_features_with_SEV_max_guests)
+    def test_sev_snp_detected_after_restart(self):
+        """Compute should fail if sev-es instance exists but sev-snp is
+        detected
+        """
+        self.hostname = self.start_compute(qemu_version=self.qemu_version)
+
+        # create sev-es instance
+        self._create_server(
+            image_uuid=uuids.sev_es_image_id,
+            networks='none'
+        )
+
+        # sev-es is lost because sev-snp is detected, so compute should fail
+        self.sev_snp = True
         ex = self.assertRaises(
             exception.InvalidConfiguration,
             self.restart_compute_service, self.hostname)

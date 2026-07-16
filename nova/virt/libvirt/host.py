@@ -2105,6 +2105,12 @@ class Host(object):
             LOG.info("QEMU doesn't support AMD SEV-ES")
             return self._supports_amd_sev_es
 
+        if self._kernel_supports_amd_sev(model='sev-snp'):
+            LOG.warning("AMD SEV-ES support is detected, but ignored because "
+                        "AMD SEV-SNP support is detected")
+            return False
+
+        LOG.info("AMD SEV-ES support detected")
         self._supports_amd_sev_es = True
         return self._supports_amd_sev_es
 
