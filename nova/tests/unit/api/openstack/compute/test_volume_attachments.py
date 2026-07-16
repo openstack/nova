@@ -1288,6 +1288,25 @@ class VolumeAttachTestsV289(VolumeAttachTestsV285):
         self.assertNotIn('bdm_uuid', result['volumeAttachment'])
         self.assertNotIn('attachment_id', result['volumeAttachment'])
 
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
+    def test_show_no_attachment_id(self, mock_get_bdm):
+        mock_get_bdm.return_value = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            uuid=uuids.bdm,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=True,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=None)
+        self.assertRaises(
+            webob.exc.HTTPNotFound,
+            self.controller.show, self.req, FAKE_UUID, FAKE_UUID_A)
+
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     def test_list(self, mock_get_bdms):
         vol_bdm = objects.BlockDeviceMapping(
@@ -1303,7 +1322,23 @@ class VolumeAttachTestsV289(VolumeAttachTestsV285):
             tag='fake-tag',
             device_name='/dev/fake0',
             attachment_id=uuids.attachment_id)
-        bdms = objects.BlockDeviceMappingList(objects=[vol_bdm])
+        # This is expected to be filtered out to fulfill the response schema
+        # that declares attachment_id as not None
+        vol_bdm_no_attachment_id = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            uuid=uuids.bdm,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=True,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=None)
+        bdms = objects.BlockDeviceMappingList(
+            objects=[vol_bdm, vol_bdm_no_attachment_id])
         mock_get_bdms.return_value = bdms
 
         req = fakes.HTTPRequest.blank(

@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    `Bug #2160224 <https://bugs.launchpad.net/nova/+bug/2160224>`_: Fixed the
+    `GET servers/<server_id>/os-volume_attachments/<volume_id>` and
+    `GET servers/<server_id>/os-volume_attachments` not to intermittently
+    return an empty attachment_id (or return HTTP 400 if response body schema
+    validation is enabled) while the volume is being attached to the server in
+    microversion 2.89 or newer.
+    The show API will keep returning 404 until the attachment_id is populated.
+    The list API will keep filtering out the attachment from the response
+    until the attachment_id is populated.
