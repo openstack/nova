@@ -3337,7 +3337,6 @@ class LibvirtDriver(driver.ComputeDriver):
             self._host.has_min_version(hv_type=host.HV_DRIVER_QEMU) and
             source_type != 'lvm' and
             not CONF.ephemeral_storage_encryption.enabled and
-            not CONF.workarounds.disable_libvirt_livesnapshot and
             # NOTE(stephenfin): Live snapshotting doesn't make sense for
             # shutdown instances
             original_power_state != power_state.SHUTDOWN

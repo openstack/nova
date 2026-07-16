@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    The deprecated ``[workarounds] disable_libvirt_livesnapshot`` option has
+    been removed.
