@@ -976,6 +976,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def process_instances_at_startup(self, context, instances):
         self._validate_pinning_configuration(instances)
         self._validate_vtpm_configuration(instances)
+        self._validate_mem_encryption_configuration(instances)
         self._register_all_undefined_instance_details(context, instances)
         return instances
 
@@ -1082,6 +1083,39 @@ class LibvirtDriver(driver.ComputeDriver):
                     'vTPM support.'
                 )
                 raise exception.InvalidConfiguration(msg)
+
+    def _validate_mem_encryption_configuration(
+        self,
+        instances: 'objects.InstanceList',
+    ) -> None:
+
+        for instance in instances:
+            if instance.deleted:
+                continue
+
+            try:
+                mem_enc = hardware.get_mem_encryption_constraint(
+                    instance.flavor, instance.image_meta,
+                )
+            except exception.FlavorImageConflict:
+                continue
+
+            if not mem_enc:
+                continue
+
+            if self._is_supported_mem_encryption_model(mem_enc.model):
+                continue
+
+            msg = _(
+                'This host has instances with the memory encryption feature '
+                'by %s enabled but the host is configured not to support '
+                'this feature any more. '
+                'Please move or delete these instances from this host, '
+                'before disabling the feature support. '
+                'Evacuate the instances or fix configuration to enable '
+                'the feature to recover the nova-compute service.'
+            )
+            raise exception.InvalidConfiguration(msg % mem_enc.model)
 
     def _register_all_undefined_instance_details(
         self,
@@ -13632,6 +13666,14 @@ class LibvirtDriver(driver.ComputeDriver):
                            nova.privsep.fs.FS_FORMAT_EXT3,
                            nova.privsep.fs.FS_FORMAT_EXT4,
                            nova.privsep.fs.FS_FORMAT_XFS]
+
+    def _is_supported_mem_encryption_model(self, me_model):
+        if me_model == fields.MemEncryptionModel.AMD_SEV:
+            return self._host.supports_amd_sev
+        if me_model == fields.MemEncryptionModel.AMD_SEV_ES:
+            return self._host.supports_amd_sev_es
+        raise exception.Invalid('Invalid memory encryption model: %r' %
+                                me_model)
 
     def _get_tpm_traits(self) -> dict[str, bool]:
         # Assert or deassert TPM support traits
