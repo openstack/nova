@@ -1,0 +1,6 @@
+---
+security:
+  - |
+    Bug #2158919 is fixed, which involved an authenticated user able to poison
+    the server-side allowed origins list (and potentially exhaust memory by
+    extending it until failure).
