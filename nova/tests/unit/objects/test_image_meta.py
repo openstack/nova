@@ -675,3 +675,21 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertNotIn(
             'hw_mem_encryption_model',
             primitive['nova_object.data'])
+
+    def test_obj_make_compatible_mem_encryption_model_amd_sev_snp(self):
+        """Test "amd-sev-snp" support from Nova object version 1.43 onwords
+        """
+        obj = objects.ImageMetaProps(
+            hw_mem_encryption_model=fields.MemEncryptionModel.AMD_SEV_SNP)
+        primitive = obj.obj_to_primitive('1.43')
+        self.assertIn(
+            'hw_mem_encryption_model',
+            primitive['nova_object.data'])
+        self.assertEqual(
+            fields.MemEncryptionModel.AMD_SEV_SNP,
+            primitive['nova_object.data']['hw_mem_encryption_model'])
+
+        ex = self.assertRaises(exception.ObjectActionError,
+                               obj.obj_to_primitive, '1.42')
+        self.assertIn('hw_mem_encryption_model=amd-sev-snp not supported',
+                      str(ex))

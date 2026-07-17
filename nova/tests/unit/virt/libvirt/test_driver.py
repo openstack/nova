@@ -3866,6 +3866,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = True
         drvr._host._supports_amd_sev_es = False
+        drvr._host._supports_amd_sev_snp = False
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict({
             "hw_architecture": fields.Architecture.X86_64,
@@ -24146,6 +24147,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self.driver._host._supports_amd_sev = True
         self.driver._host._max_sev_guests = 0
         self.driver._host._supports_amd_sev_es = False
+        self.driver._host._supports_amd_sev_snp = False
         # Before we update_provider_tree, we have 2 providers from setUp():
         # self.cn_rp and self.shared_rp and they are both empty {}.
         self.assertEqual(2, len(self.pt.get_provider_uuids()))
@@ -24267,10 +24269,11 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self.assertEqual(expected_resources,
                          self.pt.data(self.cn_rp['uuid']).resources)
 
-    def test_update_provider_tree_with_memory_encryption(self):
+    def test_update_provider_tree_with_memory_encryption_sev(self):
         self.driver._host._supports_amd_sev = True
         self.driver._host._max_sev_guests = 16
         self.driver._host._supports_amd_sev_es = False
+        self.driver._host._supports_amd_sev_snp = False
         self._test_update_provider_tree()
         inventory = self._get_inventory()
         # root compute node provider inventory is unchanged
@@ -24296,6 +24299,104 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             }
         }, sev_provider_data.inventory)
         self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
+
+    def test_update_provider_tree_with_memory_encryption_sev_es(self):
+        self.driver._host._supports_amd_sev = True
+        self.driver._host._max_sev_guests = 16
+        self.driver._host._supports_amd_sev_es = True
+        self.driver._host._max_sev_es_guests = 17
+        self.driver._host._supports_amd_sev_snp = False
+        self._test_update_provider_tree()
+        inventory = self._get_inventory()
+        # root compute node provider inventory is unchanged
+        self.assertEqual(inventory,
+                         (self.pt.data(self.cn_rp['uuid'])).inventory)
+        # We should have new sev child providers in the tree under the
+        # compute node root provider.
+        compute_node_tree_uuids = self.pt.get_provider_uuids(
+            self.cn_rp['name'])
+        self.assertEqual(3, len(compute_node_tree_uuids))
+        sev_rp_uuid = compute_node_tree_uuids[1]
+        sev_provider_data = self.pt.data(sev_rp_uuid)
+        self.assertEqual('%s_amd_sev' % self.cn_rp['name'],
+                         sev_provider_data.name)
+        self.assertEqual({
+            orc.MEM_ENCRYPTION_CONTEXT: {
+                'total': 16,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0
+            }
+        }, sev_provider_data.inventory)
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
+
+        sev_es_rp_uuid = compute_node_tree_uuids[2]
+        sev_es_provider_data = self.pt.data(sev_es_rp_uuid)
+        self.assertEqual('%s_amd_sev_es' % self.cn_rp['name'],
+                         sev_es_provider_data.name)
+        self.assertEqual({
+            orc.MEM_ENCRYPTION_CONTEXT: {
+                'total': 17,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0
+            }
+        }, sev_es_provider_data.inventory)
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV_ES},
+                          sev_es_provider_data.traits)
+
+    def test_update_provider_tree_with_memory_encryption_sev_snp(self):
+        self.driver._host._supports_amd_sev = True
+        self.driver._host._max_sev_guests = 16
+        self.driver._host._supports_amd_sev_es = False
+        self.driver._host._max_sev_es_guests = 17
+        self.driver._host._supports_amd_sev_snp = True
+        self._test_update_provider_tree()
+        inventory = self._get_inventory()
+        # root compute node provider inventory is unchanged
+        self.assertEqual(inventory,
+                         (self.pt.data(self.cn_rp['uuid'])).inventory)
+        # We should have new sev child providers in the tree under the
+        # compute node root provider.
+        compute_node_tree_uuids = self.pt.get_provider_uuids(
+            self.cn_rp['name'])
+        self.assertEqual(3, len(compute_node_tree_uuids))
+        sev_rp_uuid = compute_node_tree_uuids[1]
+        sev_provider_data = self.pt.data(sev_rp_uuid)
+        self.assertEqual('%s_amd_sev' % self.cn_rp['name'],
+                         sev_provider_data.name)
+        self.assertEqual({
+            orc.MEM_ENCRYPTION_CONTEXT: {
+                'total': 16,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0
+            }
+        }, sev_provider_data.inventory)
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
+
+        sev_snp_rp_uuid = compute_node_tree_uuids[2]
+        sev_snp_provider_data = self.pt.data(sev_snp_rp_uuid)
+        self.assertEqual('%s_amd_sev_snp' % self.cn_rp['name'],
+                         sev_snp_provider_data.name)
+        self.assertEqual({
+            orc.MEM_ENCRYPTION_CONTEXT: {
+                'total': 17,
+                'step_size': 1,
+                'max_unit': 1,
+                'min_unit': 1,
+                'reserved': 0,
+                'allocation_ratio': 1.0
+            }
+        }, sev_snp_provider_data.inventory)
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV_SNP},
+                          sev_snp_provider_data.traits)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
                 new=mock.Mock(return_value={'total': disk_gb}))
@@ -24636,6 +24737,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self.driver._host._supports_amd_sev = True
         self.driver._host._max_sev_guests = 16
         self.driver._host._supports_amd_sev_es = False
+        self.driver._host._supports_amd_sev_snp = False
         # First create a provider tree with MEM_ENCRYPTION_CONTEXT inventory on
         # the root node provider.
         inventory = self._get_inventory()
@@ -24748,6 +24850,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self.driver._host._supports_amd_sev = True
         self.driver._host._max_sev_guests = 16
         self.driver._host._supports_amd_sev_es = False
+        self.driver._host._supports_amd_sev_snp = False
         # First create a provider tree with MEM_ENCRYPTION_CONTEXT inventory on
         # the root node provider.
         inventory = self._get_inventory()
@@ -32591,6 +32694,9 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
             },
             'amd_sev_es': {
                 'total': 0
+            },
+            'amd_sev_snp': {
+                'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
 
@@ -32601,6 +32707,9 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
                 'total': 0
             },
             'amd_sev_es': {
+                'total': 0
+            },
+            'amd_sev_snp': {
                 'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
@@ -32616,6 +32725,9 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
             },
             'amd_sev_es': {
                 'total': 0
+            },
+            'amd_sev_snp': {
+                'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_called_with(
@@ -32628,6 +32740,9 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
                 'total': 0
             },
             'amd_sev_es': {
+                'total': 0
+            },
+            'amd_sev_snp': {
                 'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
@@ -32661,6 +32776,9 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
             },
             'amd_sev_es': {
                 'total': 0
+            },
+            'amd_sev_snp': {
+                'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
 
@@ -32678,6 +32796,9 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
             },
             'amd_sev_es': {
+                'total': 0
+            },
+            'amd_sev_snp': {
                 'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
@@ -32698,6 +32819,9 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
             'amd_sev_es': {
                 'total': 0
             },
+            'amd_sev_snp': {
+                'total': 0
+            }
         }, self.driver._get_memory_encryption_inventories())
 
 
@@ -32731,6 +32855,9 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
             'amd_sev_es': {
                 'total': 0
             },
+            'amd_sev_snp': {
+                'total': 0
+            },
         }, self.driver._get_memory_encryption_inventories())
         mock_log.assert_not_called()
 
@@ -32749,6 +32876,9 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
             },
             'amd_sev_es': {
+                'total': 0
+            },
+            'amd_sev_snp': {
                 'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
@@ -32771,6 +32901,9 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
                 'traits': [ot.HW_CPU_X86_AMD_SEV]
             },
             'amd_sev_es': {
+                'total': 0
+            },
+            'amd_sev_snp': {
                 'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())

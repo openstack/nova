@@ -81,6 +81,8 @@ HV_DRIVER_QEMU = "QEMU"
 SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/%s'
 
 MIN_QEMU_SEV_ES_VERSION = (8, 0, 0)
+MIN_QEMU_SEV_SNP_VERSION = (9, 1, 0)
+MIN_LIBVIRT_SEV_SNP_VERSION = (10, 5, 0)
 
 
 class LibvirtEventHandler:
@@ -325,6 +327,7 @@ class Host(object):
         # memoized by various properties below
         self._supports_amd_sev: bool | None = None
         self._supports_amd_sev_es: bool | None = None
+        self._supports_amd_sev_snp: bool | None = None
         self._max_sev_guests: int | None = None
         self._max_sev_es_guests: int | None = None
         self._supports_uefi: bool | None = None
@@ -2084,7 +2087,7 @@ class Host(object):
     def supports_amd_sev_es(self) -> bool:
         """Determine if the host supports AMD SEV-ES for guests.
 
-        Returns a boolean indicating whether AMD SEV (Secure Encrypted
+        Returns a boolean indicating whether AMD SEV-ES (Secure Encrypted
         Virtualization-Encrypted State) is supported.  This is conditional on
         support in the hardware, kernel, qemu, and libvirt. SEV-ES is enabled
         in kernel only when SEV is enabled, so this check depends on
@@ -2113,6 +2116,36 @@ class Host(object):
         LOG.info("AMD SEV-ES support detected")
         self._supports_amd_sev_es = True
         return self._supports_amd_sev_es
+
+    @property
+    def supports_amd_sev_snp(self) -> bool:
+        """Determine if the host supports AMD SEV-SNP for guests.
+
+        Returns a boolean indicating whether AMD SEV-SNP (Secure Encrypted
+        Secure Encrypted Virtualization State) is supported.  This is
+        conditional on support in the hardware, kernel, qemu, and libvirt.
+        SEV-SNP is enabled in kernel only when SEV is enabled, so this check
+        depends on the supports_amd_sev check.
+        """
+        if self._supports_amd_sev_snp is not None:
+            return self._supports_amd_sev_snp
+
+        self._supports_amd_sev_snp = False
+        if not self.supports_amd_sev:
+            return self._supports_amd_sev_snp
+
+        if not self._kernel_supports_amd_sev(model='sev-snp'):
+            LOG.info("kernel doesn't support AMD SEV-SNP")
+            return self._supports_amd_sev_snp
+
+        if not self.has_min_version(lv_ver=MIN_LIBVIRT_SEV_SNP_VERSION,
+                                    hv_ver=MIN_QEMU_SEV_SNP_VERSION):
+            LOG.info("QEMU or libvirt doesn't support AMD SEV-SNP")
+            return self._supports_amd_sev_snp
+
+        LOG.info("AMD SEV-SNP support detected")
+        self._supports_amd_sev_snp = True
+        return self._supports_amd_sev_snp
 
     @property
     def max_sev_guests(self) -> int | None:
@@ -2204,6 +2237,15 @@ class Host(object):
 
     def _get_mem_encryption_traits_amd_sev_es(self) -> list[str]:
         return [ot.HW_CPU_X86_AMD_SEV_ES]
+
+    def _get_mem_encryption_slots_amd_sev_snp(self) -> int:
+        if self.supports_amd_sev_snp and self.max_sev_es_guests is not None:
+            return self.max_sev_es_guests
+        else:
+            return 0
+
+    def _get_mem_encryption_traits_amd_sev_snp(self) -> list[str]:
+        return [ot.HW_CPU_X86_AMD_SEV_SNP]
 
     @property
     def supports_remote_managed_ports(self) -> bool:
