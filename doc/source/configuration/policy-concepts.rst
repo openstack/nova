@@ -82,17 +82,6 @@ For example, consider the ``POST /os-server-groups`` API.
     # Intended scope(s): project
     #"os_compute_api:os-server-groups:create": "rule:project_member_api"
 
-Policy scope is disabled by default to allow operators to migrate from
-the old policy enforcement system in a graceful way. This can be
-enabled by configuring the :oslo.config:option:`oslo_policy.enforce_scope`
-option to ``True``.
-
-.. note::
-
-  [oslo_policy]
-  enforce_scope=True
-
-
 Roles
 -----
 
@@ -366,17 +355,6 @@ Here is step wise guide for migration:
    If you do not have new defaults in Keystone then you can create and re-run
    the :keystone-doc:`Keystone Bootstrap </admin/bootstrap.html>`. Keystone
    added this support in 14.0.0 (Rocky) release.
-
-#. Enable Scope Checks
-
-   The :oslo.config:option:`oslo_policy.enforce_scope` flag is to enable the
-   ``scope_type`` features. The scope of the token used in the request is
-   always compared to the ``scope_type`` of the policy. If the scopes do not
-   match, one of two things can happen. If :oslo.config:option:`oslo_policy.enforce_scope`
-   is True, the request will be rejected. If  :oslo.config:option:`oslo_policy.enforce_scope`
-   is False, an warning will be logged, but the request will be accepted
-   (assuming the rest of the policy passes). The default value of this flag
-   is False.
 
 #. Enable new defaults
 
