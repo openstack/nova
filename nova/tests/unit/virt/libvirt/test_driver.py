@@ -104,7 +104,6 @@ from nova.virt import hardware
 from nova.virt.image import model as imgmodel
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import designer
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
@@ -4012,7 +4011,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "(150d530b-1c57-4367-b754-1f1b5237923d): q35 type is required "
             "for SEV to work", str(exc))
 
-    def _setup_sev_guest(self, extra_image_properties=None, model=None):
+    def _setup_sev_guest(self, model=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_uefi = True
         drvr._host._supports_amd_sev = True
@@ -4034,16 +4033,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.flavor = flavor
-        image_meta_properties = {
-            'hw_firmware_type': 'uefi',
-            'hw_machine_type': 'q35'}
-        if extra_image_properties:
-            image_meta_properties.update(extra_image_properties)
         image_meta = objects.ImageMeta.from_dict({
             'id': 'd9c6aeee-8258-4bdb-bca4-39940461b182',
             'name': 'fakeimage',
             'disk_format': 'raw',
-            'properties': image_meta_properties})
+            'properties': {
+                'hw_firmware_type': 'uefi',
+                'hw_machine_type': 'q35'
+            }
+        })
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -4060,8 +4058,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         {'sev_model': 'amd-sev', 'sev_policy': 0x0033},
         {'sev_model': 'amd-sev-es', 'sev_policy': 0x0037}
     )
-    @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
-    def test_get_guest_config_sev(self, mock_designer, sev_model, sev_policy):
+    def test_get_guest_config_sev(self, sev_model, sev_policy):
         cfg = self._setup_sev_guest(model=sev_model)
 
         # SEV-related tag should be set
@@ -4072,14 +4069,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(cfg.membacking.locked)
         self.assertEqual(sev_policy, cfg.launch_security.policy)
 
-        mock_designer.assert_called_once_with(cfg)
-
     @mock.patch.object(hardware.MemEncryptionConfigSev, 'model',
                        new_callable=mock.PropertyMock)
-    @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
-    def test_get_guest_config_invalid_mem_enc_model(
-        self, mock_designer, fake_me_model
-    ):
+    def test_get_guest_config_invalid_mem_enc_model(self, fake_me_model):
         fake_me_model.return_value = 'invalid'
         self.assertRaisesRegex(exception.Invalid,
                                'Unknown MemEncryptionModel: invalid',
@@ -7894,29 +7886,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[6].type, "unix")
         self.assertEqual(cfg.devices[6].target_name, "org.qemu.guest_agent.0")
 
-    @ddt.unpack
-    @ddt.data(
-        {'sev_model': None},
-        {'sev_model': 'amd-sev'},
-        {'sev_model': 'amd-sev-es'}
-    )
-    @mock.patch.object(designer, 'set_driver_iommu_for_all_devices')
-    def test_get_guest_config_with_qga_through_image_meta_with_sev(
-        self, mock_designer, sev_model
-    ):
-        extra_properties = {"hw_qemu_guest_agent": "yes"}
-        cfg = self._setup_sev_guest(extra_properties, model=sev_model)
-
-        self.assertIsInstance(cfg.devices[8],
-                              vconfig.LibvirtConfigGuestController)
-        self.assertIsInstance(cfg.devices[9],
-                              vconfig.LibvirtConfigGuestChannel)
-
-        self.assertEqual(cfg.devices[8].type, "virtio-serial")
-        self.assertTrue(cfg.devices[8].uses_virtio)
-        self.assertEqual(cfg.devices[9].type, "unix")
-        self.assertEqual(cfg.devices[9].target_name, "org.qemu.guest_agent.0")
-
     def test_get_guest_config_with_vtpm(self):
         self.flags(virt_type='kvm', group='libvirt')
 
@@ -10688,14 +10657,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         return fake_config
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       '_get_mem_encryption_config',
-                       new=mock.Mock(return_value=None))
     @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver, 'get_config')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_cache_mode')
     def test_get_volume_config(self, mock_set_cache_mode, mock_get_config):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(**self.test_instance)
         connection_info = {
             'driver_volume_type': 'fake',
             'data': {
@@ -10707,7 +10672,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_config.return_value = copy.deepcopy(generated_config)
 
         returned_config = drvr._get_volume_config(
-            instance,
             connection_info,
             mock.sentinel.disk_info)
 
@@ -10716,35 +10680,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.sentinel.disk_info)
         mock_set_cache_mode.assert_called_once_with(returned_config)
         self.assertEqual(generated_config.to_xml(), returned_config.to_xml())
-
-    @mock.patch.object(
-        libvirt_driver.LibvirtDriver, '_get_mem_encryption_config',
-        new=mock.Mock(return_value=hardware.MemEncryptionConfig.create(
-            fields.MemEncryptionModel.AMD_SEV)))
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_cache_mode',
-                       new=mock.Mock())
-    @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver, 'get_config')
-    def test_get_volume_config_sev(self, mock_get_config):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(**self.test_instance)
-        connection_info = {
-            'driver_volume_type': 'fake',
-            'data': {
-                'device_path': '/fake',
-                'access_mode': 'rw'
-            }
-        }
-        generated_config = self._fake_libvirt_config_guest_disk()
-        generated_config.target_bus = 'virtio'
-        mock_get_config.return_value = copy.deepcopy(generated_config)
-
-        returned_config = drvr._get_volume_config(
-            instance,
-            connection_info,
-            mock.sentinel.disk_info)
-
-        # Assert that driver_iommu is enabled for this virtio volume
-        self.assertTrue(returned_config.driver_iommu)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_driver')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_attach_encryptor')
@@ -11155,7 +11090,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock_connect_volume.assert_called_with(
                     self.context, connection_info, instance, encryption=None)
                 mock_get_volume_config.assert_called_with(
-                    instance, connection_info, disk_info)
+                    connection_info, disk_info)
                 mock_dom.attachDeviceFlags.assert_called_with(
                     mock_conf.to_xml(), flags=flags)
                 mock_check_discard.assert_called_with(mock_conf, instance)
@@ -14168,10 +14103,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ),
             mock.patch.object(
                 guest, 'get_xml_desc', return_value=initial_xml
-            ),
-            mock.patch.object(
-                drvr, '_get_mem_encryption_config',
-                new=mock.Mock(return_value=None)
             )
         ):
             config = libvirt_migrate.get_updated_guest_xml(
@@ -14377,10 +14308,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ),
             mock.patch.object(
                 guest, 'get_xml_desc', return_value=initial_xml
-            ),
-            mock.patch.object(
-                drvr, '_get_mem_encryption_config',
-                new=mock.Mock(return_value=None)
             )
         ):
             config = libvirt_migrate.get_updated_guest_xml(
@@ -14424,10 +14351,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ),
             mock.patch.object(
                 guest, 'get_xml_desc', return_value=initial_xml
-            ),
-            mock.patch.object(
-                drvr, '_get_mem_encryption_config',
-                new=mock.Mock(return_value=None)
             )
         ):
             config = libvirt_migrate.get_updated_guest_xml(
@@ -22510,7 +22433,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             connect_volume.assert_called_with(self.context,
                 bdm['connection_info'], instance)
             get_volume_config.assert_called_with(
-                instance,
                 bdm['connection_info'],
                 {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
             volume_save.assert_called_once_with()
@@ -26881,7 +26803,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_save.assert_called_once_with()
             mock_set_metadata.assert_called_once_with(config_meta)
 
-    @mock.patch('nova.virt.libvirt.designer.set_driver_iommu_for_device')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_mem_encryption_config')
     @mock.patch.object(objects.Instance, 'get_network_info')
@@ -26893,8 +26814,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def _test_attach_interface(self, power_state, expected_flags,
                                mock_get_domain, mock_attach, mock_info,
                                mock_build, mock_save, mock_get_network_info,
-                               mock_me_config, mock_designer_set_iommu,
-                               me_config=None):
+                               mock_me_config, me_config=None):
         instance = self._create_instance()
         network_info = _fake_network_info(self)
         domain = FakeVirtDomain(fake_xml="""
@@ -26938,23 +26858,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_get_network_info.assert_called_once_with()
             mock_attach.assert_called_once_with(expected.to_xml(),
                                                 flags=expected_flags)
-            if me_config:
-                mock_designer_set_iommu.assert_called_once_with(expected)
 
     def test_attach_interface_with_running_instance(self):
         self._test_attach_interface(
             power_state.RUNNING,
             (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
              fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
-
-    def test_attach_interface_with_sev(self):
-        self._test_attach_interface(
-            power_state.RUNNING,
-            (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
-             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE),
-            me_config=hardware.MemEncryptionConfig.create(
-                fields.MemEncryptionModel.AMD_SEV
-            ))
 
     def test_attach_interface_with_pause_instance(self):
         self._test_attach_interface(

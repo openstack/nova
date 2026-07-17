@@ -375,7 +375,7 @@ def _update_volume_xml(xml_doc, migrate_data, instance, get_volume_config):
             serial_source not in bdm_info_by_serial):
             continue
         conf = get_volume_config(
-            instance, bdm_info.connection_info, bdm_info.as_disk_info())
+            bdm_info.connection_info, bdm_info.as_disk_info())
 
         if bdm_info.obj_attr_is_set('encryption_secret_uuid'):
             conf.volume_encryption = vconfig.LibvirtConfigGuestDiskEncryption()

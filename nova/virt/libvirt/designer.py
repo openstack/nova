@@ -205,13 +205,3 @@ def set_vcpu_realtime_scheduler(conf, vcpus_rt, priority):
     conf.vcpus = vcpus_rt
     conf.scheduler = "fifo"
     conf.priority = priority
-
-
-def set_driver_iommu_for_device(dev):
-    if dev.uses_virtio:
-        dev.driver_iommu = True
-
-
-def set_driver_iommu_for_all_devices(conf):
-    for dev in conf.devices:
-        set_driver_iommu_for_device(dev)
