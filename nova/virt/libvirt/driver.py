@@ -7886,10 +7886,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._guest_add_mdevs(guest, mdevs)
 
         if me_config:
-            caps = self._host.get_capabilities()
-            self._guest_configure_mem_encryption(guest, caps.host.cpu.arch,
-                                                 guest.os_mach_type,
-                                                 me_config.model)
+            self._guest_configure_mem_encryption(guest, me_config.model)
 
         if vpmems:
             self._guest_add_vpmems(guest, vpmems)
@@ -7958,11 +7955,10 @@ class LibvirtDriver(driver.ComputeDriver):
         return hardware.get_mem_encryption_constraint(flavor, image_meta,
                                                       mach_type)
 
-    def _guest_configure_mem_encryption(self, guest, arch, mach_type, model):
+    def _guest_configure_mem_encryption(self, guest, model):
         if model in (fields.MemEncryptionModel.AMD_SEV,
                      fields.MemEncryptionModel.AMD_SEV_ES):
-            self._guest_configure_sev_mem_encryption(
-                guest, arch, mach_type, model)
+            self._guest_configure_sev_mem_encryption(guest, model)
         else:
             raise exception.Invalid(
                 "Unknown MemEncryptionModel: %(model)s. "
@@ -7971,23 +7967,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     'supported': ', '.join(fields.MemEncryptionModel.ALL)
                 })
 
-    def _guest_configure_sev_mem_encryption(
-        self, guest, arch, mach_type, model):
-        sev = self._find_sev_feature(arch, mach_type)
-        if sev is None:
-            # In theory this should never happen because it should
-            # only get called if SEV was requested, in which case the
-            # guest should only get scheduled on this host if it
-            # supports SEV, and SEV support is dependent on the
-            # presence of this <sev> feature.  That said, it's
-            # conceivable that something could get messed up along the
-            # way, e.g. a mismatch in the choice of machine type.  So
-            # make sure that if it ever does happen, we at least get a
-            # helpful error rather than something cryptic like
-            # "AttributeError: 'NoneType' object has no attribute 'cbitpos'
-            raise exception.MissingDomainCapabilityFeatureException(
-                feature='sev')
-
+    def _guest_configure_sev_mem_encryption(self, guest, model):
         designer.set_driver_iommu_for_all_devices(guest)
         self._guest_add_sev_launch_security(guest, model)
 
@@ -7997,33 +7977,6 @@ class LibvirtDriver(driver.ComputeDriver):
         if model == fields.MemEncryptionModel.AMD_SEV_ES:
             launch_security.policy = launch_security.DEFAULT_SEV_ES_POLICY
         guest.launch_security = launch_security
-
-    def _find_sev_feature(self, arch, mach_type):
-        """Search domain capabilities for the given arch and machine type
-        for the <sev> element under <features>, and return it if found.
-        """
-        domain_caps = self._host.get_domain_capabilities()
-        if arch not in domain_caps:
-            LOG.warning(
-                "Wanted to add SEV to config for guest with arch %(arch)s "
-                "but only had domain capabilities for: %(archs)s",
-                {'arch': arch, 'archs': ' '.join(domain_caps)})
-            return None
-
-        if mach_type not in domain_caps[arch]:
-            LOG.warning(
-                "Wanted to add SEV to config for guest with machine type "
-                "%(mtype)s but for arch %(arch)s only had domain capabilities "
-                "for machine types: %(mtypes)s",
-                {'mtype': mach_type, 'arch': arch,
-                 'mtypes': ' '.join(domain_caps[arch])})
-            return None
-
-        for feature in domain_caps[arch][mach_type].features:
-            if feature.root_name == 'sev':
-                return feature
-
-        return None
 
     def _guest_add_mdevs(self, guest, chosen_mdevs):
         for chosen_mdev in chosen_mdevs:
