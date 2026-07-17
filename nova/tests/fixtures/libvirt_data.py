@@ -249,8 +249,6 @@ FAKE_KVM_GUEST = """
     </devices>
     <launchSecurity type="sev">
       <policy>0x0033</policy>
-      <cbitpos>47</cbitpos>
-      <reducedPhysBits>1</reducedPhysBits>
     </launchSecurity>
   </domain>"""
 

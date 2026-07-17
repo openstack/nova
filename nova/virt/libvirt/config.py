@@ -360,8 +360,6 @@ class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
         super(LibvirtConfigDomainCapsFeatureSev, self).__init__(
             root_name='sev', **kwargs)
         self.supported = False
-        self.cbitpos = None
-        self.reduced_phys_bits = None
         self.max_guests = None
         self.max_es_guests = None
 
@@ -372,11 +370,7 @@ class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
             self.supported = True
 
         for c in list(xmldoc):
-            if c.tag == 'reducedPhysBits':
-                self.reduced_phys_bits = int(c.text)
-            elif c.tag == 'cbitpos':
-                self.cbitpos = int(c.text)
-            elif c.tag == 'maxGuests':
+            if c.tag == 'maxGuests':
                 self.max_guests = int(c.text)
             elif c.tag == 'maxESGuests':
                 self.max_es_guests = int(c.text)
@@ -3085,8 +3079,6 @@ class LibvirtConfigGuestSEVLaunchSecurity(LibvirtConfigObject):
         # Use SEV policy as default, because SEV is the default encryption
         # model
         self.policy = self.DEFAULT_SEV_POLICY
-        self.cbitpos = None
-        self.reduced_phys_bits = None
 
     def format_dom(self):
         root = super(LibvirtConfigGuestSEVLaunchSecurity, self).format_dom()
@@ -3095,14 +3087,6 @@ class LibvirtConfigGuestSEVLaunchSecurity(LibvirtConfigObject):
         policy = etree.Element('policy')
         policy.text = '0x%04x' % self.policy
         root.append(policy)
-
-        cbitpos = etree.Element('cbitpos')
-        cbitpos.text = str(self.cbitpos)
-        root.append(cbitpos)
-
-        reducedPhysBits = etree.Element('reducedPhysBits')
-        reducedPhysBits.text = str(self.reduced_phys_bits)
-        root.append(reducedPhysBits)
 
         return root
 

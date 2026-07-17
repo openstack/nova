@@ -1001,8 +1001,6 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(vconfig.LibvirtConfigDomainCapsFeatureSev, type(sev))
         self.assertEqual(supported, sev.supported)
         if supported:
-            self.assertEqual(47, sev.cbitpos)
-            self.assertEqual(1, sev.reduced_phys_bits)
             self.assertIsNone(sev.max_guests)
             self.assertIsNone(sev.max_es_guests)
 
@@ -1030,8 +1028,6 @@ class HostTestCase(test.NoDBTestCase):
         sev = features[0]
         self.assertEqual(vconfig.LibvirtConfigDomainCapsFeatureSev, type(sev))
         self.assertTrue(sev.supported)
-        self.assertEqual(47, sev.cbitpos)
-        self.assertEqual(1, sev.reduced_phys_bits)
         self.assertEqual(100, sev.max_guests)
         self.assertEqual(15, sev.max_es_guests)
 

@@ -2731,15 +2731,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
         # SEV
         obj = config.LibvirtConfigGuestSEVLaunchSecurity()
-        obj.cbitpos = 47
-        obj.reduced_phys_bits = 1
 
         xml = obj.to_xml()
         launch_security_expected = """
             <launchSecurity type="sev">
               <policy>0x0033</policy>
-              <cbitpos>47</cbitpos>
-              <reducedPhysBits>1</reducedPhysBits>
             </launchSecurity>"""
 
         self.assertXmlEqual(launch_security_expected, xml)
@@ -2750,8 +2746,6 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         launch_security_expected = """
             <launchSecurity type="sev">
               <policy>0x0037</policy>
-              <cbitpos>47</cbitpos>
-              <reducedPhysBits>1</reducedPhysBits>
             </launchSecurity>"""
 
         self.assertXmlEqual(launch_security_expected, xml)
@@ -2868,8 +2862,6 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj = fake_libvirt_data.fake_kvm_guest()
 
         launch_security = config.LibvirtConfigGuestSEVLaunchSecurity()
-        launch_security.cbitpos = 47
-        launch_security.reduced_phys_bits = 1
         obj.launch_security = launch_security
 
         xml = obj.to_xml()
