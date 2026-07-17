@@ -2729,6 +2729,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
     def test_launch_security(self):
         # test that sev-specific bits are added to the xml
 
+        # SEV
         obj = config.LibvirtConfigGuestSEVLaunchSecurity()
         obj.cbitpos = 47
         obj.reduced_phys_bits = 1
@@ -2743,6 +2744,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
         self.assertXmlEqual(launch_security_expected, xml)
 
+        # SEV-ES
         obj.policy = obj.DEFAULT_SEV_ES_POLICY
         xml = obj.to_xml()
         launch_security_expected = """
@@ -2751,6 +2753,27 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <cbitpos>47</cbitpos>
               <reducedPhysBits>1</reducedPhysBits>
             </launchSecurity>"""
+
+        self.assertXmlEqual(launch_security_expected, xml)
+
+        # SEV-SNP (default)
+        obj = config.LibvirtConfigGuestSEVSNPLaunchSecurity()
+
+        xml = obj.to_xml()
+        launch_security_expected = """
+            <launchSecurity type="sev-snp" authorKey="no" vcek="yes" kernelHashes="no">
+              <policy>0x00030000</policy>
+            </launchSecurity>"""  # noqa: E501
+
+        self.assertXmlEqual(launch_security_expected, xml)
+
+        # SEV-SNP with kernel hash
+        obj.kernelHashes = True
+        xml = obj.to_xml()
+        launch_security_expected = """
+            <launchSecurity type="sev-snp" authorKey="no" vcek="yes" kernelHashes="yes">
+              <policy>0x00030000</policy>
+            </launchSecurity>"""  # noqa: E501
 
         self.assertXmlEqual(launch_security_expected, xml)
 
