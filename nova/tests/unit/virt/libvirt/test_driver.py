@@ -22101,29 +22101,39 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         for fs in supported_fs:
             self.assertFalse(drvr.is_supported_fs_format(fs))
 
-    def test_is_supported_mem_encryption_model(self):
-        valid_models = [
-            fields.MemEncryptionModel.AMD_SEV,
-            fields.MemEncryptionModel.AMD_SEV_ES,
-            fields.MemEncryptionModel.AMD_SEV_SNP,
-        ]
+    @ddt.data(
+        fields.MemEncryptionModel.AMD_SEV,
+        fields.MemEncryptionModel.AMD_SEV_ES,
+        fields.MemEncryptionModel.AMD_SEV_SNP,
+    )
+    def test_is_supported_mem_encryption_model_unsupported(self, model):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._host._supports_amd_sev = False
         drvr._host._supports_amd_sev_es = False
         drvr._host._supports_amd_sev_snp = False
-        for model in valid_models:
-            self.assertFalse(drvr._is_supported_mem_encryption_model(model))
+        self.assertFalse(drvr._is_supported_mem_encryption_model(model))
 
-        invalid_models = [
-            'invalid',
-        ]
-        for model in invalid_models:
-            ex = self.assertRaises(
-                exception.Invalid,
-                drvr._is_supported_mem_encryption_model,
-                model)
-            self.assertIn("Invalid memory encryption model: '%s'" % model,
-                          str(ex))
+    @ddt.data(
+        fields.MemEncryptionModel.AMD_SEV,
+        fields.MemEncryptionModel.AMD_SEV_ES,
+        fields.MemEncryptionModel.AMD_SEV_SNP,
+    )
+    def test_is_supported_mem_encryption_model_supported(self, model):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._host._supports_amd_sev = True
+        drvr._host._supports_amd_sev_es = True
+        drvr._host._supports_amd_sev_snp = True
+        self.assertTrue(drvr._is_supported_mem_encryption_model(model))
+
+    def test_is_supported_mem_encryption_invalid_model(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        model = 'invalid'
+        ex = self.assertRaises(
+            exception.Invalid,
+            drvr._is_supported_mem_encryption_model,
+            model)
+        self.assertIn("Invalid memory encryption model: '%s'" % model,
+                      str(ex))
 
     @mock.patch("nova.objects.instance.Instance.image_meta",
                 new_callable=mock.PropertyMock)
