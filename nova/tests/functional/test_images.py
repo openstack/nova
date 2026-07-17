@@ -35,6 +35,7 @@ class ImagesTest(integrated_helpers._IntegratedTestBase):
         image_map = {image['name']: image for image in images}
         found_image = image_map.get(name)
         self.assertTrue(found_image)
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Change server status from ACTIVE to SHELVED for negative test
         self.flags(shelved_offload_time = -1)
