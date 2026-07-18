@@ -7864,7 +7864,8 @@ class LibvirtDriver(driver.ComputeDriver):
             self._guest_add_mdevs(guest, mdevs)
 
         if me_config:
-            self._guest_configure_mem_encryption(guest, me_config.model)
+            self._guest_configure_mem_encryption(instance, guest,
+                                                 me_config.model)
 
         if vpmems:
             self._guest_add_vpmems(guest, vpmems)
@@ -7933,10 +7934,11 @@ class LibvirtDriver(driver.ComputeDriver):
         return hardware.get_mem_encryption_constraint(flavor, image_meta,
                                                       mach_type)
 
-    def _guest_configure_mem_encryption(self, guest, model):
+    def _guest_configure_mem_encryption(self, instance, guest, model):
         if model in (fields.MemEncryptionModel.AMD_SEV,
-                     fields.MemEncryptionModel.AMD_SEV_ES):
-            self._guest_configure_sev_mem_encryption(guest, model)
+                     fields.MemEncryptionModel.AMD_SEV_ES,
+                     fields.MemEncryptionModel.AMD_SEV_SNP):
+            self._guest_configure_sev_mem_encryption(instance, guest, model)
         else:
             raise exception.Invalid(
                 "Unknown MemEncryptionModel: %(model)s. "
@@ -7945,11 +7947,17 @@ class LibvirtDriver(driver.ComputeDriver):
                     'supported': ', '.join(fields.MemEncryptionModel.ALL)
                 })
 
-    def _guest_configure_sev_mem_encryption(self, guest, model):
-        launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
-        # NOTE(tkajinam): Default policy is for SEV
-        if model == fields.MemEncryptionModel.AMD_SEV_ES:
+    def _guest_configure_sev_mem_encryption(self, instance, guest, model):
+        if model == fields.MemEncryptionModel.AMD_SEV_SNP:
+            launch_security = vconfig.LibvirtConfigGuestSEVSNPLaunchSecurity()
+            if instance.kernel_id:
+                launch_security.kernelHashes = True
+        elif model == fields.MemEncryptionModel.AMD_SEV_ES:
+            launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
             launch_security.policy = launch_security.DEFAULT_SEV_ES_POLICY
+        else:
+            launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
+
         guest.launch_security = launch_security
 
     def _guest_add_mdevs(self, guest, chosen_mdevs):
@@ -13597,6 +13605,8 @@ class LibvirtDriver(driver.ComputeDriver):
             return self._host.supports_amd_sev
         if me_model == fields.MemEncryptionModel.AMD_SEV_ES:
             return self._host.supports_amd_sev_es
+        if me_model == fields.MemEncryptionModel.AMD_SEV_SNP:
+            return self._host.supports_amd_sev_snp
         raise exception.Invalid('Invalid memory encryption model: %r' %
                                 me_model)
 

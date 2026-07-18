@@ -87,6 +87,7 @@ class MemEncryptionConfig(metaclass=abc.ABCMeta):
         model2cls = {
             fields.MemEncryptionModel.AMD_SEV: MemEncryptionConfigSev,
             fields.MemEncryptionModel.AMD_SEV_ES: MemEncryptionConfigSevEs,
+            fields.MemEncryptionModel.AMD_SEV_SNP: MemEncryptionConfigSevSnp,
         }
 
         if model not in model2cls:
@@ -118,8 +119,8 @@ class MemEncryptionConfigSev(MemEncryptionConfig):
             return
 
         emsg = _(
-            "Memory encryption requested by %(requesters)s but image "
-            "metadata doesn't have 'hw_firmware_type' property set to "
+            "Memory encryption is requested by %(requesters)s but the image "
+            "metadata doesn't have the 'hw_firmware_type' property set to "
             "'uefi'"
         )
         data = {'requesters': " and ".join(requesters)}
@@ -182,6 +183,33 @@ class MemEncryptionConfigSevEs(MemEncryptionConfigSev):
     @property
     def required_trait(self) -> str:
         return os_traits.HW_CPU_X86_AMD_SEV_ES
+
+
+class MemEncryptionConfigSevSnp(MemEncryptionConfigSev):
+    @property
+    def model(self) -> str:
+        return fields.MemEncryptionModel.AMD_SEV_SNP
+
+    @property
+    def required_trait(self) -> str:
+        return os_traits.HW_CPU_X86_AMD_SEV_SNP
+
+    @property
+    def needs_locked_memory(self) -> bool:
+        return False
+
+    def check_constraints(self, image_meta: 'objects.ImageMeta',
+                          machine_type: str | None,
+                          requesters: list[str]) -> None:
+        super().check_constraints(image_meta, machine_type, requesters)
+
+        if not get_stateless_firmware_constraint(image_meta):
+            emsg = _(
+                "The %s memory encryption model requires stateless firmware "
+                "but the image metadata doesn't have "
+                "the 'hw_firmware_stateless' property set to True"
+            )
+            raise exception.StatelessFirmwareRequired(emsg % self.model)
 
 
 def get_vcpu_pin_set():
@@ -1321,8 +1349,14 @@ def get_mem_encryption_constraint(
     :param flavor: Flavor object
     :param image: an ImageMeta object
     :param machine_type: a string representing the machine type (optional)
-    :raises: nova.exception.FlavorImageConflict
-    :raises: nova.exception.InvalidMachineType
+    :raises: exception.FlavorImageConflict if memory encryption constraints
+        between flavor and image conflicts
+    :raises: exception.InvalidMachineType if the machine type does not
+       support memory encryption even if it is requested
+    :raises: exception.StatelessFirmwareNotSupported if stateles firmware
+        is requested but non-uefi firmware is selected
+    :raises: exception.StatelessFirmwareRequired if memory encryption requires
+        stateless firmware but stateful firmware is selected
     :returns: A MemEncryptionConfig object, else None.
     """
 
@@ -1525,6 +1559,10 @@ def get_locked_memory_constraint(
         between flavor and image conflicts
     :raises: exception.InvalidMachineType if the machine type does not
        support memory encryption even if it is requested
+    :raises: exception.StatelessFirmwareNotSupported if stateles firmware
+        is requested but non-uefi firmware is selected
+    :raises: exception.StatelessFirmwareRequired if memory encryption requires
+        stateless firmware but stateful firmware is selected
     :returns: The locked memory flag requested.
     """
     mem_page_size_flavor, mem_page_size_image = _get_flavor_image_meta(
