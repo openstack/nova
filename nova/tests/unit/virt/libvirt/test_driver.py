@@ -66,7 +66,6 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 import nova.conf
 from nova import context
-from nova.db import constants as db_const
 from nova.db.main import api as db
 from nova import exception
 from nova.network import model as network_model
@@ -32616,53 +32615,6 @@ class TestLibvirtSEV(test.NoDBTestCase):
 
 @mock.patch.object(os.path, 'exists', new=mock.Mock(return_value=False))
 class TestLibvirtSEVUnsupported(TestLibvirtSEV):
-    def test_get_memory_encryption_inventories_no_config(self):
-        self.assertEqual({
-            'amd_sev': {
-                'total': 0
-            },
-            'amd_sev_es': {
-                'total': 0
-            },
-            'amd_sev_snp': {
-                'total': 0
-            }
-        }, self.driver._get_memory_encryption_inventories())
-
-    def test_get_memory_encryption_inventories_config_zero(self):
-        self.flags(num_memory_encrypted_guests=0, group='libvirt')
-        self.assertEqual({
-            'amd_sev': {
-                'total': 0
-            },
-            'amd_sev_es': {
-                'total': 0
-            },
-            'amd_sev_snp': {
-                'total': 0
-            }
-        }, self.driver._get_memory_encryption_inventories())
-
-    @mock.patch.object(host.LOG, 'warning')
-    def test_get_memory_encryption_inventories_config_non_zero_unsupported(
-            self, mock_log):
-        self.flags(num_memory_encrypted_guests=16, group='libvirt')
-        # Still zero without mocked SEV support
-        self.assertEqual({
-            'amd_sev': {
-                'total': 0
-            },
-            'amd_sev_es': {
-                'total': 0
-            },
-            'amd_sev_snp': {
-                'total': 0
-            }
-        }, self.driver._get_memory_encryption_inventories())
-        mock_log.assert_called_with(
-            'Host is configured with libvirt.num_memory_encrypted_guests '
-            'set to %d, but is not SEV-capable.', 16)
-
     def test_get_memory_encryption_inventories_unsupported(self):
         self.assertEqual({
             'amd_sev': {
@@ -32679,9 +32631,9 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
 
 @mock.patch.object(vc, '_domain_capability_features',
                    new=vc._domain_capability_features_with_SEV)
-class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
+class TestLibvirtSEVSupported(TestLibvirtSEV):
     def setUp(self):
-        super(TestLibvirtSEVSupportedNoMaxGuests, self).setUp()
+        super(TestLibvirtSEVSupported, self).setUp()
 
         def fake_exists(path):
             if path == '/sys/module/kvm_amd/parameters/sev':
@@ -32692,85 +32644,7 @@ class TestLibvirtSEVSupportedNoMaxGuests(TestLibvirtSEV):
 
     """Libvirt driver tests for when AMD SEV support is present."""
     @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    def test_get_memory_encryption_inventories_unlimited(self):
-        self.assertEqual({
-            'amd_sev': {
-                'total': db_const.MAX_INT,
-                'step_size': 1,
-                'max_unit': 1,
-                'min_unit': 1,
-                'reserved': 0,
-                'allocation_ratio': 1.0,
-                'traits': [ot.HW_CPU_X86_AMD_SEV]
-            },
-            'amd_sev_es': {
-                'total': 0
-            },
-            'amd_sev_snp': {
-                'total': 0
-            }
-        }, self.driver._get_memory_encryption_inventories())
-
-    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    def test_get_memory_encryption_inventories_config_non_zero_supported(self):
-        self.flags(num_memory_encrypted_guests=16, group='libvirt')
-        self.assertEqual({
-            'amd_sev': {
-                'total': 16,
-                'step_size': 1,
-                'max_unit': 1,
-                'min_unit': 1,
-                'reserved': 0,
-                'allocation_ratio': 1.0,
-                'traits': [ot.HW_CPU_X86_AMD_SEV]
-            },
-            'amd_sev_es': {
-                'total': 0
-            },
-            'amd_sev_snp': {
-                'total': 0
-            }
-        }, self.driver._get_memory_encryption_inventories())
-
-    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    def test_get_memory_encryption_inventories_config_zero_supported(self):
-        self.flags(num_memory_encrypted_guests=0, group='libvirt')
-        self.assertEqual({
-            'amd_sev': {
-                'total': 0,
-                'step_size': 1,
-                'max_unit': 1,
-                'min_unit': 1,
-                'reserved': 0,
-                'allocation_ratio': 1.0,
-                'traits': [ot.HW_CPU_X86_AMD_SEV]
-            },
-            'amd_sev_es': {
-                'total': 0
-            },
-            'amd_sev_snp': {
-                'total': 0
-            }
-        }, self.driver._get_memory_encryption_inventories())
-
-
-@mock.patch.object(vc, '_domain_capability_features',
-                   new=vc._domain_capability_features_with_SEV_max_guests)
-class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
-    def setUp(self):
-        super(TestLibvirtSEVSupportedMaxGuests, self).setUp()
-
-        def fake_exists(path):
-            if path == '/sys/module/kvm_amd/parameters/sev':
-                return True
-            return False
-
-        self.stub_out('os.path.exists', fake_exists)
-
-    """Libvirt driver tests for when AMD SEV support is present."""
-    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    @mock.patch.object(host.LOG, 'warning')
-    def test_get_memory_encryption_inventories_no_override(self, mock_log):
+    def test_get_memory_encryption_inventories(self):
         self.assertEqual({
             'amd_sev': {
                 'total': 100,
@@ -32788,55 +32662,6 @@ class TestLibvirtSEVSupportedMaxGuests(TestLibvirtSEV):
                 'total': 0
             },
         }, self.driver._get_memory_encryption_inventories())
-        mock_log.assert_not_called()
-
-    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    @mock.patch.object(host.LOG, 'warning')
-    def test_get_memory_encryption_inventories_override_more(self, mock_log):
-        self.flags(num_memory_encrypted_guests=120, group='libvirt')
-        self.assertEqual({
-            'amd_sev': {
-                'total': 100,
-                'step_size': 1,
-                'max_unit': 1,
-                'min_unit': 1,
-                'reserved': 0,
-                'allocation_ratio': 1.0,
-                'traits': [ot.HW_CPU_X86_AMD_SEV]
-            },
-            'amd_sev_es': {
-                'total': 0
-            },
-            'amd_sev_snp': {
-                'total': 0
-            }
-        }, self.driver._get_memory_encryption_inventories())
-        mock_log.assert_called_with(
-            'Host is configured with libvirt.num_memory_encrypted_guests '
-            'set to %d, but supports only %d.', 120, 100)
-
-    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
-    @mock.patch.object(host.LOG, 'warning')
-    def test_get_memory_encryption_inventories_override_less(self, mock_log):
-        self.flags(num_memory_encrypted_guests=80, group='libvirt')
-        self.assertEqual({
-            'amd_sev': {
-                'total': 80,
-                'step_size': 1,
-                'max_unit': 1,
-                'min_unit': 1,
-                'reserved': 0,
-                'allocation_ratio': 1.0,
-                'traits': [ot.HW_CPU_X86_AMD_SEV]
-            },
-            'amd_sev_es': {
-                'total': 0
-            },
-            'amd_sev_snp': {
-                'total': 0
-            }
-        }, self.driver._get_memory_encryption_inventories())
-        mock_log.assert_not_called()
 
 
 class LibvirtPMEMNamespaceTests(test.NoDBTestCase):

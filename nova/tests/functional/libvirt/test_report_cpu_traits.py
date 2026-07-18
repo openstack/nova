@@ -23,7 +23,6 @@ import os_traits as ost
 from oslo_utils import versionutils
 
 from nova import conf
-from nova.db import constants as db_const
 from nova import test
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import integrated_helpers
@@ -278,7 +277,7 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             sev_rp_uuid = sev_rps['sev'][0]['uuid']
             sev_rp_traits = self._get_provider_traits(sev_rp_uuid)
             self.assertIn(ost.HW_CPU_X86_AMD_SEV, sev_rp_traits)
-            self.assertMemEncryptionSlotsEqual(sev_rp_uuid, db_const.MAX_INT)
+            self.assertMemEncryptionSlotsEqual(sev_rp_uuid, 100)
 
             self.assertEqual(0, len(sev_rps['sev-es']))
             self.assertEqual(0, len(sev_rps['sev-snp']))
@@ -288,7 +287,7 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         # kvm-amd kernel module's "sev-es" parameter to become available
         # and set to 1
         sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV_max_guests)
+                        _domain_capability_features_with_SEV)
         with test.nested(
                 self._patch_sev_exists(True, True, False),
                 self._patch_sev_open(),
@@ -367,7 +366,7 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         # kvm-amd kernel module's "sev-snp" parameter to become available
         # and set to 1 .
         sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV_max_guests)
+                        _domain_capability_features_with_SEV)
         with test.nested(
                 self._patch_sev_exists(True, True, True),
                 self._patch_sev_open(),
@@ -453,7 +452,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
 
     def _init_compute(self, sev, sev_es, sev_snp):
         sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV_max_guests)
+                        _domain_capability_features_with_SEV)
         with test.nested(
                 self._patch_sev_exists(sev, sev_es, sev_snp),
                 self._patch_sev_open(),
@@ -617,7 +616,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         # unavailable, however it could also happen via a libvirt
         # downgrade, for instance.
         sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV_max_guests)
+                        _domain_capability_features_with_SEV)
         with test.nested(
                 self._patch_sev_exists(True, False, False),
                 self._patch_sev_open(),
@@ -720,7 +719,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         # unavailable, however it could also happen via a libvirt
         # downgrade, for instance.
         sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV_max_guests)
+                        _domain_capability_features_with_SEV)
         with test.nested(
                 self._patch_sev_exists(True, True, False),
                 self._patch_sev_open(),
@@ -933,8 +932,8 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         # the kvm-amd kernel module's "sev-snp" parameter to become
         # available, however it could also happen via a libvirt
         # upgrade, for instance.
-        sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV_max_guests)
+        sev_features = (
+            fakelibvirt.virConnect._domain_capability_features_with_SEV)
         with test.nested(
                 self._patch_sev_exists(True, True, True),
                 self._patch_sev_open(),

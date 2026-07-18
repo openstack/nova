@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The deprecated ``[libvirt] num_memory_encrypted_guests`` option has been
+    removed. Now the maximum memory encrypted guests is detected automatically
+    using libvirt API.

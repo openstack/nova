@@ -263,7 +263,7 @@ class SevResphapeTests(base.ServersTestBase):
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
         new=fakelibvirt.virConnect.
-            _domain_capability_features_with_SEV_max_guests)
+            _domain_capability_features_with_SEV)
     def test_create_servers_with_amd_sev(self, mock_configure_me):
         """Verify that SEV reshape works with libvirt driver
 
@@ -355,7 +355,7 @@ class SevResphapeTests(base.ServersTestBase):
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
         new=fakelibvirt.virConnect.
-            _domain_capability_features_with_SEV_max_guests)
+            _domain_capability_features_with_SEV)
     def test_create_servers_with_amd_sev_mixed(self, mock_configure_me):
         """Verify that SEV reshape supports upgrade sceario
 

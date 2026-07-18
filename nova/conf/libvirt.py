@@ -886,55 +886,6 @@ Related options:
 * ``virt_type`` must be set to ``kvm`` or ``qemu``.
 * ``ram_allocation_ratio`` must be set to 1.0.
 """),
-    cfg.IntOpt('num_memory_encrypted_guests',
-               default=None,
-               min=0,
-               deprecated_for_removal=True,
-               deprecated_since='32.0.0',
-               deprecated_reason="""
-This option is effective for only SEV and has no effect for SEV-ES. Libvirt
-is capable to present maximum number of SEV guests and one of SEV-ES guests
-since 8.0.0 and this option is no longer necessary.
-""",
-               help="""
-Maximum number of guests with encrypted memory which can run
-concurrently on this compute host.
-
-For now this is only relevant for AMD machines which support SEV
-(Secure Encrypted Virtualization).  Such machines have a limited
-number of slots in their memory controller for storing encryption
-keys.  Each running guest with encrypted memory will consume one of
-these slots.
-
-The option may be reused for other equivalent technologies in the
-future.  If the machine does not support memory encryption, the option
-will be ignored and inventory will be set to 0.
-
-If the machine does support memory encryption and this option is not set,
-the driver detects maximum number of SEV guests from the libvirt API which
-is available since v8.0.0. Setting this option overrides the detected limit,
-unless the given value is not larger than the detected limit.
-
-On the other hand, if an older version of libvirt is used, ``None`` means
-an effectively unlimited inventory, i.e. no limit will be imposed by Nova
-on the number of SEV guests which can be launched, even though the underlying
-hardware will enforce its own limit.
-
-.. note::
-
-   It is recommended to read :ref:`the deployment documentation's
-   section on this option <num_memory_encrypted_guests>` before
-   deciding whether to configure this setting or leave it at the
-   default.
-
-Related options:
-
-* :oslo.config:option:`libvirt.virt_type` must be set to ``kvm``.
-
-* It's recommended to consider including ``x86_64=q35`` in
-  :oslo.config:option:`libvirt.hw_machine_type`; see
-  :ref:`deploying-sev-capable-infrastructure` for more on this.
-"""),
     cfg.IntOpt('device_detach_attempts',
                default=8,
                min=1,
