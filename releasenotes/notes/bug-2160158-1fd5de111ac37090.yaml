@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    `Bug #2160158 <https://bugs.launchpad.net/nova/+bug/2160158>`_: Fixed
+    the ``supports_virtio_fs`` capability always reported by the libvirt
+    driver regardless of virtualization type. This feature is supported by
+    only QEMU. Now the capability is reported only when
+    the ``[libvirt] virt_type`` option is set to ``qemu`` or ``kvm``.

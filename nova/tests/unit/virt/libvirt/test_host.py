@@ -27,6 +27,7 @@ import testtools
 
 from nova.compute import manager
 from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
@@ -42,6 +43,8 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
+
+CONF = nova.conf.CONF
 
 
 class StringMatcher(object):
@@ -66,6 +69,7 @@ class FakeVirtDomain(object):
         return self._uuid
 
 
+@ddt.ddt
 class HostTestCase(test.NoDBTestCase):
 
     def setUp(self):
@@ -2102,6 +2106,16 @@ class HostTestCase(test.NoDBTestCase):
         </domainCapabilities>
         """
         self.assertTrue(self.host.supports_secure_boot)
+
+    @ddt.data('kvm', 'qemu')
+    def test_supports_virtio_fs__true(self, virt_type):
+        CONF.set_override('virt_type', virt_type, group='libvirt')
+        self.assertTrue(self.host.supports_virtio_fs)
+
+    @ddt.data('lxc', 'parallels')
+    def test_supports_virtio_fs__false(self, virt_type):
+        CONF.set_override('virt_type', virt_type, group='libvirt')
+        self.assertFalse(self.host.supports_virtio_fs)
 
     @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
     def test_supports_remote_managed_ports__true(self, mock_libversion):

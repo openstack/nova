@@ -934,6 +934,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             driver.init_host('goat')
             mock_power_up.assert_called_with(set([0, 42, 1337]))
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_all_undefined_instance_details',
+                       new=mock.Mock())
+    @mock.patch.object(
+        host.Host, 'supports_virtio_fs', new_callable=mock.PropertyMock)
+    def test_driver_capabilities_virtio_fs(self, mock_supports):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.init_host("dummyhost")
+        self.assertTrue(
+            drvr.capabilities['supports_virtio_fs'],
+            "Driver capabilities for 'supports_virtio_fs' is invalid when "
+            "host should support this feature"
+        )
+        mock_supports.assert_called_once_with()
+
     @mock.patch.object(
         libvirt_driver.LibvirtDriver,
         '_register_all_undefined_instance_details',
