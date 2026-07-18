@@ -14231,7 +14231,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_live_migration_uri(self):
         addresses = ('127.0.0.1', '127.0.0.1:4444', '[::1]:4444',
-                    '[0:0:0:0:0:0:0:1]:4444', u'127.0.0.1', u'destination',
+                    '[0:0:0:0:0:0:0:1]:4444', 'destination',
         )
 
         hypervisor_uri_map = (
@@ -14255,7 +14255,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       dest)
 
     def test_live_migration_uri_ipv6(self):
-        addresses = ('::1', '0:0:0:0:0:0:0:1', u'::1')
+        addresses = ('::1', '0:0:0:0:0:0:0:1')
 
         hypervisor_uri_map = (
             ('kvm', 'qemu+tcp://[%s]/system'),
