@@ -13897,12 +13897,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # baseline call. Consider using the new apis when they are ready. See
         # https://www.redhat.com/archives/libvir-list/2018-May/msg01204.html.
         try:
-            if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
-                return self._host.get_connection().baselineCPU(
-                    [xml_str],
-                    libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
-            else:
-                return self._host.get_connection().baselineCPU([xml_str])
+            return self._host.get_connection().baselineCPU(
+                [xml_str],
+                libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
         except libvirt.libvirtError as ex:
             with excutils.save_and_reraise_exception() as ctxt:
                 error_code = ex.get_error_code()
