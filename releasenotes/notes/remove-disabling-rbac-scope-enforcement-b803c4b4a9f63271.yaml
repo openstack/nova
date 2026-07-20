@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    The deprecated ``[oslo_policy] enforce_scope`` configuration option has
+    been removed in oslo.policy version 6.0.0 which will impact Nova as
+    there is no longer any way to disable RBAC policy scope enforcement; scope
+    checks are now always enforced regardless of configuration.
+
+    If you are not upgrading the oslo.policy to 6.0.0, then there will not be
+    any change in scope enforcement behaviour.

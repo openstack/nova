@@ -49,6 +49,10 @@ similar, but different, roles implemented across projects or deployments
 With the help of the new defaults it is easier to understand who can do
 what across projects, reduces divergence, and increases interoperability.
 
+In the Nova 27.0.0 (OpenStack 2023.1) release, new defaults and scope
+enforcement have been enabled by default. Nova 34.0.0 (OpenStack 2026.2)
+release made scope enforcement mandatory.
+
 The below sections explain how these new defaults in the Nova can solve the
 first two issues mentioned above and extend more functionality to end users
 in a safe and secure way.
@@ -81,6 +85,8 @@ For example, consider the ``POST /os-server-groups`` API.
     # POST  /os-server-groups
     # Intended scope(s): project
     #"os_compute_api:os-server-groups:create": "rule:project_member_api"
+
+Policy scope enforcement is always enabled.
 
 Roles
 -----
@@ -363,7 +369,7 @@ Here is step wise guide for migration:
    old deprecated defaults when evaluating policies. If True, the old
    deprecated defaults are not evaluated. This means if any existing
    token is allowed for old defaults but is disallowed for new defaults,
-   it will be rejected. The default value of this flag is False.
+   it will be rejected. The default value of this flag is True.
 
    .. note:: Before you enable this flag, you need to educate users about the
              different roles they need to use to continue using Nova APIs.
