@@ -169,14 +169,10 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         with test.nested(
                 self._patch_sev_exists(False, False, False),
                 mock.patch.object(
-                    fakelibvirt.Connection, 'getLibVersion',
-                    return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
-                mock.patch.object(
                     fakelibvirt.Connection, 'getVersion',
                     return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
-        ) as (mock_exists, mock_lib_version, mock_get_version):
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_get_version):
             super(LibvirtReportNoSevTraitsTests, self).setUp()
             self.start_compute()
 
@@ -228,8 +224,12 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
-                                  new=sev_features)
-        ) as (mock_exists, mock_open, mock_features):
+                                  new=sev_features),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             # As we are changing the domain caps we need to clear the
@@ -286,8 +286,8 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         # simulate a kernel update or reconfiguration which causes the
         # kvm-amd kernel module's "sev-es" parameter to become available
         # and set to 1
-        sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV)
+        sev_features = (
+            fakelibvirt.virConnect._domain_capability_features_with_SEV)
         with test.nested(
                 self._patch_sev_exists(True, True, False),
                 self._patch_sev_open(),
@@ -295,15 +295,10 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
                                   '_domain_capability_features',
                                   new=sev_features),
                 mock.patch.object(
-                    fakelibvirt.Connection, 'getLibVersion',
-                    return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
-                mock.patch.object(
                     fakelibvirt.Connection, 'getVersion',
                     return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
-        ) as (mock_exists, mock_open, mock_features,
-              mock_lib_version, mock_get_version):
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             # As we are changing the domain caps we need to clear the
@@ -365,8 +360,9 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         # simulate a kernel update or reconfiguration which causes the
         # kvm-amd kernel module's "sev-snp" parameter to become available
         # and set to 1 .
-        sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV)
+        sev_features = (
+            fakelibvirt.virConnect.
+            _domain_capability_features_with_launch_security_SEV_SNP)
         with test.nested(
                 self._patch_sev_exists(True, True, True),
                 self._patch_sev_open(),
@@ -374,15 +370,10 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
                                   '_domain_capability_features',
                                   new=sev_features),
                 mock.patch.object(
-                    fakelibvirt.Connection, 'getLibVersion',
-                    return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
-                mock.patch.object(
                     fakelibvirt.Connection, 'getVersion',
                     return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
-        ) as (mock_exists, mock_open, mock_features,
-              mock_lib_version, mock_get_version):
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             # As we are changing the domain caps we need to clear the
@@ -451,8 +442,13 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         super(LibvirtReportSevTraitsTests, self).setUp()
 
     def _init_compute(self, sev, sev_es, sev_snp):
-        sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV)
+        if sev_snp:
+            sev_features = (
+                fakelibvirt.virConnect.
+                _domain_capability_features_with_launch_security_SEV_SNP)
+        else:
+            sev_features = (fakelibvirt.virConnect.
+                            _domain_capability_features_with_SEV)
         with test.nested(
                 self._patch_sev_exists(sev, sev_es, sev_snp),
                 self._patch_sev_open(),
@@ -460,15 +456,10 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
                                   '_domain_capability_features',
                                   new=sev_features),
                 mock.patch.object(
-                    fakelibvirt.Connection, 'getLibVersion',
-                    return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
-                mock.patch.object(
                     fakelibvirt.Connection, 'getVersion',
                     return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
-        ) as (mock_exists, mock_open, mock_features,
-              mock_lib_version, mock_get_version):
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             self.start_compute()
 
     def test_sev_trait_on_off(self):
@@ -524,8 +515,12 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
-                                  new=sev_features)
-        ) as (mock_exists, mock_open, mock_features):
+                                  new=sev_features),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             self.compute.driver._host._domain_caps = None
@@ -622,8 +617,12 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
-                                  new=sev_features)
-        ) as (mock_exists, mock_open, mock_features):
+                                  new=sev_features),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             self.compute.driver._host._domain_caps = None
@@ -718,8 +717,9 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         # the kvm-amd kernel module's "sev-snp" parameter to become
         # unavailable, however it could also happen via a libvirt
         # downgrade, for instance.
-        sev_features = (fakelibvirt.virConnect.
-                        _domain_capability_features_with_SEV)
+        sev_features = (
+            fakelibvirt.virConnect.
+            _domain_capability_features_with_launch_security_SEV)
         with test.nested(
                 self._patch_sev_exists(True, True, False),
                 self._patch_sev_open(),
@@ -727,15 +727,10 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
                                   '_domain_capability_features',
                                   new=sev_features),
                 mock.patch.object(
-                    fakelibvirt.Connection, 'getLibVersion',
-                    return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
-                mock.patch.object(
                     fakelibvirt.Connection, 'getVersion',
                     return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
-        ) as (mock_exists, mock_open, mock_features,
-              mock_lib_version, mock_get_version):
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             # Here sev-es is enabled because sev-snp is disabled
@@ -845,8 +840,12 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
                 self._patch_sev_open(),
                 mock.patch.object(fakelibvirt.virConnect,
                                   '_domain_capability_features',
-                                  new=sev_features)
-        ) as (mock_exists, mock_open, mock_features):
+                                  new=sev_features),
+                mock.patch.object(
+                    fakelibvirt.Connection, 'getVersion',
+                    return_value=versionutils.convert_version_to_int(
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             self.compute.driver._host._domain_caps = None
@@ -933,7 +932,8 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         # available, however it could also happen via a libvirt
         # upgrade, for instance.
         sev_features = (
-            fakelibvirt.virConnect._domain_capability_features_with_SEV)
+            fakelibvirt.virConnect.
+            _domain_capability_features_with_launch_security_SEV_SNP)
         with test.nested(
                 self._patch_sev_exists(True, True, True),
                 self._patch_sev_open(),
@@ -941,15 +941,10 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
                                   '_domain_capability_features',
                                   new=sev_features),
                 mock.patch.object(
-                    fakelibvirt.Connection, 'getLibVersion',
-                    return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_LIBVIRT_SEV_SNP_VERSION)),
-                mock.patch.object(
                     fakelibvirt.Connection, 'getVersion',
                     return_value=versionutils.convert_version_to_int(
-                    libvirt_host.MIN_QEMU_SEV_SNP_VERSION))
-        ) as (mock_exists, mock_open, mock_features,
-              mock_lib_version, mock_get_version):
+                    libvirt_host.MIN_QEMU_SEV_ES_VERSION))
+        ) as (mock_exists, mock_open, mock_features, mock_get_version):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             # Here sev-es is disabled because sev-snp is enabled

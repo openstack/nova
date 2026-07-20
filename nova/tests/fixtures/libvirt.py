@@ -2377,18 +2377,55 @@ class Connection(object):
     <gic supported='no'/>
   </features>'''
 
-    _domain_capability_features_with_SEV = '''  <features>
+    # TODO(tkajinam): Libvirt >= 10.0.0 always shows the sev feature.
+    # Merge this into the base template after the minimum libvirt version is
+    # bumped.
+    # https://gitlab.com/libvirt/libvirt/-/commit/6688393c6b2
+    _domain_capability_features_with_SEV_base = '''  <features>
     <gic supported='no'/>
     <sev supported='yes'>
       <cbitpos>47</cbitpos>
       <reducedPhysBits>1</reducedPhysBits>
       <maxGuests>100</maxGuests>
       <maxESGuests>15</maxESGuests>
-    </sev>
+    </sev>%s
   </features>'''
 
-    _domain_capability_features_with_SEV_unsupported = \
-        _domain_capability_features_with_SEV.replace('yes', 'no')
+    _domain_capability_features_with_SEV = \
+        _domain_capability_features_with_SEV_base % ''
+
+    _domain_capability_features_with_SEV_unsupported = '''  <features>
+    <gic supported='no'/>
+    <sev supported='no'/>
+  </features>'''
+
+    # TODO(tkajinam): Libvirt >= 10.5.0 always shows the launchSecurity
+    # feature. Merge this into the base template when minimum libvirt
+    # version is >= bumped.
+    # https://gitlab.com/libvirt/libvirt/-/commit/d460e17282b
+    _domain_capability_features_with_launch_security_SEV = \
+        _domain_capability_features_with_SEV_base % '''
+    <launchSecurity supported='yes'>
+      <enum name='sectype'>
+        <value>sev</value>
+      </enum>
+    </launchSecurity>'''
+
+    _domain_capability_features_with_launch_security_unsupported = \
+        '''  <features>
+    <gic supported='no'/>
+    <sev supported='no'/>
+    <launchSecurity supported='no'/>
+  </features>'''
+
+    _domain_capability_features_with_launch_security_SEV_SNP = \
+        _domain_capability_features_with_SEV_base % '''
+    <launchSecurity supported='yes'>
+      <enum name='sectype'>
+        <value>sev</value>
+        <value>sev-snp</value>
+      </enum>
+    </launchSecurity>'''
 
     def getCapabilities(self):
         """Return spoofed capabilities."""

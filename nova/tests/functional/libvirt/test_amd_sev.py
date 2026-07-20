@@ -20,6 +20,7 @@ from oslo_utils import versionutils
 from nova import exception
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base
+from nova.virt.libvirt import driver
 from nova.virt.libvirt import host
 
 
@@ -71,10 +72,8 @@ class TestSEV(base.ServersTestBase):
             'nova.virt.libvirt.host.Host._kernel_supports_amd_sev',
             side_effect=mock_kernel))
 
-        self.libvirt_version = versionutils.convert_version_to_int(
-            host.MIN_LIBVIRT_SEV_SNP_VERSION)
         self.qemu_version = versionutils.convert_version_to_int(
-            host.MIN_QEMU_SEV_SNP_VERSION)
+            host.MIN_QEMU_SEV_ES_VERSION)
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
@@ -83,7 +82,6 @@ class TestSEV(base.ServersTestBase):
         """Compute should fail if sev instance exists but sev is lost
         """
         self.hostname = self.start_compute(
-            libvirt_version=self.libvirt_version,
             qemu_version=self.qemu_version)
 
         # create sev instance
@@ -115,7 +113,6 @@ class TestSEV(base.ServersTestBase):
         """Compute should fail if sev-es instance exists but sev-es is lost
         """
         self.hostname = self.start_compute(
-            libvirt_version=self.libvirt_version,
             qemu_version=self.qemu_version)
 
         # create sev-es instance
@@ -143,7 +140,6 @@ class TestSEV(base.ServersTestBase):
         detected
         """
         self.hostname = self.start_compute(
-            libvirt_version=self.libvirt_version,
             qemu_version=self.qemu_version)
 
         # create sev-es instance
@@ -165,14 +161,17 @@ class TestSEV(base.ServersTestBase):
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
-        new=fakelibvirt.virConnect._domain_capability_features_with_SEV)
+        new=fakelibvirt.virConnect.
+        _domain_capability_features_with_launch_security_SEV_SNP)
     def test_sev_snp_lost_after_restart(self):
         """Compute should fail if sev-snp instance exists but sev-snp is lost
         """
         self.sev_es = False
         self.sev_snp = True
+        libvirt_version = versionutils.convert_version_to_int(
+            driver.MIN_LIBVIRT_STATELESS_FIRMWARE)
         self.hostname = self.start_compute(
-            libvirt_version=self.libvirt_version,
+            libvirt_version=libvirt_version,
             qemu_version=self.qemu_version)
 
         # create sev-snp instance
