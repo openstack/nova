@@ -23,6 +23,7 @@ from nova.db.main import api as db
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import notifications as notifications_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
@@ -120,6 +121,9 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
     def setUp(self):
         super(ServerGroupTestV21, self).setUp()
+
+        self.notifier = self.useFixture(
+            notifications_fixtures.NotificationFixture(self))
 
         # TODO(sbauza): Remove that once there is a way to have a custom
         # FakeDriver supporting different resources. Note that we can't also
@@ -566,6 +570,9 @@ class ServerGroupTestV21(ServerGroupTestBase):
         failed_server = self._boot_a_server_to_group(created_group,
                                                      flavor=flavor,
                                                      expected_status='ERROR')
+        self.notifier.wait_for_versioned_notifications(
+            "compute_task.build_instances.error")
+        failed_server = self.api.get_server(failed_server['id'])
 
         self.assertEqual('Exceeded maximum number of retries. Exhausted all '
                          'hosts available for retrying build failures for '
