@@ -28,6 +28,7 @@ from oslo_log import log as logging
 from oslo_privsep import priv_context
 from oslo_reports import guru_meditation_report as gmr
 from oslo_reports import opts as gmr_opts
+from oslo_service import opts as oslo_svc_opts
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor import rpcapi as conductor_rpcapi
@@ -41,11 +42,22 @@ from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
+LOG = logging.getLogger(__name__)
 
 
 def main():
     config.parse_args(sys.argv)
     logging.setup(CONF, 'nova')
+    # nova-compute runs with no_fork=True, so launch_service()
+    # starts the service directly without calling _get_service_manager().
+    # Other services go through _get_service_manager() which calls
+    # oslo_config_glue.link() -> _load_service_manager_options() ->
+    # log_opt_values(). Register the opts and dump config manually here.
+    # TODO(ksambor): Remove this once oslo.service logs config for the
+    # no_fork case. See https://bugs.launchpad.net/oslo.service/+bug/2161400
+    oslo_svc_opts.register_service_opts(CONF)
+    if CONF.log_options and utils.concurrency_mode_threading():
+        CONF.log_opt_values(LOG, logging.DEBUG)
     priv_context.init(root_helper=shlex.split(utils.get_root_helper()))
     objects.register_all()
     gmr_opts.set_defaults(CONF)
