@@ -2063,19 +2063,21 @@ class Host(object):
             return self._supports_amd_sev
 
         domain_caps = self.get_domain_capabilities()
-        for arch in domain_caps:
-            for machine_type in domain_caps[arch]:
-                LOG.debug("Checking SEV support for arch %s "
-                          "and machine type %s", arch, machine_type)
-                for feature in domain_caps[arch][machine_type].features:
-                    feature_is_sev = isinstance(
-                        feature, vconfig.LibvirtConfigDomainCapsFeatureSev)
-                    if feature_is_sev and feature.supported:
-                        LOG.info("AMD SEV support detected")
-                        self._supports_amd_sev = True
-                        self._max_sev_guests = feature.max_guests
-                        self._max_sev_es_guests = feature.max_es_guests
-                        return self._supports_amd_sev
+        arch = fields.Architecture.X86_64
+        if arch not in domain_caps:
+            return self._supports_amd_sev
+        for machine_type in domain_caps[arch]:
+            LOG.debug("Checking SEV support for arch %s and machine type %s",
+                      arch, machine_type)
+            for feature in domain_caps[arch][machine_type].features:
+                feature_is_sev = isinstance(
+                    feature, vconfig.LibvirtConfigDomainCapsFeatureSev)
+                if feature_is_sev and feature.supported:
+                    LOG.info("AMD SEV support detected")
+                    self._supports_amd_sev = True
+                    self._max_sev_guests = feature.max_guests
+                    self._max_sev_es_guests = feature.max_es_guests
+                    return self._supports_amd_sev
 
         LOG.debug("No AMD SEV support detected for any (arch, machine_type)")
         return self._supports_amd_sev
@@ -2136,21 +2138,23 @@ class Host(object):
             return self._supports_amd_sev_snp
 
         domain_caps = self.get_domain_capabilities()
-        for arch in domain_caps:
-            for machine_type in domain_caps[arch]:
-                LOG.debug("Checking SEV-SNP support for arch %s "
-                          "and machine type %s", arch, machine_type)
-                for feature in domain_caps[arch][machine_type].features:
-                    feature_is_launch_security = isinstance(
-                        feature,
-                        vconfig.LibvirtConfigDomainCapsFeatureLaunchSecurity)
-                    if feature_is_launch_security:
-                        if feature.supported and 'sev-snp' in feature.sectypes:
-                            LOG.info("AMD SEV-SNP support detected")
-                            self._supports_amd_sev_snp = True
-                            return self._supports_amd_sev_snp
-                        else:
-                            break
+        arch = fields.Architecture.X86_64
+        if arch not in domain_caps:
+            return self._supports_amd_sev_snp
+        for machine_type in domain_caps[arch]:
+            LOG.debug("Checking SEV-SNP support for arch %s "
+                      "and machine type %s", arch, machine_type)
+            for feature in domain_caps[arch][machine_type].features:
+                feature_is_launch_security = isinstance(
+                    feature,
+                    vconfig.LibvirtConfigDomainCapsFeatureLaunchSecurity)
+                if feature_is_launch_security:
+                    if feature.supported and 'sev-snp' in feature.sectypes:
+                        LOG.info("AMD SEV-SNP support detected")
+                        self._supports_amd_sev_snp = True
+                        return self._supports_amd_sev_snp
+                    else:
+                        break
 
         LOG.info("Libvirt or QEMU doesn't support AMD SEV-SNP")
         self._supports_amd_sev_snp = False
