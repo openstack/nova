@@ -2191,6 +2191,7 @@ class Connection(object):
             aliases = {'pc': 'pc-i440fx-2.11', 'q35': 'pc-q35-2.11'}
             return fake_libvirt_data.DOMCAPABILITIES_X86_64_TEMPLATE % \
                 {'devices': self._domain_capability_devices,
+                 'tpm': self._domain_capability_tpm,
                  'features': self._domain_capability_features,
                  'mtype': aliases.get(machine_type, machine_type)}
 
@@ -2312,8 +2313,7 @@ class Connection(object):
       </enum>
     </hostdev>'''
 
-    _domain_capability_devices_with_tpm_supported = \
-        _domain_capability_devices_default + '''
+    _domain_capability_tpm_supported = '''
     <tpm supported='yes'>
       <enum name='model'>
         <value>tpm-tis</value>
@@ -2327,15 +2327,11 @@ class Connection(object):
     </tpm>
 '''
 
-    # TODO(tkajinam): Merge this to the default value once libvirt >= 8.0.0 is
-    # required
-    _domain_capability_devices_with_tpm_unsupported = \
-        _domain_capability_devices_default + '''
+    _domain_capability_tpm_unsupported = '''
     <tpm supported='no'/>
 '''
 
-    _domain_capability_devices_with_no_emulator = \
-        _domain_capability_devices_default + '''
+    _domain_capability_tpm_with_no_emulator = '''
     <tpm supported='yes'>
       <enum name='model'>
         <value>tpm-tis</value>
@@ -2350,7 +2346,7 @@ class Connection(object):
 
     # TODO(tkajinam): Merge this to _supported value once libvirt >= 8.6.0 is
     # required
-    _domain_capability_devices_with_tpm_versions = \
+    _domain_capability_tpm_with_tpm_versions = \
         _domain_capability_devices_default + '''
     <tpm supported='yes'>
       <enum name='model'>
@@ -2370,6 +2366,10 @@ class Connection(object):
     # Devices are kept separately so that the tests can patch this
     # class variable with alternate values.
     _domain_capability_devices = _domain_capability_devices_default
+
+    # TPM is kept separately so that the tests can patch this class class
+    # variable with alternative values.
+    _domain_capability_tpm = _domain_capability_tpm_unsupported
 
     # Features are kept separately so that the tests can patch this
     # class variable with alternate values.

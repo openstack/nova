@@ -29,6 +29,7 @@ from nova import crypto
 from nova.db.main import api as db_api
 from nova import exception
 from nova import objects
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova import utils
@@ -143,6 +144,8 @@ class FakeKeyManager(key_manager.KeyManager):
 
 
 @ddt.ddt
+@mock.patch.object(fakelibvirt.virConnect, '_domain_capability_tpm',
+                   new=fakelibvirt.virConnect._domain_capability_tpm_supported)
 class VTPMServersTest(base.LibvirtMigrationMixin, base.ServersTestBase):
 
     # NOTE: ADMIN_API is intentionally not set to True in order to catch key
