@@ -64,7 +64,8 @@ create_v264['properties']['server_group']['required'].append('policy')
 create_v264['properties']['server_group']['properties']['policy'] = {
     'type': 'string',
     'enum': ['anti-affinity', 'affinity',
-             'soft-anti-affinity', 'soft-affinity'],
+             'soft-anti-affinity', 'soft-affinity',
+             'network-group-affinity', 'network-group-anti-affinity'],
 }
 
 create_v264['properties']['server_group']['properties']['rules'] = {
@@ -72,6 +73,11 @@ create_v264['properties']['server_group']['properties']['rules'] = {
     'properties': {
         'max_server_per_host':
             parameter_types.positive_integer,
+        'network_group': {
+            'type': 'string',
+            'minLength': 1,
+            'maxLength': 255,
+        },
     },
     'additionalProperties': False,
 }
@@ -160,12 +166,15 @@ _server_group_response_v264['properties'].update({
             'anti-affinity',
             'soft-affinity',
             'soft-anti-affinity',
+            'network-group-affinity',
+            'network-group-anti-affinity',
         ],
     },
     'rules': {
         'type': 'object',
         'properties': {
             'max_server_per_host': {'type': 'integer'},
+            'network_group': {'type': 'string'},
         },
         'required': [],
         'additionalProperties': False,

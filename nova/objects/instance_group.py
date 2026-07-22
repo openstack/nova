@@ -157,6 +157,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         if 'max_server_per_host' in self._rules:
             rules['max_server_per_host'] = \
                     int(self._rules['max_server_per_host'])
+        if 'network_group' in self._rules:
+            rules['network_group'] = self._rules['network_group']
         return rules
 
     def obj_make_compatible(self, primitive, target_version):

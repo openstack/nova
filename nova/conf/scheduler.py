@@ -330,6 +330,8 @@ Related options:
             "ImagePropertiesFilter",
             "ServerGroupAntiAffinityFilter",
             "ServerGroupAffinityFilter",
+            "NetworkGroupAffinityFilter",
+            "NetworkGroupAntiAffinityFilter",
         ],
         help="""
 Filters that the scheduler will use.
