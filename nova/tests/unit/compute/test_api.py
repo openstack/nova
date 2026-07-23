@@ -208,6 +208,24 @@ class _ComputeAPIUnitTestMixIn(object):
         list_obj.obj_reset_changes()
         return list_obj
 
+    @mock.patch('nova.scheduler.utils.build_filter_properties')
+    def test_create_strips_internal_scheduler_hints(self,
+                                                    mock_build_filter):
+        mock_build_filter.side_effect = (
+            test.TestingException('stop early'))
+        flavor = self._create_flavor()
+        self.assertRaises(
+            test.TestingException,
+            self.compute_api.create,
+            self.context, flavor, 'image_id',
+            scheduler_hints={
+                '_nova_check_type': 'rebuild',
+                '_nova_future': 'something',
+                'group': 'valid-group-uuid',
+            })
+        actual_hints = mock_build_filter.call_args[0][0]
+        self.assertEqual({'group': 'valid-group-uuid'}, actual_hints)
+
     @mock.patch(
         'nova.network.neutron.API.is_remote_managed_port',
         new=mock.Mock(return_value=False),
