@@ -13,11 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import builtins
+import contextlib
 import ddt
 import fixtures
+import os
 import os_resource_classes as orc
 import os_traits as ost
 from oslo_utils import versionutils
+from unittest import mock
 
 from nova import conf
 from nova.tests.fixtures import libvirt as fakelibvirt
@@ -89,7 +93,8 @@ class LibvirtReportTraitsTests(
             self.assertIn(trait, traits)
 
 
-class LibvirtReportSevTraitsTestBase(
+@ddt.ddt
+class LibvirtReportSevTraitsTests(
         integrated_helpers.LibvirtProviderUsageBaseTestCase):
 
     STUB_INIT_HOST = False
@@ -169,7 +174,7 @@ class LibvirtReportSevTraitsTestBase(
         self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
 
     def _assert_sev_rps(self, sev, sev_es, sev_snp):
-        """Assert presence of sub-PRs representing SEV ASID slots"""
+        """Assert presence of sub-RPs representing SEV ASID slots"""
 
         # sanity checks for root RP
         self._assert_global_sev_traits()
@@ -214,10 +219,6 @@ class LibvirtReportSevTraitsTestBase(
                       self.compute.driver._host._supports_amd_sev_es)
         self.assertIs(sev_snp, self.compute.driver._host._supports_amd_sev_snp)
 
-
-@ddt.ddt
-class LibvirtReportSevTraitsTests(LibvirtReportSevTraitsTestBase):
-
     @ddt.unpack
     @ddt.data(
         # sev is detected
@@ -242,7 +243,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportSevTraitsTestBase):
         the placement API, due to the SEV capability being (mocked as) absent.
 
         Then test that if the SEV capability appears (again via mocking), after
-        a restart of the compute service, the SEV sub-RP is deleted.
+        a restart of the compute service, the SEV sub-RP is created.
         """
         self.start_compute_with_sev(**before)
 
@@ -296,3 +297,151 @@ class LibvirtReportSevTraitsTests(LibvirtReportSevTraitsTestBase):
 
         self._assert_host_sev_support(**after)
         self._assert_sev_rps(**after)
+
+
+@ddt.ddt
+class LibvirtReportTdxTraitsTests(
+        integrated_helpers.LibvirtProviderUsageBaseTestCase):
+
+    STUB_INIT_HOST = False
+
+    def start_compute_with_tdx(self, enabled):
+        with self._patch_tdx_capability(enabled):
+            self.start_compute()
+
+    def restart_compute_service_with_tdx(self, enabled):
+        # Retrigger detection of TDX support
+        self.compute.driver._host._domain_caps = None
+        self.compute.driver._host._supports_intel_tdx = None
+
+        with self._patch_tdx_capability(enabled):
+            self.restart_compute_service(self.compute)
+
+    def assertMemEncryptionSlotsEqual(self, rp_uuid, slots):
+        inventory = self._get_provider_inventory(rp_uuid)
+        if slots == 0:
+            self.assertNotIn(orc.MEM_ENCRYPTION_CONTEXT, inventory)
+        else:
+            self.assertEqual(
+                {
+                    'total': slots,
+                    'min_unit': 1,
+                    'max_unit': 1,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                    'reserved': 0,
+                },
+                inventory[orc.MEM_ENCRYPTION_CONTEXT]
+            )
+
+    def _get_intel_tdx_rps(self):
+        root_rp = self._get_resource_provider_by_uuid(self.host_uuid)
+        rps = self._get_all_rps_in_a_tree(self.host_uuid)
+        return [rp for rp in rps
+                if rp['name'] == '%s_intel_tdx' % root_rp['name']]
+
+    @contextlib.contextmanager
+    def _patch_tdx_capability(self, enabled):
+        """Patch /sys/fs/cgroup/misc.capacity and domain tdx capability
+
+        Domain tdx capability is changed according to the expected presence
+        of TDX.
+        """
+        real_exists = os.path.exists
+        real_open = builtins.open
+
+        def fake_exists(path):
+            if path == libvirt_host.MISC_CONTROL_GROUP_CAPACITY_FILE:
+                return True
+            return real_exists(path)
+
+        def fake_open(path, *args, **kwargs):
+            if path == libvirt_host.MISC_CONTROL_GROUP_CAPACITY_FILE:
+                return mock.mock_open(read_data='tdx 63\n')(path)
+            return real_open(path, *args, **kwargs)
+
+        if enabled:
+            caps = (fakelibvirt.virConnect.
+                    _domain_capability_features_with_TDX)
+        else:
+            caps = (fakelibvirt.virConnect.
+                    _domain_capability_features_with_TDX_unsupported)
+
+        with mock.patch('os.path.exists') as mock_exists, \
+                mock.patch('builtins.open') as mock_open, \
+                mock.patch.object(fakelibvirt.virConnect,
+                                  '_domain_capability_features',
+                                  new=caps):
+            mock_exists.side_effect = fake_exists
+            mock_open.side_effect = fake_open
+
+            yield
+
+            if enabled:
+                mock_exists.assert_has_calls([
+                    mock.call(libvirt_host.MISC_CONTROL_GROUP_CAPACITY_FILE)
+                ])
+                mock_open.assert_has_calls([
+                    mock.call(libvirt_host.MISC_CONTROL_GROUP_CAPACITY_FILE)
+                ])
+
+    def _assert_global_tdx_traits(self):
+        """Assert that tdx traits are present in global traits"""
+        global_traits = self._get_all_traits()
+        self.assertIn(ost.HW_CPU_X86_INTEL_TDX, global_traits)
+
+    def _assert_root_provider_tdx_traits(self):
+        """Assert that tdx capabilities are not present in root RP"""
+        traits = self._get_provider_traits(self.host_uuid)
+        self.assertNotIn(ost.HW_CPU_X86_INTEL_TDX, traits)
+        self.assertMemEncryptionSlotsEqual(self.host_uuid, 0)
+
+    def _assert_tdx_rps(self, enabled):
+        """Assert presence of sub-RPs representing TDX capacility"""
+
+        # sanity checks for root RP
+        self._assert_global_tdx_traits()
+        self._assert_root_provider_tdx_traits()
+
+        tdx_rps = self._get_intel_tdx_rps()
+        if enabled:
+            self.assertEqual(1, len(tdx_rps))
+            rp_uuid = tdx_rps[0]['uuid']
+            rp_traits = self._get_provider_traits(rp_uuid)
+            self.assertIn(ost.HW_CPU_X86_INTEL_TDX, rp_traits)
+            self.assertMemEncryptionSlotsEqual(rp_uuid, 63)
+        else:
+            self.assertEqual(0, len(tdx_rps))
+
+    def _assert_host_tdx_support(self, enabled):
+        """Assert tdx support detected by LibvirtHost.
+
+        We intentionally assert the internal caches so that we can also verify
+        that these support flags are already evaluated.
+        """
+        self.assertIs(enabled,
+                      self.compute.driver._host._supports_intel_tdx)
+
+    @ddt.unpack
+    @ddt.data(
+        (False, True),
+        (True, False)
+    )
+    def test_tdx_trait_changed(self, before, after):
+        """Test that the compute service reports the TDX trait in
+        the list of global traits, but create TDX sub-RP in the placement API
+        only when the TDX capability being (mocked as) present.
+
+        Then test that if the TDX capability appears/disappears (again via
+        mocking), after a restart of the compute service, the TDX sub-RP is
+        created/deleted.
+        """
+        self.flags(cpu_mode="host-passthrough", group="libvirt")
+
+        self.start_compute_with_tdx(before)
+        self._assert_host_tdx_support(before)
+        self._assert_tdx_rps(before)
+
+        self.restart_compute_service_with_tdx(after)
+        self._assert_host_tdx_support(after)
+        self._assert_tdx_rps(after)
