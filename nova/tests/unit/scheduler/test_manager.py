@@ -1767,10 +1767,9 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
         mock_get_by_binary.assert_called_once_with(
             mock.sentinel.context, 'nova-scheduler')
-        msg = (
-            "Current leader is test-host-1, skipping discover "
-            "hosts on test-host-2")
-        mock_log_debug.assert_called_once_with(msg)
+        mock_log_debug.assert_called_once_with(
+            "Current leader is %s, skipping discover hosts on %s",
+            "test-host-1", "test-host-2")
 
     @mock.patch('nova.scheduler.client.report.report_client_singleton')
     @mock.patch.object(manager, 'LOG')

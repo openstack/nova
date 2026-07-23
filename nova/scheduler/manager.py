@@ -117,8 +117,8 @@ class SchedulerManager(manager.Manager):
 
         if CONF.host != leader:
             LOG.debug(
-                f"Current leader is {leader}, "
-                f"skipping discover hosts on {CONF.host}")
+                "Current leader is %s, skipping discover hosts on %s",
+                leader, CONF.host)
             return
 
         global HOST_MAPPING_EXISTS_WARNING

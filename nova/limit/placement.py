@@ -91,7 +91,7 @@ def _get_usage(
     except exception.UsagesRetrievalFailed as e:
         msg = ("Failed to retrieve usages from placement while enforcing "
                "%s quota limits." % ", ".join(resource_names))
-        LOG.error(msg + " Error: " + str(e))
+        LOG.error("%s. Error: %s", msg, str(e))
         raise exception.UsagesRetrievalFailed(msg)
 
     # Use legacy behavior VCPU = VCPU + PCPU if configured.

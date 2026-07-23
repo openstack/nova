@@ -65,10 +65,10 @@ class InstanceNUMACell(base.NovaEphemeralObject,
                 primitive['cpuset'] = primitive['pcpuset']
             primitive.pop('pcpuset', None)
             LOG.warning(
-                f'Downgrading InstanceNUMACell to version {target_version} '
-                f'may cause the loss of pinned CPUs if mixing different '
-                f'verisons of nova on different hosts. This should not '
-                f'happen on any supported version after Victoria.')
+                'Downgrading InstanceNUMACell to version %s may cause '
+                'the loss of pinned CPUs if mixing different versions '
+                'of nova on different hosts. This should not happen on '
+                'any supported version after Victoria.', target_version)
 
         if target_version < (1, 4):
             primitive.pop('cpuset_reserved', None)

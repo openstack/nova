@@ -1581,7 +1581,7 @@ class Host(object):
                     'pf_mac_address': pci_utils.get_mac_by_pci_address(pf_addr)
                 })
             except exception.PciDeviceNotFoundById:
-                LOG.debug(f'Could not get a PF mac for {pf_addr}')
+                LOG.debug('Could not get a PF mac for %s', pf_addr)
                 # For the purposes Nova uses this information currently,
                 # having both a PF MAC and a VF number is needed so we return
                 # an empty dict if a PF MAC is not available.
@@ -1781,8 +1781,8 @@ class Host(object):
                self._has_cgroupsv2_cpu_controller()
 
     def _has_cgroupsv1_cpu_controller(self):
-        LOG.debug(f"Searching host: '{self.get_hostname()}' "
-                  "for CPU controller through CGroups V1...")
+        LOG.debug("Searching host: '%s' for CPU controller through "
+                  "CGroups V1...", self.get_hostname())
         try:
             with open("/proc/self/mounts", "r") as fd:
                 for line in fd.readlines():
@@ -1794,14 +1794,14 @@ class Host(object):
                 LOG.debug("CPU controller missing on host.")
                 return False
         except IOError as ex:
-            LOG.debug(f"Search failed due to: '{ex}'. "
-                      "Maybe the host is not running under CGroups V1. "
-                      "Deemed host to be missing controller by this approach.")
+            LOG.debug("Search failed due to: '%s'. Maybe the host is "
+                      "not running under CGroups V1. Deemed host to be "
+                      "missing controller by this approach.", ex)
             return False
 
     def _has_cgroupsv2_cpu_controller(self):
-        LOG.debug(f"Searching host: '{self.get_hostname()}' "
-                  "for CPU controller through CGroups V2...")
+        LOG.debug("Searching host: '%s' for CPU controller through "
+                  "CGroups V2...", self.get_hostname())
         try:
             with open("/sys/fs/cgroup/cgroup.controllers", "r") as fd:
                 for line in fd.readlines():
@@ -1812,9 +1812,9 @@ class Host(object):
                 LOG.debug("CPU controller missing on host.")
                 return False
         except IOError as ex:
-            LOG.debug(f"Search failed due to: '{ex}'. "
-                      "Maybe the host is not running under CGroups V2. "
-                      "Deemed host to be missing controller by this approach.")
+            LOG.debug("Search failed due to: '%s'. Maybe the host is "
+                      "not running under CGroups V2. Deemed host to be "
+                      "missing controller by this approach.", ex)
             return False
 
     def get_canonical_machine_type(self, arch, machine) -> str:

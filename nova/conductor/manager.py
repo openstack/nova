@@ -550,10 +550,10 @@ class ComputeTaskManager:
                 migration.status = 'error'
                 migration.save()
         except Exception as ex:
-            LOG.error('Migration of instance %(instance_id)s to host'
-                      ' %(dest)s unexpectedly failed.',
-                      {'instance_id': instance.uuid, 'dest': destination},
-                      exc_info=True)
+            LOG.exception(
+                'Migration of instance %(instance_id)s to host'
+                ' %(dest)s unexpectedly failed.',
+                {'instance_id': instance.uuid, 'dest': destination})
             # Reset the task state to None to indicate completion of
             # the operation as it is done in case of known exceptions.
             _set_vm_state(context, instance, ex, vm_states.ERROR,
@@ -2378,7 +2378,7 @@ class ComputeTaskManager:
                             volume['id'])
                 except exception.VolumeBDMNotFound:
                     LOG.debug("BDM not found, ignoring removal. "
-                              f"Error attaching volume {volume['id']}")
+                              "Error attaching volume %s", volume['id'])
         try:
             compute_utils.check_attach_and_reserve_volume(
                 context, self.volume_api, volume, instance, volume_bdm,

@@ -167,15 +167,16 @@ def should_enforce(exc: limit_exceptions.ProjectOverLimit) -> bool:
         enforced = enforce_candidates - set(require_or_ignore)
     else:
         LOG.error(
-            f'Invalid strategy value: {strategy} is specified in the '
+            'Invalid strategy value: %s is specified in the '
             '[quota]unified_limits_resource_strategy config option, so '
-            f'enforcing for resources {enforced}')
+            'enforcing for resources %s', strategy, enforced)
     # Log in case we need to debug unexpected enforcement or non-enforcement.
     msg = (
-        f'enforcing for resources {enforced}' if enforced else 'not enforcing')
+        'enforcing for resources %s' % enforced if enforced else
+        'not enforcing')
     LOG.debug(
-        f'Resources {enforce_candidates} have no registered limits set in '
-        f'Keystone. [quota]unified_limits_resource_strategy is {strategy} and '
-        f'[quota]unified_limits_resource_list is {require_or_ignore}, '
-        f'so {msg}')
+        'Resources %s have no registered limits set in Keystone. '
+        '[quota]unified_limits_resource_strategy is %s and '
+        '[quota]unified_limits_resource_list is %s, so %s',
+        enforce_candidates, strategy, require_or_ignore, msg)
     return bool(enforced)

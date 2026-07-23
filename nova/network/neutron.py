@@ -1581,8 +1581,9 @@ class API:
             except neutron_client_exc.NeutronClientException:
                 # Something failed, so log the error and rollback any
                 # successful bindings.
-                LOG.error('Binding failed for port %s and host %s.',
-                          port_id, host, instance=instance, exc_info=True)
+                LOG.exception(
+                    'Binding failed for port %s and host %s.',
+                    port_id, host, instance=instance)
                 for rollback_port_id in bindings_by_port_id:
                     try:
                         client.delete_port_binding(rollback_port_id, host)
@@ -1616,9 +1617,9 @@ class API:
             # We can safely ignore 404s since we're trying to delete
             # the thing that wasn't found anyway.
             if exc.status_code != 404:
-                LOG.error(
+                LOG.exception(
                     'Unexpected error trying to delete binding for port %s '
-                    'and host %s.', port_id, host, exc_info=True)
+                    'and host %s.', port_id, host)
                 raise exception.PortBindingDeletionFailed(
                     port_id=port_id, host=host)
 
@@ -3192,10 +3193,10 @@ class API:
                     # We don't raise an exception here because we assume that
                     # port bindings will be updated correctly when
                     # migrate_instance_finish runs
-                    LOG.error(
+                    LOG.exception(
                         'Unexpected error trying to get binding info '
                         'for port %s and destination host %s.',
-                        vif['id'], dest_host, exc_info=True)
+                        vif['id'], dest_host)
                     continue
 
                 # ...but if there is no port binding record for the destination
@@ -3232,10 +3233,9 @@ class API:
                     continue
 
                 # Log the details, raise an exception.
-                LOG.error(
+                LOG.exception(
                     'Unexpected error trying to activate binding '
-                    'for port %s and host %s.',
-                    vif['id'], dest_host, exc_info=True)
+                    'for port %s and host %s.', vif['id'], dest_host)
                 raise exception.PortBindingActivationFailed(
                     port_id=vif['id'], host=dest_host)
 

@@ -133,7 +133,7 @@ def enforce_api_limit(entity_type: str, count: int) -> None:
     except limit_exceptions.SessionInitError as e:
         msg = ("Failed to connect to keystone while enforcing %s quota limit."
                % entity_type)
-        LOG.error(msg + " Error: " + str(e))
+        LOG.error("%s Error: %s", msg, str(e))
         raise exception.KeystoneConnectionFailed(msg)
 
     try:
@@ -183,7 +183,7 @@ def enforce_db_limit(
     except limit_exceptions.SessionInitError as e:
         msg = ("Failed to connect to keystone while enforcing %s quota limit."
                % entity_type)
-        LOG.error(msg + " Error: " + str(e))
+        LOG.error("%s Error: %s", msg, str(e))
         raise exception.KeystoneConnectionFailed(msg)
 
     try:

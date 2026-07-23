@@ -1156,8 +1156,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if not unregistered_image_props:
             return
 
-        LOG.debug(f'Attempting to register defaults for the following '
-                  f'image properties: {unregistered_image_props}',
+        LOG.debug('Attempting to register defaults for the following '
+                  'image properties: %s', unregistered_image_props,
                   instance=instance)
 
         # NOTE(lyarwood): Only build disk_info once per instance if we need it
@@ -1185,11 +1185,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance, image_prop, disk_info, guest_config)
                 instance.system_metadata[f"image_{image_prop}"] = default_value
 
-                LOG.debug(f'Found default for {image_prop} of {default_value}',
-                          instance=instance)
+                LOG.debug('Found default for %s of %s',
+                          image_prop, default_value, instance=instance)
             except Exception:
-                LOG.exception(f'Ignoring unknown failure while attempting '
-                              f'to find the default of {image_prop}',
+                LOG.exception('Ignoring unknown failure while attempting '
+                              'to find the default of %s', image_prop,
                               instance=instance)
         instance.save()
 
@@ -1363,9 +1363,9 @@ class LibvirtDriver(driver.ComputeDriver):
         inactive_mdevs = self._host.list_all_devices(flags)
         if inactive_mdevs:
             names = [mdev.name() for mdev in inactive_mdevs]
-            LOG.info(f'Found inactive mdevs: {names}')
+            LOG.info('Found inactive mdevs: %s', names)
         for mdev in inactive_mdevs:
-            LOG.info(f'Starting inactive mdev: {mdev.name()}')
+            LOG.info('Starting inactive mdev: %s', mdev.name())
             self._host.device_start(mdev)
 
     def _check_my_ip(self):
@@ -3190,8 +3190,8 @@ class LibvirtDriver(driver.ComputeDriver):
             live = state in (power_state.RUNNING, power_state.PAUSED)
             guest.attach_device(cfg, persistent=True, live=live)
         except libvirt.libvirtError:
-            LOG.error('attaching network adapter failed.',
-                      instance=instance, exc_info=True)
+            LOG.exception(
+                'attaching network adapter failed.', instance=instance)
             self.vif_driver.unplug(instance, vif)
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
@@ -3213,9 +3213,10 @@ class LibvirtDriver(driver.ComputeDriver):
             # failed. Just unplugging the vif is therefore not enough cleanup,
             # we need to detach the interface.
             with excutils.save_and_reraise_exception(reraise=False):
-                LOG.error('Interface attached successfully but building '
-                          'and/or saving device metadata failed.',
-                          instance=instance, exc_info=True)
+                LOG.exception(
+                    'Interface attached successfully but building '
+                    'and/or saving device metadata failed.',
+                    instance=instance)
                 self.detach_interface(context, instance, vif)
                 raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
@@ -4368,8 +4369,8 @@ class LibvirtDriver(driver.ComputeDriver):
             if (mdevs and errcode == libvirt.VIR_ERR_INTERNAL_ERROR and
                     'error getting device from group' in errmsg):
                 LOG.info(
-                    f'Encountered error {errmsg}, reattempting creation of '
-                    'the guest.', instance=instance)
+                    'Encountered error %s, reattempting creation of '
+                    'the guest.', errmsg, instance=instance)
                 self._create_guest_with_network(
                     context, xml, instance, network_info, block_device_info,
                     vifs_already_plugged=vifs_already_plugged,
@@ -4936,8 +4937,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         context, instance.uuid, secret_uuid)
                 except Exception:
                     LOG.exception(
-                        f'Failed to delete encryption secret '
-                        f'{secret_uuid} in the key manager', instance=instance)
+                        'Failed to delete encryption secret %s in the key '
+                        'manager', secret_uuid, instance=instance)
 
             for i, orig_driver_bdm in enumerate(orig_encrypted_bdms):
                 driver_bdm = encrypted_bdms[i]
@@ -4951,7 +4952,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         self._host.delete_secret('volume', secret_usage)
                 except Exception:
                     LOG.exception(
-                        f'Failed to delete libvirt secret {secret_usage}',
+                        'Failed to delete libvirt secret %s', secret_usage,
                         instance=instance)
             raise
 
@@ -5783,7 +5784,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 cfg = self.vif_driver.get_config(
                     instance, vif, instance.image_meta, instance.flavor,
                     CONF.libvirt.virt_type)
-                LOG.debug(f'Detaching type: {type(cfg)}, data: {cfg}')
+                LOG.debug('Detaching type: %s, data: %s', type(cfg), cfg)
                 if isinstance(cfg, vconfig.LibvirtConfigGuestHostdevPCI):
                     attached_via_hostdev_element.append(vif)
                 else:
@@ -9409,8 +9410,8 @@ class LibvirtDriver(driver.ComputeDriver):
             self._host.device_set_autostart(mdev_dev, autostart=True)
         except Exception as e:
             LOG.info(
-                'Failed to set autostart to True for mdev '
-                f'{mdev_dev.name()} with UUID {uuid}: {str(e)}.')
+                'Failed to set autostart to True for mdev %s with UUID %s: %s',
+                mdev_dev.name(), uuid, str(e))
         return uuid
 
     def _create_new_mediated_device(self, parent, uuid=None):

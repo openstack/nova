@@ -268,11 +268,12 @@ class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):
             client.OpenStackApiException, self._create_server)
         self.assertEqual(403, e.response.status_code)
         expected = (
-            'Invalid strategy value: bogus is specified in the '
+            'Invalid strategy value: %s is specified in the '
             '[quota]unified_limits_resource_strategy config option, so '
-            'enforcing for resources')
+            'enforcing for resources %s')
         mock_log_error.assert_called()
-        self.assertIn(expected, mock_log_error.call_args.args[0])
+        self.assertEqual(expected, mock_log_error.call_args.args[0])
+        self.assertEqual('bogus', mock_log_error.call_args.args[1])
 
     @mock.patch('nova.limit.utils.LOG.debug')
     def test_required_limits_set(self, mock_log_debug):
@@ -292,10 +293,10 @@ class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):
         self._create_server()
         unset_limits = set(['class:DISK_GB'])
         call = mock.call(
-            f'Resources {unset_limits} have no registered limits set in '
-            f'Keystone. [quota]unified_limits_resource_strategy is require '
-            f'and [quota]unified_limits_resource_list is {require}, so not '
-            'enforcing')
+            'Resources %s have no registered limits set in Keystone. '
+            '[quota]unified_limits_resource_strategy is %s and '
+            '[quota]unified_limits_resource_list is %s, so %s',
+            unset_limits, 'require', require, 'not enforcing')
         # The message will be logged twice -- once in nova-api and once in
         # nova-conductor because of the quota recheck after resource creation.
         self.assertEqual([call, call], mock_log_debug.mock_calls)
@@ -349,10 +350,10 @@ class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):
         self._create_server()
         unset_limits = set(['class:DISK_GB'])
         call = mock.call(
-            f'Resources {unset_limits} have no registered limits set in '
-            f'Keystone. [quota]unified_limits_resource_strategy is ignore and '
-            f'[quota]unified_limits_resource_list is {ignore}, so not '
-            'enforcing')
+            'Resources %s have no registered limits set in Keystone. '
+            '[quota]unified_limits_resource_strategy is %s and '
+            '[quota]unified_limits_resource_list is %s, so %s',
+            unset_limits, 'ignore', ignore, 'not enforcing')
         # The message will be logged twice -- once in nova-api and once in
         # nova-conductor because of the quota recheck after resource creation.
         self.assertEqual([call, call], mock_log_debug.mock_calls)

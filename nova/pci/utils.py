@@ -265,9 +265,9 @@ def get_pci_ids_by_pci_addr(pci_addr: str) -> tuple[str, ...]:
         except IOError as e:
             LOG.warning(
                 "Could not find the expected sysfs file for "
-                f"determining the {id_name} ID of a PCI device "
+                "determining the %(id_name)s ID of a PCI device "
                 "with addr %(addr)s. Error: %(e)s",
-                {"addr": pci_addr, "e": e},
+                {"id_name": id_name, "addr": pci_addr, "e": e},
             )
             raise exception.PciDeviceNotFoundById(id=pci_addr)
     return tuple(ids)

@@ -4374,9 +4374,9 @@ class ComputeManager(manager.Manager):
                     self.volume_api.attachment_get(context, bdm.attachment_id)
                 except exception.VolumeAttachmentNotFound:
                     LOG.info(
-                        f"Removing stale volume attachment "
-                        f"'{bdm.attachment_id}' from instance for "
-                        f"volume '{bdm.volume_id}'.", instance=instance)
+                        "Removing stale volume attachment '%s' from instance "
+                        "for volume '%s'.", bdm.attachment_id, bdm.volume_id,
+                        instance=instance)
                     bdm.destroy()
                     bdms_to_delete.append(bdm)
                 else:
@@ -4391,7 +4391,7 @@ class ComputeManager(manager.Manager):
         for each_attach in set(cinder_attachments) - set(nova_attachments):
             # delete only cinder known attachments, from cinder DB.
             LOG.debug(
-                f"Removing attachment '{each_attach}'", instance=instance)
+                "Removing attachment '%s'", each_attach, instance=instance)
             self.volume_api.attachment_delete(context, each_attach)
 
         # refresh bdms object
@@ -10504,8 +10504,8 @@ class ComputeManager(manager.Manager):
                 LOG.debug('InstanceInfoCache no longer exists. '
                           'Unable to refresh', instance=instance)
             except Exception:
-                LOG.error('An error occurred while refreshing the network '
-                          'cache.', instance=instance, exc_info=True)
+                LOG.exception('An error occurred while refreshing the network '
+                              'cache.', instance=instance)
         else:
             LOG.debug("Didn't find any instances for network info cache "
                       "update.")
