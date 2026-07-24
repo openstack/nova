@@ -89,6 +89,7 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.RequiredMixedOrRealtimeCPUMask,
     exception.StatelessFirmwareRequired,
     exception.InvalidMixedInstanceDedicatedMask,
+    exception.InvalidVideoMode,
 )
 
 
