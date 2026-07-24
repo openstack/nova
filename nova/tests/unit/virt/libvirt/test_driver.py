@@ -3947,20 +3947,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                 self._test_get_mem_encryption_config,
                                 host_sev_enabled=True, enc_extra_spec=True,
                                 hw_firmware_type='uefi')
+        mem_encryption_model = fields.MemEncryptionModel.AMD_SEV
         self.assertEqual(
             "Machine type 'pc' is not compatible with image fake_image "
             "(150d530b-1c57-4367-b754-1f1b5237923d): q35 type is required "
-            "for SEV to work", str(exc))
+            "for %s to work" % mem_encryption_model, str(exc))
 
     def test_get_mem_encryption_config_host_extra_spec_pc(self):
         exc = self.assertRaises(exception.InvalidMachineType,
                                 self._test_get_mem_encryption_config,
                                 host_sev_enabled=True, enc_extra_spec=True,
                                 hw_firmware_type='uefi', hw_machine_type='pc')
+        mem_encryption_model = fields.MemEncryptionModel.AMD_SEV
         self.assertEqual(
             "Machine type 'pc' is not compatible with image fake_image "
             "(150d530b-1c57-4367-b754-1f1b5237923d): q35 type is required "
-            "for SEV to work", str(exc))
+            "for %s to work" % mem_encryption_model, str(exc))
 
     def _setup_sev_guest(self, model=None, direct_kernel_boot=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

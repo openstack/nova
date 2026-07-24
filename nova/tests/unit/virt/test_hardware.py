@@ -5474,6 +5474,7 @@ class MemEncryptionRequestedInvalidImagePropsTestCase(test.NoDBTestCase):
     flavor_name = 'm1.faketiny'
     image_name = 'fakecirros'
     image_id = '7ec4448e-f3fd-44b1-b172-9a7980f0f29f'
+    model = fields.MemEncryptionModel.AMD_SEV
 
     def _test_encrypted_memory_support_raises(self, enc_extra_spec,
                                               enc_image_prop, image_props,
@@ -5542,13 +5543,13 @@ class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
     expected_exception = exception.InvalidMachineType
     expected_error = (
         "Machine type '%(mtype)s' is not compatible with image %(image_name)s "
-        "(%(image_id)s): q35 type is required for SEV to work")
+        "(%(image_id)s): q35 type is required for %(model)s to work")
 
     def _test_encrypted_memory_support_pc(self, enc_extra_spec,
                                               enc_image_prop):
         error_data = {'image_id': self.image_id,
                       'image_name': self.image_name,
-                      'mtype': 'pc'}
+                      'mtype': 'pc', 'model': self.model}
         image_props = {'hw_firmware_type': 'uefi',
                        'hw_machine_type': 'pc'}
         self._test_encrypted_memory_support_raises(enc_extra_spec,
@@ -5587,7 +5588,7 @@ class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
             {'name': self.image_name}, {}, image_props)
         error_data = {'image_id': '<no-id>',
                       'image_name': self.image_name,
-                      'mtype': 'pc'}
+                      'mtype': 'pc', 'model': self.model}
         self._test_encrypted_memory_support_pc_image_id(image_meta,
                                                         error_data)
 
@@ -5600,7 +5601,7 @@ class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
             {}, image_props)
         error_data = {'image_id': self.image_id,
                       'image_name': self.image_name,
-                      'mtype': 'pc'}
+                      'mtype': 'pc', 'model': self.model}
         self._test_encrypted_memory_support_pc_image_id(image_meta,
                                                         error_data)
 
