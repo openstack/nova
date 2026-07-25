@@ -1151,9 +1151,13 @@ class ComputeManager(manager.Manager):
         if self.driver.capabilities.get('supports_vtpm', False):
             return
 
-        for instance in instances:
+        total_instances = len(instances)
+        for i, instance in enumerate(instances):
             if instance.deleted:
                 continue
+
+            LOG.debug('Checking vTPM constraint for instance %d/%d: %s',
+                      i + 1, total_instances, instance.uuid)
 
             # NOTE(stephenfin): We don't have an attribute on the instance to
             # check for this, so we need to inspect the flavor/image metadata
@@ -1781,10 +1785,13 @@ class ComputeManager(manager.Manager):
         # startup before we start mucking with instances we think are
         # ours.
         self._check_for_host_rename(nodes_by_uuid)
-
+        expected_attrs = ['info_cache', 'metadata', 'system_metadata',
+                          'numa_topology', 'flavor']
+        LOG.debug('Loading instances for host %s with expected_attrs: %s',
+                  self.host, ', '.join(expected_attrs))
         instances = objects.InstanceList.get_by_host(
-            context, self.host,
-            expected_attrs=['info_cache', 'metadata', 'numa_topology'])
+            context, self.host, expected_attrs=expected_attrs)
+        LOG.debug('Loaded %d instances for host', len(instances))
 
         self.init_virt_events()
 
