@@ -87,6 +87,7 @@ from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_instance_numa
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit import utils as test_utils
+from nova import thread_pool_factory
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
@@ -1661,7 +1662,6 @@ class ComputeTestCase(BaseTestCase,
                       fake_resource_tracker.RTMockMixin):
     def setUp(self):
         super(ComputeTestCase, self).setUp()
-        self.compute._live_migration_executor = futurist.SynchronousExecutor()
         # NOTE(gibi): the _sync_power_states periodic task in the
         # ComputeManager spawning concurrent tasks and uses a lock to
         # synchronize a shared data structure. As the spawn is made
@@ -8575,7 +8575,8 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute._sync_power_states(ctxt)
         # wait for sync to finish
-        self.compute._sync_power_executor.shutdown(wait=True)
+        thread_pool_factory.get_executor(
+            thread_pool_factory.ExecutorType.SYNC_POWER).shutdown(wait=True)
 
         mock_get.assert_has_calls([mock.call(mock.ANY), mock.call(mock.ANY),
                                    mock.call(mock.ANY)])

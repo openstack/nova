@@ -94,6 +94,7 @@ from nova.tests.unit.objects import test_instance_numa
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
 from nova.tests.unit import utils as test_utils
+from nova import thread_pool_factory
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -566,8 +567,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait1 = threading.Event()
         done1 = threading.Event()
         sig1 = threading.Event()
-        thr1 = utils.spawn(backend.by_name(self._fake_instance(uuid),
-                                              'name').cache,
+        thr1 = thread_pool_factory.spawn(
+                backend.by_name(self._fake_instance(uuid), 'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig1, wait=wait1, done=done1)
         utils.cooperative_yield()
@@ -577,8 +578,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2 = threading.Event()
         done2 = threading.Event()
         sig2 = threading.Event()
-        thr2 = utils.spawn(backend.by_name(self._fake_instance(uuid),
-                                              'name').cache,
+        thr2 = thread_pool_factory.spawn(
+                backend.by_name(self._fake_instance(uuid), 'name').cache,
                 _concurrency, 'fname', None,
                 signal=sig2, wait=wait2, done=done2)
 
@@ -604,8 +605,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait1 = threading.Event()
         done1 = threading.Event()
         sig1 = threading.Event()
-        thr1 = utils.spawn(backend.by_name(self._fake_instance(uuid),
-                                              'name').cache,
+        thr1 = thread_pool_factory.spawn(
+                backend.by_name(self._fake_instance(uuid), 'name').cache,
                 _concurrency, 'fname2', None,
                 signal=sig1, wait=wait1, done=done1)
         utils.cooperative_yield()
@@ -615,8 +616,8 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
         wait2 = threading.Event()
         done2 = threading.Event()
         sig2 = threading.Event()
-        thr2 = utils.spawn(backend.by_name(self._fake_instance(uuid),
-                                              'name').cache,
+        thr2 = thread_pool_factory.spawn(
+                backend.by_name(self._fake_instance(uuid), 'name').cache,
                 _concurrency, 'fname1', None,
                 signal=sig2, wait=wait2, done=done2)
         utils.cooperative_yield()
@@ -13763,7 +13764,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             drvr._live_migration_uri(target_connection),
             params=params, flags=0)
 
-    @mock.patch.object(utils, 'spawn')
+    @mock.patch.object(thread_pool_factory, 'spawn')
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(fakelibvirt.Connection, '_mark_running')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -15665,7 +15666,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                              expected_switch=True)
 
     @mock.patch.object(host.Host, "get_connection")
-    @mock.patch.object(utils, "spawn")
+    @mock.patch.object(thread_pool_factory, "spawn")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration_monitor")
     @mock.patch.object(host.Host, "get_guest")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
@@ -15724,7 +15725,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self._test_live_migration_main(mon_side_effect=Exception)
 
     @mock.patch.object(host.Host, "get_connection", new=mock.Mock())
-    @mock.patch.object(utils, "spawn")
+    @mock.patch.object(thread_pool_factory, "spawn")
     @mock.patch.object(host.Host, "get_guest")
     @mock.patch.object(
         libvirt_driver.LibvirtDriver, "_live_migration_copy_disk_paths")

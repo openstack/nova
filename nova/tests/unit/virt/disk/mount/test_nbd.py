@@ -21,6 +21,7 @@ from unittest import mock
 import fixtures
 
 from nova import test
+from nova import thread_pool_factory
 from nova import utils
 from nova.virt.disk.mount import nbd
 from nova.virt.image import model as imgmodel
@@ -324,8 +325,8 @@ class NbdTestCase(test.NoDBTestCase):
             n.get_dev()
             chosen_devices.append(n.device)
 
-        thread1 = utils.spawn(get_a_device)
-        thread2 = utils.spawn(get_a_device)
+        thread1 = thread_pool_factory.spawn(get_a_device)
+        thread2 = thread_pool_factory.spawn(get_a_device)
         thread1.result()
         thread2.result()
 

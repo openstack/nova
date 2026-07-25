@@ -37,7 +37,6 @@ import fixtures
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-from nova import utils
 
 
 class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
@@ -883,9 +882,6 @@ class TestConductorGracefulShutdown(test.TestCase):
     def test_graceful_shutdown_completes_instantly_when_no_tasks(self):
         manager = self.conductor_service.manager
         self.assertFalse(manager._shutdown_in_progress.is_set())
-
-        utils.get_cache_images_executor()
-        self.addCleanup(utils.destroy_cache_images_executor)
 
         start = time.monotonic()
         self.conductor_service.stop()

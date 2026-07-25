@@ -15,7 +15,7 @@ from unittest import mock
 from nova.cmd import scheduler
 from nova import config
 from nova import test
-from nova import utils
+from nova import thread_pool_factory
 
 
 # required because otherwise oslo early parse_args dies
@@ -55,15 +55,24 @@ class TestScheduler(test.NoDBTestCase):
         self, mock_wait, mock_serve, service_create
     ):
         # simulate that the thread pool is initialized before the fork
-        executor = utils._get_default_executor()
-        sc_executor = utils.get_scatter_gather_executor()
+        executor = thread_pool_factory.get_executor(
+            thread_pool_factory.ExecutorType.DEFAULT)
+        sc_executor = thread_pool_factory.get_executor(
+            thread_pool_factory.ExecutorType.SCATTER_GATHER)
+
         scheduler.main()
 
         mock_serve.assert_called_once_with(
             service_create.return_value, workers=mock.ANY)
         mock_wait.assert_called_once_with()
-        # check that the executor was properly destroyed
+        # check that the executors were properly destroyed
         self.assertFalse(executor.alive)
-        self.assertIsNone(utils.DEFAULT_EXECUTOR)
         self.assertFalse(sc_executor.alive)
-        self.assertIsNone(utils.SCATTER_GATHER_EXECUTOR)
+        self.assertEqual({}, thread_pool_factory.FACTORY._all_executors)
+        # check that the factory is not left in a permanently
+        # "shutdown" state, since the process (and its forked workers)
+        # must still be able to create new executors afterwards
+        self.assertFalse(thread_pool_factory.FACTORY._shutdown)
+        new_executor = thread_pool_factory.get_executor(
+            thread_pool_factory.ExecutorType.DEFAULT)
+        self.addCleanup(new_executor.shutdown, wait=False)

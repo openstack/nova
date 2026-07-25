@@ -31,6 +31,7 @@ from nova import objects
 from nova.pci import stats as pci_stats
 from nova.scheduler import filters
 from nova.scheduler import weights
+from nova import thread_pool_factory
 from nova import utils
 from nova.virt import hardware
 
@@ -468,7 +469,7 @@ class HostManager(object):
                 LOG.debug("END:_async_init_instance_info")
 
         # Run this async so that we don't block the scheduler start-up
-        utils.spawn(_async_init_instance_info, computes_by_cell)
+        thread_pool_factory.spawn(_async_init_instance_info, computes_by_cell)
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need

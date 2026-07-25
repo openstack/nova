@@ -29,7 +29,7 @@ import nova.conf
 from nova import config
 from nova import objects
 from nova import service
-from nova import utils
+from nova import thread_pool_factory
 from nova import version
 
 CONF = nova.conf.CONF
@@ -48,7 +48,6 @@ def main():
                                     topic=rpcapi.RPC_TOPIC)
     workers = CONF.conductor.workers or processutils.get_worker_count()
 
-    utils.destroy_default_executor()
-    utils.destroy_scatter_gather_executor()
+    thread_pool_factory.reset_all_executors()
     service.serve(server, workers=workers)
     service.wait()

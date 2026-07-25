@@ -44,6 +44,7 @@ from nova.objects import service as service_obj
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import fake_instance
+from nova import thread_pool_factory
 from nova import utils
 
 CONF = cfg.CONF
@@ -296,27 +297,27 @@ class TestIndirectionAPIFixture(testtools.TestCase):
 
 class TestSpawnIsSynchronousFixture(testtools.TestCase):
     def test_spawn_patch(self):
-        orig_spawn = utils.spawn
+        orig_spawn = thread_pool_factory.spawn
 
         fix = fixtures.SpawnIsSynchronousFixture()
         self.useFixture(fix)
-        self.assertNotEqual(orig_spawn, utils.spawn)
+        self.assertNotEqual(orig_spawn, thread_pool_factory.spawn)
 
     def test_spawn_passes_through(self):
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         tester = mock.MagicMock()
-        utils.spawn(tester.function, 'foo', bar='bar')
+        thread_pool_factory.spawn(tester.function, 'foo', bar='bar')
         tester.function.assert_called_once_with('foo', bar='bar')
 
     def test_spawn_return_has_result(self):
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
-        future = utils.spawn(lambda x: '%s' % x, 'foo')
+        future = thread_pool_factory.spawn(lambda x: '%s' % x, 'foo')
         foo = future.result()
         self.assertEqual('foo', foo)
 
     def test_spawn_callback(self):
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
-        future = utils.spawn(mock.MagicMock)
+        future = thread_pool_factory.spawn(mock.MagicMock)
         call_count = []
 
         def fake(thread):
