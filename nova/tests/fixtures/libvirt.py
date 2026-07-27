@@ -904,6 +904,25 @@ def _parse_disk_info(element):
         if not disk_info['source']:
             disk_info['source'] = source.get('path')
 
+        # Network-backed disks (e.g. rbd) use <source protocol='rbd'
+        # name='pool/image'> with optional <host name='...' port='...'/>
+        # children. Capture them so they can be re-rendered by XMLDesc.
+        protocol = source.get('protocol')
+        if protocol:
+            disk_info['source_protocol'] = protocol
+            disk_info['source_name'] = source.get('name')
+            disk_info['source_hosts'] = [
+                {'name': host.get('name'), 'port': host.get('port')}
+                for host in source.findall('./host')
+            ]
+            auth = element.find('./auth')
+            if auth is not None:
+                disk_info['auth_username'] = auth.get('username')
+                secret = auth.find('./secret')
+                if secret is not None:
+                    disk_info['auth_secret_type'] = secret.get('type')
+                    disk_info['auth_secret_uuid'] = secret.get('uuid')
+
         encryption = element.find('./source/encryption')
         if encryption is not None and len(encryption):
             disk_info['encryption_format'] = encryption.get('format')
@@ -1605,6 +1624,35 @@ class Domain(object):
                 source_attr = 'file'
             else:
                 source_attr = 'dev'
+
+            # Network-backed disks (e.g. rbd) need a different <source>
+            # element shape with optional <host> children and a sibling
+            # <auth> element. Render them up-front and skip the generic
+            # source_attr templating below.
+            if disk.get('source_protocol'):
+                auth_xml = ''
+                if disk.get('auth_username'):
+                    auth_xml = ('''
+    <auth username='%s'>
+      <secret type='%s' uuid='%s'/>
+    </auth>''') % (disk['auth_username'],
+                   disk.get('auth_secret_type', 'ceph'),
+                   disk.get('auth_secret_uuid', ''))
+
+                hosts_xml = ''.join('''<host name='%s' port='%s'/>''' % (
+                        h['name'], h['port'])
+                    for h in disk.get('source_hosts') or [])
+                disks += ('''
+    <disk type='%(type)s' device='%(device)s'>
+      <driver name='%(driver_name)s' type='%(driver_type)s'/>
+      <alias name='%(alias)s'/>%(auth_xml)s
+      <source protocol='%(source_protocol)s'
+       name='%(source_name)s'>%(hosts_xml)s
+      </source>
+      <target dev='%(target_dev)s' bus='%(target_bus)s'/>
+      <address type='drive' controller='0' bus='0' unit='0'/>
+    </disk>''') % dict(disk, auth_xml=auth_xml, hosts_xml=hosts_xml)
+                continue
 
             strformat = """
     <disk type='%(type)s' device='%(device)s'>
