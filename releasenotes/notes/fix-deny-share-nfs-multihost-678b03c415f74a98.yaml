@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Fixed a bug where detaching an NFS share left
+    orphaned access rules when another instance on a
+    different host used the same share.
+    See `bug 2161868
+    <https://launchpad.net/bugs/2161868>`__.
