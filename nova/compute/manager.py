@@ -4890,6 +4890,66 @@ class ComputeManager(manager.Manager):
 
         _allow_share(context, instance, share_mapping)
 
+    def _check_share_usage(self, context, share_mapping, instance):
+        """Check if a share is still in use by active mappings.
+
+        Returns True if the share is still needed (should not be
+        revoked), False if it can be safely revoked.
+        """
+        instance_uuid = instance.uuid
+        share_mappings_used_by_share = (
+            objects.share_mapping.ShareMappingList.get_by_share_id(
+                context, share_mapping.share_id
+            )
+        )
+
+        # For NFS, each host has its own IP-based access rule. Only
+        # consider instances on the same host when deciding whether
+        # the access rule is still needed. Instances on other hosts
+        # have independent access rules.
+        if share_mapping.share_proto == fields.ShareMappingProto.NFS:
+            other_uuids = list({
+                sm.instance_uuid
+                for sm in share_mappings_used_by_share
+                if sm.instance_uuid != instance_uuid
+            })
+            same_host_uuids = {instance_uuid}
+            if other_uuids:
+                others = objects.InstanceList.get_by_filters(
+                    context, {'uuid': other_uuids},
+                    expected_attrs=[])
+                same_host_uuids.update(
+                    inst.uuid for inst in others
+                    if inst.host == instance.host
+                )
+            share_mappings_used_by_share = [
+                sm for sm in share_mappings_used_by_share
+                if sm.instance_uuid in same_host_uuids
+            ]
+
+        # The share is safe to revoke (not used) when every mapping
+        # satisfies one of:
+        #  - It belongs to this instance and is INACTIVE or ERROR
+        #    (granted but not mounted, or broken).
+        #  - It is in DETACHING state (any instance, including ours).
+        # If any mapping falls outside these cases (e.g. another
+        # instance is ACTIVE), the share is still in use.
+        # The return value is inverted: True = still used, False = safe
+        # to revoke.
+        return not all(
+            (
+                (
+                    sm.instance_uuid == instance_uuid and
+                    sm.status in (
+                        fields.ShareMappingStatus.INACTIVE,
+                        fields.ShareMappingStatus.ERROR,
+                    )
+                ) or
+                sm.status == fields.ShareMappingStatus.DETACHING
+            )
+            for sm in share_mappings_used_by_share
+        )
+
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
@@ -4898,42 +4958,6 @@ class ComputeManager(manager.Manager):
 
         @utils.synchronized(share_mapping.share_id)
         def _deny_share(context, instance, share_mapping):
-
-            def check_share_usage(context, instance_uuid):
-                share_mappings_used_by_share = (
-                    objects.share_mapping.ShareMappingList.get_by_share_id(
-                        context, share_mapping.share_id
-                    )
-                )
-
-                # Logic explanation:
-                #
-                # Warning: Here we have a list of share_mapping using our
-                # share (usually share_mappings is a list of share_mapping used
-                # by an instance).
-                # A share IS NOT used (detachable) if:
-                # - The share status is INACTIVE or ERROR on our instance.
-                # - The share status is DETACHING on all other instances.
-                #       +-- reverse the logic as the function check if a share
-                #       |   IS used.
-                #       v
-                return not all(
-                    (
-                        (
-                            sm.instance_uuid == instance_uuid and
-                            (
-                                sm.status
-                                in (
-                                    fields.ShareMappingStatus.INACTIVE,
-                                    fields.ShareMappingStatus.ERROR,
-                                )
-                            )
-                        ) or
-                        sm.status == fields.ShareMappingStatus.DETACHING
-                    )
-                    for sm in share_mappings_used_by_share
-                )
-
             try:
                 compute_utils.notify_about_share_attach_detach(
                     context,
@@ -4944,9 +4968,12 @@ class ComputeManager(manager.Manager):
                     share_id=share_mapping.share_id,
                 )
 
-                still_used = check_share_usage(context, instance.uuid)
-
+                # Must run before _check_share_usage: populates
+                # access_type/access_to needed by deny() below.
                 share_mapping.set_access_according_to_protocol()
+
+                still_used = self._check_share_usage(
+                    context, share_mapping, instance)
 
                 if not still_used:
                     # self.manila_api.unlock(share_mapping.share_id)

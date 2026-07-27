@@ -2639,6 +2639,7 @@ class ComputeTestCase(BaseTestCase,
                                        share_info)
         self.compute.terminate_instance(ctxt, instance, [])
 
+    @mock.patch('nova.share.manila.API.deny')
     @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
     @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
@@ -2648,7 +2649,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_image_specified_and_share(
         self, mock_rescue, mock_power_off, mock_image_get, mock_get_block_info,
-            mock_get_share_info, mock_drv_mount):
+            mock_get_share_info, mock_drv_mount, mock_manila_deny):
         image_ref = uuids.image_instance
         rescue_image_meta = {}
         params = {"task_state": task_states.RESCUING}
@@ -2683,6 +2684,7 @@ class ComputeTestCase(BaseTestCase,
         )
         self.compute.terminate_instance(ctxt, instance, [])
 
+    @mock.patch('nova.share.manila.API.deny')
     @mock.patch('nova.objects.instance_fault.InstanceFault.create')
     @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
     @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
@@ -2693,7 +2695,8 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_image_specified_and_mount_error(
         self, mock_rescue, mock_power_off, mock_image_get, mock_get_block_info,
-            mock_get_share_info, mock_drv_mount, mock_db_fault):
+            mock_get_share_info, mock_drv_mount, mock_db_fault,
+            mock_manila_deny):
         image_ref = uuids.image_instance
         rescue_image_meta = {}
         params = {"task_state": task_states.RESCUING}
