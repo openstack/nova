@@ -16,6 +16,8 @@
 """Test of Policy Engine For Nova."""
 
 import os.path
+import threading
+import time
 from unittest import mock
 
 from oslo_policy import policy as oslo_policy
@@ -63,6 +65,56 @@ class PolicyFileTestCase(test.NoDBTestCase):
             policy._ENFORCER.load_rules(True)
             self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.context, action, self.target)
+
+
+class PolicyInitTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        policy.reset()
+        self.addCleanup(policy.reset)
+
+    def test_concurrent_init_serializes_and_builds_enforcer_once(self):
+        context_ = context.RequestContext(
+            'fake-user', 'fake-project', is_admin=True, roles=['admin'])
+        real_register_rules = policy.register_rules
+        call_count = 0
+        building = threading.Event()
+        second_call_attempted = threading.Event()
+
+        def blocking_register_rules(enforcer):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                building.set()
+                # Wait for the second caller to start trying to init, then
+                # give it time to block on the lock, before we finish
+                # building and publish the enforcer.
+                second_call_attempted.wait(timeout=2)
+                time.sleep(0.1)
+            real_register_rules(enforcer)
+
+        errors = []
+
+        def second_caller():
+            building.wait(timeout=2)
+            second_call_attempted.set()
+            try:
+                policy.authorize(
+                    context_, servers_policy.NETWORK_ATTACH_EXTERNAL, {})
+            except Exception as e:
+                errors.append(e)
+
+        with mock.patch.object(
+                policy, 'register_rules',
+                side_effect=blocking_register_rules):
+            t = threading.Thread(target=second_caller)
+            t.start()
+            policy.init(suppress_deprecation_warnings=True)
+            t.join(timeout=5)
+
+        self.assertFalse(t.is_alive())
+        self.assertEqual([], errors)
+        self.assertEqual(1, call_count)
 
 
 class PolicyTestCase(test.NoDBTestCase):

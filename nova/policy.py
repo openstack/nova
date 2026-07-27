@@ -17,6 +17,7 @@
 import copy
 import re
 
+from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_policy import policy
@@ -67,23 +68,32 @@ def init(policy_file=None, rules=None, default_rule=None, use_conf=True,
     global saved_file_rules
 
     if not _ENFORCER:
-        _ENFORCER = policy.Enforcer(
-            CONF,
-            policy_file=policy_file,
-            rules=rules,
-            default_rule=default_rule,
-            use_conf=use_conf)
-        # NOTE(gmann): Explicitly disable the warnings for policies
-        # changing their default check_str. During policy-defaults-refresh
-        # work, all the policy defaults have been changed and warning for
-        # each policy started filling the logs limit for various tool.
-        # Once we move to new defaults only world then we can enable these
-        # warning again.
-        _ENFORCER.suppress_default_change_warnings = True
-        if suppress_deprecation_warnings:
-            _ENFORCER.suppress_deprecation_warnings = True
-        register_rules(_ENFORCER)
-        _ENFORCER.load_rules()
+        with lockutils.lock('nova-policy-init'):
+            # Re-check under the lock: another caller may have finished
+            # initializing the enforcer while we were waiting to acquire it.
+            if not _ENFORCER:
+                enforcer = policy.Enforcer(
+                    CONF,
+                    policy_file=policy_file,
+                    rules=rules,
+                    default_rule=default_rule,
+                    use_conf=use_conf)
+                # NOTE(gmann): Explicitly disable the warnings for policies
+                # changing their default check_str. During
+                # policy-defaults-refresh work, all the policy defaults have
+                # been changed and warning for each policy started filling
+                # the logs limit for various tool. Once we move to new
+                # defaults only world then we can enable these warning again.
+                enforcer.suppress_default_change_warnings = True
+                if suppress_deprecation_warnings:
+                    enforcer.suppress_deprecation_warnings = True
+                register_rules(enforcer)
+                enforcer.load_rules()
+
+                # Only expose the enforcer once it is fully initialized, so
+                # concurrent callers can never observe a partially
+                # initialized enforcer.
+                _ENFORCER = enforcer
 
     # Only the rules which are loaded from file may be changed.
     current_file_rules = _ENFORCER.file_rules
