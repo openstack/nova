@@ -778,12 +778,6 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-    periodic-weekly:
-      jobs:
-        # Runs emulation feature functionality test less frequently due
-        # to being the initial release and experimental in nature.
-        - nova-emulation
-        - tempest-centos9-stream-fips
     experimental:
       jobs:
         - ironic-tempest-bfv:
