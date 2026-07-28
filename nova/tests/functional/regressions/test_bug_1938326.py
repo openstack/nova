@@ -16,12 +16,11 @@ from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
 
-class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
+class TestMigrateFromDisabledHost(integrated_helpers._IntegratedTestBase):
     """Regression test for bug #1938326
 
     Assert the behaviour of n-api when requests are made to migrate an instance
-    from a disabled, forced down, down and disabled and down compute
-    host.
+    from a disabled host.
 
     Bug #1938326 specifically covering the case where a request is made and
     accepted to migrate an instance from a disabled and down compute host.
@@ -30,11 +29,6 @@ class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
     ADMIN_API = True
 
     def _setup_compute_service(self):
-        # We want the service to be marked down in a reasonable time while
-        # ensuring we don't accidentally mark services as down prematurely
-        self.flags(report_interval=1)
-        self.flags(service_down_time=6)
-
         # Use two compute services to make it easier to assert the call from
         # the dest to the src, we could also test this for same host resize.
         self._start_compute('src')
@@ -61,6 +55,31 @@ class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
         # Assert that we can migrate and confirm from a disabled but up compute
         self._migrate_server(server)
         self._confirm_resize(server)
+
+
+class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
+    """Regression test for bug #1938326
+
+    Assert the behaviour of n-api when requests are made to migrate an instance
+    from a forced down, down and disabled and down compute
+    host.
+
+    Bug #1938326 specifically covering the case where a request is made and
+    accepted to migrate an instance from a disabled and down compute host.
+    """
+    microversion = 'latest'
+    ADMIN_API = True
+
+    def _setup_compute_service(self):
+        # We want the service to be marked down in a reasonable time while
+        # ensuring we don't accidentally mark services as down prematurely
+        self.flags(report_interval=1)
+        self.flags(service_down_time=6)
+
+        # Use two compute services to make it easier to assert the call from
+        # the dest to the src, we could also test this for same host resize.
+        self._start_compute('src')
+        self._start_compute('dest')
 
     def test_migrate_from_forced_down_host(self):
         """Assert that migration requests for forced down hosts are rejected
