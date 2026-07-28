@@ -184,7 +184,7 @@ class TestLiveMigrationRbdMonAddrsNotRefreshed(
     def _get_host(self, server_id):
         return self.api.get_server(server_id)['OS-EXT-SRV-ATTR:host']
 
-    def test_rbd_mon_addrs_not_refreshed_on_live_migration(self):
+    def test_rbd_mon_addrs_are_refreshed_on_live_migration(self):
         """Bug #1741364: rbd <host> entries are stale on the destination.
 
         Without the fix, get_updated_guest_xml leaves the rbd
@@ -229,12 +229,12 @@ class TestLiveMigrationRbdMonAddrsNotRefreshed(
         # When the fix lands, the next two assertions should be flipped:
         # the destination XML should contain expected_new.
 
-        self.assertNotEqual(
+        self.assertEqual(
             expected_new, dest_hosts,
             "Bug #1741364 reproducer: destination libvirt XML must NOT "
             "yet contain the freshly reported mon addresses; if it does, "
             "the bug has been fixed and this test should be updated.")
-        self.assertEqual(
+        self.assertNotEqual(
             expected_old, dest_hosts,
             "Bug #1741364 reproducer: destination libvirt XML still "
             "contains the old mon addresses. If not, the bug has been "

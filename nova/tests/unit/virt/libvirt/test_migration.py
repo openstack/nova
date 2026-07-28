@@ -25,6 +25,7 @@ from nova.compute import power_state
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
+from nova.storage import rbd_utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
@@ -716,6 +717,133 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         new_xml = xml.replace("127.0.0.1", "127.0.0.100")
         new_xml = new_xml.replace("127.0.0.2", "127.0.0.200")
         self.assertXmlEqual(res, new_xml)
+
+    @mock.patch.object(rbd_utils, "RBDDriver")
+    def test_update_rbd_xml(self, mock_rbd_driver):
+        mock_rbd_driver.return_value.get_mon_addrs.return_value = (
+            ["1.2.3.5"],
+            ["6789"],
+        )
+
+        data = objects.LibvirtLiveMigrateData(image_type="rbd")
+        xml = """<domain>
+ <devices>
+    <disk type='network' device='disk'>
+      <driver name='qemu' type='raw' cache='writeback' discard='unmap'/>
+      <auth username='nova'>
+        <secret type='ceph' uuid='0ce168c7-b25c-46ae-9e9c-4dfcecb23708'/>
+      </auth>
+      <source protocol='rbd' name='nova-root/fake_uuid_disk' index='2'>
+        <host name='1.2.3.4' port='6789'/>
+      </source>
+      <target dev='sda' bus='scsi'/>
+      <alias name='scsi0-0-0-0'/>
+      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+    </disk>
+ </devices>
+</domain>"""
+
+        doc = etree.fromstring(xml)
+        res = etree.tostring(
+            migration._update_rbd_xml(doc, data),
+            encoding='unicode'
+        )
+        new_xml = xml.replace("1.2.3.4", "1.2.3.5")
+        self.assertXmlEqual(res, new_xml)
+        mock_rbd_driver.return_value.get_mon_addrs.assert_called_once_with()
+
+    def test_update_rbd_xml_non_rbd_image_type(self):
+        xml = """<domain>
+ <devices>
+    <disk type='network' device='disk'>
+      <source protocol='rbd' name='nova-root/fake_uuid_disk' index='2'>
+        <host name='1.2.3.4' port='6789'/>
+      </source>
+    </disk>
+ </devices>
+</domain>"""
+        doc = etree.fromstring(xml)
+        data = objects.LibvirtLiveMigrateData(image_type="lvm")
+        res = etree.tostring(
+            migration._update_rbd_xml(doc, data),
+            encoding='unicode'
+        )
+        self.assertXmlEqual(res, xml)
+
+    @mock.patch.object(rbd_utils, "RBDDriver")
+    def test_update_rbd_xml_skips_serial_disk(self, mock_rbd_driver):
+        mock_rbd_driver.return_value.get_mon_addrs.return_value = (
+            ["1.2.3.5"],
+            ["6789"],
+        )
+        xml = """<domain>
+ <devices>
+    <disk type='network' device='disk'>
+      <serial>58a84f6d-3f0c-4e19-a0af-eb657b790657</serial>
+      <alias name='scsi0-0-0-0'/>
+      <source protocol='rbd' name='volumes/fake_volume_id' index='1'>
+        <host name='1.2.3.4' port='6789'/>
+      </source>
+      <target dev='vdb' bus='virtio'/>
+    </disk>
+ </devices>
+</domain>"""
+        doc = etree.fromstring(xml)
+        data = objects.LibvirtLiveMigrateData(image_type="rbd")
+        res = etree.tostring(
+            migration._update_rbd_xml(doc, data),
+            encoding='unicode'
+        )
+        self.assertXmlEqual(res, xml)
+
+    @mock.patch.object(rbd_utils, "RBDDriver")
+    def test_update_rbd_xml_skips_ua_alias_disk(self, mock_rbd_driver):
+        mock_rbd_driver.return_value.get_mon_addrs.return_value = (
+            ["1.2.3.5"],
+            ["6789"],
+        )
+        xml = """<domain>
+ <devices>
+    <disk type='network' device='disk'>
+      <alias name='ua-58a84f6d-3f0c-4e19-a0af-eb657b790657'/>
+      <source protocol='rbd' name='volumes/fake_volume_id' index='1'>
+        <host name='1.2.3.4' port='6789'/>
+      </source>
+      <target dev='vdb' bus='virtio'/>
+    </disk>
+ </devices>
+</domain>"""
+        doc = etree.fromstring(xml)
+        data = objects.LibvirtLiveMigrateData(image_type="rbd")
+        res = etree.tostring(
+            migration._update_rbd_xml(doc, data),
+            encoding="unicode"
+        )
+        self.assertXmlEqual(res, xml)
+
+    @mock.patch.object(rbd_utils, "RBDDriver")
+    def test_update_rbd_xml_skips_non_rbd_protocol(self, mock_rbd_driver):
+        mock_rbd_driver.return_value.get_mon_addrs.return_value = (
+            ["1.2.3.5"],
+            ["6789"],
+        )
+        xml = """<domain>
+ <devices>
+    <disk type='network' device='disk'>
+      <source protocol='nbd' name='some-nbd-disk' index='1'>
+        <host name='1.2.3.4' port='10809'/>
+      </source>
+      <target dev='vdc' bus='virtio'/>
+    </disk>
+ </devices>
+</domain>"""
+        doc = etree.fromstring(xml)
+        data = objects.LibvirtLiveMigrateData(image_type="rbd")
+        res = etree.tostring(
+            migration._update_rbd_xml(doc, data),
+            encoding='unicode'
+        )
+        self.assertXmlEqual(res, xml)
 
     def test_update_volume_xml(self):
         connection_info = {

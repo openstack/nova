@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Fixed bug `1761361`_ where 'local' RBD disks did not use the up-to-date
+    Ceph monitor addresses during live migrations, which could lead to
+    connection failures when connecting the disk on the destination hypervisor.
+    The fix ensures that the latest Ceph monitor addresses are used during
+    live migrations, improving the reliability of migrations involving RBD disks.
+
+    .. _1761361: https://bugs.launchpad.net/nova/+bug/1761361
