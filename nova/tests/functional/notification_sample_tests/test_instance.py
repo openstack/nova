@@ -75,8 +75,13 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             }
         }
         self.admin_api.post_server_action(server['id'], post)
+        # NOTE(gibi): the two end notifications come from two different
+        # computes so their order is not fully defined. Let's wait for both
+        # before we assert.
         self._wait_for_notification(
             'instance.live_migration_rollback_dest.end')
+        self._wait_for_notification(
+            'instance.live_migration_rollback.end')
 
         # 0. scheduler.select_destinations.start
         # 1. scheduler.select_destinations.end
@@ -93,24 +98,33 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=self.notifier.versioned_notifications[2])
+        end = self._get_notifications(
+            'instance.live_migration_rollback.end')
+        self.assertEqual(1, len(end))
         self._verify_notification(
             'instance-live_migration_rollback-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=self.notifier.versioned_notifications[3])
+            actual=end[0])
+        dest_start = self._get_notifications(
+            'instance.live_migration_rollback_dest.start')
+        self.assertEqual(1, len(dest_start))
         self._verify_notification(
             'instance-live_migration_rollback_dest-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=self.notifier.versioned_notifications[4])
+            actual=dest_start[0])
+        dest_end = self._get_notifications(
+            'instance.live_migration_rollback_dest.end')
+        self.assertEqual(1, len(dest_end))
         self._verify_notification(
             'instance-live_migration_rollback_dest-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=self.notifier.versioned_notifications[5])
+            actual=dest_end[0])
 
     def _test_live_migration_success(self, server):
         post = {
