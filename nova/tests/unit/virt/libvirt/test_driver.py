@@ -3796,7 +3796,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             None, None, flavor, image_meta,
         )
 
-    @ddt.data('amd-sev', 'amd-sev-es', 'amd-sev-snp')
+    @ddt.data('amd-sev', 'amd-sev-es', 'amd-sev-snp', 'intel-tdx')
     @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_memory_encryption(self, model):
         """Generate a guest with memory encryption.
@@ -3813,6 +3813,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._host._supports_amd_sev_es = True
         drvr._host._max_sev_es_guests = 17
         drvr._host._supports_amd_sev_snp = True
+        drvr._host._max_intel_tdx_guests = 63
+        drvr._host._supports_intel_tdx = True
         instance_ref = objects.Instance(**self.test_instance)
         image_props = {
             "hw_machine_type": "q35",
@@ -3820,8 +3822,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "hw_mem_encryption": True,
             "hw_mem_encryption_model": model,
         }
-        if model == 'amd-sev-snp':
+        if model in ('amd-sev-snp', 'intel-tdx'):
             image_props["hw_firmware_stateless"] = True
+        if model == 'intel-tdx':
+            image_props['hw_video_model'] = fields.VideoModel.NONE
+            self.flags(cpu_mode="host-passthrough", group='libvirt')
         image_meta = objects.ImageMeta.from_dict({
             "hw_architecture": fields.Architecture.X86_64,
             "disk_format": "raw",
@@ -3964,10 +3969,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "(150d530b-1c57-4367-b754-1f1b5237923d): q35 type is required "
             "for %s to work" % mem_encryption_model, str(exc))
 
-    def _setup_sev_guest(self, model=None, direct_kernel_boot=False):
+    def _setup_mem_enc_guest(self, model=None, direct_kernel_boot=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_uefi = True
         drvr._host._supports_amd_sev = True
+        drvr._host._supports_intel_tdx = True
 
         ctxt = context.RequestContext(project_id=123,
                                       project_name="aubergine",
@@ -3993,8 +3999,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'hw_firmware_type': 'uefi',
             'hw_machine_type': 'q35'
         }
-        if model == 'amd-sev-snp':
+        if model in ('amd-sev-snp', 'intel-tdx'):
             image_props['hw_firmware_stateless'] = True
+        if model == 'intel-tdx':
+            image_props['hw_video_model'] = fields.VideoModel.NONE
+            self.flags(cpu_mode="host-passthrough", group='libvirt')
         image_meta = objects.ImageMeta.from_dict({
             'id': 'd9c6aeee-8258-4bdb-bca4-39940461b182',
             'name': 'fakeimage',
@@ -4018,7 +4027,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         {'sev_model': 'amd-sev-es', 'sev_policy': 0x0037}
     )
     def test_get_guest_config_sev(self, sev_model, sev_policy):
-        cfg = self._setup_sev_guest(model=sev_model)
+        cfg = self._setup_mem_enc_guest(model=sev_model)
 
         # SEV-related tag should be set
         self.assertIsInstance(cfg.launch_security,
@@ -4029,7 +4038,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(sev_policy, cfg.launch_security.policy)
 
     def test_get_guest_config_sev_snp(self):
-        cfg = self._setup_sev_guest(model='amd-sev-snp')
+        cfg = self._setup_mem_enc_guest(model='amd-sev-snp')
 
         self.assertIsInstance(cfg.launch_security,
                               vconfig.LibvirtConfigGuestSEVSNPLaunchSecurity)
@@ -4038,7 +4047,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertFalse(cfg.launch_security.kernelHashes)
 
     def test_get_guest_config_sev_snp_direct_kernel_boot(self):
-        cfg = self._setup_sev_guest(
+        cfg = self._setup_mem_enc_guest(
             model='amd-sev-snp', direct_kernel_boot=True)
 
         self.assertIsInstance(cfg.launch_security,
@@ -4047,13 +4056,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(0x00030000, cfg.launch_security.policy)
         self.assertTrue(cfg.launch_security.kernelHashes)
 
+    def test_get_guest_config_tdx(self):
+        cfg = self._setup_mem_enc_guest(model='intel-tdx')
+
+        self.assertIsInstance(cfg.launch_security,
+                              vconfig.LibvirtConfigGuestTDXLaunchSecurity)
+        self.assertIsNone(cfg.membacking)
+
     @mock.patch.object(hardware.MemEncryptionConfigSev, 'model',
                        new_callable=mock.PropertyMock)
     def test_get_guest_config_invalid_mem_enc_model(self, fake_me_model):
         fake_me_model.return_value = 'invalid'
         self.assertRaisesRegex(exception.Invalid,
                                'Unknown MemEncryptionModel: invalid',
-                               self._setup_sev_guest,
+                               self._setup_mem_enc_guest,
                                model='amd-sev')
 
     def _setup_fake_domain_caps(self, fake_domain_caps):
@@ -30758,7 +30774,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             str(ex))
 
     def _test__validate_mem_encryption_configuration(
-        self, sev, sev_es, sev_snp
+        self, sev, sev_es, sev_snp, intel_tdx
     ):
         instance_1 = fake_instance.fake_instance_obj(
             self.context, uuid=uuids.instance_1)
@@ -30770,10 +30786,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.context, uuid=uuids.instance_4)
         instance_5 = fake_instance.fake_instance_obj(
             self.context, uuid=uuids.instance_5)
+        instance_6 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_6)
         image_meta = objects.ImageMeta.from_dict({
             'properties': {
                 'hw_firmware_type': 'uefi',
                 'hw_firmware_stateless': True,
+                'hw_video_model': fields.VideoModel.NONE
             }
         })
 
@@ -30792,13 +30811,26 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             'hw:mem_encryption': True,
             'hw:mem_encryption_model': 'amd-sev-snp',
         }
+        # TDX
+        instance_5.flavor.extra_specs = {
+            'hw:mem_encryption': True,
+            'hw:mem_encryption_model': 'intel-tdx',
+        }
 
-        instance_5.deleted = True
+        instance_6.deleted = True
 
-        instances = objects.InstanceList(objects=[
-            instance_1, instance_2, instance_3, instance_4, instance_5])
+        instances = objects.InstanceList(
+    objects=[
+        instance_1,
+        instance_2,
+        instance_3,
+        instance_4,
+        instance_5,
+         instance_6])
 
         def fake_is_supported_mem_encryption_model(me_model):
+            if me_model == 'intel-tdx':
+                return intel_tdx
             if me_model == 'amd-sev-snp':
                 return sev_snp
             if me_model == 'amd-sev-es':
@@ -30823,7 +30855,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         ex = self.assertRaises(
             exception.InvalidConfiguration,
             self._test__validate_mem_encryption_configuration,
-            False, False, False)
+            False, False, False, False)
         self.assertIn(
             'This host has instances with the memory encryption feature by '
             'amd-sev enabled but the host is configured not to support '
@@ -30837,7 +30869,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         ex = self.assertRaises(
             exception.InvalidConfiguration,
             self._test__validate_mem_encryption_configuration,
-            True, False, False)
+            True, False, False, False)
         self.assertIn(
             'This host has instances with the memory encryption feature by '
             'amd-sev-es enabled but the host is configured not to support '
@@ -30851,10 +30883,24 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         ex = self.assertRaises(
             exception.InvalidConfiguration,
             self._test__validate_mem_encryption_configuration,
-            True, True, False)
+            True, True, False, False)
         self.assertIn(
             'This host has instances with the memory encryption feature by '
             'amd-sev-snp enabled but the host is configured not to support '
+            'this feature any more.',
+            str(ex))
+
+    def test__validate_mem_encryption_configuration_tdx_unsupported(self):
+        """Test that the check fails if the driver does not support intel-tdx
+        and instances request it.
+        """
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_mem_encryption_configuration,
+            True, True, True, False)
+        self.assertIn(
+            'This host has instances with the memory encryption feature by '
+            'intel-tdx enabled but the host is configured not to support '
             'this feature any more.',
             str(ex))
 
@@ -30862,7 +30908,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         """Test that the entire check pass if the driver supports all models
         instances request
         """
-        self._test__validate_mem_encryption_configuration(True, True, True)
+        self._test__validate_mem_encryption_configuration(
+            True, True, True, True)
 
     @mock.patch('nova.objects.instance.Instance.save')
     def test_register_machine_type_already_registered_image_metadata(

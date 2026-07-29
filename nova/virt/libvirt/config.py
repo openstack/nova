@@ -3108,6 +3108,29 @@ class LibvirtConfigGuestSEVSNPLaunchSecurity(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestTDXLaunchSecurity(LibvirtConfigObject):
+    # NOTE: See also
+    # https://gitlab.com/qemu-project/qemu/-/blob/v10.1.0/target/i386/kvm/tdx.c
+    # Optional fields ignored:
+    # mrConfigId, mrOwner, mrOwnerConfig
+    # policy is left as qemu default (SEPT_VE_DISABLE)
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestTDXLaunchSecurity, self).__init__(
+            root_name='launchSecurity', **kwargs)
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestTDXLaunchSecurity, self).format_dom()
+        root.set('type', 'tdx')
+
+        # libvirt fills the default path:
+        # /var/run/tdx-qgs/qgs.socket
+        qgs = etree.Element('quoteGenerationService')
+        root.append(qgs)
+
+        return root
+
+
 class LibvirtConfigGuestFeatureVMCoreInfo(LibvirtConfigGuestFeature):
 
     def __init__(self, **kwargs):

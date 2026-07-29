@@ -421,6 +421,7 @@ feature_flag_validators = [
                 'amd-sev',
                 'amd-sev-es',
                 'amd-sev-snp',
+                'intel-tdx',
             ],
         },
     ),
