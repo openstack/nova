@@ -568,6 +568,8 @@
     irrelevant-files: *nova-base-irrelevant-files
     required-projects:
       - openstack/nova
+      - name: openstack/cinder-tempest-plugin
+        override-checkout: 2023.1-last
     timeout: 9000
     pre-run:
       - playbooks/ceph/glance-setup.yaml
