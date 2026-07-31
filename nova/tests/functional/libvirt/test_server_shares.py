@@ -14,6 +14,7 @@ import fixtures
 from lxml import etree
 import os
 from requests import request
+from unittest import mock
 
 from nova import context as nova_context
 from nova import exception
@@ -489,3 +490,134 @@ class ServerSharesTest(ServerSharesTestBase):
         self._assert_share_in_metadata(
             self._get_metadata_url(server), share_id, share_id)
         return (server, share_id)
+
+
+class ServerSharesColdMigrateTest(ServerSharesTestBase):
+
+    def setUp(self):
+        super(ServerSharesColdMigrateTest, self).setUp()
+        self.compute2 = self.start_compute(
+            'host2',
+            libvirt_version=self.FAKE_LIBVIRT_VERSION,
+            qemu_version=self.FAKE_QEMU_VERSION
+        )
+        self.flags(allow_resize_to_same_host=False)
+
+    def _get_xml_on_host(self, server, hostname):
+        host = self.computes[hostname].driver._host
+        inst = instance.Instance.get_by_uuid(self.context, server['id'])
+        guest = host.get_guest(inst)
+        return guest.get_xml_desc()
+
+    def _setup_server_with_share(self):
+        server = self._create_server(networks='auto')
+        self._stop_server(server)
+        share_id = '4b021746-d0eb-4031-92aa-23c3bec182cd'
+        self._attach_share(server, share_id)
+        self._start_server(server)
+        return server, share_id
+
+    def test_cold_migrate_with_share(self):
+        server, share_id = self._setup_server_with_share()
+        src_host = server['OS-EXT-SRV-ATTR:host']
+        self._assert_filesystem_tag(
+            self._get_xml_on_host(server, src_host), share_id)
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._migrate_server(server)
+        dest_host = server['OS-EXT-SRV-ATTR:host']
+        self.assertNotEqual(src_host, dest_host)
+
+        xml = self._get_xml_on_host(server, dest_host)
+        self._assert_filesystem_tag(xml, share_id)
+
+        server = self._confirm_resize(server)
+        xml = self._get_xml_on_host(server, dest_host)
+        self._assert_filesystem_tag(xml, share_id)
+
+    def test_cold_migrate_revert_with_share(self):
+        server, share_id = self._setup_server_with_share()
+        src_host = server['OS-EXT-SRV-ATTR:host']
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._migrate_server(server)
+        dest_host = server['OS-EXT-SRV-ATTR:host']
+        self.assertNotEqual(src_host, dest_host)
+        self._assert_filesystem_tag(
+            self._get_xml_on_host(server, dest_host), share_id)
+
+        server = self._revert_resize(server)
+        self.assertEqual(src_host, server['OS-EXT-SRV-ATTR:host'])
+        self._assert_filesystem_tag(
+            self._get_xml_on_host(server, src_host), share_id)
+
+    def test_cold_migrate_with_share_mount_failure(self):
+        server, share_id = self._setup_server_with_share()
+        self.mock_connect.side_effect = processutils.ProcessExecutionError
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            exc = self.assertRaises(
+                client.OpenStackApiException,
+                self.api.post_server_action,
+                server['id'], {'migrate': None})
+        self.assertIn("ShareMountError", str(exc))
+
+        server = self.api.get_server(server['id'])
+        self.assertEqual('ERROR', server['status'])
+        sm = share_mapping.ShareMapping.get_by_instance_uuid_and_share_id(
+            self.context, server['id'], share_id)
+        self.assertEqual(sm.status, 'active')
+
+    def test_cold_migrate_same_host_with_share(self):
+        self.flags(allow_resize_to_same_host=True)
+        server, share_id = self._setup_server_with_share()
+        src_host = server['OS-EXT-SRV-ATTR:host']
+
+        # Stop the other compute so the scheduler is forced to pick
+        # the same host for the resize.
+        other_host = 'host2' if src_host == 'host1' else 'host1'
+        other_svc = self.admin_api.get_services(
+            host=other_host, binary='nova-compute')[0]
+        self.computes[other_host].stop()
+        self.admin_api.put_service(other_svc['id'],
+                                  {'forced_down': True})
+
+        connect_count_before = self.mock_connect.call_count
+        disconnect_count_before = self.mock_disconnect.call_count
+
+        flavors = self.api.get_flavors()
+        server_flavor = server['flavor']['original_name']
+        new_flavor = flavors[1]
+        if new_flavor['name'] == server_flavor:
+            new_flavor = flavors[0]
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._resize_server(server, new_flavor['id'])
+        self.assertEqual(src_host, server['OS-EXT-SRV-ATTR:host'])
+
+        self._assert_filesystem_tag(
+            self._get_xml_on_host(server, src_host), share_id)
+
+        server = self._confirm_resize(server)
+        # After confirm on a same-host resize the old domain is destroyed
+        # and recreated, so we can't inspect XML via fakelibvirt. Verify
+        # through the DB instead.
+        sm = share_mapping.ShareMapping.get_by_instance_uuid_and_share_id(
+            self.context, server['id'], share_id)
+        self.assertEqual('active', sm.status)
+
+        self.assertEqual(connect_count_before,
+                         self.mock_connect.call_count)
+        self.assertEqual(disconnect_count_before,
+                         self.mock_disconnect.call_count)

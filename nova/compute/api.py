@@ -131,6 +131,8 @@ MIN_COMPUTE_USB_MODEL_TRAITS = 70
 
 MIN_COMPUTE_VTPM_LIVE_MIGRATION = 72
 
+MIN_COMPUTE_COLD_MIGRATE_WITH_SHARES = 74
+
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
 # trigger.
@@ -4282,7 +4284,6 @@ class API:
                     "other TPM secret security modes is not supported.")
             raise exception.OperationNotSupportedForVTPM(msg)
 
-    @block_shares_not_supported()
     # TODO(stephenfin): This logic would be so much easier to grok if we
     # finally split resize and cold migration into separate code paths
     @block_extended_resource_request
@@ -4305,6 +4306,14 @@ class API:
         # Only lookup the minimum compute version once
         min_comp_ver = objects.service.get_minimum_version_all_cells(
             context, ["nova-compute"])
+
+        if instance_has_share(context, instance):
+            if min_comp_ver < MIN_COMPUTE_COLD_MIGRATE_WITH_SHARES:
+                raise exception.ForbiddenWithShare(
+                    message=_("Cold migration and resize with shares "
+                              "requires all compute services to be at "
+                              "service version %d or later.")
+                    % MIN_COMPUTE_COLD_MIGRATE_WITH_SHARES)
 
         allow_cross_cell_resize = self._allow_cross_cell_resize(
             context, instance, min_comp_ver)

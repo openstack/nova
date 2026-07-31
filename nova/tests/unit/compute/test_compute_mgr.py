@@ -3895,6 +3895,203 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute.share_manager.check_share_usage,
             self.context, instance, share_mapping)
 
+    @mock.patch('nova.share.manila.API.has_access')
+    @mock.patch('nova.share.manila.API.allow')
+    @mock.patch('nova.objects.share_mapping.ShareMapping.save')
+    def test_grant_access(self, mock_save, mock_allow, mock_has_access):
+        share_mapping = self.get_fake_share_mapping()
+        self.flags(my_shared_fs_storage_ip="192.168.0.1")
+        compute_ip = CONF.my_shared_fs_storage_ip
+
+        # Test fresh grant: first has_access returns False, then True
+        mock_has_access.side_effect = [
+            None, None, self.get_fake_share_access()]
+        self.compute.share_manager.grant_access(self.context, share_mapping)
+        mock_allow.assert_called_once_with(
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw',
+            lock_reason="Lock by nova for instance %s"
+            % share_mapping.instance_uuid)
+
+        # Test already-granted: has_access returns True immediately
+        mock_allow.reset_mock()
+        mock_has_access.reset_mock()
+        mock_has_access.side_effect = None
+        mock_has_access.return_value = self.get_fake_share_access()
+        self.compute.share_manager.grant_access(self.context, share_mapping)
+        mock_allow.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.has_access', return_value=None)
+    @mock.patch('nova.share.manila.API.allow')
+    @mock.patch('nova.objects.share_mapping.ShareMapping.save')
+    def test_grant_access_timeout(
+        self, mock_save, mock_allow, mock_has_access
+    ):
+        share_mapping = self.get_fake_share_mapping()
+        self.flags(my_shared_fs_storage_ip="192.168.0.1")
+        self.flags(share_apply_policy_timeout=1, group='manila')
+        self.assertRaises(
+            exception.ShareAccessGrantError,
+            self.compute.share_manager.grant_access,
+            self.context, share_mapping)
+
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch('nova.objects.share_mapping.ShareMapping.save')
+    def test_revoke_access(
+        self, mock_save, mock_get_by_share, mock_deny, mock_get_by_filters
+    ):
+        share_mapping = self.get_fake_share_mapping()
+        self.flags(my_shared_fs_storage_ip="192.168.0.1")
+        compute_ip = CONF.my_shared_fs_storage_ip
+        our_instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host=self.compute.host)
+
+        # Test revoke when no other instances use the share
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[our_instance])
+        mock_get_by_share.return_value = (
+            objects.share_mapping.ShareMappingList(objects=[share_mapping]))
+        self.compute.share_manager.revoke_access(self.context, share_mapping)
+        mock_deny.assert_called_once_with(
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip)
+
+        # Test skip revoke when another instance on this host uses the share
+        mock_deny.reset_mock()
+        other_mapping = self.get_fake_share_mapping()
+        other_mapping.instance_uuid = uuids.other_instance
+        other_mapping.status = 'active'
+        other_instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.other_instance, host=self.compute.host)
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[our_instance, other_instance])
+        mock_get_by_share.return_value = (
+            objects.share_mapping.ShareMappingList(
+                objects=[share_mapping, other_mapping]))
+        self.compute.share_manager.revoke_access(self.context, share_mapping)
+        mock_deny.assert_not_called()
+
+        # Test graceful handling of ShareNotFound
+        mock_deny.reset_mock()
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[our_instance])
+        mock_get_by_share.return_value = (
+            objects.share_mapping.ShareMappingList(objects=[share_mapping]))
+        mock_deny.side_effect = exception.ShareNotFound(share_id='fake')
+        self.compute.share_manager.revoke_access(self.context, share_mapping)
+
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch('nova.objects.share_mapping.ShareMapping.save')
+    def test_revoke_access_nfs_ignores_other_host(
+        self, mock_save, mock_get_by_share, mock_deny, mock_get_by_filters
+    ):
+        """An instance on a different host has its own per-host NFS access
+        rule, so it must not prevent revoking this host's access rule.
+        """
+        self.flags(my_shared_fs_storage_ip="192.168.0.1")
+        compute_ip = CONF.my_shared_fs_storage_ip
+        share_mapping = self.get_fake_share_mapping()
+        our_instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host=self.compute.host)
+        other_mapping = self.get_fake_share_mapping()
+        other_mapping.instance_uuid = uuids.other_instance
+        other_mapping.status = 'active'
+        other_instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.other_instance, host='other-host')
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[our_instance, other_instance])
+        mock_get_by_share.return_value = (
+            objects.share_mapping.ShareMappingList(
+                objects=[share_mapping, other_mapping]))
+
+        self.compute.share_manager.revoke_access(self.context, share_mapping)
+
+        mock_deny.assert_called_once_with(
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip)
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch('nova.objects.share_mapping.ShareMapping.save')
+    def test_revoke_access_cephfs_ignores_other_instances(
+        self, mock_save, mock_get_by_share, mock_deny
+    ):
+        self.flags(host='compute-1')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+
+        # Another instance actively using the same share must not block
+        # revoking our own per-instance cephx identity.
+        other_mapping = self.get_fake_share_mapping_cephfs()
+        other_mapping.instance_uuid = uuids.other_instance
+        other_mapping.status = 'active'
+        mock_get_by_share.return_value = (
+            objects.share_mapping.ShareMappingList(
+                objects=[share_mapping, other_mapping]))
+
+        self.compute.share_manager.revoke_access(self.context, share_mapping)
+
+        self.assertTrue(share_mapping.access_to.startswith('nova-'))
+        mock_deny.assert_called_once_with(
+            mock.ANY, share_mapping.share_id, 'cephx',
+            share_mapping.access_to)
+        mock_get_by_share.assert_not_called()
+
+    @mock.patch.object(share_management.ShareManager, 'revoke_access')
+    @mock.patch.object(share_management.ShareManager, 'umount',
+                       return_value=False)
+    def test_umount_and_revoke_all(self, mock_umount, mock_revoke):
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance,
+            vm_state=vm_states.ACTIVE)
+        sm1 = self.get_fake_share_mapping()
+        sm2 = self.get_fake_share_mapping()
+        share_info = objects.ShareMappingList(objects=[sm1, sm2])
+
+        self.compute.share_manager.umount_and_revoke_all(
+            self.context, instance, share_info, "confirm resize")
+
+        self.assertEqual(2, mock_umount.call_count)
+        self.assertEqual(2, mock_revoke.call_count)
+
+    @mock.patch.object(share_management.ShareManager, 'revoke_access')
+    @mock.patch.object(share_management.ShareManager, 'umount',
+                       return_value=True)
+    def test_umount_and_revoke_all_skips_revoke_when_still_mounted(
+        self, mock_umount, mock_revoke
+    ):
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance,
+            vm_state=vm_states.ACTIVE)
+        share_info = objects.ShareMappingList(
+            objects=[self.get_fake_share_mapping()])
+
+        self.compute.share_manager.umount_and_revoke_all(
+            self.context, instance, share_info, "confirm resize")
+
+        mock_umount.assert_called_once()
+        mock_revoke.assert_not_called()
+
+    @mock.patch.object(share_management.ShareManager, 'revoke_access')
+    @mock.patch.object(share_management.ShareManager, 'umount',
+                       side_effect=exception.ShareUmountError(
+                           share_id='fake', server_id='fake',
+                           reason='test'))
+    def test_umount_and_revoke_all_logs_failures(
+        self, mock_umount, mock_revoke
+    ):
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance,
+            vm_state=vm_states.ACTIVE)
+        sm1 = self.get_fake_share_mapping()
+        share_info = objects.ShareMappingList(objects=[sm1])
+
+        self.compute.share_manager.umount_and_revoke_all(
+            self.context, instance, share_info, "revert resize")
+
+        mock_umount.assert_called_once()
+        mock_revoke.assert_called_once()
+
     @mock.patch('nova.objects.share_mapping.ShareMapping.save')
     @mock.patch('nova.virt.fake.FakeDriver.mount_share')
     def test_mount_nfs_share(
@@ -3968,7 +4165,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.context, instance, share_mapping)
 
     @mock.patch.object(share_management.ShareManager, 'mount')
-    def test_mount_all(self, mock_mount):
+    @mock.patch.object(share_management.ShareManager, 'grant_access')
+    def test_mount_all(self, mock_grant, mock_mount):
         instance = fake_instance.fake_instance_obj(
             self.context, uuid=uuids.instance)
         sm1 = self.get_fake_share_mapping()
@@ -3979,6 +4177,33 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.compute.share_manager.mount_all(
             self.context, instance, share_info)
 
+        mock_grant.assert_has_calls([
+            mock.call(self.context, sm1),
+            mock.call(self.context, sm2),
+        ])
+        mock_mount.assert_has_calls([
+            mock.call(self.context, instance, sm1),
+            mock.call(self.context, instance, sm2),
+        ])
+
+    @mock.patch.object(share_management.ShareManager, 'mount')
+    @mock.patch.object(share_management.ShareManager, 'grant_access')
+    def test_mount_all_grant_access_failure(self, mock_grant, mock_mount):
+        mock_grant.side_effect = Exception('manila down')
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance)
+        sm1 = self.get_fake_share_mapping()
+        sm2 = self.get_fake_share_mapping()
+        sm2.share_id = uuids.share_id_2
+        share_info = objects.ShareMappingList(objects=[sm1, sm2])
+
+        self.compute.share_manager.mount_all(
+            self.context, instance, share_info)
+
+        mock_grant.assert_has_calls([
+            mock.call(self.context, sm1),
+            mock.call(self.context, sm2),
+        ])
         mock_mount.assert_has_calls([
             mock.call(self.context, instance, sm1),
             mock.call(self.context, instance, sm2),
@@ -11591,6 +11816,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.useFixture(fixtures.EventReporterStub())
 
+        self.mock_get_share_info = self.useFixture(
+            fixtures.fixtures.MockPatchObject(
+                self.compute.share_manager, 'get_share_info',
+                return_value=objects.ShareMappingList(objects=[]))).mock
+
     @contextlib.contextmanager
     def _mock_finish_resize(self):
         with test.nested(
@@ -11858,8 +12088,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                               migration=self.migration,
                                               instance=self.instance,
                                               request_spec=request_spec)
-            finish_revert_migration.assert_called_with(self.context,
-                self.instance, 'nw_info', self.migration, mock.ANY, mock.ANY)
+            finish_revert_migration.assert_called_with(
+                self.context,
+                self.instance, 'nw_info', self.migration, mock.ANY,
+                mock.ANY, share_info=mock.ANY)
             # Make sure the migration.dest_compute is not still set to the
             # source_compute value.
             self.assertNotEqual(self.migration.dest_compute,
@@ -15709,6 +15941,692 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # instance.
         mock_inst_save.assert_called_once_with(
             expected_task_state=[task_states.RESIZE_REVERTING])
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_send_finish_resize_notifications')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_complete_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_instance_block_device_info')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_request_group_mapping')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer')
+    def test__finish_resize_with_shares(
+        self, mock_allocs, mock_get_bdms, mock_req_group_mapping,
+        mock_setup_nw, mock_migrate_finish, mock_get_nw_info,
+        mock_get_bdi, mock_update_vols, mock_complete_vols,
+        mock_send_notifications, mock_inst_save, mock_notify_usage,
+        mock_notify_action
+    ):
+        allocations = {
+            uuids.provider1: {
+                "generation": 0,
+                "resources": {"VCPU": 1, "MEMORY_MB": 512}
+            }
+        }
+        mock_allocs.return_value = {'allocations': allocations}
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+
+        self.migration.old_instance_type_id = 1
+        self.migration.new_instance_type_id = 1
+
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_uuid
+        share_mapping.instance_uuid = self.instance.uuid
+        share_mapping.share_id = uuids.share_id
+        share_mapping.status = 'active'
+        share_mapping.tag = 'tag'
+        share_mapping.export_location = '192.168.0.1:/share'
+        share_mapping.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[share_mapping])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'grant_access'),
+            mock.patch.object(self.compute.share_manager, 'mount'),
+            mock.patch.object(self.compute.driver, 'finish_migration'),
+        ) as (mock_grant, mock_mount, mock_finish_mig):
+            self.instance.old_flavor = self.instance.flavor
+            self.instance.new_flavor = self.instance.flavor
+            self.compute._finish_resize(
+                self.context, self.instance, self.migration,
+                disk_info='[]', image_meta=objects.ImageMeta(),
+                bdms=mock_get_bdms.return_value,
+                request_spec=objects.RequestSpec())
+
+            self.mock_get_share_info.assert_called_with(
+                self.context, self.instance, check_status=False)
+            mock_grant.assert_called_once_with(self.context, share_mapping)
+            mock_mount.assert_called_once_with(
+                self.context, self.instance, share_mapping)
+            mock_finish_mig.assert_called_once()
+            call_kwargs = mock_finish_mig.call_args
+            self.assertEqual(share_info, call_kwargs[1].get('share_info'))
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_send_finish_resize_notifications')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_complete_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_instance_block_device_info')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_request_group_mapping')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer')
+    def test__finish_resize_with_shares_partial_failure(
+        self, mock_allocs, mock_get_bdms, mock_req_group_mapping,
+        mock_setup_nw, mock_migrate_finish, mock_get_nw_info,
+        mock_get_bdi, mock_update_vols, mock_complete_vols,
+        mock_send_notifications, mock_inst_save, mock_notify_usage,
+        mock_notify_action
+    ):
+        allocations = {
+            uuids.provider1: {
+                "generation": 0,
+                "resources": {"VCPU": 1, "MEMORY_MB": 512}
+            }
+        }
+        mock_allocs.return_value = {'allocations': allocations}
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+
+        self.migration.old_instance_type_id = 1
+        self.migration.new_instance_type_id = 1
+
+        sm1 = objects.ShareMapping(self.context)
+        sm1.uuid = uuids.share_uuid1
+        sm1.instance_uuid = self.instance.uuid
+        sm1.share_id = uuids.share_id1
+        sm1.status = 'active'
+        sm1.tag = 'tag1'
+        sm1.export_location = '192.168.0.1:/share1'
+        sm1.share_proto = 'NFS'
+        sm2 = objects.ShareMapping(self.context)
+        sm2.uuid = uuids.share_uuid2
+        sm2.instance_uuid = self.instance.uuid
+        sm2.share_id = uuids.share_id2
+        sm2.status = 'active'
+        sm2.tag = 'tag2'
+        sm2.export_location = '192.168.0.1:/share2'
+        sm2.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[sm1, sm2])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'grant_access'),
+            mock.patch.object(self.compute.share_manager, 'mount',
+                              side_effect=[None, test.TestingException]),
+            mock.patch.object(self.compute.share_manager, 'umount',
+                              return_value=False),
+            mock.patch.object(self.compute.share_manager, 'revoke_access'),
+            mock.patch.object(self.compute.driver, 'finish_migration'),
+        ) as (mock_grant, mock_mount,
+              mock_umount, mock_revoke, mock_finish_mig):
+            self.instance.old_flavor = self.instance.flavor
+            self.instance.new_flavor = self.instance.flavor
+            self.assertRaises(
+                test.TestingException, self.compute._finish_resize,
+                self.context, self.instance, self.migration,
+                disk_info='[]', image_meta=objects.ImageMeta(),
+                bdms=mock_get_bdms.return_value,
+                request_spec=objects.RequestSpec())
+
+            # First share was mounted, so it should be cleaned up
+            mock_umount.assert_called_once_with(
+                self.context, self.instance, sm1)
+            # Access is NOT revoked during rollback so that
+            # stop/start after reset-state can re-mount.
+            self.assertEqual(2, mock_grant.call_count)
+            mock_revoke.assert_not_called()
+            mock_finish_mig.assert_not_called()
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_send_finish_resize_notifications')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_complete_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_instance_block_device_info')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_request_group_mapping')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer')
+    def test__finish_resize_with_shares_grant_failure(
+        self, mock_allocs, mock_get_bdms, mock_req_group_mapping,
+        mock_setup_nw, mock_migrate_finish, mock_get_nw_info,
+        mock_get_bdi, mock_update_vols, mock_complete_vols,
+        mock_send_notifications, mock_inst_save, mock_notify_usage,
+        mock_notify_action
+    ):
+        allocations = {
+            uuids.provider1: {
+                "generation": 0,
+                "resources": {"VCPU": 1, "MEMORY_MB": 512}
+            }
+        }
+        mock_allocs.return_value = {'allocations': allocations}
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+
+        self.migration.old_instance_type_id = 1
+        self.migration.new_instance_type_id = 1
+
+        sm1 = objects.ShareMapping(self.context)
+        sm1.uuid = uuids.share_uuid1
+        sm1.instance_uuid = self.instance.uuid
+        sm1.share_id = uuids.share_id1
+        sm1.status = 'active'
+        sm1.tag = 'tag1'
+        sm1.export_location = '192.168.0.1:/share1'
+        sm1.share_proto = 'NFS'
+        sm2 = objects.ShareMapping(self.context)
+        sm2.uuid = uuids.share_uuid2
+        sm2.instance_uuid = self.instance.uuid
+        sm2.share_id = uuids.share_id2
+        sm2.status = 'active'
+        sm2.tag = 'tag2'
+        sm2.export_location = '192.168.0.1:/share2'
+        sm2.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[sm1, sm2])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'grant_access',
+                              side_effect=[None, test.TestingException]),
+            mock.patch.object(self.compute.share_manager, 'mount'),
+            mock.patch.object(self.compute.share_manager, 'umount',
+                              return_value=False),
+            mock.patch.object(self.compute.share_manager, 'revoke_access'),
+            mock.patch.object(self.compute.driver, 'finish_migration'),
+        ) as (mock_grant, mock_mount,
+              mock_umount, mock_revoke, mock_finish_mig):
+            self.instance.old_flavor = self.instance.flavor
+            self.instance.new_flavor = self.instance.flavor
+            self.assertRaises(
+                test.TestingException, self.compute._finish_resize,
+                self.context, self.instance, self.migration,
+                disk_info='[]', image_meta=objects.ImageMeta(),
+                bdms=mock_get_bdms.return_value,
+                request_spec=objects.RequestSpec())
+
+            # Grant succeeded for sm1, then failed for sm2
+            self.assertEqual(2, mock_grant.call_count)
+            # sm1 was mounted before sm2 grant was attempted
+            mock_mount.assert_called_once_with(
+                self.context, self.instance, sm1)
+            # Rollback: unmount sm1, but don't revoke access so
+            # stop/start after reset-state can re-mount.
+            mock_umount.assert_called_once_with(
+                self.context, self.instance, sm1)
+            mock_revoke.assert_not_called()
+            mock_finish_mig.assert_not_called()
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_send_finish_resize_notifications')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_complete_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_instance_block_device_info')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_request_group_mapping')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer')
+    def test__finish_resize_with_shares_umount_failure_during_rollback(
+        self, mock_allocs, mock_get_bdms, mock_req_group_mapping,
+        mock_setup_nw, mock_migrate_finish, mock_get_nw_info,
+        mock_get_bdi, mock_update_vols, mock_complete_vols,
+        mock_send_notifications, mock_inst_save, mock_notify_usage,
+        mock_notify_action
+    ):
+        allocations = {
+            uuids.provider1: {
+                "generation": 0,
+                "resources": {"VCPU": 1, "MEMORY_MB": 512}
+            }
+        }
+        mock_allocs.return_value = {'allocations': allocations}
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+
+        self.migration.old_instance_type_id = 1
+        self.migration.new_instance_type_id = 1
+
+        sm1 = objects.ShareMapping(self.context)
+        sm1.uuid = uuids.share_uuid1
+        sm1.instance_uuid = self.instance.uuid
+        sm1.share_id = uuids.share_id1
+        sm1.status = 'active'
+        sm1.tag = 'tag1'
+        sm1.export_location = '192.168.0.1:/share1'
+        sm1.share_proto = 'NFS'
+        sm2 = objects.ShareMapping(self.context)
+        sm2.uuid = uuids.share_uuid2
+        sm2.instance_uuid = self.instance.uuid
+        sm2.share_id = uuids.share_id2
+        sm2.status = 'active'
+        sm2.tag = 'tag2'
+        sm2.export_location = '192.168.0.1:/share2'
+        sm2.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[sm1, sm2])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'grant_access'),
+            mock.patch.object(self.compute.share_manager, 'mount',
+                              side_effect=[None, test.TestingException]),
+            mock.patch.object(self.compute.share_manager, 'umount',
+                              side_effect=Exception('umount failed')),
+            mock.patch.object(self.compute.share_manager, 'revoke_access'),
+            mock.patch.object(self.compute.driver, 'finish_migration'),
+        ) as (mock_grant, mock_mount,
+              mock_umount, mock_revoke, mock_finish_mig):
+            self.instance.old_flavor = self.instance.flavor
+            self.instance.new_flavor = self.instance.flavor
+            # The original mount failure propagates, not the umount
+            # failure raised while cleaning up.
+            self.assertRaises(
+                test.TestingException, self.compute._finish_resize,
+                self.context, self.instance, self.migration,
+                disk_info='[]', image_meta=objects.ImageMeta(),
+                bdms=mock_get_bdms.return_value,
+                request_spec=objects.RequestSpec())
+
+            mock_umount.assert_called_once_with(
+                self.context, self.instance, sm1)
+            mock_revoke.assert_not_called()
+            mock_finish_mig.assert_not_called()
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch.object(objects.Instance, 'save')
+    def test__confirm_resize_with_shares(
+        self, mock_inst_save, mock_setup_nw, mock_get_nw_info,
+        mock_notify_usage, mock_notify_action
+    ):
+        self.instance.migration_context = objects.MigrationContext(
+            new_pci_devices=objects.PciDeviceList(),
+            old_pci_devices=objects.PciDeviceList(),
+            new_pci_requests=objects.InstancePCIRequests(),
+            old_pci_requests=objects.InstancePCIRequests())
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_uuid
+        share_mapping.instance_uuid = self.instance.uuid
+        share_mapping.share_id = uuids.share_id
+        share_mapping.status = 'active'
+        share_mapping.tag = 'tag'
+        share_mapping.export_location = '192.168.0.1:/share'
+        share_mapping.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[share_mapping])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'umount',
+                              return_value=False),
+            mock.patch.object(self.compute.share_manager, 'revoke_access'),
+            mock.patch.object(self.compute.driver, 'confirm_migration'),
+            mock.patch.object(self.compute.rt, 'drop_move_claim_at_source'),
+        ) as (mock_umount, mock_revoke, mock_confirm, mock_drop):
+            self.compute._confirm_resize(
+                self.context, self.instance, self.migration)
+
+            self.mock_get_share_info.assert_called_with(
+                self.context, self.instance, check_status=False)
+            mock_umount.assert_called_once_with(
+                self.context, self.instance, share_mapping)
+            mock_revoke.assert_called_once_with(
+                self.context, share_mapping)
+            mock_confirm.assert_called_once()
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch.object(objects.Instance, 'save')
+    def test__confirm_resize_share_cleanup_failure(
+        self, mock_inst_save, mock_setup_nw, mock_get_nw_info,
+        mock_notify_usage, mock_notify_action
+    ):
+        self.instance.migration_context = objects.MigrationContext(
+            new_pci_devices=objects.PciDeviceList(),
+            old_pci_devices=objects.PciDeviceList(),
+            new_pci_requests=objects.InstancePCIRequests(),
+            old_pci_requests=objects.InstancePCIRequests())
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_uuid
+        share_mapping.instance_uuid = self.instance.uuid
+        share_mapping.share_id = uuids.share_id
+        share_mapping.status = 'active'
+        share_mapping.tag = 'tag'
+        share_mapping.export_location = '192.168.0.1:/share'
+        share_mapping.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[share_mapping])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'umount',
+                              side_effect=Exception('umount failed')),
+            mock.patch.object(self.compute.share_manager, 'revoke_access',
+                              side_effect=Exception('revoke failed')),
+            mock.patch.object(self.compute.driver, 'confirm_migration'),
+            mock.patch.object(self.compute.rt, 'drop_move_claim_at_source'),
+        ) as (mock_umount, mock_revoke, mock_confirm, mock_drop):
+            # Should not raise despite cleanup failures
+            self.compute._confirm_resize(
+                self.context, self.instance, self.migration)
+            mock_confirm.assert_called_once()
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
+    @mock.patch.object(objects.Instance, 'revert_migration_context')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_terminate_volume_connections')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_is_instance_storage_shared', return_value=False)
+    @mock.patch.object(compute_utils, 'notify_usage_exists')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.migrate_instance_start')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_revert_resize_with_shares(
+        self, mock_inst_save, mock_setup_nw, mock_migrate_start,
+        mock_get_nw_info, mock_usage_exists, mock_shared,
+        mock_terminate_vols, mock_get_bdms, mock_revert_mig_ctx,
+        mock_finish_revert
+    ):
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_uuid
+        share_mapping.instance_uuid = self.instance.uuid
+        share_mapping.share_id = uuids.share_id
+        share_mapping.status = 'active'
+        share_mapping.tag = 'tag'
+        share_mapping.export_location = '192.168.0.1:/share'
+        share_mapping.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[share_mapping])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'umount',
+                              return_value=False),
+            mock.patch.object(self.compute.share_manager, 'revoke_access'),
+            mock.patch.object(self.compute.driver, 'destroy'),
+            mock.patch.object(self.compute.rt, 'drop_move_claim_at_dest'),
+        ) as (mock_umount, mock_revoke, mock_destroy, mock_drop):
+            self.compute.revert_resize(
+                self.context, self.instance, self.migration,
+                request_spec=objects.RequestSpec())
+
+            self.mock_get_share_info.assert_called_with(
+                self.context, self.instance, check_status=False)
+            mock_umount.assert_called_once_with(
+                self.context, self.instance, share_mapping)
+            mock_revoke.assert_called_once_with(
+                self.context, share_mapping)
+
+    @mock.patch.object(objects.Instance, 'drop_migration_context')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
+    @mock.patch('nova.scheduler.utils.'
+                'fill_provider_mapping_based_on_allocation')
+    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_set_instance_info')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test__finish_revert_resize_with_shares(
+        self, mock_get_bdms, mock_notify_action, mock_notify_usage,
+        mock_set_instance_info, mock_inst_save, mock_revert_allocation,
+        mock_fill_provider_mapping, mock_migrate_instance_finish,
+        mock_drop_migration_context
+    ):
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+        mock_revert_allocation.return_value = mock.sentinel.allocation
+        self.compute.rt.compute_nodes[self.migration.source_node] = (
+            mock.MagicMock(id=123,
+                           hypervisor_hostname=self.migration.source_node))
+
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_uuid
+        share_mapping.instance_uuid = self.instance.uuid
+        share_mapping.share_id = uuids.share_id
+        share_mapping.status = 'active'
+        share_mapping.tag = 'tag'
+        share_mapping.export_location = '192.168.0.1:/share'
+        share_mapping.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[share_mapping])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.driver,
+                              'finish_revert_migration'),
+            mock.patch.object(self.compute.network_api,
+                              'get_instance_nw_info'),
+        ) as (mock_finish_revert, mock_nw_info):
+            self.compute.finish_revert_resize(
+                self.context, self.instance, self.migration,
+                request_spec=objects.RequestSpec())
+
+            self.mock_get_share_info.assert_called_with(
+                self.context, self.instance, check_status=False)
+            mock_finish_revert.assert_called_once()
+            call_kwargs = mock_finish_revert.call_args[1]
+            self.assertEqual(share_info, call_kwargs.get('share_info'))
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_send_finish_resize_notifications')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_complete_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_volume_attachments')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_instance_block_device_info')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_request_group_mapping')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocs_for_consumer')
+    def test__finish_resize_same_host_skips_share_ops(
+        self, mock_allocs, mock_get_bdms, mock_req_group_mapping,
+        mock_setup_nw, mock_migrate_finish, mock_get_nw_info,
+        mock_get_bdi, mock_update_vols, mock_complete_vols,
+        mock_send_notifications, mock_inst_save, mock_notify_usage,
+        mock_notify_action
+    ):
+        allocations = {
+            uuids.provider1: {
+                "generation": 0,
+                "resources": {"VCPU": 1, "MEMORY_MB": 512}
+            }
+        }
+        mock_allocs.return_value = {'allocations': allocations}
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+
+        self.migration.old_instance_type_id = 1
+        self.migration.new_instance_type_id = 1
+        self.migration.source_compute = 'same_host'
+        self.migration.dest_compute = 'same_host'
+
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_uuid
+        share_mapping.instance_uuid = self.instance.uuid
+        share_mapping.share_id = uuids.share_id
+        share_mapping.status = 'active'
+        share_mapping.tag = 'tag'
+        share_mapping.export_location = '192.168.0.1:/share'
+        share_mapping.share_proto = 'NFS'
+        share_info = objects.ShareMappingList(objects=[share_mapping])
+        self.mock_get_share_info.return_value = share_info
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'grant_access'),
+            mock.patch.object(self.compute.share_manager, 'mount'),
+            mock.patch.object(self.compute.driver, 'finish_migration'),
+        ) as (mock_grant, mock_mount, mock_finish_mig):
+            self.instance.old_flavor = self.instance.flavor
+            self.instance.new_flavor = self.instance.flavor
+            self.compute._finish_resize(
+                self.context, self.instance, self.migration,
+                disk_info='[]', image_meta=objects.ImageMeta(),
+                bdms=mock_get_bdms.return_value,
+                request_spec=objects.RequestSpec())
+
+            mock_grant.assert_not_called()
+            mock_mount.assert_not_called()
+            mock_finish_mig.assert_called_once()
+            call_kwargs = mock_finish_mig.call_args
+            self.assertEqual(share_info, call_kwargs[1].get('share_info'))
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch.object(objects.Instance, 'save')
+    def test__confirm_resize_same_host_skips_share_cleanup(
+        self, mock_inst_save, mock_setup_nw, mock_get_nw_info,
+        mock_notify_usage, mock_notify_action
+    ):
+        self.instance.migration_context = objects.MigrationContext(
+            new_pci_devices=objects.PciDeviceList(),
+            old_pci_devices=objects.PciDeviceList(),
+            new_pci_requests=objects.InstancePCIRequests(),
+            old_pci_requests=objects.InstancePCIRequests())
+
+        self.migration.source_compute = 'same_host'
+        self.migration.dest_compute = 'same_host'
+
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_uuid
+        share_mapping.instance_uuid = self.instance.uuid
+        share_mapping.share_id = uuids.share_id
+        share_mapping.status = 'active'
+        share_mapping.tag = 'tag'
+        share_mapping.export_location = '192.168.0.1:/share'
+        share_mapping.share_proto = 'NFS'
+        self.mock_get_share_info.return_value = (
+            objects.ShareMappingList(objects=[share_mapping]))
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'umount',
+                              return_value=False),
+            mock.patch.object(self.compute.share_manager, 'revoke_access'),
+            mock.patch.object(self.compute.driver, 'confirm_migration'),
+            mock.patch.object(self.compute.rt, 'drop_move_claim_at_source'),
+        ) as (mock_umount, mock_revoke, mock_confirm, mock_drop):
+            self.compute._confirm_resize(
+                self.context, self.instance, self.migration)
+
+            mock_umount.assert_not_called()
+            mock_revoke.assert_not_called()
+            mock_confirm.assert_called_once()
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
+    @mock.patch.object(objects.Instance, 'revert_migration_context')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_terminate_volume_connections')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_is_instance_storage_shared', return_value=False)
+    @mock.patch.object(compute_utils, 'notify_usage_exists')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API.migrate_instance_start')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_revert_resize_same_host_skips_share_cleanup(
+        self, mock_inst_save, mock_setup_nw, mock_migrate_start,
+        mock_get_nw_info, mock_usage_exists, mock_shared,
+        mock_terminate_vols, mock_get_bdms, mock_revert_mig_ctx,
+        mock_finish_revert
+    ):
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+
+        self.migration.source_compute = 'same_host'
+        self.migration.dest_compute = 'same_host'
+
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_uuid
+        share_mapping.instance_uuid = self.instance.uuid
+        share_mapping.share_id = uuids.share_id
+        share_mapping.status = 'active'
+        share_mapping.tag = 'tag'
+        share_mapping.export_location = '192.168.0.1:/share'
+        share_mapping.share_proto = 'NFS'
+        self.mock_get_share_info.return_value = (
+            objects.ShareMappingList(objects=[share_mapping]))
+
+        with test.nested(
+            mock.patch.object(self.compute.share_manager, 'umount',
+                              return_value=False),
+            mock.patch.object(self.compute.share_manager, 'revoke_access'),
+            mock.patch.object(self.compute.driver, 'destroy'),
+            mock.patch.object(self.compute.rt, 'drop_move_claim_at_dest'),
+        ) as (mock_umount, mock_revoke, mock_destroy, mock_drop):
+            self.compute.revert_resize(
+                self.context, self.instance, self.migration,
+                request_spec=objects.RequestSpec())
+
+            mock_umount.assert_not_called()
+            mock_revoke.assert_not_called()
+
+    def test_cleanup_shares_after_migration_no_migration(self):
+        with mock.patch.object(
+            self.compute.share_manager, 'umount_and_revoke_all'
+        ) as mock_umount_revoke:
+            self.compute.share_manager.cleanup_shares_after_migration(
+                self.context, self.instance, None, "confirm resize")
+
+            self.mock_get_share_info.assert_not_called()
+            mock_umount_revoke.assert_not_called()
 
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):

@@ -26031,7 +26031,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         def fake_to_xml(self, context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,
-                        block_device_info=None, mdevs=None, old_guest=None):
+                        block_device_info=None, mdevs=None,
+                        share_info=None, old_guest=None):
             return ""
 
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver._get_guest_xml',
@@ -26141,7 +26142,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         def fake_get_guest_xml(context, instance, network_info, disk_info,
                                image_meta, block_device_info=None, mdevs=None,
-                               old_guest=None):
+                               old_guest=None, share_info=None):
             self.assertEqual('ide', disk_info['disk_bus'])
 
         image_meta = {"disk_format": "raw",

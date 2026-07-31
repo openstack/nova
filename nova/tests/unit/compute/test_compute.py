@@ -2640,6 +2640,7 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch('nova.share.manila.API.deny')
     @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
+    @mock.patch('nova.compute.share_management.ShareManager.grant_access')
     @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
@@ -2648,7 +2649,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_image_specified_and_share(
         self, mock_rescue, mock_power_off, mock_image_get, mock_get_block_info,
-            mock_get_share_info, mock_drv_mount, mock_manila_deny):
+            mock_get_share_info, mock_grant, mock_drv_mount, mock_manila_deny):
         image_ref = uuids.image_instance
         rescue_image_meta = {}
         params = {"task_state": task_states.RESCUING}
@@ -2805,9 +2806,10 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(fake.FakeDriver, 'power_on')
     @mock.patch('nova.objects.share_mapping.ShareMapping.activate')
     @mock.patch('nova.compute.share_management.ShareManager.mount')
+    @mock.patch('nova.compute.share_management.ShareManager.grant_access')
     @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
-    def test_power_on_with_share(self, mock_share, mock_mount, mock_activate,
-            mock_power_on, mock_nw_info, mock_blockdev):
+    def test_power_on_with_share(self, mock_share, mock_grant, mock_mount,
+            mock_activate, mock_power_on, mock_nw_info, mock_blockdev):
         instance = self._create_fake_instance_obj()
 
         share_info = self.fake_share_info()
@@ -5214,6 +5216,7 @@ class ComputeTestCase(BaseTestCase,
         for operation in actions:
             if 'revert_resize' in operation:
                 migration.source_compute = 'fake-mini'
+                migration.dest_compute = 'fake-mini'
                 migration.source_node = 'fake-mini'
 
             def fake_migration_save(*args, **kwargs):
@@ -5419,7 +5422,7 @@ class ComputeTestCase(BaseTestCase,
             mock_virt_mig.assert_called_once_with(self.context, migration,
                 instance, disk_info, 'fake-nwinfo1',
                 test.MatchType(objects.ImageMeta), resize_instance, mock.ANY,
-                'fake-bdminfo', power_on)
+                'fake-bdminfo', power_on, share_info=mock.ANY)
             mock_get_blk.assert_called_once_with(self.context, instance,
                                                  refresh_conn_info=True,
                                                  bdms=fake_bdms)

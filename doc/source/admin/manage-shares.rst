@@ -76,10 +76,14 @@ Limitations
   * evacuate
   * live_migrate
   * rebuild
-  * resize(migrate)
   * resume
   * shelve
   * volume snapshot
+
+.. note::
+   Cold migration and resize of instances with share attachments is
+   supported. Share attachments are automatically re-established on the
+   destination host.
 
 Known bugs
 ----------

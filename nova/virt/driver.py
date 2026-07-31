@@ -935,7 +935,8 @@ class ComputeDriver(object):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         allocations, block_device_info=None, power_on=True):
+                         allocations, block_device_info=None, power_on=True,
+                         share_info=None):
         """Completes a resize/migration.
 
         :param context: the context for the migration/resize
@@ -953,6 +954,7 @@ class ComputeDriver(object):
         :param block_device_info: instance volume block device info
         :param power_on: True if the instance should be powered on, False
                          otherwise
+        :param share_info: ShareMappingList for the instance, or None
         """
         raise NotImplementedError()
 
@@ -965,7 +967,7 @@ class ComputeDriver(object):
 
     def finish_revert_migration(self, context, instance, network_info,
                                 migration, block_device_info=None,
-                                power_on=True):
+                                power_on=True, share_info=None):
         """Finish reverting a resize/migration.
 
         :param context: the context for the finish_revert_migration
@@ -975,6 +977,7 @@ class ComputeDriver(object):
         :param block_device_info: instance volume block device info
         :param power_on: True if the instance should be powered on, False
                          otherwise
+        :param share_info: ShareMappingList for the instance, or None
         """
         raise NotImplementedError()
 

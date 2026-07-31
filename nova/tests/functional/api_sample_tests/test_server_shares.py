@@ -467,10 +467,42 @@ class ServerSharesJsonAdminTest(ServerSharesBase):
         self._block_action({"evacuate": {}})
 
     def test_resize_server_with_share_fails(self):
-        self._block_action({"resize": {"flavorRef": "2"}})
+        uuid = self._post_server_shares()
+        with mock.patch(
+            "nova.objects.service.get_minimum_version_all_cells",
+            return_value=73
+        ):
+            ex = self.assertRaises(
+                client.OpenStackApiException,
+                self.api.post_server_action,
+                uuid,
+                {"resize": {"flavorRef": "2"}}
+            )
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn(
+            "Cold migration and resize with shares requires all compute "
+            "services to be at service version",
+            ex.response.text
+        )
 
     def test_migrate_server_with_share_fails(self):
-        self._block_action({"migrate": None})
+        uuid = self._post_server_shares()
+        with mock.patch(
+            "nova.objects.service.get_minimum_version_all_cells",
+            return_value=73
+        ):
+            ex = self.assertRaises(
+                client.OpenStackApiException,
+                self.api.post_server_action,
+                uuid,
+                {"migrate": None}
+            )
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn(
+            "Cold migration and resize with shares requires all compute "
+            "services to be at service version",
+            ex.response.text
+        )
 
     def test_live_migrate_server_with_share_fails(self):
         self._block_action(

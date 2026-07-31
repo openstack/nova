@@ -156,16 +156,7 @@ class ShareManager:
                 share_id=share_mapping.share_id
             )
 
-            share_mapping.set_access_according_to_protocol()
-
-            if not self.manila_api.has_access(
-                context,
-                share_mapping.share_id,
-                share_mapping.access_type,
-                share_mapping.access_to,
-            ):
-                self._apply_access_policy(context, share_mapping)
-                self._wait_for_access_policy(context, share_mapping)
+            self.grant_access(context, share_mapping)
 
             self.set_mapping_status(
                 share_mapping, fields.ShareMappingStatus.INACTIVE
@@ -323,6 +314,33 @@ class ShareManager:
                 share_id=share_mapping.share_id,
             )
 
+    @staticmethod
+    def _filter_mappings_to_host(context, share_mappings, host, keep_uuid):
+        """Keep only the share mappings relevant to ``host``.
+
+        NFS access is a single per-host IP rule, so only instances on
+        the same host share that rule. Instances on other hosts have
+        their own independent rules and must not keep this host's rule
+        alive.
+
+        ``keep_uuid`` is the instance whose access is being managed; its
+        mapping is always kept (its host is not queried) so the caller
+        can reason about its own mapping.
+        """
+        other_uuids = list({
+            sm.instance_uuid for sm in share_mappings
+            if sm.instance_uuid != keep_uuid})
+        same_host_uuids = {keep_uuid}
+        if other_uuids:
+            others = objects.InstanceList.get_by_filters(
+                context, {'uuid': other_uuids}, expected_attrs=[])
+            same_host_uuids.update(
+                inst.uuid for inst in others if inst.host == host)
+        return [
+            sm for sm in share_mappings
+            if sm.instance_uuid in same_host_uuids
+        ]
+
     def check_share_usage(self, context, instance, share_mapping):
         """Check if a share is still in use by active mappings.
 
@@ -341,24 +359,9 @@ class ShareManager:
         # the access rule is still needed. Instances on other hosts
         # have independent access rules.
         if share_mapping.share_proto == fields.ShareMappingProto.NFS:
-            other_uuids = list({
-                sm.instance_uuid
-                for sm in share_mappings_used_by_share
-                if sm.instance_uuid != instance_uuid
-            })
-            same_host_uuids = {instance_uuid}
-            if other_uuids:
-                others = objects.InstanceList.get_by_filters(
-                    context, {'uuid': other_uuids},
-                    expected_attrs=[])
-                same_host_uuids.update(
-                    inst.uuid for inst in others
-                    if inst.host == instance.host
-                )
-            share_mappings_used_by_share = [
-                sm for sm in share_mappings_used_by_share
-                if sm.instance_uuid in same_host_uuids
-            ]
+            share_mappings_used_by_share = self._filter_mappings_to_host(
+                context, share_mappings_used_by_share, instance.host,
+                instance_uuid)
         elif share_mapping.share_proto == fields.ShareMappingProto.CEPHFS:
             # CephFS uses a per-instance-per-host cephx identity, so a
             # share's access rule is never shared between instances.
@@ -400,11 +403,57 @@ class ShareManager:
 
     def mount_all(self, context, instance, share_info):
         for share_mapping in share_info:
+            try:
+                self.grant_access(context, share_mapping)
+            except Exception:
+                LOG.warning(
+                    "Failed to verify Manila access for share %s, "
+                    "attempting mount anyway",
+                    share_mapping.share_id)
             self.mount(context, instance, share_mapping)
 
     def umount_all(self, context, instance, share_info):
         for share_mapping in share_info:
             self.umount(context, instance, share_mapping)
+
+    def cleanup_shares_after_migration(
+        self, context, instance, migration, reason
+    ):
+        """Unmount shares and revoke access on the abandoned host.
+
+        No-op for same-host resize or when migration is None.
+        """
+        if migration is None:
+            return
+        if migration.source_compute == migration.dest_compute:
+            return
+        share_info = self.get_share_info(
+            context, instance, check_status=False)
+        self.umount_and_revoke_all(context, instance, share_info, reason)
+
+    def umount_and_revoke_all(self, context, instance, share_info, reason):
+        """Unmount shares and revoke Manila access, logging failures.
+
+        Used during confirm/revert resize to clean up shares on
+        the host being abandoned. Failures are logged but do not
+        prevent the operation from continuing.
+        """
+        for share_mapping in share_info:
+            still_mounted = False
+            try:
+                still_mounted = self.umount(context, instance, share_mapping)
+            except Exception:
+                LOG.exception(
+                    "Failed to unmount share %s during %s",
+                    share_mapping.share_id, reason)
+            if still_mounted:
+                continue
+            try:
+                self.revoke_access(context, share_mapping)
+            except Exception:
+                LOG.exception(
+                    "Failed to revoke share access for %s during %s",
+                    share_mapping.share_id, reason)
 
     @share_synchronized
     def mount(self, context, instance, share_mapping):
@@ -439,7 +488,7 @@ class ShareManager:
                 fields.ShareMappingProto.CEPHFS):
                 share_mapping.enhance_with_ceph_credentials(context)
 
-            self.driver.umount_share(context, instance, share_mapping)
+            return self.driver.umount_share(context, instance, share_mapping)
 
         except (
             exception.ShareNotFound,
@@ -448,6 +497,93 @@ class ShareManager:
         ) as e:
             LOG.error(e.format_message())
             raise
+
+    def grant_access(self, context, share_mapping):
+        """Grant Manila access for a share without side effects.
+
+        Unlike allow_share(), this does not change ShareMapping status,
+        send notifications, or modify the database. Used during migration
+        where the share remains attached to the instance.
+
+        Callers that need share-level serialization must hold the
+        @utils.synchronized(share_mapping.share_id) lock.
+        """
+        share_mapping.set_access_according_to_protocol()
+
+        if self.manila_api.has_access(
+            context,
+            share_mapping.share_id,
+            share_mapping.access_type,
+            share_mapping.access_to,
+        ):
+            LOG.debug(
+                "Share %s already has access, skipping grant",
+                share_mapping.share_id,
+            )
+            return
+
+        self._apply_access_policy(context, share_mapping)
+        self._wait_for_access_policy(context, share_mapping)
+
+    def revoke_access(self, context, share_mapping):
+        """Revoke Manila access for a share without side effects.
+
+        Unlike deny_share(), this does not delete the ShareMapping,
+        send notifications, or modify the database. Used during migration
+        where the share remains attached to the instance.
+
+        Callers that need share-level serialization must hold the lock
+        themselves (e.g. deny_share uses @share_synchronized).
+        """
+        share_mapping.set_access_according_to_protocol()
+
+        # NFS uses a single per-host IP access rule shared by every
+        # instance on this host, so only revoke it when no other
+        # instance on this host still needs it. Instances on other
+        # hosts have their own independent rules. CephFS uses a
+        # per-instance-per-host cephx identity, so each grant is
+        # independent and always safe to revoke.
+        if share_mapping.share_proto == fields.ShareMappingProto.NFS:
+            share_mappings_used_by_share = self._filter_mappings_to_host(
+                context,
+                objects.share_mapping.ShareMappingList.get_by_share_id(
+                    context, share_mapping.share_id),
+                CONF.host,
+                share_mapping.instance_uuid)
+            # Only another instance on this host keeps the shared rule
+            # alive. This instance's own mapping is being torn down, so
+            # it is intentionally ignored.
+            other_active = any(
+                sm.instance_uuid != share_mapping.instance_uuid and
+                sm.status not in (
+                    fields.ShareMappingStatus.DETACHING,
+                    fields.ShareMappingStatus.ERROR,
+                )
+                for sm in share_mappings_used_by_share
+            )
+            if other_active:
+                LOG.debug(
+                    "Share %s still used by other instances on this "
+                    "host, skipping access revoke",
+                    share_mapping.share_id,
+                )
+                return
+
+        try:
+            self.manila_api.deny(
+                context,
+                share_mapping.share_id,
+                share_mapping.access_type,
+                share_mapping.access_to,
+            )
+        except (
+            exception.ShareNotFound,
+            exception.ShareAccessNotFound,
+        ):
+            LOG.warning(
+                "Share %s or access rule not found during revoke, "
+                "ignoring", share_mapping.share_id,
+            )
 
     @staticmethod
     def set_mapping_status(share_mapping, status):

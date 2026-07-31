@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Cold migration and resize of instances with virtiofs share attachments
+    is now supported. Share attachments are automatically re-established on
+    the destination host during migration and cleaned up appropriately during
+    revert. This feature requires all ``nova-compute`` services to be
+    upgraded to ``SERVICE_VERSION 74`` or later.

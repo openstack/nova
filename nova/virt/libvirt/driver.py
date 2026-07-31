@@ -12993,6 +12993,7 @@ class LibvirtDriver(driver.ComputeDriver):
         allocations: dict[str, ty.Any],
         block_device_info: dict[str, ty.Any] | None = None,
         power_on: bool = True,
+        share_info: 'objects.ShareMappingList | None' = None,
     ) -> None:
         """Complete the migration process on the destination host."""
         LOG.debug("Starting finish_migration", instance=instance)
@@ -13071,7 +13072,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info,
                                   block_disk_info, image_meta,
                                   block_device_info=block_device_info,
-                                  mdevs=mdevs)
+                                  mdevs=mdevs,
+                                  share_info=share_info)
         # NOTE(mriedem): vifs_already_plugged=True here, regardless of whether
         # or not we've migrated to another host, because we unplug VIFs locally
         # and the status change in the port might go undetected by the neutron
@@ -13138,6 +13140,7 @@ class LibvirtDriver(driver.ComputeDriver):
         migration: 'objects.Migration',
         block_device_info: dict[str, ty.Any] | None = None,
         power_on: bool = True,
+        share_info: 'objects.ShareMappingList | None' = None,
     ) -> None:
         """Finish the second half of reverting a resize on the source host."""
         LOG.debug('Starting finish_revert_migration', instance=instance)
@@ -13175,7 +13178,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   instance.image_meta,
                                   block_device_info=block_device_info,
-                                  mdevs=mdevs, old_guest=old_guest)
+                                  mdevs=mdevs, old_guest=old_guest,
+                                  share_info=share_info)
         self._create_guest_with_network(
             context, xml, instance, network_info, block_device_info,
             power_on=power_on)

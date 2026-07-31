@@ -37,7 +37,7 @@ __all__ = [
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 73
+SERVICE_VERSION = 74
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -257,6 +257,9 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '6.5'},
     # Version 73: Compute RPC v6.5:
     # Report OWNER_NOVA trait on resource providers
+    {'compute_rpc': '6.5'},
+    # Version 74: Compute RPC v6.5:
+    # Add support for cold migration with shares
     {'compute_rpc': '6.5'},
 )
 

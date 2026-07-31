@@ -5072,6 +5072,10 @@ class ComputeManager(manager.Manager):
         self.driver.confirm_migration(context, migration, instance,
                                       network_info)
 
+        # Unmount shares and revoke Manila access on source host.
+        self.share_manager.cleanup_shares_after_migration(
+            context, instance, migration, "confirm resize")
+
         # Free up the old_flavor usage from the resource tracker for this host.
         self.rt.drop_move_claim_at_source(context, instance, migration)
 
@@ -5626,6 +5630,9 @@ class ComputeManager(manager.Manager):
             self.driver.destroy(context, instance, network_info,
                                 block_device_info, destroy_disks)
 
+            self.share_manager.cleanup_shares_after_migration(
+                context, instance, migration, "revert resize")
+
             self._terminate_volume_connections(context, instance, bdms)
 
             # Free up the new_flavor usage from the resource tracker for this
@@ -5722,9 +5729,16 @@ class ComputeManager(manager.Manager):
                     context, instance, refresh_conn_info=True, bdms=bdms)
 
             power_on = old_vm_state != vm_states.STOPPED
+
+            # Get share_info for domain XML regeneration. Shares are
+            # still mounted on the source (lazy cleanup), so no
+            # re-grant or re-mount is needed.
+            share_info = self.share_manager.get_share_info(
+                context, instance, check_status=False)
+
             self.driver.finish_revert_migration(
                 context, instance, network_info, migration, block_device_info,
-                power_on)
+                power_on, share_info=share_info)
 
             instance.drop_migration_context()
             instance.launched_at = timeutils.utcnow()
@@ -6552,13 +6566,42 @@ class ComputeManager(manager.Manager):
         allocations = self.reportclient.get_allocs_for_consumer(
             context, instance.uuid)['allocations']
 
+        # Grant Manila access and mount shares on the destination host.
+        # check_status=False because no concurrent attach/detach is
+        # possible while instance is in RESIZE state.
+        share_info = self.share_manager.get_share_info(
+            context, instance, check_status=False)
+        same_host = migration.source_compute == migration.dest_compute
+        if not same_host:
+            mounted_shares = []
+            try:
+                for share_mapping in share_info:
+                    self.share_manager.grant_access(context, share_mapping)
+                    self.share_manager.mount(context, instance, share_mapping)
+                    mounted_shares.append(share_mapping)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    for sm in reversed(mounted_shares):
+                        try:
+                            self.share_manager.umount(context, instance, sm)
+                        except Exception:
+                            LOG.exception(
+                                "Failed to unmount share %s during "
+                                "cleanup", sm.share_id)
+                    # Don't revoke access here. instance.host already
+                    # points to the destination, so stop/start after
+                    # reset-state needs the access grants to remain.
+                    # Access is cleaned up by cleanup_shares_after_migration
+                    # during confirm or revert.
+
         try:
             self.driver.finish_migration(context, migration, instance,
                                          disk_info,
                                          network_info,
                                          image_meta, resize_instance,
                                          allocations,
-                                         block_device_info, power_on)
+                                         block_device_info, power_on,
+                                         share_info=share_info)
         except Exception:
             # Note that we do not rollback port bindings to the source host
             # because resize_instance (on the source host) updated the

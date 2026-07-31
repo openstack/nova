@@ -267,7 +267,7 @@ class FakeDriver(driver.ComputeDriver):
 
     def finish_revert_migration(self, context, instance, network_info,
                                 migration, block_device_info=None,
-                                power_on=True):
+                                power_on=True, share_info=None):
         state = power_state.RUNNING if power_on else power_state.SHUTDOWN
         self.instances[instance.uuid] = FakeInstance(
             instance.name, state, instance.uuid)
@@ -618,7 +618,8 @@ class FakeDriver(driver.ComputeDriver):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         allocations, block_device_info=None, power_on=True):
+                         allocations, block_device_info=None, power_on=True,
+                         share_info=None):
         injected_files = admin_password = None
         # Finish migration is just like spawning the guest on a destination
         # host during resize/cold migrate, so reuse the spawn() fake to

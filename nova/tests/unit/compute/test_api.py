@@ -2314,6 +2314,80 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, fake_inst, flavor_id=uuids.new_falvor
         )
 
+    @mock.patch(
+        'nova.servicegroup.api.API.service_is_up',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        new=mock.Mock(return_value=73),
+    )
+    @mock.patch(
+        'nova.compute.api.instance_has_share',
+        new=mock.Mock(return_value=True),
+    )
+    def test_resize_with_shares_old_compute_blocked(self):
+        fake_inst = self._create_instance_obj()
+
+        self.assertRaises(
+            exception.ForbiddenWithShare,
+            self.compute_api.resize,
+            self.context, fake_inst, flavor_id=uuids.new_flavor
+        )
+
+    @mock.patch(
+        'nova.servicegroup.api.API.service_is_up',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        new=mock.Mock(return_value=74),
+    )
+    @mock.patch(
+        'nova.compute.api.instance_has_share',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch('nova.compute.flavors.get_flavor_by_flavor_id')
+    def test_resize_with_shares_new_compute_allowed(self, mock_get_flavor):
+        fake_inst = self._create_instance_obj()
+        new_flavor = self._create_flavor(
+            id=200, flavorid='new-flavor-id', name='new_flavor',
+            disabled=False)
+        mock_get_flavor.return_value = new_flavor
+
+        # Should not raise ForbiddenWithShare; will fail later for
+        # other reasons but that's fine — we just check the share
+        # gate lets us through.
+        try:
+            self.compute_api.resize(
+                self.context, fake_inst,
+                flavor_id=new_flavor.flavorid)
+        except exception.ForbiddenWithShare:
+            self.fail("resize raised ForbiddenWithShare with new compute")
+        except Exception:
+            pass
+
+    @mock.patch(
+        'nova.servicegroup.api.API.service_is_up',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        new=mock.Mock(return_value=73),
+    )
+    @mock.patch(
+        'nova.compute.api.instance_has_share',
+        new=mock.Mock(return_value=True),
+    )
+    def test_resize_with_shares_old_service_version_blocked(self):
+        fake_inst = self._create_instance_obj()
+
+        self.assertRaises(
+            exception.ForbiddenWithShare,
+            self.compute_api.resize,
+            self.context, fake_inst, flavor_id=uuids.new_flavor
+        )
+
     def _test_migrate(self, *args, **kwargs):
         self._test_resize(*args, flavor_id_passed=False, **kwargs)
 
