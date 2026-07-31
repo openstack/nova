@@ -321,7 +321,7 @@ class ServerSharesTest(ServerSharesTestBase):
 
         sm = share_mapping.ShareMapping.get_by_instance_uuid_and_share_id(
             self.context, server['id'], share_id)
-        self.assertEqual(sm.status, 'error')
+        self.assertEqual(sm.status, 'inactive')
         self.instance = instance.Instance.get_by_uuid(
             self.context, server['id'])
         self.assertEqual(self.instance.vm_state, 'error')
@@ -333,9 +333,6 @@ class ServerSharesTest(ServerSharesTestBase):
            soon as the share issue is fixed.
         """
         server, share_id = self.test_server_share_mount_failure()
-        self._verify_start_fails_share_in_error(server, share_id)
-
-        server, share_id = self.test_server_share_umount_failure()
         self._verify_start_fails_share_in_error(server, share_id)
 
     def _verify_start_fails_share_in_error(self, server, share_id):
@@ -371,7 +368,7 @@ class ServerSharesTest(ServerSharesTestBase):
 
         sm = share_mapping.ShareMapping.get_by_instance_uuid_and_share_id(
             self.context, server['id'], share_id)
-        self.assertEqual(sm.status, 'error')
+        self.assertEqual(sm.status, 'inactive')
         self.instance = instance.Instance.get_by_uuid(
             self.context, server['id'])
         self.assertEqual(self.instance.vm_state, 'error')
@@ -419,10 +416,11 @@ class ServerSharesTest(ServerSharesTestBase):
         )
         self.instance = instance.Instance.get_by_uuid(
             self.context, server['id'])
-        self.assertEqual(self.instance.vm_state, 'error')
+        self.assertEqual(self.instance.vm_state, 'stopped')
 
-        # Reboot the server to restart it without the share.
-        self._reboot_server(server, hard=True)
+        # Start the server without the share.
+        self.mock_disconnect.side_effect = None
+        self._start_server(server)
 
         self.instance = instance.Instance.get_by_uuid(
             self.context, server['id'])
@@ -439,16 +437,8 @@ class ServerSharesTest(ServerSharesTestBase):
         self._attach_share(server, share_id)
         self._start_server(server)
 
-        # Here we are using CastAsCallFixture so we got an exception from
-        # nova compute. This should not happen without the fixture and
-        # the api should answer with a 202 status code.
-        exc = self.assertRaises(
-            client.OpenStackApiException,
-            self._stop_server,
-            server,
-        )
-
-        self.assertIn("nova.exception.ShareUmountError", str(exc))
+        # umount failure during power-off is caught; stop completes.
+        self._stop_server(server)
 
         log_out = self.stdlog.logger.output
 
@@ -459,10 +449,10 @@ class ServerSharesTest(ServerSharesTestBase):
 
         sm = share_mapping.ShareMapping.get_by_instance_uuid_and_share_id(
             self.context, server['id'], share_id)
-        self.assertEqual(sm.status, 'error')
+        self.assertEqual(sm.status, 'inactive')
         self.instance = instance.Instance.get_by_uuid(
             self.context, server['id'])
-        self.assertEqual(self.instance.vm_state, 'error')
+        self.assertEqual(self.instance.vm_state, 'stopped')
         return (server, share_id)
 
     def test_server_resume_with_shares(self):

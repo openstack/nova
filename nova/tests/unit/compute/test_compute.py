@@ -2565,7 +2565,7 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.terminate_instance(self.context, instance, [])
 
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch.object(fake.FakeDriver, 'power_off')
@@ -2601,7 +2601,7 @@ class ComputeTestCase(BaseTestCase,
                                             share_info)
 
     @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch.object(image_api.API, "get")
@@ -2640,7 +2640,7 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch('nova.share.manila.API.deny')
     @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch.object(image_api.API, "get")
@@ -2686,7 +2686,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.share.manila.API.deny')
     @mock.patch('nova.objects.instance_fault.InstanceFault.create')
     @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch.object(image_api.API, "get")
@@ -2730,7 +2730,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(instance.vm_state, 'error')
         self.compute.terminate_instance(ctxt, instance, [])
 
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch.object(image_api.API, "get")
@@ -2804,8 +2804,8 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.network.neutron.API.get_instance_nw_info')
     @mock.patch.object(fake.FakeDriver, 'power_on')
     @mock.patch('nova.objects.share_mapping.ShareMapping.activate')
-    @mock.patch('nova.compute.manager.ComputeManager._mount_share')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.mount')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     def test_power_on_with_share(self, mock_share, mock_mount, mock_activate,
             mock_power_on, mock_nw_info, mock_blockdev):
         instance = self._create_fake_instance_obj()
@@ -2835,8 +2835,8 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.network.neutron.API.get_instance_nw_info')
     @mock.patch.object(fake.FakeDriver, 'power_on')
     @mock.patch('nova.objects.share_mapping.ShareMapping.activate')
-    @mock.patch('nova.compute.manager.ComputeManager._mount_share')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.mount')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     def test_power_on_with_no_share(self, mock_shares, mock_mount,
             mock_activate, mock_power_on, mock_nw_info, mock_blockdev):
         instance = self._create_fake_instance_obj()
@@ -2859,7 +2859,7 @@ class ComputeTestCase(BaseTestCase,
         mock_mount.assert_not_called()
         mock_activate.assert_not_called()
 
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch('nova.network.neutron.API.get_instance_nw_info')
@@ -2918,8 +2918,8 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.network.neutron.API.get_instance_nw_info')
     @mock.patch.object(fake.FakeDriver, 'power_off')
     @mock.patch('nova.objects.share_mapping.ShareMapping.deactivate')
-    @mock.patch('nova.compute.manager.ComputeManager._umount_share')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.umount')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     def test_power_off_with_share(self, mock_share, mock_umount,
             mock_deactivate, mock_power_off, mock_nw_info, mock_blockdev):
         instance = self._create_fake_instance_obj()
@@ -2946,8 +2946,8 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.network.neutron.API.get_instance_nw_info')
     @mock.patch.object(fake.FakeDriver, 'power_off')
     @mock.patch('nova.objects.share_mapping.ShareMapping.deactivate')
-    @mock.patch('nova.compute.manager.ComputeManager._umount_share')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.umount')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     def test_power_off_with_no_share(self, mock_share, mock_umount,
             mock_deactivate, mock_power_off, mock_nw_info, mock_blockdev):
         instance = self._create_fake_instance_obj()
@@ -3012,7 +3012,7 @@ class ComputeTestCase(BaseTestCase,
         self.compute.terminate_instance(self.context, instance, [])
 
     @mock.patch('nova.virt.fake.FakeDriver.resume')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.context.RequestContext.elevated')
     def test_suspend(self, mock_context, mock_notify, mock_get_share_info,
@@ -3055,7 +3055,7 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch('nova.compute.manager.ComputeManager.deny_share')
     @mock.patch('nova.virt.fake.FakeDriver.resume')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.context.RequestContext.elevated')
     def test_suspend_with_share(self, mock_context, mock_notify,
@@ -3400,7 +3400,7 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch.object(compute_manager.ComputeManager,
                            '_delete_dangling_bdms')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(compute_manager.ComputeManager,
                            '_get_instance_block_device_info')
@@ -3636,7 +3636,7 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch.object(compute_manager.ComputeManager,
                            '_delete_dangling_bdms')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     @mock.patch('nova.virt.fake.FakeDriver.reboot')
     @mock.patch('nova.objects.instance.Instance.save')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -3692,7 +3692,7 @@ class ComputeTestCase(BaseTestCase,
         self._test_reboot_with_accels(extra_specs=None, accel_info=None)
         mock_get_arqs.assert_not_called()
 
-    @mock.patch('nova.compute.manager.ComputeManager._mount_all_shares')
+    @mock.patch('nova.compute.share_management.ShareManager.mount_all')
     @mock.patch('nova.virt.fake.FakeDriver.reboot')
     @mock.patch('nova.objects.instance.Instance.save')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -3704,7 +3704,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(db, 'instance_update_and_get_original')
     @mock.patch.object(compute_manager.ComputeManager, '_get_power_state')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     def test_soft_reboot_with_share_info(
         self,
         mock_shares,
@@ -3740,7 +3740,7 @@ class ComputeTestCase(BaseTestCase,
 
         return instance['uuid']
 
-    @mock.patch('nova.compute.manager.ComputeManager._mount_all_shares')
+    @mock.patch('nova.compute.share_management.ShareManager.mount_all')
     @mock.patch('nova.virt.fake.FakeDriver.reboot')
     @mock.patch('nova.objects.instance.Instance.save')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -3752,7 +3752,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(db, 'instance_update_and_get_original')
     @mock.patch.object(compute_manager.ComputeManager, '_get_power_state')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     def test_hard_reboot_with_share_info(
         self,
         mock_shares,
@@ -3788,7 +3788,7 @@ class ComputeTestCase(BaseTestCase,
 
         return instance['uuid']
 
-    @mock.patch('nova.compute.manager.ComputeManager._mount_all_shares')
+    @mock.patch('nova.compute.share_management.ShareManager.mount_all')
     @mock.patch('nova.virt.fake.FakeDriver.reboot')
     @mock.patch('nova.objects.instance.Instance.save')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -3800,7 +3800,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(db, 'instance_update_and_get_original')
     @mock.patch.object(compute_manager.ComputeManager, '_get_power_state')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
     def test_hard_reboot_with_share_info_error(
         self,
         mock_shares,
@@ -8420,7 +8420,7 @@ class ComputeTestCase(BaseTestCase,
                        '_complete_partial_deletion',
                        fake_partial_deletion)
         with mock.patch(
-            "nova.compute.manager.ComputeManager._get_share_info",
+            "nova.compute.share_management.ShareManager.get_share_info",
             return_value=objects.ShareMappingList(),
         ):
             self.compute._init_instance(admin_context, instance)

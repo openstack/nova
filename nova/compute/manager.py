@@ -40,7 +40,6 @@ import traceback
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
 from keystoneauth1 import exceptions as keystone_exception
-from openstack import exceptions as sdk_exc
 import os_traits
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -60,6 +59,7 @@ from nova.compute import claims
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import share_management
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute.utils import wrap_instance_event
@@ -718,6 +718,8 @@ class ComputeManager(manager.Manager):
         # initialized before that happens.
         self.service_ref = None
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
+        self.share_manager = share_management.ShareManager(
+            self.manila_api, self.driver)
         self.rt = resource_tracker.ResourceTracker(
             self.host, self.driver, reportclient=self.reportclient)
 
@@ -1276,8 +1278,14 @@ class ComputeManager(manager.Manager):
         block_device_info = \
             self._get_instance_block_device_info(context, instance)
 
-        share_info = self._get_share_info(context, instance)
-        self._mount_all_shares(context, instance, share_info)
+        share_info = self.share_manager.get_share_info(context, instance)
+        try:
+            self.share_manager.mount_all(context, instance, share_info)
+        except Exception:
+            LOG.exception('Failed to mount shares for instance',
+                          instance=instance)
+            self._set_instance_obj_error_state(instance)
+            return
 
         try:
             self.driver.resume_state_on_host_boot(
@@ -1288,8 +1296,8 @@ class ComputeManager(manager.Manager):
         except Exception:
             # NOTE(vish): The instance failed to resume, so we set the
             #             instance to error and attempt to continue.
-            LOG.warning('Failed to resume instance',
-                        instance=instance)
+            LOG.exception('Failed to resume instance',
+                          instance=instance)
             self._set_instance_obj_error_state(instance)
 
     def _retry_reboot(self, instance, current_power_state):
@@ -3158,12 +3166,17 @@ class ComputeManager(manager.Manager):
 
     def _power_off_instance(self, context, instance, clean_shutdown=True):
         """Power off an instance on this host."""
-        share_info = self._get_share_info(context, instance)
+        share_info = self.share_manager.get_share_info(context, instance)
         timeout, retry_interval = self._get_power_off_values(
             instance, clean_shutdown)
         self.driver.power_off(instance, timeout, retry_interval)
         share_info.deactivate_all()
-        self._umount_all_shares(context, instance, share_info)
+        try:
+            self.share_manager.umount_all(context, instance, share_info)
+        except Exception:
+            LOG.exception(
+                "Failed to unmount shares during power off",
+                instance=instance)
 
     def _shutdown_instance(self, context, instance,
                            bdms, requested_networks=None, notify=True,
@@ -3193,7 +3206,7 @@ class ComputeManager(manager.Manager):
 
         network_info = instance.get_network_info()
 
-        share_info = self._get_share_info(
+        share_info = self.share_manager.get_share_info(
             context, instance, check_status=False
         )
 
@@ -3240,7 +3253,7 @@ class ComputeManager(manager.Manager):
             # dangling share_mapping in the DB (share_mapping entry with an
             # instance that does not exist anymore).
             try:
-                self._umount_share(context, instance, share)
+                self.share_manager.umount(context, instance, share)
                 share.deactivate()
                 self.deny_share(context, instance, share)
             except (
@@ -3520,9 +3533,13 @@ class ComputeManager(manager.Manager):
                                                                  instance)
         accel_info = self._get_accel_info(context, instance)
 
-        share_info = self._get_share_info(context, instance)
+        share_info = self.share_manager.get_share_info(context, instance)
 
-        self._mount_all_shares(context, instance, share_info)
+        try:
+            self.share_manager.mount_all(context, instance, share_info)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._set_instance_obj_error_state(instance)
         self.driver.power_on(context, instance,
                              network_info,
                              block_device_info, accel_info, share_info)
@@ -4372,50 +4389,6 @@ class ComputeManager(manager.Manager):
         for bdm in bdms_to_delete:
             bdms.objects.remove(bdm)
 
-    def _get_share_info(self, context, instance, check_status=True):
-        share_info = objects.ShareMappingList(context)
-
-        for share_mapping in objects.ShareMappingList.get_by_instance_uuid(
-            context, instance.uuid
-        ):
-            share_info.objects.append(share_mapping)
-
-            if check_status:
-                fsm = fields.ShareMappingStatus
-                if (
-                    share_mapping.status == fsm.ATTACHING or
-                    share_mapping.status == fsm.DETACHING
-                ):
-                    # If the share status is attaching it means we are racing
-                    # with the compute node. The mount is not completed yet or
-                    # something really bad happened. So we set the instance in
-                    # error state.
-                    LOG.error(
-                        "Share id '%s' attached to server id '%s' is "
-                        "still in '%s' state. Setting the instance "
-                        "in error.",
-                        share_mapping.share_id,
-                        instance.id,
-                        share_mapping.status,
-                    )
-                    self._set_instance_obj_error_state(
-                        instance, clean_task_state=True
-                    )
-                    raise exception.ShareErrorUnexpectedStatus(
-                        share_id=share_mapping.share_id,
-                        instance_uuid=instance.id,
-                    )
-
-                if share_mapping.status == fsm.ERROR:
-                    LOG.warning(
-                        "Share id '%s' attached to server id '%s' is in "
-                        "error state.",
-                        share_mapping.share_id,
-                        instance.id
-                    )
-
-        return share_info
-
     @messaging.expected_exceptions(exception.VTPMSecretForbidden)
     @wrap_exception()
     @reverts_task_state
@@ -4456,7 +4429,7 @@ class ComputeManager(manager.Manager):
 
         accel_info = self._get_accel_info(context, instance)
 
-        share_info = self._get_share_info(context, instance)
+        share_info = self.share_manager.get_share_info(context, instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
         compute_utils.notify_about_instance_action(
@@ -4503,7 +4476,7 @@ class ComputeManager(manager.Manager):
             # so it is safe to ignore the re-mounting of the share for
             # soft reboot.
             if reboot_type == "HARD":
-                self._mount_all_shares(context, instance, share_info)
+                self.share_manager.mount_all(context, instance, share_info)
 
             self.driver.reboot(context, instance,
                                network_info,
@@ -4723,404 +4696,14 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def allow_share(self, context, instance, share_mapping):
-
-        @utils.synchronized(share_mapping.share_id)
-        def _allow_share(context, instance, share_mapping):
-            def _apply_policy():
-                # self.manila_api.lock(share_mapping.share_id)
-                # Explicitly locking the share is not needed as
-                # create_access_rule() from the sdk will do it if the
-                # lock_visibility and lock_deletion flags are passed
-                # Tag the lock with the owning instance so operators can
-                # trace each access rule back to an instance (bug 2161761).
-                lock_reason = (
-                    "Lock by nova for instance %s"
-                    % share_mapping.instance_uuid)
-                self.manila_api.allow(
-                    context,
-                    share_mapping.share_id,
-                    share_mapping.access_type,
-                    share_mapping.access_to,
-                    "rw",
-                    lock_reason=lock_reason,
-                )
-
-            def _wait_policy_to_be_applied():
-                # Ensure the share policy is updated, this will avoid
-                # a race condition mounting the share if it is not the case.
-                max_retries = CONF.manila.share_apply_policy_timeout
-                attempt_count = 0
-                while attempt_count < max_retries:
-                    if self.manila_api.has_access(
-                        context,
-                        share_mapping.share_id,
-                        share_mapping.access_type,
-                        share_mapping.access_to,
-                    ):
-                        LOG.debug(
-                            "Allow policy set on share %s ",
-                            share_mapping.share_id,
-                        )
-                        break
-                    else:
-                        LOG.debug(
-                            "Waiting policy to be set on share %s ",
-                            share_mapping.share_id,
-                        )
-                        time.sleep(1)
-                        attempt_count += 1
-
-                if attempt_count >= max_retries:
-                    raise exception.ShareAccessGrantError(
-                        share_id=share_mapping.share_id,
-                        reason="Failed to set allow policy on share, "
-                        "too many retries",
-                    )
-
-            try:
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_ATTACH,
-                    phase=fields.NotificationPhase.START,
-                    share_id=share_mapping.share_id
-                )
-
-                share_mapping.set_access_according_to_protocol()
-
-                if not self.manila_api.has_access(
-                    context,
-                    share_mapping.share_id,
-                    share_mapping.access_type,
-                    share_mapping.access_to,
-                ):
-                    _apply_policy()
-                    _wait_policy_to_be_applied()
-
-                # Set the share from attaching to inactive
-                self._set_share_mapping_status(
-                    share_mapping, fields.ShareMappingStatus.INACTIVE
-                )
-
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_ATTACH,
-                    phase=fields.NotificationPhase.END,
-                    share_id=share_mapping.share_id
-                )
-
-            except (
-                exception.ShareNotFound,
-                exception.ShareProtocolNotSupported,
-                exception.ShareAccessGrantError,
-            ) as e:
-                self._set_share_mapping_status(
-                    share_mapping, fields.ShareMappingStatus.ERROR
-                )
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_ATTACH,
-                    phase=fields.NotificationPhase.ERROR,
-                    share_id=share_mapping.share_id,
-                    exception=e
-                )
-                LOG.error(e.format_message())
-                raise
-            except (
-                sdk_exc.BadRequestException,
-            ) as e:
-                self._set_share_mapping_status(
-                    share_mapping, fields.ShareMappingStatus.ERROR
-                )
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_ATTACH,
-                    phase=fields.NotificationPhase.ERROR,
-                    share_id=share_mapping.share_id,
-                    exception=e
-                )
-                LOG.error(
-                    "%s: %s error from url: %s, %s",
-                    e.message,
-                    e.source,
-                    e.url,
-                    e.details,
-                )
-                raise
-            except keystone_exception.http.Unauthorized as e:
-                self._set_share_mapping_status(
-                    share_mapping, fields.ShareMappingStatus.ERROR
-                )
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_ATTACH,
-                    phase=fields.NotificationPhase.ERROR,
-                    share_id=share_mapping.share_id,
-                    exception=e
-                )
-                LOG.error(e)
-                raise
-
-        _allow_share(context, instance, share_mapping)
-
-    def _check_share_usage(self, context, share_mapping, instance):
-        """Check if a share is still in use by active mappings.
-
-        Returns True if the share is still needed (should not be
-        revoked), False if it can be safely revoked.
-        """
-        instance_uuid = instance.uuid
-        share_mappings_used_by_share = (
-            objects.share_mapping.ShareMappingList.get_by_share_id(
-                context, share_mapping.share_id
-            )
-        )
-
-        # For NFS, each host has its own IP-based access rule. Only
-        # consider instances on the same host when deciding whether
-        # the access rule is still needed. Instances on other hosts
-        # have independent access rules.
-        if share_mapping.share_proto == fields.ShareMappingProto.NFS:
-            other_uuids = list({
-                sm.instance_uuid
-                for sm in share_mappings_used_by_share
-                if sm.instance_uuid != instance_uuid
-            })
-            same_host_uuids = {instance_uuid}
-            if other_uuids:
-                others = objects.InstanceList.get_by_filters(
-                    context, {'uuid': other_uuids},
-                    expected_attrs=[])
-                same_host_uuids.update(
-                    inst.uuid for inst in others
-                    if inst.host == instance.host
-                )
-            share_mappings_used_by_share = [
-                sm for sm in share_mappings_used_by_share
-                if sm.instance_uuid in same_host_uuids
-            ]
-        elif share_mapping.share_proto == fields.ShareMappingProto.CEPHFS:
-            # CephFS uses a per-instance-per-host cephx identity, so a
-            # share's access rule is never shared between instances.
-            # Only this instance's own mappings decide whether the rule
-            # is still needed.
-            share_mappings_used_by_share = [
-                sm for sm in share_mappings_used_by_share
-                if sm.instance_uuid == instance_uuid
-            ]
-
-        # The share is safe to revoke (not used) when every mapping
-        # satisfies one of:
-        #  - It belongs to this instance and is INACTIVE or ERROR
-        #    (granted but not mounted, or broken).
-        #  - It is in DETACHING state (any instance, including ours).
-        # If any mapping falls outside these cases (e.g. another
-        # instance is ACTIVE), the share is still in use.
-        # The return value is inverted: True = still used, False = safe
-        # to revoke.
-        return not all(
-            (
-                (
-                    sm.instance_uuid == instance_uuid and
-                    sm.status in (
-                        fields.ShareMappingStatus.INACTIVE,
-                        fields.ShareMappingStatus.ERROR,
-                    )
-                ) or
-                sm.status == fields.ShareMappingStatus.DETACHING
-            )
-            for sm in share_mappings_used_by_share
-        )
+        self.share_manager.allow_share(context, instance, share_mapping)
 
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def deny_share(self, context, instance, share_mapping):
-
-        @utils.synchronized(share_mapping.share_id)
-        def _deny_share(context, instance, share_mapping):
-            try:
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_DETACH,
-                    phase=fields.NotificationPhase.START,
-                    share_id=share_mapping.share_id,
-                )
-
-                # Must run before _check_share_usage: populates
-                # access_type/access_to needed by deny() below.
-                share_mapping.set_access_according_to_protocol()
-
-                still_used = self._check_share_usage(
-                    context, share_mapping, instance)
-
-                if not still_used:
-                    # self.manila_api.unlock(share_mapping.share_id)
-                    # Explicit unlocking the share is not needed as
-                    # delete_access_rule() from the sdk will do it if the
-                    # "unrestrict" parameter is passed
-                    self.manila_api.deny(
-                        context,
-                        share_mapping.share_id,
-                        share_mapping.access_type,
-                        share_mapping.access_to,
-                    )
-
-                share_mapping.delete()
-
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_DETACH,
-                    phase=fields.NotificationPhase.END,
-                    share_id=share_mapping.share_id,
-                )
-
-            except (
-                exception.ShareAccessRemovalError,
-                exception.ShareProtocolNotSupported,
-            ) as e:
-                self._set_share_mapping_status(
-                    share_mapping, fields.ShareMappingStatus.ERROR
-                )
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_DETACH,
-                    phase=fields.NotificationPhase.ERROR,
-                    share_id=share_mapping.share_id,
-                    exception=e
-                )
-                LOG.error(e.format_message())
-                raise
-            except keystone_exception.http.Unauthorized as e:
-                self._set_share_mapping_status(
-                    share_mapping, fields.ShareMappingStatus.ERROR
-                )
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_DETACH,
-                    phase=fields.NotificationPhase.ERROR,
-                    share_id=share_mapping.share_id,
-                    exception=e
-                )
-                LOG.error(e)
-                raise
-            except (exception.ShareNotFound, exception.ShareAccessNotFound):
-                # Ignore the error if for any reason there is nothing to
-                # remove from manila, so we can still detach the share.
-                share_mapping.delete()
-                compute_utils.notify_about_share_attach_detach(
-                    context,
-                    instance,
-                    instance.host,
-                    action=fields.NotificationAction.SHARE_DETACH,
-                    phase=fields.NotificationPhase.END,
-                    share_id=share_mapping.share_id,
-                )
-
-        _deny_share(context, instance, share_mapping)
-
-    @wrap_exception()
-    def _mount_all_shares(self, context, instance, share_info):
-        for share_mapping in share_info:
-            self._mount_share(context, instance, share_mapping)
-
-    @wrap_exception()
-    def _umount_all_shares(self, context, instance, share_info):
-        for share_mapping in share_info:
-            self._umount_share(context, instance, share_mapping)
-
-    @wrap_exception()
-    def _mount_share(self, context, instance, share_mapping):
-
-        @utils.synchronized(share_mapping.share_id)
-        def _mount_share(context, instance, share_mapping):
-            try:
-                share_mapping.set_access_according_to_protocol()
-
-                if share_mapping.share_proto == (
-                    fields.ShareMappingProto.CEPHFS):
-                    share_mapping.enhance_with_ceph_credentials(context)
-
-                LOG.debug("Mounting share %s", share_mapping.share_id)
-                self.driver.mount_share(context, instance, share_mapping)
-
-            except (
-                exception.ShareNotFound,
-                exception.ShareProtocolNotSupported,
-                exception.ShareMountError,
-            ) as e:
-                self._set_share_mapping_and_instance_in_error(
-                    instance, share_mapping
-                )
-                LOG.error(e.format_message())
-                raise
-            except (sdk_exc.BadRequestException) as e:
-                self._set_share_mapping_and_instance_in_error(
-                    instance, share_mapping
-                )
-                LOG.error("%s: %s error from url: %s, %s", e.message, e.source,
-                          e.url, e.details)
-                raise
-
-        _mount_share(context, instance, share_mapping)
-
-    @wrap_exception()
-    def _umount_share(self, context, instance, share_mapping):
-
-        @utils.synchronized(share_mapping.share_id)
-        def _umount_share(context, instance, share_mapping):
-            try:
-                share_mapping.set_access_according_to_protocol()
-
-                if share_mapping.share_proto == (
-                    fields.ShareMappingProto.CEPHFS):
-                    share_mapping.enhance_with_ceph_credentials(context)
-
-                self.driver.umount_share(context, instance, share_mapping)
-
-            except (
-                exception.ShareNotFound,
-                exception.ShareUmountError,
-                exception.ShareProtocolNotSupported,
-            ) as e:
-                self._set_share_mapping_and_instance_in_error(
-                    instance, share_mapping
-                )
-                LOG.error(e.format_message())
-                raise
-
-        _umount_share(context, instance, share_mapping)
-
-    def _set_share_mapping_status(self, share_mapping, status):
-        share_mapping.status = status
-        share_mapping.save()
-
-    def _set_share_mapping_and_instance_in_error(
-        self, instance, share_mapping
-    ):
-        share_mapping.status = fields.ShareMappingStatus.ERROR
-        share_mapping.save()
-        self._set_instance_obj_error_state(
-            instance, clean_task_state=True
-        )
+        self.share_manager.deny_share(context, instance, share_mapping)
 
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):
@@ -5286,7 +4869,7 @@ class ComputeManager(manager.Manager):
         block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
 
-        share_info = self._get_share_info(context, instance)
+        share_info = self.share_manager.get_share_info(context, instance)
 
         extra_usage_info = {'rescue_image_name':
                             self._get_image_name(rescue_image_meta)}
@@ -5300,7 +4883,7 @@ class ComputeManager(manager.Manager):
         try:
             self._power_off_instance(context, instance, clean_shutdown)
 
-            self._mount_all_shares(context, instance, share_info)
+            self.share_manager.mount_all(context, instance, share_info)
 
             self.driver.rescue(context, instance, network_info,
                                rescue_image_meta, admin_password,
@@ -7535,7 +7118,7 @@ class ComputeManager(manager.Manager):
         # because suspending an instance with a share is not permitted
         # by libvirt. As a result, the suspend action involving a share
         # is blocked by the API.
-        share_info = self._get_share_info(context, instance)
+        share_info = self.share_manager.get_share_info(context, instance)
 
         compute_utils.notify_about_instance_action(context, instance,
             self.host, action=fields.NotificationAction.RESUME,
