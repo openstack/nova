@@ -597,6 +597,26 @@ Example Configuration:
    alias = {'name': 'vf_live', 'vendor_id': '8086', 'product_id': '1515', 'device_type': 'type-VF', 'live_migratable': 'yes'}
    alias = {'name': 'vf_no_migrate', 'vendor_id': '8086', 'product_id': '1516', 'device_type': 'type-VF', 'live_migratable': 'no'}
 
+Post-copy Limitation
+~~~~~~~~~~~~~~~~~~~~
+
+:oslo.config:option:`libvirt.live_migration_permit_post_copy` must be set to
+``False`` on compute nodes hosting instances with PCI devices that use the
+``vfio-pci`` variant driver. VFIO device migration is incompatible with
+postcopy at the QEMU level: a VFIO device on the destination cannot handle
+page faults for memory pages not yet transferred from the source. QEMU will
+reject any migration attempt that combines VFIO devices with postcopy
+capabilities.
+
+This constraint applies to both PCI passthrough devices using the ``vfio-pci``
+variant driver and mediated devices (vGPUs). See :doc:`virtual-gpu` for
+vGPU-specific live migration configuration including required downtime
+settings.
+
+If you need postcopy for workloads without VFIO devices, use host aggregates
+to separate VFIO-capable computes (postcopy disabled) from non-VFIO computes
+(postcopy enabled).
+
 
 Virtual IOMMU support
 ---------------------

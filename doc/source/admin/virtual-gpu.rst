@@ -466,6 +466,16 @@ Caveats
       live_migration_downtime_steps = 3
       live_migration_downtime_delay = 3
 
+   Additionally,
+   :oslo.config:option:`libvirt.live_migration_permit_post_copy` must be set
+   to ``False`` on compute nodes hosting vGPU instances. VFIO device migration
+   is incompatible with postcopy at the QEMU level: a VFIO device on the
+   destination cannot handle page faults for memory pages not yet transferred
+   from the source. QEMU will reject any migration attempt that combines VFIO
+   devices with postcopy capabilities. If you need postcopy for non-vGPU
+   workloads, use host aggregates to separate vGPU computes (postcopy
+   disabled) from non-vGPU computes (postcopy enabled).
+
    You can see an example of a working live-migration `here`__.
 
    .. __: http://sbauza.github.io/vgpu/vgpu_live_migration.html

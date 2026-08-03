@@ -318,6 +318,13 @@ To make live-migration succeed, you have several options:
      - Post-copy may lead to an increased page fault rate during migration,
        which can slow the instance down.
 
+     - Post-copy is incompatible with VFIO device migration (including
+       vGPU/mediated devices). QEMU will reject any live migration that
+       combines a VFIO device with postcopy capabilities. If your deployment
+       uses vGPU live migration, set ``live_migration_permit_post_copy=false``
+       on compute nodes hosting vGPU instances. See
+       :doc:`virtual-gpu` for details.
+
 If live migrations routinely timeout or fail during cleanup operations due
 to the user token timing out, consider configuring nova to use
 :ref:`service user tokens <service_user_token>`.
