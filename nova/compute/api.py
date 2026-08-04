@@ -251,10 +251,12 @@ def check_instance_lock(function):
     return inner
 
 
-def reject_sev_instances(operation):
-    """Reject requests to decorated function if instance has SEV enabled.
+def reject_mem_enc_instances(operation):
+    """Reject requests to decorated function if instance has mem encryption
+    enabled.
 
-    Raise OperationNotSupportedForSEV if instance has SEV enabled.
+    Raise OperationNotSupportedForMemEncryption if instance has mem encryption
+    enabled.
     """
 
     def outer(f):
@@ -262,7 +264,7 @@ def reject_sev_instances(operation):
         def inner(self, context, instance, *args, **kw):
             if hardware.get_mem_encryption_constraint(instance.flavor,
                                                       instance.image_meta):
-                raise exception.OperationNotSupportedForSEV(
+                raise exception.OperationNotSupportedForMemEncryption(
                     instance_uuid=instance.uuid,
                     operation=operation)
             return f(self, context, instance, *args, **kw)
@@ -4857,7 +4859,7 @@ class API:
         instance_actions.SUSPEND, until=MIN_COMPUTE_VDPA_HOTPLUG_LIVE_MIGRATION
     )
     @block_accelerators()
-    @reject_sev_instances(instance_actions.SUSPEND)
+    @reject_mem_enc_instances(instance_actions.SUSPEND)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def suspend(self, context, instance):
@@ -5570,7 +5572,7 @@ class API:
     )
     @block_accelerators()
     @reject_legacy_vtpm_live_migration
-    @reject_sev_instances(instance_actions.LIVE_MIGRATION)
+    @reject_mem_enc_instances(instance_actions.LIVE_MIGRATION)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
     def live_migrate(self, context, instance, block_migration,

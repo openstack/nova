@@ -596,9 +596,9 @@ class UnableToMigrateToSelf(Invalid):
                 "to current host (%(host)s).")
 
 
-class OperationNotSupportedForSEV(NotSupported):
-    msg_fmt = _("Operation '%(operation)s' not supported for SEV-enabled "
-                "instance (%(instance_uuid)s).")
+class OperationNotSupportedForMemEncryption(NotSupported):
+    msg_fmt = _("Operation '%(operation)s' not supported for mem encryption "
+                "enabled instance (%(instance_uuid)s).")
 
 
 class OperationNotSupportedForVTPM(NotSupported):
