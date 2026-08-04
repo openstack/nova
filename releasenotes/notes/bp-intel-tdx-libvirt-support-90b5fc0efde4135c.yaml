@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Intel TDX (Intel Trust Domain Extensions) is now available as a memory
+    encryption option in the libvirt driver.
+
+    Usage of Intel TDX for memory encryption can be required either via
+    a flavor which has the ``hw:mem_encryption_model`` extra spec set to
+    ``intel-tdx``, or via an image which has the ``hw_mem_encryption_model``
+    property set to ``intel-tdx``.
+
+    For more details, see the `Intel TDX documentation
+    <https://docs.openstack.org/nova/latest/admin/tdx.html>`_.
