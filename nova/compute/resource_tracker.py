@@ -77,12 +77,35 @@ def _instance_in_resize_state(instance):
 
 
 def _instance_is_live_migrating(instance):
+    """Returns True if the instance is currently live-migrating."""
     vm = instance.vm_state
     task = instance.task_state
     if task == task_states.MIGRATING and vm in [vm_states.ACTIVE,
                                                 vm_states.PAUSED]:
         return True
     return False
+
+
+def _instance_is_evacuating(instance, migration):
+    """Returns True if the instance is being evacuated and the evacuation
+    has not yet completed (instance.host not updated to dest).
+
+    During an evacuation the instance keeps host=source until
+    finish_evacuation sets host under COMPUTE_RESOURCE_SEMAPHORE.
+    If the periodic wins the semaphore first, the instance is not
+    counted by _update_usage_from_instances (wrong host) and the
+    migration falls through both _instance_in_resize_state and
+    _instance_is_live_migrating. This helper ensures the migration
+    resources (including CPU pinning) are still tracked.
+
+    Failed evacuations are not a concern here: their migration status
+    is 'failed', which is excluded by get_in_progress_and_error.
+    Migrations in 'error' status are included by the DB query but
+    filtered out here since the evacuation is no longer in progress.
+    """
+    return (migration.migration_type == 'evacuation' and
+            migration.status != 'error' and
+            instance.host != migration.dest_compute)
 
 
 class ResourceTracker(object):
@@ -1599,12 +1622,13 @@ class ResourceTracker(object):
                 LOG.debug('Migration instance not found: %s', e)
                 continue
 
-            # Skip migration if instance is neither in a resize state nor is
-            # live-migrating.
-            if (not _instance_in_resize_state(instances[uuid]) and not
-                    _instance_is_live_migrating(instances[uuid])):
+            inst = instances[uuid]
+            if not (_instance_in_resize_state(inst) or
+                    _instance_is_live_migrating(inst) or
+                    _instance_is_evacuating(inst, migration)):
                 LOG.debug('Skipping migration as instance is neither '
-                          'resizing nor live-migrating.', instance_uuid=uuid)
+                          'resizing, live-migrating, nor being evacuated.',
+                          instance_uuid=uuid)
                 continue
 
             # filter to most recently updated migration for each instance:

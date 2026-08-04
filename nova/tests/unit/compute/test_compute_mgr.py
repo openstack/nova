@@ -8846,13 +8846,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance = fake_instance.fake_instance_obj(self.context,
                                                    node=uuids.compute)
         instance.migration_context = None
+        instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([]),
+            instance_uuid=instance.uuid)
         migration = objects.Migration(status='accepted')
         with test.nested(
             mock.patch.object(self.compute, '_get_compute_info'),
             mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
             mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(migration, 'save'),
-        ) as (mock_get, mock_rebuild, mock_save, mock_migration_save):
+            mock.patch.object(self.compute,
+                              '_notify_about_instance_usage'),
+            mock.patch.object(compute_utils,
+                              'notify_about_instance_rebuild'),
+        ) as (mock_get, mock_rebuild, mock_save, mock_migration_save,
+              mock_notify_usage, mock_notify_rebuild):
             self.compute.rebuild_instance(
                 self.context, instance, None, None,
                 None, None, None, None, False,
@@ -8871,11 +8879,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                    node=dead_node)
         instance.system_metadata = img_sys_meta
         instance.migration_context = None
+        instance.info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([]),
+            instance_uuid=instance.uuid)
         mock_rt = self._mock_rt()
         with test.nested(
             mock.patch.object(self.compute, '_get_compute_info'),
             mock.patch.object(self.compute, '_do_rebuild_instance'),
-        ) as (mock_get, mock_rebuild):
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(self.compute,
+                              '_notify_about_instance_usage'),
+            mock.patch.object(compute_utils,
+                              'notify_about_instance_rebuild'),
+        ) as (mock_get, mock_rebuild, mock_save, mock_notify_usage,
+              mock_notify_rebuild):
             mock_get.return_value.hypervisor_hostname = 'new-node'
             self.compute.rebuild_instance(
                 self.context, instance, None, None, None, None, None,
@@ -8967,9 +8984,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             mock_notify_usage.assert_has_calls(
                 [mock.call(self.context, instance, "rebuild.start",
-                           extra_usage_info=mock.ANY),
-                 mock.call(self.context, instance, "rebuild.end",
-                           network_info=new_nw_info,
                            extra_usage_info=mock.ANY)])
             self.assertTrue(mock_image_ref.called)
             self.assertTrue(mock_save.called)

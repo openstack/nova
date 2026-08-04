@@ -1,0 +1,17 @@
+---
+fixes:
+  - |
+    Fixed race conditions during evacuation that could corrupt instance
+    state. During an evacuation, the instance was briefly visible with
+    ``task_state=None`` while ``instance.host`` still pointed to the
+    dead source compute. This allowed the ResourceTracker's periodic
+    task to reset resource tracking (including ``pinned_cpus`` for
+    dedicated CPU pinning VMs, causing duplicate pCPU assignments), and
+    could allow other API actions to race against the in-progress
+    evacuation. The compute manager now keeps ``task_state`` non-None
+    throughout the evacuation and only clears it after
+    ``finish_evacuation`` has set ``instance.host`` to the destination.
+    The ResourceTracker also now recognizes in-progress evacuation
+    migrations so the periodic task preserves their resource usage.
+    See `bug 2162835 <https://bugs.launchpad.net/nova/+bug/2162835>`__
+    and `bug 2166474 <https://bugs.launchpad.net/nova/+bug/2166474>`__.
