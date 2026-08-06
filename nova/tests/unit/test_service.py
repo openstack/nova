@@ -277,6 +277,37 @@ class ServiceTestCase(test.NoDBTestCase):
     @mock.patch('nova.servicegroup.API')
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
     @mock.patch.object(rpc, 'get_server')
+    def test_service_stop_calls_manager_graceful_shutdown_before_rpc_wait(
+            self, mock_rpc, mock_svc_get_by_host_and_binary, mock_API):
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager')
+        serv.start()
+        rpcserver = serv.rpcserver
+        call_order = []
+
+        def _stop():
+            call_order.append('stop')
+
+        def _wait():
+            call_order.append('wait')
+
+        def _graceful_shutdown(timeout):
+            call_order.append('graceful_shutdown')
+
+        rpcserver.stop.side_effect = _stop
+        rpcserver.wait.side_effect = _wait
+        with mock.patch.object(
+                serv.manager, 'graceful_shutdown',
+                side_effect=_graceful_shutdown):
+            serv.stop()
+
+        self.assertEqual(['stop', 'graceful_shutdown', 'wait'], call_order)
+
+    @mock.patch('nova.servicegroup.API')
+    @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
+    @mock.patch.object(rpc, 'get_server')
     def test_start_wraps_manager_and_additional_endpoints_for_tracking(
             self, mock_rpc, mock_svc_get_by_host_and_binary, mock_API):
         serv = service.Service(self.host,

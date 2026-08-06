@@ -376,16 +376,27 @@ class Service(service.Service):
         except exception.NotFound:
             LOG.warning('Service killed that has no database entry')
 
-    def _shutdown_rpc_server(self, rpc_server, topic):
+    def _stop_rpc_server(self, rpc_server, topic):
         try:
             LOG.debug('%s service stopping RPC server on topic: %s',
                       self.binary, topic)
             rpc_server.stop()
+            return True
+        except Exception:
+            LOG.exception('Error occurred during RPC server stop.')
+            return False
+
+    def _wait_rpc_server(self, rpc_server, topic):
+        try:
             rpc_server.wait()
             LOG.debug('%s service stopped RPC server on topic: %s',
                       self.binary, topic)
         except Exception:
-            LOG.exception('Error occurred during RPC server stop & wait.')
+            LOG.exception('Error occurred during RPC server wait.')
+
+    def _shutdown_rpc_server(self, rpc_server, topic):
+        if self._stop_rpc_server(rpc_server, topic):
+            self._wait_rpc_server(rpc_server, topic)
 
     def _get_manager_shutdown_timeout(self):
         if CONF.manager_shutdown_timeout > CONF.graceful_shutdown_timeout:
@@ -440,10 +451,18 @@ class Service(service.Service):
         # graceful shutdown, we limit the RPC requests the service can handle.
         # So we stop the main RPC server here and let the alternative RPC
         # server handle the remaining requests for the ongoing operations.
+        rpcserver_stopped = False
         if self.rpcserver is not None:
-            self._shutdown_rpc_server(self.rpcserver, self.topic)
+            rpcserver_stopped = self._stop_rpc_server(
+                self.rpcserver, self.topic)
 
+        # Run manager graceful_shutdown() before waiting for the RPC server
+        # to shutdown so that tasks already in progress on self.rpcserver can
+        # also be tracked and logged before RPC server wait() finish them.
         self._run_manager_graceful_shutdown()
+
+        if rpcserver_stopped:
+            self._wait_rpc_server(self.rpcserver, self.topic)
 
         if self.rpcserver_alt is not None:
             # During graceful shutdown, manager will use this RPC server to
