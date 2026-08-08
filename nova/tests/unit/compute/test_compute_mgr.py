@@ -3340,11 +3340,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch('nova.share.manila.API.deny')
     @mock.patch('nova.share.manila.API.get_access')
     @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
     def test_deny_share_in_use_by_another_instance(
-        self, mock_db_get_share, mock_get_access, mock_deny, mock_db_delete,
-            mock_notifications
+        self, mock_get_by_filters, mock_db_get_share, mock_get_access,
+            mock_deny, mock_db_delete, mock_notifications
     ):
-        """Ensure we do not deny a share used by another instance.
+        """Ensure we do not deny a share used by another instance
+        on the same host (NFS, same IP-based access rule).
         """
         self.flags(shutdown_retry_interval=20, group='compute')
         instance = fake_instance.fake_instance_obj(
@@ -3352,12 +3354,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 uuid=uuids.instance,
                 vm_state=vm_states.ACTIVE,
                 task_state=task_states.POWERING_OFF)
+        other_instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.other_instance,
+                host=instance.host)
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[other_instance])
         mock_db_get_share.return_value = (
             objects.share_mapping.ShareMappingList()
         )
         share_mapping1 = self.get_fake_share_mapping()
         share_mapping2 = self.get_fake_share_mapping()
-        share_mapping2.instance_uuid = uuidutils.generate_uuid()
+        share_mapping2.instance_uuid = other_instance.uuid
         mock_db_get_share.return_value.objects.append(share_mapping1)
         mock_db_get_share.return_value.objects.append(share_mapping2)
         self.compute.deny_share(self.context, instance, share_mapping1)
@@ -3390,12 +3398,56 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch('nova.share.manila.API.deny')
     @mock.patch('nova.share.manila.API.get_access')
     @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
-    def test_deny_share_in_error_on_another_instance(
-        self, mock_db_get_share, mock_get_access, mock_deny, mock_db_delete,
-        mock_notifications
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_deny_share_nfs_different_host_revokes_access(
+        self, mock_get_by_filters, mock_db_get_share, mock_get_access,
+            mock_deny, mock_db_delete, mock_notifications
     ):
-        """Ensure we cannot deny a share in error state on another instance.
-        If the other instance is hard rebooted, it might need the share.
+        """For NFS, instances on different hosts have independent IP-based
+        access rules. Deny must revoke this host's access even when
+        another instance on a different host still uses the share.
+        """
+        self.flags(shutdown_retry_interval=20, group='compute')
+        self.flags(my_shared_fs_storage_ip="192.168.0.1")
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.instance,
+                vm_state=vm_states.ACTIVE,
+                task_state=task_states.POWERING_OFF)
+        other_instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.other_instance,
+                host='other-host')
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[other_instance])
+        mock_db_get_share.return_value = (
+            objects.share_mapping.ShareMappingList()
+        )
+        share_mapping1 = self.get_fake_share_mapping()
+        share_mapping2 = self.get_fake_share_mapping()
+        share_mapping2.instance_uuid = other_instance.uuid
+        mock_db_get_share.return_value.objects.append(share_mapping1)
+        mock_db_get_share.return_value.objects.append(share_mapping2)
+        self.compute.deny_share(self.context, instance, share_mapping1)
+        mock_deny.assert_called_once()
+        mock_db_delete.assert_called_once()
+
+    @mock.patch(
+        'nova.compute.utils.notify_about_share_attach_detach',
+        return_value=None
+    )
+    @mock.patch('nova.objects.share_mapping.ShareMapping.delete')
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_deny_share_in_error_on_another_instance(
+        self, mock_get_by_filters, mock_db_get_share, mock_get_access,
+        mock_deny, mock_db_delete, mock_notifications
+    ):
+        """Ensure we cannot deny a share in error state on another instance
+        on the same host. If the other instance is hard rebooted, it might
+        need the share.
         """
         self.flags(shutdown_retry_interval=20, group='compute')
         instance = fake_instance.fake_instance_obj(
@@ -3403,12 +3455,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 uuid=uuids.instance,
                 vm_state=vm_states.ACTIVE,
                 task_state=task_states.POWERING_OFF)
+        other_instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.other_instance,
+                host=instance.host)
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[other_instance])
         mock_db_get_share.return_value = (
             objects.share_mapping.ShareMappingList()
         )
         share_mapping1 = self.get_fake_share_mapping()
         share_mapping2 = self.get_fake_share_mapping()
-        share_mapping2.instance_uuid = uuidutils.generate_uuid()
+        share_mapping2.instance_uuid = other_instance.uuid
         share_mapping2.status = 'error'
         mock_db_get_share.return_value.objects.append(share_mapping1)
         mock_db_get_share.return_value.objects.append(share_mapping2)
