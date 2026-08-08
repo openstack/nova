@@ -236,7 +236,7 @@ class ThreadPoolFactory:
 
         return executor
 
-    def _teardown_all(self, mark_shutdown=True, wait=False):
+    def _teardown_all(self, mark_shutdown=True):
         with self._shutdown_lock:
             if mark_shutdown:
                 self._shutdown = True
@@ -246,7 +246,7 @@ class ThreadPoolFactory:
         for executor in executors:
             name = getattr(executor, "name")
             LOG.info("The thread pool %s is shutting down", name)
-            executor.shutdown(wait=wait)
+            executor.shutdown(wait=True)
             LOG.info("The thread pool %s is shutdown", name)
 
     def shutdown_all(self):
@@ -256,6 +256,9 @@ class ThreadPoolFactory:
         need. Since get_executor() registers every executor it creates,
         this gives nova.service.Service's graceful shutdown flow a single,
         common call to shut all of them down at the end.
+
+        Every executor is shut down with wait=True, so this call blocks until
+        the slowest executor has drained its in-progress work.
 
         NOTE: This permanently marks this factory as shutdown (set
         self._shutdown=True), after which get_executor() will always raise.
@@ -272,21 +275,19 @@ class ThreadPoolFactory:
     def reset_all(self):
         """Reset/Clear every executor.
 
-        This shuts down every executor and clears self._all_executors but
-        does not set any flag/state on this factory. Also, it shutdown the
-        executors with wait=True so it gives executors to finish the things
-        already in queue. Those two are the difference from shutdown_all().
-        It is used before the main process uses os.fork() to create multiple
-        workers. Any executor created in the parent or this factory state
-        must not be inherited by the forked worker. Use this when you need
-        to clear the executors but do not want to mark this thread pool
-        factory as shutdown.
+        This shuts down every executor with wait=True and clears
+        self._all_executors but does not set any flag/state on this factory.
+        That is the difference from shutdown_all(). It is used before the
+        main process uses os.fork() to create multiple workers. Any executor
+        created in the parent or this factory state must not be inherited by
+        the forked worker. Use this when you need to clear the executors but
+        do not want to mark this thread pool factory as shutdown.
 
         TODO(gmaan): Once we make our services to use spawn instead of fork
         then we do not need this reset_all() or cleanup the threads before
         child process/workers are created.
         """
-        self._teardown_all(mark_shutdown=False, wait=True)
+        self._teardown_all(mark_shutdown=False)
 
 
 FACTORY = ThreadPoolFactory()

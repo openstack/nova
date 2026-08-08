@@ -1278,12 +1278,62 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute.init_host(None)
             mock_driver.init_host.assert_called_once_with(host='fake-mini')
 
+            # cleanup_host() calls the real shutdown_all_executors(), which
+            # permanently marks the process-wide thread_pool_factory.FACTORY
+            # as shutdown. Reset the _shutdown flag so other tests can still
+            # create executors.
+            self.addCleanup(
+                setattr, thread_pool_factory.FACTORY, '_shutdown', False)
             self.compute.cleanup_host()
             # register_event_listener is called on startup (init_host) and
             # in cleanup_host
             mock_driver.register_event_listener.assert_has_calls([
                 mock.call(self.compute.handle_events), mock.call(None)])
             mock_driver.cleanup_host.assert_called_once_with(host='fake-mini')
+
+    @mock.patch.object(manager.ComputeManager,
+                        '_cleanup_live_migrations_in_pool')
+    @mock.patch('nova.thread_pool_factory.shutdown_all_executors')
+    def test_cleanup_host_shuts_down_all_executors(
+            self, mock_shutdown_executors, mock_cleanup_migrations_pool):
+        with mock.patch.object(self.compute, 'driver') as mock_driver:
+            tracker = mock.Mock()
+            tracker.attach_mock(
+                mock_driver.cleanup_host, 'driver_cleanup_host')
+            tracker.attach_mock(
+                mock_shutdown_executors, 'shutdown_all_executors')
+            tracker.attach_mock(
+                mock_cleanup_migrations_pool, 'cleanup_migrations_pool')
+
+            self.compute.cleanup_host()
+
+        mock_shutdown_executors.assert_called_once_with()
+        # shutdown_all_executors() must run after the driver cleanup and
+        # before the live migration pool cleanup.
+        self.assertEqual([
+            mock.call.driver_cleanup_host(host=self.compute.host),
+            mock.call.shutdown_all_executors(),
+            mock.call.cleanup_migrations_pool(),
+        ], tracker.mock_calls)
+
+    @mock.patch.object(manager.ComputeManager,
+                        '_cleanup_live_migrations_in_pool')
+    @mock.patch('nova.compute.manager.LOG')
+    @mock.patch('nova.thread_pool_factory.shutdown_all_executors')
+    def test_cleanup_host_handles_shutdown_all_executors_exception(
+            self, mock_shutdown_executors, mock_log,
+            mock_cleanup_migrations_pool):
+        mock_shutdown_executors.side_effect = Exception()
+
+        with mock.patch.object(self.compute, 'driver'):
+            # Should not raise even though shutdown_all_executors() raises,
+            # and cleanup should still proceed to clean up the live
+            # migration pool.
+            self.compute.cleanup_host()
+
+        mock_shutdown_executors.assert_called_once_with()
+        mock_log.exception.assert_called_once()
+        mock_cleanup_migrations_pool.assert_called_once_with()
 
     def test_cleanup_live_migrations_in_pool_with_record(self):
         fake_future = mock.MagicMock()
@@ -6158,6 +6208,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertEqual('failed', event.status)
 
     def test_cleanup_cancels_all_events(self):
+        # cleanup_host() calls the real shutdown_all_executors(), which
+        # permanently marks the process-wide thread_pool_factory.FACTORY
+        # as shutdown. Reset the _shutdown flag so other tests can still
+        # create executors.
+        self.addCleanup(
+            setattr, thread_pool_factory.FACTORY, '_shutdown', False)
         with mock.patch.object(self.compute, 'instance_events') as mock_ev:
             self.compute.cleanup_host()
             mock_ev.cancel_all_events.assert_called_once_with()

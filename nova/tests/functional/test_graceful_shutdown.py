@@ -31,6 +31,7 @@ Scenarios:
 
 import threading
 import time
+from unittest import mock
 
 import fixtures
 
@@ -76,7 +77,14 @@ class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
             shutdown_waiting.set()
             operation_complete_event.wait(
                 timeout=self.MANAGER_GRACEFUL_SHUTDOWN_TIMEOUT)
-            compute.manager.cleanup_host()
+            # NOTE(gmaan): cleanup_host() calls the
+            # shutdown_all_executors(), which permanently marks the
+            # process-wide thread_pool_factory.FACTORY as shutdown.
+            # That block any other tests to create new executor. We
+            # need to mock shutdown_all_executors() during cleanup_host
+            # call.
+            with mock.patch('nova.thread_pool_factory.shutdown_all_executors'):
+                compute.manager.cleanup_host()
 
         self.useFixture(fixtures.MockPatchObject(
             compute.manager, 'graceful_shutdown',

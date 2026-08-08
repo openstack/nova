@@ -1661,12 +1661,37 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             self.manager.reset()
             mock_refresh.assert_called_once_with()
 
+    @mock.patch('nova.thread_pool_factory.shutdown_all_executors')
     @mock.patch('nova.scheduler.manager.SchedulerManager.'
                 '_wait_for_in_progress_tasks')
-    def test_graceful_shutdown(self, mock_wait):
+    def test_graceful_shutdown(self, mock_wait, mock_shutdown_executors):
         self.manager.set_shutdown_in_progress()
+        timeout = 30
+        self.manager.graceful_shutdown(timeout)
+        # shutdown_all_executors() should get the reserved 20 seconds
+        shutdown_executors_reserved_time = 20
+        wait = timeout - shutdown_executors_reserved_time
+        mock_wait.assert_called_once_with(wait)
+        mock_shutdown_executors.assert_called_once_with()
+
+    @mock.patch('nova.thread_pool_factory.shutdown_all_executors')
+    @mock.patch('nova.scheduler.manager.SchedulerManager.'
+                '_wait_for_in_progress_tasks')
+    def test_graceful_shutdown_no_negative_wait_time(
+            self, mock_wait, mock_shutdown_executors):
+        self.manager.graceful_shutdown(5)
+        mock_wait.assert_called_once_with(0)
+        mock_shutdown_executors.assert_called_once_with()
+
+    @mock.patch('nova.thread_pool_factory.shutdown_all_executors')
+    @mock.patch('nova.scheduler.manager.SchedulerManager.'
+                '_wait_for_in_progress_tasks')
+    def test_graceful_shutdown_handles_shutdown_all_executors_exception(
+            self, mock_wait, mock_shutdown_executors):
+        mock_shutdown_executors.side_effect = test.TestingException
+        # Should not raise even though shutdown_all_executors() raises.
         self.manager.graceful_shutdown(10)
-        mock_wait.assert_called_once_with(10)
+        mock_shutdown_executors.assert_called_once_with()
 
     @mock.patch('nova.objects.service.ServiceList.get_by_binary')
     @mock.patch('nova.objects.host_mapping.discover_hosts')

@@ -141,6 +141,21 @@ class ServiceFixture(fixtures.Fixture):
                         return_value=self.ctxt):
             self.service = service.Service.create(**self.kwargs)
             self.service.start()
+
+        # NOTE(gmaan): service.stop() calls the real shutdown_all_executors(),
+        # which permanently marks the process-wide thread_pool_factory.FACTORY
+        # as shutdown and stop any other tests to create executors.
+        # Test run the service stop/start n cleanup or withint test.
+        # service stop() run manager's graceful_shutdown() in background thread
+        # so we need to mock the shutdown_all_executors() while service
+        # shutdown is finished in background. Only mocking over stop() call
+        # will not be enough.
+        # This is at least better than mocking it globally in test.py because
+        # it will mock it for the tests playing with services (means using
+        # ServiceFixture)
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.thread_pool_factory.shutdown_all_executors',
+            lambda: None))
         self.addCleanup(self.service.kill)
 
 
@@ -1347,6 +1362,12 @@ class IsolatedExecutorFixture(fixtures.Fixture):
                     if isinstance(gt, eventlet.greenthread.GreenThread):
                         gt.kill()
                 self._raise_on_green_pool(executor._pool)
+
+        # NOTE(gmaan): shutdown_all_executors() set the _shutdown flag to True
+        # and if any test called the shutdown_all_executors then they should
+        # reset it back to False. Check here if any test leave it without
+        # resetting it back to False.
+        assert not thread_pool_factory.FACTORY._shutdown
 
     def _raise_on_green_pool(self, pool):
         eventlet = utils.get_eventlet()

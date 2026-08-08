@@ -436,15 +436,13 @@ class GetExecutorTestCase(test.NoDBTestCase):
 
 class ShutdownAllExecutorsTestCase(test.NoDBTestCase):
 
-    def setUp(self):
-        super().setUp()
-        # NOTE: thread_pool_factory.FACTORY is a process-wide singleton, so
-        # calling shutdown_all_executors() by the tests will permanently
-        # mark it as shutdown. That will break every other test in this
-        # process to create an executor. Mock the shutdown flag so it is
-        # reset once this test is done.
-        self.useFixture(fixtures.MockPatchObject(
-            thread_pool_factory.FACTORY, '_shutdown', False))
+    def tearDown(self):
+        super().tearDown()
+        # NOTE(gmaan): thread_pool_factory.FACTORY is a process-wide singleton,
+        # so calling shutdown_all_executors() in the tests below permanently
+        # marks it as shutdown. Reset the _shutdown flag so other tests can
+        # still create executors.
+        thread_pool_factory.FACTORY._shutdown = False
 
     def test_shutdown_all_executors(self):
         executor1 = thread_pool_factory.get_executor(
@@ -462,7 +460,7 @@ class ShutdownAllExecutorsTestCase(test.NoDBTestCase):
         self.assertFalse(executor2.alive)
         self.assertEqual({}, thread_pool_factory.FACTORY._all_executors)
 
-    def test_shutdown_all_executors_shutdown_with_no_wait(self):
+    def test_shutdown_all_executors_shuts_down_with_wait(self):
         executor = thread_pool_factory.get_executor(
             thread_pool_factory.ExecutorType.DEFAULT)
         self.addCleanup(executor.shutdown, wait=False)
@@ -470,7 +468,7 @@ class ShutdownAllExecutorsTestCase(test.NoDBTestCase):
         with mock.patch.object(executor, 'shutdown') as mock_shutdown:
             thread_pool_factory.shutdown_all_executors()
 
-        mock_shutdown.assert_called_once_with(wait=False)
+        mock_shutdown.assert_called_once_with(wait=True)
 
     def test_shutdown_all_executors_clears_registry(self):
         thread_pool_factory.get_executor(
