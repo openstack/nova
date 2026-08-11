@@ -6064,6 +6064,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.os_loader_type)
         self.assertIsNone(cfg.os_loader_readonly)
         self.assertFalse(cfg.os_loader_secure)
+        self.assertFalse(cfg.os_firmware_secure)
         self.assertIsNone(cfg.os_loader_stateless)
         self.assertIsNone(cfg.os_loader)
         self.assertIsNone(cfg.os_nvram)
@@ -6089,6 +6090,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         old_guest.os_loader_type = 'pflash'
         old_guest.os_loader_readonly = True
         old_guest.os_loader_secure = False
+        old_guest.os_firmware_secure = old_guest.os_loader_secure
         old_guest.os_loader = loader
         old_guest.os_nvram = nvram
         old_guest.os_nvram_template = nvram_template
@@ -6104,6 +6106,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual('pflash', cfg.os_loader_type)
         self.assertTrue(cfg.os_loader_readonly)
         self.assertFalse(cfg.os_loader_secure)
+        self.assertFalse(cfg.os_firmware_secure)
         self.assertIsNone(cfg.os_loader_stateless)
         self.assertEqual(loader, cfg.os_loader)
         self.assertEqual(nvram, cfg.os_nvram)
@@ -6130,6 +6133,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         old_guest.os_loader_type = 'pflash'
         old_guest.os_loader_readonly = True
         old_guest.os_loader_secure = False
+        old_guest.os_firmware_secure = old_guest.os_loader_secure
         old_guest.os_loader = loader
         old_guest.os_nvram = nvram
         old_guest.os_nvram_template = nvram_template
@@ -6148,6 +6152,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.os_loader_type)
         self.assertIsNone(cfg.os_loader_readonly)
         self.assertFalse(cfg.os_loader_secure)
+        self.assertFalse(cfg.os_firmware_secure)
         self.assertIsNone(cfg.os_loader_stateless)
         self.assertIsNone(cfg.os_loader)
         self.assertIsNone(cfg.os_nvram)
@@ -6174,6 +6179,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         old_guest.os_loader_type = 'pflash'
         old_guest.os_loader_readonly = True
         old_guest.os_loader_secure = False
+        old_guest.os_firmware_secure = old_guest.os_loader_secure
         old_guest.os_loader = loader
         old_guest.os_nvram = nvram
         old_guest.os_nvram_template = nvram_template
@@ -6192,6 +6198,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.os_loader_type)
         self.assertIsNone(cfg.os_loader_readonly)
         self.assertFalse(cfg.os_loader_secure)
+        self.assertFalse(cfg.os_firmware_secure)
         self.assertIsNone(cfg.os_loader_stateless)
         self.assertIsNone(cfg.os_loader)
         self.assertIsNone(cfg.os_nvram)
@@ -6221,6 +6228,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.os_loader_type)
         self.assertIsNone(cfg.os_loader_readonly)
         self.assertFalse(cfg.os_loader_secure)
+        self.assertFalse(cfg.os_firmware_secure)
         self.assertTrue(cfg.os_loader_stateless)
         self.assertIsNone(cfg.os_loader)
         self.assertIsNone(cfg.os_nvram)
@@ -6257,6 +6265,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertIsNone(cfg.os_loader_type)
             self.assertIsNone(cfg.os_loader_readonly)
             self.assertTrue(cfg.os_loader_secure)
+            self.assertTrue(cfg.os_firmware_secure)
             self.assertIsNone(cfg.os_loader)
             self.assertIsNone(cfg.os_nvram)
             self.assertIsNone(cfg.os_nvram_template)
@@ -6294,8 +6303,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             instance_ref, [], image_meta, disk_info)
         if host_has_support:
             self.assertTrue(cfg.os_loader_secure)
+            self.assertTrue(cfg.os_firmware_secure)
         else:
             self.assertFalse(cfg.os_loader_secure)
+            self.assertFalse(cfg.os_firmware_secure)
 
         self.assertEqual('efi', cfg.os_firmware)
         self.assertIsNone(cfg.os_loader_type)
@@ -6334,6 +6345,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         old_guest.os_loader_type = 'pflash'
         old_guest.os_loader_readonly = True
         old_guest.os_loader_secure = True
+        old_guest.os_firmware_secure = old_guest.os_loader_secure
         old_guest.os_loader = loader
         old_guest.os_nvram = nvram
         old_guest.os_nvram_template = nvram_template
@@ -6347,6 +6359,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual('pflash', cfg.os_loader_type)
         self.assertTrue(cfg.os_loader_readonly)
         self.assertTrue(cfg.os_loader_secure)
+        self.assertTrue(cfg.os_firmware_secure)
         self.assertIsNone(cfg.os_loader_stateless)
         self.assertEqual(loader, cfg.os_loader)
         self.assertEqual(nvram, cfg.os_nvram)
@@ -6386,6 +6399,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         old_guest.os_loader_type = 'pflash'
         old_guest.os_loader_readonly = True
         old_guest.os_loader_secure = True
+        old_guest.os_firmware_secure = old_guest.os_loader_secure
         old_guest.os_loader = loader
         old_guest.os_nvram = nvram
         old_guest.os_nvram_template = nvram_template
@@ -6402,6 +6416,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.os_loader_type)
         self.assertIsNone(cfg.os_loader_readonly)
         self.assertFalse(cfg.os_loader_secure)
+        self.assertFalse(cfg.os_firmware_secure)
         self.assertIsNone(cfg.os_loader_stateless)
         self.assertIsNone(cfg.os_loader)
         self.assertIsNone(cfg.os_nvram)

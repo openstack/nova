@@ -7256,7 +7256,10 @@ class LibvirtDriver(driver.ComputeDriver):
         loader = old_guest.os_loader
         nvram_template = old_guest.os_nvram_template
 
-        if guest.os_loader_secure != old_guest.os_loader_secure:
+        if (
+            guest.os_loader_secure != old_guest.os_loader_secure or
+            guest.os_firmware_secure != old_guest.os_firmware_secure
+        ):
             LOG.warning('Secure boot support was changed '
                         'after this instance had been created. '
                         'Re-selecting the firmware files.')
@@ -7354,6 +7357,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     )
                 else:
                     guest.os_loader_secure = False
+
+                # NOTE(antia): mirror onto os_firmware_secure. Firmware that
+                # doesn't support SMM (e.g. TDX) clears os_loader_secure later
+                # but keeps os_firmware_secure to preserve the secure boot
+                # intent. loader.secure is still required on libvirt < 8.6.0
+                guest.os_firmware_secure = guest.os_loader_secure
 
                 guest.os_firmware = 'efi'
                 if hw_firmware_stateless:

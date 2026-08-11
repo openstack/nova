@@ -2884,6 +2884,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_firmware = "efi"
         obj.os_mach_type = "pc-q35-5.1"
         obj.os_loader_secure = secure
+        obj.os_firmware_secure = secure
         obj.os_loader_stateless = stateless
 
         return obj.to_xml()
