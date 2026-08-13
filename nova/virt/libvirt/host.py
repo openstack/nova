@@ -2192,21 +2192,18 @@ class Host(object):
             return self._supports_intel_tdx
 
         domain_caps = self.get_domain_capabilities()
-        for arch in domain_caps:
-            for machine_type in domain_caps[arch]:
-                LOG.debug(
-                    "Checking TDX support for arch %s and machine type %s",
-                    arch,
-                    machine_type,
+        arch = fields.Architecture.X86_64
+        for machine_type in domain_caps[arch]:
+            LOG.debug("Checking TDX support for arch %s and machine type %s",
+                      arch, machine_type)
+            for feature in domain_caps[arch][machine_type].features:
+                feature_is_tdx = isinstance(
+                    feature, vconfig.LibvirtConfigDomainCapsFeatureTDX
                 )
-                for feature in domain_caps[arch][machine_type].features:
-                    feature_is_tdx = isinstance(
-                        feature, vconfig.LibvirtConfigDomainCapsFeatureTDX
-                    )
-                    if feature_is_tdx and feature.supported:
-                        LOG.info("Intel TDX support detected")
-                        self._supports_intel_tdx = True
-                        return self._supports_intel_tdx
+                if feature_is_tdx and feature.supported:
+                    LOG.info("Intel TDX support detected")
+                    self._supports_intel_tdx = True
+                    return self._supports_intel_tdx
 
         LOG.debug("No Intel TDX support detected for any (arch, machine_type)")
         return self._supports_intel_tdx
