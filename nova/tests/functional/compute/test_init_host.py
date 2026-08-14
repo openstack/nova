@@ -15,6 +15,7 @@ import time
 from unittest import mock
 
 
+from nova.compute import resource_tracker
 from nova import context as nova_context
 from nova import objects
 from nova.tests.functional import integrated_helpers
@@ -154,13 +155,16 @@ class TestComputeRestartInstanceStuckInBuild(
             networks='none')
 
         stop = threading.Event()
+        self.addCleanup(stop.set)
+
+        orig_claim = resource_tracker.ResourceTracker.instance_claim
 
         def sleep_forever(*args, **kwargs):
             stop.wait(1000000)
+            return orig_claim(*args, **kwargs)
 
         with mock.patch('nova.compute.resource_tracker.ResourceTracker.'
-                        'instance_claim') as mock_instance_claim:
-            mock_instance_claim.side_effect = sleep_forever
+                        'instance_claim', new=sleep_forever):
 
             server = self.api.post_server({'server': server_req})
             self._wait_for_state_change(server, 'BUILD')
@@ -175,7 +179,7 @@ class TestComputeRestartInstanceStuckInBuild(
 
         # We expect that the instance is pushed to ERROR state during the
         # compute restart.
-        self._wait_for_state_change(server, 'ERROR')
+        self._wait_for_state_change(server, 'ERROR', wait_for_fault_key=False)
         mock_log.assert_called_with(
             'Instance spawn was interrupted before instance_claim, setting '
             'instance to ERROR state',
