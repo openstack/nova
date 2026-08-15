@@ -323,6 +323,8 @@
     timeout: 10800
     irrelevant-files: *nova-base-irrelevant-files
     vars:
+      graceful_shutdown_timeout: 180
+      service_report_interval: 10
       devstack_services:
         neutron-trunk: true
         openstack-cli-server: true
@@ -334,7 +336,8 @@
       tempest_test_regex: ''
       devstack_localrc:
         <<: *uec_image_vars
-        SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT: 180
+        SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT: "{{ graceful_shutdown_timeout }}"
+        NOVA_SERVICE_REPORT_INTERVAL: "{{ service_report_interval }}"
         NOVA_ALLOW_MOVE_TO_SAME_HOST: false
         LIVE_MIGRATION_AVAILABLE: true
         USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION: true
@@ -353,7 +356,8 @@
           s-proxy: false
           c-bak: false
         devstack_localrc:
-          SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT: 180
+          SERVICE_GRACEFUL_SHUTDOWN_TIMEOUT: "{{ graceful_shutdown_timeout }}"
+          NOVA_SERVICE_REPORT_INTERVAL: "{{ service_report_interval }}"
           NOVA_ALLOW_MOVE_TO_SAME_HOST: false
           LIVE_MIGRATION_AVAILABLE: true
           USE_BLOCK_MIGRATION_FOR_LIVE_MIGRATION: true

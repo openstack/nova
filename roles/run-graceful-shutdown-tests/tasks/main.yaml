@@ -1,3 +1,8 @@
+- name: Set graceful shutdown related timeouts from job vars
+  set_fact:
+    report_interval: "{{ service_report_interval }}"
+    service_down_time: "{{ (service_report_interval | int) * 6 }}"
+
 - name: Graceful shutdown source compute live migration
   block:
     - name: Start live migrations of test servers
@@ -29,15 +34,14 @@
           environment:
             CONTROLLER_HOSTNAME: "{{ hostvars['controller']['ansible_hostname'] }}"
 
-        # Sleep for 180 sec: default graceful_shutdown_timeout
-        - name: Sleep for 180 seconds to allow source compute graceful shutdown to complete
+        - name: Sleep for "graceful_shutdown_timeout" to allow compute service graceful shutdown to complete
           pause:
-            seconds: 180
+            seconds: "{{ graceful_shutdown_timeout }}"
 
         - name: Verify compute service is stopped after graceful shutdown
           become: true
           become_user: stack
-          script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive"
+          script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
     - name: Start and verify subnode compute service is running
       become: true
@@ -79,15 +83,14 @@
           become_user: stack
           script: "verify_cold_migration.sh server-cm1"
 
-        # Sleep for 180 sec: default graceful_shutdown_timeout
-        - name: Sleep for 180 seconds to allow source compute graceful shutdown to complete
+        - name: Sleep for "graceful_shutdown_timeout" to allow compute service graceful shutdown to complete
           pause:
-            seconds: 180
+            seconds: "{{ graceful_shutdown_timeout }}"
 
         - name: Verify compute service is stopped after graceful shutdown
           become: true
           become_user: stack
-          script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive"
+          script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
     - name: Start and verify subnode compute service is running
       become: true
@@ -131,15 +134,14 @@
           environment:
             CONTROLLER_HOSTNAME: "{{ hostvars['controller']['ansible_hostname'] }}"
 
-        # Sleep for 180 sec: default graceful_shutdown_timeout
-        - name: Sleep for 180 seconds to allow dest compute graceful shutdown to complete
+        - name: Sleep for "graceful_shutdown_timeout" to allow dest compute service graceful shutdown to complete
           pause:
-            seconds: 180
+            seconds: "{{ graceful_shutdown_timeout }}"
 
         - name: Verify dest compute service is stopped after graceful shutdown
           become: true
           become_user: stack
-          script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive"
+          script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
     - name: Start and verify dest compute service is running
       become: true
@@ -181,15 +183,14 @@
           become_user: stack
           script: "verify_cold_migration.sh server-cm2"
 
-        # Sleep for 180 sec: default graceful_shutdown_timeout
-        - name: Sleep for 180 seconds to allow dest compute graceful shutdown to complete
+        - name: Sleep for "graceful_shutdown_timeout" to allow dest compute service graceful shutdown to complete
           pause:
-            seconds: 180
+            seconds: "{{ graceful_shutdown_timeout }}"
 
         - name: Verify dest compute service is stopped after graceful shutdown
           become: true
           become_user: stack
-          script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive"
+          script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
     - name: Start and verify dest compute service is running
       become: true
@@ -230,15 +231,14 @@
           become_user: stack
           script: "verify_build_instance.sh"
 
-        # Sleep for 180 sec: default graceful_shutdown_timeout
-        - name: Sleep for 180 seconds to allow graceful shutdown to complete
+        - name: Sleep for "graceful_shutdown_timeout" to allow subnode compute service graceful shutdown to complete
           pause:
-            seconds: 180
+            seconds: "{{ graceful_shutdown_timeout }}"
 
         - name: Verify subnode compute service is stopped after graceful shutdown
           become: true
           become_user: stack
-          script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive"
+          script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
     - name: Verify subnode compute service is running
       become: true
@@ -282,15 +282,14 @@
           environment:
             SUBNODE_HOSTNAME: "{{ hostvars['compute1']['ansible_hostname'] }}"
 
-        # Sleep for 180 sec: default graceful_shutdown_timeout
-        - name: Sleep for 180 seconds to allow graceful shutdown to complete
+        - name: Sleep for "graceful_shutdown_timeout" to allow dest compute service graceful shutdown to complete
           pause:
-            seconds: 180
+            seconds: "{{ graceful_shutdown_timeout }}"
 
         - name: Verify dest compute service is stopped after graceful shutdown
           become: true
           become_user: stack
-          script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive"
+          script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
     - name: Start and verify source compute service is running
       become: true
