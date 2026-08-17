@@ -5,7 +5,7 @@
 
 - name: Graceful shutdown source compute live migration
   block:
-    - name: Start live migrations of test servers
+    - name: "Source live migration: Start live migrations of test servers"
       become: true
       become_user: stack
       script: "start_live_migration.sh server-lm1"
@@ -15,40 +15,40 @@
       register: start_live_migrations_result
       failed_when: start_live_migrations_result.rc not in [0, 2]
 
-    - name: Set fact if migrations completed or timed out before SIGTERM to source compute
+    - name: "Source live migration: Set fact if migrations completed or timed out before SIGTERM"
       set_fact:
         live_migrations_completed_or_timeout: "{{ start_live_migrations_result.rc == 2 }}"
 
-    - name: Run graceful shutdown tests
+    - name: "Source live migration: Run graceful shutdown tests"
       when: not live_migrations_completed_or_timeout
       block:
-        - name: Send SIGTERM to source compute to start the source compute graceful shutdown
+        - name: "Source live migration: Send SIGTERM to source compute to start the graceful shutdown"
           delegate_to: compute1
           become: true
           shell: "kill -15 $(systemctl show devstack@n-cpu -p MainPID --value)"
 
-        - name: Verify live migration is completed during graceful shutdown
+        - name: "Source live migration: Verify live migration is completed during graceful shutdown"
           become: true
           become_user: stack
           script: "verify_live_migration.sh server-lm1"
           environment:
             CONTROLLER_HOSTNAME: "{{ hostvars['controller']['ansible_hostname'] }}"
 
-        - name: Sleep for "graceful_shutdown_timeout" to allow compute service graceful shutdown to complete
+        - name: "Source live migration: Sleep for graceful_shutdown_timeout to allow compute service graceful shutdown to complete"
           pause:
             seconds: "{{ graceful_shutdown_timeout }}"
 
-        - name: Verify compute service is stopped after graceful shutdown
+        - name: "Source live migration: Verify compute service is stopped after graceful shutdown"
           become: true
           become_user: stack
           script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
-    - name: Start and verify subnode compute service is running
+    - name: "Source live migration: Start and verify subnode compute service is running"
       become: true
       become_user: stack
       script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }}"
 
-    - name: Cleanup test servers
+    - name: "Source live migration: Cleanup test servers"
       become: true
       become_user: stack
       script: "cleanup_test_servers.sh server-lm1"
@@ -56,7 +56,7 @@
 
 - name: Graceful shutdown source compute cold migration
   block:
-    - name: Start cold migrations of test servers
+    - name: "Source cold migration: Start cold migrations of test servers"
       become: true
       become_user: stack
       script: "start_cold_migration.sh server-cm1"
@@ -66,38 +66,38 @@
       register: start_cold_migrations_result
       failed_when: start_cold_migrations_result.rc not in [0, 2]
 
-    - name: Set fact if migration is completed or timed out before SIGTERM to source compute
+    - name: "Source cold migration: Set fact if migration is completed or timed out before SIGTERM"
       set_fact:
         cold_migrations_completed_or_timeout: "{{ start_cold_migrations_result.rc == 2 }}"
 
-    - name: Run graceful shutdown tests
+    - name: "Source cold migration: Run graceful shutdown tests"
       when: not cold_migrations_completed_or_timeout
       block:
-        - name: Send SIGTERM to source compute to start the source compute graceful shutdown
+        - name: "Source cold migration: Send SIGTERM to source compute to start the graceful shutdown"
           delegate_to: compute1
           become: true
           shell: "kill -15 $(systemctl show devstack@n-cpu -p MainPID --value)"
 
-        - name: Verify cold migration is completed during graceful shutdown
+        - name: "Source cold migration: Verify cold migration is completed during graceful shutdown"
           become: true
           become_user: stack
           script: "verify_cold_migration.sh server-cm1"
 
-        - name: Sleep for "graceful_shutdown_timeout" to allow compute service graceful shutdown to complete
+        - name: "Source cold migration: Sleep for graceful_shutdown_timeout to allow compute service graceful shutdown to complete"
           pause:
             seconds: "{{ graceful_shutdown_timeout }}"
 
-        - name: Verify compute service is stopped after graceful shutdown
+        - name: "Source cold migration: Verify compute service is stopped after graceful shutdown"
           become: true
           become_user: stack
           script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
-    - name: Start and verify subnode compute service is running
+    - name: "Source cold migration: Start and verify subnode compute service is running"
       become: true
       become_user: stack
       script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }}"
 
-    - name: Cleanup test servers
+    - name: "Source cold migration: Cleanup test servers"
       become: true
       become_user: stack
       script: "cleanup_test_servers.sh server-cm1"
@@ -105,7 +105,7 @@
 
 - name: Graceful shutdown dest compute live migration
   block:
-    - name: Start live migrations of test servers
+    - name: "Dest live migration: Start live migrations of test servers"
       become: true
       become_user: stack
       script: "start_live_migration.sh server-lm2"
@@ -115,40 +115,40 @@
       register: start_live_migrations_result_dest
       failed_when: start_live_migrations_result_dest.rc not in [0, 2]
 
-    - name: Set fact if migrations completed or timed out before SIGTERM to dest compute
+    - name: "Dest live migration: Set fact if migrations completed or timed out before SIGTERM"
       set_fact:
         live_migrations_completed_or_timeout_dest: "{{ start_live_migrations_result_dest.rc == 2 }}"
 
-    - name: Run graceful shutdown tests
+    - name: "Dest live migration: Run graceful shutdown tests"
       when: not live_migrations_completed_or_timeout_dest
       block:
-        - name: Send SIGTERM to dest compute to start the dest compute graceful shutdown
+        - name: "Dest live migration: Send SIGTERM to dest compute to start the graceful shutdown"
           delegate_to: controller
           become: true
           shell: "kill -15 $(systemctl show devstack@n-cpu -p MainPID --value)"
 
-        - name: Verify live migration is completed during graceful shutdown
+        - name: "Dest live migration: Verify live migration is completed during graceful shutdown"
           become: true
           become_user: stack
           script: "verify_live_migration.sh server-lm2"
           environment:
             CONTROLLER_HOSTNAME: "{{ hostvars['controller']['ansible_hostname'] }}"
 
-        - name: Sleep for "graceful_shutdown_timeout" to allow dest compute service graceful shutdown to complete
+        - name: "Dest live migration: Sleep for graceful_shutdown_timeout to allow compute service graceful shutdown to complete"
           pause:
             seconds: "{{ graceful_shutdown_timeout }}"
 
-        - name: Verify dest compute service is stopped after graceful shutdown
+        - name: "Dest live migration: Verify compute service is stopped after graceful shutdown"
           become: true
           become_user: stack
           script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
-    - name: Start and verify dest compute service is running
+    - name: "Dest live migration: Start and verify dest compute service is running"
       become: true
       become_user: stack
       script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }}"
 
-    - name: Cleanup test servers
+    - name: "Dest live migration: Cleanup test servers"
       become: true
       become_user: stack
       script: "cleanup_test_servers.sh server-lm2"
@@ -156,7 +156,7 @@
 
 - name: Graceful shutdown dest compute cold migration
   block:
-    - name: Start cold migrations of test servers
+    - name: "Dest cold migration: Start cold migrations of test servers"
       become: true
       become_user: stack
       script: "start_cold_migration.sh server-cm2"
@@ -166,38 +166,38 @@
       register: start_cold_migrations_result_dest
       failed_when: start_cold_migrations_result_dest.rc not in [0, 2]
 
-    - name: Set fact if migrations completed or timed out before SIGTERM to dest compute
+    - name: "Dest cold migration: Set fact if cold migration completed or timed out before SIGTERM"
       set_fact:
         cold_migrations_completed_or_timeout_dest: "{{ start_cold_migrations_result_dest.rc == 2 }}"
 
-    - name: Run graceful shutdown tests
+    - name: "Dest cold migration: Run graceful shutdown tests"
       when: not cold_migrations_completed_or_timeout_dest
       block:
-        - name: Send SIGTERM to dest compute to start the dest compute graceful shutdown
+        - name: "Dest cold migration: Send SIGTERM to dest compute to start the graceful shutdown"
           delegate_to: controller
           become: true
           shell: "kill -15 $(systemctl show devstack@n-cpu -p MainPID --value)"
 
-        - name: Verify cold migration is completed during graceful shutdown
+        - name: "Dest cold migration: Verify cold migration is completed during graceful shutdown"
           become: true
           become_user: stack
           script: "verify_cold_migration.sh server-cm2"
 
-        - name: Sleep for "graceful_shutdown_timeout" to allow dest compute service graceful shutdown to complete
+        - name: "Dest cold migration: Sleep for graceful_shutdown_timeout to allow compute service graceful shutdown to complete"
           pause:
             seconds: "{{ graceful_shutdown_timeout }}"
 
-        - name: Verify dest compute service is stopped after graceful shutdown
+        - name: "Dest cold migration: Verify compute service is stopped after graceful shutdown"
           become: true
           become_user: stack
           script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
-    - name: Start and verify dest compute service is running
+    - name: "Dest cold migration: Start and verify dest compute service is running"
       become: true
       become_user: stack
       script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }}"
 
-    - name: Cleanup test servers
+    - name: "Dest cold migration: Cleanup test servers"
       become: true
       become_user: stack
       script: "cleanup_test_servers.sh server-cm2"
@@ -205,7 +205,7 @@
 
 - name: Graceful shutdown while building instance
   block:
-    - name: Build instance on subnode
+    - name: "Build instance: Build instance on subnode"
       become: true
       become_user: stack
       script: "build_instance.sh"
@@ -214,38 +214,38 @@
       register: build_instance_result
       failed_when: build_instance_result.rc not in [0, 2]
 
-    - name: Set fact if build completed before SIGTERM
+    - name: "Build instance: Set fact if build completed before SIGTERM"
       set_fact:
         build_completed_or_error: "{{ build_instance_result.rc == 2 }}"
 
-    - name: Run graceful shutdown tests
+    - name: "Build instance: Run graceful shutdown tests"
       when: not build_completed_or_error
       block:
-        - name: Send SIGTERM to subnode compute service
+        - name: "Build instance: Send SIGTERM to subnode compute service"
           delegate_to: compute1
           become: true
           shell: "kill -15 $(systemctl show devstack@n-cpu -p MainPID --value)"
 
-        - name: Verify build instance is completed and it is in active state
+        - name: "Build instance: Verify build instance is completed and it is in active state"
           become: true
           become_user: stack
           script: "verify_build_instance.sh"
 
-        - name: Sleep for "graceful_shutdown_timeout" to allow subnode compute service graceful shutdown to complete
+        - name: "Build instance: Sleep for graceful_shutdown_timeout to allow subnode compute service graceful shutdown to complete"
           pause:
             seconds: "{{ graceful_shutdown_timeout }}"
 
-        - name: Verify subnode compute service is stopped after graceful shutdown
+        - name: "Build instance: Verify subnode compute service is stopped after graceful shutdown"
           become: true
           become_user: stack
           script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
-    - name: Verify subnode compute service is running
+    - name: "Build instance: Verify subnode compute service is running"
       become: true
       become_user: stack
       script: "start_and_verify_compute_service.sh {{ hostvars['compute1']['ansible_hostname'] }}"
 
-    - name: Cleanup test servers
+    - name: "Build instance: Cleanup test servers"
       become: true
       become_user: stack
       script: "cleanup_test_servers.sh server-build"
@@ -253,7 +253,7 @@
 
 - name: Graceful shutdown revert resize
   block:
-    - name: Start revert resize of test server
+    - name: "Revert resize: Start revert resize of test server"
       become: true
       become_user: stack
       script: "start_revert_resize.sh"
@@ -263,40 +263,40 @@
       register: start_revert_resize_result
       failed_when: start_revert_resize_result.rc not in [0, 2]
 
-    - name: Set fact if revert resize completed before SIGTERM
+    - name: "Revert resize: Set fact if revert resize completed before SIGTERM"
       set_fact:
         revert_resize_not_done: "{{ start_revert_resize_result.rc == 2 }}"
 
-    - name: Run graceful shutdown tests
+    - name: "Revert resize: Run graceful shutdown tests"
       when: not revert_resize_not_done
       block:
-        - name: Send SIGTERM to controller during revert resize
+        - name: "Revert resize: Send SIGTERM to controller during revert resize"
           delegate_to: controller
           become: true
           shell: "kill -15 $(systemctl show devstack@n-cpu -p MainPID --value)"
 
-        - name: Verify revert resize is completed during graceful shutdown
+        - name: "Revert resize: Verify revert resize is completed during graceful shutdown"
           become: true
           become_user: stack
           script: "verify_revert_resize.sh"
           environment:
             SUBNODE_HOSTNAME: "{{ hostvars['compute1']['ansible_hostname'] }}"
 
-        - name: Sleep for "graceful_shutdown_timeout" to allow dest compute service graceful shutdown to complete
+        - name: "Revert resize: Sleep for graceful_shutdown_timeout to allow compute service graceful shutdown to complete"
           pause:
             seconds: "{{ graceful_shutdown_timeout }}"
 
-        - name: Verify dest compute service is stopped after graceful shutdown
+        - name: "Revert resize: Verify compute service is stopped after graceful shutdown"
           become: true
           become_user: stack
           script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }} inactive {{ report_interval }} {{ service_down_time }}"
 
-    - name: Start and verify source compute service is running
+    - name: "Revert resize: Start and verify source compute service is running"
       become: true
       become_user: stack
       script: "start_and_verify_compute_service.sh {{ hostvars['controller']['ansible_hostname'] }}"
 
-    - name: Cleanup test servers
+    - name: "Revert resize: Cleanup test servers"
       become: true
       become_user: stack
       script: "cleanup_test_servers.sh server-rr"
