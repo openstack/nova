@@ -214,7 +214,9 @@ class TestVolAttachmentsDuringLiveMigration(
             # Migrate the instance and wait until the migration errors out
             # thanks to our mocked version of live_migration raising
             # TestingException
-            self._live_migrate(server, 'error', server_expected_state='ERROR')
+            self._live_migrate(
+                server, 'error', server_expected_state='ERROR',
+                wait_for_fault_key=False)
 
         # Assert that we called the fake live_migration method
         mock_lm.assert_called_once()

@@ -123,27 +123,48 @@ class InstanceHelperMixin:
             time.sleep(0.5)
 
     def _wait_for_server_parameter(
-            self, server, expected_params, max_retries=10, api=None):
+        self, server, expected_params, max_retries=10,
+        api=None, wait_for_fault_key=True,
+    ):
         api = api or getattr(self, 'admin_api', self.api)
+
+        wait_for_fault = False
+
+        if (wait_for_fault_key and
+            expected_params.get('status', None) == "ERROR"):
+            # Nova sets the ERROR state on the instance before recording the
+            # actual fault in the DB or sending the error notification. So
+            # most of the cases when a test needs to wait for an instance to
+            # reach ERROR state is actually also wants to assert the fault.
+            # To avoid occasional test failure where a test sees the ERROR
+            # state but fails to found the fault in the server response we
+            # wait for the fault key to appear in the response.
+            wait_for_fault = True
 
         retry_count = 0
         while True:
             server = api.get_server(server['id'])
             if all([server[attr] == expected_params[attr]
                     for attr in expected_params]):
-                break
+                if not wait_for_fault or 'fault' in server:
+                    break
+
             retry_count += 1
             if retry_count == max_retries:
                 self.fail('Wait for state change failed, '
-                          'expected_params=%s, server=%s' % (
-                              expected_params, server))
+                          'expected_params=%s, server=%s, wait_for_fault=%s'
+                          % (expected_params, server, wait_for_fault))
             time.sleep(0.5)
 
         return server
 
-    def _wait_for_state_change(self, server, expected_status, max_retries=10):
+    def _wait_for_state_change(
+        self, server, expected_status, max_retries=10,
+        wait_for_fault_key=True,
+    ):
         return self._wait_for_server_parameter(
-            server, {'status': expected_status}, max_retries)
+            server, {'status': expected_status}, max_retries,
+            wait_for_fault_key=wait_for_fault_key)
 
     def _wait_until_deleted(self, server):
         initially_in_error = server.get('status') == 'ERROR'
@@ -646,13 +667,16 @@ class InstanceHelperMixin:
     def _live_migrate(
         self, server, migration_expected_state='completed',
         server_expected_state='ACTIVE', api=None, host=None,
+        wait_for_fault_key=True
     ):
         api = api or self.api
         api.post_server_action(
             server['id'],
             {'os-migrateLive': {'host': host, 'block_migration': 'auto'}})
         self._wait_for_migration_status(server, [migration_expected_state])
-        return self._wait_for_state_change(server, server_expected_state)
+        return self._wait_for_state_change(
+            server, server_expected_state,
+            wait_for_fault_key=wait_for_fault_key)
 
     _live_migrate_server = _live_migrate
 
