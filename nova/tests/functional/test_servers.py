@@ -875,12 +875,14 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Create server as user 'fake' with default flavor, 1 core, 512 ram.
         server1 = self._build_server()
         created_server1 = self.api.post_server({"server": server1})
+        self._wait_for_state_change(created_server1, 'ACTIVE')
 
         # Project usage should now be 512.
         # User 'fake' usage should be 512.
         # Create server as user 'other' with flavor 1 core, 2048 ram.
         server2 = self._build_server(flavor_id='2')
-        self.api_fixture.other_api.post_server({"server": server2})
+        server2 = self.api_fixture.other_api.post_server({"server": server2})
+        self._wait_for_state_change(server2, 'ACTIVE')
 
         # Project usage should now be 512 + 2048 = 2560.
         # User 'fake' usage should still be 512.
@@ -940,6 +942,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Create server as user 'fake' with default flavor, 1 core, 512 ram
         server1 = self._build_server()
         created_server1 = self.api.post_server({"server": server1})
+        self._wait_for_state_change(created_server1, 'ACTIVE')
 
         # Create server as user 'other' with flavor 1 core, 2048 ram
         server2 = self._build_server(flavor_id='2')
@@ -1887,6 +1890,7 @@ class ServersTestV280(integrated_helpers._IntegratedTestBase):
 
         # Check it's there
         found_server = self.api.get_server(server_id)
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
         self.assertEqual(server_id, found_server['id'])
 
         self.start_service('compute', host='host2')
@@ -1922,7 +1926,7 @@ class ServersTestV280(integrated_helpers._IntegratedTestBase):
         found_server = self.api.get_server(server_id)
         self.assertEqual(server_id, found_server['id'])
 
-        server = self._wait_for_state_change(found_server, 'BUILD')
+        server = self._wait_for_state_change(found_server, 'ACTIVE')
 
         self.start_service('compute', host='host2')
 
@@ -3200,6 +3204,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_server_parameter(server,
                                         {'OS-EXT-SRV-ATTR:host': dest_hostname,
                                          'status': 'ACTIVE'})
+        self.notifier.wait_for_versioned_notifications(
+            'instance.live_migration_post.end')
 
         self._run_periodics()
 
@@ -6342,6 +6348,12 @@ class AcceleratorServerReschedTest(AcceleratorServerBase):
             networks='none', expected_state='ERROR')
 
         server_uuid = server['id']
+        # This is ugly but even the last notification from the build is sent
+        # before the allocation and arqs is cleaned up after the failed
+        # re-schedule so we don't have a wait to wait for a signal. So we
+        # wait blindly to keep the test case stable. See
+        # _cleanup_when_reschedule_fails for the sequence of events.
+        time.sleep(1)
         self._check_no_allocs_usage(server_uuid)
         self.cyborg.mock_del_arqs.assert_has_calls(
             [mock.call(server_uuid),

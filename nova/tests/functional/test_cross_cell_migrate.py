@@ -1109,6 +1109,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
 
         # The migration should be in 'error' status.
         self._wait_for_migration_status(server, ['error'])
+        server = self.api.get_server(server['id'])
         # Assert a fault was recorded.
         self.assertIn('fault', server)
         self.assertIn('Connection to the hypervisor is broken',
