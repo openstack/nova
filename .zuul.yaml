@@ -1033,8 +1033,7 @@
             voting: false
         - nova-tox-functional-py311
         - nova-tox-functional-py313
-        - nova-tox-functional-py313-threading:
-            voting: false
+        - nova-tox-functional-py313-threading
         - tempest-integrated-compute:
            # NOTE(gmann): Policies changes do not need to run all the
            # integration test jobs. Running only tempest and grenade
@@ -1064,8 +1063,7 @@
         - nova-live-migration
         - nova-tox-functional-py311
         - nova-tox-functional-py313
-        - nova-tox-functional-py313-threading:
-            voting: false
+        - nova-tox-functional-py313-threading
         - nova-multi-cell
         - nova-next
         - nova-tox-validate-backport
