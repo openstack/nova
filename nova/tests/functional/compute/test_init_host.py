@@ -11,13 +11,13 @@
 # under the License.
 
 import threading
-import time
 from unittest import mock
 
 
 from nova.compute import resource_tracker
 from nova import context as nova_context
 from nova import objects
+from nova import service as nova_service
 from nova.tests.functional import integrated_helpers
 
 
@@ -44,30 +44,54 @@ class ComputeManagerInitHostTestCase(
         # Save the source hostname for assertions later.
         source_host = server['OS-EXT-SRV-ATTR:host']
 
+        # This test restarts compute while cold migration is blocked in the
+        # mock. Graceful shutdown sees that migration as in-progress and would
+        # wait for the full manager_shutdown_timeout from the global test
+        # config. Use a low graceful_shutdown_timeout so restart completes
+        # quickly; we are simulating crash recovery, not graceful shutdown.
+        self.flags(graceful_shutdown_timeout=3)
+
+        migrate_started = threading.Event()
+        stop = threading.Event()
+        self.addCleanup(migrate_started.set)
+        self.addCleanup(stop.set)
+
         def fake_migrate_disk_and_power_off(*args, **kwargs):
-            # Simulate the source compute service crashing by restarting it.
-            self.restart_compute_service(self.computes[source_host])
-            # We have to keep the method from returning before asserting the
-            # _init_instance restart behavior otherwise resize_instance will
-            # fail and set the instance to ERROR status, revert allocations,
-            # etc which is not realistic if the service actually crashed while
-            # migrate_disk_and_power_off was running.
-            # The sleep value needs to be large to avoid this waking up and
-            # interfering with other tests running on the same worker.
-            time.sleep(1000000)
+            migrate_started.set()
+            # Do not return until the test is done. If this mock completes,
+            # resize_instance will run to completion and the instance will
+            # go ERROR/revert allocations and not the mid-crash path test want.
+            stop.wait(1000000)
+
+        def _crash_shutdown_rpc_server(service_self, rpc_server, topic):
+            # resize_instance runs on the compute-alt RPC topic and a graceful
+            # service stop waits for it to finish. Simulate a crash by stopping
+            # RPC servers without waiting for the in-flight migration handler.
+            rpc_server.stop()
 
         source_driver = self.computes[source_host].manager.driver
         with mock.patch.object(source_driver, 'migrate_disk_and_power_off',
                                side_effect=fake_migrate_disk_and_power_off):
             # Initiate a cold migration from the source host.
             self.admin_api.post_server_action(server['id'], {'migrate': None})
+            if not migrate_started.wait(timeout=30):
+                self.fail('migrate_disk_and_power_off was not called')
+            # Simulate the source compute service crashing by restarting it
+            # while migrate_disk_and_power_off is blocked.
+            with mock.patch.object(nova_service.Service,
+                                   '_shutdown_rpc_server',
+                                   _crash_shutdown_rpc_server):
+                new_compute = self.restart_compute_service(
+                    self.computes[source_host])
+            self.computes[source_host] = new_compute
             # Now wait for the task_state to be reset to None during
             # _init_instance.
             server = self._wait_for_server_parameter(server, {
                     'status': 'ACTIVE',
                     'OS-EXT-STS:task_state': None,
                     'OS-EXT-SRV-ATTR:host': source_host
-                }
+                },
+                max_retries=60,
             )
 
         # Assert we went through the _init_instance processing we expect.
@@ -118,6 +142,8 @@ class ComputeManagerInitHostTestCase(
         # the source host but is not tracking allocations against the source
         # host.
         self.assertNotIn(server['id'], source_allocations)
+
+        stop.set()  # Release the blocked migration RPC handler.
 
 
 class TestComputeRestartInstanceStuckInBuild(
