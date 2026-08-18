@@ -20,6 +20,7 @@ for OpenStack Nova."""
 from nova import monkey_patch; monkey_patch.patch()  # noqa
 # autopep8: on
 
+import multiprocessing
 import os
 import sys
 
@@ -68,6 +69,12 @@ def proxy(host, port, security_proxy=None):
     logging.setup(CONF, "nova")
 
     gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
+
+    # Python 3.14 changed the default multiprocessing start method from
+    # 'fork' to 'forkserver' on Linux (gh-84559). websockify's daemon mode
+    # uses multiprocessing internally, so explicitly restore 'fork' to
+    # preserve the previous behaviour and avoid pickling failures.
+    multiprocessing.set_start_method('fork', force=True)
 
     # Create and start the NovaWebSockets proxy
     websocketproxy.NovaWebSocketProxy(
