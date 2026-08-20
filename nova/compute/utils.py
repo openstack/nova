@@ -1615,8 +1615,11 @@ def delete_arqs_if_needed(context, instance, arq_uuids=None):
     :param instance: instance who own the args
     :param uuids: delete arqs by uuids while did not bind to instance yet.
     """
-    cyclient = cyborg.get_client(context)
     dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+    if not dp_name and not arq_uuids:
+        return
+
+    cyclient = cyborg.get_client(context)
 
     if dp_name:
         LOG.debug('Calling Cyborg to delete ARQs for instance %(instance)s',

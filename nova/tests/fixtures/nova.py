@@ -1867,7 +1867,7 @@ class OpenStackSDKFixture(fixtures.Fixture):
         self.useFixture(fixtures.MockPatch(
             'openstack.proxy.Proxy.get_endpoint'))
         real_make_proxy = service_description.ServiceDescription._make_proxy
-        _stub_service_types = {'placement'}
+        _stub_service_types = {'placement', 'accelerator'}
 
         def fake_make_proxy(self, instance):
             if self.service_type in _stub_service_types:

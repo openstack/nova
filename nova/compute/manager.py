@@ -11078,7 +11078,6 @@ class ComputeManager(manager.Manager):
             if timeutils.is_older_than(shelved_at, CONF.shelved_offload_time):
                 to_gc.append(instance)
 
-        cyclient = cyborg.get_client(context)
         for instance in to_gc:
             try:
                 instance.task_state = task_states.SHELVING_OFFLOADING
@@ -11088,6 +11087,7 @@ class ComputeManager(manager.Manager):
                     # TODO(brinzhang): After cyborg support batch query ARQs
                     # for more than one instances, we will improve efficiency
                     # with this implementation.
+                    cyclient = cyborg.get_client(context)
                     accel_uuids = cyclient.get_arq_uuids_for_instance(instance)
                 self.shelve_offload_instance(
                     context, instance, clean_shutdown=False,

@@ -906,7 +906,7 @@ def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
 
 def get_sdk_adapter(
     service_type, admin, check_service=False, conf_group=None,
-    context=None, **kwargs
+    context=None, ksa_auth=None, **kwargs
 ):
     """Construct an openstacksdk-brokered Adapter for a given service type.
 
@@ -916,13 +916,18 @@ def get_sdk_adapter(
 
     :param service_type: String name of the service type for which the Adapter
                          is to be constructed.
-    :param admin: If set to true, the service will use Nova's service user
-                  and password; otherwise, it will use the user's token.
+    :param admin: If True, use Nova's service credentials from config.
+                  If False, use the user's token from context.
+                  Ignored if ksa_auth is provided.
     :param check_service: If True, we will query the endpoint to make sure the
             service is alive, raising ServiceUnavailable if it is not.
     :param conf_group: String name of the conf group to use, otherwise the name
             of the service_type will be used.
-    :param context: Use to get user's token, if admin is set to False.
+    :param context: Required when admin=False and ksa_auth=None to get the
+                    user's token.
+    :param ksa_auth: Optional auth plugin to use instead of admin/context.
+                     Use this to send both user and service tokens via
+                     ServiceTokenAuthWrapper, or to provide any custom auth.
     :param kwargs: Additional arguments to pass to the Adapter constructor.
                    Mainly used to pass microversion to a specific service,
                    e.g. shared_file_system_api_version="2.82".
@@ -934,7 +939,23 @@ def get_sdk_adapter(
     confgrp = conf_group or _get_conf_group(service_type)
 
     try:
-        if admin is False:
+        if ksa_auth is not None:
+            # Create a connection based on a provided auth plugin (example:
+            # ServiceTokenAuthWrapper for user+service tokens, or any custom
+            # auth).
+            sess = _get_auth_and_session(confgrp, ksa_auth=ksa_auth)[1]
+            conn = connection.Connection(
+                session=sess, oslo_conf=CONF, service_types={service_type},
+                strict_proxies=check_service, **kwargs)
+        elif admin:
+            # Create a connection based on nova's service user/pass
+            sess = _get_auth_and_session(confgrp)[1]
+            conn = connection.Connection(
+                session=sess, oslo_conf=CONF, service_types={service_type},
+                strict_proxies=check_service, **kwargs)
+        else:
+            # Create a connection using the user's token instead of nova's
+            # service user/pass.
             if context is None:
                 raise ValueError(
                     "If admin is set to False then context cannot be None.")
@@ -944,8 +965,6 @@ def get_sdk_adapter(
             ks_loading.load_auth_from_conf_options(
                 CONF, nova.conf.service_token.service_user.name)
 
-            # Create a connection using the user's token instead of nova's
-            # service user/pass.
             conn = connection.Connection(
                 token=context.auth_token,
                 auth_type="v3token",
@@ -956,12 +975,6 @@ def get_sdk_adapter(
                 strict_proxies=check_service,
                 **kwargs,
             )
-        else:
-            # Create a connection based on nova's service user/pass
-            sess = _get_auth_and_session(confgrp)[1]
-            conn = connection.Connection(
-                session=sess, oslo_conf=CONF, service_types={service_type},
-                strict_proxies=check_service, **kwargs)
 
     except sdk_exc.ServiceDiscoveryException as e:
         raise exception.ServiceUnavailable(

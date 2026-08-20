@@ -563,10 +563,7 @@ class _BaseTaskTestCase(object):
             mock.call(mock.ANY, instances[1].uuid,
                       instances[1].flavor.extra_specs, 'node2', None),
             ])
-        mock_get_cyborg.assert_has_calls([
-             mock.call(self.context),
-             mock.call(self.context),
-        ])
+        mock_get_cyborg.assert_not_called()
 
     @mock.patch('nova.accelerator.cyborg.get_client')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
@@ -628,10 +625,8 @@ class _BaseTaskTestCase(object):
             mock.call(mock.ANY, instances[1].uuid,
                       instances[1].flavor.extra_specs, 'node2', mock.ANY),
             ])
-        mock_get_cyborg.assert_has_calls([
-             mock.call(self.context),
-             mock.call(self.context),
-        ])
+        self.assertEqual(
+            [mock.call(self.context)] * 2, mock_get_cyborg.call_args_list)
         # Comparing instances fails because the instance objects have changed
         # in the above flow. So, we compare the fields instead.
         mock_cleanup.assert_has_calls([

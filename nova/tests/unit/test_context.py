@@ -144,6 +144,31 @@ class ContextTestCase(test.NoDBTestCase):
                 service_catalog=service_catalog)
         self.assertEqual(volume_catalog, ctxt.service_catalog)
 
+    @mock.patch('keystoneauth1.plugin.BaseAuthPlugin.get_endpoint_data')
+    @mock.patch('nova.context._ContextAuthPlugin.get_endpoint')
+    def test_context_auth_plugin_get_endpoint_data(
+            self, mock_get_endpoint, mock_super_get_endpoint_data):
+        # _ContextAuthPlugin resolves the endpoint from the service
+        # catalog and passes it as endpoint_override so the base class
+        # can run version discovery. Without this, openstacksdk gets
+        # None and raises NotSupported during proxy creation.
+        mock_get_endpoint.return_value = 'http://cyborg.example.com/v2'
+        ctxt = context.RequestContext(
+            '111', '222',
+            service_catalog=[{'type': 'accelerator', 'name': 'cyborg'}])
+        auth_plugin = ctxt.get_auth_plugin()
+
+        result = auth_plugin.get_endpoint_data(
+            mock.sentinel.session, service_type='accelerator')
+
+        mock_get_endpoint.assert_called_once_with(
+            mock.sentinel.session, service_type='accelerator')
+        mock_super_get_endpoint_data.assert_called_once_with(
+            mock.sentinel.session,
+            endpoint_override='http://cyborg.example.com/v2',
+            discover_versions=True, service_type='accelerator')
+        self.assertEqual(mock_super_get_endpoint_data.return_value, result)
+
     def test_to_dict_from_dict_no_log(self):
         warns = []
 
