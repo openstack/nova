@@ -88,6 +88,7 @@ from nova.scheduler.client import query
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova.share import manila
+from nova import thread_pool_factory
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
@@ -666,57 +667,26 @@ class ComputeManager(manager.Manager):
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.query_client = query.SchedulerQueryClient()
         self.instance_events = InstanceEvents()
-        self._sync_power_executor = nova.utils.create_executor(
-            max_workers=CONF.sync_power_state_pool_size)
         self._syncs_in_progress: set[str] = set()
         self._syncs_in_progress_lock = threading.Lock()
         self.send_instance_updates = (
             CONF.filter_scheduler.track_instance_changes)
 
-        max_builds = self._get_max_concurrent_builds()
-        max_snapshots = self._get_max_concurrent_snapshots()
-
         if utils.concurrency_mode_threading():
-            max_tasks = max(max_builds, max_snapshots)
-
-            if max_builds != max_snapshots:
-                LOG.warning(
-                    "In native threading mode the number of concurrent "
-                    "builds, and snapshots should be limited to the "
-                    "same number. The current configuration has differing "
-                    "limits: max_concurrent_builds: %d, "
-                    "max_concurrent_snapshots: %d. "
-                    "Nova will use a single, overall limit of %d for these "
-                    "tasks.",
-                    max_builds, max_snapshots, max_tasks)
-
-            self._long_task_executor = utils.get_long_task_executor(max_tasks)
-
             # In threading mode we want to use the size of the executor to
             # act as the limit of concurrent execution. So neuter the
             # semaphores here.
             # TODO(gibi): remove the semaphores once eventlet mode is removed
             self._build_semaphore = compute_utils.UnlimitedSemaphore()
             self._snapshot_semaphore = compute_utils.UnlimitedSemaphore()
-
         else:
             # In eventlet mode we use the individual semaphores to limit
             # the concurrent tasks, so just create a big Executor to
             # potentially host all of them
-            self._long_task_executor = utils.get_long_task_executor(
-                max_builds + max_snapshots)
-
-            self._build_semaphore = threading.Semaphore(max_builds)
-            self._snapshot_semaphore = threading.Semaphore(max_snapshots)
-
-        # While live migration is a long-running task we cannot put it into
-        # the same long_task_executor as build and snapshot as we need:
-        # 1. a very small limit of concurrent live migrations compared to
-        #    builds and snapshots
-        # 2. a way to cancel live migrations easily that are waiting due to the
-        #    limit
-        self._live_migration_executor = nova.utils.create_executor(
-            max_workers=self._get_max_concurrent_live_migrations())
+            self._build_semaphore = threading.Semaphore(
+                thread_pool_factory.get_max_concurrent_builds())
+            self._snapshot_semaphore = threading.Semaphore(
+                thread_pool_factory.get_max_concurrent_snapshots())
 
         # This is a dict, keyed by instance uuid, to a two-item tuple of
         # migration object and Future for the queued live migration.
@@ -750,68 +720,6 @@ class ComputeManager(manager.Manager):
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.rt = resource_tracker.ResourceTracker(
             self.host, self.driver, reportclient=self.reportclient)
-
-    def _get_max_concurrent_builds(self):
-        if CONF.max_concurrent_builds > 0:
-            return CONF.max_concurrent_builds
-
-        # setting CONF.max_concurrent_builds to 0 (unlimited)
-        # is deprecated but still supported, so we need to use a sane
-        # default values for each threading mode
-        LOG.warning("Nova compute deprecated the support of unlimited "
-                    "parallel instance builds so "
-                    "[DEFAULT]max_concurrent_builds configured "
-                    "with value 0 is deprecated and will not be supported "
-                    "in future releases. Please set an explicit positive "
-                    "value to this config option instead.")
-        if utils.concurrency_mode_threading():
-            # Fall back to the default of the config
-            return 10
-        else:
-            # In eventlet mode we need to keep backward compatibility, and
-            # we use 1000 to emulate unlimited
-            return 1000
-
-    def _get_max_concurrent_snapshots(self):
-        if CONF.max_concurrent_snapshots > 0:
-            return CONF.max_concurrent_snapshots
-
-        # setting CONF.max_concurrent_snapshots to 0 (unlimited)
-        # is deprecated but still supported, so we need to use a sane
-        # default values for each threading mode
-        LOG.warning("Nova compute deprecated the support of unlimited "
-                    "parallel instance snapshots so "
-                    "[DEFAULT]max_concurrent_snapshots configured "
-                    "with value 0 is deprecated and will not be supported "
-                    "in future releases. Please set an explicit positive "
-                    "value to this config option instead.")
-        if utils.concurrency_mode_threading():
-            # Fall back to the default of the config
-            return 5
-        else:
-            # In eventlet mode we need to keep backward compatibility, and
-            # we use 1000 to emulate unlimited
-            return 1000
-
-    def _get_max_concurrent_live_migrations(self):
-        if CONF.max_concurrent_live_migrations > 0:
-            return CONF.max_concurrent_live_migrations
-
-        # setting CONF.max_concurrent_live_migrations to 0 (unlimited)
-        # is deprecated but still supported, so we need to use a sane
-        # default values for each threading mode
-        LOG.warning("Nova compute deprecated the support of unlimited "
-                    "parallel live migration so "
-                    "[DEFAULT]max_concurrent_live_migrations configured "
-                    "with value 0 is deprecated and will not be supported "
-                    "in future releases. Please set an explicit positive"
-                    "value to this config option instead.")
-        if utils.concurrency_mode_threading():
-            return 5
-        else:
-            # In eventlet mode we need to keep backward compatibility and
-            # 1000 greenthreads to emulate unlimited
-            return 1000
 
     @contextlib.contextmanager
     def syncs_in_progress(self) -> Iterator[set[str]]:
@@ -1852,9 +1760,11 @@ class ComputeManager(manager.Manager):
 
     def _cleanup_live_migrations_in_pool(self):
         # Shutdown the pool so we don't get new requests.
-        self._live_migration_executor.shutdown(wait=False)
-        # For any queued migrations, cancel the migration and update
-        # its status.
+        live_migration_executor = thread_pool_factory.get_executor(
+                thread_pool_factory.ExecutorType.LIVE_MIGRATION)
+        live_migration_executor.shutdown(wait=False)
+        thread_pool_factory.FACTORY._all_executors.pop(
+            thread_pool_factory.ExecutorType.LIVE_MIGRATION, None)
         for migration, future in self._waiting_live_migrations.values():
             # If we got here before the Future was submitted then we need
             # to move on since there isn't anything we can do.
@@ -2421,8 +2331,8 @@ class ComputeManager(manager.Manager):
     def _build_succeeded(self, node):
         self.rt.build_succeeded(node)
 
-    def _start_recorded_task(self, executor, task_name, instance, context,
-                             func, *args, **kwargs):
+    def _start_recorded_task(self, executor_type, task_name, instance,
+                             context, func, *args, **kwargs):
         """Spawn func on executor while tracking it as an in-progress task.
 
         Wraps the common pattern of recording a task as started, spawning
@@ -2430,19 +2340,21 @@ class ComputeManager(manager.Manager):
         itself raises, and arranging for it to be recorded as completed or
         failed (based on the Future's outcome) when it finishes.
 
-        :param executor: the executor to spawn func on
+        :param executor_type: the thread_pool_factory.ExecutorType to spawn
+            func on
         :param task_name: task name, most of time it is RPC method name
         :param instance: the nova.objects.Instance the task is for
         :param context: the request context, used for the request id
         :param func: the callable to spawn
         :param args: positional arguments passed to func
         :param kwargs: keyword arguments passed to func
-        :returns: the Future returned by utils.spawn_on()
+        :returns: the Future returned by thread_pool_factory.spawn_on()
         """
         key = self._record_task_start(
             task_name, instance.uuid, context.request_id)
         try:
-            future = utils.spawn_on(executor, func, *args, **kwargs)
+            future = thread_pool_factory.spawn_on(
+                executor_type, func, *args, **kwargs)
         except Exception:
             self._record_task_end(key, failed=True)
             raise
@@ -2517,7 +2429,8 @@ class ComputeManager(manager.Manager):
         # NOTE(gmaan): Track this task so that graceful_shutdown() can wait for
         # the build to complete.
         self._start_recorded_task(
-            self._long_task_executor, 'build_instance', instance, context,
+            thread_pool_factory.ExecutorType.LONG_TASK, 'build_instance',
+            instance, context,
             _locked_do_build_and_run_instance,
             context, instance, image, request_spec,
             filter_properties, admin_password, injected_files,
@@ -4700,9 +4613,9 @@ class ComputeManager(manager.Manager):
         # avoid blocking RPC traffic.
         # Track this as an active task for graceful shutdown.
         return self._start_recorded_task(
-            self._long_task_executor, 'snapshot_instance', instance, context,
-            do_snapshot_instance, context, image_id, instance,
-            task_states.IMAGE_SNAPSHOT)
+            thread_pool_factory.ExecutorType.LONG_TASK, 'snapshot_instance',
+            instance, context, do_snapshot_instance, context, image_id,
+            instance, task_states.IMAGE_SNAPSHOT)
 
     @wrap_exception()
     @reverts_task_state
@@ -9914,9 +9827,10 @@ class ComputeManager(manager.Manager):
         # decremented via callback when the future finishes.
         try:
             future = self._start_recorded_task(
-                self._live_migration_executor, 'live_migration', instance,
-                context, self._do_live_migration, context, dest, instance,
-                block_migration, migration, migrate_data)
+                thread_pool_factory.ExecutorType.LIVE_MIGRATION,
+                'live_migration', instance, context, self._do_live_migration,
+                context, dest, instance, block_migration, migration,
+                migrate_data)
         except RuntimeError:
             # GreenThreadPoolExecutor.submit will raise RuntimeError if the
             # pool is shutdown, which happens in
@@ -11261,8 +11175,9 @@ class ComputeManager(manager.Manager):
                 else:
                     LOG.debug('Triggering sync for uuid %s', uuid)
                     syncs.add(uuid)
-                    nova.utils.spawn_on(
-                        self._sync_power_executor, _sync, db_instance)
+                    thread_pool_factory.spawn_on(
+                        thread_pool_factory.ExecutorType.SYNC_POWER,
+                        _sync, db_instance)
 
     def _query_driver_power_state_and_sync(self, context, db_instance):
         if db_instance.task_state is not None:

@@ -29,6 +29,7 @@ from nova import exception
 from nova import objects
 from nova import service_auth
 from nova import test
+from nova import thread_pool_factory
 from nova import utils
 
 
@@ -480,7 +481,9 @@ class ContextTestCase(test.NoDBTestCase):
         # the leaked thread check at the test case cleanup
         def cleanup():
             work.release()
-            utils.SCATTER_GATHER_EXECUTOR.shutdown(wait=True)
+            thread_pool_factory.get_executor(
+                thread_pool_factory.ExecutorType.SCATTER_GATHER).shutdown(
+                    wait=True)
 
         self.addCleanup(cleanup)
 
@@ -510,7 +513,10 @@ class ContextTestCase(test.NoDBTestCase):
     def test_scatter_gather_cells_queued_task_cancelled(self, mock_warning):
         # ensure that only one task can run at a time so we can simulate
         # queued tasks
-        utils.SCATTER_GATHER_EXECUTOR = utils.create_executor(max_workers=1)
+        executor = thread_pool_factory.FACTORY._new_executor(
+            1, thread_pool_factory.ExecutorType.SCATTER_GATHER.value)
+        thread_pool_factory.FACTORY._all_executors[
+            thread_pool_factory.ExecutorType.SCATTER_GATHER] = executor
 
         work = threading.Event()
 
@@ -519,7 +525,7 @@ class ContextTestCase(test.NoDBTestCase):
         # cleanup
         def cleanup():
             work.set()
-            utils.SCATTER_GATHER_EXECUTOR.shutdown(wait=True)
+            executor.shutdown(wait=True)
 
         self.addCleanup(cleanup)
 
@@ -548,9 +554,9 @@ class ContextTestCase(test.NoDBTestCase):
         # let the started task eventually finish so the thread leak check at
         # the test case cleanup is satisfied.
         work.set()
-        utils.SCATTER_GATHER_EXECUTOR.shutdown(wait=True)
+        executor.shutdown(wait=True)
 
-        stats = utils.SCATTER_GATHER_EXECUTOR.statistics
+        stats = executor.statistics
         # The task that wasn't started is cancelled when the scatter-gather
         # timed out.
         self.assertEqual(1, stats.cancelled)

@@ -53,6 +53,7 @@ from nova.i18n import _
 from nova.objects import fields
 from nova.pci import utils as pci_utils
 from nova import rpc
+from nova import thread_pool_factory
 from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.libvirt import config as vconfig
@@ -144,7 +145,7 @@ class _EventletLibvirtEventHandler(LibvirtEventHandler):
         self._event_thread.start()
 
         LOG.debug("Starting event dispatch greenthread")
-        utils.spawn(self._dispatch_thread)
+        thread_pool_factory.spawn(self._dispatch_thread)
 
     def _queue_event(self, event):
         """Puts an event on the queue for dispatch.
@@ -542,15 +543,16 @@ class Host(object):
         """Initializes the libvirt events subsystem.
         """
         self._delayed_executor = (
-            utils.StaticallyDelayingCancellableTaskExecutorWrapper(
-                delay=15, executor=utils._get_default_executor()))
+    thread_pool_factory.StaticallyDelayingCancellableTaskExecutorWrapper(
+        delay=15, executor=thread_pool_factory.get_executor(
+             thread_pool_factory.ExecutorType.DEFAULT)))
         self._event_handler.start()
 
         # This thread is just for async connection closed event handling.
         # In eventlet mode it only handles tasks within the main thread with
         # the eventlet hub.
         LOG.debug("Starting connection event dispatch thread")
-        utils.spawn(self._conn_event_thread)
+        thread_pool_factory.spawn(self._conn_event_thread)
 
     def _get_new_connection(self):
         # call with _wrapped_conn_lock held

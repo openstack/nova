@@ -35,6 +35,7 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.fixtures import libvirt_data as fake_libvirt_data
+from nova import thread_pool_factory
 from nova import utils
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
@@ -82,8 +83,10 @@ class HostTestCase(test.NoDBTestCase):
         # to cover code there. So we partially instantiate the event handling
         # logic here and pumping the events in the test cases individually.
         h._delayed_executor = (
-            utils.StaticallyDelayingCancellableTaskExecutorWrapper(
-                delay=15, executor=utils._get_default_executor()))
+            thread_pool_factory.
+            StaticallyDelayingCancellableTaskExecutorWrapper(
+                delay=15, executor=thread_pool_factory.get_executor(
+                    thread_pool_factory.ExecutorType.DEFAULT)))
 
         return h
 
@@ -130,8 +133,8 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(log_mock.method_calls),
                          'LOG should not be used in _connect_auth_cb.')
 
-    @mock.patch.object(
-        utils, 'StaticallyDelayingCancellableTaskExecutorWrapper')
+    @mock.patch.object(thread_pool_factory,
+     'StaticallyDelayingCancellableTaskExecutorWrapper')
     def test_event_dispatch(self, mock_wrapper):
         # Validate that the libvirt self-pipe for forwarding
         # events between threads is working sanely
@@ -180,7 +183,8 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(want_events, got_events)
 
         mock_wrapper.assert_called_once_with(
-            delay=15, executor=utils._get_default_executor())
+            delay=15, executor=thread_pool_factory.get_executor(
+                thread_pool_factory.ExecutorType.DEFAULT))
         # STOPPED is delayed so it's handled separately
         mock_wrapper.return_value.submit_with_delay(
             hostimpl._event_emit, event4)
@@ -292,7 +296,9 @@ class HostTestCase(test.NoDBTestCase):
             test.MatchType(libvirt_guest.Guest), instance=None,
             logging_ok=False)
 
-    @mock.patch('nova.utils.StaticallyDelayingCancellableTaskExecutorWrapper')
+    @mock.patch(
+        'nova.thread_pool_factory.'
+        'StaticallyDelayingCancellableTaskExecutorWrapper')
     def test_event_emit_delayed_call_delayed(self, mock_wrapper):
         ev = event.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
@@ -303,11 +309,14 @@ class HostTestCase(test.NoDBTestCase):
 
         hostimpl._event_emit_delayed(ev)
         mock_wrapper.assert_called_once_with(
-            delay=15, executor=utils._get_default_executor())
+            delay=15, executor=thread_pool_factory.get_executor(
+                thread_pool_factory.ExecutorType.DEFAULT))
         mock_wrapper.return_value.submit_with_delay.assert_called_once_with(
             hostimpl._event_emit, ev)
 
-    @mock.patch('nova.utils.StaticallyDelayingCancellableTaskExecutorWrapper')
+    @mock.patch(
+        'nova.thread_pool_factory.'
+        'StaticallyDelayingCancellableTaskExecutorWrapper')
     def test_event_emit_delayed_call_delayed_pending(self, mock_wrapper):
         hostimpl = self._create_host(
             'qemu:///system', lifecycle_event_handler=lambda e: None)
@@ -439,8 +448,8 @@ class HostTestCase(test.NoDBTestCase):
         mock_event.side_effect = fake_register
 
         # call concurrently
-        thr1 = utils.spawn(get_conn_currency, self.host)
-        thr2 = utils.spawn(get_conn_currency, self.host)
+        thr1 = thread_pool_factory.spawn(get_conn_currency, self.host)
+        thr2 = thread_pool_factory.spawn(get_conn_currency, self.host)
 
         # let threads run
         utils.cooperative_yield()
@@ -2118,8 +2127,10 @@ class TestLibvirtSEV(test.NoDBTestCase):
         self.host = host.Host("qemu:///system")
         self.addCleanup(self.host.cleanup)
         self.host._delayed_executor = (
-            utils.StaticallyDelayingCancellableTaskExecutorWrapper(
-                delay=0.1, executor=utils._get_default_executor()))
+            thread_pool_factory.
+            StaticallyDelayingCancellableTaskExecutorWrapper(
+                delay=0.1, executor=thread_pool_factory.get_executor(
+                    thread_pool_factory.ExecutorType.DEFAULT)))
 
         self.kernel_sev = None
         self.kernel_sev_es = None
@@ -2560,8 +2571,10 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
         self.useFixture(nova_fixtures.LibvirtFixture())
         self.host = host.Host("qemu:///system")
         self.host._delayed_executor = (
-            utils.StaticallyDelayingCancellableTaskExecutorWrapper(
-                delay=0.1, executor=utils._get_default_executor()))
+            thread_pool_factory.
+            StaticallyDelayingCancellableTaskExecutorWrapper(
+                delay=0.1, executor=thread_pool_factory.get_executor(
+                    thread_pool_factory.ExecutorType.DEFAULT)))
         self.addCleanup(self.host.cleanup)
 
         def _stub_xml(uuid):

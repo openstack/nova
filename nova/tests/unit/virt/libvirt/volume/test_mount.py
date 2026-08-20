@@ -23,7 +23,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import test
-from nova import utils
+from nova import thread_pool_factory
 from nova.virt.libvirt import config as libvirt_config
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host as libvirt_host
@@ -656,7 +656,7 @@ class MountManagerTestCase(test.NoDBTestCase):
 
         # Call host_up in a separate thread because it will block, and give
         # it plenty of time to race
-        host_up = utils.spawn(self.m.host_up, mock.sentinel.host)
+        host_up = thread_pool_factory.spawn(self.m.host_up, mock.sentinel.host)
         time.sleep(0.01)
 
         # Assert that we haven't instantiated a new state while there's an

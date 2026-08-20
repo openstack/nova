@@ -34,6 +34,7 @@ from nova.i18n import _
 from nova import objects
 from nova import policy
 from nova import service_auth
+from nova import thread_pool_factory
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -463,13 +464,12 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
 
         return result
 
-    executor = utils.get_scatter_gather_executor()
-
     for cell_mapping in cell_mappings:
         with target_cell(context, cell_mapping) as cctxt:
-            future = utils.spawn_on(
-                executor,
-                gather_result, cell_mapping.uuid, fn, cctxt, *args, **kwargs)
+            future = thread_pool_factory.spawn_on(
+                thread_pool_factory.ExecutorType.SCATTER_GATHER,
+                gather_result, cell_mapping.uuid, fn, cctxt, *args,
+                **kwargs)
             tasks[cell_mapping.uuid] = future
 
     futurist.waiters.wait_for_all(tasks.values(), timeout)

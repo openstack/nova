@@ -69,6 +69,7 @@ from nova import rpc
 from nova.scheduler import weights
 from nova import service
 from nova.tests.functional.api import client
+from nova import thread_pool_factory
 from nova import utils
 from nova.virt import node
 
@@ -1310,109 +1311,41 @@ class IsolatedExecutorFixture(fixtures.Fixture):
 
     def _setUp(self):
         # Just safety that the previous testcase cleaned up after itself
-        assert utils.SCATTER_GATHER_EXECUTOR is None
-        assert utils.DEFAULT_EXECUTOR is None
-        assert utils.CACHE_IMAGES_EXECUTOR is None
-        assert utils.LONG_TASK_EXECUTOR is None
+        assert not thread_pool_factory.FACTORY._all_executors
 
-        origi_get_scatter_gather = utils.get_scatter_gather_executor
-        origi_default_executor = utils._get_default_executor
-        origi_get_cache_images_executor = utils.get_cache_images_executor
-        origi_get_long_task_executor = utils.get_long_task_executor
+        origi_get_executor = thread_pool_factory.get_executor
 
-        self.executor = None
-        self.scatter_gather_executor = None
-        self.cache_images_executor = None
-        self.long_task_executor = None
+        def _get_executor(executor_type, **kwargs):
+            executor = origi_get_executor(executor_type, **kwargs)
+            executor.name = f"{self.test_case_id}.{executor_type.value}"
+            return executor
 
-        def _get_default_executor():
-            self.executor = origi_default_executor()
-            self.executor.name = f"{self.test_case_id}.default"
-            return self.executor
         # NOTE(sean-k-mooney): greenpools use eventlet.spawn so we can't stub
         # out all calls to those functions.
-        # Instead since nova only creates greenthreads directly via nova.utils
-        # we stub out the default green pool. This will not capture
-        # Greenthreads created via the standard lib threading module.
+        # Instead since nova only creates greenthreads directly via
+        # nova.thread_pool_factory we stub out the executor getter. This will
+        # not capture Greenthreads created via the standard lib threading
+        # module.
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils._get_default_executor', _get_default_executor))
-        self.addCleanup(lambda: self.do_cleanup_executor(self.executor))
+            'nova.thread_pool_factory.get_executor', _get_executor))
 
-        def _get_scatter_gather_executor():
-            self.scatter_gather_executor = origi_get_scatter_gather()
-            self.scatter_gather_executor.name = (
-                f"{self.test_case_id}.cell_worker")
-            return self.scatter_gather_executor
+        self.addCleanup(self._cleanup_executors)
 
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.get_scatter_gather_executor',
-            _get_scatter_gather_executor))
-
-        self.addCleanup(
-            lambda: self.do_cleanup_executor(self.scatter_gather_executor))
-
-        def _get_cache_images_executor():
-            self.cache_images_executor = origi_get_cache_images_executor()
-            self.cache_images_executor.name = (
-                f"{self.test_case_id}.cache_images")
-            return self.cache_images_executor
-
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.get_cache_images_executor',
-            _get_cache_images_executor))
-
-        self.addCleanup(
-            lambda: self.do_cleanup_executor(self.cache_images_executor))
-
-        def _get_long_task_executor(max_workers):
-            self.long_task_executor = origi_get_long_task_executor(max_workers)
-            self.long_task_executor.name = (
-                f"{self.test_case_id}.long_task")
-            return self.long_task_executor
-
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.get_long_task_executor',
-            _get_long_task_executor))
-
-        self.addCleanup(
-            lambda: self.do_cleanup_executor(self.long_task_executor))
-
-        self.addCleanup(self.reset_globals)
-
-    def reset_globals(self):
-        utils.SCATTER_GATHER_EXECUTOR = None
-        utils.DEFAULT_EXECUTOR = None
-        utils.CACHE_IMAGES_EXECUTOR = None
-        utils.LONG_TASK_EXECUTOR = None
-
-    def do_cleanup_executor(self, executor):
-        # NOTE(gibi): we cannot rely on utils.concurrency_mode_threading
-        # as that might have been mocked during the test when the executor
-        # was created, but during cleanup the mock is already removed.
-        threading = isinstance(executor, futurist.ThreadPoolExecutor)
-        if executor and executor.alive:
-            executor.shutdown(wait=False)
-
-            if threading:
-                # NOTE(gibi): This is optimistic, but we need specific examples
-                # where self.executor.shutdown(wait=True) hangs to figure out
-                # what we can do here.
-                pass
-            else:
+    def _cleanup_executors(self):
+        executors = list(thread_pool_factory.FACTORY._all_executors.values())
+        # reset_all_executors call shutdown(wait=True) for all executors.
+        thread_pool_factory.reset_all_executors()
+        for executor in executors:
+            # NOTE(gibi): we cannot rely on utils.concurrency_mode_threading
+            # as that might have been mocked during the test when the executor
+            # was created, but during cleanup the mock is already removed.
+            if isinstance(executor, futurist.GreenThreadPoolExecutor):
                 eventlet = utils.get_eventlet()
                 # kill all greenthreads in the pool before raising to prevent
                 # them from interfering with other tests.
                 for gt in list(executor._pool.coroutines_running):
                     if isinstance(gt, eventlet.greenthread.GreenThread):
                         gt.kill()
-
-            executor.shutdown(wait=True)
-
-            if threading:
-                # NOTE(gibi):If shutdown(wait=True) returns then nothing is
-                # leaked, so nothing to do here.
-                pass
-            else:
                 self._raise_on_green_pool(executor._pool)
 
     def _raise_on_green_pool(self, pool):
@@ -1451,16 +1384,18 @@ class SpawnIsSynchronousFixture(fixtures.Fixture):
         executor = futurist.SynchronousExecutor()
         self.addCleanup(executor.shutdown)
 
-        def spawn(*args, **kwargs):
-            return executor.submit(*args, **kwargs)
+        def spawn(func, *args, **kwargs):
+            return executor.submit(func, *args, **kwargs)
 
-        # Just ignore the first arg that is the original executor instance
-        # and use our test internal synchronous executor.
-        def spawn_on(_, *args, **kwargs):
-            return executor.submit(*args, **kwargs)
+        # Just ignore the executor_type argument and use our test internal
+        # synchronous executor instead.
+        def spawn_on(executor_type, func, *args, **kwargs):
+            return executor.submit(func, *args, **kwargs)
 
-        self.useFixture(fixtures.MonkeyPatch('nova.utils.spawn', spawn))
-        self.useFixture(fixtures.MonkeyPatch('nova.utils.spawn_on', spawn_on))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.thread_pool_factory.spawn', spawn))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.thread_pool_factory.spawn_on', spawn_on))
 
 
 class BannedDBSchemaOperations(fixtures.Fixture):
@@ -1998,16 +1933,16 @@ class PropagateTestCaseIdToChildEventlets(fixtures.Fixture):
         c = eventlet.getcurrent()
         c.test_case_id = self.test_case_id
 
-        orig_spawn = utils.spawn
+        orig_spawn = thread_pool_factory.spawn
 
         def wrapped_spawn(func, *args, **kwargs):
             # This is still runs before the eventlet.spawn so read the id for
             # propagation
             caller = eventlet.getcurrent()
-            # If there is no id set on us that means we were spawned with other
-            # than nova.utils.spawn so the id propagation chain got
-            # broken. We fall back to self.test_case_id from the fixture which
-            # is good enough
+            # If there is no id set on us that means we were spawned with
+            # other than nova.thread_pool_factory.spawn so the id propagation
+            # chain got broken. We fall back to self.test_case_id from the
+            # fixture which is good enough
             caller_test_case_id = getattr(
                 caller, 'test_case_id', None) or self.test_case_id
 
@@ -2023,10 +1958,11 @@ class PropagateTestCaseIdToChildEventlets(fixtures.Fixture):
             # new wrapper around its target
             return orig_spawn(test_case_id_wrapper, *args, **kwargs)
 
-        # let's replace nova.utils.spawn with the wrapped one that injects
-        # our initialization to the child eventlet
-        self.useFixture(
-            fixtures.MonkeyPatch('nova.utils.spawn', wrapped_spawn))
+        # let's replace nova.thread_pool_factory.spawn with the wrapped one
+        # that injects our initialization to the child eventlet
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.thread_pool_factory.spawn',
+            wrapped_spawn))
 
 
 class ReaderWriterLock(lockutils.ReaderWriterLock):
@@ -2371,7 +2307,10 @@ class DelayingExecutorWrapperCleanupFixture(fixtures.Fixture):
     def setUp(self):
         super().setUp()
 
-        orig = utils.StaticallyDelayingCancellableTaskExecutorWrapper.__init__
+        orig = (
+            thread_pool_factory.
+            StaticallyDelayingCancellableTaskExecutorWrapper.
+            __init__)
 
         def wrapped_init(executor_wrapper, delay, executor):
             stack = "".join(traceback.format_stack())
@@ -2381,18 +2320,21 @@ class DelayingExecutorWrapperCleanupFixture(fixtures.Fixture):
 
         self.useFixture(
             fixtures.MonkeyPatch(
-                'nova.utils.StaticallyDelayingCancellableTaskExecutorWrapper.'
+                'nova.thread_pool_factory.'
+                'StaticallyDelayingCancellableTaskExecutorWrapper.'
                 '__init__', wrapped_init))
 
     @staticmethod
     def _check_wrapper_stopped(
-        wrapper: utils.StaticallyDelayingCancellableTaskExecutorWrapper,
+        wrapper: thread_pool_factory.
+        StaticallyDelayingCancellableTaskExecutorWrapper,
         stack: str,
     ):
         if wrapper.is_alive:
             raise RuntimeError(
                 'The test case leaked an active '
-                'nova.utils.StaticallyDelayingCancellableTaskExecutorWrapper'
+                'nova.thread_pool_factory.'
+                'StaticallyDelayingCancellableTaskExecutorWrapper'
                 'instance. This can lead to unexpected failures in later test '
                 'case. Please ensure that shutdown(wait=true) is called on '
                 'the wrapper before the end of the test case e.g. by using '

@@ -31,7 +31,7 @@ from nova import config
 from nova import objects
 from nova.scheduler import rpcapi
 from nova import service
-from nova import utils
+from nova import thread_pool_factory
 from nova import version
 
 CONF = nova.conf.CONF
@@ -58,10 +58,9 @@ def main():
     # parent to the child process, we destroy the executor in the parent
     # process before the forking, so that the workers initialize new
     # executor(s) and therefore avoid working with the wrong internal executor
-    # state (i.e. number of workers idle in the pool). A long therm solution
+    # state (i.e. number of workers idle in the pool). A long term solution
     # would be to use os.spawn instead of os.fork for the workers.
-    utils.destroy_scatter_gather_executor()
-    utils.destroy_default_executor()
+    thread_pool_factory.reset_all_executors()
 
     service.serve(server, workers=workers)
     service.wait()

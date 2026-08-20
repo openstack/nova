@@ -20,7 +20,7 @@ from oslo_serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _
-from nova import utils
+from nova import thread_pool_factory
 
 
 # Constants for the 'vif_type' field in VIF class
@@ -583,7 +583,7 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
     def __init__(self, async_method, *args, **kwargs):
         super(NetworkInfoAsyncWrapper, self).__init__()
 
-        self._future = utils.spawn(async_method, *args, **kwargs)
+        self._future = thread_pool_factory.spawn(async_method, *args, **kwargs)
         methods = ['json', 'fixed_ips', 'floating_ips']
         for method in methods:
             fn = getattr(self, method)

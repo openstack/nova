@@ -70,6 +70,7 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
+from nova import thread_pool_factory
 from nova import utils
 from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
 from nova.virt import driver as virt_driver
@@ -970,24 +971,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self._test_max_concurrent_builds()
 
     def test_max_concurrent_builds_semaphore_limited(self):
-        utils.destroy_long_task_executor()
         self.flags(max_concurrent_builds=123)
         compute = manager.ComputeManager()
         if utils.concurrency_mode_threading():
             self.assertIsInstance(
                 compute._build_semaphore, compute_utils.UnlimitedSemaphore)
-            self.assertEqual(123, compute._long_task_executor._max_workers)
         else:
             self.assertEqual(123, compute._build_semaphore._value)
 
     def test_max_concurrent_builds_semaphore_unlimited(self):
-        utils.destroy_long_task_executor()
         self.flags(max_concurrent_builds=0)
         compute = manager.ComputeManager()
         if utils.concurrency_mode_threading():
             self.assertIsInstance(
                 compute._build_semaphore, compute_utils.UnlimitedSemaphore)
-            self.assertEqual(10, compute._long_task_executor._max_workers)
         else:
             self.assertEqual(1000, compute._build_semaphore._value)
 
@@ -1041,8 +1038,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 wraps=self.compute._record_task_end),
         ) as (mock_task_start, mock_task_end):
             future = self.compute._start_recorded_task(
-                self.compute._long_task_executor, 'fake-task', instance,
-                self.context, func)
+                thread_pool_factory.ExecutorType.LONG_TASK, 'fake-task',
+                instance, self.context, func)
             self.assertRaises(test.TestingException, future.result)
 
         mock_task_end.assert_called_once_with(1, mock.ANY)
@@ -1059,12 +1056,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(
                 self.compute, '_record_task_end',
                 wraps=self.compute._record_task_end),
-            mock.patch('nova.utils.spawn_on', side_effect=RuntimeError),
+            mock.patch(
+                'nova.thread_pool_factory.spawn_on',
+                side_effect=RuntimeError),
         ) as (mock_task_start, mock_task_end, mock_spawn):
             self.assertRaises(
                 RuntimeError, self.compute._start_recorded_task,
-                self.compute._long_task_executor, 'fake-task', instance,
-                self.context, func)
+                thread_pool_factory.ExecutorType.LONG_TASK, 'fake-task',
+                instance, self.context, func)
 
         mock_task_start.assert_called_once_with(
             'fake-task', instance.uuid, self.context.request_id)
@@ -1081,46 +1080,35 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self._test_max_concurrent_snapshots()
 
     def test_max_concurrent_snapshots_semaphore_limited(self):
-        utils.destroy_long_task_executor()
         self.flags(max_concurrent_snapshots=123)
         compute = manager.ComputeManager()
         if utils.concurrency_mode_threading():
             self.assertIsInstance(
                 compute._snapshot_semaphore, compute_utils.UnlimitedSemaphore)
-            self.assertEqual(123, compute._long_task_executor._max_workers)
         else:
             self.assertEqual(123, compute._snapshot_semaphore._value)
 
     def test_max_concurrent_snapshots_semaphore_unlimited(self):
-        utils.destroy_long_task_executor()
         self.flags(max_concurrent_snapshots=0)
         compute = manager.ComputeManager()
         if utils.concurrency_mode_threading():
             self.assertIsInstance(
                 compute._snapshot_semaphore, compute_utils.UnlimitedSemaphore)
-            self.assertEqual(10, compute._long_task_executor._max_workers)
         else:
             self.assertEqual(1000, compute._snapshot_semaphore._value)
 
-    @mock.patch.object(manager.LOG, 'warning')
-    def test_max_c_builds_and_snapshots_different_limits(self, mock_log):
-        utils.destroy_long_task_executor()
+    def test_max_c_builds_and_snapshots_different_limits(self):
         self.flags(max_concurrent_builds=124)
         self.flags(max_concurrent_snapshots=123)
         compute = manager.ComputeManager()
         if utils.concurrency_mode_threading():
-            self.assertEqual(124, compute._long_task_executor._max_workers)
-            mock_log.assert_called_once_with(
-                'In native threading mode the number of concurrent builds, '
-                'and snapshots should be limited to the same number. '
-                'The current configuration has differing limits: '
-                'max_concurrent_builds: %d, max_concurrent_snapshots: %d. '
-                'Nova will use a single, overall limit of %d for these tasks.',
-                124, 123, 124)
+            self.assertIsInstance(
+                compute._snapshot_semaphore, compute_utils.UnlimitedSemaphore)
+            self.assertIsInstance(
+                compute._build_semaphore, compute_utils.UnlimitedSemaphore)
         else:
             self.assertEqual(123, compute._snapshot_semaphore._value)
             self.assertEqual(124, compute._build_semaphore._value)
-            mock_log.assert_not_called()
 
     def test_nil_out_inst_obj_host_and_node_sets_nil(self):
         instance = fake_instance.fake_instance_obj(self.context,
@@ -1306,23 +1294,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.compute._waiting_live_migrations[fake_instance_uuid] = (
             fake_migration, fake_future)
 
-        with mock.patch.object(self.compute, '_live_migration_executor'
-                               ) as mock_migration_pool:
-            self.compute._cleanup_live_migrations_in_pool()
+        self.compute._cleanup_live_migrations_in_pool()
 
-            mock_migration_pool.shutdown.assert_called_once_with(wait=False)
-            self.assertEqual('cancelled', fake_migration.status)
-            fake_future.cancel.assert_called_once_with()
-            self.assertEqual({}, self.compute._waiting_live_migrations)
+        self.assertEqual('cancelled', fake_migration.status)
+        fake_future.cancel.assert_called_once_with()
+        self.assertEqual({}, self.compute._waiting_live_migrations)
 
-            # test again with Future is None
-            self.compute._waiting_live_migrations[fake_instance_uuid] = (
-                None, None)
-            self.compute._cleanup_live_migrations_in_pool()
+        # test again with Future is None
+        self.compute._waiting_live_migrations[fake_instance_uuid] = (
+            None, None)
+        self.compute._cleanup_live_migrations_in_pool()
 
-            mock_migration_pool.shutdown.assert_called_with(wait=False)
-            self.assertEqual(2, mock_migration_pool.shutdown.call_count)
-            self.assertEqual({}, self.compute._waiting_live_migrations)
+        self.assertEqual({}, self.compute._waiting_live_migrations)
 
     def test_init_virt_events_disabled(self):
         self.flags(handle_virt_lifecycle_events=False, group='workarounds')
@@ -11900,7 +11883,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertEqual('queued', migration.status)
             migration.save.assert_called_once_with()
 
-        with mock.patch('nova.utils.spawn_on') as mock_spawn:
+        with mock.patch('nova.thread_pool_factory.spawn_on') as mock_spawn:
             for _ in (1, 2, 3):
                 _do_it()
         self.assertEqual(3, mock_spawn.call_count)
@@ -11915,16 +11898,20 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
     def test_max_concurrent_live_semaphore_limited(self):
         self.flags(max_concurrent_live_migrations=123)
-        mgr = manager.ComputeManager()
-        self.assertEqual(123, mgr._live_migration_executor._max_workers)
+        manager.ComputeManager()
+        executor = thread_pool_factory.get_executor(
+            thread_pool_factory.ExecutorType.LIVE_MIGRATION)
+        self.assertEqual(123, executor._max_workers)
 
     def test_max_concurrent_live_semaphore_unlimited(self):
         self.flags(max_concurrent_live_migrations=0)
-        mgr = manager.ComputeManager()
+        manager.ComputeManager()
+        executor = thread_pool_factory.get_executor(
+            thread_pool_factory.ExecutorType.LIVE_MIGRATION)
         if utils.concurrency_mode_threading():
-            self.assertEqual(5, mgr._live_migration_executor._max_workers)
+            self.assertEqual(5, executor._max_workers)
         else:
-            self.assertEqual(1000, mgr._live_migration_executor._max_workers)
+            self.assertEqual(1000, executor._max_workers)
 
     @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
@@ -12444,7 +12431,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     def test_live_migration_submit_failed(self, mock_notify, mock_exc):
         migration = objects.Migration(self.context, uuid=uuids.migration)
         migration.save = mock.MagicMock()
-        with mock.patch('nova.utils.spawn_on') as mock_spawn:
+        with mock.patch('nova.thread_pool_factory.spawn_on') as mock_spawn:
             mock_spawn.side_effect = RuntimeError
             self.assertRaises(exception.LiveMigrationNotSubmitted,
                               self.compute.live_migration, self.context,
@@ -12464,7 +12451,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             mock.patch.object(
                 self.compute, '_record_task_end',
                 wraps=self.compute._record_task_end),
-            mock.patch('nova.utils.spawn_on'),
+            mock.patch('nova.thread_pool_factory.spawn_on'),
         ) as (mock_task_start, mock_task_end, mock_spawn):
             mock_spawn.side_effect = RuntimeError
             self.assertRaises(exception.LiveMigrationNotSubmitted,

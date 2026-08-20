@@ -155,7 +155,8 @@ class FakeVersionedNotifier(FakeNotifier):
         current = self.eventlet.getcurrent()
         # NOTE(gibi) not all eventlet spawn is under our control, so there can
         # be senders without test_case_id set, find the first ancestor that
-        # was spawned from nova.utils.spawn[_n] and therefore has the id set.
+        # was spawned from nova.thread_pool_factory.spawn[_n] and therefore has
+        # the id set.
         while not getattr(current, 'test_case_id', None):
             current = current.parent
         return current.test_case_id

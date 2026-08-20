@@ -62,6 +62,7 @@ from nova.scheduler.client import query
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
+from nova import thread_pool_factory
 from nova import utils
 from nova.volume import cinder
 
@@ -2082,7 +2083,6 @@ class ComputeTaskManager:
             fields.NotificationPhase.START)
 
         clock = timeutils.StopWatch()
-        cache_image_executor = utils.get_cache_images_executor()
         futures = []
 
         hosts_by_cell = {}
@@ -2154,9 +2154,9 @@ class ComputeTaskManager:
                             {'host': host})
                         skipped_host(target_ctxt, host, image_ids)
                         continue
-                    future = utils.spawn_on(cache_image_executor,
-                                    wrap_cache_images,
-                                    target_ctxt, host, image_ids)
+                    future = thread_pool_factory.spawn_on(
+                        thread_pool_factory.ExecutorType.CACHE_IMAGES,
+                        wrap_cache_images, target_ctxt, host, image_ids)
                     futures.append(future)
         # Wait until all those things finish
         concurrent.futures.wait(futures)

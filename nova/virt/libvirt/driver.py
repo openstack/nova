@@ -99,6 +99,7 @@ import nova.privsep.libvirt
 import nova.privsep.path
 import nova.privsep.utils
 from nova.storage import rbd_utils
+from nova import thread_pool_factory
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -11824,7 +11825,8 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_paths, device_names = self._live_migration_copy_disk_paths(
                 context, instance, guest)
 
-        future = utils.spawn(self._live_migration_operation,
+        future = thread_pool_factory.spawn(
+                                     self._live_migration_operation,
                                      context, instance, dest,
                                      block_migration,
                                      migrate_data, guest,
