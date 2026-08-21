@@ -40,17 +40,16 @@ class ManilaShare():
 
 
 class ManilaAccess():
-    def __init__(self, access_type="ip"):
+    def __init__(self, access_type="ip", access_to=None):
         self.access_level = "rw"
         self.state = "active"
         self.id = "507bf114-36f2-4f56-8cf4-857985ca87c1"
+        self.access_type = access_type
         if access_type == "ip":
-            self.access_type = "ip"
-            self.access_to = "192.168.0.1"
+            self.access_to = access_to or "192.168.0.1"
             self.access_key = None
         elif access_type == "cephx":
-            self.access_type = "cephx"
-            self.access_to = "nova"
+            self.access_to = access_to or "nova"
             self.access_key = "mykey"
 
 
@@ -60,6 +59,7 @@ class ManilaFixture(fixtures.Fixture):
     def setUp(self):
         super().setUp()
         self.share_access = set()
+        self.share_locks = {}
         self.mock_get = self.useFixture(fixtures.MockPatch(
             'nova.share.manila.API.get',
             side_effect=self.fake_get)).mock
@@ -111,24 +111,22 @@ class ManilaFixture(fixtures.Fixture):
         )
 
     def fake_get_access(self, context, share_id, access_type, access_to):
-        if share_id not in self.share_access:
+        # Access is tracked per (share_id, access_type, access_to) so the
+        # fixture faithfully reflects the identity nova requested. This is
+        # what lets tests observe the per-instance cephx identity and see
+        # that revoking one instance's access leaves another's intact.
+        if (share_id, access_type, access_to) not in self.share_access:
             return None
-        else:
-            access = ManilaAccess()
-            return nova.share.manila.Access.from_manila_access(access)
-
-    def fake_get_access_cephfs(
-        self, context, share_id, access_type, access_to
-    ):
-        access = ManilaAccess(access_type="cephx")
-        return access
+        access = ManilaAccess(access_type=access_type, access_to=access_to)
+        return nova.share.manila.Access.from_manila_access(access)
 
     def fake_allow(
-        self, context, share_id, access_type, access_to, access_level
+        self, context, share_id, access_type, access_to, access_level,
+        lock_reason=None
     ):
-        self.share_access.add(share_id)
-        self.fake_get_access(context, share_id, access_type, access_to)
+        self.share_access.add((share_id, access_type, access_to))
+        self.share_locks[(share_id, access_type, access_to)] = lock_reason
 
     def fake_deny(self, context, share_id, access_type, access_to):
-        self.share_access.discard(share_id)
+        self.share_access.discard((share_id, access_type, access_to))
         return 202

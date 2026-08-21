@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import datetime
+import hashlib
 
 from copy import deepcopy
 from nova.db.main import api as db
@@ -272,6 +273,50 @@ class _TestShareMapping(object):
                 self.context, uuids.instance, uuids.share)
 
             self._compare_obj(share_mapping, fake_share_mapping)
+
+    def test_set_access_according_to_protocol_nfs(self):
+        self.flags(my_shared_fs_storage_ip='192.168.0.1')
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.instance_uuid = uuids.instance
+        share_mapping.share_proto = 'NFS'
+        share_mapping.set_access_according_to_protocol()
+        self.assertEqual('ip', share_mapping.access_type)
+        self.assertEqual('192.168.0.1', share_mapping.access_to)
+
+    def test_set_access_according_to_protocol_cephfs(self):
+        self.flags(host='compute-1')
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.instance_uuid = uuids.instance
+        share_mapping.share_proto = 'CEPHFS'
+        share_mapping.set_access_according_to_protocol()
+        expected = 'nova-' + hashlib.sha256(
+            f'{uuids.instance}:compute-1'.encode()).hexdigest()[:16]
+        self.assertEqual('cephx', share_mapping.access_type)
+        self.assertEqual(expected, share_mapping.access_to)
+
+    def test_set_access_according_to_protocol_cephfs_per_instance_per_host(
+        self
+    ):
+        self.flags(host='compute-1')
+        sm_a = objects.ShareMapping(self.context)
+        sm_a.instance_uuid = uuids.instance
+        sm_a.share_proto = 'CEPHFS'
+        sm_a.set_access_according_to_protocol()
+
+        # Different instance on the same host gets a different identity.
+        sm_b = objects.ShareMapping(self.context)
+        sm_b.instance_uuid = uuids.instance2
+        sm_b.share_proto = 'CEPHFS'
+        sm_b.set_access_according_to_protocol()
+        self.assertNotEqual(sm_a.access_to, sm_b.access_to)
+
+        # Same instance on a different host gets a different identity.
+        self.flags(host='compute-2')
+        sm_c = objects.ShareMapping(self.context)
+        sm_c.instance_uuid = uuids.instance
+        sm_c.share_proto = 'CEPHFS'
+        sm_c.set_access_according_to_protocol()
+        self.assertNotEqual(sm_a.access_to, sm_c.access_to)
 
     @mock.patch(
         'nova.db.main.api.share_mapping_get_by_instance_uuid_and_share_id',

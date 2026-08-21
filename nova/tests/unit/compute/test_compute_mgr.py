@@ -61,6 +61,7 @@ from nova.pci import request as pci_request
 from nova.scheduler.client import report
 from nova import test
 from nova.tests import fixtures
+from nova.tests.fixtures import manila as manila_fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
@@ -2546,7 +2547,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_access.assert_called_with(
             self.context, share_mapping.share_id, 'ip', compute_ip)
         mock_allow.assert_called_once_with(
-            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw')
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw',
+            lock_reason="Lock by nova for instance %s" % (
+                share_mapping.instance_uuid))
         mock_notifications.assert_has_calls([
             mock.call(
                 mock.ANY,
@@ -2615,7 +2618,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_access.assert_called_with(
             self.context, share_mapping.share_id, 'ip', compute_ip)
         mock_allow.assert_called_once_with(
-            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw')
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw',
+            lock_reason="Lock by nova for instance %s" % (
+                share_mapping.instance_uuid))
         mock_notifications.assert_has_calls([
             mock.call(
                 mock.ANY,
@@ -2676,7 +2681,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_access.assert_called_with(
             self.context, share_mapping.share_id, 'ip', compute_ip)
         mock_allow.assert_called_once_with(
-            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw')
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw',
+            lock_reason="Lock by nova for instance %s" % (
+                share_mapping.instance_uuid))
 
         mock_instance_fault.assert_called_once_with(
             mock.ANY,
@@ -2726,7 +2733,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_access.assert_called_with(
             self.context, share_mapping.share_id, 'ip', compute_ip)
         mock_allow.assert_called_once_with(
-            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw')
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw',
+            lock_reason="Lock by nova for instance %s" % (
+                share_mapping.instance_uuid))
 
         mock_instance_fault.assert_called_once_with(
             mock.ANY,
@@ -2773,7 +2782,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_access.assert_called_with(
             self.context, share_mapping.share_id, 'ip', compute_ip)
         mock_allow.assert_called_once_with(
-            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw')
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw',
+            lock_reason="Lock by nova for instance %s" % (
+                share_mapping.instance_uuid))
 
         mock_instance_fault.assert_called_once_with(
             mock.ANY,
@@ -2822,7 +2833,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_access.assert_called_with(
             self.context, share_mapping.share_id, 'ip', compute_ip)
         mock_allow.assert_called_once_with(
-            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw')
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw',
+            lock_reason="Lock by nova for instance %s" % (
+                share_mapping.instance_uuid))
 
         mock_instance_fault.assert_called_once_with(
             mock.ANY,
@@ -2871,7 +2884,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_access.assert_called_with(
             self.context, share_mapping.share_id, 'ip', compute_ip)
         mock_allow.assert_called_once_with(
-            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw')
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw',
+            lock_reason="Lock by nova for instance %s" % (
+                share_mapping.instance_uuid))
 
         mock_instance_fault.assert_called_once_with(
             mock.ANY,
@@ -3591,6 +3606,115 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             ),
         ])
 
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    def test_check_share_usage_cephfs_ignores_other_instance(
+        self, mock_db_get_share, mock_get_by_filters
+    ):
+        """CephFS uses a per-instance identity, so another instance
+        actively using the same share must not keep our access rule
+        alive.
+        """
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='fake-host')
+        other_instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.other_instance, host='fake-host')
+        share_mapping1 = self.get_fake_share_mapping_cephfs()
+        share_mapping2 = self.get_fake_share_mapping_cephfs()
+        share_mapping2.instance_uuid = other_instance.uuid
+        share_mapping2.status = 'active'
+        mock_db_get_share.return_value = objects.share_mapping.\
+            ShareMappingList(objects=[share_mapping1, share_mapping2])
+        still_used = self.compute._check_share_usage(
+            self.context, share_mapping1, instance)
+        self.assertFalse(still_used)
+        mock_get_by_filters.assert_not_called()
+
+    @mock.patch(
+        'nova.compute.utils.notify_about_share_attach_detach',
+        return_value=None
+    )
+    @mock.patch('nova.objects.share_mapping.ShareMapping.delete')
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_deny_share_cephfs_revokes_despite_other_instance(
+        self, mock_get_by_filters, mock_db_get_share, mock_get_access,
+        mock_deny, mock_db_delete, mock_notifications
+    ):
+        """For CephFS, each instance has its own cephx identity, so deny
+        must revoke this instance's access even when another instance on
+        the same host still uses the share.
+        """
+        self.flags(shutdown_retry_interval=20, group='compute')
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.instance,
+                vm_state=vm_states.ACTIVE,
+                task_state=task_states.POWERING_OFF)
+        other_instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.other_instance,
+                host=instance.host)
+        mock_db_get_share.return_value = (
+            objects.share_mapping.ShareMappingList()
+        )
+        share_mapping1 = self.get_fake_share_mapping_cephfs()
+        share_mapping2 = self.get_fake_share_mapping_cephfs()
+        share_mapping2.instance_uuid = other_instance.uuid
+        share_mapping2.status = 'active'
+        mock_db_get_share.return_value.objects.append(share_mapping1)
+        mock_db_get_share.return_value.objects.append(share_mapping2)
+        self.compute.deny_share(self.context, instance, share_mapping1)
+        self.assertTrue(share_mapping1.access_to.startswith('nova-'))
+        mock_deny.assert_called_once_with(
+            self.context, share_mapping1.share_id, 'cephx',
+            share_mapping1.access_to)
+        mock_db_delete.assert_called_once()
+        mock_get_by_filters.assert_not_called()
+
+    @mock.patch(
+        'nova.compute.utils.notify_about_share_attach_detach',
+        return_value=None
+    )
+    @mock.patch('nova.objects.share_mapping.ShareMapping.delete')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    def test_deny_share_cephfs_leaves_legacy_nova_rule(
+        self, mock_db_get_share, mock_db_delete, mock_notifications
+    ):
+        """Denying an instance's per-instance cephx grant must not remove
+        the legacy shared 'nova' grant left behind for other instances
+        (bug 2161761).
+        """
+        self.flags(host='compute-1')
+        manila = self.useFixture(manila_fixtures.ManilaFixture())
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, vm_state=vm_states.ACTIVE,
+            task_state=task_states.POWERING_OFF)
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        share_mapping.instance_uuid = instance.uuid
+        share_mapping.set_access_according_to_protocol()
+        per_instance = share_mapping.access_to
+        self.assertTrue(per_instance.startswith('nova-'))
+        # Simulate a pre-upgrade shared 'nova' grant alongside this
+        # instance's per-instance grant on the share.
+        manila.share_access.add(
+            (share_mapping.share_id, 'cephx', per_instance))
+        manila.share_access.add((share_mapping.share_id, 'cephx', 'nova'))
+        mock_db_get_share.return_value = (
+            objects.share_mapping.ShareMappingList())
+
+        self.compute.deny_share(self.context, instance, share_mapping)
+
+        # Our per-instance rule is gone; the legacy 'nova' rule survives.
+        self.assertNotIn(
+            (share_mapping.share_id, 'cephx', per_instance),
+            manila.share_access)
+        self.assertIn(
+            (share_mapping.share_id, 'cephx', 'nova'), manila.share_access)
+        mock_db_delete.assert_called_once()
+
     @mock.patch('nova.objects.share_mapping.ShareMapping.save')
     @mock.patch('nova.virt.fake.FakeDriver.mount_share')
     def test_mount_nfs_share(
@@ -3623,10 +3747,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.get_fake_share_access_cephfs(),
         ]
         self.compute._mount_share(self.context, instance, share_mapping)
+        self.assertTrue(share_mapping.access_to.startswith('nova-'))
         mock_get_access.assert_called_with(
-            self.context, share_mapping.share_id, 'cephx', 'nova')
+            self.context, share_mapping.share_id, 'cephx',
+            share_mapping.access_to)
         mock_drv.assert_called_once_with(self.context, instance, share_mapping)
-        self.assertEqual(share_mapping.access_to, 'nova')
         self.assertEqual(share_mapping.access_key, 'mykey')
 
     @mock.patch('nova.share.manila.API.deny')

@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import hashlib
 import logging
 
 from oslo_utils import versionutils
@@ -172,7 +173,16 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
             self.access_to = CONF.my_shared_fs_storage_ip
         elif self.share_proto == fields.ShareMappingProto.CEPHFS:
             self.access_type = 'cephx'
-            self.access_to = 'nova'
+            # Per-instance, per-host cephx identity. instance_uuid gives
+            # per-instance isolation (a leaked key unlocks a single
+            # instance's shares, not every CephFS share in the cloud);
+            # CONF.host scopes the grant to this host so a migration
+            # revoke on the source does not break the grant on the
+            # destination.
+            digest = hashlib.sha256(
+                f'{self.instance_uuid}:{CONF.host}'.encode()
+            ).hexdigest()
+            self.access_to = 'nova-' + digest[:16]
         else:
             raise exception.ShareProtocolNotSupported(
                 share_proto=self.share_proto

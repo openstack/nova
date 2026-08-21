@@ -202,12 +202,9 @@ class ServerSharesTest(ServerSharesTestBase):
 
     def test_server_cephfs_share_metadata(self):
         """Verify that cephfs share metadata are available"""
-        # update the mock to call the cephfs fake values
+        # update the mock to return a cephfs share
         self.manila_fixture.mock_get.side_effect = (
             self.manila_fixture.fake_get_cephfs
-        )
-        self.manila_fixture.mock_get_access.side_effect = (
-            self.manila_fixture.fake_get_access_cephfs
         )
 
         self._check_traits()
@@ -225,7 +222,56 @@ class ServerSharesTest(ServerSharesTestBase):
 
         self._assert_share_in_metadata(
             self._get_metadata_url(server), share_id, share_id)
+
+        # The share must be authorized to a per-instance cephx identity,
+        # not the legacy shared "nova" identity.
+        cephx_grants = [
+            grant for grant in self.manila_fixture.share_access
+            if grant[0] == share_id and grant[1] == 'cephx'
+        ]
+        self.assertEqual(1, len(cephx_grants))
+        access_to = cephx_grants[0][2]
+        self.assertTrue(access_to.startswith('nova-'))
+        self.assertNotEqual('nova', access_to)
         return (server, share_id)
+
+    def _cephfs_grants(self, share_id):
+        return {
+            grant[2] for grant in self.manila_fixture.share_access
+            if grant[0] == share_id and grant[1] == 'cephx'
+        }
+
+    def test_cephfs_share_per_instance_identity(self):
+        """Verify per-instance cephx identity for a shared cephfs share"""
+        self.manila_fixture.mock_get.side_effect = (
+            self.manila_fixture.fake_get_cephfs
+        )
+        self._check_traits()
+        share_id = '4b021746-d0eb-4031-92aa-23c3bec182cd'
+
+        server1 = self._create_server(networks='auto')
+        self._stop_server(server1)
+        self._attach_share(server1, share_id)
+        self._start_server(server1)
+        grants = self._cephfs_grants(share_id)
+        self.assertEqual(1, len(grants))
+        id1 = grants.pop()
+        self.assertTrue(id1.startswith('nova-'))
+
+        server2 = self._create_server(networks='auto')
+        self._stop_server(server2)
+        self._attach_share(server2, share_id)
+        self._start_server(server2)
+        grants = self._cephfs_grants(share_id)
+        self.assertEqual(2, len(grants))
+        id2 = (grants - {id1}).pop()
+        self.assertNotEqual(id1, id2)
+
+        # Detaching from the first instance revokes only its own cephx
+        # identity; the second instance keeps its independent access.
+        self._stop_server(server1)
+        self._detach_share(server1, share_id)
+        self.assertEqual({id2}, self._cephfs_grants(share_id))
 
     def test_server_share_after_hard_reboot(self):
         """Verify that share is still available after a reboot"""

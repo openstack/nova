@@ -4731,12 +4731,18 @@ class ComputeManager(manager.Manager):
                 # Explicitly locking the share is not needed as
                 # create_access_rule() from the sdk will do it if the
                 # lock_visibility and lock_deletion flags are passed
+                # Tag the lock with the owning instance so operators can
+                # trace each access rule back to an instance (bug 2161761).
+                lock_reason = (
+                    "Lock by nova for instance %s"
+                    % share_mapping.instance_uuid)
                 self.manila_api.allow(
                     context,
                     share_mapping.share_id,
                     share_mapping.access_type,
                     share_mapping.access_to,
                     "rw",
+                    lock_reason=lock_reason,
                 )
 
             def _wait_policy_to_be_applied():
@@ -4901,6 +4907,15 @@ class ComputeManager(manager.Manager):
             share_mappings_used_by_share = [
                 sm for sm in share_mappings_used_by_share
                 if sm.instance_uuid in same_host_uuids
+            ]
+        elif share_mapping.share_proto == fields.ShareMappingProto.CEPHFS:
+            # CephFS uses a per-instance-per-host cephx identity, so a
+            # share's access rule is never shared between instances.
+            # Only this instance's own mappings decide whether the rule
+            # is still needed.
+            share_mappings_used_by_share = [
+                sm for sm in share_mappings_used_by_share
+                if sm.instance_uuid == instance_uuid
             ]
 
         # The share is safe to revoke (not used) when every mapping

@@ -26,6 +26,7 @@ from openstack.shared_file_system.v2 import (
 )
 from openstack.shared_file_system.v2 import share as sdk_share
 from openstack import utils
+from oslo_utils.fixture import uuidsentinel as uuids
 from requests import Response
 
 import nova.conf
@@ -33,6 +34,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.share import manila
 from nova import test
+from nova.tests.fixtures.manila import ManilaAccess
 from nova.tests.unit.api.openstack import fakes
 
 CONF = nova.conf.CONF
@@ -449,6 +451,20 @@ class ManilaTestCase(BaseManilaTestCase, test.NoDBTestCase):
         self.assertEqual('ip', access.access_type)
         self.assertEqual('0.0.0.0/0', access.access_to)
         self.assertIsNone(access.access_key)
+
+    @mock.patch('nova.share.manila._manilaclient')
+    def test_allow_access_sets_lock_reason(self, mock_client):
+        reason = "Lock by nova for instance %s" % uuids.instance
+        mock_create = mock_client.return_value.create_access_rule
+        mock_create.return_value = ManilaAccess(
+            access_type='cephx', access_to='nova-abc123')
+        self.api.allow(
+            self.context, '1234', 'cephx', 'nova-abc123', 'rw',
+            lock_reason=reason)
+        mock_create.assert_called_once_with(
+            '1234', access_type='cephx', access_to='nova-abc123',
+            access_level='rw', lock_visibility=True, lock_deletion=True,
+            lock_reason=reason)
 
     def test_allow_access_fails_already_exists(self):
         """Tests that we have an exception is the share already exists.

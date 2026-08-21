@@ -1,0 +1,12 @@
+---
+security:
+  - |
+    CephFS Manila shares attached to instances now use a per-instance,
+    per-host cephx identity instead of a single shared ``nova`` identity.
+    Previously a cephx key recovered from one instance or compute host
+    granted access to every CephFS share in the cloud. New grants derive
+    the identity from the instance UUID and compute host name. Grants
+    created before the upgrade keep the shared ``nova`` identity until the
+    instance next mounts the share (for example on start, reboot, or
+    migration). See `bug 2161761
+    <https://launchpad.net/bugs/2161761>`__.

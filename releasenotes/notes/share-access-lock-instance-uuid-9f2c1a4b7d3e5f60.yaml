@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Manila share access rules created by Nova now record the owning
+    instance's UUID in the access rule's resource lock ``lock_reason``
+    field. Operators can enumerate a share's access locks to trace each
+    per-instance grant back to an instance, which helps track migration
+    off the legacy shared ``nova`` CephFS grant (see bug 2161761).
