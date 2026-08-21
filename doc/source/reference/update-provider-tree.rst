@@ -227,6 +227,12 @@ There are various types of traits:
   mechanism is :ref:`documented in the configuration guide
   <compute-capabilities-as-traits>`.
 
+- Some use the ``OWNER_`` namespace (e.g. ``OWNER_NOVA``) to
+  indicate which service manages a resource provider. Nova reports
+  the ``OWNER_NOVA`` trait on all resource providers it creates,
+  allowing other services and tools to distinguish Nova-managed
+  providers from those managed by other services such as Cyborg.
+
 This diagram may shed further light on how these traits relate to each
 other and how they are managed.
 

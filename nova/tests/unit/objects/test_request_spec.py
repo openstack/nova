@@ -462,6 +462,7 @@ class _TestRequestSpecObject(object):
             requester_id=f"{uuids.req1}-0",
             resources={"CUSTOM_PCI_1234_FE12": 1},
             same_provider=True,
+            required_traits=set()
         )
 
         spec = objects.RequestSpec.from_components(
@@ -1186,6 +1187,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
                 requester_id=f"{uuids.req1}-0",
                 resources={"CUSTOM_PCI_DE12_1234": 1},
                 use_same_provider=True,
+                required_traits=set()
             ).obj_to_primitive(),
             spec.requested_resources[0].obj_to_primitive(),
         )
@@ -1194,6 +1196,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
                 requester_id=f"{uuids.req2}-0",
                 resources={"CUSTOM_PCI_FFF_DEAD": 1},
                 use_same_provider=True,
+                required_traits=set()
             ).obj_to_primitive(),
             spec.requested_resources[1].obj_to_primitive(),
         )
@@ -1221,6 +1224,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
                 requester_id=f"{uuids.req1}-0",
                 resources={"CUSTOM_PCI_DE12_1234": 1},
                 use_same_provider=True,
+                required_traits=set()
             ).obj_to_primitive(),
             spec.requested_resources[0].obj_to_primitive(),
         )
@@ -1229,6 +1233,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
                 requester_id=f"{uuids.req1}-1",
                 resources={"CUSTOM_PCI_DE12_1234": 1},
                 use_same_provider=True,
+                required_traits=set()
             ).obj_to_primitive(),
             spec.requested_resources[1].obj_to_primitive(),
         )
@@ -1274,6 +1279,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
                 requester_id=f"{uuids.req1}-0",
                 resources={"CUSTOM_GPU": 1},
                 use_same_provider=True,
+                required_traits=set()
             ).obj_to_primitive(),
             spec.requested_resources[0].obj_to_primitive(),
         )

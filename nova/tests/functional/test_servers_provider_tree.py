@@ -104,8 +104,8 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         }, self._get_provider_inventory(self.host_uuid))
         self.expected_compute_node_traits = (
             self.expected_fake_driver_capability_traits.union(
-                # The COMPUTE_NODE trait is always added
-                [os_traits.COMPUTE_NODE]))
+                # COMPUTE_NODE and OWNER_NOVA are always added
+                [os_traits.COMPUTE_NODE, os_traits.OWNER_NOVA]))
         self.assertCountEqual(self.expected_compute_node_traits,
                               self._get_provider_traits(self.host_uuid))
 
@@ -624,7 +624,8 @@ class TraitsTrackingTests(integrated_helpers.ProviderUsageBaseTestCase):
         rp_uuid = self._get_provider_uuid_by_host('host1')
         expected_traits = set(
             ptree_traits +
-            [os_traits.COMPUTE_NET_ATTACH_INTERFACE, os_traits.COMPUTE_NODE]
+            [os_traits.COMPUTE_NET_ATTACH_INTERFACE, os_traits.COMPUTE_NODE,
+             os_traits.OWNER_NOVA]
         )
         self.assertCountEqual(expected_traits,
                               self._get_provider_traits(rp_uuid))

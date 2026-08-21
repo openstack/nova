@@ -1280,6 +1280,7 @@ class ResourceTracker(object):
         # unrelated to nova or even OpenStack) find and distinguish these
         # providers easily.
         traits.add(os_traits.COMPUTE_NODE)
+        traits.add(os_traits.OWNER_NOVA)
 
         self._sync_compute_service_disabled_trait(context, traits)
 
@@ -2037,6 +2038,9 @@ class ResourceTracker(object):
 
                     provider_tree.update_inventory(
                         provider.uuid, merged_inventory)
+
+                provider_tree.add_traits(
+                    provider.uuid, os_traits.OWNER_NOVA)
 
                 processed_providers[current_uuid] = source_file_name
 

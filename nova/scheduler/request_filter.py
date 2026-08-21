@@ -30,6 +30,11 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 TENANT_METADATA_KEY = 'filter_tenant_id'
 
+# Minimum nova-compute service version that reports the OWNER_NOVA
+# trait on resource providers. Used to gate adding the trait as a
+# scheduling requirement until all computes are upgraded.
+MIN_COMPUTE_VERSION_OWNER_TRAIT = 73
+
 
 def trace_request_filter(fn):
     @functools.wraps(fn)
@@ -499,6 +504,107 @@ def tpm_secret_security_filter(
     return True
 
 
+def _get_pci_request_ids(request_spec):
+    """Return the set of PCI request IDs from the request spec.
+
+    :param request_spec: An objects.RequestSpec
+    :returns: A set of PCI request_id UUIDs, or empty set if
+        there are no PCI requests.
+    """
+    if ('pci_requests' not in request_spec or
+            not request_spec.pci_requests or
+            not request_spec.pci_requests.requests):
+        return set()
+    return {
+        req.request_id
+        for req in request_spec.pci_requests.requests
+        if (req.source != objects.InstancePCIRequest.NEUTRON_PORT and
+                req.request_id)
+    }
+
+
+def _should_filter_by_owner(context):
+    """Check if all computes support the OWNER_NOVA trait.
+
+    Queries the minimum nova-compute service version across
+    all cells. Returns True if all computes are at version
+    MIN_COMPUTE_VERSION_OWNER_TRAIT or above.
+
+    .. note::
+
+       Caching via ``functools.cache`` was considered but is
+       not used here because each RequestContext is a new
+       object, making the cache ineffective. Checking
+       per-request is correct for rolling upgrades anyway.
+
+    :param context: nova auth RequestContext
+    :returns: True if all computes are upgraded, False
+        otherwise.
+    """
+    min_version = objects.service.get_minimum_version_all_cells(
+        context, ['nova-compute'])
+    if min_version < MIN_COMPUTE_VERSION_OWNER_TRAIT:
+        LOG.warning(
+            'OWNER_NOVA trait not added to scheduling request: '
+            'not all nova-compute services are upgraded '
+            '(min_version=%d, need %d).',
+            min_version, MIN_COMPUTE_VERSION_OWNER_TRAIT)
+        return False
+    return True
+
+
+@trace_request_filter
+def owner_nova_filter(ctxt, request_spec):
+    """Require OWNER_NOVA trait on root and PCI providers.
+
+    This pre-filter adds the OWNER_NOVA trait as a required
+    trait on the root resource provider and on any PCI request
+    groups in the request spec. This ensures the scheduler only
+    considers Nova-managed resource providers, preventing
+    incorrect matches against non-Nova providers (e.g. those
+    created by Cyborg).
+
+    The filter gates on the minimum nova-compute service version
+    across all cells, only adding the trait when all computes
+    report version >= MIN_COMPUTE_VERSION_OWNER_TRAIT.
+    """
+    # If OWNER_NOVA is already required (e.g. live migration
+    # reschedule), skip the version check and return early.
+    if os_traits.OWNER_NOVA in request_spec.root_required:
+        return True
+
+    if not _should_filter_by_owner(ctxt):
+        return False
+
+    request_spec.root_required.add(os_traits.OWNER_NOVA)
+    LOG.debug(
+        'Added required trait %s to root provider '
+        'in request spec', os_traits.OWNER_NOVA)
+
+    # PCI request groups map to resource providers for PCI
+    # devices. Without OWNER_NOVA on these groups, the scheduler
+    # could match non-Nova resource providers (e.g. from Cyborg)
+    # that happen to satisfy the PCI resource class, and have the
+    # Nova-managed root provider as root, leading to incorrect
+    # placement.
+    # PCI request groups are only present in requested_resources when
+    # [filter_scheduler]pci_in_placement is enabled, so this loop is
+    # always a no-op when PCI-in-Placement is disabled.
+    pci_req_ids = _get_pci_request_ids(request_spec)
+    if pci_req_ids and request_spec.requested_resources:
+        for rg in request_spec.requested_resources:
+            if not rg.requester_id:
+                continue
+            prefix = rg.requester_id.rsplit('-', 1)[0]
+            if prefix in pci_req_ids:
+                rg.required_traits.add(os_traits.OWNER_NOVA)
+        LOG.debug(
+            'Added required trait %s to PCI request '
+            'groups in request spec', os_traits.OWNER_NOVA)
+
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
@@ -513,6 +619,7 @@ ALL_REQUEST_FILTERS = [
     ephemeral_encryption_filter,
     virtio_sound_filter,
     tpm_secret_security_filter,
+    owner_nova_filter,
 ]
 
 

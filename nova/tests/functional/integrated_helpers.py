@@ -24,6 +24,7 @@ import re
 import string
 import time
 
+import os_traits
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -896,15 +897,34 @@ class PlacementHelperMixin:
             '/resource_providers/%s/traits' % rp_uuid, version='1.6'
         ).body['traits']
 
+    # Infrastructure traits that the resource tracker always sets
+    # on root resource providers (compute nodes).
+    _INFRA_TRAITS = frozenset({
+        os_traits.OWNER_NOVA,
+        os_traits.COMPUTE_NODE,
+    })
+
     def _set_provider_traits(self, rp_uuid, traits):
         """Set traits for the specified provider.
 
-        This will overwrite any existing traits.
+        This will overwrite any existing traits, but preserves
+        infrastructure traits (OWNER_NOVA, COMPUTE_NODE) that the
+        resource tracker always sets on root compute node
+        providers. This matches production behavior where the RT
+        periodic re-adds these traits after any external change.
+
+        For non-root providers (e.g. child device RPs), these
+        infrastructure traits were never set, so nothing extra
+        is preserved.
 
         :param rp_uuid: UUID of the resource provider to update.
         :param traits: List of trait strings to set on the provider.
         :returns: APIResponse object with the results.
         """
+        current_traits = set(self._get_provider_traits(rp_uuid))
+        preserved = current_traits & self._INFRA_TRAITS
+        all_traits = list(set(traits) | preserved)
+
         provider = self.placement.get(
             '/resource_providers/%s' % rp_uuid
         ).body
@@ -912,7 +932,7 @@ class PlacementHelperMixin:
             '/resource_providers/%s/traits' % rp_uuid,
             {
                 'resource_provider_generation': provider['generation'],
-                'traits': traits
+                'traits': all_traits
             },
             version='1.6',
         )

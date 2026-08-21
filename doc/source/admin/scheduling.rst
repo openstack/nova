@@ -92,6 +92,28 @@ periodic task runs - which is controlled by the
 
 .. _os-services: https://docs.openstack.org/api-ref/compute/#compute-services-os-services
 
+.. _owner_nova_prefilter:
+
+Owner Nova Filter
+~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 34.0.0 (Hibiscus)
+
+Nova reports the ``OWNER_NOVA`` trait on all resource providers it
+manages in Placement, including root compute node providers and child
+providers for pGPUs, memory encryption, and PCI devices. When
+scheduling, the scheduler adds ``OWNER_NOVA`` as a required trait on
+the root resource provider and the child resource providers created by Nova
+in the request spec, ensuring the scheduler only considers Nova-managed
+resource providers and distinguishes them from providers managed by other
+services such as Cyborg.
+
+This requirement is version-gated: it only activates when all
+``nova-compute`` services in all cells report service version 73 or
+higher. The version check is performed per scheduling request in the
+scheduler. During a rolling upgrade, a warning is logged for each
+request where the trait cannot yet be added.
+
 Isolate Aggregates
 ~~~~~~~~~~~~~~~~~~
 
@@ -1293,8 +1315,9 @@ then restrict the flavor to the aggregate
 :ref:`as normal <config-sch-for-aggs>`.
 
 Here is an example of a libvirt compute node resource provider that is
-exposing some CPU features as traits, driver capabilities as traits, and a
-custom trait denoted by the ``CUSTOM_`` prefix:
+exposing some CPU features as traits, driver capabilities as traits, a
+custom trait denoted by the ``CUSTOM_`` prefix, and the ``OWNER_NOVA``
+ownership trait:
 
 .. code-block:: console
 
@@ -1315,6 +1338,7 @@ custom trait denoted by the ``CUSTOM_`` prefix:
   | HW_CPU_X86_SSE                        |
   | HW_CPU_X86_SSE2                       |
   | HW_CPU_X86_SVM                        |
+  | OWNER_NOVA                            |
   +---------------------------------------+
 
 **Rules**
@@ -1343,6 +1367,25 @@ There are some rules associated with capability-defined traits.
    library.
 
 .. _os-traits: https://opendev.org/openstack/os-traits/src/branch/master/os_traits/compute
+
+Resource provider ownership trait
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 34.0.0 (Hibiscus)
+
+In addition to capability traits, Nova reports the ``OWNER_NOVA``
+trait on every resource provider it creates in Placement. This
+includes root compute node providers and child providers for pGPUs,
+vpmem, and PCI devices. The trait allows external tools and other
+OpenStack services to identify which resource providers are managed
+by Nova, distinguishing them from providers managed by services such
+as Cyborg.
+
+The ``OWNER_NOVA`` trait follows the same ownership rules as
+capability traits: the ``nova-compute`` service adds the trait
+automatically and will re-add it if removed externally. See
+:ref:`owner_nova_prefilter` for how the trait is used during
+scheduling.
 
 :ref:`Further information on capabilities and traits
 <taxonomy_of_traits_and_capabilities>` can be found in the

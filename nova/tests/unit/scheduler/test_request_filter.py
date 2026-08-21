@@ -820,3 +820,290 @@ class TestRequestFilter(test.NoDBTestCase):
                 exception.RequestFilterFailed,
                 request_filter.tpm_secret_security_filter,
                 self.context, reqspec)
+
+    def test_owner_nova_filter_in_all_filters(self):
+        self.assertIn(request_filter.owner_nova_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_adds_trait(
+            self, mock_get_min_ver):
+        """Test OWNER_NOVA trait is added when version is met."""
+        mock_get_min_ver.return_value = (
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT)
+        reqspec = objects.RequestSpec()
+
+        self.assertTrue(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertIn(
+            ot.OWNER_NOVA, reqspec.root_required)
+        mock_get_min_ver.assert_called_once_with(
+            self.context, ['nova-compute'])
+
+    @mock.patch.object(request_filter, 'LOG')
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_skips_when_not_upgraded(
+            self, mock_get_min_ver, mock_log):
+        """Test OWNER_NOVA trait is not added when version < 73."""
+        mock_get_min_ver.return_value = (
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT -
+            1)
+        reqspec = objects.RequestSpec()
+
+        self.assertFalse(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertNotIn(
+            ot.OWNER_NOVA, reqspec.root_required)
+        mock_log.warning.assert_called_once_with(
+            'OWNER_NOVA trait not added to scheduling request: '
+            'not all nova-compute services are upgraded '
+            '(min_version=%d, need %d).',
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT - 1,
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT)
+
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_preserves_existing_traits(
+            self, mock_get_min_ver):
+        """Test existing root_required traits are preserved."""
+        mock_get_min_ver.return_value = (
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT)
+        reqspec = objects.RequestSpec()
+        reqspec.root_required.add('CUSTOM_TRAIT_FOO')
+
+        self.assertTrue(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertIn(
+            ot.OWNER_NOVA, reqspec.root_required)
+        self.assertIn(
+            'CUSTOM_TRAIT_FOO', reqspec.root_required)
+
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_above_min_version(
+            self, mock_get_min_ver):
+        """Test OWNER_NOVA trait is added with version above min."""
+        mock_get_min_ver.return_value = (
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT +
+            5)
+        reqspec = objects.RequestSpec()
+
+        self.assertTrue(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertIn(
+            ot.OWNER_NOVA, reqspec.root_required)
+
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_skips_version_check_if_present(
+            self, mock_get_min_ver):
+        """Test early return when OWNER_NOVA already in root_required.
+
+        This covers the live migration reschedule case where
+        the trait has already been added on a prior scheduling
+        pass.
+        """
+        reqspec = objects.RequestSpec()
+        reqspec.root_required.add(ot.OWNER_NOVA)
+
+        self.assertTrue(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertIn(
+            ot.OWNER_NOVA, reqspec.root_required)
+        # Version check should not have been called
+        mock_get_min_ver.assert_not_called()
+
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_adds_trait_to_pci_groups(
+            self, mock_get_min_ver):
+        """Test OWNER_NOVA is added to multiple PCI request groups."""
+        mock_get_min_ver.return_value = (
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT)
+        pci_req = objects.InstancePCIRequest(
+            request_id=uuids.pci_req1,
+            alias_name='a1',
+        )
+        pci_req2 = objects.InstancePCIRequest(
+            request_id=uuids.pci_req2,
+            alias_name='a2',
+        )
+        pci_rg = objects.RequestGroup(
+            requester_id="%s-0" % uuids.pci_req1,
+            use_same_provider=True,
+            resources={"CUSTOM_PCI_1234_ABCD": 1},
+            required_traits={"CUSTOM_FOO"},
+        )
+        pci_rg2 = objects.RequestGroup(
+            requester_id="%s-0" % uuids.pci_req2,
+            use_same_provider=True,
+            resources={"CUSTOM_PCI_5678_EFGH": 1},
+        )
+        reqspec = objects.RequestSpec(
+            pci_requests=objects.InstancePCIRequests(
+                requests=[pci_req, pci_req2]),
+            requested_resources=[pci_rg, pci_rg2],
+        )
+
+        self.assertTrue(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertIn(
+            ot.OWNER_NOVA, reqspec.root_required)
+        self.assertIn(
+            ot.OWNER_NOVA, pci_rg.required_traits)
+        self.assertIn(
+            ot.OWNER_NOVA, pci_rg2.required_traits)
+        self.assertIn(
+            'CUSTOM_FOO', pci_rg.required_traits)
+
+    def test_get_pci_request_ids_excludes_neutron_port_requests(self):
+        """Test Neutron-originated PCI requests are filtered out."""
+        flavor_req = objects.InstancePCIRequest(
+            request_id=uuids.pci_req1,
+            alias_name='a1',
+        )
+        neutron_req = objects.InstancePCIRequest(
+            request_id=uuids.pci_neutron,
+            alias_name=None,
+        )
+        reqspec = objects.RequestSpec(
+            pci_requests=objects.InstancePCIRequests(requests=[
+                flavor_req, neutron_req]),
+        )
+
+        self.assertEqual(
+            {uuids.pci_req1},
+            request_filter._get_pci_request_ids(reqspec))
+
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_skips_non_pci_groups(
+            self, mock_get_min_ver):
+        """Test OWNER_NOVA is not added to non-PCI groups."""
+        mock_get_min_ver.return_value = (
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT)
+        pci_req = objects.InstancePCIRequest(
+            request_id=uuids.pci_req1,
+            alias_name='a1',
+        )
+        pci_rg = objects.RequestGroup(
+            requester_id="%s-0" % uuids.pci_req1,
+            use_same_provider=True,
+            resources={"CUSTOM_PCI_1234_ABCD": 1},
+        )
+        # Neutron port bandwidth request group
+        neutron_rg = objects.RequestGroup(
+            requester_id=uuids.port1,
+            use_same_provider=True,
+            resources={
+                "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+        )
+        # Cyborg device profile request group
+        cyborg_rg = objects.RequestGroup(
+            requester_id=uuids.dp_group1,
+            resources={"FPGA": 1},
+        )
+        reqspec = objects.RequestSpec(
+            pci_requests=objects.InstancePCIRequests(
+                requests=[pci_req]),
+            requested_resources=[
+                pci_rg, neutron_rg, cyborg_rg],
+        )
+
+        self.assertTrue(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertIn(
+            ot.OWNER_NOVA, pci_rg.required_traits)
+        self.assertNotIn(
+            ot.OWNER_NOVA, neutron_rg.required_traits)
+        self.assertNotIn(
+            ot.OWNER_NOVA, cyborg_rg.required_traits)
+
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_skips_groups_without_requester_id(
+            self, mock_get_min_ver):
+        """Test OWNER_NOVA is not added to groups without requester_id."""
+        mock_get_min_ver.return_value = (
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT)
+        pci_req = objects.InstancePCIRequest(
+            request_id=uuids.pci_req1,
+            alias_name='a1',
+        )
+        pci_rg = objects.RequestGroup(
+            requester_id="%s-0" % uuids.pci_req1,
+            use_same_provider=True,
+            resources={"CUSTOM_PCI_1234_ABCD": 1},
+        )
+        no_id_rg = objects.RequestGroup(
+            requester_id=None,
+            resources={"VCPU": 1},
+        )
+        reqspec = objects.RequestSpec(
+            pci_requests=objects.InstancePCIRequests(requests=[pci_req]),
+            requested_resources=[pci_rg, no_id_rg],
+        )
+
+        self.assertTrue(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertIn(
+            ot.OWNER_NOVA, pci_rg.required_traits)
+        self.assertNotIn(
+            ot.OWNER_NOVA, no_id_rg.required_traits)
+
+    @mock.patch.object(request_filter, 'LOG')
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        autospec=True)
+    def test_owner_nova_filter_skips_pci_when_not_upgraded(
+            self, mock_get_min_ver, mock_log):
+        """Test PCI groups untouched when version < 73."""
+        mock_get_min_ver.return_value = (
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT -
+            1)
+        pci_req = objects.InstancePCIRequest(
+            request_id=uuids.pci_req1,
+            alias_name='a1',
+        )
+        pci_rg = objects.RequestGroup(
+            requester_id="%s-0" % uuids.pci_req1,
+            use_same_provider=True,
+            resources={"CUSTOM_PCI_1234_ABCD": 1},
+        )
+        reqspec = objects.RequestSpec(
+            pci_requests=objects.InstancePCIRequests(
+                requests=[pci_req]),
+            requested_resources=[pci_rg],
+        )
+
+        self.assertFalse(
+            request_filter.owner_nova_filter(self.context, reqspec))
+
+        self.assertNotIn(
+            ot.OWNER_NOVA, reqspec.root_required)
+        self.assertNotIn(
+            ot.OWNER_NOVA, pci_rg.required_traits)
+        mock_log.warning.assert_called_once_with(
+            'OWNER_NOVA trait not added to scheduling request: '
+            'not all nova-compute services are upgraded '
+            '(min_version=%d, need %d).',
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT - 1,
+            request_filter.MIN_COMPUTE_VERSION_OWNER_TRAIT)

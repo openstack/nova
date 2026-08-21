@@ -24083,6 +24083,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             pgpu_inventory[orc.VGPU][
                 'max_unit'] = inventory_dict['max_unit']
             self.assertEqual(pgpu_inventory, pgpu_provider_data.inventory)
+            self.assertIn(ot.OWNER_NOVA, pgpu_provider_data.traits)
 
     def test_update_provider_tree_for_vpmem(self):
         rp_uuid = self.cn_rp['uuid']
@@ -24166,7 +24167,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'allocation_ratio': 1.0
             }
         }, sev_provider_data.inventory)
-        self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
+        self.assertIn(ot.HW_CPU_X86_AMD_SEV, sev_provider_data.traits)
+        self.assertIn(ot.OWNER_NOVA, sev_provider_data.traits)
 
     def test_update_provider_tree_with_memory_encryption_sev_es(self):
         self.driver._host._supports_amd_sev = True
@@ -24198,7 +24200,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'allocation_ratio': 1.0
             }
         }, sev_provider_data.inventory)
-        self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV, ot.OWNER_NOVA},
+                         sev_provider_data.traits)
 
         sev_es_rp_uuid = compute_node_tree_uuids[2]
         sev_es_provider_data = self.pt.data(sev_es_rp_uuid)
@@ -24214,7 +24217,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'allocation_ratio': 1.0
             }
         }, sev_es_provider_data.inventory)
-        self.assertEqual({ot.HW_CPU_X86_AMD_SEV_ES},
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV_ES, ot.OWNER_NOVA},
                           sev_es_provider_data.traits)
 
     def test_update_provider_tree_with_memory_encryption_sev_snp(self):
@@ -24247,7 +24250,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'allocation_ratio': 1.0
             }
         }, sev_provider_data.inventory)
-        self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV, ot.OWNER_NOVA},
+                         sev_provider_data.traits)
 
         sev_snp_rp_uuid = compute_node_tree_uuids[2]
         sev_snp_provider_data = self.pt.data(sev_snp_rp_uuid)
@@ -24263,7 +24267,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'allocation_ratio': 1.0
             }
         }, sev_snp_provider_data.inventory)
-        self.assertEqual({ot.HW_CPU_X86_AMD_SEV_SNP},
+        self.assertEqual({ot.HW_CPU_X86_AMD_SEV_SNP, ot.OWNER_NOVA},
                           sev_snp_provider_data.traits)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
@@ -24489,6 +24493,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 rp_per_pci_device[pci_devices[0]] = rp_uuid
             elif pci_devices[1] in pgpu_provider_data.name:
                 rp_per_pci_device[pci_devices[1]] = rp_uuid
+            self.assertIn(ot.OWNER_NOVA, pgpu_provider_data.traits)
         # Make sure we have two child resource providers
         self.assertEqual(2, len(rp_per_pci_device))
 
@@ -24673,7 +24678,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             }
         }, sev_provider_data.inventory)
         # Make sure the child provider has the SEV trait
-        self.assertEqual({ot.HW_CPU_X86_AMD_SEV}, sev_provider_data.traits)
+        self.assertIn(ot.HW_CPU_X86_AMD_SEV, sev_provider_data.traits)
+        self.assertIn(ot.OWNER_NOVA, sev_provider_data.traits)
 
         # The compute node root provider should not have MEM_ENCRYPTION_CONTEXT
         # inventory.
