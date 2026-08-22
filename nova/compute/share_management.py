@@ -585,6 +585,178 @@ class ShareManager:
                 "ignoring", share_mapping.share_id,
             )
 
+    def reconcile_stale_share_access(self, context):
+        """Revoke Manila access rules left behind by failed cleanup."""
+        if CONF.manila.auth_type is None:
+            return
+
+        # A single conductor-side query returns every share this host might
+        # hold a stale rule for (instances here now, plus instances whose
+        # migration touched this host). _reconcile_share revalidates each
+        # share under a lock, so a rule still needed by a live instance here
+        # is preserved.
+        share_ids = {
+            sm.share_id
+            for sm in objects.ShareMappingList.get_by_host_for_reconcile(
+                context, CONF.host)
+        }
+
+        if not share_ids:
+            return
+
+        try:
+            for share_id in share_ids:
+                try:
+                    self._reconcile_share(context, share_id)
+                except (
+                    exception.ManilaConnectionFailed,
+                    keystone_exception.MissingAuthPlugin,
+                ):
+                    # Manila is unreachable, or the [manila] section is not
+                    # configured on this compute: re-raise so the whole pass
+                    # bails out instead of the broad handler below swallowing
+                    # it and retrying every remaining share against an
+                    # endpoint we cannot reach.
+                    raise
+                except Exception:
+                    LOG.exception(
+                        "Failed to reconcile stale access rules for share %s",
+                        share_id)
+        except exception.ManilaConnectionFailed:
+            LOG.warning(
+                "Manila is unreachable, skipping stale share access "
+                "reconcile; it will be retried on the next interval")
+        except keystone_exception.MissingAuthPlugin:
+            LOG.warning(
+                "The [manila] section is not configured with credentials on "
+                "this compute; skipping stale share access reconcile")
+
+    def _reconcile_share(self, context, share_id):
+        @utils.synchronized(share_id)
+        def _locked():
+            # Re-read the share's mappings and their instances from the DB
+            # under the lock, so the desired access rules are computed from
+            # committed ground truth at the moment we diff against manila,
+            # not from a snapshot taken at the top of the pass. This closes
+            # the window where a migration completing, or another host
+            # attaching the share, mid-pass would make us revoke a live grant.
+            mappings = objects.ShareMappingList.get_by_share_id(
+                context, share_id)
+            if not mappings:
+                return
+
+            instance_uuids = list({m.instance_uuid for m in mappings})
+            # Not filtered by CONF.host: an instance that migrated away still
+            # has a stale rule to drain here, and we need its *current* host
+            # to know which per-host cephx identity is legitimate. Bounded to
+            # this one share's instances (usually one), so it stays small.
+            found = objects.InstanceList.get_by_filters(
+                context, {'uuid': instance_uuids}, expected_attrs=[])
+            instances_by_uuid = {inst.uuid: inst for inst in found}
+
+            # Conservative: if any of the share's instances is unknown
+            # (deleted or a read race) or in transit (migrating/resizing,
+            # when an off-host grant legitimately still exists), skip the
+            # whole share and let a later pass retry once it is quiescent.
+            instances = []
+            for mapping in mappings:
+                instance = instances_by_uuid.get(mapping.instance_uuid)
+                if instance is None or self._instance_in_transit(instance):
+                    return
+                instances.append(instance)
+
+            rules = self.manila_api.get_access_rules(context, share_id)
+            if mappings[0].share_proto == fields.ShareMappingProto.CEPHFS:
+                self._reconcile_cephfs_rules(
+                    context, share_id, mappings, instances, rules)
+            else:
+                self._reconcile_nfs_rules(
+                    context, share_id, mappings, instances, rules)
+
+        _locked()
+
+    def _reconcile_cephfs_rules(
+        self, context, share_id, mappings, instances, rules
+    ):
+        legit = {
+            objects.ShareMapping._cephx_identity(
+                mapping.instance_uuid, instance.host)
+            for mapping, instance in zip(mappings, instances)
+        }
+        for rule in rules:
+            # Only nova-managed per-instance identities are drained. Legacy
+            # shared 'nova' grants and any non-nova cephx identity are left
+            # untouched (operators drain those via the OSSN).
+            if rule.access_type != 'cephx':
+                continue
+            if not rule.access_to.startswith('nova-'):
+                continue
+            if rule.access_to in legit:
+                continue
+            # Skip rules Manila is already processing to avoid noisy
+            # repeated deny calls that generate no useful state change.
+            if rule.state in ('queued_to_deny', 'denying'):
+                continue
+            self._revoke(context, share_id, 'cephx', rule.access_to)
+
+    def _reconcile_nfs_rules(
+        self, context, share_id, mappings, instances, rules
+    ):
+        # A host can only recognize its own NFS ip rule, and drains it only
+        # once it no longer serves any instance on the share.
+        if CONF.host in {instance.host for instance in instances}:
+            return
+        stale = [
+            rule for rule in rules
+            if rule.access_type == 'ip' and
+            rule.access_to == CONF.my_shared_fs_storage_ip
+        ]
+        if not stale:
+            return
+        # Never revoke while a hard NFS mount is still present on this host:
+        # dropping access under a hard mount wedges I/O in uninterruptible
+        # sleep and the umount itself then hangs. Leave it for the mount
+        # cleanup follow-up, which unmounts first.
+        if self.driver.is_share_mounted(mappings[0]):
+            LOG.warning(
+                "Stale NFS access rule for share %s is still mounted on this "
+                "host; skipping revoke to avoid wedging a hard mount",
+                share_id)
+            return
+        for rule in stale:
+            # Skip rules Manila is already processing to avoid noisy
+            # repeated deny calls that generate no useful state change.
+            if rule.state not in ('queued_to_deny', 'denying'):
+                self._revoke(context, share_id, 'ip', rule.access_to)
+
+    def _revoke(self, context, share_id, access_type, access_to):
+        try:
+            self.manila_api.deny(context, share_id, access_type, access_to)
+            LOG.info(
+                "Revoked stale Manila access rule '%s' (%s) on share %s",
+                access_to, access_type, share_id)
+        except (
+            exception.ShareNotFound,
+            exception.ShareAccessNotFound,
+        ):
+            # Already gone (e.g. another host raced us). Nothing to do.
+            pass
+        except Exception:
+            LOG.exception(
+                "Failed to revoke stale access rule '%s' on share %s",
+                access_to, share_id)
+
+    @staticmethod
+    def _instance_in_transit(instance):
+        # A migrating or resizing instance legitimately holds an access
+        # rule on a host it is not currently "on" (the source grant
+        # persists until confirm/revert). RESIZED covers the finished but
+        # not-yet-confirmed window where task_state is already None.
+        return (
+            instance.task_state is not None or
+            instance.vm_state == vm_states.RESIZED
+        )
+
     @staticmethod
     def set_mapping_status(share_mapping, status):
         share_mapping.status = status

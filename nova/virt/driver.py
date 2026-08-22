@@ -1151,6 +1151,15 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def is_share_mounted(self, share_mapping):
+        """Return whether a manila share is mounted on this compute node.
+
+        :param share_mapping: nova.objects.share_mapping.ShareMapping object
+            that define the share
+        :returns: True if the share's mountpoint is present on this host
+        """
+        raise NotImplementedError()
+
     def power_update_event(self, instance, target_power_state):
         """Update power, vm and task states of the specified instance.
 

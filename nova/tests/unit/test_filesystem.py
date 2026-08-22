@@ -103,3 +103,19 @@ class TestFSCommon(test.NoDBTestCase):
                 (filesystem.RETRY_LIMIT + 1))
             self.assertRaises(
                 exception.DeviceBusy, filesystem.write_sys, 'foo', 'bar')
+
+    @mock.patch('psutil.disk_partitions')
+    def test_is_mounted_true(self, mock_partitions):
+        mock_partitions.return_value = [
+            mock.Mock(mountpoint='/mnt/other'),
+            mock.Mock(mountpoint='/mnt/foo'),
+        ]
+        self.assertTrue(filesystem.is_mounted('/mnt/foo'))
+        mock_partitions.assert_called_once_with(all=True)
+
+    @mock.patch('psutil.disk_partitions')
+    def test_is_mounted_false(self, mock_partitions):
+        mock_partitions.return_value = [
+            mock.Mock(mountpoint='/mnt/other'),
+        ]
+        self.assertFalse(filesystem.is_mounted('/mnt/foo'))

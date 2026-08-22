@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    Nova compute now reconciles stale Manila share access rules. When the
+    source host's share access is not revoked during a cold migration or
+    resize confirm/revert (for example because manila-api is unreachable), the
+    orphaned rule remains granted with nothing to retry the cleanup. Each
+    compute now revokes such orphaned rules at start-up and periodically. The
+    interval is controlled by the new
+    ``[DEFAULT] stale_share_access_reconcile_interval`` option (default 1800
+    seconds); setting it to ``0`` or a negative value disables the periodic
+    task while leaving the start-up reconcile in place.
+upgrade:
+  - |
+    The new stale share access reconcile does not revoke legacy shared
+    ``nova`` CephFS grants, non-nova cephx identities, or access rules for
+    shares that have no remaining share mappings. Draining those pre-existing
+    grants remains an operator task.

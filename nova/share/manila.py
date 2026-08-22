@@ -251,6 +251,13 @@ class API(object):
                 return Access.from_manila_access(access)
         return None
 
+    @translate_share_exception
+    def get_access_rules(self, context, share_id):
+        LOG.debug("Get all access rules for share id:'%s'", share_id)
+        access_list = _manilaclient(
+            context, admin=True).access_rules(share_id)
+        return [Access.from_manila_access(access) for access in access_list]
+
     @translate_allow_exception
     def allow(
         self,

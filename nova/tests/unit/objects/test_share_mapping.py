@@ -294,6 +294,21 @@ class _TestShareMapping(object):
         self.assertEqual('cephx', share_mapping.access_type)
         self.assertEqual(expected, share_mapping.access_to)
 
+    def test_cephx_identity(self):
+        identity = objects.ShareMapping._cephx_identity(
+            uuids.instance, 'compute-1')
+        expected = 'nova-' + hashlib.sha256(
+            f'{uuids.instance}:compute-1'.encode()).hexdigest()[:16]
+        self.assertEqual(expected, identity)
+        self.assertTrue(identity.startswith('nova-'))
+        # Deterministic and host-scoped.
+        self.assertEqual(
+            identity,
+            objects.ShareMapping._cephx_identity(uuids.instance, 'compute-1'))
+        self.assertNotEqual(
+            identity,
+            objects.ShareMapping._cephx_identity(uuids.instance, 'compute-2'))
+
     def test_set_access_according_to_protocol_cephfs_per_instance_per_host(
         self
     ):
@@ -344,6 +359,54 @@ class _TestShareMappingList(object):
             self.assertIsInstance(share_mappings, sm.ShareMappingList)
             self.assertEqual(1, len(share_mappings))
             self.assertIsInstance(share_mappings[0], sm.ShareMapping)
+
+    @mock.patch.object(db, 'share_mapping_get_by_instance_uuids')
+    @mock.patch.object(db, 'migration_get_all_by_filters')
+    @mock.patch.object(db, 'instance_get_all_uuids_by_hosts')
+    def test_get_by_host_for_reconcile(
+        self, mock_hosts, mock_migs, mock_share_mappings
+    ):
+        mock_hosts.return_value = {'fake-host': [uuids.instance]}
+        mock_migs.return_value = [mock.Mock(instance_uuid=uuids.instance2)]
+        mock_share_mappings.return_value = [fake_share_mapping]
+
+        share_mappings = sm.ShareMappingList.get_by_host_for_reconcile(
+            self.context, 'fake-host'
+        )
+
+        mock_hosts.assert_called_once_with(self.context, ['fake-host'])
+        mock_migs.assert_called_once_with(
+            self.context,
+            {'host': 'fake-host',
+             'status': ['confirmed', 'reverted', 'error']})
+        # The on-host instance and the migration's instance are gathered
+        # into a single bulk share-mapping query.
+        called_context, called_uuids = mock_share_mappings.call_args[0]
+        self.assertEqual(self.context, called_context)
+        self.assertEqual(
+            {uuids.instance, uuids.instance2}, set(called_uuids))
+        self.assertIsInstance(share_mappings, sm.ShareMappingList)
+        self.assertEqual(1, len(share_mappings))
+        self.assertIsInstance(share_mappings[0], sm.ShareMapping)
+
+    @mock.patch.object(db, 'share_mapping_get_by_instance_uuids')
+    @mock.patch.object(db, 'migration_get_all_by_filters')
+    @mock.patch.object(db, 'instance_get_all_uuids_by_hosts')
+    def test_get_by_host_for_reconcile_no_candidates(
+        self, mock_hosts, mock_migs, mock_share_mappings
+    ):
+        # No instances on the host and no migrations touching it: skip the
+        # share-mapping query entirely and return an empty list.
+        mock_hosts.return_value = {'fake-host': []}
+        mock_migs.return_value = []
+
+        share_mappings = sm.ShareMappingList.get_by_host_for_reconcile(
+            self.context, 'fake-host'
+        )
+
+        mock_share_mappings.assert_not_called()
+        self.assertIsInstance(share_mappings, sm.ShareMappingList)
+        self.assertEqual(0, len(share_mappings))
 
     def test_get_by_share_id(self):
         with mock.patch.object(db, 'share_mapping_get_by_share_id') as get:

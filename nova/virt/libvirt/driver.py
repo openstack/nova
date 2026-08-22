@@ -85,6 +85,7 @@ from nova.console import type as ctype
 from nova import context as nova_context
 from nova import crypto
 from nova import exception
+from nova import filesystem
 from nova.i18n import _
 from nova.image import glance
 from nova.network import model as network_model
@@ -4556,6 +4557,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 server_id=share_mapping.instance_uuid,
                 reason=exc
             )
+
+    def is_share_mounted(self, share_mapping):
+        # The mountpoint is a deterministic hash of the export location, so
+        # matching on it sidesteps how the kernel canonicalizes the NFS
+        # server:/path device string (short name vs FQDN vs IP).
+        drv = self._get_share_driver_manager(
+            CONF.host, share_mapping.share_proto)
+        mount_path = drv._get_mount_path(
+            self._get_share_connection_info(share_mapping))
+        return filesystem.is_mounted(mount_path)
 
     def trigger_crash_dump(self, instance):
         """Trigger crash dump by injecting an NMI to the specified instance."""

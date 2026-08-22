@@ -72,6 +72,9 @@ class ManilaFixture(fixtures.Fixture):
         self.mock_deny = self.useFixture(fixtures.MockPatch(
             'nova.share.manila.API.deny',
             side_effect=self.fake_deny)).mock
+        self.mock_get_access_rules = self.useFixture(fixtures.MockPatch(
+            'nova.share.manila.API.get_access_rules',
+            side_effect=self.fake_get_access_rules)).mock
 
     def fake_get(self, context, share_id):
         manila_share = ManilaShare(share_id)
@@ -130,3 +133,12 @@ class ManilaFixture(fixtures.Fixture):
     def fake_deny(self, context, share_id, access_type, access_to):
         self.share_access.discard((share_id, access_type, access_to))
         return 202
+
+    def fake_get_access_rules(self, context, share_id):
+        rules = []
+        for s_id, access_type, access_to in self.share_access:
+            if s_id != share_id:
+                continue
+            access = ManilaAccess(access_type=access_type, access_to=access_to)
+            rules.append(nova.share.manila.Access.from_manila_access(access))
+        return rules

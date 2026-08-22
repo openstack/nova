@@ -1668,6 +1668,16 @@ class ComputeManager(manager.Manager):
                 # _sync_scheduler_instance_info periodic task will.
                 self._update_scheduler_instance_info(context, instances)
 
+        # Revoke any Manila share access rules left behind by a cold
+        # migration or resize whose confirm/revert failed to clean them up.
+        # Non-fatal: manila may be down at startup and the periodic task
+        # retries.
+        try:
+            self.share_manager.reconcile_stale_share_access(context)
+        except Exception:
+            LOG.exception(
+                "Failed to reconcile stale share access rules at startup")
+
     def _error_out_instances_whose_build_was_interrupted(
             self, context, already_handled_instances, node_uuids):
         """If there are instances in BUILDING state that are not
@@ -11800,6 +11810,17 @@ class ComputeManager(manager.Manager):
                                 migration.id,
                                 instance=instance)
                 break
+
+    @periodic_task.periodic_task(
+        spacing=CONF.stale_share_access_reconcile_interval
+            if CONF.stale_share_access_reconcile_interval != 0
+            else -1)
+    def _reconcile_stale_share_access(self, context):
+        """Periodically revoke Manila share access rules left behind by a
+        cold migration or resize whose confirm/revert failed to clean them
+        up.
+        """
+        self.share_manager.reconcile_stale_share_access(context)
 
     @messaging.expected_exceptions(exception.InstanceQuiesceNotSupported,
                                    exception.QemuGuestAgentNotEnabled,

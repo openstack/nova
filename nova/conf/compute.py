@@ -1308,6 +1308,26 @@ Possible values:
 * 0: Will run at the default periodic interval.
 * Any value < 0: Disables the option.
 * Any positive integer in seconds.
+"""),
+    cfg.IntOpt('stale_share_access_reconcile_interval',
+        default=1800,
+        help="""
+Interval for reconciling stale Manila share access rules.
+
+Each compute periodically scans the cell's share mappings and revokes
+Manila access rules left behind when a cold migration or resize
+confirm/revert failed to clean them up (for example because manila-api
+was unreachable). A start-up reconcile always runs during host init;
+this option only controls the periodic task.
+
+The scan is cell-wide, so in large deployments you may want to raise
+this interval to reduce load on the Manila API.
+
+Possible values:
+
+* Any positive integer in seconds.
+* 0 or any negative value disables the periodic task (the start-up
+  reconcile still runs).
 """)
 ]
 

@@ -4909,6 +4909,14 @@ def share_mapping_get_by_instance_uuid(context, instance_uuid):
 
 @require_context
 @pick_context_manager_reader
+def share_mapping_get_by_instance_uuids(context, instance_uuids):
+    """Get share_mapping records for a list of instances."""
+    return context.session.query(models.ShareMapping).\
+    filter(models.ShareMapping.instance_uuid.in_(instance_uuids)).all()
+
+
+@require_context
+@pick_context_manager_reader
 def share_mapping_get_by_instance_uuid_and_share_id(
         context, instance_uuid, share_id):
     """Get share_mapping record for a specific instance and share_id."""

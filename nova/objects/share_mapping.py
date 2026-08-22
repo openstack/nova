@@ -167,22 +167,26 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
         )
         self.access_key = access.access_key
 
+    @staticmethod
+    def _cephx_identity(instance_uuid, host):
+        # Per-instance, per-host cephx identity. instance_uuid gives
+        # per-instance isolation (a leaked key unlocks a single
+        # instance's shares, not every CephFS share in the cloud); host
+        # scopes the grant to a single host so a migration revoke on the
+        # source does not break the grant on the destination.
+        digest = hashlib.sha256(
+            f'{instance_uuid}:{host}'.encode()
+        ).hexdigest()
+        return 'nova-' + digest[:16]
+
     def set_access_according_to_protocol(self):
         if self.share_proto == fields.ShareMappingProto.NFS:
             self.access_type = 'ip'
             self.access_to = CONF.my_shared_fs_storage_ip
         elif self.share_proto == fields.ShareMappingProto.CEPHFS:
             self.access_type = 'cephx'
-            # Per-instance, per-host cephx identity. instance_uuid gives
-            # per-instance isolation (a leaked key unlocks a single
-            # instance's shares, not every CephFS share in the cloud);
-            # CONF.host scopes the grant to this host so a migration
-            # revoke on the source does not break the grant on the
-            # destination.
-            digest = hashlib.sha256(
-                f'{self.instance_uuid}:{CONF.host}'.encode()
-            ).hexdigest()
-            self.access_to = 'nova-' + digest[:16]
+            self.access_to = self._cephx_identity(
+                self.instance_uuid, CONF.host)
         else:
             raise exception.ShareProtocolNotSupported(
                 share_proto=self.share_proto
@@ -192,7 +196,8 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
 @base.NovaObjectRegistry.register
 class ShareMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add get_by_host_for_reconcile()
+    VERSION = '1.1'
     fields = {
         'objects': fields.ListOfObjectsField('ShareMapping'),
     }
@@ -202,6 +207,32 @@ class ShareMappingList(base.ObjectListBase, base.NovaObject):
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_share_mappings = db.share_mapping_get_by_instance_uuid(
             context, instance_uuid)
+        return base.obj_make_list(context, cls(context), db_share_mappings)
+
+    @classmethod
+    @base.remotable
+    def get_by_host_for_reconcile(cls, context, host):
+        """Share mappings whose access rules may be stale on ``host``.
+
+        Gathered entirely conductor-side so reconcile costs a single
+        compute->conductor round-trip instead of one query per instance and
+        per migration. Includes every instance currently on ``host``, plus
+        every instance whose migration touched ``host`` as source or
+        destination (a failed cleanup there can leave a grant behind).
+        Over-including is harmless: the caller revalidates each share under a
+        lock before revoking anything.
+        """
+        instance_uuids = set(
+            db.instance_get_all_uuids_by_hosts(context, [host])[host])
+        for migration in db.migration_get_all_by_filters(
+                context,
+                {'host': host,
+                 'status': ['confirmed', 'reverted', 'error']}):
+            instance_uuids.add(migration.instance_uuid)
+        if not instance_uuids:
+            return base.obj_make_list(context, cls(context), [])
+        db_share_mappings = db.share_mapping_get_by_instance_uuids(
+            context, list(instance_uuids))
         return base.obj_make_list(context, cls(context), db_share_mappings)
 
     @classmethod

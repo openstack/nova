@@ -4378,6 +4378,29 @@ class ShareMappingDBApiTestCase(test.TestCase):
             expected_share_mappings[share_mappings[0].share_id]
         )
 
+    def test_share_mapping_get_by_instance_uuids(self):
+        ctxt = context.get_admin_context()
+        expected_share_mappings = self.create_test_data(ctxt)
+
+        share_mappings = db.share_mapping_get_by_instance_uuids(
+            ctxt, ['fake-instance-uuid1', 'fake-instance-uuid2'])
+        self.assertEqual(len(share_mappings), 2)
+        for share_mapping in share_mappings:
+            self._compare(
+                share_mapping,
+                expected_share_mappings[share_mapping.share_id])
+
+    def test_share_mapping_get_by_instance_uuids_subset(self):
+        ctxt = context.get_admin_context()
+        expected_share_mappings = self.create_test_data(ctxt)
+
+        share_mappings = db.share_mapping_get_by_instance_uuids(
+            ctxt, ['fake-instance-uuid1'])
+        self.assertEqual(len(share_mappings), 1)
+        self._compare(
+            share_mappings[0],
+            expected_share_mappings[share_mappings[0].share_id])
+
     def test_share_mapping_get_by_instance_uuid_and_share_id(self):
         ctxt = context.get_admin_context()
         expected_share_mappings = self.create_test_data(ctxt)

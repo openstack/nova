@@ -19006,6 +19006,33 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             processutils.ProcessExecutionError,
         )
 
+    @mock.patch('nova.filesystem.is_mounted')
+    def test_is_share_mounted(self, mock_is_mounted):
+        mock_is_mounted.return_value = True
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.share_id = uuids.share
+        share_mapping.export_location = '192.168.122.152:/manila/share'
+        share_mapping.share_proto = fields.ShareMappingProto.NFS
+        # The check keys off the deterministic mountpoint, not the NFS
+        # server:/path device string the kernel may canonicalize.
+        expected_path = drvr._get_share_driver_manager(
+            CONF.host, share_mapping.share_proto)._get_mount_path(
+                drvr._get_share_connection_info(share_mapping))
+
+        self.assertTrue(drvr.is_share_mounted(share_mapping))
+        mock_is_mounted.assert_called_once_with(expected_path)
+
+    @mock.patch('nova.filesystem.is_mounted', return_value=False)
+    def test_is_share_mounted_not_mounted(self, mock_is_mounted):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.share_id = uuids.share
+        share_mapping.export_location = '192.168.122.152:/manila/share'
+        share_mapping.share_proto = fields.ShareMappingProto.NFS
+
+        self.assertFalse(drvr.is_share_mounted(share_mapping))
+
     @mock.patch('nova.objects.instance.Instance.save',
                 return_value=None)
     @mock.patch('nova.virt.libvirt.LibvirtDriver._build_device_metadata',

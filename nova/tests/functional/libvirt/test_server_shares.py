@@ -44,6 +44,7 @@ class ServerSharesTestBase(base.ServersTestBase):
 
         self.context = nova_context.get_admin_context()
         self.manila_fixture = self.useFixture(nova_fixtures.ManilaFixture())
+        self.flags(auth_type='password', group='manila')
         self.flags(ram_allocation_ratio=1.0)
         self.flags(file_backed_memory=8192, group='libvirt')
         self.flags(reserved_host_memory_mb=0)
@@ -273,6 +274,27 @@ class ServerSharesTest(ServerSharesTestBase):
         self._stop_server(server1)
         self._detach_share(server1, share_id)
         self.assertEqual({id2}, self._cephfs_grants(share_id))
+
+    def test_reconcile_removes_stale_cephfs_grant(self):
+        server, share_id = self.test_server_cephfs_share_metadata()
+        live = self._cephfs_grants(share_id)
+        self.assertEqual(1, len(live))
+        live_id = live.pop()
+
+        # Seed a stale orphan identity (as if a cold migration confirm
+        # failed to revoke the source host's grant) and a legacy shared
+        # 'nova' grant (drained only by operators, never by reconcile).
+        self.manila_fixture.share_access.add(
+            (share_id, 'cephx', 'nova-deadbeefdeadbeef'))
+        self.manila_fixture.share_access.add((share_id, 'cephx', 'nova'))
+
+        self.computes[self.compute].manager._reconcile_stale_share_access(
+            self.context)
+
+        grants = self._cephfs_grants(share_id)
+        self.assertNotIn('nova-deadbeefdeadbeef', grants)
+        self.assertIn(live_id, grants)
+        self.assertIn('nova', grants)
 
     def test_server_share_after_hard_reboot(self):
         """Verify that share is still available after a reboot"""

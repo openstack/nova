@@ -17,6 +17,7 @@ import os
 import time
 
 from oslo_log import log as logging
+import psutil
 
 from nova import exception
 
@@ -79,6 +80,19 @@ def read_sys(path: str) -> str:
         raise exception.FileNotFound(file_path=path) from exc
     except ValueError as exc:
         raise exception.FileNotFound(file_path=path) from exc
+
+
+def is_mounted(mountpoint: str) -> bool:
+    """Return whether ``mountpoint`` is a mounted filesystem.
+
+    Uses psutil to read the mount table rather than os.path.ismount(), which
+    stats the mountpoint and can hang on a wedged NFS mount. psutil parses
+    the table without traversing the mounts, so it never blocks, and it works
+    on platforms without procfs (e.g. macOS) so tests need not fake it.
+    """
+    return any(
+        part.mountpoint == mountpoint
+        for part in psutil.disk_partitions(all=True))
 
 
 # NOTE(bauzas): this method is deliberately not wrapped in a privsep entrypoint

@@ -415,6 +415,45 @@ class ManilaTestCase(BaseManilaTestCase, test.NoDBTestCase):
 
         self.assertIsNone(access)
 
+    @mock.patch(
+        'nova.utils.get_sdk_adapter', side_effect=nova.utils.get_sdk_adapter)
+    def test_get_access_rules(self, mock_get_sdk_adapter):
+        """Tests that we manage to list every access rule of a share.
+        """
+        access_rules = self.api.get_access_rules(self.context, '1234')
+        mock_get_sdk_adapter.assert_called_once_with(
+            "shared-file-system",
+            admin=True,
+            check_service=True,
+            context=self.context,
+            shared_file_system_api_version="2.82",
+            global_request_id=self.context.global_id,
+        )
+        self.assertEqual(1, len(access_rules))
+        access = access_rules[0]
+        self.assertIsInstance(access, manila.Access)
+        self.assertEqual('a25b2df3-90bd-4add-afa6-5f0dbbd50452', access.id)
+        self.assertEqual('ip', access.access_type)
+        self.assertEqual('0.0.0.0/0', access.access_to)
+
+    def test_get_access_rules_empty(self):
+        """Tests that a share with no access rules returns an empty list.
+        """
+        access_rules = self.api.get_access_rules(self.context, '4567')
+        self.assertEqual([], access_rules)
+
+    def test_get_access_rules_fails_non_existing_share(self):
+        """Tests that we fail when listing rules of a non existing share.
+        """
+        exc = self.assertRaises(
+            exception.ShareNotFound,
+            self.api.get_access_rules,
+            self.context,
+            "nonexisting",
+        )
+
+        self.assertIn("Share nonexisting could not be found.", exc.message)
+
     def test_allow_access_fails_non_existing_share(self):
         """Tests that we fail if trying to allow an
         non existing share.

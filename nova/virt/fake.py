@@ -304,6 +304,9 @@ class FakeDriver(driver.ComputeDriver):
     def umount_share(self, context, instance, share_mapping):
         pass
 
+    def is_share_mounted(self, share_mapping):
+        return False
+
     def trigger_crash_dump(self, instance):
         pass
 

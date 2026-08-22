@@ -1248,6 +1248,62 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.call.list_instance_uuids(),
             self.compute.driver.mock_calls[1])
 
+    def _init_host_scaffold(self, mock_get_nodes):
+        mock_get_nodes.return_value = {
+            uuids.cn_uuid1: objects.ComputeNode(
+                uuid=uuids.cn_uuid1, hypervisor_hostname='node1',
+                host=self.compute.host)}
+        self.compute.driver = mock.Mock()
+        self.compute.driver.capabilities = {'supports_evacuate': False}
+        self.compute.driver.process_instances_at_startup.side_effect = (
+            lambda context, instances: instances)
+        self.compute.driver.list_instance_uuids.return_value = []
+
+    @mock.patch('nova.compute.manager.ComputeManager._get_nodes')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_error_out_instances_whose_build_was_interrupted')
+    @mock.patch('nova.objects.InstanceList.get_by_host',
+                return_value=objects.InstanceList())
+    @mock.patch('nova.compute.manager.ComputeManager._init_instance',
+                mock.NonCallableMock())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_scheduler_instance_info', mock.NonCallableMock())
+    @mock.patch('nova.compute.share_management.ShareManager.'
+                'reconcile_stale_share_access')
+    def test_init_host_reconciles_stale_share_access(
+            self, mock_reconcile, mock_get_by_host, mock_error_interrupted,
+            mock_get_nodes):
+        self._init_host_scaffold(mock_get_nodes)
+
+        self.compute.init_host(None)
+
+        # init_host kicks off a reconcile pass; the pass gathers its own
+        # candidate shares conductor-side.
+        mock_reconcile.assert_called_once_with(
+            test.MatchType(context.RequestContext))
+
+    @mock.patch('nova.compute.manager.ComputeManager._get_nodes')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_error_out_instances_whose_build_was_interrupted')
+    @mock.patch('nova.objects.InstanceList.get_by_host',
+                return_value=objects.InstanceList())
+    @mock.patch('nova.compute.manager.ComputeManager._init_instance',
+                mock.NonCallableMock())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_scheduler_instance_info', mock.NonCallableMock())
+    @mock.patch('nova.compute.share_management.ShareManager.'
+                'reconcile_stale_share_access',
+                side_effect=Exception('manila down'))
+    def test_init_host_reconcile_failure_non_fatal(
+            self, mock_reconcile, mock_get_by_host, mock_error_interrupted,
+            mock_get_nodes):
+        self._init_host_scaffold(mock_get_nodes)
+
+        # A failing reconcile must not prevent the host from coming up.
+        self.compute.init_host(None)
+
+        mock_reconcile.assert_called_once()
+
     def test_init_host_new_with_instances(self):
         """Tests the case where we start up without an existing service_ref,
         indicating that we are a new service, but our hypervisor reports
@@ -4263,6 +4319,603 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertNotEqual(share_mapping.status,
                             fields.ShareMappingStatus.ERROR)
         self.assertEqual(instance.vm_state, vm_states.ACTIVE)
+
+    def _fake_access_rule(self, access_type, access_to):
+        return nova.share.manila.Access.from_dict({
+            "access_level": "rw",
+            "state": "active",
+            "id": uuids.access_id,
+            "access_type": access_type,
+            "access_to": access_to,
+            "access_key": None,
+        })
+
+    # Helper to set up the standard reconcile mocks.
+    # get_by_host_for_reconcile returns the share mappings for the whole
+    # candidate set in one conductor-side query; get_by_share_id is used
+    # inside _reconcile_share for the re-read-under-lock.
+    def _setup_reconcile_mocks(
+        self,
+        mock_get_for_reconcile,
+        mock_get_by_share_id,
+        instances,
+        share_mappings,
+    ):
+        mock_get_for_reconcile.return_value = objects.ShareMappingList(
+            objects=share_mappings)
+        mock_get_by_share_id.return_value = objects.ShareMappingList(
+            objects=share_mappings)
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_cephfs_revokes_orphan(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(auth_type='password', group='manila')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        live_id = objects.ShareMapping._cephx_identity(
+            uuids.instance, 'dest-host')
+        mock_get_rules.return_value = [
+            self._fake_access_rule('cephx', live_id),
+            self._fake_access_rule('cephx', 'nova-deadbeefdeadbeef'),
+            self._fake_access_rule('cephx', 'nova'),
+            self._fake_access_rule('cephx', 'client.someoneelse'),
+            self._fake_access_rule('ip', '192.168.0.1'),
+        ]
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_called_once_with(
+            self.context, share_mapping.share_id, 'cephx',
+            'nova-deadbeefdeadbeef')
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_cephfs_skips_queued_to_deny(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        # An orphan cephx identity already in queued_to_deny/denying must not
+        # trigger a second deny call - Manila is already processing it.
+        self.flags(auth_type='password', group='manila')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        live_id = objects.ShareMapping._cephx_identity(
+            uuids.instance, 'dest-host')
+        mock_get_rules.return_value = [
+            self._fake_access_rule('cephx', live_id),
+            nova.share.manila.Access.from_dict({
+                "access_level": "rw",
+                "state": "queued_to_deny",
+                "id": uuids.access_id,
+                "access_type": "cephx",
+                "access_to": "nova-deadbeefdeadbeef",
+                "access_key": None,
+            }),
+        ]
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_nfs_revokes_own_ip(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(host='source-host')
+        self.flags(auth_type='password', group='manila')
+        self.flags(my_shared_fs_storage_ip='192.168.0.1')
+        share_mapping = self.get_fake_share_mapping()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.return_value = [
+            self._fake_access_rule('ip', '192.168.0.1'),
+            self._fake_access_rule('ip', '192.168.9.9'),
+            self._fake_access_rule('cephx', 'nova-deadbeef'),
+        ]
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_called_once_with(
+            self.context, share_mapping.share_id, 'ip', '192.168.0.1')
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_nfs_keeps_ip_when_serving(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(host='this-host')
+        self.flags(auth_type='password', group='manila')
+        self.flags(my_shared_fs_storage_ip='192.168.0.1')
+        share_mapping = self.get_fake_share_mapping()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='this-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.return_value = [
+            self._fake_access_rule('ip', '192.168.0.1'),
+        ]
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_nfs_leaves_other_host_ip(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(host='this-host')
+        self.flags(auth_type='password', group='manila')
+        self.flags(my_shared_fs_storage_ip='192.168.0.1')
+        share_mapping = self.get_fake_share_mapping()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.return_value = [
+            self._fake_access_rule('ip', '192.168.9.9'),
+        ]
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_nfs_skips_when_mounted(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(host='source-host')
+        self.flags(auth_type='password', group='manila')
+        self.flags(my_shared_fs_storage_ip='192.168.0.1')
+        share_mapping = self.get_fake_share_mapping()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.return_value = [
+            self._fake_access_rule('ip', '192.168.0.1'),
+        ]
+
+        with mock.patch.object(
+            self.compute.share_manager.driver, 'is_share_mounted',
+            return_value=True
+        ) as mock_mounted:
+            self.compute.share_manager.reconcile_stale_share_access(
+                self.context)
+
+        # Still mounted here, so the ip rule is left in place.
+        mock_deny.assert_not_called()
+        mock_mounted.assert_called_once_with(share_mapping)
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_nfs_skips_queued_to_deny(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        # Rules already in queued_to_deny/denying must not trigger a second
+        # deny call — Manila is already processing them.
+        self.flags(host='source-host')
+        self.flags(auth_type='password', group='manila')
+        self.flags(my_shared_fs_storage_ip='192.168.0.1')
+        share_mapping = self.get_fake_share_mapping()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.return_value = [
+            nova.share.manila.Access.from_dict({
+                "access_level": "rw",
+                "state": "queued_to_deny",
+                "id": uuids.access_id,
+                "access_type": "ip",
+                "access_to": "192.168.0.1",
+                "access_key": None,
+            }),
+        ]
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_skips_in_transit_task_state(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(auth_type='password', group='manila')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE,
+            task_state=task_states.RESIZE_MIGRATING)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_get_rules.assert_not_called()
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_skips_in_transit_resized(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(auth_type='password', group='manila')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.RESIZED, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_get_rules.assert_not_called()
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_skips_missing_instance(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(auth_type='password', group='manila')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        # _reconcile_share re-reads instances; simulate missing instance
+        mock_get_by_filters.return_value = objects.InstanceList(objects=[])
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_get_rules.assert_not_called()
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_deny_error_swallowed(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(auth_type='password', group='manila')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.return_value = [
+            self._fake_access_rule('cephx', 'nova-deadbeefdeadbeef'),
+        ]
+        mock_deny.side_effect = exception.ShareAccessRemovalError(
+            share_id=share_mapping.share_id, reason='boom')
+
+        # Must not raise.
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_called_once()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_get_rules_not_found(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(auth_type='password', group='manila')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.side_effect = exception.ShareNotFound(
+            share_id=share_mapping.share_id)
+
+        # Must not raise.
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_no_shares(
+        self, mock_get_for_reconcile,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(auth_type='password', group='manila')
+        mock_get_for_reconcile.return_value = objects.ShareMappingList(
+            objects=[])
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_get_rules.assert_not_called()
+        mock_deny.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_manila_down(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        self.flags(auth_type='password', group='manila')
+        share_mapping = self.get_fake_share_mapping_cephfs()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        self._setup_reconcile_mocks(
+            mock_get_for_reconcile,
+            mock_get_by_share_id, [instance], [share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.side_effect = exception.ManilaConnectionFailed(
+            reason='down')
+
+        # Must not raise; the whole pass bails out.
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_deny.assert_not_called()
+
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_manila_not_configured(
+        self, mock_get_for_reconcile
+    ):
+        # When [manila] auth_type is None the method returns immediately
+        # without touching anything.
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_get_for_reconcile.assert_not_called()
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_source_migration(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        # This host was the source of a confirmed migration; the NFS ip rule
+        # left on this host must be drained even though the instance is gone.
+        self.flags(host='source-host')
+        self.flags(auth_type='password', group='manila')
+        self.flags(my_shared_fs_storage_ip='192.168.0.1')
+        share_mapping = self.get_fake_share_mapping()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='dest-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        # No instances on this host now, but a migration touched it, so the
+        # conductor-side collection still surfaces this share mapping.
+        mock_get_for_reconcile.return_value = objects.ShareMappingList(
+            objects=[share_mapping])
+        mock_get_by_share_id.return_value = objects.ShareMappingList(
+            objects=[share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.return_value = [
+            self._fake_access_rule('ip', '192.168.0.1'),
+        ]
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        # Source's stale NFS rule must be revoked (the fake driver reports the
+        # share unmounted here).
+        mock_deny.assert_called_once_with(
+            self.context, share_mapping.share_id, 'ip', '192.168.0.1')
+
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access_rules')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_dest_revert(
+        self, mock_get_for_reconcile,
+        mock_get_by_share_id, mock_get_by_filters,
+        mock_get_rules, mock_deny
+    ):
+        # This host was the destination of a reverted migration; our ip rule
+        # must be drained even though the instance went back to the source.
+        self.flags(host='dest-host')
+        self.flags(auth_type='password', group='manila')
+        self.flags(my_shared_fs_storage_ip='192.168.0.2')
+        share_mapping = self.get_fake_share_mapping()
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance, host='source-host',
+            vm_state=vm_states.ACTIVE, task_state=None)
+        # No instances on this host now, but a migration touched it, so the
+        # conductor-side collection still surfaces this share mapping.
+        mock_get_for_reconcile.return_value = objects.ShareMappingList(
+            objects=[share_mapping])
+        mock_get_by_share_id.return_value = objects.ShareMappingList(
+            objects=[share_mapping])
+        mock_get_by_filters.return_value = objects.InstanceList(
+            objects=[instance])
+        mock_get_rules.return_value = [
+            self._fake_access_rule('ip', '192.168.0.2'),
+        ]
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        # Dest host's stale NFS rule must be revoked (the fake driver reports
+        # the share unmounted here).
+        mock_deny.assert_called_once_with(
+            self.context, share_mapping.share_id, 'ip', '192.168.0.2')
+
+    @mock.patch(
+        'nova.objects.share_mapping.ShareMappingList.'
+        'get_by_host_for_reconcile')
+    def test_reconcile_stale_share_access_single_bulk_query(
+        self, mock_get_for_reconcile
+    ):
+        # The candidate shares are collected in a single conductor-side query
+        # rather than one lookup per instance and per migration.
+        self.flags(auth_type='password', group='manila')
+        mock_get_for_reconcile.return_value = objects.ShareMappingList(
+            objects=[])
+
+        self.compute.share_manager.reconcile_stale_share_access(self.context)
+
+        mock_get_for_reconcile.assert_called_once_with(
+            self.context, CONF.host)
+
+    def test_reconcile_stale_share_access_periodic(self):
+        with mock.patch.object(
+            self.compute.share_manager, 'reconcile_stale_share_access'
+        ) as mock_reconcile:
+            self.compute._reconcile_stale_share_access(self.context)
+            mock_reconcile.assert_called_once_with(self.context)
 
     @mock.patch('nova.compute.share_management.ShareManager.umount_all')
     @mock.patch('nova.compute.share_management.ShareManager.get_share_info')
