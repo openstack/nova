@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    The libvirt driver now supports Cyborg-managed mediated devices
+    (MDEVs). When Cyborg accelerator requests (ARQs) include MDEV
+    attach handles, Nova will create the corresponding mediated
+    devices on the compute host before instance boot, following the
+    same pattern used for Nova-managed vGPUs. This enables operators
+    to use Cyborg for managing GPU/vGPU accelerators alongside Nova's
+    existing vGPU support.
