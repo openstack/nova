@@ -128,7 +128,7 @@ class CinderFixture(fixtures.Fixture):
             side_effect=self.fake_attachment_get, autospec=False))
         self.useFixture(fixtures.MockPatch(
             'nova.volume.cinder.API.begin_detaching',
-            lambda *args, **kwargs: None))
+            side_effect=self.fake_begin_detaching, autospec=False))
         self.useFixture(fixtures.MockPatch(
             'nova.volume.cinder.API.get',
             side_effect=self.fake_get, autospec=False))
@@ -137,7 +137,7 @@ class CinderFixture(fixtures.Fixture):
             side_effect=self.fake_migrate_volume_completion, autospec=False))
         self.useFixture(fixtures.MockPatch(
             'nova.volume.cinder.API.roll_detaching',
-            side_effect=(lambda *args, **kwargs: None), autospec=False))
+            side_effect=self.fake_roll_detaching, autospec=False))
         self.useFixture(fixtures.MockPatch(
             'nova.volume.cinder.is_microversion_supported',
             side_effect=(lambda ctxt, microversion: None), autospec=False))
@@ -229,6 +229,11 @@ class CinderFixture(fixtures.Fixture):
         return {'save_volume_id': new_volume_id}
 
     def fake_get(self, context, volume_id, microversion=None):
+        """Get a volume by ID
+
+        Note that this will fake existence of a volume even if you did not
+        create one explicitly (if volume_id is not in self.volumes).
+        """
         if volume_id in self.volumes:
             volume = self.volumes[volume_id]
         else:
@@ -262,16 +267,21 @@ class CinderFixture(fixtures.Fixture):
                     'attachment_id': attachment['id'],
                     'mountpoint': '/dev/vdb',
                 }
-            migration_status = (
-                None if volume_id not in (
-                    self.SWAP_OLD_VOL, self.SWAP_ERR_OLD_VOL)
-                else "migrating")
-            volume.update({
-                'status': 'in-use',
-                'attach_status': 'attached',
-                'attachments': attachments,
-                'migration_status': migration_status
-            })
+            if volume_id not in self.volumes:
+                # This code block assumes you want to fake existence of a
+                # volume without actually creating it. Only do this if the
+                # volume is not in self.volumes and thus was not created by
+                # calling the volume create API.
+                migration_status = (
+                    None if volume_id not in (
+                        self.SWAP_OLD_VOL, self.SWAP_ERR_OLD_VOL)
+                    else "migrating")
+                volume.update({
+                    'status': 'in-use',
+                    'attach_status': 'attached',
+                    'attachments': attachments,
+                    'migration_status': migration_status
+                })
         # Otherwise mark the volume as available and detached
         else:
             volume.update({
@@ -407,8 +417,11 @@ class CinderFixture(fixtures.Fixture):
 
     def fake_attachment_complete(self, _context, attachment_id):
         # Ensure the attachment exists
-        self._find_attachment(attachment_id)
+        volume_id, _, _ = self._find_attachment(attachment_id)
         LOG.info('Completing volume attachment: %s', attachment_id)
+        if volume_id in self.volumes:
+            self.volumes[volume_id]['status'] = 'in-use'
+            self.volumes[volume_id]['attach_status'] = 'attached'
 
     def fake_attachment_delete(self, context, attachment_id):
         # 'attachment' is a tuple defining a attachment-instance mapping
@@ -419,6 +432,16 @@ class CinderFixture(fixtures.Fixture):
             'Deleted attachment %s for volume %s. Total attachments '
             'for volume: %d',
             attachment_id, volume_id, len(attachments))
+
+    def fake_begin_detaching(self, context, volume_id):
+        if volume_id in self.volumes:
+            self.volumes[volume_id]['status'] = 'detaching'
+            LOG.info(f'Setting volume {volume_id} status to detaching')
+
+    def fake_roll_detaching(self, context, volume_id):
+        if volume_id in self.volumes:
+            self.volumes[volume_id]['status'] = 'in-use'
+            LOG.info(f'Setting volume {volume_id} status to in-use')
 
     def fake_reimage_volume(self, *args, **kwargs):
         if self.IMAGE_BACKED_VOL not in args:
@@ -465,6 +488,7 @@ class CinderFixture(fixtures.Fixture):
         return attachment_ids
 
     def create_vol_attachment(self, volume_id, instance_id):
+        """Create a Cinder volume attachment that Nova is not aware of."""
         attachment_id = uuidutils.generate_uuid()
         if self.attachment_error_id is not None:
             attachment_id = self.attachment_error_id
@@ -476,6 +500,7 @@ class CinderFixture(fixtures.Fixture):
         return attachment
 
     def get_vol_attachment(self, _id):
+        """Get a Cinder volume attachment that Nova is not aware of."""
         for _, attachments in self.volume_to_attachment.items():
             for attachment_id in attachments:
                 if _id == attachment_id:
@@ -483,6 +508,7 @@ class CinderFixture(fixtures.Fixture):
                     return attachments[attachment_id]
 
     def delete_vol_attachment(self, vol_id):
+        """Delete a Cinder volume attachment that Nova is not aware of."""
         del self.volume_to_attachment[vol_id]
 
     def fake_create_snapshot_force(self, _ctxt, volume_id, name, description):
@@ -514,6 +540,8 @@ class CinderFixture(fixtures.Fixture):
             'attach_status': 'detached',
             'size': size,
             'display_description': description or 'fake-description',
+            'multiattach': self._is_multiattach(_id),
+            'availability_zone': self.az,
         }
         self.volumes[_id] = volume
         return volume
