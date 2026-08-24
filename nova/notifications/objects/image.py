@@ -137,7 +137,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.17: Added 'hw_usb_model' and 'hw_redirected_usb_ports' fields
     # Version 1.18: Added 'hw_mem_encryption_model' field
     # Version 1.19: Added 'amd-sev-snp' as an option to hw_mem_encryption_model
-    VERSION = '1.19'
+    # Version 1.20: Added 'intel-tdx' as an option to hw_mem_encryption_model
+    VERSION = '1.20'
 
     # NOTE(efried): This logic currently relies on all of the fields of
     # ImageMetaProps being initialized with no arguments. See the docstring.

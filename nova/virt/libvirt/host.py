@@ -82,6 +82,8 @@ SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/%s'
 
 MIN_QEMU_SEV_ES_VERSION = (8, 0, 0)
 
+MISC_CONTROL_GROUP_CAPACITY_FILE = '/sys/fs/cgroup/misc.capacity'
+
 
 class LibvirtEventHandler:
     def __init__(self, conn_event_handler=None, lifecycle_event_handler=None):
@@ -328,6 +330,8 @@ class Host(object):
         self._supports_amd_sev_snp: bool | None = None
         self._max_sev_guests: int = 0
         self._max_sev_es_guests: int = 0
+        self._supports_intel_tdx: bool | None = None
+        self._max_intel_tdx_guests: int | None = None
         self._supports_uefi: bool | None = None
         self._supports_secure_boot: bool | None = None
 
@@ -2152,6 +2156,134 @@ class Host(object):
         return self._supports_amd_sev_snp
 
     @property
+    def supports_intel_tdx(self) -> bool:
+        """Determine if the host supports Intel TDX for guests.
+
+        Returns a boolean indicating whether Intel Trust Domain Extensions
+        (Intel TDX) is supported. This is conditional on support in the
+        hardware, kernel, qemu, and libvirt.
+
+        CPU mode also has to be configured to host-passthrough, since Intel TDX
+        enabled guests require it.
+
+        This checks whether the feature is supported by *any* machine type.
+        This is only used for trait-reporting purposes and a machine
+        type-specific check should be used when creating guests.
+        """
+        if self._supports_intel_tdx is not None:
+            return self._supports_intel_tdx
+
+        self._supports_intel_tdx = False
+
+        caps = self.get_capabilities()
+        if caps.host.cpu.arch != fields.Architecture.X86_64:
+            return self._supports_intel_tdx
+
+        # NOTE(antia): This effectively requires cpu_mode to be explicitly
+        # configured to "host-passthrough" to enable Intel TDX support. TDX
+        # requires the guest to see the real host CPU, so host-passthrough is a
+        # hard prerequisite.
+        cpu_mode = CONF.libvirt.cpu_mode
+        if cpu_mode != "host-passthrough":
+            LOG.debug(
+                "Skipping Intel TDX detection: cpu_mode is not "
+                "'host-passthrough', which is required.",
+            )
+            return self._supports_intel_tdx
+
+        domain_caps = self.get_domain_capabilities()
+        for arch in domain_caps:
+            for machine_type in domain_caps[arch]:
+                LOG.debug(
+                    "Checking TDX support for arch %s and machine type %s",
+                    arch,
+                    machine_type,
+                )
+                for feature in domain_caps[arch][machine_type].features:
+                    feature_is_tdx = isinstance(
+                        feature, vconfig.LibvirtConfigDomainCapsFeatureTDX
+                    )
+                    if feature_is_tdx and feature.supported:
+                        LOG.info("Intel TDX support detected")
+                        self._supports_intel_tdx = True
+                        return self._supports_intel_tdx
+
+        LOG.debug("No Intel TDX support detected for any (arch, machine_type)")
+        return self._supports_intel_tdx
+
+    def _get_cgroup_tdx_capacity(self):
+        """Read kernel misc control group for maximum Intel TDX guests.
+
+        The misc control group is a generic interface for any resource that may
+        need limiting, it is not specific to Intel TDX. Only the capacity part
+        is used.
+        https://lwn.net/Articles/856438/
+        """
+        capacity_file = MISC_CONTROL_GROUP_CAPACITY_FILE
+
+        if not os.path.exists(capacity_file):
+            LOG.debug("%s does not exist", capacity_file)
+            return None
+
+        with open(capacity_file) as f:
+            content = f.read()
+            LOG.debug("%s contains [%s]", capacity_file, content)
+            for line in content.splitlines():
+                parts = line.split()
+                if len(parts) == 2 and parts[0] == 'tdx':
+                    try:
+                        return int(parts[1])
+                    except ValueError:
+                        LOG.warning(
+                            "Failed to parse TDX capacity from %s: "
+                            "unexpected value [%s]", capacity_file, parts[1])
+                        return None
+            LOG.warning("No TDX entry found in %s", capacity_file)
+            return None
+
+    def _get_tdx_capacity(self) -> int:
+        """Determine the maximum number of Intel TDX guests this host can run
+        concurrently.
+
+        The primary source is the kernel misc control group (see
+        _get_cgroup_tdx_capacity). In case this is unavailable
+        [libvirt] num_tdx_guests becomes the only source and must be set.
+        If both are set then the smallest of the two are used.
+        """
+        cgroup_capacity = self._get_cgroup_tdx_capacity()
+        conf_capacity = CONF.libvirt.num_intel_tdx_guests
+
+        if cgroup_capacity is None:
+            if conf_capacity is None:
+                LOG.warning(
+                    "Unable to determine Intel TDX capacity from the misc "
+                    "cgroup, and libvirt.num_intel_tdx_guests is not set. "
+                    "Assuming this host does not support Intel TDX.")
+                return 0
+            return conf_capacity
+
+        if conf_capacity is not None:
+            if conf_capacity > cgroup_capacity:
+                LOG.warning(
+                    "Host is configured with libvirt.num_intel_tdx_guests "
+                    "set to %d, but only supports %d Intel TDX guests "
+                    "according to the misc cgroup.",
+                    conf_capacity, cgroup_capacity)
+            return conf_capacity
+
+        return cgroup_capacity
+
+    @property
+    def max_intel_tdx_guests(self) -> int:
+        """Determine maximum number of guests with Intel TDX.
+        """
+        if not self.supports_intel_tdx:
+            return 0
+        if self._max_intel_tdx_guests is None:
+            self._max_intel_tdx_guests = self._get_tdx_capacity()
+        return self._max_intel_tdx_guests
+
+    @property
     def supports_mem_encryption(self) -> bool:
         """Determine if the host supports memory encryption for guests.
 
@@ -2163,7 +2295,7 @@ class Host(object):
         is supported.
         """
 
-        return self.supports_amd_sev
+        return self.supports_amd_sev or self.supports_intel_tdx
 
     def get_mem_encryption_inventories(self) -> dict[str, ty.Any]:
         """Return a dictionary of memory encryption information.
@@ -2219,6 +2351,12 @@ class Host(object):
 
     def _get_mem_encryption_traits_amd_sev_snp(self) -> list[str]:
         return [ot.HW_CPU_X86_AMD_SEV_SNP]
+
+    def _get_mem_encryption_slots_intel_tdx(self) -> int:
+        return self.max_intel_tdx_guests
+
+    def _get_mem_encryption_traits_intel_tdx(self) -> list[str]:
+        return [ot.HW_CPU_X86_INTEL_TDX]
 
     @property
     def supports_remote_managed_ports(self) -> bool:

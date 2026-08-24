@@ -3318,6 +3318,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch('nova.virt.libvirt.utils.get_default_machine_type',
                 new=mock.Mock(return_value='config-machine_type'))
+    # the getDomainCapabilities test stub is called by memory encryption config
+    # but it doesn't support the faked machine type used in this test
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                '_get_mem_encryption_config', new=mock.Mock(return_value=None))
     def test_get_guest_config_records_machine_type_in_instance(self):
         # Assert that the config derived machine type is used when it
         # isn't present in the image_meta of an instance.
@@ -6041,6 +6045,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_with_uefi(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
 
         image_meta = objects.ImageMeta.from_dict({
@@ -6066,6 +6071,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_with_uefi_old_guest(self, mock_exists):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
 
         image_meta = objects.ImageMeta.from_dict({
@@ -6106,6 +6112,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self, mock_exists):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
 
         image_meta = objects.ImageMeta.from_dict({
@@ -6149,6 +6156,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self, mock_exists):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
 
         image_meta = objects.ImageMeta.from_dict({
@@ -6190,6 +6198,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_with_uefi_and_stateless_firmware(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
 
         image_meta = objects.ImageMeta.from_dict({
@@ -6221,6 +6230,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     ):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
         drvr._host._supports_secure_boot = host_has_support
 
@@ -6261,6 +6271,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     ):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
         drvr._host._supports_secure_boot = host_has_support
 
@@ -6298,6 +6309,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self, mock_exists, smm):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
         drvr._host._supports_secure_boot = True
 
@@ -6349,6 +6361,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self, mock_exists):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = False
+        drvr._host._supports_intel_tdx = False
         drvr._host._supports_uefi = True
         drvr._host._supports_secure_boot = False
 
@@ -32575,6 +32588,9 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
             },
             'amd_sev_snp': {
                 'total': 0
+            },
+            'intel_tdx': {
+                'total': 0
             }
         }, self.driver._get_memory_encryption_inventories())
 
@@ -32611,6 +32627,9 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
             'amd_sev_snp': {
                 'total': 0
             },
+            'intel_tdx': {
+                'total': 0
+            }
         }, self.driver._get_memory_encryption_inventories())
 
 

@@ -2555,6 +2555,186 @@ class TestLibvirtSEVSNPSupported(TestLibvirtSEV):
             inventories['amd_sev_snp'])
 
 
+class TestLibvirtTDX(test.NoDBTestCase):
+    """Libvirt host tests for Intel TDX support."""
+
+    def setUp(self):
+        super(TestLibvirtTDX, self).setUp()
+
+        self.useFixture(nova_fixtures.LibvirtFixture())
+        self.flags(cpu_mode='host-passthrough', group='libvirt')
+        self.host = host.Host("qemu:///system")
+        self.addCleanup(self.host.cleanup)
+        self.host._delayed_executor = (
+            thread_pool_factory.
+            StaticallyDelayingCancellableTaskExecutorWrapper(
+                delay=0.1, executor=thread_pool_factory.get_executor(
+                    thread_pool_factory.ExecutorType.DEFAULT)))
+
+        self.misc_capacity = None
+
+        def _exists(path):
+            if path == '/sys/fs/cgroup/misc.capacity':
+                return self.misc_capacity is not None
+            elif path == '/sys/module/kvm_amd/parameters/sev':
+                # Mock as absent so supports_mem_encryption() reports no SEV
+                # support in TDX scenarios
+                return None
+            self.fail('Unexpected path is accessed by os.path: %s' % path)
+
+        self.mock_exists = self.useFixture(fixtures.MockPatch(
+            'os.path.exists', side_effect=_exists)).mock
+
+        def _open(path):
+            if path == '/sys/fs/cgroup/misc.capacity':
+                return io.StringIO(self.misc_capacity)
+            self.fail('Unexpected path is accessed by open: %s' % path)
+
+        self.mock_open = self.useFixture(fixtures.MockPatch(
+            'builtins.open', side_effect=_open)).mock
+
+
+class TestLibvirtTDXUnsupported(TestLibvirtTDX):
+    def test_unsupported_without_feature(self):
+        self.assertFalse(self.host.supports_intel_tdx)
+        self.assertFalse(self.host.supports_mem_encryption)
+
+    @mock.patch.object(vc, '_domain_capability_features',
+    new=vc._domain_capability_features_with_TDX)
+    def test_unsupported_without_host_passthrough(self):
+        self.flags(cpu_mode='host-model', group='libvirt')
+        self.assertFalse(self.host.supports_intel_tdx)
+        self.assertFalse(self.host.supports_mem_encryption)
+
+    @mock.patch.object(vc, '_domain_capability_features',
+        new=vc._domain_capability_features_with_TDX_unsupported)
+    def test_unsupported_with_feature(self):
+        self.assertFalse(self.host.supports_intel_tdx)
+        self.assertFalse(self.host.supports_mem_encryption)
+
+    def test_non_x86_architecture(self):
+        fake_caps_xml = '''
+<capabilities>
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>aarch64</arch>
+    </cpu>
+  </host>
+</capabilities>'''
+        with mock.patch.object(fakelibvirt.virConnect, 'getCapabilities',
+                                return_value=fake_caps_xml):
+            self.assertFalse(self.host.supports_intel_tdx)
+            self.assertFalse(self.host.supports_mem_encryption)
+
+    def test_slots(self):
+        self.assertEqual(0, self.host._get_mem_encryption_slots_intel_tdx())
+
+    def test_slots_with_config_set(self):
+        self.flags(num_intel_tdx_guests=63, group='libvirt')
+        self.assertEqual(0, self.host._get_mem_encryption_slots_intel_tdx())
+
+    def test_inventory_traits(self):
+        self.assertEqual(['HW_CPU_X86_INTEL_TDX'],
+                         self.host._get_mem_encryption_traits_intel_tdx())
+
+    def test_inventory(self):
+        inventories = self.host.get_mem_encryption_inventories()
+        self.assertIn('intel_tdx', inventories)
+        self.assertEqual({'supported': False}, inventories['intel_tdx'])
+
+
+class TestLibvirtTDXSupported(TestLibvirtTDX):
+    """Libvirt driver tests for when Intel TDX support is present."""
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_TDX)
+    def test_supported_with_feature(self):
+        self.misc_capacity = "tdx 0\n"
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_TDX)
+    def test_slots_with_capacity_and_config_absent(self):
+        self.misc_capacity = "tdx 63\n"
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+        self.assertEqual(63, self.host._get_mem_encryption_slots_intel_tdx())
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_TDX)
+    def test_slots_with_capacity_and_config_less(self):
+        self.misc_capacity = "tdx 63\n"
+        self.flags(num_intel_tdx_guests=1, group='libvirt')
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+        self.assertEqual(1, self.host._get_mem_encryption_slots_intel_tdx())
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_TDX)
+    def test_slots_with_capacity_and_config_equal(self):
+        self.misc_capacity = "tdx 63\n"
+        self.flags(num_intel_tdx_guests=63, group='libvirt')
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+        self.assertEqual(63, self.host._get_mem_encryption_slots_intel_tdx())
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_TDX)
+    def test_slots_with_capacity_and_config_more(self):
+        self.misc_capacity = "tdx 63\n"
+        self.flags(num_intel_tdx_guests=100, group='libvirt')
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+        self.assertEqual(100, self.host._get_mem_encryption_slots_intel_tdx())
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_TDX)
+    def test_slots_capacity_file_and_config_absent_when_supported(self):
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+        self.assertEqual(0, self.host._get_mem_encryption_slots_intel_tdx())
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_TDX)
+    def test_slots_capacity_file_absent_and_config_zero_when_supported(self):
+        self.flags(num_intel_tdx_guests=0, group='libvirt')
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+        self.assertEqual(0, self.host._get_mem_encryption_slots_intel_tdx())
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_TDX)
+    def test_slots_capacity_file_absent_and_config_set_when_supported(self):
+        self.flags(num_intel_tdx_guests=63, group='libvirt')
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+        self.assertEqual(63, self.host._get_mem_encryption_slots_intel_tdx())
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                    new=vc._domain_capability_features_with_TDX)
+    def test_inventory_traits(self):
+        self.assertEqual(['HW_CPU_X86_INTEL_TDX'],
+                         self.host._get_mem_encryption_traits_intel_tdx())
+
+    @mock.patch.object(vc, '_domain_capability_features',
+                    new=vc._domain_capability_features_with_TDX)
+    def test_inventory_supported(self):
+        self.misc_capacity = "tdx 100\n"
+        self.assertTrue(self.host.supports_intel_tdx)
+        self.assertTrue(self.host.supports_mem_encryption)
+        inventories = self.host.get_mem_encryption_inventories()
+        self.assertIn('intel_tdx', inventories)
+        self.assertEqual(
+            {
+                'supported': True,
+                'total': 100,
+                'traits': ['HW_CPU_X86_INTEL_TDX'],
+            },
+            inventories['intel_tdx'])
+
+
 class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
     def setUp(self):
         if utils.concurrency_mode_threading():
