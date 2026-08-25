@@ -598,20 +598,6 @@ Frequently Asked Questions
   A: Make sure you have installed ``python-numpy``, which is required to
   support a newer version of the WebSocket protocol (HyBi-07+).
 
-- **Q: How do I adjust the dimensions of the VNC window image in the OpenStack
-  dashboard?**
-
-  A: These values are hard-coded in a Django HTML template. To alter them, edit
-  the ``_detail_vnc.html`` template file. The location of this file varies
-  based on Linux distribution. On Ubuntu 14.04, the file is at
-  ``/usr/share/pyshared/horizon/dashboards/nova/instances/templates/instances/_detail_vnc.html``.
-
-  Modify the ``width`` and ``height`` options, as follows:
-
-  .. code-block:: ini
-
-     <iframe src="{{ vnc_url }}" width="720" height="430"></iframe>
-
 - **Q: My noVNC connections failed with ValidationError: Origin header protocol
   does not match. Why?**
 
