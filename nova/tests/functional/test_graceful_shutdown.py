@@ -34,10 +34,13 @@ import time
 
 import fixtures
 
+import nova.conf
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova import utils
+
+CONF = nova.conf.CONF
 
 
 class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
@@ -53,20 +56,33 @@ class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
     MANAGER_GRACEFUL_SHUTDOWN_TIMEOUT = OPERATION_TIMEOUT + 2
 
     def setUp(self):
-        self.flags(report_interval=1, service_down_time=6)
+        # NOTE(gmaan): report_interval/service_down_time control how fast
+        # the compute service update status to "down". graceful shutdown
+        # tests heavily rely on the service start/stop so we need a high
+        # service_down_time here. Every test starts service during setUp
+        # and wait for service being up. But if service_down_time is less
+        # then during test execution, service status can be seen as down.
+        # Many tests runs in heavy parallel load and in threading mode,
+        # there is chance that service status heartbeat lags to report it in
+        # DB then, DB will report service as down during test execution time.
+        # so that a merely-delayed heartbeat (many tests running in
+        # heavy parallel load and in threading mode can delay report_state)
+        # is not mistaken for a stopped service.
+        # service_down_time should be large enough so that wrong status update
+        # can be avoided in mid of tests. Considering 30 sec enough for
+        # service heartbeat thread to get its turn and update the service
+        # status.
+        self.flags(
+            report_interval=1,
+            service_down_time=30)
         super().setUp()
         self.flags(manager_shutdown_timeout=30)
+        # NOTE(gmaan): Here _start_compute() create a fresh service and for
+        # freshly created service, status is decided based on the 'created_at'
+        # instead of 'last_seen_up' which means service is starting as 'up'
+        # until first heartbeat arrives or service_down_time is elapsed.
         self._start_compute('src')
         self._start_compute('dest')
-        # The servicegroup DB driver waits INITIAL_REPORTING_DELAY (5s)
-        # before sending the first service state report, which is very
-        # close to our 6s service_down_time above. Without waiting here,
-        # a slow test host can see either service as "down" (falling back
-        # to its stale created_at timestamp) before its first heartbeat
-        # lands, causing 409 ServiceUnavailable errors.
-        for host in ('src', 'dest'):
-            self._wait_for_service_parameter(
-                host, 'nova-compute', {'state': 'up'}, max_retries=20)
 
     def _setup_graceful_shutdown_mock(self, compute, operation_complete_event):
         # Manager graceful_shutdown() wait for operation_complete_event to
@@ -102,12 +118,24 @@ class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
                               binary='nova-compute', timeout=60):
         """Join stop_thread then poll until the service is down in the DB."""
         self._join_stop_thread(stop_thread, timeout=timeout)
+        # self._wait_for_service_parameter polls the service status every
+        # .5 sec, so wait for CONF.service_down_time + 10 sec worth of
+        # retries whenever we poll for a service state ('up' or 'down')
+        # change in this test class.
+        max_retries = int(CONF.service_down_time / 0.5 + 10)
         self._wait_for_service_parameter(
-            host, binary, {'state': 'down'}, max_retries=20)
+            host, binary, {'state': 'down'}, max_retries=max_retries)
 
     def _restart_compute(self, hostname):
         self.computes.pop(hostname, None)
         self._start_compute(hostname)
+        # NOTE(gmaan): In this case, existing service is started again
+        # (restart service). When service is stopped, DB entry of that
+        # service is not deleted but service status is 'down'. Once we
+        # start it again then it remains 'down' until first heartbeat
+        # arrives because this time it does not consider 'created_at'
+        # instead it consider 'last_seen_up' to check the elapsed time.
+        # That is why we need to explicitly wait for service to be 'up'.
         self._wait_for_service_parameter(
             hostname, 'nova-compute', {'state': 'up'}, max_retries=20)
 
