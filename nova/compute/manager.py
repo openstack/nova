@@ -1952,7 +1952,8 @@ class ComputeManager(manager.Manager):
             return
 
         filters = {'vm_state': vm_states.BUILDING,
-                   'host': self.host}
+                   'host': self.host,
+                   'deleted': False}
 
         building_insts = objects.InstanceList.get_by_filters(context,
                            filters, expected_attrs=[], use_slave=True)
