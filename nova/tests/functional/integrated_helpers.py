@@ -598,6 +598,7 @@ class InstanceHelperMixin:
             server['id'], {"share": {"share_id": share_id}})
         self.notifier.wait_for_versioned_notifications(
             'instance.share_attach.error')
+        self.notifier.wait_for_versioned_notifications('compute.exception')
 
     def _detach_share(self, server, share_id):
         self.api.delete_server_share(server['id'], share_id)
@@ -608,6 +609,7 @@ class InstanceHelperMixin:
         self.api.delete_server_share(server['id'], share_id)
         self.notifier.wait_for_versioned_notifications(
             'instance.share_detach.error')
+        self.notifier.wait_for_versioned_notifications('compute.exception')
 
     def _attach_volume(self, server, volume_id):
         """attach a cinder volume to a server."""
