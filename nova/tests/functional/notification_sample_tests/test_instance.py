@@ -157,6 +157,9 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         migrations = self.admin_api.get_active_migrations(server['id'])
         self.assertEqual(1, len(migrations))
 
+        # The two notifications come from two different compute service so
+        # their order is not deterministic.
+        self._wait_for_notification('instance.live_migration_post_dest.end')
         self._wait_for_notification('instance.live_migration_post.end')
         # 0. scheduler.select_destinations.start
         # 1. scheduler.select_destinations.end
@@ -181,18 +184,22 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=self.notifier.versioned_notifications[5])
+        dest_end = self._get_notifications(
+            'instance.live_migration_post_dest.end')[0]
         self._verify_notification(
             'instance-live_migration_post_dest-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=self.notifier.versioned_notifications[6])
+            actual=dest_end)
+        post_end = self._get_notifications(
+            'instance.live_migration_post.end')[0]
         self._verify_notification(
             'instance-live_migration_post-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=self.notifier.versioned_notifications[7])
+            actual=post_end)
 
     def _test_live_migration_abort(self, server):
         post = {
@@ -334,18 +341,25 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         # 5. instance.live_migration_force_complete.end
         self.assertGreaterEqual(len(self.notifier.versioned_notifications), 6,
                                 self.notifier.versioned_notifications)
+        # Note that instance.live_migration_post.start can arrive in between
+        # these notifications so we cannot check the received notification
+        # by index.
+        force_start = self._get_notifications(
+            'instance.live_migration_force_complete.start')[0]
         self._verify_notification(
             'instance-live_migration_force_complete-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=self.notifier.versioned_notifications[4])
+            actual=force_start)
+        force_end = self._get_notifications(
+            'instance.live_migration_force_complete.end')[0]
         self._verify_notification(
             'instance-live_migration_force_complete-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=self.notifier.versioned_notifications[5])
+            actual=force_end)
 
 
 class TestInstanceNotificationSample(
