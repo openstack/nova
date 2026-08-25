@@ -13,6 +13,15 @@ their host system.
 
 .. __: https://developer.amd.com/sev/
 
+.. versionchanged:: 32.0.0
+
+    Added support for Secure Encrypted Virtualization-Encrypted State
+    (SEV-ES)
+
+.. versionchanged:: 34.0.0
+
+    Added support for Secure Encrypted Virtualization-Secure Nested Paging
+    (SEV-SNP)
 
 .. _deploying-sev-capable-infrastructure:
 
