@@ -293,7 +293,7 @@ def create_encryption_secret(
     key_mgr = _get_key_manager()
     secret_uuid = key_mgr.store(context, cmo)
     LOG.debug(
-        f'Created "{secret_name}" with UUID {secret_uuid}',
+        'Created "%s" with UUID %s', secret_name, secret_uuid,
         instance=instance
     )
     return secret_uuid, secret
@@ -306,10 +306,10 @@ def get_encryption_secret(
     key_mgr = _get_key_manager()
     try:
         key = key_mgr.get(context, secret_uuid)
-        LOG.debug(f"Retrieved secret with UUID {secret_uuid}")
+        LOG.debug("Retrieved secret with UUID %s", secret_uuid)
         return key.get_encoded()
     except castellan_exception.ManagedObjectNotFoundError:
-        LOG.debug(f"Encryption secret with UUID {secret_uuid} was not found.")
+        LOG.debug("Encryption secret with UUID %s was not found.", secret_uuid)
     return None
 
 
@@ -321,8 +321,9 @@ def delete_encryption_secret(
     key_mgr = _get_key_manager()
     try:
         key_mgr.delete(context, secret_uuid)
-        LOG.debug(f"Deleted secret with UUID {secret_uuid}",
-            instance_uuid=instance_uuid)
+        LOG.debug("Deleted secret with UUID %s", secret_uuid,
+                  instance_uuid=instance_uuid)
     except castellan_exception.ManagedObjectNotFoundError:
-        LOG.debug(f"Encryption secret with UUID {secret_uuid} already deleted "
-                  "or never existed.", instance_uuid=instance_uuid)
+        LOG.debug(
+            "Encryption secret with UUID %s already deleted or never existed.",
+            secret_uuid, instance_uuid=instance_uuid)
