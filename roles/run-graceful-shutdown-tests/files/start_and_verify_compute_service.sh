@@ -4,6 +4,8 @@ set -e
 
 COMPUTE_HOST=$1
 EXPECTED_STATE=${2:-active}
+INTERVAL=${3:-10}
+TIMEOUT=${4:-60}
 
 get_service_status() {
   local host=$1
@@ -15,25 +17,30 @@ get_service_status() {
 wait_for_service_state() {
   local host=$1
   local expected=$2
-  local timeout=${3:-30}
-  local count=0
+  local interval=$3
+  local timeout=$4
+  local elapsed=0
   local status
+  local start_time
+  start_time=$(date)
+
+  echo "Started checking compute service on ${host} for state '${expected}' at ${start_time} (interval=${interval}s, timeout=${timeout}s)"
 
   status=$(get_service_status "${host}")
   while [ "${status}" != "${expected}" ]; do
-    sleep 5
-    count=$((count+1))
-    if [ ${count} -eq ${timeout} ]; then
-      echo "Timed out waiting for compute service on ${host} to be ${expected} (current: ${status})"
+    sleep "${interval}"
+    elapsed=$((elapsed + interval))
+    if [ ${elapsed} -ge ${timeout} ]; then
+      echo "Timed out waiting for compute service on ${host} to be ${expected} (current: ${status}); started at ${start_time}, waited ${elapsed}s"
       exit 5
     fi
     status=$(get_service_status "${host}")
   done
-  echo "Compute service on ${host} is ${expected}"
+  echo "Compute service on ${host} is ${expected}; started at ${start_time}, took ${elapsed}s"
 }
 
 if [ "${EXPECTED_STATE}" == "active" ] && [ "$(get_service_status "${COMPUTE_HOST}")" != "active" ]; then
     ssh "${COMPUTE_HOST}" sudo systemctl start devstack@n-cpu
 fi
 
-wait_for_service_state "${COMPUTE_HOST}" "${EXPECTED_STATE}"
+wait_for_service_state "${COMPUTE_HOST}" "${EXPECTED_STATE}" "${INTERVAL}" "${TIMEOUT}"
