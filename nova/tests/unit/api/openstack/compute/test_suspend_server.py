@@ -42,7 +42,7 @@ class SuspendServerTests(admin_only_action_common.CommonTests):
     @ddt.data(
         exception.OperationNotSupportedForVDPAInterface(
             instance_uuid=uuids.instance, operation='foo'),
-        exception.OperationNotSupportedForSEV(
+        exception.OperationNotSupportedForMemEncryption(
             instance_uuid=uuids.instance, operation='foo'),
         exception.ForbiddenWithAccelerators(),
     )

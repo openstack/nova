@@ -292,7 +292,7 @@ class MigrateServerTests(admin_only_action_common.CommonTests):
 
     def test_migrate_live_sev_not_supported(self):
         self._test_migrate_live_failed_with_exception(
-            exception.OperationNotSupportedForSEV(
+            exception.OperationNotSupportedForMemEncryption(
                 instance_uuid=uuids.instance, operation='foo'),
             expected_exc=webob.exc.HTTPBadRequest,
             check_response=False)
