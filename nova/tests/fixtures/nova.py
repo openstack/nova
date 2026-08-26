@@ -453,7 +453,8 @@ class DatabaseWriteLock(fixtures.Fixture):
         @contextmanager
         def _locked_scope(tcm_self, context):
             if tcm_self._mode is enginefacade._WRITER:
-                with self._get_lock(tcm_self):
+                db_url = tcm_self.reader.get_engine().url
+                with self._get_lock(db_url):
                     with original(tcm_self, context) as resource:
                         yield resource
             else:
@@ -465,10 +466,10 @@ class DatabaseWriteLock(fixtures.Fixture):
             '_transaction_scope',
             _locked_scope))
 
-    def _get_lock(self, transaction_context_manager):
-        """Return a reentrant lock for the given engine facade root."""
+    def _get_lock(self, db_url):
+        """Return a reentrant lock for the given DB"""
         with self._locks_guard:
-            return self._locks[transaction_context_manager._root]
+            return self._locks[db_url]
 
 
 class CellDatabases(fixtures.Fixture):
