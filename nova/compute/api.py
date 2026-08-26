@@ -1402,14 +1402,22 @@ class API:
             raise exception.MismatchVolumeAZException(reason=msg)
 
     def _enforce_create_unified_limits(
-        self, context, flavor, is_bfv, port_resource_requests,
+        self, context, flavor, is_bfv, image, port_resource_requests,
         dp_request_groups, min_count, num_instances,
     ):
         if not limit_utils.use_unified_limits():
             return num_instances
 
+        # NOTE(melwitt): The image is needed so that extra specs which only
+        # translate to a resource class in combination with the image (e.g.
+        # hw:mem_encryption) can be accounted for, and so that the translation
+        # does not raise FlavorImageConflict against an empty image. The flavor
+        # and image have already been validated together earlier in the create
+        # flow, so this cannot introduce a new conflict. See bug #2088831.
+        image_meta = _get_image_meta_obj(image)
         req_spec = scheduler_utils.request_spec_for_limits(
-            flavor, is_bfv, port_resource_requests, dp_request_groups)
+            flavor, is_bfv, image_meta, port_resource_requests,
+            dp_request_groups)
         return placement_limits.enforce_num_instances_and_resources(
             context, context.project_id, req_spec, min_count, num_instances)
 
@@ -1454,7 +1462,7 @@ class API:
 
         port_resource_requests = base_options.get('port_resource_requests')
         num_instances = self._enforce_create_unified_limits(
-            context, flavor, is_bfv, port_resource_requests,
+            context, flavor, is_bfv, boot_meta, port_resource_requests,
             dp_request_groups, min_count, num_instances)
 
         security_groups = security_group_api.populate_security_groups(
