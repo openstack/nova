@@ -206,6 +206,7 @@ instance for these kind of workloads.
    uefi
    secure-boot
    sev
+   tdx
    managing-resource-providers
    compute-node-identification
    resource-limits
