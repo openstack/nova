@@ -178,6 +178,7 @@ class MemEncryptionConfig(metaclass=abc.ABCMeta):
             fields.MemEncryptionModel.AMD_SEV: MemEncryptionConfigSev,
             fields.MemEncryptionModel.AMD_SEV_ES: MemEncryptionConfigSevEs,
             fields.MemEncryptionModel.AMD_SEV_SNP: MemEncryptionConfigSevSnp,
+            fields.MemEncryptionModel.INTEL_TDX: MemEncryptionConfigTDX,
         }
 
         if model not in model2cls:
@@ -242,6 +243,46 @@ class MemEncryptionConfigSevSnp(MemEncryptionConfigSev):
     @property
     def needs_stateless_firmware(self) -> bool:
         return True
+
+
+class MemEncryptionConfigTDX(MemEncryptionConfig):
+    @property
+    def model(self) -> str:
+        return fields.MemEncryptionModel.INTEL_TDX
+
+    @property
+    def needs_locked_memory(self) -> bool:
+        return False
+
+    @property
+    def required_trait(self) -> str:
+        return os_traits.HW_CPU_X86_INTEL_TDX
+
+    @property
+    def required_firmware_type(self) -> str:
+        return "uefi"
+
+    @property
+    def required_machine_type(self) -> str:
+        return "q35"
+
+    @property
+    def needs_stateless_firmware(self) -> bool:
+        return True
+
+    def check_constraints(self, image_meta: 'objects.ImageMeta',
+                          machine_type: str | None,
+                          requesters: list[str]) -> None:
+        super().check_constraints(image_meta, machine_type, requesters)
+
+        if image_meta.properties.get(
+                'hw_video_model') != fields.VideoModel.NONE:
+            emsg = _(
+                "The %s memory encryption model is incompatible with an "
+                "attached video device. Set the 'hw_video_model' image "
+                "property to 'none' to disable it"
+            )
+            raise exception.InvalidVideoMode(emsg % self.model)
 
 
 def get_vcpu_pin_set():

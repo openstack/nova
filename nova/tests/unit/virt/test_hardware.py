@@ -5415,6 +5415,14 @@ class GetMemEncryptionConfigTestCase(test.NoDBTestCase):
                          me_config.model)
         self.assertEqual(ot.HW_CPU_X86_AMD_SEV_SNP, me_config.required_trait)
 
+    def test_tdx(self):
+        me_config = hw.MemEncryptionConfig.create(
+            fields.MemEncryptionModel.INTEL_TDX)
+        self.assertIs(hw.MemEncryptionConfigTDX, type(me_config))
+        self.assertFalse(me_config.needs_locked_memory)
+        self.assertEqual(fields.MemEncryptionModel.INTEL_TDX, me_config.model)
+        self.assertEqual(ot.HW_CPU_X86_INTEL_TDX, me_config.required_trait)
+
 
 class MemEncryptionFlavorImageConflictTestCase(test.NoDBTestCase):
     def _test_encrypted_memory_support_conflict(self, extra_spec,
@@ -5606,6 +5614,7 @@ class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
                                                         error_data)
 
 
+@ddt.ddt
 class MemEncryptionRequestedWithoutStatelessFirmware(
        MemEncryptionRequestedInvalidImagePropsTestCase):
     expected_exception = exception.StatelessFirmwareRequired
@@ -5614,14 +5623,34 @@ class MemEncryptionRequestedWithoutStatelessFirmware(
         "but the image metadata doesn't have the 'hw_firmware_stateless' "
         "property set to True")
 
-    def test_encrypted_memory_support_without_stateless(self):
-        error_data = {'model': 'amd-sev-snp'}
+    @ddt.data('amd-sev-snp', 'intel-tdx')
+    def test_encrypted_memory_support_without_stateless(self, model):
+        error_data = {'model': model}
         image_props = {'hw_firmware_type': 'uefi',
                        'hw_machine_type': 'q35',
                        'hw_mem_encryption': True,
-                       'hw_mem_encryption_model': 'amd-sev-snp'}
+                       'hw_mem_encryption_model': model}
         self._test_encrypted_memory_support_raises(None, None,
                                                    image_props, error_data)
+
+
+class MemEncryptionRequestedWithoutDisabledVideoModel(
+        MemEncryptionRequestedInvalidImagePropsTestCase):
+    expected_exception = exception.InvalidVideoMode
+    expected_error = (
+        "The %(model)s memory encryption model is incompatible with an "
+        "attached video device. Set the 'hw_video_model' image property "
+        "to 'none' to disable it")
+
+    def test_encrypted_memory_support_without_disabled_video(self):
+        error_data = {'model': 'intel-tdx'}
+        image_props = {'hw_firmware_type': 'uefi',
+                        'hw_machine_type': 'q35',
+                        'hw_firmware_stateless': True,
+                        'hw_mem_encryption': True,
+                        'hw_mem_encryption_model': 'intel-tdx'}
+        self._test_encrypted_memory_support_raises(None, None,
+                                                    image_props, error_data)
 
 
 class MemEncryptionRequiredTestCase(test.NoDBTestCase):
