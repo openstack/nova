@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Fixed `bug 2088831 <https://bugs.launchpad.net/nova/+bug/2088831>`__ where
+    creating a server with a flavor requesting memory encryption
+    (``hw:mem_encryption``) failed with a 400 error when unified limits quotas
+    were enabled (``[quota]driver = nova.quota.UnifiedLimitsDriver``). The
+    unified limits quota check built its resource request from the flavor
+    alone, without the image, causing a spurious flavor/image conflict during
+    extra spec translation. The image metadata is now included in the quota
+    check.

@@ -682,7 +682,7 @@ def resources_from_flavor_and_bfv(flavor, is_bfv):
 
 
 def request_spec_for_limits(
-    flavor, is_bfv, port_resource_requests=None,
+    flavor, is_bfv, image=None, port_resource_requests=None,
     dp_request_groups=None,
 ):
     """Build a RequestSpec for unified limits quota enforcement.
@@ -692,15 +692,21 @@ def request_spec_for_limits(
     and cyborg device profile resources, so the unified limits check covers
     all requested resource classes.
 
+    The image metadata is included because some extra specs are translated
+    into resource classes only in combination with the image, and because
+    the translation (e.g. for hw:mem_encryption) would otherwise raise a
+    FlavorImageConflict against an empty image. See bug #2088831.
+
     :param flavor: The instance Flavor object.
     :param is_bfv: True if the instance is boot-from-volume.
+    :param image: The image metadata as an ImageMeta object, or None.
     :param port_resource_requests: RequestGroup list from neutron port
         resource requests, or None.
     :param dp_request_groups: RequestGroup list from cyborg device profile,
         or None.
     :returns: A RequestSpec with requested_resources and PCI groups set.
     """
-    req_spec = objects.RequestSpec(flavor=flavor, is_bfv=is_bfv)
+    req_spec = objects.RequestSpec(flavor=flavor, is_bfv=is_bfv, image=image)
     req_spec.requested_resources = []
     if CONF.filter_scheduler.pci_in_placement:
         req_spec.pci_requests = pci_request.get_pci_requests_from_flavor(
