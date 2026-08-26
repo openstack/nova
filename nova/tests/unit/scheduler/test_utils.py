@@ -2346,6 +2346,10 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
             expected_resources[orc.MEM_ENCRYPTION_CONTEXT] = 1
             required_traits |= {'COMPUTE_SECURITY_STATELESS_FIRMWARE',
                                 'HW_CPU_X86_AMD_SEV_SNP'}
+        elif mem_encryption_model == 'intel-tdx':
+            expected_resources[orc.MEM_ENCRYPTION_CONTEXT] = 1
+            required_traits |= {'COMPUTE_SECURITY_STATELESS_FIRMWARE',
+                                'HW_CPU_X86_INTEL_TDX'}
         elif mem_encryption_model is not None:
             self.fail('invalid mem_encryption_model: %s'
                       % mem_encryption_model)
@@ -2477,6 +2481,8 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
             me_trait = 'HW_CPU_X86_AMD_SEV_ES'
         if model == 'amd-sev-snp':
             me_trait = 'HW_CPU_X86_AMD_SEV_SNP'
+        if model == 'intel-tdx':
+            me_trait = 'HW_CPU_X86_INTEL_TDX'
         mock_log.debug.assert_has_calls([
             mock.call('Requiring memory encryption model %s via trait %s',
                       model, me_trait)
@@ -2526,14 +2532,16 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
                     hw_mem_encryption=image_prop))
         )
 
-    @ddt.data('amd-sev', 'amd-sev-es', 'amd-sev-snp')
+    @ddt.data('amd-sev', 'amd-sev-es', 'amd-sev-snp', 'intel-tdx')
     def test_encrypted_memory_model_extra_spec(self, model):
         image_props = {
             'hw_machine_type': 'q35',
             'hw_firmware_type': 'uefi'
         }
-        if model == 'amd-sev-snp':
+        if model in ('amd-sev-snp', 'intel-tdx'):
             image_props['hw_firmware_stateless'] = 'true'
+        if model == 'intel-tdx':
+            image_props['hw_video_model'] = 'none'
 
         self._test_encrypted_memory_support_required(
             'hw:mem_encryption extra spec',
@@ -2545,7 +2553,7 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
             model=model
         )
 
-    @ddt.data('amd-sev', 'amd-sev-es', 'amd-sev-snp')
+    @ddt.data('amd-sev', 'amd-sev-es', 'amd-sev-snp', 'intel-tdx')
     def test_encrypted_memory_model_image_prop(self, model):
         image_props = {
             'hw_machine_type': 'q35',
@@ -2553,8 +2561,10 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
             'hw_mem_encryption': 'true',
             'hw_mem_encryption_model': model,
         }
-        if model == 'amd-sev-snp':
+        if model in ('amd-sev-snp', 'intel-tdx'):
             image_props['hw_firmware_stateless'] = 'true'
+        if model == 'intel-tdx':
+            image_props['hw_video_model'] = 'none'
 
         self._test_encrypted_memory_support_required(
             'hw_mem_encryption image property',
@@ -2566,7 +2576,7 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
             model=model
         )
 
-    @ddt.data('amd-sev', 'amd-sev-es', 'amd-sev-snp')
+    @ddt.data('amd-sev', 'amd-sev-es', 'amd-sev-snp', 'intel-tdx')
     def test_encrypted_memory_model_both_required(self, model):
         image_props = {
             'hw_machine_type': 'q35',
@@ -2574,8 +2584,10 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
             'hw_mem_encryption': 'true',
             'hw_mem_encryption_model': model,
         }
-        if model == 'amd-sev-snp':
+        if model in ('amd-sev-snp', 'intel-tdx'):
             image_props['hw_firmware_stateless'] = 'true'
+        if model == 'intel-tdx':
+            image_props['hw_video_model'] = 'none'
 
         self._test_encrypted_memory_support_required(
             'hw:mem_encryption extra spec and '
@@ -2593,10 +2605,16 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
     @ddt.data(
         ('amd-sev', 'amd-sev-es'),
         ('amd-sev', 'amd-sev-snp'),
+        ('amd-sev', 'intel-tdx'),
         ('amd-sev-es', 'amd-sev'),
         ('amd-sev-es', 'amd-sev-snp'),
+        ('amd-sev-es', 'intel-tdx'),
         ('amd-sev-snp', 'amd-sev'),
-        ('amd-sev-snp', 'amd-sev-es'))
+        ('amd-sev-snp', 'amd-sev-es'),
+        ('amd-sev-snp', 'intel-tdx'),
+        ('intel-tdx', 'amd-sev'),
+        ('intel-tdx', 'amd-sev-es'),
+        ('intel-tdx', 'amd-sev-snp'))
     def test_encrypted_memory_model_conflict_1(self, f_model, i_model):
         image = objects.ImageMeta(
             name=self.image_name,

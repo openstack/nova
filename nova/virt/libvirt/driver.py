@@ -7936,6 +7936,8 @@ class LibvirtDriver(driver.ComputeDriver):
                      fields.MemEncryptionModel.AMD_SEV_ES,
                      fields.MemEncryptionModel.AMD_SEV_SNP):
             self._guest_configure_sev_mem_encryption(instance, guest, model)
+        elif model == fields.MemEncryptionModel.INTEL_TDX:
+            self._guest_configure_tdx_mem_encryption(guest)
         else:
             raise exception.Invalid(
                 "Unknown MemEncryptionModel: %(model)s. "
@@ -7956,6 +7958,17 @@ class LibvirtDriver(driver.ComputeDriver):
             launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
 
         guest.launch_security = launch_security
+
+    def _guest_configure_tdx_mem_encryption(self, guest):
+        guest.launch_security = vconfig.LibvirtConfigGuestTDXLaunchSecurity()
+        # NOTE(antia)
+        # https://github.com/canonical/tdx/commit/a6216d1eeea8140f9db242d74ebc99c54071535f
+        guest.os_loader_readonly = True
+        # NOTE(antia) Intel TDX firmware does not have SMM support but can be
+        # packaged with secure boot. Loader with secure enabled forces SMM and
+        # thus conflicts and prevents firmware auto-discovery. TDX doesn't use
+        # pflash and thus there is nothing for SMM to protect.
+        guest.os_loader_secure = None
 
     def _guest_add_mdevs(self, guest, chosen_mdevs):
         for chosen_mdev in chosen_mdevs:
@@ -13662,6 +13675,8 @@ class LibvirtDriver(driver.ComputeDriver):
             return self._host.supports_amd_sev_es
         if me_model == fields.MemEncryptionModel.AMD_SEV_SNP:
             return self._host.supports_amd_sev_snp
+        if me_model == fields.MemEncryptionModel.INTEL_TDX:
+            return self._host.supports_intel_tdx
         raise exception.Invalid('Invalid memory encryption model: %r' %
                                 me_model)
 
