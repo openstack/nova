@@ -1077,6 +1077,22 @@ class TestGetSDKAdapter(test.NoDBTestCase):
             self._test_get_sdk_adapter(admin=True), mock.sentinel.proxy
         )
 
+    def test_get_sdk_adapter_ksa_auth(self):
+        # When ksa_auth is provided it takes precedence over the admin
+        # flag: the session is built from the given auth plugin rather
+        # than from nova's service credentials or the user's token.
+        auth = mock.sentinel.auth
+        actual = utils.get_sdk_adapter(
+            self.service_type, admin=True, ksa_auth=auth)
+
+        self.mock_get_confgrp.assert_called_once_with(self.service_type)
+        self.mock_get_auth_sess.assert_called_once_with(
+            self.mock_get_confgrp.return_value, ksa_auth=auth)
+        self.mock_connection.assert_called_once_with(
+            session=mock.sentinel.session, oslo_conf=self.mock_conf,
+            service_types={'test_service'}, strict_proxies=False)
+        self.assertEqual(mock.sentinel.proxy, actual)
+
     def test_get_sdk_adapter_strict(self):
         self.assertEqual(
             self._test_get_sdk_adapter(True, strict=True), mock.sentinel.proxy)

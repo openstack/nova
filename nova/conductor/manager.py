@@ -917,9 +917,9 @@ class ComputeTaskManager:
         try:
             resource_provider_mapping = (
                 request_spec.get_request_group_mapping())
-            # Using nodename instead of hostname. See:
-            # http://lists.openstack.org/pipermail/openstack-discuss/2019-November/011044.html  # noqa
-            cyclient = cyborg.get_client(context)
+            dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+            cyclient = cyborg.get_client(
+                    context) if dp_name or requested_networks else None
             bindings = {}
             port_bindings = {}
 

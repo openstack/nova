@@ -68,3 +68,23 @@ class ServiceAuthTestCase(test.NoDBTestCase):
                 self.ctx, user_auth=user_auth)
 
         self.assertEqual(user_auth, result.user_auth)
+
+    @mock.patch.object(ks_loading, 'load_auth_from_conf_options',
+                       new=mock.Mock())
+    def test_get_service_user_token_auth_plugin_endpoint_data(self):
+        # The local ServiceTokenAuthWrapper subclass delegates
+        # get_endpoint_data() to user_auth, which the upstream wrapper
+        # does not. openstacksdk needs this for API version discovery.
+        # See https://bugs.launchpad.net/keystoneauth/+bug/2164939
+        self.flags(send_service_user_token=True, group='service_user')
+        user_auth = mock.Mock()
+
+        result = service_auth.get_service_user_token_auth_plugin(
+                self.ctx, user_auth=user_auth)
+
+        endpoint_data = result.get_endpoint_data(mock.sentinel.session)
+
+        user_auth.get_endpoint_data.assert_called_once_with(
+            mock.sentinel.session)
+        self.assertEqual(
+            user_auth.get_endpoint_data.return_value, endpoint_data)

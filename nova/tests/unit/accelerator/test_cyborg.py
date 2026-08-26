@@ -15,7 +15,9 @@
 import itertools
 from unittest import mock
 
-from keystoneauth1 import exceptions as ks_exc
+import fixtures
+
+from openstack import exceptions as sdk_exc
 from requests.models import Response
 
 from oslo_serialization import jsonutils
@@ -34,49 +36,49 @@ class CyborgTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CyborgTestCase, self).setUp()
         self.context = context.get_admin_context()
+        self.mock_get_auth = self.useFixture(fixtures.MockPatch(
+            'nova.service_auth.get_service_user_token_auth_plugin')).mock
+        self.mock_get_sdk_adapter = self.useFixture(
+            fixtures.MockPatch('nova.utils.get_sdk_adapter')).mock
+        self.mock_adapter = mock.Mock()
+        self.mock_get_sdk_adapter.return_value = self.mock_adapter
         self.client = cyborg.get_client(self.context)
 
     def test_get_client(self):
-        # Set up some ksa conf options
-        region = 'MyRegion'
-        endpoint = 'http://example.com:1234'
-        self.flags(group='cyborg',
-                   region_name=region,
-                   endpoint_override=endpoint)
-        ctxt = context.get_admin_context()
-        client = cyborg.get_client(ctxt)
+        # The SDK adapter is created lazily: merely constructing the
+        # client must not look up auth or contact Cyborg for endpoint
+        # discovery.
+        self.mock_get_auth.assert_not_called()
+        self.mock_get_sdk_adapter.assert_not_called()
 
-        # Dig into the ksa adapter a bit to ensure the conf options got through
-        # We don't bother with a thorough test of get_ksa_adapter - that's done
-        # elsewhere - this is just sanity-checking that we spelled things right
-        # in the conf setup.
-        self.assertEqual('accelerator', client._client.service_type)
-        self.assertEqual(region, client._client.region_name)
-        self.assertEqual(endpoint, client._client.endpoint_override)
+        # The adapter is created on first access and reused after that.
+        self.assertIs(self.mock_adapter, self.client._client)
+        self.assertIs(self.mock_adapter, self.client._client)
+        self.mock_get_auth.assert_called_once_with(self.context)
+        self.mock_get_sdk_adapter.assert_called_once_with(
+            'accelerator', admin=False,
+            ksa_auth=self.mock_get_auth.return_value)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_call_cyborg(self, mock_ksa_get):
-        mock_ksa_get.return_value = 1  # dummy value
+    def test_call_cyborg(self):
+        self.mock_adapter.get.return_value = 1  # dummy value
         resp, err_msg = self.client._call_cyborg(
-            self.client._client.get, self.client.DEVICE_PROFILE_URL)
+            'get', self.client.DEVICE_PROFILE_URL)
         self.assertEqual(resp, 1)
         self.assertIsNone(err_msg)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_call_cyborg_keystone_error(self, mock_ksa_get):
-        mock_ksa_get.side_effect = ks_exc.ClientException
+    def test_call_cyborg_sdk_error(self):
+        self.mock_adapter.get.side_effect = sdk_exc.SDKException
         resp, err_msg = self.client._call_cyborg(
-            self.client._client.get, self.client.DEVICE_PROFILE_URL)
+            'get', self.client.DEVICE_PROFILE_URL)
 
         self.assertIsNone(resp)
-        expected_err = 'Could not communicate with Cyborg.'
+        expected_err = 'Could not communicate with Cyborg:'
         self.assertIn(expected_err, err_msg)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_call_cyborg_bad_response(self, mock_ksa_get):
-        mock_ksa_get.return_value = None
+    def test_call_cyborg_bad_response(self):
+        self.mock_adapter.get.return_value = None
         resp, err_msg = self.client._call_cyborg(
-            self.client._client.get, self.client.DEVICE_PROFILE_URL)
+            'get', self.client.DEVICE_PROFILE_URL)
 
         self.assertIsNone(resp)
         expected_err = 'Invalid response from Cyborg:'
@@ -203,10 +205,9 @@ class CyborgTestCase(test.NoDBTestCase):
             bound_arq['attach_handle_info']['function'] = index  # fix func ID
         return bindings, bound_arqs
 
-    @mock.patch('keystoneauth1.adapter.Adapter.post')
-    def test_create_arqs_failure(self, mock_cyborg_post):
+    def test_create_arqs_failure(self):
         # If Cyborg returns invalid response, raise exception.
-        mock_cyborg_post.return_value = None
+        self.mock_adapter.post.return_value = None
         self.assertRaises(exception.AcceleratorRequestOpFailed,
                           self.client._create_arqs,
                           dp_name='mydp')
@@ -263,8 +264,7 @@ class CyborgTestCase(test.NoDBTestCase):
             self.client.create_arqs_and_match_resource_providers,
             dp_name, rg_rp_map)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.patch')
-    def test_bind_arqs(self, mock_cyborg_patch):
+    def test_bind_arqs(self):
         bindings, bound_arqs = self._get_bound_arqs()
         arq_uuid = bound_arqs[0]['uuid']
 
@@ -278,9 +278,9 @@ class CyborgTestCase(test.NoDBTestCase):
 
         self.client.bind_arqs(bindings)
 
-        mock_cyborg_patch.assert_called_once_with(
+        self.mock_adapter.patch.assert_called_once_with(
             self.client.ARQ_URL, json=mock.ANY)
-        called_params = mock_cyborg_patch.call_args.kwargs['json']
+        called_params = self.mock_adapter.patch.call_args.kwargs['json']
         self.assertEqual(sorted(called_params), sorted(patch_list))
 
     @mock.patch('nova.accelerator.cyborg._CyborgClient.delete_arqs_by_uuid')
@@ -293,8 +293,7 @@ class CyborgTestCase(test.NoDBTestCase):
              self.client.bind_arqs, bindings=bindings)
         mock_del_arqs.assert_not_called()
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_get_arqs_for_instance(self, mock_cyborg_get):
+    def test_get_arqs_for_instance(self):
         # Happy path, without only_resolved=True
         _, bound_arqs = self._get_bound_arqs()
         instance_uuid = bound_arqs[0]['instance_uuid']
@@ -302,11 +301,11 @@ class CyborgTestCase(test.NoDBTestCase):
         query = {"instance": instance_uuid}
         content = jsonutils.dumps({'arqs': bound_arqs})
         resp = fake_requests.FakeResponse(200, content)
-        mock_cyborg_get.return_value = resp
+        self.mock_adapter.get.return_value = resp
 
         ret_arqs = self.client.get_arqs_for_instance(instance_uuid)
 
-        mock_cyborg_get.assert_called_once_with(
+        self.mock_adapter.get.assert_called_once_with(
             self.client.ARQ_URL, params=query)
 
         bound_arqs.sort(key=lambda x: x['uuid'])
@@ -314,34 +313,31 @@ class CyborgTestCase(test.NoDBTestCase):
         for ret_arq, bound_arq in zip(ret_arqs, bound_arqs):
             self.assertDictEqual(ret_arq, bound_arq)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_get_arqs_for_instance_exception(self, mock_cyborg_get):
+    def test_get_arqs_for_instance_exception(self):
         # If Cyborg returns an error code, raise exception
         _, bound_arqs = self._get_bound_arqs()
         instance_uuid = bound_arqs[0]['instance_uuid']
 
         resp = fake_requests.FakeResponse(404, content='')
-        mock_cyborg_get.return_value = resp
+        self.mock_adapter.get.return_value = resp
         self.assertRaises(
             exception.AcceleratorRequestOpFailed,
             self.client.get_arqs_for_instance, instance_uuid)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_get_arqs_for_instance_exception_no_resp(self, mock_cyborg_get):
+    def test_get_arqs_for_instance_exception_no_resp(self):
         # If Cyborg returns an error code, raise exception
         _, bound_arqs = self._get_bound_arqs()
         instance_uuid = bound_arqs[0]['instance_uuid']
 
         content = jsonutils.dumps({'noarqs': 'oops'})
         resp = fake_requests.FakeResponse(200, content)
-        mock_cyborg_get.return_value = resp
+        self.mock_adapter.get.return_value = resp
         self.assertRaisesRegex(
             exception.AcceleratorRequestOpFailed,
             'Cyborg returned no accelerator requests for ',
             self.client.get_arqs_for_instance, instance_uuid)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_get_arqs_for_instance_all_resolved(self, mock_cyborg_get):
+    def test_get_arqs_for_instance_all_resolved(self):
         # If all ARQs are resolved, return full list
         _, bound_arqs = self._get_bound_arqs()
         instance_uuid = bound_arqs[0]['instance_uuid']
@@ -349,12 +345,12 @@ class CyborgTestCase(test.NoDBTestCase):
         query = {"instance": instance_uuid}
         content = jsonutils.dumps({'arqs': bound_arqs})
         resp = fake_requests.FakeResponse(200, content)
-        mock_cyborg_get.return_value = resp
+        self.mock_adapter.get.return_value = resp
 
         ret_arqs = self.client.get_arqs_for_instance(
             instance_uuid, only_resolved=True)
 
-        mock_cyborg_get.assert_called_once_with(
+        self.mock_adapter.get.assert_called_once_with(
             self.client.ARQ_URL, params=query)
 
         bound_arqs.sort(key=lambda x: x['uuid'])
@@ -362,8 +358,7 @@ class CyborgTestCase(test.NoDBTestCase):
         for ret_arq, bound_arq in zip(ret_arqs, bound_arqs):
             self.assertDictEqual(ret_arq, bound_arq)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_get_arqs_for_instance_some_resolved(self, mock_cyborg_get):
+    def test_get_arqs_for_instance_some_resolved(self):
         # If only some ARQs are resolved, return just the resolved ones
         unbound_arqs, _ = self._get_arqs_and_request_groups()
         _, bound_arqs = self._get_bound_arqs()
@@ -374,12 +369,12 @@ class CyborgTestCase(test.NoDBTestCase):
         query = {"instance": instance_uuid}
         content = jsonutils.dumps({'arqs': arqs})
         resp = fake_requests.FakeResponse(200, content)
-        mock_cyborg_get.return_value = resp
+        self.mock_adapter.get.return_value = resp
 
         ret_arqs = self.client.get_arqs_for_instance(
             instance_uuid, only_resolved=True)
 
-        mock_cyborg_get.assert_called_once_with(
+        self.mock_adapter.get.assert_called_once_with(
             self.client.ARQ_URL, params=query)
         self.assertEqual(ret_arqs, [bound_arqs[0]])
 
@@ -428,17 +423,16 @@ class CyborgTestCase(test.NoDBTestCase):
         mock_log.assert_called_once_with('Failed to delete ARQs %s',
                                          arq_uuid_str)
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_get_arq_by_uuid(self, mock_cyborg_get):
+    def test_get_arq_by_uuid(self):
         _, bound_arqs = self._get_bound_arqs()
         arq_uuids = [arq['uuid'] for arq in bound_arqs]
         content = jsonutils.dumps({'arqs': bound_arqs[0]})
         resp = fake_requests.FakeResponse(200, content)
-        mock_cyborg_get.return_value = resp
+        self.mock_adapter.get.return_value = resp
 
         ret_arqs = self.client.get_arq_by_uuid(arq_uuids[0])
 
-        mock_cyborg_get.assert_called_once_with(
+        self.mock_adapter.get.assert_called_once_with(
             "%s/%s" % (self.client.ARQ_URL, arq_uuids[0]))
         self.assertEqual(bound_arqs[0], ret_arqs['arqs'])
 
@@ -452,20 +446,18 @@ class CyborgTestCase(test.NoDBTestCase):
                 self.client.get_arq_by_uuid,
                 arq_uuids[0])
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_get_arq_by_uuid_not_found(self, mock_cyborg_get):
+    def test_get_arq_by_uuid_not_found(self):
         _, bound_arqs = self._get_bound_arqs()
         arq_uuids = [arq['uuid'] for arq in bound_arqs]
         content = jsonutils.dumps({})
         resp = fake_requests.FakeResponse(404, content)
-        mock_cyborg_get.return_value = resp
+        self.mock_adapter.get.return_value = resp
 
         self.assertRaises(exception.AcceleratorRequestOpFailed,
                 self.client.get_arq_by_uuid,
                 arq_uuids[0])
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get')
-    def test_get_arq_uuids_for_instance(self, mock_cyborg_get):
+    def test_get_arq_uuids_for_instance(self):
         # Happy path, without only_resolved=True
         _, bound_arqs = self._get_bound_arqs()
         instance_uuid = bound_arqs[0]['instance_uuid']
@@ -475,11 +467,11 @@ class CyborgTestCase(test.NoDBTestCase):
         query = {"instance": instance_uuid}
         content = jsonutils.dumps({'arqs': bound_arqs})
         resp = fake_requests.FakeResponse(200, content)
-        mock_cyborg_get.return_value = resp
+        self.mock_adapter.get.return_value = resp
 
         ret_arqs = self.client.get_arq_uuids_for_instance(instance)
 
-        mock_cyborg_get.assert_called_once_with(
+        self.mock_adapter.get.assert_called_once_with(
             self.client.ARQ_URL, params=query)
         bound_arqs = [bound_arq['uuid'] for bound_arq in bound_arqs]
         bound_arqs.sort()

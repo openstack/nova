@@ -43,8 +43,6 @@
 
 from oslo_log import log as logging
 
-from keystoneauth1 import exceptions as ks_exc
-
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -116,19 +114,35 @@ class _CyborgClient(object):
     ARQ_URL = "/accelerator_requests"
 
     def __init__(self, context):
-        auth = service_auth.get_service_user_token_auth_plugin(context)
-        self._client = utils.get_ksa_adapter('accelerator', ksa_auth=auth)
+        self._context = context
+        self._adapter = None
 
-    def _call_cyborg(self, func, *args, **kwargs):
+    @property
+    def _client(self):
+        # Create the openstacksdk adapter lazily so that merely
+        # constructing a client does not contact the Cyborg service.
+        # This preserves the previous keystoneauth1 behavior: endpoint
+        # discovery is deferred until the first actual Cyborg call, so
+        # callers that create a client for an instance that turns out
+        # not to use accelerators never trigger discovery (which would
+        # fail in deployments without Cyborg).
+        if self._adapter is None:
+            auth = service_auth.get_service_user_token_auth_plugin(
+                self._context)
+            self._adapter = utils.get_sdk_adapter(
+                'accelerator', admin=False, ksa_auth=auth)
+        return self._adapter
+
+    def _call_cyborg(self, method, *args, **kwargs):
         resp = err_msg = None
         try:
-            resp = func(*args, **kwargs)
+            resp = getattr(self._client, method)(*args, **kwargs)
             if not resp:
                 msg = _('Invalid response from Cyborg: ')
                 err_msg = msg + str(resp)
-        except ks_exc.ClientException as exc:
-            err_msg = _('Could not communicate with Cyborg.')
-            LOG.exception('%s: %s', err_msg, str(exc))
+        except Exception as e:
+            err_msg = _('Could not communicate with Cyborg: %s') % e
+            LOG.exception(err_msg)
 
         return resp, err_msg
 
@@ -136,7 +150,7 @@ class _CyborgClient(object):
         query = {"name": dp_name}
         err_msg = None
 
-        resp, err_msg = self._call_cyborg(self._client.get,
+        resp, err_msg = self._call_cyborg('get',
             self.DEVICE_PROFILE_URL, params=query)
 
         if err_msg:
@@ -188,8 +202,7 @@ class _CyborgClient(object):
 
     def _create_arqs(self, dp_name):
         data = {"device_profile_name": dp_name}
-        resp, err_msg = self._call_cyborg(self._client.post,
-             self.ARQ_URL, json=data)
+        resp, err_msg = self._call_cyborg('post', self.ARQ_URL, json=data)
 
         if err_msg:
             raise exception.AcceleratorRequestOpFailed(
@@ -266,7 +279,7 @@ class _CyborgClient(object):
                      } for field, value in binding.items()]
             patch_list[arq_uuid] = patch
 
-        resp, err_msg = self._call_cyborg(self._client.patch,
+        resp, err_msg = self._call_cyborg('patch',
              self.ARQ_URL, json=patch_list)
         if err_msg:
             arq_uuids = bindings.keys()
@@ -302,8 +315,7 @@ class _CyborgClient(object):
            :raises: AcceleratorRequestOpFailed
         """
         query = {"instance": instance_uuid}
-        resp, err_msg = self._call_cyborg(self._client.get,
-            self.ARQ_URL, params=query)
+        resp, err_msg = self._call_cyborg('get', self.ARQ_URL, params=query)
 
         if err_msg:
             err_msg = err_msg + _(' Instance %s') % instance_uuid
@@ -343,7 +355,7 @@ class _CyborgClient(object):
 
            :raises: AcceleratorRequestOpFailed
         """
-        resp, err_msg = self._call_cyborg(self._client.get,
+        resp, err_msg = self._call_cyborg('get',
                 "/".join([self.ARQ_URL, arq_uuid]))
 
         if err_msg:
@@ -363,7 +375,7 @@ class _CyborgClient(object):
         """
         # Unbind and delete the ARQs
         params = {"instance": instance_uuid}
-        resp, err_msg = self._call_cyborg(self._client.delete,
+        resp, err_msg = self._call_cyborg('delete',
             self.ARQ_URL, params=params)
         if err_msg:
             msg = err_msg + _(' Instance %s') % instance_uuid
@@ -391,7 +403,7 @@ class _CyborgClient(object):
         """
         arq_uuid_str = ','.join(arq_uuids)
         params = {'arqs': arq_uuid_str}
-        resp, err_msg = self._call_cyborg(self._client.delete,
+        resp, err_msg = self._call_cyborg('delete',
             self.ARQ_URL, params=params)
         if err_msg:
             # No point raising an exception.

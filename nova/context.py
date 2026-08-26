@@ -83,6 +83,29 @@ class _ContextAuthPlugin(plugin.BaseAuthPlugin):
                                             interface=interface,
                                             region_name=region_name)
 
+    def get_endpoint_data(self, session, *, endpoint_override=None,
+                          discover_versions=True, **kwargs):
+        """Return endpoint data with service catalog support.
+
+        BaseAuthPlugin.get_endpoint_data() returns None when no
+        endpoint_override is given because it has no service catalog
+        access. BaseIdentityPlugin adds catalog support but requires
+        get_auth_ref() to return a full AccessInfo, which we cannot
+        construct from serialized context data.
+
+        This class overrides get_endpoint() with a catalog lookup, but
+        that is not sufficient: openstacksdk calls get_endpoint_data()
+        directly for API version discovery, bypassing get_endpoint().
+        We bridge the gap by resolving the catalog endpoint ourselves
+        and passing it as endpoint_override so the base class can run
+        version discovery on the URL.
+        """
+        if not endpoint_override:
+            endpoint_override = self.get_endpoint(session, **kwargs)
+        return super().get_endpoint_data(
+            session, endpoint_override=endpoint_override,
+            discover_versions=discover_versions, **kwargs)
+
 
 @enginefacade.transaction_context_provider
 class RequestContext(context.RequestContext):

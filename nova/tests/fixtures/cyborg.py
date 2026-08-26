@@ -250,6 +250,10 @@ class CyborgFixture(fixtures.Fixture):
 
     def setUp(self):
         super().setUp()
+        self.useFixture(fixtures.MockPatch(
+            'nova.service_auth.get_service_user_token_auth_plugin'))
+        self.useFixture(fixtures.MockPatch(
+            'nova.utils.get_sdk_adapter'))
         self.mock_get_dp = self.useFixture(fixtures.MockPatch(
             'nova.accelerator.cyborg._CyborgClient._get_device_profile_list',
             side_effect=self.fake_get_device_profile_list)).mock
