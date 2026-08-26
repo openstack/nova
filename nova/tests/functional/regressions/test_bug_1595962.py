@@ -143,6 +143,9 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         except Exception as ex:
             self.fail(ex.response.content)
 
+        # wait for completion to avoid leaking threads
+        self.wait_for_migration_status(server, ["completed"])
+
     def wait_till_active_or_timeout(self, server_id):
         timeout = 0.0
         server = self.api.get_server(server_id)
@@ -152,3 +155,28 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
             server = self.api.get_server(server_id)
         if server['status'] != "ACTIVE":
             self.fail("The server is not active after the timeout.")
+
+    def wait_for_migration_status(self, server, expected_statuses):
+        """Waits for a migration record with the given statuses to be found
+        for the given server, else the test fails. The migration record, if
+        found, is returned.
+        """
+
+        statuses = [status.lower() for status in expected_statuses]
+        actual_status = None
+
+        for attempt in range(10):
+            migrations = self.admin_api.api_get(
+                '/os-migrations').body['migrations']
+            for migration in migrations:
+                if migration['instance_uuid'] == server['id']:
+                    actual_status = migration['status']
+                    if migration['status'].lower() in statuses:
+                        return migration
+            time.sleep(0.5)
+
+        self.fail(
+            'Timed out waiting for migration with status for instance %s '
+            '(expected "%s", got "%s")' % (
+                server['id'], expected_statuses, actual_status,
+            ))
