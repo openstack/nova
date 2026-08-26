@@ -3142,6 +3142,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': dest_hostname,
              'status': 'ACTIVE'})
+        self._wait_for_migration_status(server, ['completed'])
 
         self._run_periodics()
 
@@ -3970,6 +3971,7 @@ class ServerLiveMigrateForceAndAbort(
         self._wait_for_server_parameter(server,
                                         {'OS-EXT-SRV-ATTR:host': dest_hostname,
                                          'status': 'ACTIVE'})
+        self._wait_for_migration_status(server, ['completed'])
 
         self._run_periodics()
 

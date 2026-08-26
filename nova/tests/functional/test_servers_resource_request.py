@@ -2259,6 +2259,7 @@ class ServerMoveWithPortResourceRequestTest(
             server,
             {'OS-EXT-SRV-ATTR:host': 'host2',
              'status': 'ACTIVE'})
+        self._wait_for_migration_status(server, ['completed'])
 
         self._check_allocation(
             server, self.compute2_rp_uuid, non_qos_normal_port,
@@ -2315,6 +2316,7 @@ class ServerMoveWithPortResourceRequestTest(
                 server,
                 {'OS-EXT-SRV-ATTR:host': 'host3',
                  'status': 'ACTIVE'})
+            self._wait_for_migration_status(server, ['completed'])
 
         self._check_allocation(
             server, compute3_rp_uuid, non_qos_normal_port,
