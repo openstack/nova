@@ -3144,6 +3144,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_loader_readonly = None
         self.os_loader_secure = None
         self.os_loader_stateless = None
+        self.os_firmware_secure = None
         self.os_nvram = None
         self.os_nvram_template = None
         self.os_kernel = None
@@ -3195,12 +3196,12 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
         if self.os_firmware is not None:
             os.set("firmware", self.os_firmware)
-            if self.os_loader_secure is not None:
+            if self.os_firmware_secure is not None:
                 firmware = etree.Element("firmware")
                 sb_feature = etree.Element("feature")
                 sb_feature.set("name", "secure-boot")
                 sb_feature.set(
-                    "enabled", self.get_yes_no_str(self.os_loader_secure))
+                    "enabled", self.get_yes_no_str(self.os_firmware_secure))
                 firmware.append(sb_feature)
                 os.append(firmware)
 
@@ -3371,6 +3372,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                     self.os_loader_readonly = (c.get('readonly') == 'yes')
                 if c.get('secure'):
                     self.os_loader_secure = (c.get('secure') == 'yes')
+                    self.os_firmware_secure = self.os_loader_secure
                 if c.get('stateless'):
                     self.os_loader_stateless = (c.get('stateless') == 'yes')
             elif c.tag == 'nvram':
@@ -3391,6 +3393,11 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                     self.os_bootmenu = True
             elif c.tag == 'initenv':
                 self.os_init_env[c.get('name')] = c.text
+            elif c.tag == 'firmware':
+                for feature in c:
+                    if feature.get('name') == 'secure-boot':
+                        self.os_firmware_secure = (
+                            feature.get('enabled') == 'yes')
 
     def parse_dom(self, xmldoc):
         self.virt_type = xmldoc.get('type')
