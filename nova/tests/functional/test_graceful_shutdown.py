@@ -104,6 +104,19 @@ class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_service_parameter(
             host, binary, {'state': 'down'}, max_retries=20)
 
+    def _assert_in_progress_task_count(
+            self, compute, task_count, task_name=None):
+        tracked = list(compute.manager._in_progress_tasks.values())
+        self.assertEqual(task_count, len(tracked))
+        if task_name is not None:
+            self.assertEqual(task_name, tracked[0]['name'])
+
+    def _wait_for_no_task_tracked(self, compute):
+        def no_task_tracked():
+            self._assert_in_progress_task_count(compute, 0)
+
+        self._wait_for_assert(no_task_tracked)
+
     def _restart_compute(self, hostname):
         self.computes.pop(hostname, None)
         self._start_compute(hostname)
@@ -585,9 +598,10 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
             'Timed out waiting for spawn to start on src')
 
         # Check if build instance task is tracked
-        tracked = list(compute.manager._in_progress_tasks.values())
-        self.assertEqual(1, len(tracked))
-        self.assertEqual('build_instance', tracked[0]['name'])
+        def build_instance_tracked():
+            self._assert_in_progress_task_count(compute, 1, 'build_instance')
+
+        self._wait_for_assert(build_instance_tracked)
 
         stop_thread = self._stop_compute_gracefully(compute)
 
@@ -608,7 +622,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
 
         self.assertTrue(cleanup_called.is_set())
         # Check tracked task is removed from tracking dict.
-        self.assertEqual({}, compute.manager._in_progress_tasks)
+        self._wait_for_no_task_tracked(compute)
 
         self._restart_compute('src')
         self._delete_server(server)
@@ -639,9 +653,11 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
             'Timed out waiting for snapshot to start on src')
 
         # Check if snapshot instance task is tracked
-        tracked = list(compute.manager._in_progress_tasks.values())
-        self.assertEqual(1, len(tracked))
-        self.assertEqual('snapshot_instance', tracked[0]['name'])
+        def snapshot_instance_tracked():
+            self._assert_in_progress_task_count(
+                compute, 1, 'snapshot_instance')
+
+        self._wait_for_assert(snapshot_instance_tracked)
 
         stop_thread = self._stop_compute_gracefully(compute)
 
@@ -659,7 +675,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
 
         self.assertTrue(cleanup_called.is_set())
         # Check tracked task is removed from tracking dict.
-        self.assertEqual({}, compute.manager._in_progress_tasks)
+        self._wait_for_no_task_tracked(compute)
 
         self._restart_compute('src')
         self._delete_server(server)
@@ -706,12 +722,15 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
                 'Timed out waiting for spawn to start for %s' % server['id'])
 
         # Both build instance tasks should be tracked as in-progress tasks.
-        tracked = list(compute.manager._in_progress_tasks.values())
-        self.assertEqual(2, len(tracked))
-        self.assertEqual({'build_instance'}, {t['name'] for t in tracked})
-        self.assertEqual(
-            {s['id'] for s in servers},
-            {t['instance_uuid'] for t in tracked})
+        def both_build_instances_tracked():
+            self._assert_in_progress_task_count(compute, 2)
+            tracked = list(compute.manager._in_progress_tasks.values())
+            self.assertEqual({'build_instance'}, {t['name'] for t in tracked})
+            self.assertEqual(
+                {s['id'] for s in servers},
+                {t['instance_uuid'] for t in tracked})
+
+        self._wait_for_assert(both_build_instances_tracked)
 
         stop_thread = self._stop_compute_gracefully(compute)
 
@@ -726,7 +745,11 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
         self.assertTrue(
             stop_thread.is_alive(),
             'shutdown returned before all tracked tasks finished')
-        self.assertEqual(1, len(compute.manager._in_progress_tasks))
+
+        def one_task_tracked():
+            self._assert_in_progress_task_count(compute, 1)
+
+        self._wait_for_assert(one_task_tracked)
         remaining = list(compute.manager._in_progress_tasks.values())[0]
         self.assertEqual(servers[1]['id'], remaining['instance_uuid'])
 
@@ -739,7 +762,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
         self.wait_for_service_stop(stop_thread, 'src')
 
         self.assertTrue(cleanup_called.is_set())
-        self.assertEqual({}, compute.manager._in_progress_tasks)
+        self._wait_for_no_task_tracked(compute)
 
         self._restart_compute('src')
         for server in servers:
@@ -793,11 +816,14 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
             'Timed out waiting for live migration to start on src')
 
         # All three tasks should be tracked concurrently.
-        tracked = list(compute.manager._in_progress_tasks.values())
-        self.assertEqual(3, len(tracked))
-        self.assertEqual(
-            {'snapshot_instance', 'pause_instance', 'live_migration'},
-            {t['name'] for t in tracked})
+        def all_three_tasks_tracked():
+            self._assert_in_progress_task_count(compute, 3)
+            tracked = list(compute.manager._in_progress_tasks.values())
+            self.assertEqual(
+                {'snapshot_instance', 'pause_instance', 'live_migration'},
+                {t['name'] for t in tracked})
+
+        self._wait_for_assert(all_three_tasks_tracked)
 
         stop_thread = self._stop_compute_gracefully(compute)
 
@@ -809,15 +835,21 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
         self._wait_for_state_change(snap_server, 'ACTIVE')
         self.assertTrue(stop_thread.is_alive())
         self.assertFalse(cleanup_called.is_set())
-        self.assertEqual(2, len(compute.manager._in_progress_tasks))
+
+        def two_tasks_tracked():
+            self._assert_in_progress_task_count(compute, 2)
+
+        self._wait_for_assert(two_tasks_tracked)
 
         pause_proceed.set()
         self._wait_for_state_change(pause_server, 'PAUSED')
         self.assertTrue(stop_thread.is_alive())
         self.assertFalse(cleanup_called.is_set())
-        tracked = list(compute.manager._in_progress_tasks.values())
-        self.assertEqual(1, len(tracked))
-        self.assertEqual('live_migration', tracked[0]['name'])
+
+        def only_live_migration_tracked():
+            self._assert_in_progress_task_count(compute, 1, 'live_migration')
+
+        self._wait_for_assert(only_live_migration_tracked)
 
         self.assertGreater(lm_proceed.waiter_count(), 0,
                            'live migration not blocking')
@@ -828,7 +860,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
         self.wait_for_service_stop(stop_thread, 'src')
 
         self.assertTrue(cleanup_called.is_set())
-        self.assertEqual({}, compute.manager._in_progress_tasks)
+        self._wait_for_no_task_tracked(compute)
 
         self._restart_compute('src')
         self._delete_server(snap_server)
@@ -850,15 +882,17 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
             pause_started.wait(timeout=30),
             'Timed out waiting for pause to start on src')
 
-        tracked = list(compute.manager._in_progress_tasks.values())
-        self.assertEqual(1, len(tracked))
-        self.assertEqual('pause_instance', tracked[0]['name'])
-        self.assertEqual(server['id'], tracked[0]['instance_uuid'])
+        def pause_instance_tracked():
+            self._assert_in_progress_task_count(compute, 1, 'pause_instance')
+            tracked = list(compute.manager._in_progress_tasks.values())
+            self.assertEqual(server['id'], tracked[0]['instance_uuid'])
+
+        self._wait_for_assert(pause_instance_tracked)
 
         pause_proceed.set()
         self._wait_for_state_change(server, 'PAUSED')
 
-        self.assertEqual({}, compute.manager._in_progress_tasks)
+        self._wait_for_no_task_tracked(compute)
         self._delete_server(server)
 
     def test_periodic_tasks_skipped_once_shutdown_starts(self):
