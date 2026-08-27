@@ -45,6 +45,7 @@ class ServerSharesTestBase(base.ServersTestBase):
         self.manila_fixture = self.useFixture(nova_fixtures.ManilaFixture())
         self.flags(ram_allocation_ratio=1.0)
         self.flags(file_backed_memory=8192, group='libvirt')
+        self.flags(reserved_host_memory_mb=0)
         self.compute = self.start_compute(
             'host1',
             libvirt_version=self.FAKE_LIBVIRT_VERSION,

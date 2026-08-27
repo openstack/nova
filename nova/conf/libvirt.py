@@ -885,6 +885,7 @@ Related options:
 
 * ``virt_type`` must be set to ``kvm`` or ``qemu``.
 * ``ram_allocation_ratio`` must be set to 1.0.
+* ``reserved_host_memory_mb`` must be set to 0.
 """),
     cfg.IntOpt('device_detach_attempts',
                default=8,
