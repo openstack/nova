@@ -71,6 +71,7 @@ class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
         # Manager graceful_shutdown() wait for operation_complete_event to
         # be set or MANAGER_GRACEFUL_SHUTDOWN_TIMEOUT.
         shutdown_waiting = threading.Event()
+        self.addCleanup(shutdown_waiting.set)
 
         def coordinated_graceful_shutdown(timeout):
             shutdown_waiting.set()
@@ -136,6 +137,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
         """Live migration completes when the source compute is shut down."""
         server = self._create_server(host='src', networks='none')
         operation_complete_event = threading.Event()
+        self.addCleanup(operation_complete_event.set)
         shutdown_waiting = self._setup_graceful_shutdown_mock(
             self.computes['src'], operation_complete_event)
 
@@ -196,6 +198,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
         """Live migration completes when the dest compute is shut down."""
         server = self._create_server(host='src', networks='none')
         operation_complete_event = threading.Event()
+        self.addCleanup(operation_complete_event.set)
         shutdown_waiting = self._setup_graceful_shutdown_mock(
             self.computes['dest'], operation_complete_event)
 
@@ -303,6 +306,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
         """Cold migration completes when the source compute is shut down."""
         server = self._create_server(host='src', networks='none')
         operation_complete_event = threading.Event()
+        self.addCleanup(operation_complete_event.set)
         shutdown_waiting = self._setup_graceful_shutdown_mock(
             self.computes['src'], operation_complete_event)
 
@@ -360,6 +364,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
         """Cold migration completes when the dest compute is shut down."""
         server = self._create_server(host='src', networks='none')
         operation_complete_event = threading.Event()
+        self.addCleanup(operation_complete_event.set)
         shutdown_waiting = self._setup_graceful_shutdown_mock(
             self.computes['dest'], operation_complete_event)
 
@@ -460,6 +465,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
     def test_instance_build_graceful_shutdown(self):
         """Instance build completes when the compute is stopped."""
         operation_complete_event = threading.Event()
+        self.addCleanup(operation_complete_event.set)
         shutdown_waiting = self._setup_graceful_shutdown_mock(
             self.computes['src'], operation_complete_event)
 
@@ -513,6 +519,7 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
     def test_revert_resize_dest_compute_graceful_shutdown(self):
         """Revert resize completes when the dest compute is stopped."""
         operation_complete_event = threading.Event()
+        self.addCleanup(operation_complete_event.set)
         shutdown_waiting = self._setup_graceful_shutdown_mock(
             self.computes['dest'], operation_complete_event)
 
@@ -713,7 +720,9 @@ class TestComputeGracefulShutdown(GracefulShutdownTestBase):
             server = self.api.post_server({'server': server_body})
             with lock:
                 started_events[server['id']] = threading.Event()
+                self.addCleanup(started_events[server['id']].set)
                 proceed_events[server['id']] = nova_fixtures.WaitableEvent()
+                self.addCleanup(proceed_events[server['id']].set)
             servers.append(server)
 
         for server in servers:
