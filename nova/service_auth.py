@@ -27,20 +27,6 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
-class _ServiceTokenAuthWrapper(service_token.ServiceTokenAuthWrapper):
-    # NOTE(melwitt): Upstream ServiceTokenAuthWrapper delegates
-    # get_endpoint() to user_auth but not get_endpoint_data(), which
-    # openstacksdk needs for API version discovery. Without this,
-    # BaseAuthPlugin.get_endpoint_data() returns None when there is no
-    # endpoint_override configured (the default) and the SDK raises
-    # NotSupported during proxy creation. This can be removed once
-    # keystoneauth1 adds the delegation upstream.
-    # See https://bugs.launchpad.net/keystoneauth/+bug/2164939
-
-    def get_endpoint_data(self, session, **kwargs):
-        return self.user_auth.get_endpoint_data(session, **kwargs)
-
-
 # Auth plugins and auth sessions keyed by configuration group name
 _AUTHS = {}
 _SESSIONS = {}
@@ -113,6 +99,6 @@ def get_service_user_token_auth_plugin(context, user_auth=None):
                         'configuration. Ensure "auth_type" is set.')
             return user_auth
 
-        return _ServiceTokenAuthWrapper(
+        return service_token.ServiceTokenAuthWrapper(
                    user_auth=user_auth, service_auth=service_auth)
     return user_auth
