@@ -13,11 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import builtins
-import contextlib
-import os.path
-from unittest import mock
-
 import ddt
 import fixtures
 import os_resource_classes as orc
@@ -112,8 +107,10 @@ class LibvirtReportSevTraitsTestBase(
                 _domain_capability_features_with_launch_security_SEV_SNP))
 
     def start_compute_with_sev(self, sev, sev_es, sev_snp):
-        with self._patch_sev_params(sev, sev_es, sev_snp):
-            self.start_compute()
+        self.libvirt.amd_sev.sev = sev
+        self.libvirt.amd_sev.sev_es = sev_es
+        self.libvirt.amd_sev.sev_snp = sev_snp
+        self.start_compute()
 
     def restart_compute_service_with_sev(self, sev, sev_es, sev_snp):
         # Retrigger detection of SEV support
@@ -122,8 +119,10 @@ class LibvirtReportSevTraitsTestBase(
         self.compute.driver._host._supports_amd_sev_es = None
         self.compute.driver._host._supports_amd_sev_snp = None
 
-        with self._patch_sev_params(sev, sev_es, sev_snp):
-            self.restart_compute_service(self.compute)
+        self.libvirt.amd_sev.sev = sev
+        self.libvirt.amd_sev.sev_es = sev_es
+        self.libvirt.amd_sev.sev_snp = sev_snp
+        self.restart_compute_service(self.compute)
 
     def assertMemEncryptionSlotsEqual(self, rp_uuid, slots):
         inventory = self._get_provider_inventory(rp_uuid)
@@ -153,64 +152,6 @@ class LibvirtReportSevTraitsTestBase(
             'sev-snp': [rp for rp in rps
                         if rp['name'] == '%s_amd_sev_snp' % root_rp['name']],
         }
-
-    @contextlib.contextmanager
-    def _patch_sev_params(self, sev, sev_es, sev_snp):
-        """Patch access to sev parameters of kvm_amd module
-
-        Control presence of the parameter paths according to the simulated
-        presence of sev features
-        """
-        real_exists = os.path.exists
-        real_open = builtins.open
-
-        def fake_exists(path):
-            if path == libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev':
-                return sev
-            elif path == libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es':
-                return sev_es
-            elif path == libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp':
-                return sev_snp
-            return real_exists(path)
-
-        def fake_open(path, *args, **kwargs):
-            if path in (libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev',
-                        libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es',
-                        libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp'):
-                return mock.mock_open(read_data='1\n')(path)
-            return real_open(path, *args, **kwargs)
-
-        with mock.patch('os.path.exists') as mock_exists, \
-                mock.patch('builtins.open') as mock_open:
-            mock_exists.side_effect = fake_exists
-            mock_open.side_effect = fake_open
-
-            yield
-
-            exists_calls = [
-                mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
-            ]
-            open_calls = []
-            if sev:
-                exists_calls.extend([
-                    mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es'),
-                    mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp'),
-                ])
-                open_calls.extend([
-                    mock.call(libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev'),
-                ])
-                if sev_es:
-                    open_calls.extend([
-                        mock.call(
-                            libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_es')
-                    ])
-                if sev_snp:
-                    open_calls.extend([
-                        mock.call(
-                            libvirt_host.SEV_KERNEL_PARAM_FILE % 'sev_snp')
-                    ])
-            mock_exists.assert_has_calls(exists_calls)
-            mock_open.assert_has_calls(open_calls)
 
     def _assert_global_sev_traits(self):
         """Assert that sev traits are present in global traits"""

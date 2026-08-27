@@ -2123,7 +2123,7 @@ class TestLibvirtSEV(test.NoDBTestCase):
     def setUp(self):
         super(TestLibvirtSEV, self).setUp()
 
-        self.useFixture(nova_fixtures.LibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture(stub_amd_sev=False))
         self.host = host.Host("qemu:///system")
         self.addCleanup(self.host.cleanup)
         self.host._delayed_executor = (

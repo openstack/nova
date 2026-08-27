@@ -13,7 +13,6 @@
 import copy
 from unittest import mock
 
-import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import versionutils
 
@@ -57,20 +56,8 @@ class TestSEV(base.ServersTestBase):
         sev_snp_image['properties']['hw_mem_encryption_model'] = 'amd-sev-snp'
         self.glance.create(None, sev_snp_image)
 
-        self.sev = True
-        self.sev_es = True
-        self.sev_snp = False
-
-        def mock_kernel(model='sev'):
-            if model == 'sev-snp':
-                return self.sev_snp
-            if model == 'sev-es':
-                return self.sev_es
-            return self.sev
-
-        self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.host.Host._kernel_supports_amd_sev',
-            side_effect=mock_kernel))
+        self.libvirt.amd_sev.sev = True
+        self.libvirt.amd_sev.sev_es = True
 
         self.qemu_version = versionutils.convert_version_to_int(
             host.MIN_QEMU_SEV_ES_VERSION)
@@ -92,11 +79,11 @@ class TestSEV(base.ServersTestBase):
 
         # sev-es is lost but sev is still available, so compute should be
         # able to start
-        self.sev_es = False
+        self.libvirt.amd_sev.sev_es = False
         self.restart_compute_service(self.hostname)
 
         # now sev is lost, so compute should fail
-        self.sev = False
+        self.libvirt.amd_sev.sev = False
         ex = self.assertRaises(
             exception.InvalidConfiguration,
             self.restart_compute_service, self.hostname)
@@ -122,7 +109,7 @@ class TestSEV(base.ServersTestBase):
         )
 
         # now sev-es is lost, so compute should fail
-        self.sev_es = False
+        self.libvirt.amd_sev.sev_es = False
         ex = self.assertRaises(
             exception.InvalidConfiguration,
             self.restart_compute_service, self.hostname)
@@ -149,7 +136,7 @@ class TestSEV(base.ServersTestBase):
         )
 
         # sev-es is lost because sev-snp is detected, so compute should fail
-        self.sev_snp = True
+        self.libvirt.amd_sev.sev_snp = True
         ex = self.assertRaises(
             exception.InvalidConfiguration,
             self.restart_compute_service, self.hostname)
@@ -166,8 +153,8 @@ class TestSEV(base.ServersTestBase):
     def test_sev_snp_lost_after_restart(self):
         """Compute should fail if sev-snp instance exists but sev-snp is lost
         """
-        self.sev_es = False
-        self.sev_snp = True
+        self.libvirt.amd_sev.sev_es = False
+        self.libvirt.amd_sev.sev_snp = True
         libvirt_version = versionutils.convert_version_to_int(
             driver.MIN_LIBVIRT_STATELESS_FIRMWARE)
         self.hostname = self.start_compute(
@@ -181,8 +168,8 @@ class TestSEV(base.ServersTestBase):
         )
 
         # now sev-snp is lost, so compute should fail
-        self.sev_es = True
-        self.sev_snp = False
+        self.libvirt.amd_sev.sev_es = True
+        self.libvirt.amd_sev.sev_snp = False
         ex = self.assertRaises(
             exception.InvalidConfiguration,
             self.restart_compute_service, self.hostname)

@@ -109,7 +109,6 @@ from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
-from nova.virt.libvirt.host import SEV_KERNEL_PARAM_FILE
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import migration as libvirt_migrate
@@ -8319,12 +8318,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[5].rate_bytes, 1024)
         self.assertEqual(cfg.devices[5].rate_period, 2)
 
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE % 'sev', result=False, other=True)
-    def test_get_guest_config_with_rng_backend(self):
+    @mock.patch('nova.virt.libvirt.driver.os.path.exists')
+    def test_get_guest_config_with_rng_backend(self, mock_path):
         self.flags(virt_type='kvm',
                    rng_dev_path='/dev/hw_rng',
                    group='libvirt')
         self.flags(pointer_model='ps2mouse')
+        mock_path.return_value = True
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
@@ -8359,6 +8359,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[5].backend, '/dev/hw_rng')
         self.assertIsNone(cfg.devices[5].rate_bytes)
         self.assertIsNone(cfg.devices[5].rate_period)
+        mock_path.assert_has_calls([
+            mock.call('/dev/hw_rng')
+        ])
 
     @mock.patch('nova.virt.libvirt.driver.os.path.exists')
     def test_get_guest_config_with_rng_dev_not_present(self, mock_path):
@@ -8380,6 +8383,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           instance_ref,
                           [],
                           image_meta, disk_info)
+        mock_path.assert_has_calls([
+            mock.call('/dev/hw_rng')
+        ])
 
     def test_get_guest_config_with_cpu_quota(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -8967,7 +8973,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE % 'sev', result=False, other=True)
     def test_get_guest_config_aarch64(self, mock_numa, mock_storage):
         TEST_AMOUNT_OF_PCIE_SLOTS = 8
         CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
@@ -9004,7 +9009,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE % 'sev', result=False, other=True)
     def test_get_guest_config_aarch64_with_graphics(
         self, mock_numa, mock_storage,
     ):
@@ -32861,7 +32865,7 @@ class TestLibvirtSEV(test.NoDBTestCase):
 
     def setUp(self):
         super(TestLibvirtSEV, self).setUp()
-        self.useFixture(nova_fixtures.LibvirtFixture())
+        self.libvirt = self.useFixture(nova_fixtures.LibvirtFixture())
         self.driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         def fake_exists(path):
@@ -32894,18 +32898,12 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
 @mock.patch.object(vc, '_domain_capability_features',
                    new=vc._domain_capability_features_with_SEV)
 class TestLibvirtSEVSupported(TestLibvirtSEV):
+    """Libvirt driver tests for when AMD SEV support is present."""
+
     def setUp(self):
         super(TestLibvirtSEVSupported, self).setUp()
+        self.libvirt.amd_sev.sev = True
 
-        def fake_exists(path):
-            if path == '/sys/module/kvm_amd/parameters/sev':
-                return True
-            return False
-
-        self.stub_out('os.path.exists', fake_exists)
-
-    """Libvirt driver tests for when AMD SEV support is present."""
-    @test.patch_open(SEV_KERNEL_PARAM_FILE % 'sev', "1\n")
     def test_get_memory_encryption_inventories(self):
         self.assertEqual({
             'amd_sev': {

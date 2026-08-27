@@ -31,7 +31,8 @@ class LibvirtProviderUsageBaseTestCase(
 
     def setUp(self):
         super(LibvirtProviderUsageBaseTestCase, self).setUp()
-        self.useFixture(nova_fixtures.LibvirtFixture(stub_os_vif=False))
+        self.libvirt = self.useFixture(
+            nova_fixtures.LibvirtFixture(stub_os_vif=False))
         if self.STUB_INIT_HOST:
             self.useFixture(
                 fixtures.MockPatch(

@@ -2729,12 +2729,37 @@ class FakeHandler(object):
 _EventAddHandleFunc = FakeHandler
 
 
+class AmdSevFixture(fixtures.Fixture):
+    def __init__(self, sev=False, sev_es=False, sev_snp=False):
+        self.sev = sev
+        self.sev_es = sev_es
+        self.sev_snp = sev_snp
+
+    def setUp(self):
+        super().setUp()
+
+        def _mock_kernel_supports_amd_sev(model='sev'):
+            try:
+                return {
+                    'sev': self.sev,
+                    'sev-es': self.sev_es,
+                    'sev-snp': self.sev_snp,
+                }[model]
+            except KeyError:
+                raise RuntimeError('Invalid memory encryption model: %s')
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.host.Host._kernel_supports_amd_sev',
+            side_effect=_mock_kernel_supports_amd_sev))
+
+
 class LibvirtFixture(fixtures.Fixture):
     """Performs global setup/stubbing for all libvirt tests.
     """
 
-    def __init__(self, stub_os_vif=True):
+    def __init__(self, stub_os_vif=True, stub_amd_sev=True):
         self.stub_os_vif = stub_os_vif
+        self.stub_amd_sev = stub_amd_sev
         self.pci_address_to_mac_map = collections.defaultdict(
             lambda: '52:54:00:1e:59:c6')
 
@@ -2825,6 +2850,10 @@ class LibvirtFixture(fixtures.Fixture):
             self.useFixture(fixtures.MonkeyPatch(
                 'nova.virt.libvirt.vif.LibvirtGenericVIFDriver._unplug_os_vif',
                 lambda *a, **kw: None))
+
+        self.amd_sev = None
+        if self.stub_amd_sev:
+            self.amd_sev = self.useFixture(AmdSevFixture())
 
         # os_vif.initialize is typically done in nova-compute startup
         # even if we are not planning to plug anything with os_vif in the test
