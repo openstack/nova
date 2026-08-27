@@ -14,7 +14,6 @@
 
 import os
 import time
-from unittest import mock
 
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -81,12 +80,6 @@ class NotificationSampleTestBase(test.TestCase,
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
-        context_patcher = self.mock_gen_request_id = mock.patch(
-            'oslo_context.context.generate_request_id',
-            return_value='req-5b6c791d-5709-4f36-8fbe-c3e02869e35d')
-        self.mock_gen_request_id = context_patcher.start()
-        self.addCleanup(context_patcher.stop)
-
         self.start_service('conductor')
         self.start_service('scheduler')
         self.compute = self.start_service('compute')
@@ -109,8 +102,8 @@ class NotificationSampleTestBase(test.TestCase,
                 obj = obj['nova_object.data'][sub_key]
                 n_obj = n_obj['nova_object.data'][sub_key]
             if value == NotificationSampleTestBase.ANY:
-                del obj['nova_object.data'][key.split('.')[-1]]
-                del n_obj['nova_object.data'][key.split('.')[-1]]
+                obj['nova_object.data'].pop(key.split('.')[-1], None)
+                n_obj['nova_object.data'].pop(key.split('.')[-1], None)
             else:
                 obj['nova_object.data'][key.split('.')[-1]] = value
 
@@ -148,6 +141,13 @@ class NotificationSampleTestBase(test.TestCase,
         sample_base_dir = os.path.dirname(sample_file)
         sample_obj = json_ref.resolve_refs(
             sample_obj, base_path=sample_base_dir)
+
+        # NOTE(gibi): request_id value is generated runtime so we should match
+        # on any value
+        if not replacements:
+            replacements = {}
+        replacements["request_id"] = self.ANY
+
         self._apply_replacements(replacements, sample_obj, notification)
 
         self.assertJsonEqual(sample_obj, notification)
