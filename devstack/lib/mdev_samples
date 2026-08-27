@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function compile_mdev_samples {
     set -x
     local kver=$(uname -r)
