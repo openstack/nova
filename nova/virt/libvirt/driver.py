@@ -589,7 +589,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # this libvirt version. This is set in init_host.
         self._may_keep_vtpm = False
 
-    def _discover_vpmems(self, vpmem_conf=None):
+    def _discover_vpmems(
+        self, vpmem_conf: list[str]
+    ) -> tuple[
+        dict[str, 'objects.LibvirtVPMEMDevice'],
+        dict[str, list['objects.LibvirtVPMEMDevice']],
+    ]:
         """Discover vpmems on host and configuration.
 
         :param vpmem_conf: pmem namespaces configuration from CONF
@@ -612,12 +617,12 @@ class LibvirtDriver(driver.ComputeDriver):
         vpmems_host = self._get_vpmems_on_host()
         for ns_conf in vpmem_conf:
             try:
-                ns_label, ns_names = ns_conf.split(":", 1)
+                ns_label, ns_names_str = ns_conf.split(":", 1)
             except ValueError:
                 reason = _("The configuration doesn't follow the format")
                 raise exception.PMEMNamespaceConfigInvalid(
                         reason=reason)
-            ns_names = ns_names.split("|")
+            ns_names: list[str] = ns_names_str.split("|")
             for ns_name in ns_names:
                 if ns_name not in vpmems_host:
                     reason = _("The PMEM namespace %s isn't on host") % ns_name
@@ -637,7 +642,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return vpmems_by_name, vpmems_by_rc
 
-    def _get_vpmems_on_host(self):
+    def _get_vpmems_on_host(self) -> dict[str, 'objects.LibvirtVPMEMDevice']:
         """Get PMEM namespaces on host using ndctl utility."""
         try:
             output = nova.privsep.libvirt.get_pmem_namespaces()
