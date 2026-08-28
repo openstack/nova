@@ -1752,19 +1752,22 @@ class ComputeManager(manager.Manager):
         self.driver.register_event_listener(None)
         self.instance_events.cancel_all_events()
         self.driver.cleanup_host(host=self.host)
+        # At this stage, manager has done with all the tasks/cleanup
+        # and safe to shutdown all the executors so that no new things
+        # can run now.
+        # shutdown_all_executors is done after self.driver.cleanup_host
+        # as that shutdown(wait=True) the delayed_executors which will
+        # need the main executor to be up to finish the in-progress things.
+        try:
+            thread_pool_factory.shutdown_all_executors()
+        except Exception:
+            LOG.exception(
+                '%s service failed to shutdown all thread pool executors.',
+                self.service_name)
+
         self._cleanup_live_migrations_in_pool()
-        # NOTE: graceful shutdown needs to take care of the executors
-        # self._sync_power_executor.shutdown()
-        # utils.destroy_long_task_executor()
-        # utils.destroy_default_executor()
 
     def _cleanup_live_migrations_in_pool(self):
-        # Shutdown the pool so we don't get new requests.
-        live_migration_executor = thread_pool_factory.get_executor(
-                thread_pool_factory.ExecutorType.LIVE_MIGRATION)
-        live_migration_executor.shutdown(wait=False)
-        thread_pool_factory.FACTORY._all_executors.pop(
-            thread_pool_factory.ExecutorType.LIVE_MIGRATION, None)
         for migration, future in self._waiting_live_migrations.values():
             # If we got here before the Future was submitted then we need
             # to move on since there isn't anything we can do.

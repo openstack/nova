@@ -210,9 +210,26 @@ class ConductorManager(manager.Manager):
         should transit the in-progress tasks to safe termination point. The
         safe termination point can be either complete or abort them.
         """
+        # NOTE(gmaan): We reserve some time out of the total timeout to
+        # shutdown all the thread pool executors so that in-progress tasks
+        # waiting does not consume all the time and leave nothing for the
+        # executors to shutdown gracefully. 20 sec is the max time we are
+        # reserving for that, which is a rough estimate we can change if we
+        # get to know that it is less.
+        shutdown_executors_reserved_time = min(20, timeout)
+        wait_timeout = max(0, timeout - shutdown_executors_reserved_time)
         LOG.debug('Conductor manager waiting up to %s seconds for '
-                  'in-progress tasks to complete.', timeout)
-        self._wait_for_in_progress_tasks(timeout)
+                  'in-progress tasks to complete (%s seconds reserved for '
+                  'shutting down all thread pool executors).',
+                  wait_timeout, shutdown_executors_reserved_time)
+        self._wait_for_in_progress_tasks(wait_timeout)
+
+        try:
+            thread_pool_factory.shutdown_all_executors()
+        except Exception:
+            LOG.exception(
+                '%s service failed to shutdown all thread pool executors.',
+                self.service_name)
 
 
 @contextlib.contextmanager
