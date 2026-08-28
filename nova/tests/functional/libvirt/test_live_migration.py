@@ -14,10 +14,12 @@
 
 import copy
 import threading
+from unittest import mock
 
 from lxml import etree
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional.libvirt import base as libvirt_base
+from nova import thread_pool_factory
 
 
 class LiveMigrationWithLockBase(
@@ -208,6 +210,97 @@ class LiveMigrationQueuedAbortTestLeftoversRemoved(LiveMigrationWithLockBase):
         )
         self.assertEqual(1, len(port_binding_server_b))
         self.assertNotIn('dest', port_binding_server_b)
+
+
+class ManagerCleanupHostCancelsQueuedMigration(LiveMigrationWithLockBase):
+    """Functional test to verify that compute manager cleanup_host cancels
+    queued live migrations.
+
+    When a compute service stops while live migrations are pending in the
+    executor queue, cleanup_host (called from graceful_shutdown) must cancel
+    those queued migrations and set their status to 'cancelled'.  After the
+    service restarts, init_host must reset the stale task_state on the
+    instances whose migrations were cancelled, returning them to ACTIVE.
+    """
+
+    def test_cleanup_host_cancels_queued_live_migration(self):
+        # Lock live migrations so the single executor slot stays occupied by
+        # server_a's migration, forcing server_b and server_c into 'queued'.
+        self.lock_live_migration.acquire()
+
+        # server_a occupies the single executor slot; server_b and server_c
+        # are queued behind it.
+        server_a = self._create_server(host=self.src_hostname, networks='none')
+        server_b = self._create_server(host=self.src_hostname, networks='none')
+        server_c = self._create_server(host=self.src_hostname, networks='none')
+
+        self._live_migrate(
+            server_a,
+            migration_expected_state='running',
+            server_expected_state='MIGRATING',
+        )
+        self._live_migrate(
+            server_b,
+            migration_expected_state='queued',
+            server_expected_state='MIGRATING',
+        )
+        self._live_migrate(
+            server_c,
+            migration_expected_state='queued',
+            server_expected_state='MIGRATING',
+        )
+
+        # Simulate the compute service stopping: cleanup_host() is the final
+        # step of graceful_shutdown() and must cancel all queued migrations.
+        # Unlike the API abort path, cleanup_host only sets the migration
+        # status to 'cancelled' without reverting the instance task_state.
+        #
+        # Live migration runs on the shared, process-wide executor
+        # from thread_pool_factory. Two mocks are required to avoid
+        # test deadlocks:
+        # 1. driver.cleanup_host calls _host.cleanup() which drain the
+        # delayed-event executor.
+        # 2. _cleanup_live_migrations_in_pool() shuts the live-migration
+        #    shutdown executor with wait=False, but the
+        #    GreenThreadPoolShutdownWait test fixture forces every
+        #    GreenThreadPoolExecutor.shutdown() call to use wait=True,
+        #    which would block here because server_a's greenlet is still
+        #    running (it holds self.lock_live_migration). Override the
+        #    instance-level shutdown so that class-level patch is bypassed,
+        #    letting _cleanup_live_migrations_in_pool() cancel the queued
+        #    futures without waiting for the running one.
+        live_migration_executor = thread_pool_factory.get_executor(
+            thread_pool_factory.ExecutorType.LIVE_MIGRATION)
+        with mock.patch.object(self.src.driver, 'cleanup_host'), \
+             mock.patch.object(
+                 live_migration_executor, 'shutdown', lambda wait=True: None,
+             ):
+            self.src.manager.cleanup_host()
+
+        # Both queued migrations must now be cancelled.
+        self._wait_for_migration_status(server_b, ['cancelled'])
+        self._wait_for_migration_status(server_c, ['cancelled'])
+
+        # No queued live migrations must remain after cleanup_host ran.
+        migrations = self.api.api_get('/os-migrations').body['migrations']
+        queued_migrations = [
+            m for m in migrations if m['status'] == 'queued'
+        ]
+        self.assertEqual([], queued_migrations)
+
+        # Unblock server_a's running migration so the executor thread exits
+        # cleanly before restarting the source service.
+        self.lock_live_migration.release()
+        self._wait_for_state_change(server_a, 'ACTIVE')
+
+        # Restart the source compute. init_host will find server_b and server_c
+        # still in task_state=migrating (cleanup_host does not revert it) and
+        # reset it to None via _reset_live_migration, returning them to ACTIVE.
+        self.restart_compute_service(self.src_hostname)
+
+        # After restart, server_b and server_c must be ACTIVE again.
+        self._wait_for_state_change(server_b, 'ACTIVE')
+        self._wait_for_state_change(server_c, 'ACTIVE')
 
 
 class LiveMigrationWithCpuSharedSet(
