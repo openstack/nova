@@ -153,7 +153,7 @@ Finalize installation
 
    .. code-block:: console
 
-      $ egrep -c '(vmx|svm)' /proc/cpuinfo
+      $ grep -E -c '(vmx|svm)' /proc/cpuinfo
 
    If this command returns a value of ``one or greater``, your compute node
    supports hardware acceleration which typically requires no additional
