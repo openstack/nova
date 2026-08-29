@@ -824,17 +824,20 @@ def get_sdk_adapter(
                 raise ValueError(
                     "If admin is set to False then context cannot be None.")
 
-            # NOTE(gibi): this is only needed to make sure
-            # CONF.service_user.auth_url config is registered
-            ks_loading.load_auth_from_conf_options(
+            # NOTE(stephenfin): We get auth_url as a side-effect of the auth
+            # plugin registered, but a user could conceivably register an
+            # auth_type that doesn't use auth_url. We might want to allowlist
+            # specific auth types in the future.
+            svc_auth = ks_loading.load_auth_from_conf_options(
                 CONF, nova.conf.service_token.service_user.name)
+            auth_url = svc_auth.auth_url if svc_auth else None
 
             conn = connection.Connection(
                 token=context.auth_token,
                 auth_type="v3token",
                 project_id=context.project_id,
                 project_domain_id=context.project_domain_id,
-                auth_url=CONF.service_user.auth_url,
+                auth_url=auth_url,
                 service_types={service_type},
                 strict_proxies=check_service,
                 **kwargs,

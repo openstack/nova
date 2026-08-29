@@ -10,17 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from requests import Response
+from unittest import mock
 
 import fixtures
-from keystoneauth1 import loading as ks_loading
-
-import nova.conf
-from nova import context as nova_context
-from nova import exception
-from nova.share import manila
-from nova import test
-
 from openstack import exceptions as sdk_exc
 from openstack.shared_file_system.v2 import (
     resource_locks as sdk_resource_locks
@@ -33,10 +25,14 @@ from openstack.shared_file_system.v2 import (
     share_export_locations as sdk_share_export_locations
 )
 from openstack.shared_file_system.v2 import share as sdk_share
-
 from openstack import utils
-from unittest import mock
+from requests import Response
 
+import nova.conf
+from nova import context as nova_context
+from nova import exception
+from nova.share import manila
+from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 CONF = nova.conf.CONF
@@ -195,24 +191,12 @@ class BaseManilaTestCase(object):
 
         super(BaseManilaTestCase, self).setUp()
 
-        self.mock_get_confgrp = self.useFixture(fixtures.MockPatch(
-            'nova.utils._get_conf_group')).mock
-
-        self.mock_ks_loading = self.useFixture(
-            fixtures.MockPatchObject(ks_loading, 'load_auth_from_conf_options')
-        ).mock
-
         self.service_type = 'shared-file-system'
         self.mock_connection = self.useFixture(
             fixtures.MockPatch(
                 "nova.utils.connection.Connection", side_effect=self.fake_conn
             )
         ).mock
-
-        # We need to stub the CONF global in nova.utils to assert that the
-        # Connection constructor picks it up.
-        self.mock_conf = self.useFixture(fixtures.MockPatch(
-            'nova.utils.CONF')).mock
 
         self.api = manila.API()
 
