@@ -429,26 +429,23 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if 'pci_devices' in expected_attrs:
             pci_devices = base.obj_make_list(
                     context, objects.PciDeviceList(context),
-                    objects.PciDevice, db_inst['pci_devices'])
+                    db_inst['pci_devices'])
             instance['pci_devices'] = pci_devices
 
         # TODO(stephenfin): Remove this as it's related to nova-network
         if 'security_groups' in expected_attrs:
             sec_groups = base.obj_make_list(
-                    context, objects.SecurityGroupList(context),
-                    objects.SecurityGroup, [])
+                    context, objects.SecurityGroupList(context), [])
             instance['security_groups'] = sec_groups
 
         if 'tags' in expected_attrs:
             tags = base.obj_make_list(
-                context, objects.TagList(context),
-                objects.Tag, db_inst['tags'])
+                    context, objects.TagList(context), db_inst['tags'])
             instance['tags'] = tags
 
         if 'services' in expected_attrs:
             services = base.obj_make_list(
-                    context, objects.ServiceList(context),
-                    objects.Service, db_inst['services'])
+                    context, objects.ServiceList(context), db_inst['services'])
             instance['services'] = services
 
         instance._extra_attributes_from_db_object(instance, db_inst,

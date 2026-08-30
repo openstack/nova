@@ -448,8 +448,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_all(cls, context):
         db_computes = db.compute_node_get_all(context)
-        return base.obj_make_list(context, cls(context), objects.ComputeNode,
-                                  db_computes)
+        return base.obj_make_list(context, cls(context), db_computes)
 
     @classmethod
     @base.remotable
@@ -457,24 +456,21 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         """Return ComputeNode records that are not mapped at a certain level"""
         db_computes = db.compute_node_get_all_mapped_less_than(
             context, mapped_less_than)
-        return base.obj_make_list(context, cls(context), objects.ComputeNode,
-                                  db_computes)
+        return base.obj_make_list(context, cls(context), db_computes)
 
     @classmethod
     @base.remotable
     def get_by_pagination(cls, context, limit=None, marker=None):
         db_computes = db.compute_node_get_all_by_pagination(
             context, limit=limit, marker=marker)
-        return base.obj_make_list(context, cls(context), objects.ComputeNode,
-                                  db_computes)
+        return base.obj_make_list(context, cls(context), db_computes)
 
     @classmethod
     @base.remotable
     def get_by_hypervisor(cls, context, hypervisor_match):
         db_computes = db.compute_node_search_by_hypervisor(context,
                                                            hypervisor_match)
-        return base.obj_make_list(context, cls(context), objects.ComputeNode,
-                                  db_computes)
+        return base.obj_make_list(context, cls(context), db_computes)
 
     # NOTE(hanlind): This is deprecated and should be removed on the next
     # major version bump
@@ -488,8 +484,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
             # NOTE(sbauza): Previous behaviour was returning an empty list
             # if the service was created with no computes, we need to keep it.
             db_computes = []
-        return base.obj_make_list(context, cls(context), objects.ComputeNode,
-                                  db_computes)
+        return base.obj_make_list(context, cls(context), db_computes)
 
     @staticmethod
     @db.select_db_reader_mode
@@ -501,8 +496,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     def get_all_by_host(cls, context, host, use_slave=False):
         db_computes = cls._db_compute_node_get_all_by_host(context, host,
                                                       use_slave=use_slave)
-        return base.obj_make_list(context, cls(context), objects.ComputeNode,
-                                  db_computes)
+        return base.obj_make_list(context, cls(context), db_computes)
 
     @staticmethod
     @db.select_db_reader_mode
@@ -516,8 +510,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     def get_all_by_uuids(cls, context, compute_uuids):
         db_computes = cls._db_compute_node_get_all_by_uuids(context,
                                                             compute_uuids)
-        return base.obj_make_list(context, cls(context), objects.ComputeNode,
-                                  db_computes)
+        return base.obj_make_list(context, cls(context), db_computes)
 
     @staticmethod
     @db.select_db_reader_mode
@@ -529,8 +522,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @classmethod
     def get_by_hypervisor_type(cls, context, hv_type):
         db_computes = cls._db_compute_node_get_by_hv_type(context, hv_type)
-        return base.obj_make_list(context, cls(context), objects.ComputeNode,
-                                  db_computes)
+        return base.obj_make_list(context, cls(context), db_computes)
 
 
 def _get_node_empty_ratio(context, max_count):

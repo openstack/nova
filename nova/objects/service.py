@@ -730,8 +730,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_by_topic(cls, context, topic):
         db_services = db.service_get_all_by_topic(context, topic)
-        return base.obj_make_list(context, cls(context), objects.Service,
-                                  db_services)
+        return base.obj_make_list(context, cls(context), db_services)
 
     # NOTE(paul-carlton2): In v2.0 of the object the include_disabled flag
     # will be removed so both enabled and disabled hosts are returned
@@ -740,15 +739,13 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     def get_by_binary(cls, context, binary, include_disabled=False):
         db_services = db.service_get_all_by_binary(
             context, binary, include_disabled=include_disabled)
-        return base.obj_make_list(context, cls(context), objects.Service,
-                                  db_services)
+        return base.obj_make_list(context, cls(context), db_services)
 
     @classmethod
     @base.remotable
     def get_by_host(cls, context, host):
         db_services = db.service_get_all_by_host(context, host)
-        return base.obj_make_list(context, cls(context), objects.Service,
-                                  db_services)
+        return base.obj_make_list(context, cls(context), db_services)
 
     @classmethod
     @base.remotable
@@ -757,13 +754,11 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         if set_zones:
             db_services = availability_zones.set_availability_zones(
                 context, db_services)
-        return base.obj_make_list(context, cls(context), objects.Service,
-                                  db_services)
+        return base.obj_make_list(context, cls(context), db_services)
 
     @classmethod
     @base.remotable
     def get_all_computes_by_hv_type(cls, context, hv_type):
         db_services = db.service_get_all_computes_by_hv_type(
             context, hv_type, include_disabled=False)
-        return base.obj_make_list(context, cls(context), objects.Service,
-                                  db_services)
+        return base.obj_make_list(context, cls(context), db_services)

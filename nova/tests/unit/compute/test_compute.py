@@ -1692,7 +1692,6 @@ class ComputeTestCase(BaseTestCase,
         share_info = objects.base.obj_make_list(
             self.context,
             objects.ShareMappingList(self.context),
-            objects.ShareMapping,
             [share_mapping])
         return share_info
 

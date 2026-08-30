@@ -82,5 +82,4 @@ def get_migration_objects_sorted(ctx, filters, limit, marker,
                                  sort_keys, sort_dirs):
     mig_generator = MigrationLister(sort_keys, sort_dirs).get_records_sorted(
         ctx, filters, limit, marker)
-    return base.obj_make_list(ctx, objects.MigrationList(), objects.Migration,
-                              mig_generator)
+    return base.obj_make_list(ctx, objects.MigrationList(), mig_generator)

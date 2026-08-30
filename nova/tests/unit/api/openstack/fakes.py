@@ -413,8 +413,7 @@ def fake_compute_get_all(num_servers=5, **kwargs):
         expected = ['metadata', 'system_metadata', 'flavor',
                     'info_cache', 'security_groups']
         return base.obj_make_list(context, objects.InstanceList(),
-                                  objects.Instance, db_insts,
-                                  expected_attrs=expected)
+                                  db_insts, expected_attrs=expected)
     return _return_servers_objs
 
 

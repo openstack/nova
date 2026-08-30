@@ -20,7 +20,6 @@ from oslo_utils import versionutils
 from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
 from nova import exception
-from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -201,9 +200,7 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
         api_db_keypairs = cls._get_from_db(
             context, user_id, limit=limit, marker=marker)
 
-        return base.obj_make_list(
-            context, cls(context), objects.KeyPair, api_db_keypairs,
-        )
+        return base.obj_make_list(context, cls(context), api_db_keypairs)
 
     @classmethod
     @base.remotable

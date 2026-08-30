@@ -146,8 +146,7 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_all(cls, context):
         db_vifs = main_db_api.virtual_interface_get_all(context)
-        return base.obj_make_list(context, cls(context),
-                                  objects.VirtualInterface, db_vifs)
+        return base.obj_make_list(context, cls(context), db_vifs)
 
     @staticmethod
     @main_db_api.select_db_reader_mode
@@ -161,8 +160,7 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
     def get_by_instance_uuid(cls, context, instance_uuid, use_slave=False):
         db_vifs = cls._db_virtual_interface_get_by_instance(
             context, instance_uuid, use_slave=use_slave)
-        return base.obj_make_list(context, cls(context),
-                                  objects.VirtualInterface, db_vifs)
+        return base.obj_make_list(context, cls(context), db_vifs)
 
 
 @api_db_api.context_manager.writer

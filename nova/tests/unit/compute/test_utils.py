@@ -103,8 +103,9 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         self.data = []
 
     def _validate_device(self, device=None):
-        bdms = base.obj_make_list(self.context,
-            objects.BlockDeviceMappingList(), objects.BlockDeviceMapping,
+        bdms = base.obj_make_list(
+            self.context,
+            objects.BlockDeviceMappingList(),
             self.data)
         return compute_utils.get_device_name_for_instance(
             self.instance, bdms, device)

@@ -185,7 +185,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         share_info = objects.base.obj_make_list(
             self.context,
             objects.ShareMappingList(self.context),
-            objects.ShareMapping,
             [share_mapping, share_mapping2])
         return share_info
 

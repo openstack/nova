@@ -11,7 +11,6 @@
 #    under the License.
 
 from nova.db.main import api as db
-from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -72,13 +71,13 @@ class TagList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_by_resource_id(cls, context, resource_id):
         db_tags = db.instance_tag_get_by_instance_uuid(context, resource_id)
-        return base.obj_make_list(context, cls(), objects.Tag, db_tags)
+        return base.obj_make_list(context, cls(), db_tags)
 
     @classmethod
     @base.remotable
     def create(cls, context, resource_id, tags):
         db_tags = db.instance_tag_set(context, resource_id, tags)
-        return base.obj_make_list(context, cls(), objects.Tag, db_tags)
+        return base.obj_make_list(context, cls(), db_tags)
 
     @classmethod
     @base.remotable

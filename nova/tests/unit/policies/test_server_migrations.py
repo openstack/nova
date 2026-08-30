@@ -100,7 +100,6 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
         mock_get.return_value = obj_base.obj_make_list(
             'fake-context',
             objects.MigrationList(),
-            objects.Migration,
             fake_migrations)
 
         rule = policies.POLICY_ROOT % 'index'

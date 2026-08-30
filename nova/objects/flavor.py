@@ -27,7 +27,6 @@ from nova.db import utils as db_utils
 from nova import exception
 from nova.notifications.objects import base as notification
 from nova.notifications.objects import flavor as flavor_notification
-from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -673,6 +672,6 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
                                                  sort_dir=sort_dir,
                                                  limit=limit,
                                                  marker=marker)
-        return base.obj_make_list(context, cls(context), objects.Flavor,
+        return base.obj_make_list(context, cls(context),
                                   api_db_flavors,
                                   expected_attrs=['extra_specs'])

@@ -192,16 +192,14 @@ class ShareMappingList(base.ObjectListBase, base.NovaObject):
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_share_mappings = db.share_mapping_get_by_instance_uuid(
             context, instance_uuid)
-        return base.obj_make_list(
-            context, cls(context), ShareMapping, db_share_mappings)
+        return base.obj_make_list(context, cls(context), db_share_mappings)
 
     @classmethod
     @base.remotable
     def get_by_share_id(cls, context, share_id):
         db_share_mappings = db.share_mapping_get_by_share_id(
             context, share_id)
-        return base.obj_make_list(
-            context, cls(context), ShareMapping, db_share_mappings)
+        return base.obj_make_list(context, cls(context), db_share_mappings)
 
     def activate_all(self):
         for share in self:

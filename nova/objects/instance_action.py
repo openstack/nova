@@ -18,7 +18,6 @@ from oslo_utils import versionutils
 from nova.compute import utils as compute_utils
 from nova.db.main import api as db
 from nova import exception
-from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -139,7 +138,7 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
                              marker=None, filters=None):
         db_actions = db.actions_get(
             context, instance_uuid, limit, marker, filters)
-        return base.obj_make_list(context, cls(), InstanceAction, db_actions)
+        return base.obj_make_list(context, cls(), db_actions)
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -298,5 +297,4 @@ class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_by_action(cls, context, action_id):
         db_events = db.action_events_get(context, action_id)
-        return base.obj_make_list(context, cls(context),
-                                  objects.InstanceActionEvent, db_events)
+        return base.obj_make_list(context, cls(context), db_events)

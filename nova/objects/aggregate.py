@@ -530,15 +530,13 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_all(cls, context):
         db_aggregates = _get_all_from_db(context)
-        return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates)
+        return base.obj_make_list(context, cls(context), db_aggregates)
 
     @classmethod
     @base.remotable
     def get_by_host(cls, context, host, key=None):
         db_aggregates = _get_by_host_from_db(context, host, key=key)
-        return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates)
+        return base.obj_make_list(context, cls(context), db_aggregates)
 
     @classmethod
     @base.remotable
@@ -546,8 +544,7 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
         db_aggregates = _get_by_metadata_from_db(context, key=key)
         if hosts is not None:
             db_aggregates = cls._filter_db_aggregates(db_aggregates, hosts)
-        return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates)
+        return base.obj_make_list(context, cls(context), db_aggregates)
 
     @classmethod
     @base.remotable
@@ -559,8 +556,7 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
         that key will qualify.
         """
         db_aggregates = _get_by_metadata_from_db(context, key=key, value=value)
-        return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates)
+        return base.obj_make_list(context, cls(context), db_aggregates)
 
     @classmethod
     def get_non_matching_by_metadata_keys(cls, context, ignored_keys,
@@ -598,4 +594,4 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
         db_aggregates = _get_non_matching_by_metadata_keys_from_db(
             context, ignored_keys, key_prefix, value)
         return base.obj_make_list(context, objects.AggregateList(context),
-                                  objects.Aggregate, db_aggregates)
+                                  db_aggregates)

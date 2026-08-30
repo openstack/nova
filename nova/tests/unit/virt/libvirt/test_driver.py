@@ -18857,7 +18857,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         share_info = objects.base.obj_make_list(
             self.context,
             objects.ShareMappingList(self.context),
-            objects.ShareMapping,
             [share_mapping])
 
         with mock.patch(

@@ -94,7 +94,6 @@ fake_migrations = [
 migrations_obj = base.obj_make_list(
     'fake-context',
     objects.MigrationList(),
-    objects.Migration,
     fake_migrations)
 
 

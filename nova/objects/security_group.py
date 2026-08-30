@@ -138,22 +138,19 @@ class SecurityGroupList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_all(cls, context):
         groups = db.security_group_get_all(context)
-        return base.obj_make_list(context, cls(context),
-                                  objects.SecurityGroup, groups)
+        return base.obj_make_list(context, cls(context), groups)
 
     @classmethod
     @base.remotable
     def get_by_project(cls, context, project_id):
         groups = db.security_group_get_by_project(context, project_id)
-        return base.obj_make_list(context, cls(context),
-                                  objects.SecurityGroup, groups)
+        return base.obj_make_list(context, cls(context), groups)
 
     @classmethod
     @base.remotable
     def get_by_instance(cls, context, instance):
         groups = db.security_group_get_by_instance(context, instance.uuid)
-        return base.obj_make_list(context, cls(context),
-                                  objects.SecurityGroup, groups)
+        return base.obj_make_list(context, cls(context), groups)
 
     @classmethod
     @base.remotable

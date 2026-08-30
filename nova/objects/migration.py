@@ -303,16 +303,14 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
                                         dest_compute, use_slave=False):
         db_migrations = cls._db_migration_get_unconfirmed_by_dest_compute(
             context, confirm_window, dest_compute, use_slave=use_slave)
-        return base.obj_make_list(context, cls(context), objects.Migration,
-                                  db_migrations)
+        return base.obj_make_list(context, cls(context), db_migrations)
 
     @classmethod
     @base.remotable
     def get_in_progress_by_host_and_node(cls, context, host, node):
         db_migrations = db.migration_get_in_progress_by_host_and_node(
             context, host, node)
-        return base.obj_make_list(context, cls(context), objects.Migration,
-                                  db_migrations)
+        return base.obj_make_list(context, cls(context), db_migrations)
 
     @classmethod
     @base.remotable
@@ -321,8 +319,7 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
         db_migrations = db.migration_get_all_by_filters(
             context, filters, sort_keys=sort_keys, sort_dirs=sort_dirs,
             limit=limit, marker=marker)
-        return base.obj_make_list(context, cls(context), objects.Migration,
-                                  db_migrations)
+        return base.obj_make_list(context, cls(context), db_migrations)
 
     @classmethod
     @base.remotable
@@ -330,8 +327,7 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
                                     migration_type=None):
         db_migrations = db.migration_get_in_progress_by_instance(
             context, instance_uuid, migration_type)
-        return base.obj_make_list(context, cls(context), objects.Migration,
-                                  db_migrations)
+        return base.obj_make_list(context, cls(context), db_migrations)
 
     @classmethod
     @base.remotable
@@ -339,5 +335,4 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
         db_migrations = \
             db.migration_get_in_progress_and_error_by_host_and_node(
                 context, host, node)
-        return base.obj_make_list(context, cls(context), objects.Migration,
-                                  db_migrations)
+        return base.obj_make_list(context, cls(context), db_migrations)

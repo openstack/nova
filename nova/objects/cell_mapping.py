@@ -255,7 +255,7 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_all(cls, context):
         db_mappings = cls._get_all_from_db(context)
-        return base.obj_make_list(context, cls(), CellMapping, db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)
 
     @staticmethod
     @api_db_api.context_manager.reader
@@ -273,7 +273,7 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_by_disabled(cls, context, disabled):
         db_mappings = cls._get_by_disabled_from_db(context, disabled)
-        return base.obj_make_list(context, cls(), CellMapping, db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)
 
     @staticmethod
     @api_db_api.context_manager.reader
@@ -297,4 +297,4 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
         which project_id has InstanceMappings.
         """
         db_mappings = cls._get_by_project_id_from_db(context, project_id)
-        return base.obj_make_list(context, cls(), CellMapping, db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)

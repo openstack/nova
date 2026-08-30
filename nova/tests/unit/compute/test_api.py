@@ -3465,8 +3465,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         @classmethod
         def fake_bdm_list_get_by_instance_uuid(cls, context, instance_uuid):
-            return obj_base.obj_make_list(context, cls(),
-                    objects.BlockDeviceMapping, instance_bdms)
+            return obj_base.obj_make_list(context, cls(), instance_bdms)
 
         def fake_image_create(_self, context, image_meta, data=None):
             self.assertThat(image_meta, matchers.DictMatches(expect_meta))

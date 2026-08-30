@@ -329,8 +329,7 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     def get_by_project_id(cls, context, project_id):
         db_mappings = cls._get_by_project_id_from_db(context, project_id)
 
-        return base.obj_make_list(context, cls(), objects.InstanceMapping,
-                db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)
 
     @staticmethod
     @api_db_api.context_manager.reader
@@ -343,8 +342,7 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_by_cell_id(cls, context, cell_id):
         db_mappings = cls._get_by_cell_id_from_db(context, cell_id)
-        return base.obj_make_list(context, cls(), objects.InstanceMapping,
-                db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)
 
     @staticmethod
     @api_db_api.context_manager.reader
@@ -358,8 +356,7 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_by_instance_uuids(cls, context, uuids):
         db_mappings = cls._get_by_instance_uuids_from_db(context, uuids)
-        return base.obj_make_list(context, cls(), objects.InstanceMapping,
-                db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)
 
     @staticmethod
     @api_db_api.context_manager.writer
@@ -412,8 +409,7 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
         """
         db_mappings = cls._get_not_deleted_by_cell_and_project_from_db(
             context, cell_uuid, project_id, limit)
-        return base.obj_make_list(context, cls(), objects.InstanceMapping,
-                db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)
 
     @staticmethod
     @api_db_api.context_manager.reader

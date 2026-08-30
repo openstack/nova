@@ -284,8 +284,7 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_all(cls, context):
         db_build_reqs = cls._get_all_from_db(context)
-        return base.obj_make_list(context, cls(context), objects.BuildRequest,
-                                  db_build_reqs)
+        return base.obj_make_list(context, cls(context), db_build_reqs)
 
     @staticmethod
     def _pass_exact_filters(instance, filters):

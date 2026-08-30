@@ -182,13 +182,13 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_by_cell_id(cls, context, cell_id):
         db_mappings = cls._get_from_db(context, cell_id)
-        return base.obj_make_list(context, cls(), HostMapping, db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)
 
     @classmethod
     @base.remotable
     def get_all(cls, context):
         db_mappings = cls._get_from_db(context)
-        return base.obj_make_list(context, cls(), HostMapping, db_mappings)
+        return base.obj_make_list(context, cls(), db_mappings)
 
 
 def _create_host_mapping(host_mapping):

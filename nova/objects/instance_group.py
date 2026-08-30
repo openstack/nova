@@ -576,15 +576,13 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     @base.remotable
     def get_by_project_id(cls, context, project_id):
         api_db_groups = cls._get_from_db(context, project_id=project_id)
-        return base.obj_make_list(context, cls(context), objects.InstanceGroup,
-                                  api_db_groups)
+        return base.obj_make_list(context, cls(context), api_db_groups)
 
     @classmethod
     @base.remotable
     def get_all(cls, context):
         api_db_groups = cls._get_from_db(context)
-        return base.obj_make_list(context, cls(context), objects.InstanceGroup,
-                                  api_db_groups)
+        return base.obj_make_list(context, cls(context), api_db_groups)
 
     @classmethod
     @base.remotable

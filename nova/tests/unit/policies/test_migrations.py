@@ -110,7 +110,6 @@ class MigrationsPolicyTest(base.BasePolicyTest):
         mock_get.return_value = obj_base.obj_make_list(
             'fake-context',
             objects.MigrationList(),
-            objects.Migration,
             fake_migration)
 
         rule_1 = migrations_policies.POLICY_ROOT % 'index'
@@ -168,7 +167,6 @@ class MigrationsPolicyTest(base.BasePolicyTest):
         mock_get.return_value = obj_base.obj_make_list(
             'fake-context',
             objects.MigrationList(),
-            objects.Migration,
             fake_migration)
 
         rule = migrations_policies.POLICY_ROOT % 'index'
@@ -203,7 +201,6 @@ class MigrationsPolicyTest(base.BasePolicyTest):
         mock_get.return_value = obj_base.obj_make_list(
             'fake-context',
             objects.MigrationList(),
-            objects.Migration,
             fake_migration)
         return req, project_id
 
