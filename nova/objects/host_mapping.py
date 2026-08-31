@@ -107,7 +107,8 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
             raise exception.HostMappingNotFound(name=host)
         return db_mapping
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_host(cls, context, host):
         db_mapping = cls._get_by_host_from_db(context, host)
         return cls._from_db_object(context, cls(), db_mapping)
@@ -177,12 +178,14 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
             query = query.filter(api_models.HostMapping.cell_id == cell_id)
         return query.all()
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_cell_id(cls, context, cell_id):
         db_mappings = cls._get_from_db(context, cell_id)
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context):
         db_mappings = cls._get_from_db(context)
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)

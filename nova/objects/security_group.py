@@ -63,12 +63,14 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
         secgroup.obj_reset_changes()
         return secgroup
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get(cls, context, secgroup_id):
         db_secgroup = db.security_group_get(context, secgroup_id)
         return cls._from_db_object(context, cls(), db_secgroup)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_name(cls, context, project_id, group_name):
         db_secgroup = db.security_group_get_by_name(context,
                                                     project_id,
@@ -132,25 +134,29 @@ class SecurityGroupList(base.ObjectListBase, base.NovaObject):
             counts['user'] = {'security_groups': query.count()}
         return counts
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context):
         groups = db.security_group_get_all(context)
         return base.obj_make_list(context, cls(context),
                                   objects.SecurityGroup, groups)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_project(cls, context, project_id):
         groups = db.security_group_get_by_project(context, project_id)
         return base.obj_make_list(context, cls(context),
                                   objects.SecurityGroup, groups)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance(cls, context, instance):
         groups = db.security_group_get_by_instance(context, instance.uuid)
         return base.obj_make_list(context, cls(context),
                                   objects.SecurityGroup, groups)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_counts(cls, context, project_id, user_id=None):
         """Get the counts of SecurityGroup objects in the database.
 

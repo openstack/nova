@@ -223,7 +223,7 @@ class ConductorAPI(object):
                                      serializer=serializer)
 
     # TODO(hanlind): This method can be removed once oslo.versionedobjects
-    # has been converted to use version_manifests in remotable_classmethod
+    # has been converted to use version_manifests in remotable + classmethod
     # operations, which will use the new class action handler.
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):

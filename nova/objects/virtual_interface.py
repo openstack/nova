@@ -75,25 +75,29 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
         vif.obj_reset_changes()
         return vif
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id(cls, context, vif_id):
         db_vif = main_db_api.virtual_interface_get(context, vif_id)
         if db_vif:
             return cls._from_db_object(context, cls(), db_vif)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_uuid(cls, context, vif_uuid):
         db_vif = main_db_api.virtual_interface_get_by_uuid(context, vif_uuid)
         if db_vif:
             return cls._from_db_object(context, cls(), db_vif)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_address(cls, context, address):
         db_vif = main_db_api.virtual_interface_get_by_address(context, address)
         if db_vif:
             return cls._from_db_object(context, cls(), db_vif)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_and_network(cls, context, instance_uuid, network_id):
         db_vif = main_db_api.virtual_interface_get_by_instance_and_network(
             context, instance_uuid, network_id)
@@ -119,7 +123,8 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
             self._context, self.uuid, updates)
         return self._from_db_object(self._context, self, db_vif)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def delete_by_instance_uuid(cls, context, instance_uuid):
         main_db_api.virtual_interface_delete_by_instance(
             context, instance_uuid)
@@ -137,7 +142,8 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('VirtualInterface'),
     }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context):
         db_vifs = main_db_api.virtual_interface_get_all(context)
         return base.obj_make_list(context, cls(context),
@@ -150,7 +156,8 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
         return main_db_api.virtual_interface_get_by_instance(
             context, instance_uuid)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid, use_slave=False):
         db_vifs = cls._db_virtual_interface_get_by_instance(
             context, instance_uuid, use_slave=use_slave)

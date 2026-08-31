@@ -178,7 +178,8 @@ class BuildRequest(base.NovaObject):
             raise exception.BuildRequestNotFound(uuid=instance_uuid)
         return db_req
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_req = cls._get_by_instance_uuid_from_db(context, instance_uuid)
         return cls._from_db_object(context, cls(), db_req)
@@ -279,7 +280,8 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
         db_reqs = query.all()
         return db_reqs
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context):
         db_build_reqs = cls._get_all_from_db(context)
         return base.obj_make_list(context, cls(context), objects.BuildRequest,
@@ -375,7 +377,8 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
                                 reverse=reverse)
         return build_req_list
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_filters(cls, context, filters, limit=None, marker=None,
                        sort_keys=None, sort_dirs=None):
         # Short-circuit on anything that will not yield results.

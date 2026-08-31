@@ -30,7 +30,8 @@ class TrustedCerts(base.NovaObject):
         'ids': fields.ListOfStringsField(nullable=False),
     }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_extra = db.instance_extra_get_by_instance_uuid(
                 context, instance_uuid, columns=['trusted_certs'])

@@ -127,7 +127,8 @@ class ShareMapping(base.NovaTimestampObject, base.NovaObject):
         self.status = fields.ShareMappingStatus.INACTIVE
         self.save()
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid_and_share_id(
             cls, context, instance_uuid, share_id):
         """This query returns only one element as a share can be
@@ -186,14 +187,16 @@ class ShareMappingList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('ShareMapping'),
     }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_share_mappings = db.share_mapping_get_by_instance_uuid(
             context, instance_uuid)
         return base.obj_make_list(
             context, cls(context), ShareMapping, db_share_mappings)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_share_id(cls, context, share_id):
         db_share_mappings = db.share_mapping_get_by_share_id(
             context, share_id)

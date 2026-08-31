@@ -71,7 +71,8 @@ class MyObj(base.NovaPersistentObject, base.NovaObject,
     def obj_load_attr(self, attrname):
         setattr(self, attrname, 'loaded!')
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def query(cls, context):
         obj = cls(context=context, foo=1, bar='bar')
         obj.obj_reset_changes()

@@ -152,13 +152,15 @@ class EC2InstanceMapping(base.NovaPersistentObject, base.NovaObject):
         db_imap = db.ec2_instance_create(self._context, self.uuid)
         self._from_db_object(self._context, self, db_imap)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_uuid(cls, context, instance_uuid):
         db_imap = db.ec2_instance_get_by_uuid(context, instance_uuid)
         if db_imap:
             return cls._from_db_object(context, cls(), db_imap)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id(cls, context, ec2_id):
         db_imap = db.ec2_instance_get_by_id(context, ec2_id)
         if db_imap:
@@ -191,13 +193,15 @@ class S3ImageMapping(base.NovaPersistentObject, base.NovaObject):
         db_s3imap = db.s3_image_create(self._context, self.uuid)
         self._from_db_object(self._context, self, db_s3imap)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_uuid(cls, context, s3_image_uuid):
         db_s3imap = db.s3_image_get_by_uuid(context, s3_image_uuid)
         if db_s3imap:
             return cls._from_db_object(context, cls(context), db_s3imap)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id(cls, context, s3_id):
         db_s3imap = db.s3_image_get(context, s3_id)
         if db_s3imap:
@@ -238,7 +242,8 @@ class EC2Ids(base.NovaObject):
 
         return ec2_ids
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance(cls, context, instance):
         ec2_ids = cls._get_ec2_ids(context, instance)
         return cls._from_dict(cls(context), ec2_ids)

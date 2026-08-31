@@ -84,7 +84,8 @@ class MigrationContext(base.NovaPersistentObject, base.NovaObject):
         primitive = jsonutils.loads(db_obj)
         return cls.obj_from_primitive(primitive)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_extra = db.instance_extra_get_by_instance_uuid(
                 context, instance_uuid, columns=['migration_context'])

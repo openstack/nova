@@ -116,7 +116,8 @@ class InstancePCIRequests(base.NovaObject):
         self.obj_reset_changes()
         return self
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_pci_requests = db.instance_extra_get_by_instance_uuid(
                 context, instance_uuid, columns=['pci_requests'])

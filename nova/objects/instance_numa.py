@@ -325,7 +325,8 @@ class InstanceNUMATopology(base.NovaObject,
                                          values)
         self.obj_reset_changes()
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_extra = db.instance_extra_get_by_instance_uuid(
                 context, instance_uuid, columns=['numa_topology'])

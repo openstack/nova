@@ -47,11 +47,13 @@ class Tag(base.NovaObject):
         db_tag = db.instance_tag_add(self._context, self.resource_id, self.tag)
         self._from_db_object(self._context, self, db_tag)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def destroy(cls, context, resource_id, name):
         db.instance_tag_delete(context, resource_id, name)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def exists(cls, context, resource_id, name):
         return db.instance_tag_exists(context, resource_id, name)
 
@@ -66,16 +68,19 @@ class TagList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('Tag'),
         }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_resource_id(cls, context, resource_id):
         db_tags = db.instance_tag_get_by_instance_uuid(context, resource_id)
         return base.obj_make_list(context, cls(), objects.Tag, db_tags)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def create(cls, context, resource_id, tags):
         db_tags = db.instance_tag_set(context, resource_id, tags)
         return base.obj_make_list(context, cls(), objects.Tag, db_tags)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def destroy(cls, context, resource_id):
         db.instance_tag_delete_all(context, resource_id)

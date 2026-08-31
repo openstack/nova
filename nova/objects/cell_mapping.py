@@ -177,7 +177,8 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
 
         return db_mapping
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_uuid(cls, context, uuid):
         db_mapping = cls._get_by_uuid_from_db(context, uuid)
 
@@ -250,7 +251,8 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
         return context.session.query(api_db_models.CellMapping).order_by(
             expression.asc(api_db_models.CellMapping.id)).all()
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context):
         db_mappings = cls._get_all_from_db(context)
         return base.obj_make_list(context, cls(), CellMapping, db_mappings)
@@ -267,7 +269,8 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
                 .filter_by(disabled=sql.false())\
                 .order_by(expression.asc(api_db_models.CellMapping.id)).all()
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_disabled(cls, context, disabled):
         db_mappings = cls._get_by_disabled_from_db(context, disabled)
         return base.obj_make_list(context, cls(), CellMapping, db_mappings)

@@ -159,23 +159,27 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
             fresh = self.__class__.get_by_id(self.context, self.id)
             self.uuid = fresh.uuid
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_uuid(cls, context, migration_uuid):
         db_migration = db.migration_get_by_uuid(context, migration_uuid)
         return cls._from_db_object(context, cls(), db_migration)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id(cls, context, migration_id):
         db_migration = db.migration_get(context, migration_id)
         return cls._from_db_object(context, cls(), db_migration)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id_and_instance(cls, context, migration_id, instance_uuid):
         db_migration = db.migration_get_by_id_and_instance(
             context, migration_id, instance_uuid)
         return cls._from_db_object(context, cls(), db_migration)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_instance_and_status(cls, context, instance_uuid, status):
         db_migration = db.migration_get_by_instance_and_status(
             context, instance_uuid, status)
@@ -293,7 +297,8 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
         return db.migration_get_unconfirmed_by_dest_compute(
             context, confirm_window, dest_compute)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_unconfirmed_by_dest_compute(cls, context, confirm_window,
                                         dest_compute, use_slave=False):
         db_migrations = cls._db_migration_get_unconfirmed_by_dest_compute(
@@ -301,14 +306,16 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_in_progress_by_host_and_node(cls, context, host, node):
         db_migrations = db.migration_get_in_progress_by_host_and_node(
             context, host, node)
         return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_filters(cls, context, filters, sort_keys=None, sort_dirs=None,
                        limit=None, marker=None):
         db_migrations = db.migration_get_all_by_filters(
@@ -317,7 +324,8 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_in_progress_by_instance(cls, context, instance_uuid,
                                     migration_type=None):
         db_migrations = db.migration_get_in_progress_by_instance(
@@ -325,7 +333,8 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_in_progress_and_error(cls, context, host, node):
         db_migrations = \
             db.migration_get_in_progress_and_error_by_host_and_node(

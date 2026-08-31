@@ -252,12 +252,14 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
         return compute
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_id(cls, context, compute_id):
         db_compute = db.compute_node_get(context, compute_id)
         return cls._from_db_object(context, cls(), db_compute)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_uuid(cls, context, compute_uuid):
         nodes = ComputeNodeList.get_all_by_uuids(context, [compute_uuid])
         # We have a unique index on the uuid column so we can get back 0 or 1.
@@ -267,7 +269,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
     # NOTE(hanlind): This is deprecated and should be removed on the next
     # major version bump
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_service_id(cls, context, service_id):
         db_computes = db.compute_nodes_get_by_service_id(context, service_id)
         # NOTE(sbauza): Old version was returning an item, we need to keep this
@@ -275,13 +278,15 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         db_compute = db_computes[0]
         return cls._from_db_object(context, cls(), db_compute)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_host_and_nodename(cls, context, host, nodename):
         db_compute = db.compute_node_get_by_host_and_nodename(
             context, host, nodename)
         return cls._from_db_object(context, cls(), db_compute)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_nodename(cls, context, hypervisor_hostname):
         '''Get by node name (i.e. hypervisor hostname).
 
@@ -293,7 +298,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         return cls._from_db_object(context, cls(), db_compute)
 
     # TODO(pkholkin): Remove this method in the next major version bump
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_first_node_by_host_for_old_compat(cls, context, host,
                                               use_slave=False):
         computes = ComputeNodeList.get_all_by_host(context, host, use_slave)
@@ -438,13 +444,15 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all(cls, context):
         db_computes = db.compute_node_get_all(context)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all_by_not_mapped(cls, context, mapped_less_than):
         """Return ComputeNode records that are not mapped at a certain level"""
         db_computes = db.compute_node_get_all_mapped_less_than(
@@ -452,14 +460,16 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_pagination(cls, context, limit=None, marker=None):
         db_computes = db.compute_node_get_all_by_pagination(
             context, limit=limit, marker=marker)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_by_hypervisor(cls, context, hypervisor_match):
         db_computes = db.compute_node_search_by_hypervisor(context,
                                                            hypervisor_match)
@@ -468,7 +478,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
 
     # NOTE(hanlind): This is deprecated and should be removed on the next
     # major version bump
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def _get_by_service(cls, context, service_id, use_slave=False):
         try:
             db_computes = db.compute_nodes_get_by_service_id(
@@ -485,7 +496,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     def _db_compute_node_get_all_by_host(context, host, use_slave=False):
         return db.compute_node_get_all_by_host(context, host)
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all_by_host(cls, context, host, use_slave=False):
         db_computes = cls._db_compute_node_get_all_by_host(context, host,
                                                       use_slave=use_slave)
@@ -499,7 +511,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
             models.ComputeNode.uuid.in_(compute_uuids)).all()
         return db_computes
 
-    @base.remotable_classmethod
+    @classmethod
+    @base.remotable
     def get_all_by_uuids(cls, context, compute_uuids):
         db_computes = cls._db_compute_node_get_all_by_uuids(context,
                                                             compute_uuids)
