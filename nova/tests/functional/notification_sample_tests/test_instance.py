@@ -2218,6 +2218,7 @@ class TestInstanceNotificationSample(
         self.api.post_server_volume(server['id'], post)
 
         self._wait_for_notification('instance.volume_attach.error')
+        self._wait_for_notification('compute.exception')
 
         block_devices = [
             # Add by default at boot
@@ -2242,9 +2243,7 @@ class TestInstanceNotificationSample(
         # 0. volume_attach-start
         # 1. volume_attach-error
         # 2. compute.exception
-        # We only rely on the first 2 notifications, in this case we don't
-        # care about the exception notification.
-        self.assertLessEqual(2, len(self.notifier.versioned_notifications))
+        self.assertEqual(3, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'instance-volume_attach-start',
             replacements={
