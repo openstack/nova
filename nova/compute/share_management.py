@@ -333,9 +333,9 @@ class ShareManager:
         same_host_uuids = {keep_uuid}
         if other_uuids:
             others = objects.InstanceList.get_by_filters(
-                context, {'uuid': other_uuids}, expected_attrs=[])
-            same_host_uuids.update(
-                inst.uuid for inst in others if inst.host == host)
+                context, {'uuid': other_uuids, 'host': host},
+                expected_attrs=[])
+            same_host_uuids.update(inst.uuid for inst in others)
         return [
             sm for sm in share_mappings
             if sm.instance_uuid in same_host_uuids

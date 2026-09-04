@@ -3700,8 +3700,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.context,
                 uuid=uuids.other_instance,
                 host='other-host')
-        mock_get_by_filters.return_value = objects.InstanceList(
-            objects=[other_instance])
+        # The host filter is pushed into the query, so the DB returns no
+        # instance on this host for the other uuid.
+        mock_get_by_filters.return_value = objects.InstanceList(objects=[])
         mock_db_get_share.return_value = (
             objects.share_mapping.ShareMappingList()
         )
@@ -3892,8 +3893,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.context, uuid=uuids.instance, host='this-host')
         other_instance = fake_instance.fake_instance_obj(
                 self.context, uuid=uuids.other_instance, host='other-host')
-        mock_get_by_filters.return_value = objects.InstanceList(
-            objects=[other_instance])
+        # The host filter is pushed into the query, so the DB returns no
+        # instance on this host for the other uuid.
+        mock_get_by_filters.return_value = objects.InstanceList(objects=[])
 
         sm_ours = self.get_fake_share_mapping()
         sm_ours.instance_uuid = instance.uuid
@@ -3909,7 +3911,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         self.assertFalse(still_used)
         mock_get_by_filters.assert_called_once_with(
-            self.context, {'uuid': [other_instance.uuid]}, expected_attrs=[])
+            self.context,
+            {'uuid': [other_instance.uuid], 'host': 'this-host'},
+            expected_attrs=[])
 
     @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
@@ -4049,15 +4053,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.flags(my_shared_fs_storage_ip="192.168.0.1")
         compute_ip = CONF.my_shared_fs_storage_ip
         share_mapping = self.get_fake_share_mapping()
-        our_instance = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instance, host=self.compute.host)
         other_mapping = self.get_fake_share_mapping()
         other_mapping.instance_uuid = uuids.other_instance
         other_mapping.status = 'active'
-        other_instance = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.other_instance, host='other-host')
-        mock_get_by_filters.return_value = objects.InstanceList(
-            objects=[our_instance, other_instance])
+        # The other instance is on 'other-host'. The host filter is pushed
+        # into the query, so the DB returns no instance on this host for
+        # the other uuid.
+        mock_get_by_filters.return_value = objects.InstanceList(objects=[])
         mock_get_by_share.return_value = (
             objects.share_mapping.ShareMappingList(
                 objects=[share_mapping, other_mapping]))
