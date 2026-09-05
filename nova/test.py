@@ -204,13 +204,18 @@ class TestCase(base.BaseTestCase):
         # How many of which service we've started. {$service-name: $count}
         self._service_fixture_count = collections.defaultdict(int)
 
+        # NOTE(gmaan): StandardLogging is set up before IsolatedExecutorFixture
+        # (and the other fixtures below) so that it capture logs emitted by the
+        # executor pool shutdown in IsolatedExecutorFixture's cleanup.
+        # If any of the fixture needs to log something in cleanup steps or
+        # before then we need to re-order the StandardLogging fixture.
+        self.stdlog = self.useFixture(nova_fixtures.StandardLogging())
+
         self.useFixture(nova_fixtures.OpenStackSDKFixture())
         self.useFixture(nova_fixtures.IsolatedExecutorFixture(self.id()))
         self.useFixture(nova_fixtures.DelayingExecutorWrapperCleanupFixture())
 
         self.useFixture(log_fixture.get_logging_handle_error_fixture())
-
-        self.stdlog = self.useFixture(nova_fixtures.StandardLogging())
 
         # NOTE(sdague): because of the way we were using the lock
         # wrapper we ended up with a lot of tests that started
