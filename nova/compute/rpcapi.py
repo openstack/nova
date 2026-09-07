@@ -443,6 +443,7 @@ class ComputeAPI(object):
         'epoxy': '6.4',
         'flamingo': '6.4',
         'gazpacho': '6.5',
+        'hibiscus': '6.5',
     }
 
     @property
