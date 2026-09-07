@@ -536,6 +536,65 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertEqual(1, mock_rt.remove_node.call_count)
         mock_rt.clean_compute_node_cache.assert_called_once_with(db_nodes)
 
+    @mock.patch('nova.thread_pool_factory.spawn_on')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
+    def test_update_available_resource_parallel(
+            self, get_db_nodes, get_avail_nodes, mock_spawn_on):
+        """When [compute] update_resources_max_workers > 1, all nodes must
+        still be scheduled and the parallel path must complete without error.
+        """
+        get_db_nodes.return_value = []
+        avail_nodes = set(['node1', 'node2', 'node3'])
+        get_avail_nodes.return_value = avail_nodes
+        futures = [mock.Mock() for _node in avail_nodes]
+        mock_spawn_on.side_effect = futures
+
+        self.flags(update_resources_max_workers=4, group='compute')
+
+        self.compute.update_available_resource(self.context, startup=True)
+
+        self.assertEqual(len(avail_nodes), mock_spawn_on.call_count)
+        for nodename in avail_nodes:
+            mock_spawn_on.assert_any_call(
+                thread_pool_factory.ExecutorType.UPDATE_RESOURCES,
+                self.compute._update_available_resource_for_node,
+                self.context, nodename, startup=True)
+        for fut in futures:
+            fut.result.assert_called_once_with()
+
+    @mock.patch('nova.thread_pool_factory.spawn_on')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
+    def test_update_available_resource_parallel_reraises_first_failure(
+            self, get_db_nodes, get_avail_nodes, mock_spawn_on):
+        get_db_nodes.return_value = []
+        get_avail_nodes.return_value = set(['node1', 'node2', 'node3'])
+        first_failure = exception.InvalidConfiguration(reason='broken')
+        second_failure = test.TestingException()
+        futures = [mock.Mock() for _node in get_avail_nodes.return_value]
+        futures[0].result.side_effect = first_failure
+        futures[2].result.side_effect = second_failure
+        mock_spawn_on.side_effect = futures
+
+        self.flags(update_resources_max_workers=4, group='compute')
+
+        with mock.patch.object(manager.LOG, 'error') as mock_log_error:
+            ex = self.assertRaises(
+                exception.InvalidConfiguration,
+                self.compute.update_available_resource,
+                self.context,
+                startup=True)
+
+        self.assertIs(first_failure, ex)
+        for fut in futures:
+            fut.result.assert_called_once_with()
+        first_failed_node = mock_spawn_on.call_args_list[0].args[3]
+        mock_log_error.assert_called_once_with(
+            "update_available_resource failed for %(count)d nodes; "
+            "re-raising the first failure from node %(node)s.",
+            {'count': 2, 'node': first_failed_node})
+
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete_resource_provider')
     @mock.patch.object(manager.ComputeManager,
