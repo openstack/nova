@@ -578,13 +578,44 @@
           # Added in Hibiscus. Needed to compile the mtty kernel module
           nova: https://opendev.org/openstack/nova
 
+- nodeset:
+    # custom nodeset so we can uses tow node ubuntu 26.04
+    name: nova-next-two-node
+    nodes:
+      - name: controller
+        label: ubuntu-resolute-8GB
+      - name: compute1
+        label: ubuntu-resolute-8GB
+    groups:
+      # Node where tests are executed and test results collected
+      - name: tempest
+        nodes:
+          - controller
+      # Nodes running the compute service
+      - name: compute
+        nodes:
+          - controller
+          - compute1
+      # Nodes that are not the controller
+      - name: subnode
+        nodes:
+          - compute1
+      # Switch node for multinode networking setup
+      - name: switch
+        nodes:
+          - controller
+      # Peer nodes for multinode networking setup
+      - name: peers
+        nodes:
+          - compute1
+
 # TODO(lucasagomes): Move this job to ML2/OVN when QoS Minimum Bandwidth
 # support is implemented.
 # See: https://docs.openstack.org/neutron/latest/ovn/gaps.html
 - job:
     name: nova-next
     parent: tempest-multinode-full-py3
-    nodeset: openstack-two-node-noble
+    nodeset: nova-next-two-node
     description: |
       This job was added in Newton when placement and cellsv2
       were optional. Placement and cellsv2 are required starting in Ocata. In
