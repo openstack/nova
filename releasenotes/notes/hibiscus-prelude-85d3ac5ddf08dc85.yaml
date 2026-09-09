@@ -1,0 +1,57 @@
+---
+prelude: |
+  The OpenStack 2026.2 Hibiscus (Nova 34.0.0) release includes many new features
+  and bug fixes. Please be sure to read the upgrade section which describes the
+  required actions to upgrade your cloud from 33.0.0 (2026.1) to 34.0.0
+  (2026.2).
+  As a reminder, OpenStack 2026.2 is not a
+  `Skip-Level-Upgrade Release <https://governance.openstack.org/tc/resolutions/20220210-release-cadence-adjustment.html>`_
+  (starting from now, we name it a `SLURP release`) meaning that you can't
+  do rolling-upgrade from 2025.2, you first need to upgrade to 2026.1.
+
+  There are a few major changes worth mentioning. This is not an exhaustive
+  list:
+
+  - The latest Compute API microversion supported for 2026.2 is
+    `v2.104 <https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-2026-2-hibiscus>`_.
+
+  - Nova now supports launching instances with AMD SEV-SNP memory encryption,
+    the third generation of AMD's Secure Encrypted Virtualization. SEV-SNP
+    provides stronger integrity protection than SEV-ES and enables platform
+    attestation, allowing guest owners to verify the integrity of their VMs
+    via signed attestation reports.
+
+  - Nova now supports Intel Trust Domain Extensions (TDX) for confidential
+    computing on Intel platforms (5th Gen Xeon Scalable or later). Intel TDX
+    provides hardware-enforced memory encryption and CPU state isolation,
+    protecting guests from the hypervisor and other privileged software.
+
+  - Nova's libvirt driver now supports Cyborg-managed mediated devices (such
+    as vGPUs) via a new ``MDEV`` accelerator request binding type. Operators
+    can choose to manage vGPU/mdev lifecycle through Cyborg as an alternative
+    to Nova's native support. Both management paths coexist safely thanks to
+    a new ``OWNER_NOVA`` trait that prevents scheduling collisions between
+    Nova-managed and Cyborg-managed devices.
+
+  - Nova now supports unpinning and re-pinning the availability zone of an
+    instance via the ``PUT /servers/{server_id}`` API in a new microversion.
+    Operators can unpin an instance from its AZ, migrate it to another AZ,
+    and optionally re-pin it there, without deleting and recreating the
+    instance.
+
+  - Cold migration and resize are now supported for instances with
+    ``virtiofs`` Manila share attachments. Shares are transparently re-mounted
+    on the destination host during migration and remain available on the
+    source until resize is confirmed, enabling clean rollback on revert.
+
+  - Native threading is now the default concurrency mode for almost all Nova
+    services. Console proxy services (novncproxy, serialproxy,
+    spicehtml5proxy) also gained threading support but remain on
+    eventlet by default. The legacy eventlet mode is deprecated and will be
+    removed in a future release.
+
+  - Nova services implement task tracking as part of the ongoing graceful
+    shutdown feature. During shutdown, services monitor in-progress tasks
+    and wait for them to complete instead of waiting a fixed timeout.
+    Operators get detailed logs of tasks completed during shutdown, as well
+    as those that remain incomplete at timeout.
