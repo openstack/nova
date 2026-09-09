@@ -1338,8 +1338,8 @@ all requests.
 
 .. _microversion 2.104:
 
-2.104
------
+2.104 (Maximum in 2026.2 Hibiscus)
+-----------------------------------
 
 Add support for updating the ``pinned_availability_zone`` field via
 ``PUT /servers/{server_id}``. Setting ``pinned_availability_zone`` to ``null``
