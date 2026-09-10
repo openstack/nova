@@ -8,3 +8,17 @@ features:
     only until they complete (or until
     ``[DEFAULT]/manager_shutdown_timeout`` is reached), instead of
     always sleeping for the full timeout.
+known_issues:
+  - |
+    There is a known issue where the ``live_migration_at_dest`` task may
+    be left in-progress if the live migration is rolled back during
+    ``pre_live_migration``. Since the source and destination compute
+    services track their tasks independently, the source compute cannot
+    end the task tracked on the destination in this case, leaving it
+    reported as still in-progress. Due to this bug, if live migration
+    is rolled back at ``pre_live_migration`` stage then destination
+    ``nova-compute`` service shutdown may take the full configured
+    ``[DEFAULT]/manager_shutdown_timeout`` to shutdown, instead of
+    exiting as soon as live migration is rolled back. See
+    `bug 2166009 <https://bugs.launchpad.net/nova/+bug/2166009>`_ for
+    more details.
