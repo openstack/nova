@@ -1061,6 +1061,9 @@
         - openstack-tox-cover:
             # Allow more time for unit and functional tests to run.
             timeout: 6000
+            # Temporary make it non-voting to unblock RC1 while we fix
+            # https://bugs.launchpad.net/nova/+bug/2167088
+            voting: false
     gate:
       jobs:
         - nova-live-migration
