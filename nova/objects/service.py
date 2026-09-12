@@ -301,6 +301,7 @@ SERVICE_VERSION_ALIASES = {
     'Epoxy': 68,
     'Flamingo': 70,
     'Gazpacho': 72,
+    'Hibiscus': 74,
 }
 
 
