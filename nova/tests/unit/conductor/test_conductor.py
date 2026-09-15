@@ -4734,6 +4734,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             volume_id='fake-volume-id')
 
         fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        # No attachment_id means the BDM was not yet reserved in Cinder,
+        # so it is safe to destroy.
+        fake_bdm.attachment_id = None
         mock_get_by_volume_and_instance.return_value = fake_bdm
         instance = fake_instance.fake_instance_obj(self.context,
                                                    vm_state=vm_states.ACTIVE)
@@ -4749,6 +4752,46 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_get_by_volume_and_instance.assert_called_once_with(
             self.context, volume['id'], instance.uuid)
         fake_bdm.destroy.assert_called_once_with()
+
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_volume')
+    def test_attach_volume_reserve_bdm_timeout_concurrent_request(
+            self, mock_get_by_volume, mock_get_by_volume_and_instance,
+            mock_reserve):
+        """Test that a BDM from a concurrent request is not deleted.
+
+        When reserve_block_device_name times out, the cleanup code looks
+        up the BDM by volume and instance. If a concurrent request (e.g.
+        a K8s retry) has already created a BDM and progressed to creating
+        a Cinder attachment (attachment_id is set), the cleanup must skip
+        deletion to avoid leaving Cinder and libvirt out of sync with
+        Nova. See LP #2141355.
+        """
+        mock_get_by_volume.side_effect = exc.VolumeBDMNotFound(
+            volume_id='fake-volume-id')
+
+        fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        # attachment_id is set — this BDM belongs to a concurrent request
+        # that already reserved the volume in Cinder.
+        fake_bdm.attachment_id = uuids.attachment_id
+        mock_get_by_volume_and_instance.return_value = fake_bdm
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   vm_state=vm_states.ACTIVE)
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        mock_reserve.side_effect = messaging.exceptions.MessagingTimeout()
+
+        self.assertRaises(messaging.exceptions.MessagingTimeout,
+                            self.conductor.attach_volume,
+                            self.context, instance, volume,
+                            None, None, None)
+        mock_get_by_volume_and_instance.assert_called_once_with(
+            self.context, volume['id'], instance.uuid)
+        # The BDM must NOT be destroyed when attachment_id is set.
+        fake_bdm.destroy.assert_not_called()
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_volume')

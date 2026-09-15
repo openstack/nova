@@ -2282,12 +2282,33 @@ class ComputeTaskManager:
             # The compute node might have already created the attachment but
             # we never received the answer. In this case it is safe to delete
             # the attachment as nobody will ever pick it up again.
+            # NOTE(sbauza): We need to verify the BDM wasn't already
+            # progressed by a concurrent request (e.g. a K8s retry) that
+            # successfully reserved the volume in Cinder. If attachment_id
+            # is set, the BDM belongs to that other request and must not be
+            # deleted — doing so would leave Cinder and libvirt out of sync
+            # with Nova. See LP #2141355.
             with excutils.save_and_reraise_exception():
                 try:
-                    objects.BlockDeviceMapping.get_by_volume_and_instance(
-                        context, volume['id'], instance.uuid).destroy()
-                    LOG.debug("Delete BDM after compute did not respond to "
-                              f"attachment request for volume {volume['id']}")
+                    bdm = (
+                        objects.BlockDeviceMapping
+                        .get_by_volume_and_instance(
+                            context, volume['id'], instance.uuid))
+                    if bdm.attachment_id:
+                        LOG.warning(
+                            "BDM for volume %(vol)s on instance %(inst)s "
+                            "has attachment_id %(att)s set by a concurrent "
+                            "request, skipping cleanup to avoid deleting "
+                            "a valid attachment.",
+                            {'vol': volume['id'],
+                             'inst': instance.uuid,
+                             'att': bdm.attachment_id})
+                    else:
+                        bdm.destroy()
+                        LOG.debug(
+                            "Delete BDM after compute did not respond to "
+                            "attachment request for volume %s",
+                            volume['id'])
                 except exception.VolumeBDMNotFound:
                     LOG.debug("BDM not found, ignoring removal. "
                               f"Error attaching volume {volume['id']}")
