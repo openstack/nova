@@ -92,20 +92,11 @@ class TestPCIColdMigrationFailureRevert(TestPCIColdMigrationBase):
             self.notifier.wait_for_versioned_notifications('compute.exception')
 
         self.assert_pci_inventory(comp0, total=2, free=1)
-        # NOTE(gibi): This is bug https://bugs.launchpad.net/nova/+bug/2166786
-        # as after the migration failed and reverted
-        # the PCI allocation on the destination compute is not cleaned.
-        self.assert_pci_inventory(comp1, total=2, free=1)
-
-        # The periodic now detects and cleans such leaks
-        self._run_periodics()
-        self.assert_pci_inventory(comp0, total=2, free=1)
         self.assert_pci_inventory(comp1, total=2, free=2)
 
-        # NOTE(gibi): This is also the same bug, the migration context is not
-        # cleaned up on the instance after the migration failed and reverted.
+        # Also the migration context is cleaned up now
         inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
-        self.assertIsNotNone(inst.migration_context)
+        self.assertIsNone(inst.migration_context)
 
         self._delete_server(server)
         self.assert_pci_inventory(comp0, total=2, free=2)
@@ -141,7 +132,13 @@ class TestPCIColdMigrationLeakHealedByPeriodic(TestPCIColdMigrationBase):
         self.assert_pci_inventory(comp0, total=2, free=1)
         self.assert_pci_inventory(comp1, total=2, free=2)
 
+        # NOTE(gibi): we are simulating an ssh failure during migration
+        # (see the other test classes) but we also neutralize the fix that
+        # drops the move claim on the destination to reproduce a leak the way
+        # it happened before that fix was deployed.
         with mock.patch(
+            'nova.compute.rpcapi.ComputeAPI.drop_move_claim_at_destination'
+        ), mock.patch(
             'nova.virt.libvirt.driver.LibvirtDriver'
             '.migrate_disk_and_power_off',
             side_effect=exception.InstanceFaultRollback(
@@ -153,7 +150,8 @@ class TestPCIColdMigrationLeakHealedByPeriodic(TestPCIColdMigrationBase):
             self.notifier.wait_for_versioned_notifications('compute.exception')
 
         self.assert_pci_inventory(comp0, total=2, free=1)
-        # The migration failed and reverted but, the PCI device claimed on
+        # The migration failed and reverted but as the fix dropping the move
+        # claim on the destination was neutralized, the PCI device claimed on
         # the destination during prep_resize is leaked.
         self.assert_pci_inventory(comp1, total=2, free=1)
 
@@ -251,10 +249,7 @@ class TestPCIColdMigrationFailureRevertPciInPlacement(
             self.notifier.wait_for_versioned_notifications('compute.exception')
 
         self.assertPCIDeviceCounts(comp0, total=1, free=0)
-        # NOTE(gibi): This is bug https://bugs.launchpad.net/nova/+bug/2166786
-        # as after the migration failed and revert
-        # the PCI allocation on the destination compute is not cleaned.
-        self.assertPCIDeviceCounts(comp1, total=1, free=0)
+        self.assertPCIDeviceCounts(comp1, total=1, free=1)
 
         # NOTE(gibi): but Placement allocation is correct.
         self.assert_placement_pci_view(

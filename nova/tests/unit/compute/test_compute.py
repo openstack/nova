@@ -5143,7 +5143,9 @@ class ComputeTestCase(BaseTestCase,
             self.assertEqual(instance.vm_state, vm_state)
         self.assertIsNone(instance["task_state"])
 
-    def test_state_revert(self):
+    @mock.patch(
+        'nova.compute.rpcapi.ComputeAPI.drop_move_claim_at_destination')
+    def test_state_revert(self, mock_drop_claim):
         # ensure that task_state is reverted after a failed operation.
         migration = objects.Migration(context=self.context.elevated())
         migration.instance_uuid = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
@@ -5225,6 +5227,11 @@ class ComputeTestCase(BaseTestCase,
             self.stub_out('nova.objects.migration.Migration.save',
                           fake_migration_save)
             self._test_state_revert(instance, *operation)
+
+        # Only the failed resize_instance operation asks the destination to
+        # drop its move claim to avoid leaking the resources claimed there.
+        mock_drop_claim.assert_called_once_with(
+            self.context, instance, migration.dest_compute)
 
     def test_quotas_successful_delete(self):
         instance = self._create_fake_instance_obj()
@@ -5879,7 +5886,9 @@ class ComputeTestCase(BaseTestCase,
                           host_list=[])
         self.compute.terminate_instance(self.context, instance, [])
 
-    def test_resize_instance_driver_error(self):
+    @mock.patch(
+        'nova.compute.rpcapi.ComputeAPI.drop_move_claim_at_destination')
+    def test_resize_instance_driver_error(self, mock_drop_claim):
         # Ensure instance status set to Error on resize error.
 
         def throw_up(*args, **kwargs):
@@ -5914,13 +5923,22 @@ class ComputeTestCase(BaseTestCase,
                           flavor=jsonutils.to_primitive(
                               self.default_flavor),
                           clean_shutdown=True, request_spec=request_spec)
+        # the destination is asked to drop the move claim it made during
+        # prep_resize so that the claimed resources are not leaked
+        mock_drop_claim.assert_called_once_with(
+            self.context, instance, migration.dest_compute)
+        # the migration context created by prep_resize is cleaned up so it is
+        # not leaked on the instance kept on the source host
+        self.assertIsNone(instance.migration_context)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
         self.assertEqual(instance.vm_state, vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance, [])
 
-    def test_resize_instance_driver_rollback(self):
+    @mock.patch(
+        'nova.compute.rpcapi.ComputeAPI.drop_move_claim_at_destination')
+    def test_resize_instance_driver_rollback(self, mock_drop_claim):
         # Ensure instance status set to Running after rollback.
 
         def throw_up(*args, **kwargs):
@@ -5955,6 +5973,13 @@ class ComputeTestCase(BaseTestCase,
                           flavor=jsonutils.to_primitive(
                               self.default_flavor),
                           clean_shutdown=True, request_spec=request_spec)
+        # the destination is asked to drop the move claim it made during
+        # prep_resize so that the claimed resources are not leaked
+        mock_drop_claim.assert_called_once_with(
+            self.context, instance, migration.dest_compute)
+        # the migration context created by prep_resize is cleaned up so it is
+        # not leaked on the instance kept on the source host
+        self.assertIsNone(instance.migration_context)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
@@ -6611,7 +6636,9 @@ class ComputeTestCase(BaseTestCase,
         flavor_type = flavors.get_flavor_by_flavor_id(self.context, 1)
         self.assertEqual(flavor_type['name'], 'm1.tiny')
 
-    def test_resize_instance_handles_migration_error(self):
+    @mock.patch(
+        'nova.compute.rpcapi.ComputeAPI.drop_move_claim_at_destination')
+    def test_resize_instance_handles_migration_error(self, mock_drop_claim):
         # Ensure vm_state is ERROR when error occurs.
         def raise_migration_failure(*args):
             raise test.TestingException()
@@ -6644,6 +6671,13 @@ class ComputeTestCase(BaseTestCase,
                           flavor=jsonutils.to_primitive(
                               self.default_flavor),
                           clean_shutdown=True, request_spec=request_spec)
+        # the destination is asked to drop the move claim it made during
+        # prep_resize so that the claimed resources are not leaked
+        mock_drop_claim.assert_called_once_with(
+            self.context, instance, migration.dest_compute)
+        # the migration context created by prep_resize is cleaned up so it is
+        # not leaked on the instance kept on the source host
+        self.assertIsNone(instance.migration_context)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
