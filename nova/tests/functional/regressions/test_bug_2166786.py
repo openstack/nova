@@ -42,11 +42,6 @@ class TestPCIColdMigrationBase(base._PCIServersTestBase):
         },
     )]
 
-
-class TestPCIColdMigrationFailureRevert(TestPCIColdMigrationBase):
-    """Regression test for bug https://bugs.launchpad.net/nova/+bug/2166786
-    """
-
     def assert_pci_pool_free_count(self, hostname, free):
         node = objects.ComputeNode.get_by_nodename(self.ctxt, hostname)
         self.assertEqual(
@@ -55,6 +50,11 @@ class TestPCIColdMigrationFailureRevert(TestPCIColdMigrationBase):
     def assert_pci_inventory(self, hostname, total, free):
         self.assertPCIDeviceCounts(hostname, total=total, free=free)
         self.assert_pci_pool_free_count(hostname, free=free)
+
+
+class TestPCIColdMigrationFailureRevert(TestPCIColdMigrationBase):
+    """Regression test for bug https://bugs.launchpad.net/nova/+bug/2166786
+    """
 
     def test_cold_migrate_server_with_PF(self):
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=2, num_vfs=0)
@@ -97,9 +97,10 @@ class TestPCIColdMigrationFailureRevert(TestPCIColdMigrationBase):
         # the PCI allocation on the destination compute is not cleaned.
         self.assert_pci_inventory(comp1, total=2, free=1)
 
+        # The periodic now detects and cleans such leaks
         self._run_periodics()
         self.assert_pci_inventory(comp0, total=2, free=1)
-        self.assert_pci_inventory(comp1, total=2, free=1)
+        self.assert_pci_inventory(comp1, total=2, free=2)
 
         # NOTE(gibi): This is also the same bug, the migration context is not
         # cleaned up on the instance after the migration failed and reverted.
@@ -108,12 +109,74 @@ class TestPCIColdMigrationFailureRevert(TestPCIColdMigrationBase):
 
         self._delete_server(server)
         self.assert_pci_inventory(comp0, total=2, free=2)
-        # NOTE(gibi): this is also a bit problematic as even
-        # after the VM is deleted the PCI device is still
-        # allocated on the destination compute. We need
-        # and extra periodic run to happen to clean that up.
+        self.assert_pci_inventory(comp1, total=2, free=2)
+
+
+class TestPCIColdMigrationLeakHealedByPeriodic(TestPCIColdMigrationBase):
+    """Regression test for bug https://bugs.launchpad.net/nova/+bug/2166786
+
+    This simulates a leak that happened before the fix that drops the move
+    claim on the destination was deployed, and asserts that the periodic
+    update_available_resource job on the destination is able to heal it.
+    """
+
+    def test_cold_migrate_server_with_PF(self):
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=2, num_vfs=0)
+        comp0 = self.start_compute(
+            hostname='test_compute0',
+            pci_info=pci_info)
+        comp1 = self.start_compute(
+            hostname='test_compute1',
+            pci_info=pci_info)
+
+        self.assert_pci_inventory(comp0, total=2, free=2)
+        self.assert_pci_inventory(comp1, total=2, free=2)
+
+        # create a server
+        extra_spec = {"pci_passthrough:alias": "%s:1" % self.PFS_ALIAS_NAME}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=flavor_id, networks='none', host='test_compute0')
+
+        self.assert_pci_inventory(comp0, total=2, free=1)
+        self.assert_pci_inventory(comp1, total=2, free=2)
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off',
+            side_effect=exception.InstanceFaultRollback(
+                exception.ResizeError(reason="simulated ssh failure"))
+        ):
+            self._migrate_server(server, expected_state="ACTIVE")
+            self._wait_for_migration_status(server, ['error'])
+            self._wait_for_state_change(server, 'ACTIVE')
+            self.notifier.wait_for_versioned_notifications('compute.exception')
+
+        self.assert_pci_inventory(comp0, total=2, free=1)
+        # The migration failed and reverted but, the PCI device claimed on
+        # the destination during prep_resize is leaked.
         self.assert_pci_inventory(comp1, total=2, free=1)
+
+        # The migration is still in error state and holds the leaked claim.
+        migration = self._wait_for_migration_status(server, ['error'])
+
+        # The periodic on the destination detects the leaked move claim of the
+        # failed migration and releases it.
         self._run_periodics()
+        self.assert_pci_inventory(comp0, total=2, free=1)
+        self.assert_pci_inventory(comp1, total=2, free=2)
+
+        # The migration is marked as failed so that it is reconciled only once
+        # and no longer processed by later periodic runs.
+        migration = objects.Migration.get_by_id(self.ctxt, migration['id'])
+        self.assertEqual('failed', migration.status)
+
+        # Running it again is a no-op, the leak stays healed.
+        self._run_periodics()
+        self.assert_pci_inventory(comp0, total=2, free=1)
+        self.assert_pci_inventory(comp1, total=2, free=2)
+
+        self._delete_server(server)
         self.assert_pci_inventory(comp0, total=2, free=2)
         self.assert_pci_inventory(comp1, total=2, free=2)
 
@@ -207,9 +270,10 @@ class TestPCIColdMigrationFailureRevertPciInPlacement(
             traits={"0000:81:00.0": []},
             usages={"0000:81:00.0": {'CUSTOM_PCI_8086_1528': 0}})
 
+        # The periodic now detects and cleans such leaks
         self._run_periodics()
         self.assertPCIDeviceCounts(comp0, total=1, free=0)
-        self.assertPCIDeviceCounts(comp1, total=1, free=0)
+        self.assertPCIDeviceCounts(comp1, total=1, free=1)
         self.assert_placement_pci_view(
             comp0,
             inventories={"0000:81:00.0": {'CUSTOM_PCI_8086_1528': 1}},
@@ -224,25 +288,6 @@ class TestPCIColdMigrationFailureRevertPciInPlacement(
             usages={"0000:81:00.0": {'CUSTOM_PCI_8086_1528': 0}})
 
         self._delete_server(server)
-        self.assertPCIDeviceCounts(comp0, total=1, free=1)
-        # NOTE(gibi): this is also a bit problematic as even
-        # after the VM is deleted the PCI device is still
-        # allocated on the destination compute. We need
-        # and extra periodic run to happen to clean that up.
-        self.assertPCIDeviceCounts(comp1, total=1, free=0)
-
-        self.assert_placement_pci_view(
-            comp0,
-            inventories={"0000:81:00.0": {'CUSTOM_PCI_8086_1528': 1}},
-            traits={"0000:81:00.0": []},
-            usages={"0000:81:00.0": {'CUSTOM_PCI_8086_1528': 0}})
-        self.assert_placement_pci_view(
-            comp1,
-            inventories={"0000:81:00.0": {'CUSTOM_PCI_8086_1528': 1}},
-            traits={"0000:81:00.0": []},
-            usages={"0000:81:00.0": {'CUSTOM_PCI_8086_1528': 0}})
-
-        self._run_periodics()
         self.assertPCIDeviceCounts(comp0, total=1, free=1)
         self.assertPCIDeviceCounts(comp1, total=1, free=1)
 

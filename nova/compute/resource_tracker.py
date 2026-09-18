@@ -1068,6 +1068,15 @@ class ResourceTracker(object):
         self._pair_instances_to_migrations(migrations, instance_by_uuid)
         self._update_usage_from_migrations(context, migrations, nodename)
 
+        # Heal any move claim that leaked on this node as the destination of a
+        # failed move before https://bugs.launchpad.net/nova/+bug/2166786 is
+        # fixed preventing such a leak. This has to run after
+        # _update_usage_from_migrations() populated self.tracked_migrations so
+        # we can tell the leaked claims apart from the legitimately tracked,
+        # in-progress ones.
+        self._release_leaked_move_claims(
+            context, migrations, instance_by_uuid, nodename)
+
         # A new compute node means there won't be a resource provider yet since
         # that would be created via the _update() call below, and if there is
         # no resource provider then there are no allocations against it.
@@ -1635,6 +1644,70 @@ class ResourceTracker(object):
                 LOG.warning("Flavor could not be found, skipping migration.",
                             instance_uuid=instance.uuid)
                 continue
+
+    def _release_leaked_move_claims(
+        self, context, migrations, instance_by_uuid, nodename,
+    ):
+        """Release move claims leaked on this node as a migration destination.
+
+        A cold migration (or resize) that fails on the source host after the
+        destination already claimed the resources in prep_resize (e.g. PCI
+        devices) leaks those claims on the destination if the destination is
+        never asked to drop them. Such a migration ends up in 'error' state
+        while the instance is reverted back to and kept running on the
+        source host, so nothing releases the claim on the destination.
+
+        New leaks are prevented by asking the destination to drop the claim
+        when the move fails, but pre-existing leaks (from before that fix was
+        deployed) can only be healed here, from the periodic. Detect the leaked
+        claims and release them. See bug https://launchpad.net/bugs/2166786
+        """
+        for migration in migrations:
+            # We only care about claims leaked on this node as the destination
+            # of the move.
+            if not (migration.dest_compute == self.host and
+                    migration.dest_node == nodename):
+                continue
+
+            # An in-progress migration is either accounted for as an incoming
+            # migration (and is present in tracked_migrations) or is still
+            # legitimately holding the claim, so only consider failed ones.
+            if migration.status != 'error':
+                continue
+
+            # If the instance is actually here, or the migration is being
+            # tracked as an in-progress incoming migration, then the claim is
+            # not leaked and is handled by the normal accounting of
+            # tracked_migrations.
+            if (migration.instance_uuid in instance_by_uuid or
+                    migration.instance_uuid in self.tracked_migrations):
+                continue
+
+            # Only PCI devices are claimed on the destination in a way that is
+            # not recomputed from scratch by the periodic (they are persisted
+            # in the DB), so a leak is only observable there. If nothing is
+            # claimed for this instance on this node then there is nothing to
+            # heal.
+            uuid = migration.instance_uuid
+            if not self.pci_tracker or (
+                    uuid not in self.pci_tracker.allocations and
+                    uuid not in self.pci_tracker.claims):
+                continue
+
+            instance = migration.instance
+            LOG.warning(
+                "Releasing a move claim leaked on this host as the "
+                "destination of the failed migration %s. This can happen if "
+                "the migration failed on the source host before the fix for "
+                "bug 2166786 was deployed.",
+                migration.uuid, instance=instance)
+            self.pci_tracker.free_instance(context, instance)
+            # Mark the migration as 'failed' so that it is no longer returned
+            # by MigrationList.get_in_progress_and_error() and therefore this
+            # leak is reconciled exactly once instead of being re-examined on
+            # every periodic run.
+            migration.status = 'failed'
+            migration.save()
 
     def _update_usage_from_instance(self, context, instance, nodename,
             is_removed=False):
