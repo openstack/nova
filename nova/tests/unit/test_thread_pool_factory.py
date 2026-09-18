@@ -568,11 +568,21 @@ class SpawnOnTestCase(test.NoDBTestCase):
         # will wait in the queue
         scatter_gather = thread_pool_factory.ExecutorType.SCATTER_GATHER
         thread_pool_factory.spawn_on(scatter_gather, task)
-        thread_pool_factory.spawn_on(scatter_gather, task)
+        queued = [thread_pool_factory.spawn_on(scatter_gather, task)]
         # wait for the first task to consume the single executor thread
         started.wait()
         # start one more task to trigger the fullness check.
-        thread_pool_factory.spawn_on(scatter_gather, task)
+        queued.append(thread_pool_factory.spawn_on(scatter_gather, task))
+
+        def _cleanup_queued():
+            for future in queued:
+                future.cancel()
+            work.set()
+            executor.shutdown(wait=True)
+
+        # Cancel the queued tasks and shutdown the executors to cleanup
+        # the queue.
+        self.addCleanup(_cleanup_queued)
 
         executor = thread_pool_factory.get_executor(scatter_gather)
 
