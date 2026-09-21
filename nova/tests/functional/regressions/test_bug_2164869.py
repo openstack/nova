@@ -26,8 +26,6 @@ cause is that ``find_path_in_tree`` tries to index a list with a string key
 import fixtures
 import requests
 
-from wsgi_intercept import WSGIAppError
-
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -75,13 +73,7 @@ class TestMetadataLeafSubpathRaisesTypeError(
         self.assertEqual(200, res.status_code)
         self.assertIn('default', res.text)
 
-        # TODO(bug #2164869) Querying a subpath of a leaf value should
-        # return HTTP 404, but currently raises an unhandled TypeError
-        # that propagates out of the WSGI stack. Once the bug is fixed,
-        # this should be:
-        #   res = requests.request('GET', url, timeout=5)
-        #   self.assertEqual(404, res.status_code)
+        # Querying a subpath of a leaf value returns 404.
         url = '%slatest/meta-data/security-groups/default' % self.md_url
-        self.assertRaises(
-            WSGIAppError,
-            requests.request, 'GET', url, timeout=5)
+        res = requests.request('GET', url, timeout=5)
+        self.assertEqual(404, res.status_code)

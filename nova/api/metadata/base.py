@@ -582,7 +582,7 @@ class InstanceMetadata(object):
                 data = self.get_openstack_item(path_tokens[1:])
             else:
                 data = self.get_ec2_item(path_tokens[1:])
-        except (InvalidMetadataVersion, KeyError):
+        except (InvalidMetadataVersion, KeyError, TypeError):
             raise InvalidMetadataPath(path)
 
         return data
