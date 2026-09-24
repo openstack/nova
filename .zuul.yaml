@@ -30,12 +30,12 @@
     timeout: 3600
 
 - job:
-    name: nova-tox-functional-py313
-    parent: openstack-tox-functional-py313
+    name: nova-tox-functional-py314
+    parent: openstack-tox-functional-py314
     description: |
       Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.12 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py313`` environment.
+      under cPython version 3.14 with Nova specific irrelevant-files list.
+      Uses tox with the ``functional-py314`` environment.
 
       This job also provides a parent for other projects to run the nova
       functional tests on their own changes.
@@ -48,16 +48,16 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py313
+      bindep_profile: test py314
     timeout: 3600
 
 - job:
-    name: nova-tox-py313-threading
-    parent: openstack-tox-py313
+    name: nova-tox-py314-threading
+    parent: openstack-tox-py314
     description: |
       Run tox-based unit tests for the OpenStack Nova project
-      under cPython version 3.13 with eventlet disabled.
-      Uses tox with the ``py313-threading`` environment.
+      under cPython version 3.14 with eventlet disabled.
+      Uses tox with the ``py314-threading`` environment.
 
     required-projects:
       # including nova here makes this job reusable by other projects and
@@ -68,16 +68,16 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py313
-      tox_envlist: py313-threading
+      bindep_profile: test py314
+      tox_envlist: py314-threading
 
 - job:
-    name: nova-tox-functional-py313-threading
-    parent: openstack-tox-functional-py313
+    name: nova-tox-functional-py314-threading
+    parent: openstack-tox-functional-py314
     description: |
       Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.13 with eventlet disabled (native threading).
-      Uses tox with the ``functional-py313-threading`` environment.
+      under cPython version 3.14 with eventlet disabled (native threading).
+      Uses tox with the ``functional-py314-threading`` environment.
 
       This job also provides a parent for other projects to run the nova
       functional tests with threading on their own changes.
@@ -90,8 +90,8 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py313
-      tox_envlist: functional-py313-threading
+      bindep_profile: test py314
+      tox_envlist: functional-py314-threading
     timeout: 7200
 
 - job:
@@ -1035,8 +1035,8 @@
         - nova-tox-validate-backport:
             voting: false
         - nova-tox-functional-py311
-        - nova-tox-functional-py313
-        - nova-tox-functional-py313-threading
+        - nova-tox-functional-py314
+        - nova-tox-functional-py314-threading
         - tempest-integrated-compute:
            # NOTE(gmann): Policies changes do not need to run all the
            # integration test jobs. Running only tempest and grenade
@@ -1057,7 +1057,7 @@
         - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
-        - nova-tox-py313-threading
+        - nova-tox-py314-threading
         - openstack-tox-cover:
             # Allow more time for unit and functional tests to run.
             timeout: 6000
@@ -1068,8 +1068,8 @@
       jobs:
         - nova-live-migration
         - nova-tox-functional-py311
-        - nova-tox-functional-py313
-        - nova-tox-functional-py313-threading
+        - nova-tox-functional-py314
+        - nova-tox-functional-py314-threading
         - nova-multi-cell
         - nova-next
         - nova-tox-validate-backport
@@ -1085,7 +1085,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-        - nova-tox-py313-threading
+        - nova-tox-py314-threading
         - nova-alt-configurations
     periodic-weekly:
       jobs:
