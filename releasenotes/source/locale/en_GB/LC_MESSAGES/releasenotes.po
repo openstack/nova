@@ -9,11 +9,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-17 20:24+0000\n"
+"POT-Creation-Date: 2026-09-23 18:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2026-02-21 05:03+0000\n"
+"PO-Revision-Date: 2026-08-08 09:54+0000\n"
 "Last-Translator: Andi Chandler <andi@gowling.com>\n"
 "Language-Team: English (United Kingdom)\n"
 "Language: en_GB\n"
@@ -50,6 +50,9 @@ msgstr ""
 msgid "**Filtering**"
 msgstr "**Filtering**"
 
+msgid "**Impact:**"
+msgstr "**Impact:**"
+
 msgid "**New Defaults(Admin, Member and Reader)**"
 msgstr "**New Defaults(Admin, Member and Reader)**"
 
@@ -61,6 +64,9 @@ msgstr "**Policies granularity**"
 
 msgid "**Ports**"
 msgstr "**Ports**"
+
+msgid "**Required Actions:**"
+msgstr "**Required Actions:**"
 
 msgid "**Scope**"
 msgstr "**Scope**"
@@ -442,9 +448,6 @@ msgstr "22.3.0"
 msgid "22.4.0"
 msgstr "22.4.0"
 
-msgid "22.4.0-34"
-msgstr "22.4.0-34"
-
 msgid "23.0.0"
 msgstr "23.0.0"
 
@@ -463,9 +466,6 @@ msgstr "23.2.1"
 msgid "23.2.2"
 msgstr "23.2.2"
 
-msgid "23.2.2-38"
-msgstr "23.2.2-38"
-
 msgid "24.0.0"
 msgstr "24.0.0"
 
@@ -477,9 +477,6 @@ msgstr "24.1.1"
 
 msgid "24.2.0"
 msgstr "24.2.0"
-
-msgid "24.2.1-23"
-msgstr "24.2.1-23"
 
 msgid "25.0.0"
 msgstr "25.0.0"
@@ -589,14 +586,29 @@ msgstr "31.1.0"
 msgid "31.2.0"
 msgstr "31.2.0"
 
-msgid "31.2.0-12"
-msgstr "31.2.0-12"
+msgid "31.3.0"
+msgstr "31.3.0"
+
+msgid "31.3.1"
+msgstr "31.3.1"
+
+msgid "31.3.1-2"
+msgstr "31.3.1-2"
 
 msgid "32.0.0"
 msgstr "32.0.0"
 
 msgid "32.1.0"
 msgstr "32.1.0"
+
+msgid "32.2.0"
+msgstr "32.2.0"
+
+msgid "32.2.1"
+msgstr "32.2.1"
+
+msgid "32.2.1-2"
+msgstr "32.2.1-2"
 
 msgid "400 for unknown param for query param and for request body."
 msgstr "400 for unknown param for query param and for request body."
