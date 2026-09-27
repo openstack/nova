@@ -1469,7 +1469,7 @@ def _build_instance_get(context, columns_to_join=None):
     for column in ['metadata', 'system_metadata']:
         if column not in columns_to_join:
             column_ref = getattr(models.Instance, column)
-            query = query.options(orm.noload(column_ref))
+            query = query.options(orm.raiseload(column_ref))
     # NOTE(melwitt): We need to use order_by(<unique column>) so that the
     # additional queries emitted by subqueryload() include the same ordering as
     # used by the parent query.

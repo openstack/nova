@@ -1895,10 +1895,10 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         inst = self.create_instance_with_args()
         result = db.instance_get_by_uuid(self.ctxt, inst['uuid'],
                 columns_to_join=[])
-        meta = utils.metadata_to_dict(result['metadata'])
-        self.assertEqual(meta, {})
-        sys_meta = utils.metadata_to_dict(result['system_metadata'])
-        self.assertEqual(sys_meta, {})
+        with self.assertRaises(sqla_exc.InvalidRequestError):
+            result['metadata']
+        with self.assertRaises(sqla_exc.InvalidRequestError):
+            result['system_metadata']
 
     def test_instance_get_by_uuid_join_meta(self):
         inst = self.create_instance_with_args()
@@ -1906,15 +1906,15 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                     columns_to_join=['metadata'])
         meta = utils.metadata_to_dict(result['metadata'])
         self.assertEqual(meta, self.sample_data['metadata'])
-        sys_meta = utils.metadata_to_dict(result['system_metadata'])
-        self.assertEqual(sys_meta, {})
+        with self.assertRaises(sqla_exc.InvalidRequestError):
+            result['system_metadata']
 
     def test_instance_get_by_uuid_join_sys_meta(self):
         inst = self.create_instance_with_args()
         result = db.instance_get_by_uuid(self.ctxt, inst['uuid'],
                 columns_to_join=['system_metadata'])
-        meta = utils.metadata_to_dict(result['metadata'])
-        self.assertEqual(meta, {})
+        with self.assertRaises(sqla_exc.InvalidRequestError):
+            result['metadata']
         sys_meta = utils.metadata_to_dict(result['system_metadata'])
         self.assertEqual(sys_meta, self.sample_data['system_metadata'])
 
@@ -2182,8 +2182,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             columns_to_join=columns_to_join)
         meta = utils.metadata_to_dict(new_ref['metadata'])
         self.assertEqual(meta, self.sample_data['metadata'])
-        sys_meta = utils.metadata_to_dict(new_ref['system_metadata'])
-        self.assertEqual(sys_meta, {})
+        with self.assertRaises(sqla_exc.InvalidRequestError):
+            new_ref['system_metadata']
 
     def test_instance_update_and_get_original_metadata_none_join(self):
         instance = self.create_instance_with_args()
@@ -2191,6 +2191,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, instance['uuid'], {'metadata': {'mk1': 'mv3'}})
         meta = utils.metadata_to_dict(new_ref['metadata'])
         self.assertEqual(meta, {'mk1': 'mv3'})
+        sys_meta = utils.metadata_to_dict(new_ref['system_metadata'])
+        self.assertEqual(sys_meta, self.sample_data['system_metadata'])
 
     def test_instance_update_and_get_original_no_conflict_on_session(self):
         @db.pick_context_manager_writer
