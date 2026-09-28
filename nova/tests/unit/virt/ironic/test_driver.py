@@ -2351,7 +2351,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     def _test_rebuild(self, mock_save, mock_add_instance_info,
                       mock_looping, mock_wait_active, mock_metadata,
-                      preserve=False):
+                      preserve=False, reimage_boot_volume=False,
+                      block_device_info=None):
         node_uuid = uuidutils.generate_uuid()
         node = _get_cached_node(id=node_uuid, instance_id=self.instance_id)
         self.mock_conn.get_node.return_value = node
@@ -2375,7 +2376,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
             context=self.ctx, instance=instance, image_meta=image_meta,
             injected_files=None, admin_password=None, allocations={},
             bdms=None, detach_block_devices=None, attach_block_devices=None,
-            preserve_ephemeral=preserve)
+            preserve_ephemeral=preserve,
+            reimage_boot_volume=reimage_boot_volume,
+            block_device_info=block_device_info)
 
         mock_save.assert_called_once_with(
             expected_task_state=[task_states.REBUILDING])
@@ -2414,10 +2417,24 @@ class IronicDriverTestCase(test.NoDBTestCase):
     def test_rebuild_with_configdrive(self, mock_required_by,
                                       mock_configdrive):
         mock_required_by.return_value = True
-        self._test_rebuild()
+        self._test_rebuild(reimage_boot_volume=True)
         # assert configdrive was generated
         mock_configdrive.assert_called_once_with(
             self.ctx, mock.ANY, mock.ANY, mock.ANY, extra_md={}, files=None)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
+    @mock.patch.object(configdrive, 'required_by')
+    def test_rebuild_bfv_fails(self, mock_required_by,
+                                      mock_configdrive):
+        mock_required_by.return_value = False
+        block_device_info = self._create_fake_block_device_info()
+        e = self.assertRaises(exception.NovaException,
+           self._test_rebuild,
+           reimage_boot_volume=True,
+           block_device_info=block_device_info)
+        self.assertEqual(
+            "Ironic doesn't support rebuilding volume backed instances.",
+            str(e))
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        'get_instance_driver_metadata')
