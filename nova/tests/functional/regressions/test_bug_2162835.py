@@ -168,3 +168,162 @@ class TestEvacuatePinnedCpusPeriodicRace(base.ServersTestBase):
             cpus_a & cpus_b,
             f"Expected overlapping pCPUs but got disjoint sets: "
             f"server_a={cpus_a}, server_b={cpus_b}")
+
+
+class TestEvacuateTaskStateRace(base.ServersTestBase):
+    """Send reboot requests between evacuation's spawn and host update.
+
+    These tests recreates the following scenario:
+    1. server created on host 'source'
+    2. host 'source' is stopped
+    3. server evacuation requested and let it just before finish_evacuation
+       on the destination. At this point the task_state is None and the
+       instance.host is still pointing to the 'sorce' host.
+    4. sends a reboot request to the server that is accepted
+    5. let evuaction finishes and observer that the server is in an
+       inconsistent state.
+    """
+
+    ADMIN_API = True
+    CAST_AS_CALL = False
+    REQUIRES_LOCKING = False
+    microversion = "latest"
+
+    def setUp(self):
+        super().setUp()
+        self.start_compute("source")
+        self.start_compute("dest")
+
+    def _create_evac_and_stop_before_finish(self):
+        server = self._create_server(host="source", networks="none")
+
+        entered = threading.Event()
+        self.addCleanup(entered.set)
+        proceed = threading.Event()
+        self.addCleanup(proceed.set)
+        finished = threading.Event()
+        self.addCleanup(finished.set)
+        manager = self.computes["dest"].manager
+        original_finish = manager.rt.finish_evacuation
+        original_rebuild = manager.rebuild_instance
+
+        def pause_finish(*args, **kwargs):
+            entered.set()
+            if not proceed.wait(timeout=60):
+                raise RuntimeError("Timed out waiting to finish evacuation")
+            return original_finish(*args, **kwargs)
+
+        def track_rebuild(*args, **kwargs):
+            try:
+                return original_rebuild(*args, **kwargs)
+            finally:
+                finished.set()
+
+        self.useFixture(
+            fixtures.MockPatchObject(
+                manager.rt, "finish_evacuation", side_effect=pause_finish
+            )
+        )
+        self.useFixture(
+            fixtures.MockPatchObject(
+                manager, "rebuild_instance", side_effect=track_rebuild
+            )
+        )
+
+        self.computes["source"].stop()
+        service = self.admin_api.get_services(
+            host="source", binary="nova-compute")[0]
+        self.admin_api.put_service_force_down(service["id"], True)
+
+        self.api.post_server_action(
+            server["id"], {"evacuate": {"host": "dest"}})
+        self.assertTrue(
+            entered.wait(timeout=60),
+            "Evacuation did not reach finish_evacuation"
+        )
+
+        # A domain already exists on dest, but API actions still use
+        # source until finish_evacuation updates the database.
+        self.assertIn(server["id"], manager.driver.list_instance_uuids())
+        paused_server = self.api.get_server(server["id"])
+        self.assertEqual("source", paused_server["OS-EXT-SRV-ATTR:host"])
+
+        return server, proceed, finished
+
+    def test_reboot_during_evacuation(self):
+        server, proceed, finished = self._create_evac_and_stop_before_finish()
+        # NOTE(gibi): we cannot user self._reboot_server() as it waits for the
+        # reboot.end notification which also missing as this reboot never
+        # finishes.
+        self.api.api_post(
+            "/servers/%s/action" % server["id"],
+            {"reboot": {"type": "HARD"}},
+            check_response_status=[202],
+        )
+
+        # The API accepts the reboot and sends its RPC to
+        # the dead source, leaving the evacuated guest stuck rebooting_hard.
+        # This is part of bug 2162835 and 2166474 as well.
+        server = self.api.get_server(server["id"])
+        self._wait_for_server_parameter(
+            server,
+            {
+                "OS-EXT-SRV-ATTR:host": "source",
+                "OS-EXT-STS:task_state": "rebooting_hard",
+                "status": "SHUTOFF",
+            })
+        self._wait_for_migration_status(server, ["pre-migrating"])
+
+        # This allows the evacuation to finish but the reboot is still stuck
+        proceed.set()
+        finished.wait(timeout=60)
+        self.assertTrue(finished.is_set(), "Evacuation did not finish")
+        self._wait_for_migration_status(server, ["done"])
+        self._wait_for_server_parameter(
+            server,
+            {
+                "OS-EXT-SRV-ATTR:host": "dest",
+                "OS-EXT-STS:task_state": "rebooting_hard",
+                "status": "SHUTOFF",
+            })
+
+    def test_reboot_during_evacuation_to_active(self):
+        # With microversion older than 2.95 the evacuation moves the VM to
+        # ACTIVE state on the destination host instead of SHUTOFF.
+        self.api.microversion = "2.94"
+        server, proceed, finished = self._create_evac_and_stop_before_finish()
+
+        # NOTE(gibi): we cannot user self._reboot_server() as it waits for the
+        # reboot.end notification which also missing as this reboot never
+        # finishes.
+        self.api.api_post(
+            "/servers/%s/action" % server["id"],
+            {"reboot": {"type": "HARD"}},
+            check_response_status=[202],
+        )
+
+        # The API accepts the reboot and sends its RPC to
+        # the dead source, leaving the evacuated guest stuck rebooting_hard.
+        # This is part of bug 2162835 and 2166474 as well.
+        server = self.api.get_server(server["id"])
+        self._wait_for_server_parameter(
+            server,
+            {
+                "OS-EXT-SRV-ATTR:host": "source",
+                "OS-EXT-STS:task_state": "rebooting_hard",
+                "status": "HARD_REBOOT",
+            })
+        self._wait_for_migration_status(server, ["pre-migrating"])
+
+        # This allows the evacuation to finish but the reboot is still stuck
+        proceed.set()
+        finished.wait(timeout=60)
+        self.assertTrue(finished.is_set(), "Evacuation did not finish")
+        self._wait_for_migration_status(server, ["done"])
+        self._wait_for_server_parameter(
+            server,
+            {
+                "OS-EXT-SRV-ATTR:host": "dest",
+                "OS-EXT-STS:task_state": "rebooting_hard",
+                "status": "HARD_REBOOT",
+            })
