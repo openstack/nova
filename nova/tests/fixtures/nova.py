@@ -27,7 +27,6 @@ import sqlite3
 import sys
 import tempfile
 import threading
-import time
 import traceback
 from unittest import mock
 import warnings
@@ -507,15 +506,14 @@ class CellDatabases(fixtures.Fixture):
 
     def __init__(self):
         self._ctxt_mgrs = {}
-        self._last_ctxt_mgr = None
         self._default_ctxt_mgr = None
 
-        # NOTE(danms): Use a ReaderWriterLock to synchronize our
-        # global database muckery here. If we change global db state
-        # to point to a cell, we need to take an exclusive lock to
-        # prevent any other calls to get_context_manager() until we
-        # reset to the default.
-        self._cell_lock = ReaderWriterLock()
+        # Per-thread (or per-greenlet under eventlet) storage for the
+        # "current cell" context manager.  Replaces the old shared
+        # _last_ctxt_mgr + ReaderWriterLock: each execution context
+        # tracks its own targeted cell independently, which is safe
+        # under both eventlet and native threading.
+        self._local = threading.local()
 
     def _cache_schema(self, connection_str):
         """Apply the main DB schema to a cell and cache it for reuse.
@@ -536,108 +534,38 @@ class CellDatabases(fixtures.Fixture):
 
     @contextmanager
     def _wrap_target_cell(self, context, cell_mapping):
-        # NOTE(danms): This method is responsible for switching global
-        # database state in a safe way such that code that doesn't
-        # know anything about cell targeting (i.e. compute node code)
-        # can continue to operate when called from something that has
-        # targeted a specific cell. In order to make this safe from a
-        # dining-philosopher-style deadlock, we need to be able to
-        # support multiple threads talking to the same cell at the
-        # same time and potentially recursion within the same thread
-        # from code that would otherwise be running on separate nodes
-        # in real life, but where we're actually recursing in the
-        # tests.
-        #
-        # The basic logic here is:
-        #  1. Grab a reader lock to see if the state is already pointing at
-        #     the cell we want. If it is, we can yield and return without
-        #     altering the global state further. The read lock ensures that
-        #     global state won't change underneath us, and multiple threads
-        #     can be working at the same time, as long as they are looking
-        #     for the same cell.
-        #  2. If we do need to change the global state, grab a writer lock
-        #     to make that change, which assumes that nothing else is looking
-        #     at a cell right now. We do only non-schedulable things while
-        #     holding that lock to avoid the deadlock mentioned above.
-        #  3. We then re-lock with a reader lock just as step #1 above and
-        #     yield to do the actual work. We can do schedulable things
-        #     here and not exclude other threads from making progress.
-        #     If an exception is raised, we capture that and save it.
-        #     Note that it is possible that another thread has changed the
-        #     global state (step #2) after we released the writer lock but
-        #     before we acquired the reader lock. If this happens, we will
-        #     detect the global state change and retry step #2 a limited number
-        #     of times. If we happen to race repeatedly with another thread and
-        #     exceed our retry limit, we will give up and raise a RuntimeError,
-        #     which will fail the test.
-        #  4. If we changed state in #2, we need to change it back. So we grab
-        #     a writer lock again and do that.
-        #  5. Finally, if an exception was raised in #3 while state was
-        #     changed, we raise it to the caller.
+        """Route the context to the correct cell database.
 
+        This replaces the real ``nova.context.target_cell`` for the
+        duration of the test.  It looks up the right per-cell context
+        manager and stores it in thread-local storage so that
+        ``_wrap_get_context_manager`` returns it for any subsequent DB
+        access on this thread/greenlet.
+
+        Thread-local (``threading.local()``) is used instead of a shared
+        variable so that concurrent threads/greenlets targeting different
+        cells don't overwrite each other's routing state.  Under eventlet,
+        ``threading.local()`` is greenlet-local, so this works in both
+        concurrency modes.
+
+        The previous cell routing is saved and restored on exit so that
+        nested ``target_cell`` calls work correctly.
+        """
+        # Look up the context manager for the requested cell.
         if cell_mapping:
             desired = self._ctxt_mgrs[cell_mapping.database_connection]
         else:
             desired = self._default_ctxt_mgr
 
-        with self._cell_lock.read_lock():
-            if self._last_ctxt_mgr == desired:
-                with self._real_target_cell(context, cell_mapping) as c:
-                    yield c
-                    return
-
-        raised_exc = None
-
-        def set_last_ctxt_mgr():
-            with self._cell_lock.write_lock():
-                if cell_mapping is not None:
-                    # This assumes the next local DB access is the same cell
-                    # that was targeted last time.
-                    self._last_ctxt_mgr = desired
-
-        # Set last context manager to the desired cell's context manager.
-        set_last_ctxt_mgr()
-
-        # Retry setting the last context manager if we detect that a writer
-        # changed global DB state before we take the read lock.
-        for retry_time in range(0, 3):
-            try:
-                with self._cell_lock.read_lock():
-                    if self._last_ctxt_mgr != desired:
-                        # NOTE(danms): This is unlikely to happen, but it's
-                        # possible another waiting writer changed the state
-                        # between us letting it go and re-acquiring as a
-                        # reader. If lockutils supported upgrading and
-                        # downgrading locks, this wouldn't be a problem.
-                        # Regardless, assert that it is still as we left it
-                        # here so we don't hit the wrong cell. If this becomes
-                        # a problem, we just need to retry the write section
-                        # above until we land here with the cell we want.
-                        raise RuntimeError(
-                            'Global DB state changed underneath us')
-                    try:
-                        with self._real_target_cell(
-                            context, cell_mapping
-                        ) as ccontext:
-                            yield ccontext
-                    except Exception as exc:
-                        raised_exc = exc
-                    # Leave the retry loop after calling target_cell
-                    break
-            except RuntimeError:
-                # Give other threads a chance to make progress, increasing the
-                # wait time between attempts.
-                time.sleep(retry_time)
-                set_last_ctxt_mgr()
-
-        with self._cell_lock.write_lock():
-            # Once we have returned from the context, we need
-            # to restore the default context manager for any
-            # subsequent calls
-            self._last_ctxt_mgr = self._default_ctxt_mgr
-
-        if raised_exc:
-            raise raised_exc
+        # Save the current cell routing for this thread/greenlet so we
+        # can restore it when we leave this context.
+        previous = getattr(self._local, 'ctxt_mgr', self._default_ctxt_mgr)
+        self._local.ctxt_mgr = desired
+        try:
+            with self._real_target_cell(context, cell_mapping) as c:
+                yield c
+        finally:
+            self._local.ctxt_mgr = previous
 
     def _wrap_create_context_manager(self, connection=None):
         ctxt_mgr = self._ctxt_mgrs[connection]
@@ -645,21 +573,21 @@ class CellDatabases(fixtures.Fixture):
 
     def _wrap_get_context_manager(self, context):
         try:
-            # If already targeted, we can proceed without a lock
+            # If the context has already been targeted to a specific cell
+            # (via target_cell / _wrap_target_cell), its db_connection
+            # points directly at that cell's context manager — use it.
             if context.db_connection:
                 return context.db_connection
         except AttributeError:
             # Unit tests with None, FakeContext, etc
             pass
 
-        # NOTE(melwitt): This is a hack to try to deal with
-        # local accesses i.e. non target_cell accesses.
-        with self._cell_lock.read_lock():
-            # FIXME(mriedem): This is actually misleading and means we don't
-            # catch things like bug 1717000 where a context should be targeted
-            # to a cell but it's not, and the fixture here just returns the
-            # last targeted context that was used.
-            return self._last_ctxt_mgr
+        # For "local" DB accesses that don't go through target_cell,
+        # return whatever cell this thread/greenlet is currently
+        # operating in.  _wrap_target_cell sets this in thread-local
+        # storage; outside any target_cell scope we fall back to the
+        # default cell.
+        return getattr(self._local, 'ctxt_mgr', self._default_ctxt_mgr)
 
     def _wrap_get_server(self, target, endpoints, serializer=None):
         """Mirror rpc.get_server() but with our special sauce."""
@@ -700,11 +628,6 @@ class CellDatabases(fixtures.Fixture):
             # how we identify cells in CellMapping.
             ctxt_mgr = main_db_api.create_context_manager()
         self._ctxt_mgrs[connection_str] = ctxt_mgr
-
-        # NOTE(melwitt): The first DB access through service start is
-        # local so this initializes _last_ctxt_mgr for that and needs
-        # to be a compute cell.
-        self._last_ctxt_mgr = ctxt_mgr
 
         # NOTE(danms): Record which context manager should be the default
         # so we can restore it when we return from target-cell contexts.

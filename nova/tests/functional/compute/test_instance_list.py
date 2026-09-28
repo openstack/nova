@@ -298,7 +298,8 @@ class InstanceListTestCase(test.TestCase):
                                                None, marker,
                                                [], None, None)[1])
 
-        db.instance_destroy(self.context, marker)
+        with context.target_cell(self.context, self.cells[1]) as cctxt:
+            db.instance_destroy(cctxt, marker)
 
         after = list(
             instance_list.get_instances_sorted(self.context, {},

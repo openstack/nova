@@ -167,9 +167,9 @@ class HostMappingDiscoveryTest(test.TestCase):
                                              host=host)
                     hm.create()
 
-                with context.target_cell(ctxt, cell):
+                with context.target_cell(ctxt, cell) as cctxt:
                     cn = objects.ComputeNode(
-                        context=ctxt, vcpus=1, memory_mb=1, local_gb=1,
+                        context=cctxt, vcpus=1, memory_mb=1, local_gb=1,
                         vcpus_used=0, memory_mb_used=0, local_gb_used=0,
                         hypervisor_type='danvm', hypervisor_version='1',
                         cpu_info='foo',
