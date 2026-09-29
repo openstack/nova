@@ -33,6 +33,8 @@ class TestAvailabilityZoneScheduling(
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
+        self.notifier = self.useFixture(
+            nova_fixtures.NotificationFixture(self))
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
