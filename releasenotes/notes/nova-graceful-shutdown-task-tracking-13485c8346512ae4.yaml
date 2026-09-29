@@ -8,7 +8,7 @@ features:
     only until they complete (or until
     ``[DEFAULT]/manager_shutdown_timeout`` is reached), instead of
     always sleeping for the full timeout.
-known_issues:
+issues:
   - |
     There is a known issue where a migration-related task tracked on the
     destination compute service may be left in-progress if an error on
