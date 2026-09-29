@@ -8,7 +8,7 @@ features:
     only until they complete (or until
     ``[DEFAULT]/manager_shutdown_timeout`` is reached), instead of
     always sleeping for the full timeout.
-known_issues:
+issues:
   - |
     There is a known issue where the ``live_migration_at_dest`` task may
     be left in-progress if the live migration is rolled back during
