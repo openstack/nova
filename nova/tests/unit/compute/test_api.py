@@ -2848,6 +2848,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = self._create_instance_obj(params=paused_state)
         self._live_migrate_instance(instance)
 
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
@@ -2855,7 +2856,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.Instance, 'save')
     def test_live_migrate_messaging_timeout(self, _save, _action, get_spec,
                                             add_instance_fault_from_exc,
-                                            mock_nodelist):
+                                            mock_nodelist, mock_get_bdms):
         instance = self._create_instance_obj()
         api = conductor.api.ComputeTaskAPI
 
@@ -2905,14 +2906,79 @@ class _ComputeAPIUnitTestMixIn(object):
             disk_over_commit=False
         )
 
+    def _fake_live_migrate_block_devices(self, instance,
+                                         volume_status="in-use"):
+        fake_bdms = block_device_obj.block_device_make_list(self.context,
+                    [fake_block_device.FakeDbBlockDeviceDict(
+                     {'device_name': '/dev/vda',
+                     'source_type': 'volume',
+                     'boot_index': 0,
+                     'destination_type': 'volume',
+                     'volume_id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66'})])
+
+        volume = {'id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66',
+                  'status': volume_status, 'instance_uuid': instance['uuid']}
+
+        return fake_bdms, volume
+
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceAction, 'action_start')
-    def _live_migrate_instance(self, instance, _save, _action, get_spec):
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    def test_live_migrate_volume_not_inuse(self, mock_nodelist, _action, _save,
+                                           get_spec, mock_get_bdms):
+        instance = self._create_instance_obj()
         api = conductor.api.ComputeTaskAPI
         fake_spec = objects.RequestSpec()
         get_spec.return_value = fake_spec
-        with mock.patch.object(api, 'live_migrate_instance') as task:
+
+        bdms, volume = self._fake_live_migrate_block_devices(instance,
+                                                             "backing-up")
+
+        with test.nested(
+                mock.patch.object(api, 'live_migrate_instance'),
+                mock.patch.object(self.compute_api.volume_api, 'get'),
+        ) as (
+                task, mock_get_volume
+        ):
+            # Mock out the returned bdms and volume
+            mock_get_bdms.return_value = bdms
+            mock_get_volume.return_value = volume
+
+            self.assertRaises(exception.InvalidVolume,
+                              self.compute_api.live_migrate,
+                              self.context, instance,
+                              block_migration=True,
+                              disk_over_commit=True,
+                              host_name='fake_dest_host')
+            mock_get_bdms.assert_called_once_with(self.context,
+                                                  instance.uuid)
+            mock_get_volume.assert_called_once_with(self.context,
+                                                    volume["id"])
+
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    def _live_migrate_instance(self, instance, _save, _action,
+                               get_spec, mock_get_bdms):
+        api = conductor.api.ComputeTaskAPI
+        fake_spec = objects.RequestSpec()
+        get_spec.return_value = fake_spec
+
+        bdms, volume = self._fake_live_migrate_block_devices(instance)
+
+        with test.nested(
+                mock.patch.object(api, 'live_migrate_instance'),
+                mock.patch.object(self.compute_api.volume_api, 'get'),
+        ) as (
+                task, mock_get_volume
+        ):
+            # Mock out the returned bdms and volume
+            mock_get_bdms.return_value = bdms
+            mock_get_volume.return_value = volume
+
             self.compute_api.live_migrate(self.context, instance,
                                           block_migration=True,
                                           disk_over_commit=True,
@@ -2924,6 +2990,10 @@ class _ComputeAPIUnitTestMixIn(object):
                                          disk_over_commit=True,
                                          request_spec=fake_spec,
                                          async_=False)
+            mock_get_bdms.assert_called_once_with(self.context,
+                                                  instance.uuid)
+            mock_get_volume.assert_called_once_with(self.context,
+                                                    volume["id"])
 
     def _get_volumes_for_test_swap_volume(self):
         volumes = {}

@@ -5595,6 +5595,10 @@ class API:
             # state.
             nodes = objects.ComputeNodeList.get_all_by_host(context, host_name)
 
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+        self._check_volume_status(context, bdms)
+
         request_spec = objects.RequestSpec.get_by_instance_uuid(
             context, instance.uuid)
 
