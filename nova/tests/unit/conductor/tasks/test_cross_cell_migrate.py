@@ -224,6 +224,27 @@ class TargetDBSetupTaskTestCase(test.TestCase, ObjectComparatorMixin):
             self.source_context, inst.uuid, expected_attrs=expected_attrs)
         return inst, migration
 
+    def test_execute_with_unloaded_pci_requests(self):
+        source_instance, migration = self._create_instance_data()
+        expected_requests = source_instance.pci_requests
+        source_instance = objects.Instance.get_by_uuid(
+            self.source_context, source_instance.uuid,
+            expected_attrs=['flavor', 'services'])
+        self.assertNotIn('pci_requests', source_instance)
+
+        task = cross_cell_migrate.TargetDBSetupTask(
+            self.source_context, source_instance, migration,
+            self.target_context)
+        target_instance = task.execute()[0]
+
+        # Requests must survive the copy even when the caller did not load
+        # them. Devices belong to the source compute and must not be copied.
+        target_instance = objects.Instance.get_by_uuid(
+            self.target_context, target_instance.uuid,
+            expected_attrs=['pci_requests', 'pci_devices'])
+        self._compare_objs(expected_requests, target_instance.pci_requests)
+        self.assertEqual(0, len(target_instance.pci_devices))
+
     def test_execute_and_rollback(self):
         """Happy path test which creates an instance with related records
         in a source cell and then executes TargetDBSetupTask to create those
@@ -521,14 +542,19 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         # _target_cell_instance variables so fake those out here
         self.task._target_cell_context = mock.sentinel.target_cell_context
         target_inst = objects.Instance(
-            vm_state=vm_states.ACTIVE, system_metadata={})
+            vm_state=vm_states.ACTIVE, system_metadata={},
+            migration_context=None)
         self.task._target_cell_instance = target_inst
         target_cell_migration = objects.Migration(
             # use unique ids for comparisons
             id=self.task.source_migration.id + 1)
         self.assertNotIn('migration_context', self.task.instance)
+        source_devices = objects.PciDeviceList(objects=[objects.PciDevice(
+            address='0000:81:00.0', compute_node_id=1)])
+        self.task.instance.pci_devices = source_devices
         mock_task_execute.return_value = objects.MigrationContext(
-            migration_id=target_cell_migration.id)
+            migration_id=target_cell_migration.id,
+            old_pci_devices=objects.PciDeviceList(objects=[]))
 
         with test.nested(
             mock.patch.object(self.task,
@@ -555,12 +581,23 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
                          target_inst.system_metadata['old_vm_state'])
         self.assertEqual(mock_get_az.return_value,
                          target_inst.availability_zone)
+        # The target must also use the context returned by the claim, rather
+        # than the None cached when its instance record was created.
+        self.assertIs(target_inst.migration_context,
+                      mock_task_execute.return_value)
+        self.assertEqual(target_cell_migration.id,
+                         target_inst.migration_context.migration_id)
         # A clone of the MigrationContext returned from execute() should be
         # stored on the source instance with the internal context targeted
         # at the source cell context and the migration_id updated.
         self.assertIsNotNone(self.task.instance.migration_context)
         self.assertEqual(self.task.source_migration.id,
                          self.task.instance.migration_context.migration_id)
+        self.assertEqual(
+            source_devices.obj_to_primitive(),
+            self.task.instance.migration_context.old_pci_devices.
+                obj_to_primitive())
+        self.assertEqual(0, len(target_inst.migration_context.old_pci_devices))
         source_inst_save.assert_called_once_with()
         _upd_mig.assert_called_once_with(target_cell_migration)
 

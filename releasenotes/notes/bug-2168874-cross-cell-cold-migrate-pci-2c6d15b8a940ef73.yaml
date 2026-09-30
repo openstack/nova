@@ -1,0 +1,10 @@
+fixes:
+  - |
+    Fixed `bug 2168874 <https://bugs.launchpad.net/nova/+bug/2168874>`_
+    where cross-cell cold migration of a server with PCI devices failed
+    during destination preparation and left a PCI device allocated on the
+    destination. PCI requests are now loaded from the source cell before
+    copying the instance to the destination cell. The migration context is
+    also retained on the destination instance to apply the new PCI requests
+    before spawning, and preserves the source PCI devices for cleanup on
+    confirmation or reuse on revert.
