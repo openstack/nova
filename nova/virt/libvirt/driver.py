@@ -13587,25 +13587,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 ot.COMPUTE_SECURITY_TPM_CRB: False,
             }
 
+        tpm_versions = self._host.tpm_versions
         tpm_models = self._host.tpm_models
         tr = {
+            ot.COMPUTE_SECURITY_TPM_2_0: '2.0' in tpm_versions,
+            ot.COMPUTE_SECURITY_TPM_1_2: '1.2' in tpm_versions,
             ot.COMPUTE_SECURITY_TPM_TIS: 'tpm-tis' in tpm_models,
             ot.COMPUTE_SECURITY_TPM_CRB: 'tpm-crb' in tpm_models,
         }
-
-        tpm_versions = self._host.tpm_versions
-        if tpm_versions is None:
-            # TODO(tkajinam): Remove this fallback once libvirt>=8.6.0 is
-            # required.
-            tr.update({
-                ot.COMPUTE_SECURITY_TPM_2_0: True,
-                ot.COMPUTE_SECURITY_TPM_1_2: True,
-            })
-        else:
-            tr.update({
-                ot.COMPUTE_SECURITY_TPM_2_0: '2.0' in tpm_versions,
-                ot.COMPUTE_SECURITY_TPM_1_2: '1.2' in tpm_versions,
-            })
 
         if 'user' in CONF.libvirt.supported_tpm_secret_security:
             tr.update({

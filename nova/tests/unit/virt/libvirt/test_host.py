@@ -942,7 +942,7 @@ class HostTestCase(test.NoDBTestCase):
         self.assertFalse(caps.devices.tpm.supported)
         self.assertEqual([], caps.devices.tpm.models)
         self.assertEqual([], caps.devices.tpm.backend_models)
-        self.assertIsNone(caps.devices.tpm.backend_versions)
+        self.assertEqual([], caps.devices.tpm.backend_versions)
 
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_tpm', new=
@@ -962,28 +962,8 @@ class HostTestCase(test.NoDBTestCase):
             ['passthrough', 'emulator', 'external'],
             caps.devices.tpm.backend_models
         )
-        self.assertIsNone(caps.devices.tpm.backend_versions)
-
-    @mock.patch.object(
-        fakelibvirt.virConnect, '_domain_capability_tpm', new=
-        fakelibvirt.virConnect._domain_capability_tpm_with_tpm_versions
-    )
-    def test_get_domain_capabilities_vtpm_supported_and_versions(self):
-        caps = self._test_get_domain_capabilities()
-        self.assertEqual(vconfig.LibvirtConfigDomainCaps, type(caps))
-        self.assertEqual(vconfig.LibvirtConfigDomainCapsTpm,
-                         type(caps.devices.tpm))
-        self.assertTrue(caps.devices.tpm.supported)
         self.assertEqual(
-            ['tpm-tis'],
-            caps.devices.tpm.models
-        )
-        self.assertEqual(
-            ['passthrough', 'emulator', 'external'],
-            caps.devices.tpm.backend_models
-        )
-        self.assertEqual(
-            ['2.0'],
+            ['2.0', '1.2'],
             caps.devices.tpm.backend_versions
         )
 
