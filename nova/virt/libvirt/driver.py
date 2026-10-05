@@ -472,6 +472,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self.image_backend.backend().SUPPORTS_LUKS,
             "supports_ephemeral_encryption_luks":
                 self.image_backend.backend().SUPPORTS_LUKS,
+            'supports_remote_managed_ports': True,
         }
         super().__init__(virtapi)
 
@@ -955,8 +956,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # or UEFI bootloader support in this manner
         self.capabilities.update({
             'supports_secure_boot': self._host.supports_secure_boot,
-            'supports_remote_managed_ports':
-            self._host.supports_remote_managed_ports,
             'supports_virtio_fs': self._host.supports_virtio_fs,
             'supports_mem_backing_file': self._host.supports_mem_backing_file
         })
