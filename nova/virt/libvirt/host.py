@@ -79,8 +79,6 @@ HV_DRIVER_QEMU = "QEMU"
 
 SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/%s'
 
-MIN_QEMU_SEV_ES_VERSION = (8, 0, 0)
-
 MISC_CONTROL_GROUP_CAPACITY_FILE = '/sys/fs/cgroup/misc.capacity'
 
 
@@ -2083,10 +2081,6 @@ class Host(object):
 
         if not self._kernel_supports_amd_sev(model='sev-es'):
             LOG.info("kernel doesn't support AMD SEV-ES")
-            return self._supports_amd_sev_es
-
-        if not self.has_min_version(hv_ver=MIN_QEMU_SEV_ES_VERSION):
-            LOG.info("QEMU doesn't support AMD SEV-ES")
             return self._supports_amd_sev_es
 
         if self._kernel_supports_amd_sev(model='sev-snp'):
