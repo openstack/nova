@@ -57,7 +57,6 @@ from nova import thread_pool_factory
 from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import driver
 from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import migration as libvirt_migrate
@@ -1929,9 +1928,7 @@ class Host(object):
 
     @property
     def supports_virtio_fs(self) -> bool:
-        return self.has_min_version(
-            lv_ver=driver.MIN_LIBVIRT_VERSION,
-            hv_ver=driver.MIN_QEMU_VERSION)
+        return CONF.libvirt.virt_type in ('qemu', 'kvm')
 
     @property
     def supports_mem_backing_file(self) -> bool:
