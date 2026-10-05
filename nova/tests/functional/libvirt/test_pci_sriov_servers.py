@@ -553,41 +553,6 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             pci_info, expected_managed="yes", device_spec=device_spec
         )
 
-    def test_start_compute_with_live_migratable_fails_version(self):
-        device_spec = [
-            {
-                "vendor_id": fakelibvirt.PCI_VEND_ID,
-                "product_id": fakelibvirt.PF_PROD_ID,
-            },
-            {
-                "vendor_id": fakelibvirt.PCI_VEND_ID,
-                "product_id": fakelibvirt.VF_PROD_ID,
-                "live_migratable": "yes",
-            },
-        ]
-        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=2)
-
-        self.flags(
-            device_spec=[jsonutils.dumps(x) for x in device_spec],
-            group="pci",
-        )
-        # Try to start the compute with an old libvirt version while configured
-        # a dev_spec with live_migratable flag that requires newer libvirt
-        # version
-        exc = self.assertRaises(
-            exception.InvalidConfiguration,
-            self.start_compute,
-            pci_info=pci_info,
-            libvirt_version=None,
-            qemu_version=None,
-        )
-
-        self.assertIn(
-            "PCI device spec is configured for "
-            "live_migratable but it's not supported by libvirt.",
-            str(exc),
-        )
-
     def test_create_server_with_PF(self):
         """Create a server with an SR-IOV PF-type PCI device."""
 
@@ -6477,7 +6442,7 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
     vf_ratio = NUM_VFS // NUM_PFS
 
     # Min Libvirt version that supports working with PCI VPD.
-    FAKE_LIBVIRT_VERSION = 8_000_000  # 8.0.0
+    FAKE_LIBVIRT_VERSION = 10_000_000  # 10.0.0
 
     def setUp(self):
         super().setUp()

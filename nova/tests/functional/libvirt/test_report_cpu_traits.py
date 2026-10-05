@@ -20,7 +20,6 @@ import fixtures
 import os
 import os_resource_classes as orc
 import os_traits as ost
-from oslo_utils import versionutils
 from unittest import mock
 
 from nova import conf
@@ -101,11 +100,6 @@ class LibvirtReportSevTraitsTests(
 
     def setUp(self):
         super().setUp()
-        qemu_version = versionutils.convert_version_to_int(
-            libvirt_host.MIN_QEMU_SEV_ES_VERSION)
-        self.useFixture(fixtures.MockPatchObject(
-            fakelibvirt.Connection, 'getVersion',
-            return_value=qemu_version))
         self.useFixture(fixtures.MockPatchObject(
             fakelibvirt.virConnect, '_domain_capability_features',
             new=fakelibvirt.virConnect.

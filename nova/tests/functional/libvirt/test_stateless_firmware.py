@@ -16,13 +16,11 @@ from unittest import mock
 
 from lxml import etree
 from oslo_utils.fixture import uuidsentinel
-from oslo_utils import versionutils
 
 from nova import conf
 from nova import context as nova_context
 from nova import objects
 from nova.tests.functional.libvirt import base
-from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import migration as libvirt_migration
 
 CONF = conf.CONF
@@ -76,11 +74,7 @@ class LibvirtStatelessFirmwareTest(
             'nova.virt.libvirt.utils.get_instance_path', fake_path))
 
     def _start_compute(self, hostname='compute1'):
-        self.start_compute(
-            hostname,
-            libvirt_version=versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_STATELESS_FIRMWARE
-            ))
+        self.start_compute(hostname)
         caps = self.computes[hostname].driver.capabilities
         self.assertTrue(caps['supports_stateless_firmware'])
 
