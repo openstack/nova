@@ -39,3 +39,6 @@ Agents: explore the repo directly; this file is a routing index, not a contribut
 - **Git**: Read-only operations (`git log`, `git diff`, `git status`) are fine.
   Do not run mutating operations (`add`, `commit`, `reset`, `checkout`, `push`,
   `stash`, `merge`, `rebase`, etc.) unless explicitly instructed to do so.
+- **Scope:** Do not reformat or otherwise change lines of code that are not
+  directly part of the task at hand. If a line of code does not need to be
+  changed functionally, do not touch it at all.
