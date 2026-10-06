@@ -2055,7 +2055,9 @@ class Host(object):
                     self._max_sev_es_guests = feature.max_es_guests
                     return self._supports_amd_sev
 
-        LOG.debug("No AMD SEV support detected for any (arch, machine_type)")
+        # safe guard
+        LOG.debug("No AMD SEV support detected for any machine_type "
+                  "for x86_64 arch")
         return self._supports_amd_sev
 
     @property
@@ -2182,7 +2184,8 @@ class Host(object):
                     self._supports_intel_tdx = True
                     return self._supports_intel_tdx
 
-        LOG.debug("No Intel TDX support detected for any (arch, machine_type)")
+        LOG.debug("No Intel TDX support detected for any machine_type "
+                  "for x86_64 arch")
         return self._supports_intel_tdx
 
     def _get_cgroup_tdx_capacity(self):
