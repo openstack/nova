@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    The ``nova-novncproxy``, ``nova-serialproxy`` and ``nova-spicehtml5proxy``
+    services now default to native threading mode with the default
+    ``[DEFAULT] concurrency_backend = auto`` setting. With that every Nova
+    service defaults to native threading, only the ``nova-manage``,
+    ``nova-policy`` and ``nova-status`` CLI entry points still default to the
+    eventlet mode. Each console proxy service can be reverted individually to
+    the legacy eventlet mode by setting ``[DEFAULT] concurrency_backend =
+    eventlet`` in the configuration file of that service. Please read the
+    `concurrency <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__
+    guide for more details.

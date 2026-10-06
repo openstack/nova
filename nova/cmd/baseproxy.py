@@ -16,9 +16,10 @@
 
 """Base proxy module used to create compatible consoles
 for OpenStack Nova."""
-# autopep8: off
-from nova import monkey_patch; monkey_patch.patch()  # noqa
-# autopep8: on
+# NOTE(ksambor): This module is not an entry point. Each console proxy
+# binary (nova-novncproxy, nova-serialproxy, nova-spicehtml5proxy) monkey
+# patches before importing this module, so patching here would be a second
+# patch() call, which fails when the service runs in native threading mode.
 
 import multiprocessing
 import os

@@ -18,7 +18,7 @@ Serial consoles. Leverages websockify.py by Joel Martin.
 Based on nova-novncproxy.
 """
 # autopep8: off
-from nova import monkey_patch; monkey_patch.patch()  # noqa
+from nova import monkey_patch; monkey_patch.patch(backend='threading')  # noqa
 # autopep8: on
 
 import sys

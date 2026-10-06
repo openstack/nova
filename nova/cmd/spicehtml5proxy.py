@@ -18,7 +18,7 @@ Websocket proxy that is compatible with OpenStack Nova
 SPICE HTML5 consoles. Leverages websockify.py by Joel Martin
 """
 # autopep8: off
-from nova import monkey_patch; monkey_patch.patch()  # noqa
+from nova import monkey_patch; monkey_patch.patch(backend='threading')  # noqa
 # autopep8: on
 
 import sys
