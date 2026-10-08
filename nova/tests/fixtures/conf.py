@@ -60,9 +60,18 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default(
             'notification_format', "both", group="notifications")
 
-        # Disable graceful shutdown wait otherwise the service stop() will
-        # take time and may end up with tests timeout.
-        self.conf.set_default('manager_shutdown_timeout', 0)
+        # In the functional tests we need to wait for the free floating
+        # shutdown thread to stop before the test case can finish to avoid that
+        # thread interfering with the next test case. So setting a 0 timeout
+        # here would result in such a thread is not waited on. So we
+        # intentionally set a non-zero timeout to wait for that
+        # thread to finish. Also, we set a high number to catch test
+        # case that cannot finish cleanly.
+        # This does not slow down the good test cases that are finishing
+        # cleanly as the wait is conditional in service.stop() on the shutdown
+        # thread exit.
+        # TODO(gibi): bump this to 300 and fix the hanging tests
+        self.conf.set_default('manager_shutdown_timeout', 10)
 
         # oslo.limit requires endpoint_id since 2.3.0
         self.conf.set_default('endpoint_id', 'ENDPOINT_ID', group='oslo_limit')
