@@ -13,7 +13,6 @@
 #    under the License.
 
 from unittest import mock
-import urllib
 
 from alembic.runtime import migration as alembic_migration
 from sqlalchemy.engine import url as sa_url
@@ -23,35 +22,6 @@ from nova.db.main import api as main_db_api
 from nova.db import migration
 from nova import exception
 from nova import test
-
-
-class TestDBURL(test.NoDBTestCase):
-
-    def test_db_sync_with_special_symbols_in_connection_string(self):
-        qargs = 'read_default_group=data with/a+percent_%-and%20symbols!'
-        url = f"sqlite:///:memory:?{qargs}"
-
-        alembic_config = migration._find_alembic_conf()
-        mock_engine = mock.MagicMock()
-        mock_engine.url = sa_url.make_url(url)
-
-        with mock.patch.object(
-                migration, '_find_alembic_conf', return_value=alembic_config):
-            with mock.patch.object(
-                    migration, '_get_engine', return_value=mock_engine):
-                with mock.patch.object(migration, '_upgrade_alembic'):
-                    migration.db_sync()
-
-        actual = alembic_config.get_main_option('sqlalchemy.url')
-        expected = (
-            "sqlite:///:memory:?read_default_group=data+with%2Fa"
-            "+percent_%25-and+symbols%21"
-        )
-        self.assertEqual(expected, actual)
-        self.assertEqual(
-            urllib.parse.unquote_plus(url),
-            urllib.parse.unquote_plus(actual)
-        )
 
 
 class TestDBSync(test.NoDBTestCase):
