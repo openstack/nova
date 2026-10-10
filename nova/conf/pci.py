@@ -219,6 +219,11 @@ Possible values:
   ``devname``
     Device name of the device (for e.g. interface name). Not all PCI devices
     have a name.
+    Using ``devname`` proved to be problematic as the netdev name of a PCI
+    device could change for multiple reasons during hypervisor reboot.
+    So since nova 26.0.0 (Zed) the nova-compute service will refuse to start
+    with such configuration if the ``report_in_placement`` option is True.
+    It is suggested to use the PCI address of the device instead.
 
   ``<tag>``
     Additional ``<tag>`` and ``<tag_value>`` used for specifying PCI devices.
