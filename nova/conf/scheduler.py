@@ -507,7 +507,7 @@ Example:
   .. code-block:: ini
 
     [filter_scheduler]
-    num_instances_weight_multiplier=1.0
+    num_instances_weight_multiplier=-1.0
 
 * Disable weigher influence
 
