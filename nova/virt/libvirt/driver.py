@@ -3981,9 +3981,13 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug('volume_snapshot_delete: delete_info: %s', delete_info,
                   instance=instance)
 
-        if delete_info['type'] != 'qcow2':
-            msg = _('Unknown delete_info type %s') % delete_info['type']
-            raise exception.InternalError(msg)
+        if (not delete_info):
+            msg = _('delete_info is required.')
+            raise exception.InvalidInput(reason=msg)
+        delete_info_type = delete_info.get('type', None)
+        if (delete_info_type != 'qcow2'):
+            msg = _('Unknown delete_info type %s') % delete_info_type
+            raise exception.InvalidInput(reason=msg)
 
         try:
             guest = self._host.get_guest(instance)
