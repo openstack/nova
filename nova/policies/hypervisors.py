@@ -53,7 +53,7 @@ hypervisors_policies = [
         description="List all hypervisors with details",
         operations=[
             {
-                'path': '/os-hypervisors/details',
+                'path': '/os-hypervisors/detail',
                 'method': 'GET'
             },
         ],
