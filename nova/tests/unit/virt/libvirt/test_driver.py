@@ -12426,9 +12426,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             checks = type_uri_map[virt_type][1]
             self.flags(virt_type=virt_type, group='libvirt')
 
-            with mock.patch('nova.virt.libvirt.driver.libvirt') as old_virt:
-                del old_virt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
-
+            with mock.patch('nova.virt.libvirt.driver.libvirt'):
                 drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
                 self.assertEqual(drvr._uri(), expected_uri)
@@ -17118,8 +17116,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 # Avoid a test timeout since _wait_for_boot is threaded.
                 mock_get_info.side_effect = Exception('do not call get_info')
             mock_build_device_metadata.return_value = None
-
-            del mock_orig_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
             drvr.spawn(self.context, instance, image_meta, [], 'herp', {},
                        network_info=network_info, power_on=power_on)

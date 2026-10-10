@@ -668,43 +668,18 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(dom0, result[0]._domain)
         self.assertEqual(dom1, result[1]._domain)
 
-    def test_cpu_features_bug_1217630(self):
+    def test_cpu_features(self):
         self.host.get_connection()
 
-        # Test old version of libvirt, it shouldn't see the `aes' feature
-        with mock.patch('nova.virt.libvirt.host.libvirt') as mock_libvirt:
-            del mock_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
-            caps = self.host.get_capabilities()
-            self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
-
-        # Cleanup the capabilities cache firstly
-        self.host._caps = None
-
-        # Test new version of libvirt, should find the `aes' feature
-        with mock.patch('nova.virt.libvirt.host.libvirt') as mock_libvirt:
-            mock_libvirt['VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'] = 1
-            caps = self.host.get_capabilities()
-            self.assertIn('aes', [x.name for x in caps.host.cpu.features])
+        caps = self.host.get_capabilities()
+        self.assertIn('aes', [x.name for x in caps.host.cpu.features])
 
     def test_cpu_features_are_not_duplicated(self):
         self.host.get_connection()
 
-        # Test old version of libvirt. Should return single 'hypervisor'
-        with mock.patch('nova.virt.libvirt.host.libvirt') as mock_libvirt:
-            del mock_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
-            caps = self.host.get_capabilities()
-            cnt = [x.name for x in caps.host.cpu.features].count('xtpr')
-            self.assertEqual(1, cnt)
-
-        # Cleanup the capabilities cache firstly
-        self.host._caps = None
-
-        # Test new version of libvirt. Should still return single 'hypervisor'
-        with mock.patch('nova.virt.libvirt.host.libvirt') as mock_libvirt:
-            mock_libvirt['VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'] = 1
-            caps = self.host.get_capabilities()
-            cnt = [x.name for x in caps.host.cpu.features].count('xtpr')
-            self.assertEqual(1, cnt)
+        caps = self.host.get_capabilities()
+        cnt = [x.name for x in caps.host.cpu.features].count('xtpr')
+        self.assertEqual(1, cnt)
 
     def test_baseline_cpu_not_supported(self):
         # Handle just the NO_SUPPORT error
