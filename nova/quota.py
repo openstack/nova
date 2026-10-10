@@ -788,10 +788,6 @@ class UnifiedLimitsDriver(NoopQuotaDriver):
     all this legacy quota code will go away, leaving the new simpler code
     """
 
-    def __init__(self):
-        LOG.warning("The Unified Limits Quota Driver is experimental and "
-                    "is under active development. Do not use this driver.")
-
     def get_reserved(self):
         # To make unified limits APIs the same as the DB driver, return 0
         return 0
