@@ -22,7 +22,7 @@ For more details on our RPC system, refer to :doc:`/reference/rpc`.
 Nova uses traditional SQL databases to store information.
 These are (logically) shared between multiple components.
 To aid upgrade, the database is accessed through an object layer that ensures
-an upgraded control plane can still communicate with a compute nodes running
+an upgraded control plane can still communicate with compute nodes running
 the previous release.
 To make this possible, services running on the compute node proxy database
 requests over RPC to a central manager called the conductor.

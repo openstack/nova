@@ -6,7 +6,7 @@ Starting from microversion 2.82, nova supports creating servers with
 accelerators provisioned with the Cyborg service, which provides lifecycle
 management for accelerators.
 
-To launch servers with accelerators, the administrator (or an user with
+To launch servers with accelerators, the administrator (or a user with
 appropriate privileges) must do the following:
 
 * Create a device profile in Cyborg, which specifies what accelerator
@@ -95,7 +95,7 @@ Using SRIOV with Cyborg
 Starting from Xena release, nova supports creating servers with
 SRIOV provisioned with the Cyborg service.
 
-To launch servers with accelerators, the administrator (or an user with
+To launch servers with accelerators, the administrator (or a user with
 appropriate privileges) must do the following:
 
 * Create a device profile in Cyborg, which specifies what accelerator

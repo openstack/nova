@@ -270,7 +270,7 @@ class TestAvailabilityZoneScheduling(
 # |          |                           |       | reqspec.AZ=None            |
 # +----------+---------------------------+-------+----------------------------+
 
-    def test_unshelve_server_without_az_contraint(self):
+    def test_unshelve_server_without_az_constraint(self):
         ctxt = context.get_admin_context()
         server = self._create_server('server01')
 
@@ -281,7 +281,7 @@ class TestAvailabilityZoneScheduling(
         self._shelve_unshelve_server(ctxt, server, req)
         self._assert_request_spec_az(ctxt, server, None)
 
-    def test_unshelve_unpin_az_server_without_az_contraint(self):
+    def test_unshelve_unpin_az_server_without_az_constraint(self):
         ctxt = context.get_admin_context()
         server = self._create_server('server01')
 
@@ -296,7 +296,7 @@ class TestAvailabilityZoneScheduling(
 # |  No AZ   | No AZ or AZ=null          | Host1 | Schedule to host1,         |
 # |          |                           |       | reqspec.AZ=None            |
 # +----------+---------------------------+-------+----------------------------+
-    def test_unshelve_to_host_server_without_az_contraint(self):
+    def test_unshelve_to_host_server_without_az_constraint(self):
         ctxt = context.get_admin_context()
         server = self._create_server('server01')
         original_host = server['OS-EXT-SRV-ATTR:host']
@@ -312,7 +312,7 @@ class TestAvailabilityZoneScheduling(
         self._assert_instance_az_and_host(server, expected_zone, dest_hostname)
         self._assert_request_spec_az(ctxt, server, None)
 
-    def test_unshelve_to_host_and_unpin_server_without_az_contraint(self):
+    def test_unshelve_to_host_and_unpin_server_without_az_constraint(self):
         ctxt = context.get_admin_context()
         server = self._create_server('server01')
         original_host = server['OS-EXT-SRV-ATTR:host']
@@ -406,7 +406,7 @@ class TestAvailabilityZoneScheduling(
 # |  AZ1     | No AZ                     | No    | Schedule to AZ1,           |
 # |          |                           |       | reqspec.AZ="AZ1"           |
 # +----------+---------------------------+-------+----------------------------+
-    def test_unshelve_a_server_with_az_contraint(self):
+    def test_unshelve_a_server_with_az_constraint(self):
         ctxt = context.get_admin_context()
         server = self._create_server('server01', 'zone2')
 
@@ -440,7 +440,7 @@ class TestAvailabilityZoneScheduling(
 # |          |                           |       | reqspec.AZ="AZ1", otherwise|
 # |          |                           |       | reject the request (3)     |
 # +----------+---------------------------+-------+----------------------------+
-    def test_unshelve_to_host_server_with_az_contraint(self):
+    def test_unshelve_to_host_server_with_az_constraint(self):
         ctxt = context.get_admin_context()
         server = self._create_server('server01', 'zone1')
 
@@ -454,7 +454,7 @@ class TestAvailabilityZoneScheduling(
         self._assert_server_with_az_unshelved_to_specified_az(
             server, 'zone1')
 
-    def test_unshelve_to_host_wrong_az_server_with_az_contraint(self):
+    def test_unshelve_to_host_wrong_az_server_with_az_constraint(self):
         server = self._create_server('server01', 'zone1')
 
         req = {
@@ -480,7 +480,7 @@ class TestAvailabilityZoneScheduling(
 # |  AZ1     | AZ=null                   | Host1 | Schedule to host1,         |
 # |          |                           |       | reqspec.AZ=None            |
 # +----------+---------------------------+-------+----------------------------+
-    def test_unshelve_to_host_and_unpin_server_with_az_contraint(self):
+    def test_unshelve_to_host_and_unpin_server_with_az_constraint(self):
         ctxt = context.get_admin_context()
         server = self._create_server('server01', 'zone1')
 

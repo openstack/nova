@@ -87,7 +87,7 @@ the instructions below:
    - ``server_listen=0.0.0.0``
 
      You must not make the VNC server listen to the IP address of its compute
-     host, since that addresses changes when the instance is migrated.
+     host, since that address changes when the instance is migrated.
 
      .. important::
 

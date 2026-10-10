@@ -1519,8 +1519,8 @@ Writing your own weigher
 ------------------------
 
 To create your own weigher, you must inherit from |BaseHostWeigher|
-A weigher can implement both the ``weight_multiplier`` and ``_weight_object``
-methods or just implement the ``weight_objects`` method. ``weight_objects``
+A weigher can implement both the ``weight_multiplier`` and ``_weigh_object``
+methods or just implement the ``weigh_objects`` method. ``weigh_objects``
 method is overridden only if you need access to all objects in order to
 calculate weights, and it just return a list of weights, and not modify the
 weight of the object directly, since final weights are normalized and computed

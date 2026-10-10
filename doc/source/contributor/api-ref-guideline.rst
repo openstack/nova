@@ -75,7 +75,7 @@ Methods have to be sorted by each URI in the following order:
 4. PATCH (unused by Nova)
 5. DELETE
 
-And sorted from broadest to narrowest. So for /severs it would be:
+And sorted from broadest to narrowest. So for /servers it would be:
 
 1. GET /servers
 2. POST /servers

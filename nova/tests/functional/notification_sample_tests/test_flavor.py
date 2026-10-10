@@ -94,7 +94,7 @@ class TestFlavorNotificationSamplev2_55(
 
     MAX_MICROVERSION = '2.55'
 
-    def test_flavor_udpate_with_description(self):
+    def test_flavor_update_with_description(self):
         # First create a flavor without a description.
         body = {
             "flavor": {

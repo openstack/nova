@@ -354,7 +354,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
             mock_uname.assert_called_once_with()
             self.assertEqual(1, target.call_count)
 
-    def test_appliance_setup_inspect_capabilties_debug_mode(self):
+    def test_appliance_setup_inspect_capabilities_debug_mode(self):
         """Asserts that we do not use an eventlet thread pool when guestfs
         debug logging is enabled.
         """
