@@ -164,7 +164,7 @@
 - job:
     name: nova-alt-configurations
     parent: tempest-multinode-full-py3
-    nodeset: devstack-two-node-debian-bookworm
+    nodeset: devstack-two-node-debian-trixie
     description: |
       Run move operations, reboot, and evacuation (via the same post-run hook
       as the nova-live-migration job) tests with the OVS network backend and
@@ -173,7 +173,8 @@
       situations has historically been fragile. This job exercises them.
       This job also explicitly sets eventlet mode for all nova services to keep
       testing eventlet mode even after the default is set to native threading
-      for some services.
+      for some services. This job also tests spice support in the libvirt
+      driver and uses debian 13 with a default python versions of 3.13
     required-projects:
       - novnc/novnc
     irrelevant-files: &nova-base-irrelevant-files
@@ -195,7 +196,7 @@
     vars:
       tox_envlist: all
       # bug #1940425  only affect ml2/ovn so we execute
-      # test_live_migration_with_trunk in this job to keep
+      # test_live_migration_with_trunk in this job to keep test coverage.
       tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot|spice|novnc).*)
       devstack_localrc:
         Q_AGENT: openvswitch
