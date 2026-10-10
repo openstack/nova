@@ -114,7 +114,7 @@ following parameters.
 
   - volumeAttachment: volumeAttachment
   - device: device_resp
-  - id: attachment_id_resp
+  - id: volume_attachment_id_resp
   - serverId: server_id
   - volumeId: volumeId_resp
   - tag: device_tag_bdm_attachment_resp
