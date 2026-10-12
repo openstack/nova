@@ -5,6 +5,27 @@ of a signed image (see `Glance Image Signature Verification documentation`_) is
 trusted by the user. This feature is called certificate validation and can be
 applied to the creation or rebuild of an instance.
 
+.. warning::
+    This feature does not always verify the image signature. There are multiple
+    issues:
+
+    The signature verification can only happen when the image is downloaded
+    from Glance. If the image is already in the compute node's image cache when
+    a new VM or an incoming cold migration requests the feature the image
+    download code is skipped and therefore the image signature is not verified
+    against the certificates the owner provided in the VM's definition.
+
+    Additionally during cross cell cold migration Nova does not copy the
+    trusted certificates list attached to the VM from the source cell to the
+    destination cell DB, so no image signature verification happen in the
+    destination cell for this VM any more.
+
+    During shelve Nova creates a snapshot of the VM and uploads it to Glance.
+    Nova does not sign the uploaded image so during unshelvig of the VM no
+    signature verification happens.
+
+    `See bug #2169692 <https://bugs.launchpad.net/nova/+bug/2169692>`_
+
 Certificate validation is meant to be performed jointly with image signature
 verification but each feature has its own Nova configuration option, to be
 specified in the ``[glance]`` section of the ``nova.conf`` configuration file.
