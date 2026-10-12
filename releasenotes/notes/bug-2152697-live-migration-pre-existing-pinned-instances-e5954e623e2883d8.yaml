@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fixed the `bug #2152697`_ that prevented pre-existing VMs with dedicated
+    CPUs to be live migrated after Gazpacho.
+
+    .. _Bug #2152697: https://bugs.launchpad.net/nova/+bug/2152697

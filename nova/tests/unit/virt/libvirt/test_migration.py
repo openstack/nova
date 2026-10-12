@@ -558,6 +558,51 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 
         self.assertXmlEqual(expected, result)
 
+    def test_update_numa_xml_pre_existing_instance_without_iothreads(self):
+        doc = etree.fromstring("""
+            <domain>
+              <cputune>
+                <vcpupin vcpu="0" cpuset="0,1,2,^2"/>
+                <vcpupin vcpu="1" cpuset="2-4,^4"/>
+                <emulatorpin cpuset="8-10,^8"/>
+                <vcpusched vcpus="10" priority="13" scheduler="fifo"/>
+                <vcpusched vcpus="11" priority="13" scheduler="fifo"/>
+              </cputune>
+              <numatune>
+                <memory nodeset="4,5,6,7"/>
+                <memnode cellid="2" nodeset="4-6,^6"/>
+                <memnode cellid="3" nodeset="6-8,^8"/>
+              </numatune>
+            </domain>""")
+        data = objects.LibvirtLiveMigrateData(
+            dst_numa_info=objects.LibvirtLiveMigrateNUMAInfo(
+                cpu_pins={'0': set([10, 11]), '1': set([12, 13])},
+                cell_pins={'2': set([14, 15]), '3': set([16, 17])},
+                emulator_pins=set([18, 19]),
+                sched_vcpus=set([20, 21]),
+                sched_priority=22))
+
+        result = etree.tostring(
+            migration._update_numa_xml(copy.deepcopy(doc), data),
+            encoding='unicode')
+
+        expected = textwrap.dedent("""
+            <domain>
+              <cputune>
+                <vcpupin vcpu="0" cpuset="10-11"/>
+                <vcpupin vcpu="1" cpuset="12-13"/>
+                <emulatorpin cpuset="18-19"/>
+                <vcpusched vcpus="20-21" priority="22" scheduler="fifo"/>
+              </cputune>
+              <numatune>
+                <memory nodeset="14-17"/>
+                <memnode cellid="2" nodeset="14-15"/>
+                <memnode cellid="3" nodeset="16-17"/>
+              </numatune>
+            </domain>""")
+
+        self.assertXmlEqual(expected, result)
+
     def test_update_numa_xml_no_updates(self):
         xml = textwrap.dedent("""
             <domain>
