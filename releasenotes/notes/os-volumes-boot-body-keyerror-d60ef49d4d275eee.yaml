@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Fixes a regression in 2026.1 where all requests to the deprecated
+    ``/os-volumes_boot`` API failed with an unhandled ``HTTP 500`` due to a
+    ``KeyError: 'body'`` in the request body validation.

@@ -96,7 +96,7 @@ class VolumesBootController(servers.ServersController):
     @validation.schema(schema.create_v294, '2.94')
     @validation.response_body_schema(schema.create_response)
     def create(self, req, body):
-        return super().create(req, body)
+        return super().create(req, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(204)
@@ -125,7 +125,7 @@ class VolumesBootController(servers.ServersController):
     @validation.response_body_schema(schema.update_response_v298, '2.98', '2.99')  # noqa: E501
     @validation.response_body_schema(schema.update_response_v2100, '2.100')
     def update(self, req, id, body):
-        return super().update(req, id)
+        return super().update(req, id, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(204)
@@ -134,7 +134,7 @@ class VolumesBootController(servers.ServersController):
     @validation.schema(schema.confirm_resize)
     @validation.response_body_schema(schema.confirm_resize_response)
     def _confirm_resize(self, req, id, body):
-        return super()._confirm_resize(req, id, body)
+        return super()._confirm_resize(req, id, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(202)
@@ -143,7 +143,7 @@ class VolumesBootController(servers.ServersController):
     @validation.schema(schema.revert_resize)
     @validation.response_body_schema(schema.revert_resize_response)
     def _revert_resize(self, req, id, body):
-        return super()._revert_resize(req, id, body)
+        return super()._revert_resize(req, id, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(202)
@@ -152,7 +152,7 @@ class VolumesBootController(servers.ServersController):
     @validation.schema(schema.reboot)
     @validation.response_body_schema(schema.reboot_response)
     def _reboot(self, req, id, body):
-        return super()._reboot(req, id, body)
+        return super()._reboot(req, id, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(202)
@@ -161,7 +161,7 @@ class VolumesBootController(servers.ServersController):
     @validation.schema(schema.resize)
     @validation.response_body_schema(schema.resize_response)
     def _resize(self, req, id, body):
-        return super()._resize(req, id, body)
+        return super()._resize(req, id, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(202)
@@ -190,7 +190,7 @@ class VolumesBootController(servers.ServersController):
     @validation.response_body_schema(schema.rebuild_response_v298, '2.98', '2.99')  # noqa: E501
     @validation.response_body_schema(schema.rebuild_response_v2100, '2.100')
     def _rebuild(self, req, id, body):
-        return super()._rebuild(req, id, body)
+        return super()._rebuild(req, id, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(202)
@@ -201,7 +201,7 @@ class VolumesBootController(servers.ServersController):
     @validation.response_body_schema(schema.create_image_response, '2.0', '2.44')  # noqa: E501
     @validation.response_body_schema(schema.create_image_response_v245, '2.45')
     def _create_image(self, req, id, body):
-        return super()._create_image(req, id, body)
+        return super()._create_image(req, id, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(202)
@@ -210,7 +210,7 @@ class VolumesBootController(servers.ServersController):
     @validation.schema(schema.start_server)
     @validation.response_body_schema(schema.start_server_response)
     def _start(self, req, id, body):
-        return super()._start(req, id, body)
+        return super()._start(req, id, body=body)
 
     @wsgi.api_version('2.1', '2.102')
     @wsgi.response(202)
@@ -219,7 +219,7 @@ class VolumesBootController(servers.ServersController):
     @validation.schema(schema.stop_server)
     @validation.response_body_schema(schema.stop_server_response)
     def _stop(self, req, id, body):
-        return super()._stop(req, id, body)
+        return super()._stop(req, id, body=body)
 
     @wsgi.api_version('2.17', '2.102')
     @wsgi.response(202)
@@ -228,4 +228,4 @@ class VolumesBootController(servers.ServersController):
     @validation.schema(schema.trigger_crash_dump)
     @validation.response_body_schema(schema.trigger_crash_dump_response)
     def _trigger_crash_dump(self, req, id, body):
-        return super()._trigger_crash_dump(req, id, body)
+        return super()._trigger_crash_dump(req, id, body=body)
