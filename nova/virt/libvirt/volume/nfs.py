@@ -40,8 +40,8 @@ class LibvirtNFSVolumeDriver(fs.LibvirtMountedFileSystemVolumeDriver):
 
     def _mount_options(self, connection_info):
         options = []
-        if CONF.libvirt.nfs_mount_options is not None:
-            options.extend(['-o', CONF.libvirt.nfs_mount_options])
+        if CONF.libvirt.nfs_mount_options:
+            options.extend(['-o', ','.join(CONF.libvirt.nfs_mount_options)])
 
         conn_options = connection_info['data'].get('options')
         if conn_options:

@@ -118,6 +118,34 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.mock_umount.assert_has_calls([mock.call(export_mnt_base)])
         self.mock_rmdir.assert_has_calls([mock.call(export_mnt_base)])
 
+    def test_libvirt_nfs_driver_with_conf(self):
+        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
+        self.flags(
+            nfs_mount_options=["opt1=true", "opt2=true", "opt3"],
+            group="libvirt",
+        )
+        export_string = '192.168.1.1:/nfs/share1'
+        options = '-o intr,nfsvers=3'
+        export_mnt_base = os.path.join(self.mnt_base,
+                utils.get_hash_str(export_string))
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name,
+                                    'options': options}}
+        instance = mock.sentinel.instance
+        instance.uuid = uuids.instance
+        libvirt_driver.connect_volume(connection_info, instance)
+        libvirt_driver.disconnect_volume(connection_info,
+                                         mock.sentinel.instance)
+
+        self.mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
+        self.mock_mount.assert_has_calls([mock.call(
+            'nfs', export_string,
+            export_mnt_base,
+            ['-o', 'opt1=true,opt2=true,opt3', '-o', 'intr,nfsvers=3'])])
+        self.mock_umount.assert_has_calls([mock.call(export_mnt_base)])
+        self.mock_rmdir.assert_has_calls([mock.call(export_mnt_base)])
+
     def test_extend_volume(self):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/nfs/share1'
