@@ -4622,10 +4622,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             mock.patch.object(objects.BlockDeviceMapping, 'save'),
             mock.patch.object(compute_rpcapi.ComputeAPI,
                 'reserve_block_device_name', return_value=bdm),
-            mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+            mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume'),
+            mock.patch.object(instance, 'save'),
         ) as (mock_no_bdm,
               mock_check_availability_zone, mock_attachment_create,
-              mock_bdm_save, mock_reserve_bdm, mock_attach):
+              mock_bdm_save, mock_reserve_bdm, mock_attach, mock_inst_save):
             mock_no_bdm.side_effect = exc.VolumeBDMNotFound(
                                           volume_id=uuids.volume)
 
@@ -4668,10 +4669,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             mock.patch.object(objects.BlockDeviceMapping, 'save'),
             mock.patch.object(compute_rpcapi.ComputeAPI,
                 'reserve_block_device_name', return_value=bdm),
-            mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+            mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume'),
+            mock.patch.object(instance, 'save'),
         ) as (mock_no_bdm,
               mock_check_availability_zone, mock_attachment_create,
-              mock_bdm_save, mock_reserve_bdm, mock_attach):
+              mock_bdm_save, mock_reserve_bdm, mock_attach, mock_inst_save):
             mock_no_bdm.side_effect = exc.VolumeBDMNotFound(
                     volume_id=uuids.volume)
             self.conductor.attach_volume(
@@ -4711,7 +4713,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_volume_api = mock.patch.object(self.conductor, 'volume_api',
                                             mock.MagicMock(spec=cinder.API))
 
-        with mock_volume_api as mock_v_api:
+        with mock_volume_api as mock_v_api, \
+                mock.patch.object(instance, 'save'):
             mock_v_api.attachment_create.side_effect = test.TestingException()
             self.assertRaises(test.TestingException,
                               self.conductor.attach_volume,
@@ -4745,10 +4748,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         mock_reserve.side_effect = messaging.exceptions.MessagingTimeout()
 
-        self.assertRaises(messaging.exceptions.MessagingTimeout,
-                            self.conductor.attach_volume,
-                            self.context, instance, volume,
-                            None, None, None)
+        with mock.patch.object(instance, 'save'):
+            self.assertRaises(messaging.exceptions.MessagingTimeout,
+                                self.conductor.attach_volume,
+                                self.context, instance, volume,
+                                None, None, None)
         mock_get_by_volume_and_instance.assert_called_once_with(
             self.context, volume['id'], instance.uuid)
         fake_bdm.destroy.assert_called_once_with()
@@ -4784,14 +4788,143 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         mock_reserve.side_effect = messaging.exceptions.MessagingTimeout()
 
-        self.assertRaises(messaging.exceptions.MessagingTimeout,
-                            self.conductor.attach_volume,
-                            self.context, instance, volume,
-                            None, None, None)
+        with mock.patch.object(instance, 'save'):
+            self.assertRaises(messaging.exceptions.MessagingTimeout,
+                                self.conductor.attach_volume,
+                                self.context, instance, volume,
+                                None, None, None)
         mock_get_by_volume_and_instance.assert_called_once_with(
             self.context, volume['id'], instance.uuid)
         # The BDM must NOT be destroyed when attachment_id is set.
         fake_bdm.destroy.assert_not_called()
+
+    def test_attach_volume_sets_task_state(self):
+        """Test that attach_volume sets and resets task_state.
+
+        The conductor must set task_state to BLOCK_DEVICE_MAPPING before
+        calling reserve_block_device_name to prevent concurrent attach
+        requests from overlapping. task_state must be reset to None
+        before the attach_volume CAST so compute still sees None.
+        See LP #2167569.
+        """
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'device_name': '/dev/vdb', 'volume_id': uuids.volume_id})
+        bdm = block_device_obj.BlockDeviceMapping()._from_db_object(
+            self.context,
+            block_device_obj.BlockDeviceMapping(),
+            fake_bdm)
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE)
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         uuids.volume, None, None, None, None)
+
+        save_calls = []
+        attach_task_states = []
+
+        def _fake_save(*args, **kwargs):
+            save_calls.append(kwargs.get('expected_task_state'))
+
+        def _fake_attach(context, inst, volume_bdm):
+            attach_task_states.append(inst.task_state)
+
+        with test.nested(
+            mock.patch.object(objects.BlockDeviceMapping,
+                              'get_by_volume_and_instance',
+                              side_effect=exc.VolumeBDMNotFound(
+                                  volume_id=uuids.volume)),
+            mock.patch.object(cinder.API, 'check_availability_zone'),
+            mock.patch.object(cinder.API, 'attachment_create',
+                              return_value={'id': uuids.attachment_id}),
+            mock.patch.object(objects.BlockDeviceMapping, 'save'),
+            mock.patch.object(compute_rpcapi.ComputeAPI,
+                'reserve_block_device_name', return_value=bdm),
+            mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume',
+                              side_effect=_fake_attach),
+            mock.patch.object(instance, 'save', side_effect=_fake_save),
+        ):
+            self.conductor.attach_volume(
+                self.context, instance, volume,
+                device=None, disk_bus=None, device_type=None)
+
+        # First save: set task_state with expected_task_state=[None]
+        self.assertEqual([None], save_calls[0])
+        # Last save: reset task_state, expecting BLOCK_DEVICE_MAPPING
+        # because the first save already succeeded.
+        self.assertEqual(
+            task_states.BLOCK_DEVICE_MAPPING, save_calls[-1])
+        # After attach_volume returns, task_state must be reset to None.
+        self.assertIsNone(instance.task_state)
+        # The CAST must see the reset value, not BLOCK_DEVICE_MAPPING.
+        self.assertEqual([None], attach_task_states)
+
+    def test_attach_volume_rejects_concurrent_request(self):
+        """Test that a concurrent attach is rejected via task_state.
+
+        If an attach_volume is already in progress (task_state is set),
+        a concurrent request must be rejected with InstanceInvalidState
+        reporting the actual DB task_state. See LP #2167569.
+        """
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE,
+            task_state=task_states.BLOCK_DEVICE_MAPPING)
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        with mock.patch.object(instance, 'save',
+                side_effect=exc.UnexpectedTaskStateError(
+                    instance_uuid=instance.uuid,
+                    actual=task_states.BLOCK_DEVICE_MAPPING,
+                    expected=[None])):
+            ex = self.assertRaises(exc.InstanceInvalidState,
+                                   self.conductor.attach_volume,
+                                   self.context, instance, volume,
+                                   None, None, None)
+            # The reported state must be the actual DB state from the
+            # UnexpectedTaskStateError, not the local value we set.
+            self.assertIn('block_device_mapping', str(ex))
+
+    def test_attach_volume_resets_task_state_on_timeout(self):
+        """Test that task_state is reset even on MessagingTimeout.
+
+        When reserve_block_device_name times out, the cleanup runs and
+        then the finally block must still reset task_state to None so
+        the instance is not stuck. See LP #2167569.
+        """
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE)
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        save_calls = []
+
+        def _fake_save(*args, **kwargs):
+            save_calls.append(kwargs.get('expected_task_state'))
+
+        with test.nested(
+            mock.patch.object(compute_rpcapi.ComputeAPI,
+                'reserve_block_device_name',
+                side_effect=messaging.exceptions.MessagingTimeout()),
+            mock.patch.object(objects.BlockDeviceMapping,
+                'get_by_volume_and_instance',
+                side_effect=exc.VolumeBDMNotFound(
+                    volume_id=volume['id'])),
+            mock.patch.object(objects.BlockDeviceMappingList, 'get_by_volume',
+                side_effect=exc.VolumeBDMNotFound(
+                    volume_id=volume['id'])),
+            mock.patch.object(instance, 'save', side_effect=_fake_save),
+        ):
+            self.assertRaises(messaging.exceptions.MessagingTimeout,
+                              self.conductor.attach_volume,
+                              self.context, instance, volume,
+                              None, None, None)
+
+        # First save set the guard; the finally block then reset it.
+        self.assertEqual([None], save_calls[0])
+        self.assertEqual(
+            task_states.BLOCK_DEVICE_MAPPING, save_calls[-1])
+        # task_state must have been reset to None in the finally block.
+        self.assertIsNone(instance.task_state)
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_volume')
@@ -4812,7 +4945,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_volume_api = mock.patch.object(self.conductor, 'volume_api',
                                             mock.MagicMock(spec=cinder.API))
 
-        with mock_volume_api as mock_v_api:
+        with mock_volume_api as mock_v_api, \
+                mock.patch.object(instance, 'save'):
             mock_v_api.attachment_create.return_value = \
                 {'id': uuids.attachment_id}
             self.conductor.attach_volume(

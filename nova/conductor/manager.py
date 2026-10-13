@@ -2273,6 +2273,73 @@ class ComputeTaskManager:
         compute for reserving a block-device mapping instead of having nova-api
         do it starting with API version 2.101.
         """
+        # NOTE(sbauza): Atomically set task_state to prevent concurrent
+        # attach requests from overlapping on the reserve_block_device_name
+        # RPC call. Without this, two requests for the same volume can
+        # race: the first times out, its cleanup deletes the BDM that the
+        # second request created, leaving Cinder/libvirt out of sync with
+        # Nova.
+        # The API's @check_instance_state decorator already enforces
+        # task_state=None, so any concurrent request arriving while we
+        # hold the task_state will be rejected at the API layer.
+        # After reserve_block_device_name returns, we reset task_state
+        # *before* the attach_volume CAST so compute still receives
+        # task_state=None. Compute never refreshes the instance from
+        # the DB, so a stale BLOCK_DEVICE_MAPPING on the RPC payload
+        # would leak into volume_attach start/end notifications.
+        # From that point, the BDM's existence prevents a duplicate
+        # attach of the same volume (checked by both the API's
+        # _check_volume_already_attached and compute's do_reserve).
+        # See LP #2167569.
+        instance.task_state = task_states.BLOCK_DEVICE_MAPPING
+        try:
+            instance.save(expected_task_state=[None])
+        except exception.UnexpectedTaskStateError as e:
+            raise exception.InstanceInvalidState(
+                instance_uuid=instance.uuid,
+                attr='task_state',
+                state=e.kwargs.get('actual', instance.task_state),
+                method='attach_volume')
+
+        try:
+            volume_bdm = self._reserve_and_attach_volume(
+                context, instance, volume, device, disk_bus, device_type,
+                tag, supports_multiattach, delete_on_termination)
+        finally:
+            # Always reset task_state, whether we succeeded or failed,
+            # and do it before the attach_volume CAST below. The first
+            # save already succeeded (otherwise we never reach here),
+            # so the DB holds BLOCK_DEVICE_MAPPING.
+            try:
+                instance.task_state = None
+                instance.save(
+                    expected_task_state=task_states.BLOCK_DEVICE_MAPPING)
+            except exception.UnexpectedTaskStateError:
+                LOG.warning(
+                    "Could not reset task_state (currently %(ts)s) "
+                    "after attach_volume for instance %(inst)s; "
+                    "another operation may have changed it.",
+                    {'ts': instance.task_state,
+                     'inst': instance.uuid})
+
+        try:
+            self.compute_rpcapi.attach_volume(
+                context, instance, volume_bdm)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                volume_bdm.destroy()
+
+        return volume_bdm.device_name
+
+    def _reserve_and_attach_volume(self, context, instance, volume,
+            device, disk_bus, device_type, tag, supports_multiattach,
+            delete_on_termination):
+        """Reserve a BDM on compute and create the Cinder attachment.
+
+        This helper is extracted from attach_volume to keep the
+        task_state try/finally at a single nesting level. The caller
+        issues the attach_volume CAST after resetting task_state.
+        """
         try:
             volume_bdm = self._create_volume_bdm(
                 context, instance, device, volume, disk_bus=disk_bus,
@@ -2319,9 +2386,8 @@ class ComputeTaskManager:
             objects.InstanceAction.action_start(
                 context, instance.uuid, instance_actions.ATTACH_VOLUME,
                 want_result=False)
-            self.compute_rpcapi.attach_volume(context, instance, volume_bdm)
         except Exception:
             with excutils.save_and_reraise_exception():
                 volume_bdm.destroy()
 
-        return volume_bdm.device_name
+        return volume_bdm

@@ -619,7 +619,9 @@ class TestInstanceNotificationSample(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
 
-        instance_updates = self._wait_for_notifications('instance.update', 8)
+        # 8 notifications from create/tag plus 2 from attach_volume
+        # setting and resetting task_state=BLOCK_DEVICE_MAPPING.
+        instance_updates = self._wait_for_notifications('instance.update', 10)
 
         # The first notification comes from the nova-conductor, the
         # eighth notification comes from nova-api the
@@ -700,6 +702,29 @@ class TestInstanceNotificationSample(
             {'state_update.old_task_state': None,
              'state_update.old_state': 'active',
              'tags': ['tag1']},
+
+            # attach_volume: None -> block_device_mapping
+            {'state_update.new_task_state': 'block_device_mapping',
+             'state_update.old_task_state': 'block_device_mapping',
+             'task_state': 'block_device_mapping'},
+
+            # attach_volume: block_device_mapping -> None
+            {'state_update.new_task_state': None,
+             'state_update.old_task_state': 'block_device_mapping',
+             'task_state': None,
+             'block_devices': [{
+                "nova_object.data": {
+                    "boot_index": None,
+                    "delete_on_termination": False,
+                    "device_name": "/dev/sdb",
+                    "tag": None,
+                    "volume_id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
+                },
+                "nova_object.name": "BlockDevicePayload",
+                "nova_object.namespace": "nova",
+                "nova_object.version": "1.0"
+              }]
+            },
         ]
 
         replacements = self._verify_instance_update_steps(
