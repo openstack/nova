@@ -35,7 +35,7 @@ class TestNonBootableImageMeta(integrated_helpers._IntegratedTestBase):
 
         # Add an image to the Glance fixture with cinder_encryption_key set
         timestamp = datetime.datetime(
-            2011, 1, 1, 1, 2, 3, tzinfo=datetime.timezone.utc
+            2011, 1, 1, 1, 2, 3, tzinfo=datetime.UTC
         )
         cinder_encrypted_image = {
             'id': uuids.cinder_encrypted_image_uuid,

@@ -99,7 +99,7 @@ class UEFIServersTest(base.ServersTestBase):
 
         # create a server with UEFI and secure boot
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         uefi_image = {
             'id': uuids.uefi_image,
@@ -163,7 +163,7 @@ class UEFIServersTest(base.ServersTestBase):
 
         # create a server with UEFI and secure boot
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         sb_image = {
             'id': uuids.sb_image,
@@ -228,7 +228,7 @@ class UEFIServersTest(base.ServersTestBase):
 
         # create a server with UEFI and secure boot
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         stateless_image = {
             'id': uuids.stateless_image,
@@ -294,7 +294,7 @@ class UEFIServersTest(base.ServersTestBase):
 
         # create a server with UEFI and secure boot
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         sb_image = {
             'id': uuids.sb_image,
@@ -370,7 +370,7 @@ class UEFIServersTest(base.ServersTestBase):
 
         # create a server with UEFI and secure boot
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         stateless_image = {
             'id': uuids.stateless_image,
@@ -506,7 +506,7 @@ class UEFIServersFirmwareTest(base.ServersTestBase):
 
         # create a server with UEFI and secure boot
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         uefi_image = {
             'id': uuids.uefi_image,
@@ -640,7 +640,7 @@ class UEFIServersFirmwareTest(base.ServersTestBase):
 
         # create a server with UEFI
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         uefi_image = {
             'id': uuids.uefi_image,
@@ -732,7 +732,7 @@ class UEFIServersFirmwareTest(base.ServersTestBase):
 
         # create a server with UEFI
         timestamp = datetime.datetime(
-            2021, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc
+            2021, 1, 2, 3, 4, 5, tzinfo=datetime.UTC
         )
         uefi_image = {
             'id': uuids.uefi_image,

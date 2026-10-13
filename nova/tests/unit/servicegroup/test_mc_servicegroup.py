@@ -72,7 +72,7 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         service_ref = {
             'host': 'fake-host',
             'topic': 'compute',
-            'updated_at': updated_at_time.replace(tzinfo=datetime.timezone.utc)
+            'updated_at': updated_at_time.replace(tzinfo=datetime.UTC)
         }
 
         # If no record returned from the mc, return record from DB
@@ -84,13 +84,13 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         self.mc_client.reset_mock()
         retval = timeutils.utcnow()
         self.mc_client.get.return_value = retval
-        self.assertEqual(retval.replace(tzinfo=datetime.timezone.utc),
+        self.assertEqual(retval.replace(tzinfo=datetime.UTC),
                          self.servicegroup_api.get_updated_time(service_ref))
         self.mc_client.get.assert_called_once_with('compute:fake-host')
         # If the record in DB is newer than mc, return record from DB
         self.mc_client.reset_mock()
         service_ref['updated_at'] = \
-            retval.replace(tzinfo=datetime.timezone.utc)
+            retval.replace(tzinfo=datetime.UTC)
         self.mc_client.get.return_value = updated_at_time
         self.assertEqual(service_ref['updated_at'],
                          self.servicegroup_api.get_updated_time(service_ref))
@@ -99,6 +99,6 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         self.mc_client.reset_mock()
         service_ref['updated_at'] = None
         self.mc_client.get.return_value = updated_at_time
-        self.assertEqual(updated_at_time.replace(tzinfo=datetime.timezone.utc),
+        self.assertEqual(updated_at_time.replace(tzinfo=datetime.UTC),
                          self.servicegroup_api.get_updated_time(service_ref))
         self.mc_client.get.assert_called_once_with('compute:fake-host')

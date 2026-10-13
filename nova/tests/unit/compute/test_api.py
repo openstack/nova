@@ -906,7 +906,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def _test_delete(self, delete_type, **attrs):
         delete_time = datetime.datetime(
-            1955, 11, 5, 9, 30, tzinfo=datetime.timezone.utc)
+            1955, 11, 5, 9, 30, tzinfo=datetime.UTC)
         timeutils.set_time_override(delete_time)
         self.addCleanup(timeutils.clear_time_override)
 
@@ -1276,7 +1276,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         mock_cons.return_value = 'constraint'
         delete_time = datetime.datetime(1955, 11, 5, 9, 30,
-                                        tzinfo=datetime.timezone.utc)
+                                        tzinfo=datetime.UTC)
         updates['deleted_at'] = delete_time
         updates['deleted'] = True
         fake_inst = fake_instance.fake_db_instance(**updates)

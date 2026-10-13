@@ -1392,7 +1392,7 @@ class ServersControllerTest(_ServersControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1,
-                                              tzinfo=datetime.timezone.utc)
+                                              tzinfo=datetime.UTC)
             self.assertEqual(search_opts['changes-since'], changes_since)
             self.assertNotIn('deleted', search_opts)
             return objects.InstanceList(
@@ -2461,7 +2461,7 @@ class ServersControllerTestV266(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-before', search_opts)
             changes_before = datetime.datetime(2011, 1, 24, 17, 8, 1,
-                                              tzinfo=datetime.timezone.utc)
+                                              tzinfo=datetime.UTC)
             self.assertEqual(search_opts['changes-before'], changes_before)
             self.assertNotIn('deleted', search_opts)
             return objects.InstanceList(
@@ -2499,10 +2499,10 @@ class ServersControllerTestV266(ControllerTest):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 23, 17, 8, 1,
-                                              tzinfo=datetime.timezone.utc)
+                                              tzinfo=datetime.UTC)
             self.assertIn('changes-before', search_opts)
             changes_before = datetime.datetime(2011, 1, 24, 17, 8, 1,
-                                              tzinfo=datetime.timezone.utc)
+                                              tzinfo=datetime.UTC)
             self.assertEqual(search_opts['changes-since'], changes_since)
             self.assertEqual(search_opts['changes-before'], changes_before)
             self.assertNotIn('deleted', search_opts)

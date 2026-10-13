@@ -88,7 +88,7 @@ def set_update_time_on_success(function):
         else:
             now = timeutils.utcnow()
             # NOTE(sbauza): Objects are UTC tz-aware by default
-            self.updated = now.replace(tzinfo=datetime.timezone.utc)
+            self.updated = now.replace(tzinfo=datetime.UTC)
         return return_value
 
     return decorated_function

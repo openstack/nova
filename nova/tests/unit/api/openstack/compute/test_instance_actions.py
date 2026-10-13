@@ -382,9 +382,9 @@ class InstanceActionsTestV266(InstanceActionsTestV258):
 
         self.controller.index(req, FAKE_UUID)
         filters = {'changes-since': datetime.datetime(
-                       2012, 12, 5, 0, 0, tzinfo=datetime.timezone.utc),
+                       2012, 12, 5, 0, 0, tzinfo=datetime.UTC),
                    'changes-before': datetime.datetime(
-                       2012, 12, 5, 1, 0, tzinfo=datetime.timezone.utc)}
+                       2012, 12, 5, 1, 0, tzinfo=datetime.UTC)}
         mock_action_get.assert_called_once_with(req.environ['nova.context'],
                                                 instance, limit=1000,
                                                 marker=None,

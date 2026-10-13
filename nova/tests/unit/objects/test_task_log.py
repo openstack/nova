@@ -70,9 +70,9 @@ class _TestTaskLog(object):
             self.context,
             fake_task_log['task_name'],
             fake_task_log['period_beginning'].replace(
-                tzinfo=datetime.timezone.utc),
+                tzinfo=datetime.UTC),
             fake_task_log['period_ending'].replace(
-                tzinfo=datetime.timezone.utc),
+                tzinfo=datetime.UTC),
             fake_task_log['host'],
             task_items=fake_task_log['task_items'],
             message=fake_task_log['message'])
@@ -91,9 +91,9 @@ class _TestTaskLog(object):
             self.context,
             fake_task_log['task_name'],
             fake_task_log['period_beginning'].replace(
-                tzinfo=datetime.timezone.utc),
+                tzinfo=datetime.UTC),
             fake_task_log['period_ending'].replace(
-                tzinfo=datetime.timezone.utc),
+                tzinfo=datetime.UTC),
             fake_task_log['host'],
             errors=fake_task_log['errors'],
             message=fake_task_log['message'])
