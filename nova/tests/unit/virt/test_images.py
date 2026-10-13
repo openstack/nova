@@ -162,6 +162,12 @@ class QemuTestCase(test.NoDBTestCase):
         images.fetch_to_raw(None, 'href123', '/no/path')
         mock_rename.assert_called_once_with('/no/path.part', '/no/path')
 
+        # Image is registered as a gpt, qemu will call it raw, but that's okay
+        mock_rename.reset_mock()
+        mock_detect.return_value.__str__.return_value = 'gpt'
+        images.fetch_to_raw(None, 'href123', '/no/path')
+        mock_rename.assert_called_once_with('/no/path.part', '/no/path')
+
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
