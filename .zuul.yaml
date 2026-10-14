@@ -663,7 +663,7 @@
       # are skipped until bug #1929710 is resolved.
       # revert excluding test_live_migration_with_trunk when bug #1940425
       # is fixed in neutron
-      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|tempest.api.compute.servers.test_device_tagging.TaggedAttachmentsTest.test_tagged_attachment|test_live_migration_with_trunk
+      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|test_live_migration_with_trunk
       devstack_local_conf:
         post-config:
           $NOVA_CPU_CONF:
