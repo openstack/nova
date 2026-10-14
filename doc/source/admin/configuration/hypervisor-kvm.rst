@@ -229,7 +229,7 @@ Backing Storage is the storage used to provide the expanded operating system
 image, and any ephemeral storage. Inside the virtual machine, this is normally
 presented as two virtual hard disks (for example, ``/dev/vda`` and ``/dev/vdb``
 respectively). However, inside OpenStack, this can be derived from one of these
-methods: ``lvm``, ``qcow``, ``rbd`` or ``flat``, chosen using the
+methods: ``lvm``, ``qcow2``, ``rbd`` or ``flat``, chosen using the
 :oslo.config:option:`libvirt.images_type` option in ``nova.conf`` on the
 compute node.
 
@@ -242,7 +242,7 @@ compute node.
    disk from a QCOW2 if :oslo.config:option:`force_raw_images` is not set in
    configuration.
 
-QCOW is the default backing store. It uses a copy-on-write philosophy to delay
+QCOW2 is the default backing store. It uses a copy-on-write philosophy to delay
 allocation of storage until it is actually needed. This means that the space
 required for the backing of an image can be significantly less on the real disk
 than what seems available in the virtual machine operating system.
