@@ -1064,6 +1064,12 @@
         - nova-multi-cell
         - nova-next
         - nova-alt-configurations
+        # NOTE: nova-tox-validate-backport is non-voting in the check pipeline
+        # but voting in the gate pipeline. This way, if a stable backport is
+        # waiting on master fix or an older stable backport to merge first, the
+        # job fails and Zuul votes -1. A -1 in the check pipeline would otherwise
+        # need unnecessary rechecks once the master fix merges, or lead reviewers
+        # to skip the review.
         - nova-tox-validate-backport:
             voting: false
         - nova-tox-functional-py311
