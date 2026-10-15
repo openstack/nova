@@ -24,7 +24,6 @@ import sqlalchemy as sa
 from sqlalchemy import sql
 from sqlalchemy.sql import func
 
-from nova import availability_zones as avail_zone
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context as nova_context
@@ -70,7 +69,6 @@ __all__ = [
     'Instance',
     'InstanceList',
     'populate_instance_compute_id',
-    'populate_missing_availability_zones',
 ]
 
 # These are fields that most query calls load by default
@@ -1344,22 +1342,6 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
         inst_list.objects.append(inst_obj)
     inst_list.obj_reset_changes()
     return inst_list
-
-
-@db.pick_context_manager_writer
-def populate_missing_availability_zones(context, max_count):
-    # instances without host have no reasonable AZ to set
-    instances = (context.session.query(models.Instance).
-        filter(models.Instance.host.is_not(None)).
-        filter_by(availability_zone=None).limit(max_count).all())
-    count_all = len(instances)
-    count_hit = 0
-    for instance in instances:
-        az = avail_zone.get_instance_availability_zone(context, instance)
-        instance.availability_zone = az
-        instance.save(context.session)
-        count_hit += 1
-    return count_all, count_hit
 
 
 @db.pick_context_manager_writer

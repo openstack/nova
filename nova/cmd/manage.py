@@ -209,11 +209,6 @@ class DbCommands(object):
         # Added in Queens
         block_device_obj.BlockDeviceMapping.populate_uuids,
         # Added in Rocky
-        # NOTE(tssurya): This online migration is going to be backported to
-        # Queens and Pike since instance.avz of instances before Pike
-        # need to be populated if it was not specified during boot time.
-        instance_obj.populate_missing_availability_zones,
-        # Added in Rocky
         instance_mapping_obj.populate_queued_for_delete,
         # Added in Stein
         compute_node_obj.migrate_empty_ratio,
