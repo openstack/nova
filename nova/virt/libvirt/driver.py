@@ -11811,7 +11811,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # transfer stats in the progress too, but it
                     # might make memory info more obscure as large
                     # disk sizes might dwarf memory size
-                    remaining = 100
+                    remaining = 0
                     if info.memory_total != 0:
                         remaining = round(info.memory_remaining *
                                           100 / info.memory_total)
@@ -11821,7 +11821,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                     # NOTE(fanzhang): do not include disk transfer stats in
                     # the progress percentage calculation but log them.
-                    disk_remaining = 100
+                    disk_remaining = 0
                     if info.disk_total != 0:
                         disk_remaining = round(info.disk_remaining *
                                                100 / info.disk_total)
