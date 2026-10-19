@@ -1227,7 +1227,7 @@ class SchedulerRetries(base.NovaObject):
         # NOTE(sbauza): We are not persisting the user context since it's only
         # needed for hydrating the Retry object
         retry_obj = cls()
-        if not ('num_attempts' and 'hosts') in retry_dict:
+        if 'num_attempts' not in retry_dict or 'hosts' not in retry_dict:
             # NOTE(sbauza): We prefer to return an empty object if the
             # primitive is not good enough
             return retry_obj

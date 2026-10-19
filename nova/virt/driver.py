@@ -1274,7 +1274,7 @@ class ComputeDriver(object):
 
         See the developer reference documentation for more details:
 
-        https://docs.openstack.org/nova/latest/reference/update-provider-tree.html   # noqa
+        https://docs.openstack.org/nova/latest/reference/update-provider-tree.html
 
         :param nova.compute.provider_tree.ProviderTree provider_tree:
             A nova.compute.provider_tree.ProviderTree object representing all

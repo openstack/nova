@@ -514,7 +514,7 @@ class SchedulerReportClient(object):
                 # We want to ensure that an RP on different aggregate
                 # will not be duplicated.
                 for rp in resp.json()['resource_providers']:
-                    if not rp['uuid'] in resource_providers:
+                    if rp['uuid'] not in resource_providers:
                         resource_providers[rp['uuid']] = rp
             else:
                 msg = _("[%(placement_req_id)s] %(iquery)s/%(isize)s Failed "

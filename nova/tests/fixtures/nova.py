@@ -1933,8 +1933,8 @@ class ReaderWriterLock(lockutils.ReaderWriterLock):
 
     See https://github.com/eventlet/eventlet/issues/731 for details.
 
-    [1] https://github.com/eventlet/eventlet/blob/v0.32.0/eventlet/green/threading.py#L128  # noqa
-    """
+    [1] https://github.com/eventlet/eventlet/blob/v0.32.0/eventlet/green/threading.py#L128
+    """  # noqa: E501
 
     def __init__(self, *a, **kw):
         if not utils.concurrency_mode_threading():

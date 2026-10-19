@@ -54,7 +54,7 @@ class ExtraSpecValidator:
             )
 
         value_regex = None
-        if self.value['type'] == str and self.value.get('pattern'):
+        if self.value['type'] is str and self.value.get('pattern'):
             value_regex = self.value['pattern']
 
         self.value_regex = value_regex
@@ -112,9 +112,9 @@ class ExtraSpecValidator:
                 f"but got '{name}'."
             )
 
-        if self.value['type'] == int:
+        if self.value['type'] is int:
             self._validate_int(value)
-        elif self.value['type'] == bool:
+        elif self.value['type'] is bool:
             self._validate_bool(value)
         else:  # str
             self._validate_str(value)

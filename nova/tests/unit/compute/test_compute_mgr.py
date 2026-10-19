@@ -9989,14 +9989,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.security_groups, self.image, self.block_device_mapping,
                 self.resource_provider_mapping, accel_uuids)
 
-        resources = []
         with self.compute._build_resources(*args) as resources:
-            pass
-
-        mock_build_net.assert_called_once_with(self.context, self.instance,
-            requested_networks, mock.ANY,
-            mock.ANY, network_arqs)
-        return resources
+            mock_build_net.assert_called_once_with(self.context, self.instance,
+                requested_networks, mock.ANY,
+                mock.ANY, network_arqs)
+            return resources
 
     @mock.patch.object(virt_driver.ComputeDriver,
                        'prepare_for_spawn')

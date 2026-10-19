@@ -8253,8 +8253,8 @@ class LibvirtDriver(driver.ComputeDriver):
         is_aarch64 = self._is_aarch64_guest(image_meta)
 
         if is_x86:
-            if guest.os_mach_type is not None and not (
-                    'q35' in guest.os_mach_type
+            if guest.os_mach_type is not None and (
+                'q35' not in guest.os_mach_type
             ):
                 arch = self._check_emulation_arch(image_meta)
                 mtype = guest.os_mach_type if (
@@ -8263,8 +8263,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidVIOMMUMachineType(
                     mtype=mtype, arch=arch)
         elif is_aarch64:
-            if guest.os_mach_type is not None and not (
-                    'virt' in guest.os_mach_type
+            if guest.os_mach_type is not None and (
+                'virt' not in guest.os_mach_type
             ):
                 arch = self._check_emulation_arch(image_meta)
                 mtype = guest.os_mach_type if (
