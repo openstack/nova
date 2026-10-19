@@ -3034,9 +3034,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 device_name=disk_dev,
             )
         except exception.InstanceNotFound:
-            # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
-            #                will throw InstanceNotFound exception. Need to
-            #                disconnect volume under this circumstance.
+            # NOTE(danms): If the instance does not exist, get_guest()
+            #              will throw InstanceNotFound exception. Need to
+            #              disconnect volume under this circumstance.
             LOG.warning("During detach_volume, instance disappeared.",
                         instance=instance)
         except exception.DeviceNotFound:
