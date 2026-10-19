@@ -1093,9 +1093,11 @@ class HypervisorsTestV253(HypervisorsTestV252):
             result = self.controller.index(req)
         index_with_servers = copy.deepcopy(self.INDEX_HYPER_DICTS)
         index_with_servers[0]['servers'] = [
-            {'name': 'instance-00000001', 'uuid': uuids.hyper1_instance1}]
+            {'name': 'instance-%s' % uuids.hyper1_instance1,
+             'uuid': uuids.hyper1_instance1}]
         index_with_servers[1]['servers'] = [
-            {'name': 'instance-00000002', 'uuid': uuids.hyper2_instance1}]
+            {'name': 'instance-%s' % uuids.hyper2_instance1,
+             'uuid': uuids.hyper2_instance1}]
         self.assertEqual(dict(hypervisors=index_with_servers), result)
         # instance_get_all_by_host is called for each hypervisor
         self.assertEqual(2, mock_inst_get_all.call_count)
@@ -1241,7 +1243,8 @@ class HypervisorsTestV253(HypervisorsTestV252):
             result = self.controller.show(req, hyper_id)
         show_with_servers = copy.deepcopy(self.DETAIL_HYPERS_DICTS[0])
         show_with_servers['servers'] = [
-            {'name': 'instance-00000001', 'uuid': uuids.hyper1_instance1}]
+            {'name': 'instance-%s' % uuids.hyper1_instance1,
+             'uuid': uuids.hyper1_instance1}]
         self.assertDictEqual(dict(hypervisor=show_with_servers), result)
         # instance_get_all_by_host is called
         mock_inst_get_all.assert_called_once_with(

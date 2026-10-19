@@ -592,8 +592,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected_calls = [mock.call(mock.ANY, instances[0].uuid),
                           mock.call(mock.ANY, instances[1].uuid)]
         mock_inst_by_uuid.assert_has_calls(expected_calls)
-        self.assertEqual(['instance-00000000', 'instance-00000001'],
-                         sorted(response))
+        self.assertEqual([inst.name for inst in instances], response)
 
     @mock.patch.object(ironic_driver.IronicDriver, '_refresh_cache')
     @mock.patch.object(objects.Instance, 'get_by_uuid')

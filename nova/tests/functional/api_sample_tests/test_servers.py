@@ -110,6 +110,11 @@ class ServersSampleJsonTest(ServersSampleBase):
     use_common_server_post = True
     microversion = None
 
+    def generalize_subs(self, subs, vanilla_regexes):
+        subs = super().generalize_subs(subs, vanilla_regexes)
+        subs['instance_name'] = 'instance-%s' % vanilla_regexes['uuid']
+        return subs
+
     def test_servers_post(self):
         return self._post_server(
             use_common_server_api_samples=self.use_common_server_post)
@@ -123,7 +128,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
-        subs['instance_name'] = r'instance-\d{8}'
+        subs['instance_name'] = 'instance-%s' % uuid
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['hostname'] = r'[\w\.\-]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
@@ -149,7 +154,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
-        subs['instance_name'] = r'instance-\d{8}'
+        subs['instance_name'] = 'instance-%s' % uuid
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['hostname'] = r'[\w\.\-]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
@@ -266,7 +271,7 @@ class ServersSampleJson263Test(ServersSampleBase):
         super(ServersSampleJson263Test, self).setUp()
         self.common_subs = {
             'hostid': '[a-f0-9]+',
-            'instance_name': r'instance-\d{8}',
+            'instance_name': 'instance-%s' % self._get_regexes()['uuid'],
             'hypervisor_hostname': r'[\w\.\-]+',
             'hostname': r'[\w\.\-]+',
             'access_ip_v4': '1.2.3.4',
@@ -335,7 +340,7 @@ class ServersSampleJson266Test(ServersSampleBase):
         super(ServersSampleJson266Test, self).setUp()
         self.common_subs = {
             'hostid': '[a-f0-9]+',
-            'instance_name': r'instance-\d{8}',
+            'instance_name': 'instance-%s' % self._get_regexes()['uuid'],
             'hypervisor_hostname': r'[\w\.\-]+',
             'hostname': r'[\w\.\-]+',
             'access_ip_v4': '1.2.3.4',
@@ -440,7 +445,7 @@ class ServersSampleJson271Test(ServersSampleBase):
         super(ServersSampleJson271Test, self).setUp()
         self.common_subs = {
             'hostid': '[a-f0-9]+',
-            'instance_name': r'instance-\d{8}',
+            'instance_name': 'instance-%s' % self._get_regexes()['uuid'],
             'hypervisor_hostname': r'[\w\.\-]+',
             'hostname': r'[\w\.\-]+',
             'access_ip_v4': '1.2.3.4',

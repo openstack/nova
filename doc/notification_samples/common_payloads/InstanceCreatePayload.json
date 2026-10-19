@@ -18,7 +18,7 @@
     ],
     "tags": ["tag"],
     "trusted_image_certificates": ["cert-id-1", "cert-id-2"],
-    "instance_name": "instance-00000001"
+    "instance_name": "instance-178b0921-8f85-4257-88b6-2e743b5a975c"
   },
   "nova_object.name": "InstanceCreatePayload",
   "nova_object.version": "1.13"

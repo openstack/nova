@@ -1270,6 +1270,19 @@ class _TestInstanceObject(object):
                                inst.destroy, hard_delete=True)
         self.assertIn('host changed', str(ex))
 
+    def test_name_default(self):
+        inst = objects.Instance(id=1, uuid=uuids.instance)
+        self.assertEqual('instance-%s' % uuids.instance, inst.name)
+
+        # Database IDs can change when moving an instance between cells.
+        inst.id = 2
+        self.assertEqual('instance-%s' % uuids.instance, inst.name)
+
+    def test_name_legacy_template(self):
+        self.flags(instance_name_template='instance-%08x')
+        inst = objects.Instance(id=10, uuid=uuids.instance)
+        self.assertEqual('instance-0000000a', inst.name)
+
     def test_name_does_not_trigger_lazy_loads(self):
         values = {'user_id': self.context.user_id,
                   'project_id': self.context.project_id,

@@ -465,11 +465,14 @@ class TestInstanceNotificationSample(
             'instance-delete-end'
         ]
         for idx, notification in enumerate(expected_notifications):
+            replacements = {
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']}
+            if notification.startswith('instance-create-'):
+                replacements['instance_name'] = 'instance-%s' % server['id']
             self._verify_notification(
                 notification,
-                replacements={
-                    'reservation_id': server['reservation_id'],
-                    'uuid': server['id']},
+                replacements=replacements,
                 actual=self.notifier.versioned_notifications[idx])
 
     @mock.patch('nova.compute.manager.ComputeManager._build_resources')
@@ -501,12 +504,14 @@ class TestInstanceNotificationSample(
             'instance-create-start',
             replacements={
                 'reservation_id': server['reservation_id'],
+                'instance_name': 'instance-%s' % server['id'],
                 'uuid': server['id']},
             actual=self.notifier.versioned_notifications[2])
         self._verify_notification(
             'instance-create-error',
             replacements={
                 'reservation_id': server['reservation_id'],
+                'instance_name': 'instance-%s' % server['id'],
                 'uuid': server['id'],
                 'fault.traceback': self.ANY},
             actual=self.notifier.versioned_notifications[3])

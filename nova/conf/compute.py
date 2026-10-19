@@ -1556,24 +1556,26 @@ Possible values:
   they are not ready to use.
 """),
     cfg.StrOpt('instance_name_template',
-         default='instance-%08x',
+         default='instance-%(uuid)s',
          help="""
 Template string to be used to generate instance names.
 
 This template controls the creation of the database name of an instance. This
 is *not* the display name you enter when creating an instance (via Horizon
-or CLI). For a new deployment it is advisable to change the default value
-(which uses the database autoincrement) to another value which makes use
-of the attributes of an instance, like ``instance-%(uuid)s``. If you
-already have instances in your deployment when you change this, your
-deployment will break.
+or CLI). Changes to this value will take effect when an instance is hard-
+rebooted or live-migrated. It is recommended that this be set to the same
+value across all compute nodes in the deployment, and to something that is
+stable across cells (like the default value is). When live migrating, the
+config of the source will determine the value the instance gets on the
+destination and thus a consistent (over the long-term) application of this
+across all computes is recommended.
 
 Possible values:
 
 * A string which either uses the instance database ID (like the
   default)
-* A string with a list of named database columns, for example ``%(id)d``
-  or ``%(uuid)s`` or ``%(hostname)s``.
+* A string with a list of named instance object attributes, for example
+  ``%(id)d`` or ``%(uuid)s`` or ``%(hostname)s``.
 """),
 ]
 
