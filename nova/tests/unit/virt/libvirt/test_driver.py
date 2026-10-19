@@ -13739,6 +13739,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disk_paths = ['vda', 'vdb']
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         params = {
+            'destination_name': instance_ref.name,
             'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': disk_paths,
             'bandwidth': _bandwidth,
@@ -13780,6 +13781,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**instance_dict)
 
         params = {
+            'destination_name': instance.name,
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
         }
         migrate_data = objects.LibvirtLiveMigrateData(
@@ -13851,6 +13853,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         disk_paths = ['vda', 'vdb']
         params = {
+            'destination_name': instance_ref.name,
             'migrate_disks': disk_paths,
             'migrate_uri': 'tcp://127.0.0.2',
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
@@ -14020,6 +14023,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         disk_paths = ['vda', 'vdb']
         params = {
+            'destination_name': instance_ref.name,
             'migrate_disks': disk_paths,
             'migrate_uri': 'tcp://127.0.0.2',
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
@@ -14403,6 +14407,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         disk_paths = ['vda', 'vdb']
         params = {
+            'destination_name': instance_ref.name,
             'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': ['vda', 'vdb'],
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
@@ -14494,6 +14499,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         instance = objects.Instance(**self.test_instance)
+        params['destination_name'] = instance.name
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance, target_connection,
@@ -14501,6 +14507,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_migrateToURI3.assert_called_once_with(
             drvr._live_migration_uri(target_connection),
             params=params, flags=0)
+
+    @ddt.data(False, True)
+    @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml')
+    def test_live_migration_updates_domain_name(self, block_migration,
+                                               mock_new_xml):
+        instance = objects.Instance(**self.test_instance)
+        old_name = instance.name
+        domain = mock.Mock(spec=fakelibvirt.virDomain)
+        domain.name.return_value = old_name
+        guest = libvirt_guest.Guest(domain)
+        xml = '<domain><name>%s</name></domain>' % old_name
+        mock_new_xml.return_value = xml
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        migrate_data = objects.LibvirtLiveMigrateData(
+            block_migration=block_migration, serial_listen_addr=None,
+            target_connect_addr=None, bdms=[])
+
+        self.flags(instance_name_template='renamed-%(uuid)s')
+        new_name = 'renamed-%s' % instance.uuid
+        self.assertNotEqual(old_name, new_name)
+
+        drvr._live_migration_operation(
+            self.context, instance, 'dest', block_migration,
+            migrate_data, guest, [])
+
+        domain.migrateToURI3.assert_called_once_with(
+            drvr._live_migration_uri('dest'), flags=0,
+            params={'bandwidth': CONF.libvirt.live_migration_bandwidth,
+                    'destination_name': new_name,
+                    'destination_xml': xml, 'persistent_xml': xml})
 
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
@@ -14534,6 +14570,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         params = {
             'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': device_names,
+            'destination_name': instance.name,
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': '<xml/>',
             'persistent_xml': '<xml/>',
@@ -14600,6 +14637,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._parse_migration_flags()
         instance = objects.Instance(**self.test_instance)
+        params['destination_name'] = instance.name
         drvr._live_migration_operation(self.context, instance,
                                        target_connection, True, migrate_data,
                                        guest, device_names)
@@ -14647,6 +14685,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._parse_migration_flags()
         instance = objects.Instance(**self.test_instance)
+        params['destination_name'] = instance.name
         drvr._live_migration_operation(self.context, instance,
                                        target_connection, True, migrate_data,
                                        guest, disk_paths)
@@ -14677,6 +14716,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._parse_migration_flags()
         instance = objects.Instance(**self.test_instance)
+        params['destination_name'] = instance.name
         instance.vm_state = vm_states.PAUSED
 
         drvr._live_migration_operation(self.context, instance, 'dest',
@@ -14720,6 +14760,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._parse_migration_flags()
         instance = objects.Instance(**self.test_instance)
+        params['destination_name'] = instance.name
         drvr._live_migration_operation(self.context, instance,
                                        target_connection, True, migrate_data,
                                        guest, disk_paths)
@@ -14748,6 +14789,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         disk_paths = ['vda', 'vdb']
         params = {
+            'destination_name': instance_ref.name,
             'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': disk_paths,
             'bandwidth': CONF.libvirt.live_migration_bandwidth,

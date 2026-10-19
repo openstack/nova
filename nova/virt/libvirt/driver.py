@@ -11573,7 +11573,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 migrate_disks=device_names,
                 destination_xml=new_xml_str,
                 bandwidth=CONF.libvirt.live_migration_bandwidth,
-                parallel=CONF.libvirt.live_migration_parallel_connections)
+                parallel=CONF.libvirt.live_migration_parallel_connections,
+                destination_name=instance.name)
             LOG.debug("Migrate API has completed", instance=instance)
 
             for hostname, port in serial_ports:
