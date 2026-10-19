@@ -609,10 +609,10 @@ class LibvirtDriver(driver.ComputeDriver):
             return {}, {}
 
         # vpmem keyed by name {name: objects.LibvirtVPMEMDevice,...}
-        vpmems_by_name: dict[str, 'objects.LibvirtVPMEMDevice'] = {}
+        vpmems_by_name: dict[str, objects.LibvirtVPMEMDevice] = {}
         # vpmem list keyed by resource class
         # {'RC_0': [objects.LibvirtVPMEMDevice, ...], 'RC_1': [...]}
-        vpmems_by_rc: dict[str, list['objects.LibvirtVPMEMDevice']] = (
+        vpmems_by_rc: dict[str, list[objects.LibvirtVPMEMDevice]] = (
             collections.defaultdict(list)
         )
 
@@ -7318,7 +7318,7 @@ class LibvirtDriver(driver.ComputeDriver):
         instance: 'objects.Instance',
         image_meta: 'objects.ImageMeta',
         flavor: 'objects.Flavor',
-        old_guest: ty.Optional[vconfig.LibvirtConfigGuest] = None,
+        old_guest: vconfig.LibvirtConfigGuest | None = None,
     ) -> None:
         if CONF.libvirt.virt_type in ("kvm", "qemu"):
             caps = self._host.get_capabilities()
@@ -8253,7 +8253,8 @@ class LibvirtDriver(driver.ComputeDriver):
         is_aarch64 = self._is_aarch64_guest(image_meta)
 
         if is_x86:
-            if guest.os_mach_type is not None and (
+            if (
+                guest.os_mach_type is not None and
                 'q35' not in guest.os_mach_type
             ):
                 arch = self._check_emulation_arch(image_meta)
@@ -8263,7 +8264,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidVIOMMUMachineType(
                     mtype=mtype, arch=arch)
         elif is_aarch64:
-            if guest.os_mach_type is not None and (
+            if (
+                guest.os_mach_type is not None and
                 'virt' not in guest.os_mach_type
             ):
                 arch = self._check_emulation_arch(image_meta)
@@ -8325,7 +8327,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_existing_guest_config(
         self,
         instance: 'objects.Instance',
-    ) -> ty.Optional[vconfig.LibvirtConfigGuest]:
+    ) -> vconfig.LibvirtConfigGuest | None:
         guest_config = None
         try:
             guest = self._host.get_guest(instance)
@@ -9853,7 +9855,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # otherwise.
         inv = provider_tree.data(nodename).inventory
         ratios = self._get_allocation_ratios(inv)
-        resources: dict[str, set['objects.Resource']] = (
+        resources: dict[str, set[objects.Resource]] = (
             collections.defaultdict(set)
         )
 
@@ -10930,7 +10932,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return migrate_data
 
     def _get_resources(self, instance, prefix=None):
-        resources: 'objects.ResourceList' = []
+        resources: objects.ResourceList = []
         if prefix:
             migr_context = instance.migration_context
             attr_name = prefix + 'resources'

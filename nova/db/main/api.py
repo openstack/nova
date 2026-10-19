@@ -1918,7 +1918,7 @@ def _model_get_uuid_by_sort_filters(context, model, sort_keys, sort_dirs,
         crit_attrs = []
         for equal_attr in range(0, key_index):
             crit_attrs.append(
-                (getattr(model, sort_keys[equal_attr]) == values[equal_attr]))
+                getattr(model, sort_keys[equal_attr]) == values[equal_attr])
 
         model_attr = getattr(model, skey)
         if isinstance(model_attr.type, sa.Boolean):

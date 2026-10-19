@@ -49,7 +49,7 @@ def _manilaclient(context, admin=False):
 
 
 @dataclass(frozen=True)
-class Share():
+class Share:
     id: str
     size: int
     availability_zone: str | None
@@ -88,7 +88,7 @@ class Share():
 
 
 @dataclass(frozen=True)
-class Access():
+class Access:
     id: str
     access_level: str
     state: str

@@ -125,8 +125,7 @@ class ExtendedIpsMacTestV21(test.TestCase):
 
     def _get_ips(self, server):
         for network in server['addresses'].values():
-            for ip in network:
-                yield ip
+            yield from network
 
     def assertServerStates(self, server):
         results = []

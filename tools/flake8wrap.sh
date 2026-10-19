@@ -15,8 +15,10 @@ if test "x$1" = "x-HEAD" ; then
     echo "Running flake8 on ${files}"
     echo ""
     flake8 "$@" $files
+    ruff check $files
 else
     echo "Running flake8 on all files"
     echo ""
-    exec flake8 "$@"
+    flake8 "$@"
+    ruff check
 fi

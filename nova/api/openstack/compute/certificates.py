@@ -38,7 +38,7 @@ class CertificatesController(wsgi.Controller):
         """Return certificate information."""
         raise webob.exc.HTTPGone()
 
-    @wsgi.expected_errors((410))
+    @wsgi.expected_errors(410)
     @wsgi.removed('16.0.0', _removal_reason)
     @validation.schema(schema.create)
     @validation.response_body_schema(schema.create_response)

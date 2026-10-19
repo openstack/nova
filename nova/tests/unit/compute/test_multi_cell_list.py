@@ -142,8 +142,7 @@ class TestUtils(test.NoDBTestCase):
 
     def test_query_wrapper_success(self):
         def test(ctx, data):
-            for thing in data:
-                yield thing
+            yield from data
 
         lister = TestLister([], [], [])
         self.assertEqual([1, 2, 3],

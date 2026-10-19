@@ -1470,9 +1470,9 @@ class ComputeManager(manager.Manager):
         for node in nodes:
             if node.hypervisor_hostname != node_ids.get(node.uuid):
                 raise exception.InvalidConfiguration(
-                    ('My compute node %s has hypervisor_hostname %s '
-                     'but virt driver reports it should be %s. Possible '
-                     'rename detected, refusing to start!') % (
+                    'My compute node %s has hypervisor_hostname %s '
+                    'but virt driver reports it should be %s. Possible '
+                    'rename detected, refusing to start!' % (
                          node.uuid, node.hypervisor_hostname,
                          node_ids.get(node.uuid)))
 
@@ -1493,9 +1493,9 @@ class ComputeManager(manager.Manager):
             # have a UUID file already, as this is not our first time starting.
             if nova.virt.node.read_local_node_uuid() is None:
                 raise exception.InvalidConfiguration(
-                    ('No local node identity found, but this is not our '
-                     'first startup on this host. Refusing to start after '
-                     'potentially having lost that state!'))
+                    'No local node identity found, but this is not our '
+                    'first startup on this host. Refusing to start after '
+                    'potentially having lost that state!')
             return
 
         if nova.virt.node.read_local_node_uuid():
@@ -1509,11 +1509,10 @@ class ComputeManager(manager.Manager):
             # know of) and thus have no need to record an existing
             # UUID. That is probably strange, so log a warning.
             raise exception.InvalidConfiguration(
-                ('Upgrading from service version %i but found no '
-                 'nodes in the database for host %s to persist '
-                 'locally; Possible rename detected, '
-                 'refusing to start!') % (
-                        service_ref.version, self.host))
+                'Upgrading from service version %i but found no '
+                'nodes in the database for host %s to persist '
+                'locally; Possible rename detected, '
+                'refusing to start!' % (service_ref.version, self.host))
 
         if len(db_nodes) > 1:
             # If this happens we can't do the right thing, so raise an

@@ -2174,8 +2174,7 @@ class UnifiedLimitsFixture(fixtures.Fixture):
         if resource_name:
             registered_limits_list = [rl for rl in registered_limits_list
                                       if rl.resource_name == resource_name]
-        for registered_limit in registered_limits_list:
-            yield registered_limit
+        yield from registered_limits_list
 
     def limits(
             self, project_id=None, region_id=None, resource_name=None,
@@ -2190,8 +2189,7 @@ class UnifiedLimitsFixture(fixtures.Fixture):
         if resource_name:
             limits_list = [pl for pl in limits_list
                            if pl.resource_name == resource_name]
-        for limit in limits_list:
-            yield limit
+        yield from limits_list
 
     def create_registered_limit(self, **attrs):
         rl = collections.namedtuple(

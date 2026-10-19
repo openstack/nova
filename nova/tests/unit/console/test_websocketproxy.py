@@ -604,7 +604,7 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         # redirect. It should be rejected.
         mock_req = mock.MagicMock()
         mock_req.makefile().readline.side_effect = [
-            f'GET {url} HTTP/1.1\r\n'.encode('utf-8'),
+            f'GET {url} HTTP/1.1\r\n'.encode(),
             b''
         ]
 

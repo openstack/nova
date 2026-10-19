@@ -38,8 +38,7 @@ fake_nodes = [
 
 
 def nodes(*args, **kwargs):
-    for fake_node in fake_nodes:
-        yield fake_node
+    yield from fake_nodes
 
 
 def get_node(*args, **kwargs):

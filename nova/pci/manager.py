@@ -274,8 +274,8 @@ class PciDevTracker(object):
             else:
                 # Update tracked devices.
                 new_value: dict[str, ty.Any]
-                new_value = next((dev for dev in devices if
-                    dev['address'] == existed.address))
+                new_value = next(dev for dev in devices if
+                    dev['address'] == existed.address)
                 new_value['compute_node_id'] = self.node_id
                 if existed.status in (fields.PciDeviceStatus.CLAIMED,
                                       fields.PciDeviceStatus.ALLOCATED):

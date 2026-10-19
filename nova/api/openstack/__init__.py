@@ -41,8 +41,7 @@ def walk_class_hierarchy(clazz, encountered=None):
         if subclass not in encountered:
             encountered.append(subclass)
             # drill down to leaves first
-            for subsubclass in walk_class_hierarchy(subclass, encountered):
-                yield subsubclass
+            yield from walk_class_hierarchy(subclass, encountered)
             yield subclass
 
 

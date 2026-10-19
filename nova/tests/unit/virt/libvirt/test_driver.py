@@ -8850,7 +8850,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         # Just a fake class to check result
 
-        class PciDevice():
+        class PciDevice:
             managed = None
 
         pcidev = PciDevice()

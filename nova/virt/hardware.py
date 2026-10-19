@@ -768,7 +768,7 @@ def _sort_possible_cpu_topologies(possible, wanttopology):
     # We don't use python's sort(), since we want to
     # preserve the sorting done when populating the
     # 'possible' list originally
-    scores: dict[int, list['objects.VirtCPUTopology']] = (
+    scores: dict[int, list[objects.VirtCPUTopology]] = (
         collections.defaultdict(list)
     )
     for topology in possible:
@@ -2826,8 +2826,8 @@ def numa_fit_instance_to_host(
     fit_cache = set()
     for host_cell_perm in itertools.permutations(
             host_cells, len(instance_topology)):
-        chosen_instance_cells: list['objects.InstanceNUMACell'] = []
-        chosen_host_cells: list['objects.NUMACell'] = []
+        chosen_instance_cells: list[objects.InstanceNUMACell] = []
+        chosen_host_cells: list[objects.NUMACell] = []
         for host_cell, instance_cell in zip(
                 host_cell_perm, instance_topology.cells):
 

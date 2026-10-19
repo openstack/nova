@@ -574,8 +574,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         if old_status == fields.PciDeviceStatus.ALLOCATED and instance:
             # Notes(yjiang5): remove this check when instance object for
             # compute manager is finished
-            existed = next((dev for dev in instance['pci_devices']
-                if dev.id == self.id))
+            existed = next(dev for dev in instance['pci_devices']
+                if dev.id == self.id)
             if isinstance(instance, dict):
                 instance['pci_devices'].remove(existed)
             else:

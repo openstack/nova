@@ -20,7 +20,7 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class ManilaShare():
+class ManilaShare:
     def __init__(self, share_id, proto="NFS"):
         self.id = share_id
         self.size = 1
@@ -39,7 +39,7 @@ class ManilaShare():
         self.is_public = True
 
 
-class ManilaAccess():
+class ManilaAccess:
     def __init__(self, access_type="ip", access_to=None):
         self.access_level = "rw"
         self.state = "active"
