@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Adds a new ``[glance] preferred_stores`` configuration option. The option
+    is an ordered list of Glance store identifiers that Nova passes to Glance
+    when downloading an image, allowing deployments with replicated images to
+    prefer a local or co-located store.

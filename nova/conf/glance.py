@@ -146,6 +146,17 @@ Related options:
 * :oslo.config:option:`glance.rbd_ceph_conf`
 * :oslo.config:option:`libvirt.images_type`
 """),
+    cfg.ListOpt('preferred_stores',
+        default=[],
+        help="""
+Ordered list of preferred Glance stores for downloading an image.
+
+The stores are tried in the order they are listed. If none of the preferred
+stores has the image, Glance selects a store using its own configuration.
+
+.. note:: This option requires Glance API support for the ``prefer`` image
+          data query parameter and configured multi-store backends.
+"""),
     cfg.StrOpt('rbd_user',
         default='',
         help="""

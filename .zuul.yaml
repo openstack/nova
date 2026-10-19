@@ -174,7 +174,9 @@
       This job also explicitly sets eventlet mode for all nova services to keep
       testing eventlet mode even after the default is set to native threading
       for some services. This job also tests spice support in the libvirt
-      driver and uses debian 13 with a default python versions of 3.13
+      driver and uses debian 13 with a default python versions of 3.13.
+      The job also configures Glance multi-store and Nova preferred Glance
+      stores.
     required-projects:
       - novnc/novnc
     irrelevant-files: &nova-base-irrelevant-files
@@ -251,6 +253,8 @@
           $NOVA_CPU_CONF:
               compute:
                 heal_instance_info_cache_interval: 60
+              glance:
+                preferred_stores: fast
           $NOVA_CONF:
             vnc:
               ssl_only: true
@@ -258,6 +262,15 @@
               ssl_only: true
             DEFAULT:
               concurrency_backend: eventlet
+          $GLANCE_API_CONF:
+            DEFAULT:
+              enabled_backends: "fast:file, web:http"
+            glance_store:
+              default_backend: fast
+            fast:
+              filesystem_store_datadir: /opt/stack/data/glance/fast/
+            web:
+              https_insecure: false
     group-vars:
       subnode:
         devstack_localrc:

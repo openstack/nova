@@ -508,7 +508,27 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         self.assertFalse(show_mock.called)
         self.assertFalse(open_mock.called)
         client.call.assert_called_once_with(
-            ctx, 2, 'data', args=(mock.sentinel.image_id,))
+            ctx, 2, 'data', args=(mock.sentinel.image_id,),
+            kwargs={'prefer': []})
+        self.assertEqual(mock.sentinel.image_chunks, res)
+
+    @mock.patch('builtins.open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_preferred_stores_v2(self, show_mock, open_mock):
+        self.flags(preferred_stores=['local-store', 'regional-store'],
+                   group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = fake_glance_response(
+            mock.sentinel.image_chunks)
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id)
+
+        self.assertFalse(show_mock.called)
+        self.assertFalse(open_mock.called)
+        client.call.assert_called_once_with(
+            ctx, 2, 'data', args=(mock.sentinel.image_id,),
+            kwargs={'prefer': ['local-store', 'regional-store']})
         self.assertEqual(mock.sentinel.image_chunks, res)
 
     @mock.patch('builtins.open')
@@ -543,7 +563,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         self.assertFalse(show_mock.called)
         self.assertFalse(open_mock.called)
         client.call.assert_called_once_with(
-            ctx, 2, 'data', args=(mock.sentinel.image_id,))
+            ctx, 2, 'data', args=(mock.sentinel.image_id,),
+            kwargs={'prefer': []})
         self.assertIsNone(res)
         data.write.assert_has_calls(
                 [
@@ -570,7 +591,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
         self.assertFalse(show_mock.called)
         client.call.assert_called_once_with(
-            ctx, 2, 'data', args=(mock.sentinel.image_id,))
+            ctx, 2, 'data', args=(mock.sentinel.image_id,),
+            kwargs={'prefer': []})
         open_mock.assert_called_once_with(mock.sentinel.dst_path, 'wb')
         fsync_mock.assert_called_once_with(writer)
         self.assertIsNone(res)
@@ -601,7 +623,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         self.assertFalse(show_mock.called)
         self.assertFalse(open_mock.called)
         client.call.assert_called_once_with(
-            ctx, 2, 'data', args=(mock.sentinel.image_id,))
+            ctx, 2, 'data', args=(mock.sentinel.image_id,),
+            kwargs={'prefer': []})
         self.assertIsNone(res)
         data.write.assert_has_calls(
                 [
@@ -766,7 +789,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                             mock.sentinel.dst_path,
                                             mock.sentinel.loc_meta)
         client.call.assert_called_once_with(
-            ctx, 2, 'data', args=(mock.sentinel.image_id,))
+            ctx, 2, 'data', args=(mock.sentinel.image_id,),
+            kwargs={'prefer': []})
         fsync_mock.assert_called_once_with(writer)
         # NOTE(jaypipes): log messages call open() in part of the
         # download path, so here, we just check that the last open()
@@ -816,7 +840,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                           include_locations=True)
         get_tran_mock.assert_called_once_with('funky')
         client.call.assert_called_once_with(
-            ctx, 2, 'data', args=(mock.sentinel.image_id,))
+            ctx, 2, 'data', args=(mock.sentinel.image_id,),
+            kwargs={'prefer': []})
         fsync_mock.assert_called_once_with(writer)
         # NOTE(jaypipes): log messages call open() in part of the
         # download path, so here, we just check that the last open()

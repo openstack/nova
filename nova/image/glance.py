@@ -372,8 +372,9 @@ class GlanceImageServiceV2(object):
         # By default (or if direct download has failed), use glance client call
         # to fetch the image and fill image_chunks
         try:
+            kwargs = {'prefer': CONF.glance.preferred_stores}
             image_chunks = self._client.call(
-                context, 2, 'data', args=(image_id,))
+                context, 2, 'data', args=(image_id,), kwargs=kwargs)
         except Exception:
             _reraise_translated_image_exception(image_id)
 
