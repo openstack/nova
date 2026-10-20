@@ -27,6 +27,7 @@ import sqlite3
 import sys
 import tempfile
 import threading
+import time
 import traceback
 from unittest import mock
 import warnings
@@ -1270,10 +1271,96 @@ class IsolatedExecutorFixture(fixtures.Fixture):
 
         self.addCleanup(self._cleanup_executors)
 
+    # It shutdown all the executors test has created so that new fresh
+    # executors are available for the next test. We want to catch test
+    # who are leaving the in-progress tasks at this cleanup stage, if
+    # so then this timeout will help to fail such tests instead of hanging
+    # in executors to finish all the pending tasks. Some cleanup tasks
+    # might be needed and running in executors so let's not fail test
+    # immediately instead wait for EXECUTORS_SHUTDOWN_TIMEOUT (10 sec)
+    # before failing the tests. This is not per executor shutdown time
+    # but shutdown timeout for all the executors test created.
+    EXECUTORS_SHUTDOWN_TIMEOUT = 10
+
+    def _reset_all_executors(self, executors):
+        threading_executors = [
+            e for e in executors if isinstance(e, futurist.ThreadPoolExecutor)
+        ]
+
+        # NOTE(gmaan): Stop every threading executor from accepting any
+        # more work before we start polling for pending tasks below.
+        for executor in threading_executors:
+            executor.shutdown(wait=False)
+
+        def _get_executors_with_pending_tasks():
+            # TODO(gmaan): Once we have futurist public interface to know the
+            # state of queue, we can stop using its internal variable.
+            return [e for e in threading_executors
+                    if e._work_queue.unfinished_tasks
+            ]
+
+        LOG.info('%s: executors cleanup started, waiting up to %ss for '
+                 'pending tasks of executors %s',
+                 self.test_case_id, self.EXECUTORS_SHUTDOWN_TIMEOUT,
+                 [e.name for e in threading_executors])
+        start = time.monotonic()
+        deadline = start + self.EXECUTORS_SHUTDOWN_TIMEOUT
+        while True:
+            active_executors = _get_executors_with_pending_tasks()
+            if not active_executors or time.monotonic() >= deadline:
+                break
+            time.sleep(0.05)
+
+        # If executors still has tasks to finish after timeout
+        # then clean executors manually and fail the tests.
+        if active_executors:
+            LOG.warning('%s: executors cleanup timed out after %.2fs, '
+                        'executors %s still have tasks running or tasks '
+                        'waiting for a free worker thread',
+                        self.test_case_id, time.monotonic() - start,
+                        [e.name for e in active_executors])
+            thread_pool_factory.FACTORY._all_executors.clear()
+            for executor in active_executors:
+                queued_tasks = [
+                    getattr(item.fn, '__name__', repr(item.fn))
+                    for item in list(executor._work_queue.queue)
+                    if item is not None
+                ]
+                if queued_tasks:
+                    LOG.warning(
+                        '%s: executor %s has tasks waiting for a free '
+                        'worker thread: %s',
+                        self.test_case_id, executor.name, queued_tasks)
+                for worker in executor._workers:
+                    if worker.is_alive():
+                        stack = ''
+                        frame = sys._current_frames().get(worker.ident)
+                        if frame:
+                            stack = ''.join(traceback.format_stack(frame))
+                        LOG.warning(
+                            '%s: worker %s of executor %s did not finish '
+                            'in %ss, it is still running:\n%s',
+                            self.test_case_id, worker.name, executor.name,
+                            self.EXECUTORS_SHUTDOWN_TIMEOUT, stack)
+                    # A hanged executor still run in background and will hang
+                    # the test process so we need to cleanup the executor's
+                    # worker manually.
+                    # TODO(gmaan): need to avoid accessing internal variable
+                    # from futurist, instead futurist should provide some
+                    # public interface.
+                    # https://bugs.launchpad.net/futurist/+bug/2168924
+                    futurist._thread._to_be_cleaned.pop(worker, None)
+            raise RuntimeError(
+                f'{self.test_case_id}: the executors still have tasks that '
+                f'did not finish in {self.EXECUTORS_SHUTDOWN_TIMEOUT}s')
+        else:
+            thread_pool_factory.reset_all_executors()
+            LOG.info('%s: executors cleanup finished in %.2fs',
+                     self.test_case_id, time.monotonic() - start)
+
     def _cleanup_executors(self):
         executors = list(thread_pool_factory.FACTORY._all_executors.values())
-        # reset_all_executors call shutdown(wait=True) for all executors.
-        thread_pool_factory.reset_all_executors()
+        self._reset_all_executors(executors)
         for executor in executors:
             # NOTE(gibi): we cannot rely on utils.concurrency_mode_threading
             # as that might have been mocked during the test when the executor
