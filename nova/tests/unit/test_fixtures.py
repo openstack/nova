@@ -14,13 +14,17 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import contextlib
 import copy
 import datetime
 import io
+import threading
 import unittest
 from unittest import mock
 
+import ddt
 import fixtures as fx
+from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
@@ -528,11 +532,98 @@ class TestDownCellFixture(test.TestCase):
             self.assertEqual(inst2.uuid, result.uuid)
 
 
+@ddt.ddt
 class TestNeutronFixture(test.NoDBTestCase):
 
     def setUp(self):
         super(TestNeutronFixture, self).setUp()
         self.neutron = self.useFixture(fixtures.NeutronFixture(self))
+
+    @ddt.data('list', 'show')
+    def test_port_snapshot_during_update(self, operation):
+        copying = threading.Event()
+        resume_copy = threading.Event()
+        update_attempted = threading.Event()
+        lock_events = []
+        real_lock = lockutils.lock
+
+        @contextlib.contextmanager
+        def observed_lock(*args, **kwargs):
+            # Signal at the writer's lock boundary, not after it has acquired
+            # the lock: the reader must still be holding it at this point.
+            if copying.is_set():
+                update_attempted.set()
+            with real_lock(*args, **kwargs) as lock:
+                lock_events.append('acquired')
+                try:
+                    yield lock
+                finally:
+                    lock_events.append('released')
+
+        class CopyCheckpoint:
+            def __deepcopy__(self, memo):
+                if copying.is_set():
+                    return 'copied'
+                copying.set()
+                if not resume_copy.wait(timeout=5):
+                    raise AssertionError('Port snapshot was not resumed')
+                return 'copied'
+
+        port_id = self.neutron.port_1['id']
+        self.neutron._ports[port_id]['copy_checkpoint'] = CopyCheckpoint()
+
+        def read_port():
+            if operation == 'list':
+                return self.neutron.list_ports(
+                    True, id=port_id)['ports'][0]
+            return self.neutron.show_port(port_id)['port']
+
+        def update_port():
+            try:
+                self.neutron.update_port(
+                    port_id, {'port': {'new_attribute': 'updated'}})
+            finally:
+                # Without synchronization the update finishes immediately;
+                # resuming the reader then reproduces the deepcopy failure.
+                update_attempted.set()
+
+        with mock.patch.object(
+            lockutils, 'lock', autospec=True, side_effect=observed_lock,
+        ):
+            reader = thread_pool_factory.spawn(read_port)
+            writer = None
+            try:
+                self.assertTrue(copying.wait(timeout=5))
+                # Add a new key while deepcopy is iterating the port dict.
+                writer = thread_pool_factory.spawn(update_port)
+                self.assertTrue(update_attempted.wait(timeout=5))
+            finally:
+                resume_copy.set()
+                try:
+                    snapshot = reader.result(timeout=5)
+                finally:
+                    if writer is not None:
+                        writer.result(timeout=5)
+
+        self.assertEqual(
+            ['acquired', 'released', 'acquired', 'released'], lock_events)
+        self.assertNotIn('new_attribute', snapshot)
+        updated_port = self.neutron.show_port(port_id)['port']
+        self.assertEqual('updated', updated_port['new_attribute'])
+
+    @ddt.data('create', 'show')
+    def test_port_binding_response_is_copy(self, operation):
+        port_id = self.neutron.port_1['id']
+        binding = self.neutron.create_port_binding(
+            port_id, {'binding': {'host': 'host1'}})
+        if operation == 'show':
+            binding = self.neutron.show_port_binding(port_id, 'host1')
+
+        binding['binding']['status'] = 'INACTIVE'
+        binding['binding']['vif_details']['new_attribute'] = 'changed'
+        stored = self.neutron.show_port_binding(port_id, 'host1')['binding']
+        self.assertEqual('ACTIVE', stored['status'])
+        self.assertNotIn('new_attribute', stored['vif_details'])
 
     def test_list_ports_with_resource_request_non_admin_client(self):
         ctxt = context.get_context()
