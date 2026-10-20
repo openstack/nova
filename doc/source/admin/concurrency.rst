@@ -11,32 +11,20 @@ up support for the native threading mode.
 
 .. __: https://governance.openstack.org/tc/goals/selected/remove-eventlet.html
 
-.. note::
-
-   Native threading mode is now the default and considered production-ready for
-   all services except the console proxy services (nova-novncproxy,
-   nova-serialproxy, nova-spicehtml5proxy). For the console proxy services,
-   native threading mode is available but still experimental. Please ensure
-   you test the threading mode in pre-production before deploying to a production
-   environment. If you do so please let us know how it went on the mailing list
-   openstack-discuss@lists.openstack.org.
-
 .. warning::
 
    Eventlet based concurrency mode is deprecated and will be removed in a
-   future release, not earlier than 2027.2. Native threading is now the default
-   and recommended mode for all Nova services except the console proxy services
-   (nova-novncproxy, nova-serialproxy, nova-spicehtml5proxy) which still
-   default to eventlet mode and require explicit configuration to enable native
-   threading.
+   future release, not earlier than 2027.2. Native threading is now the
+   default and recommended mode for all Nova services. Only the CLI entry
+   points (nova-manage, nova-policy, nova-status) still default to eventlet
+   mode.
 
 Selecting concurrency mode for a service
 ----------------------------------------
 
-Since nova 34.0.0 (2026.2 Hibiscus) the nova-scheduler, nova-api,
-nova-metadata, nova-conductor, and nova-compute are using native threading by
-default. The rest of the services are using eventlet by default in this
-release.
+Since nova 35.0.0 (2027.1 Indri) all Nova services are using native threading
+by default. Only the CLI entry points (nova-manage, nova-policy, nova-status)
+are still using eventlet by default in this release.
 
 The concurrency mode can be configured in two ways: via a configuration option
 or an environment variable. When both are set the environment variable takes
@@ -51,10 +39,9 @@ file. It accepts the following values:
 
 ``auto`` (default)
     Each Nova binary applies its own built-in deployment default. On Nova
-    master all services default to native threading except the novnc/serial/
-    spice console proxy services (nova-novncproxy, nova-serialproxy,
-    nova-spicehtml5proxy) and CLI entry points (nova-manage, nova-policy,
-    nova-status) which still default to eventlet.
+    master all services default to native threading, only the CLI entry
+    points (nova-manage, nova-policy, nova-status) still default to
+    eventlet.
 
 ``threading``
     Start the service with native threading. Eventlet monkey patching is not
@@ -115,6 +102,9 @@ To run CLI commands in native threading mode::
      extended to ``nova-novncproxy``, ``nova-serialproxy``, and
      ``nova-spicehtml5proxy``, though these services require manual
      configuration to enable it.
+   * **Nova 35.0.0 (2027.1 Indri):** Native threading became the **default**
+     for ``nova-novncproxy``, ``nova-serialproxy``, and
+     ``nova-spicehtml5proxy``.
 
    Operators can still manually revert to ``eventlet`` mode if needed,
    however eventlet mode is now deprecated and will be removed in a future
