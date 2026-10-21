@@ -436,12 +436,12 @@ class CinderFixture(fixtures.Fixture):
     def fake_begin_detaching(self, context, volume_id):
         if volume_id in self.volumes:
             self.volumes[volume_id]['status'] = 'detaching'
-            LOG.info(f'Setting volume {volume_id} status to detaching')
+            LOG.info('Setting volume %s status to detaching', volume_id)
 
     def fake_roll_detaching(self, context, volume_id):
         if volume_id in self.volumes:
             self.volumes[volume_id]['status'] = 'in-use'
-            LOG.info(f'Setting volume {volume_id} status to in-use')
+            LOG.info('Setting volume %s status to in-use', volume_id)
 
     def fake_reimage_volume(self, *args, **kwargs):
         if self.IMAGE_BACKED_VOL not in args:

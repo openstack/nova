@@ -558,8 +558,10 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                 # well, but it's worth trying to roll back the status in case
                 # the detach API failure was due to an intermittent issue.
                 LOG.exception(
-                    f'Volume detach failed for volume {volume_id} '
-                    f'and attachment {attachment_id}', instance=instance
+                    'Volume detach failed for volume %(volume)s '
+                    'and attachment %(attachment)s',
+                    {'volume': volume_id, 'attachment': attachment_id},
+                    instance=instance
                 )
                 volume_api.roll_detaching(context, volume_id)
                 # Re-raise to compute.
@@ -585,8 +587,9 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                 # well, but it's worth trying to roll back the status in case
                 # the detach API failure was due to an intermittent issue.
                 LOG.exception(
-                    f"Volume detach failed for volume {volume_id} "
-                    f"and attachment {self['attachment_id']}",
+                    "Volume detach failed for volume %(volume)s "
+                    "and attachment %(attachment)s",
+                    {'volume': volume_id, 'attachment': self['attachment_id']},
                     instance=instance
                 )
                 volume_api.roll_detaching(context, volume_id)

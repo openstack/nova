@@ -75,19 +75,19 @@ class CandidateFilterMixin:
         good_candidates = []
         for candidate in host_state.allocation_candidates:
             LOG.debug(
-                f'{self.__class__.__name__} tries allocation candidate: '
-                f'{candidate}',
+                '%s tries allocation candidate: %s',
+                self.__class__.__name__, candidate,
             )
             if filter_func(candidate):
                 LOG.debug(
-                    f'{self.__class__.__name__} accepted allocation '
-                    f'candidate: {candidate}',
+                    '%s accepted allocation candidate: %s',
+                    self.__class__.__name__, candidate,
                 )
                 good_candidates.append(candidate)
             else:
                 LOG.debug(
-                    f'{self.__class__.__name__} rejected allocation '
-                    f'candidate: {candidate}',
+                    '%s rejected allocation candidate: %s',
+                    self.__class__.__name__, candidate,
                 )
 
         host_state.allocation_candidates = good_candidates

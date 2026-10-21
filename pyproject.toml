@@ -161,7 +161,7 @@ files = [
 ]
 
 [tool.ruff.lint]
-select = ["C90", "E", "F", "LOG", "UP"]
+select = ["C90", "E", "F", "G", "LOG", "UP"]
 ignore = [
     "E402",   # Module level import not at top of file
     "E731",   # Do not assign a `lambda` expression, use a `def`

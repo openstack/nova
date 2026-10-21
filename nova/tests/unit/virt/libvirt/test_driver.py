@@ -29992,9 +29992,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.test_create_mdev(uuid=uuids.mdev, drvr=drvr)
 
         mock_log_info.assert_called_once_with(
-            'Failed to set autostart to True for mdev '
-            f'{drvr._host.device_define.return_value.name.return_value} with '
-            f'UUID {uuids.mdev}: error.')
+            'Failed to set autostart to True for mdev %s with UUID %s: %s',
+            drvr._host.device_define.return_value.name.return_value,
+            uuids.mdev, 'error')
 
     @mock.patch.object(
         libvirt_driver.LibvirtDriver,
@@ -33695,10 +33695,10 @@ class EphemeralEncryptionTestCase(test.NoDBTestCase):
             block_device_info=block_device_info)
 
         call1 = mock.call(
-            f'Failed to delete encryption secret {uuids.secret1} '
-            'in the key manager', instance=self.instance)
+            'Failed to delete encryption secret %s in the key manager',
+            uuids.secret1, instance=self.instance)
         call2 = mock.call(
-            'Failed to delete libvirt secret '
+            'Failed to delete libvirt secret %s',
             f'{self.instance.uuid}_{self.eph_bdm.uuid}',
             instance=self.instance)
         self.assertEqual([call1, call2], mock_log_exc.mock_calls)

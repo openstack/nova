@@ -49,8 +49,8 @@ def retry_if_busy(func):
                 count = i + 1
                 if count < RETRY_LIMIT:
                     LOG.debug(
-                        f"File {e.kwargs['file_path']} is busy, "
-                        f"sleeping {count} seconds before retrying")
+                        "File %s is busy, sleeping %s seconds before retrying",
+                        e.kwargs['file_path'], count)
                     time.sleep(count)
                     continue
                 raise

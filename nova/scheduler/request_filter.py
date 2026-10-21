@@ -410,7 +410,7 @@ def remote_managed_ports_filter(
                 request_spec.root_required.add(
                     os_traits.COMPUTE_REMOTE_MANAGED_PORTS)
                 LOG.debug('remote_managed_ports_filter request filter added '
-                          f'trait {os_traits.COMPUTE_REMOTE_MANAGED_PORTS}')
+                          'trait %s', os_traits.COMPUTE_REMOTE_MANAGED_PORTS)
     return True
 
 
@@ -444,7 +444,7 @@ def ephemeral_encryption_filter(
         # get_ephemeral_encryption_format will raise if it is not valid
         trait_name = f"COMPUTE_EPHEMERAL_ENCRYPTION_{eph_format.upper()}"
         request_spec.root_required.add(trait_name)
-        LOG.debug(f"ephemeral_encryption_filter added trait {trait_name}")
+        LOG.debug("ephemeral_encryption_filter added trait %s", trait_name)
 
     return True
 
