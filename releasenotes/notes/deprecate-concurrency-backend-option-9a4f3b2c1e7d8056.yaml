@@ -6,3 +6,15 @@ upgrade:
     CLI tools now run in native threading mode by default. Operators who
     previously set ``[DEFAULT] concurrency_backend = threading`` explicitly
     for these CLIs may remove that setting.
+deprecations:
+  - |
+    The ``[DEFAULT] concurrency_backend`` configuration option is now
+    deprecated for removal. It was introduced to facilitate migration from
+    eventlet-based to native-threading concurrency. Once eventlet support is
+    removed (no earlier than 2027.2), the option will serve no purpose and
+    will be removed at the same time. Operators using the default (``auto``)
+    or ``threading`` should remove the option from their configuration;
+    operators still using ``eventlet`` should first migrate to native
+    threading. See the `concurrency admin guide
+    <https://docs.openstack.org/nova/latest/admin/concurrency.html>`__ for
+    migration guidance.

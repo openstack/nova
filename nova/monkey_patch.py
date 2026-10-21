@@ -155,12 +155,14 @@ def patch(backend='eventlet'):
             import oslo_service.backend as service
             service.init_backend(service.BackendType.EVENTLET)
             from oslo_log import log as logging
+            from oslo_log import versionutils
             LOG = logging.getLogger(__name__)
             LOG.info("Service is starting with Eventlet based service backend")
-            LOG.warning(
-                "Eventlet based concurrency mode is deprecated and will be "
-                "removed in a future release, not earlier than 2027.2. "
-                "Please migrate to native threading mode. See the concurrency "
+            versionutils.report_deprecated_feature(
+                LOG,
+                "Eventlet-based concurrency is deprecated since 2026.2 "
+                "(Hibiscus) and will be removed no earlier than 2027.2. "
+                "Please migrate to native threading. See the concurrency "
                 "guide for details: "
                 "https://docs.openstack.org/nova/latest/admin/concurrency"
                 ".html")

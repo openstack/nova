@@ -30,6 +30,15 @@ precedence.
 Using the ``concurrency_backend`` config option
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. deprecated:: 35.0.0
+
+   The ``concurrency_backend`` option is deprecated for removal. It was
+   introduced to facilitate the migration from eventlet to native threading.
+   Once eventlet support is removed (no earlier than 2027.2), this option
+   will be removed at the same time. Operators using the default (``auto``)
+   or ``threading`` should remove the option from their configuration;
+   those still using ``eventlet`` should migrate first.
+
 The :oslo.config:option:`concurrency_backend` option under ``[DEFAULT]``
 allows operators to select the concurrency backend in the Nova configuration
 file. It accepts the following values:

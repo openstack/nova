@@ -89,6 +89,17 @@ used if the service is running in Eventlet mode.
     cfg.StrOpt(
         'concurrency_backend',
         default='auto',
+        deprecated_for_removal=True,
+        deprecated_since='35.0.0',
+        deprecated_reason="""
+This option was introduced to facilitate the migration from eventlet-based
+concurrency to native threading. Once eventlet support is removed (no earlier
+than 2027.2), native threading will be the only concurrency mode and this
+option will serve no purpose. Operators using the default value 'auto' or
+'threading' should remove the option from their configuration; those still
+using 'eventlet' should migrate to native threading before eventlet support
+is removed.
+""",
         choices=[
             ('auto',
              'Use the per-binary deployment default. Since 2027.1 (Indri) '
