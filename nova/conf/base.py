@@ -92,9 +92,8 @@ used if the service is running in Eventlet mode.
         choices=[
             ('auto',
              'Use the per-binary deployment default. Since 2027.1 (Indri) '
-             'all services default to native threading, only the CLI entry '
-             'points (nova-manage, nova-policy, nova-status) still default '
-             'to eventlet. '
+             'all Nova services and CLI entry points default to native '
+             'threading. '
              'This is the same as leaving the option unset.'),
             ('threading',
              'Start the service with native threading. '
@@ -113,9 +112,8 @@ initialised, so that eventlet monkey patching can be applied (or suppressed)
 before any other imports occur.
 
 When set to ``auto``, each Nova binary applies its own built-in deployment
-default. Since 2027.1 (Indri) all services default to native threading, only
-the CLI entry points (nova-manage, nova-policy, nova-status) still default to
-eventlet.
+default. Since 2027.1 (Indri) all Nova services and CLI entry points default
+to native threading.
 Setting an explicit value overrides the per-binary default for every service
 that reads this config file.
 
