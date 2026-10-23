@@ -644,6 +644,11 @@
     pre-run: playbooks/nova-next/pre.yaml
     required-projects:
         - novnc/novnc
+        - openstack/devstack-plugin-jaeger
+    roles:
+        # Make the verify-tracing-backend role available to the post-run
+        # playbook so it can assert nova-api traces landed in Jaeger.
+        - zuul: openstack/devstack-plugin-jaeger
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_exclude_regex.
@@ -757,6 +762,10 @@
         'SYSTEMD_ENV_VARS["n-cpu"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
         'SYSTEMD_ENV_VARS["n-novnc-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
         'SYSTEMD_ENV_VARS["n-spice-cell1"]': OS_NOVA_DISABLE_EVENTLET_PATCHING=true
+        # Enable oslo.middleware OpenTelemetry tracing for nova-api from boot
+        # and point it at the Jaeger OTLP endpoint deployed by
+        # devstack-plugin-jaeger.
+        OSLO_TRACING_SERVICES: nova-api
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
@@ -779,9 +788,15 @@
         openstack-cli-server: true
         n-spice: true
         n-novnc: true
+        # Jaeger all-in-one trace backend (devstack-plugin-jaeger).
+        jaeger: true
       devstack_plugins:
         # Needed for QoS port heal allocation testing.
         neutron: https://opendev.org/openstack/neutron
+        # Deploys Jaeger all-in-one as an OTLP trace backend so the
+        # oslo.middleware tracing wired into nova-api can be verified
+        # end to end.
+        devstack-plugin-jaeger: https://opendev.org/openstack/devstack-plugin-jaeger
     group-vars:
       subnode:
         devstack_localrc:

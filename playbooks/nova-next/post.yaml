@@ -2,3 +2,10 @@
   roles:
     # Runs gate/post_test_hook.sh to test things like nova-manage commands.
     - run-post-test-hook
+    # Assert that nova-api traces were exported to and stored in the Jaeger
+    # backend deployed by devstack-plugin-jaeger during the Tempest run.
+    - role: verify-tracing-backend
+      vars:
+        jaeger_query_url: "http://localhost:16686"
+        tracing_expected_services:
+          - nova-api
