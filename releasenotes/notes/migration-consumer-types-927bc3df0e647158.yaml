@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    Allocation moves for cold migration, resize, and live migration now label
+    migration consumers in Placement as ``COMPUTE_MIGRATION``. When allocations
+    are restored to an instance on rollback or revert, the instance consumer is
+    labeled ``COMPUTE_INSTANCE``. Ordinary instance allocation writes are unchanged;
+    this does not label all instance consumers or backfill existing consumers.
+upgrade:
+  - |
+    Placement API microversion 1.38, available since Xena, is now required.
+    Upgrade Placement before upgrading Nova services. The
+    ``nova-status upgrade check`` command enforces this requirement.
+  - |
+    Older computes can update and delete allocations labeled by newer services,
+    and newer services can restore allocations from unlabeled migration
+    consumers. Older-version allocation updates preserve an existing consumer
+    type, but deleting a consumer and recreating it through an older-version
+    write leaves its type unknown. Consumer-type reporting is therefore not a
+    complete inventory of Nova consumers, including during rolling upgrades.

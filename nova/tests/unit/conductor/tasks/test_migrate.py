@@ -395,6 +395,40 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
 
 class MigrationTaskAllocationUtils(test.NoDBTestCase):
+    @mock.patch('nova.scheduler.client.report.report_client_singleton')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    def test_replace_allocation_with_migration(self, mock_cn, mock_client):
+        source_cn = objects.ComputeNode(uuid=uuids.compute)
+        mock_cn.return_value = source_cn
+        allocations = {uuids.compute: {'resources': {'VCPU': 1}}}
+        client = mock_client.return_value
+        client.get_allocs_for_consumer.return_value = {
+            'allocations': allocations}
+        instance = objects.Instance(uuid=uuids.instance,
+                                    host='host', node='node')
+        migration = objects.Migration(uuid=uuids.migration)
+
+        result = migrate.replace_allocation_with_migration(
+            mock.sentinel.context, instance, migration)
+
+        self.assertEqual((source_cn, allocations), result)
+        client.move_allocations.assert_called_once_with(
+            mock.sentinel.context, instance.uuid, migration.uuid,
+            target_consumer_type=report.CONSUMER_TYPE_MIGRATION)
+
+    @mock.patch('nova.scheduler.client.report.report_client_singleton')
+    def test_revert_allocation_for_migration(self, mock_client):
+        instance = objects.Instance(uuid=uuids.instance)
+        migration = objects.Migration(uuid=uuids.migration)
+        source_cn = objects.ComputeNode(uuid=uuids.compute)
+
+        migrate.revert_allocation_for_migration(
+            mock.sentinel.context, source_cn, instance, migration)
+
+        mock_client.return_value.move_allocations.assert_called_once_with(
+            mock.sentinel.context, migration.uuid, instance.uuid,
+            target_consumer_type=report.CONSUMER_TYPE_INSTANCE)
+
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     def test_replace_allocation_with_migration_no_host(self, mock_cn):
         mock_cn.side_effect = exception.ComputeHostNotFound(host='host')

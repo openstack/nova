@@ -13094,7 +13094,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
             self.assertTrue(r)
             mock_report.move_allocations.assert_called_once_with(
-                mock.sentinel.ctx, self.migration.uuid, self.instance.uuid)
+                mock.sentinel.ctx, self.migration.uuid, self.instance.uuid,
+                target_consumer_type=report.CONSUMER_TYPE_INSTANCE)
             mock_info.assert_called_once_with(
                 'Swapping old allocation on %(rp_uuids)s held by migration '
                 '%(mig)s for instance',

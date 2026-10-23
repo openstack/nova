@@ -26,6 +26,7 @@ from nova import exception
 from nova import objects
 from nova.policies import base as base_policies
 from nova.policies import servers as servers_policies
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
 from nova import test
@@ -304,6 +305,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             source_rp_uuid)[migration['uuid']]['resources']
         self.assertFlavorMatchesAllocation(
             old_flavor, source_allocations, volume_backed=volume_backed)
+        self.assertConsumerType(migration['uuid'],
+                                report.CONSUMER_TYPE_MIGRATION)
 
         target_rp_uuid = self._get_provider_uuid_by_host(expected_host)
         # The target node allocations should be on the instance record.
@@ -725,6 +728,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(1, len(migrations), migrations)
         migration = migrations[0]
         self.assertEqual('reverted', migration['status'], migration)
+        self.assertConsumerType(server['id'], report.CONSUMER_TYPE_INSTANCE)
 
         # The target allocations should be gone.
         target_allocations = self._get_allocations_by_provider_uuid(
@@ -1154,6 +1158,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         source_rp_uuid = self._get_provider_uuid_by_host(
             server['OS-EXT-SRV-ATTR:host'])
         server_allocs = self._get_allocations_by_server_uuid(server['id'])
+        self.assertConsumerType(server['id'], report.CONSUMER_TYPE_INSTANCE)
         volume_backed = False if server['image'] else True
         self.assertFlavorMatchesAllocation(
             server['flavor'], server_allocs[source_rp_uuid]['resources'],

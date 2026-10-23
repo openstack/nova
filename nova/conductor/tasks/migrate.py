@@ -71,8 +71,9 @@ def replace_allocation_with_migration(context, instance, migration):
     # FIXME(gibi): This method is flawed in that it does not handle allocations
     # against sharing providers in any special way. This leads to duplicate
     # allocations against the sharing provider during migration.
-    success = reportclient.move_allocations(context, instance.uuid,
-                                            migration.uuid)
+    success = reportclient.move_allocations(
+        context, instance.uuid, migration.uuid,
+        target_consumer_type=report.CONSUMER_TYPE_MIGRATION)
     if not success:
         LOG.error('Unable to replace resource claim on source '
                   'host %(host)s node %(node)s for instance',
@@ -99,8 +100,17 @@ def revert_allocation_for_migration(context, source_cn, instance, migration):
     # FIXME(gibi): This method is flawed in that it does not handle allocations
     # against sharing providers in any special way. This leads to duplicate
     # allocations against the sharing provider during migration.
-    success = reportclient.move_allocations(context, migration.uuid,
-                                            instance.uuid)
+    # Unlike normal instance claims, this rollback labels the restored
+    # instance consumer COMPUTE_INSTANCE. Successful destination claims and
+    # new instance builds remain untyped.
+    # NOTE(danms): We could make this not revert to COMPUTE_INSTANCE if we
+    # make move_allocations consider the types optional, don't use the newer
+    # placement microversion if they're missing, and then not pass them here
+    # during revert. Currently, they're required for move_allocations so we
+    # can set the type on the migration placeholder allocations above.
+    success = reportclient.move_allocations(
+        context, migration.uuid, instance.uuid,
+        target_consumer_type=report.CONSUMER_TYPE_INSTANCE)
     if not success:
         LOG.error('Unable to replace resource claim on source '
                   'host %(host)s node %(node)s for instance',

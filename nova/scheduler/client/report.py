@@ -43,6 +43,9 @@ from nova import utils
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 WARN_EVERY = 10
+CONSUMER_TYPE_VERSION = '1.38'
+CONSUMER_TYPE_INSTANCE = 'COMPUTE_INSTANCE'
+CONSUMER_TYPE_MIGRATION = 'COMPUTE_MIGRATION'
 SAME_SUBTREE_VERSION = '1.36'
 RESHAPER_VERSION = '1.30'
 CONSUMER_GENERATION_VERSION = '1.28'
@@ -2040,7 +2043,7 @@ class SchedulerReportClient(object):
     @safe_connect
     @retries
     def move_allocations(self, context, source_consumer_uuid,
-                         target_consumer_uuid):
+                         target_consumer_uuid, target_consumer_type):
         """Move allocations from one consumer to the other
 
         Note that this call moves the current allocation from the source
@@ -2059,6 +2062,8 @@ class SchedulerReportClient(object):
                                      allocations are moving
         :param target_consumer_uuid: the UUID of the target consumer for the
                                      allocations
+        :param target_consumer_type: the Placement type of the target consumer,
+                                     not the type of the source resources
         :returns: True if the move was successful (or already done),
                   False otherwise.
         :raises AllocationMoveFailed: If the source or the target consumer has
@@ -2090,6 +2095,13 @@ class SchedulerReportClient(object):
                 'allocations': {},
                 'project_id': source_alloc['project_id'],
                 'user_id': source_alloc['user_id'],
+                # Placement requires this field, but ignores its value when
+                # the consumer's allocations are emptied by the move. We pass
+                # 'IGNORED' here explicitly (assuming such a type is not
+                # actually used) to make it clear. If placement started to
+                # require it to match in the future, this would start to fail
+                # and highlight the behavioral/expectation change.
+                'consumer_type': 'IGNORED',
                 'consumer_generation': source_alloc['consumer_generation']},
             target_consumer_uuid: {
                 'allocations': source_alloc['allocations'],
@@ -2098,11 +2110,12 @@ class SchedulerReportClient(object):
                 # about to overwrite?
                 'project_id': source_alloc['project_id'],
                 'user_id': source_alloc['user_id'],
+                'consumer_type': target_consumer_type,
                 'consumer_generation': target_alloc.get('consumer_generation')
             }
         }
         r = self.post('/allocations', new_allocs,
-                      version=CONSUMER_GENERATION_VERSION,
+                      version=CONSUMER_TYPE_VERSION,
                       global_request_id=context.global_id)
         if r.status_code != 204:
             err = r.json()['errors'][0]
