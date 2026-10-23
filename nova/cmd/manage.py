@@ -21,7 +21,7 @@
   CLI interface for nova management.
 """
 # autopep8: off
-from nova import monkey_patch; monkey_patch.patch()  # noqa
+from nova import monkey_patch; monkey_patch.patch(backend='threading')  # noqa
 # autopep8: on
 
 import atexit

@@ -15,16 +15,13 @@ up support for the native threading mode.
 
    Eventlet based concurrency mode is deprecated and will be removed in a
    future release, not earlier than 2027.2. Native threading is now the
-   default and recommended mode for all Nova services. Only the CLI entry
-   points (nova-manage, nova-policy, nova-status) still default to eventlet
-   mode.
+   default and recommended mode for all Nova services and CLI entry points.
 
 Selecting concurrency mode for a service
 ----------------------------------------
 
-Since nova 35.0.0 (2027.1 Indri) all Nova services are using native threading
-by default. Only the CLI entry points (nova-manage, nova-policy, nova-status)
-are still using eventlet by default in this release.
+Since nova 35.0.0 (2027.1 Indri) all Nova services and CLI entry points are
+using native threading by default.
 
 The concurrency mode can be configured in two ways: via a configuration option
 or an environment variable. When both are set the environment variable takes
@@ -38,10 +35,9 @@ allows operators to select the concurrency backend in the Nova configuration
 file. It accepts the following values:
 
 ``auto`` (default)
-    Each Nova binary applies its own built-in deployment default. On Nova
-    master all services default to native threading, only the CLI entry
-    points (nova-manage, nova-policy, nova-status) still default to
-    eventlet.
+    Each Nova binary applies its own built-in deployment default. Since
+    2027.1 (Indri) all Nova services and CLI entry points default to
+    native threading.
 
 ``threading``
     Start the service with native threading. Eventlet monkey patching is not

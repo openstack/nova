@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    The nova-manage, nova-policy, and nova-status CLI entry points now default
+    to native threading. This completes the migration: all Nova services and
+    CLI tools now run in native threading mode by default. Operators who
+    previously set ``[DEFAULT] concurrency_backend = threading`` explicitly
+    for these CLIs may remove that setting.
