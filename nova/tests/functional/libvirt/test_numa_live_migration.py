@@ -128,15 +128,6 @@ class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
             self.assertEqual(host, self.get_host(server['id']))
             self._assert_instance_pinned_cpus(server['id'], [0, 1], [0, 1])
 
-    def _rpc_pin_host(self, hostname):
-        ctxt = context.get_admin_context()
-        dest_mgr = self.computes[hostname].manager
-        dest_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
-            '5.2')
-        self.assertFalse(
-            dest_mgr.compute_rpcapi.router.client(
-                ctxt).can_send_version('5.3'))
-
 
 class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
     """Tests that expect the live migration to succeed. Stubs out fakelibvirt's
@@ -194,7 +185,7 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
         dom.complete_job()
         self.migrate_stub_ran = True
 
-    def _test(self, pin_dest):
+    def _test(self):
         """Live migrate the server on host_a to host_b.
         """
         # Make sure instances initially land on "overlapping" CPUs on both
@@ -208,9 +199,6 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
         self.restart_compute_service('host_a')
         self.restart_compute_service('host_b')
 
-        # Live migrate, RPC-pinning the destination host if asked
-        if pin_dest:
-            self._rpc_pin_host('host_b')
         self._live_migrate(self.server_a, 'completed')
         self.assertEqual('host_b', self.get_host(self.server_a['id']))
         self.assertIsNone(self._get_migration_context(self.server_a['id']))
@@ -239,10 +227,7 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
         # direction here.
 
     def test_numa_live_migration(self):
-        self._test(pin_dest=False)
-
-    def test_numa_live_migration_dest_pinned(self):
-        self._test(pin_dest=True)
+        self._test()
 
     def test_bug_1843639(self):
         """Live migrations in 'accepted' status were not considered in progress
@@ -283,7 +268,7 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.compute.manager.ComputeManager.live_migration',
             live_migration))
-        self._test(pin_dest=False)
+        self._test()
         self.assertTrue(self.live_migration_ran)
 
 
@@ -321,7 +306,7 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
         dom.fail_job()
         self.migrate_stub_ran = True
 
-    def _test(self, pin_dest=False):
+    def _test(self):
         # Make sure instances initially land on "overlapping" CPUs on both
         # hosts and boot 2 instances.
         self.flags(cpu_dedicated_set='0,1', group='compute')
@@ -333,16 +318,13 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
         self.restart_compute_service('host_a')
         self.restart_compute_service('host_b')
 
-        # Live migrate, RPC-pinning the destination host if asked. This is a
-        # rollback test, so server_a is expected to remain on host_a.
-        if pin_dest:
-            self._rpc_pin_host('host_b')
+        # This is a rollback test, so server_a is expected to remain on host_a.
         self._live_migrate(self.server_a, 'failed')
         self.assertEqual('host_a', self.get_host(self.server_a['id']))
         self.assertIsNone(self._get_migration_context(self.server_a['id']))
 
-    def _test_rollback(self, pin_dest=False):
-        self._test(pin_dest)
+    def test_rollback(self):
+        self._test()
 
         # Check consumed and pinned CPUs. Things should be as they were before
         # the live migration, with CPUs 0,1 consumed on both hosts by the 2
@@ -351,12 +333,6 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
         self._assert_host_consumed_cpus('host_b', [0, 1])
         self._assert_instance_pinned_cpus(self.server_a['id'],
                                           [0, 1], [0, 1])
-
-    def test_rollback(self):
-        self._test_rollback()
-
-    def test_rollback_pinned_dest(self):
-        self._test_rollback(pin_dest=True)
 
     def _test_bug_1894095(self, pre_drop_race=False, post_drop_race=False):
         """Reproducer for bug #1894095 under live migration.
@@ -424,157 +400,6 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
 
     def test_bug_1894095_post_drop(self):
         self._test_bug_1894095(post_drop_race=True)
-
-
-class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
-    """Base for tests that ensure that correct legacy behaviour is observed
-    when either the conductor or the source are pinned to an old RPC version.
-    Sets up two identical compute hosts and "fills" them with an instance each.
-    In such a situation, live migrating one of the instances should fail with
-    the new NUMA live migration code, but the old legacy behaviour is for the
-    live migration to go through (if forced through the API, thus bypassing the
-    scheduler).
-    """
-    # NOTE(artom) After 2.67 we can no longer bypass the scheduler for live
-    # migration, which we need to do here to force the live migration to a host
-    # that's already full.
-    microversion = '2.67'
-
-    def setUp(self):
-        super(NUMALiveMigrationLegacyBase, self).setUp()
-        self.flags(compute='auto', group='upgrade_levels')
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.objects.service.get_minimum_version_all_cells',
-            lambda *args, **kwargs: objects.service.SERVICE_VERSION))
-
-    def _test(self, pin_source, pin_cond, expect_success=True):
-        self.start_compute(
-            hostname='source',
-            host_info=fakelibvirt.HostInfo())
-        self.start_compute(
-            hostname='dest',
-            host_info=fakelibvirt.HostInfo())
-
-        # This duplication is required to let the LibvirtMigrationMixin know
-        # which host is which in terms of the migration.
-        self.src = self.computes['source']
-        self.dest = self.computes['dest']
-
-        ctxt = context.get_admin_context()
-        src_mgr = self.computes['source'].manager
-        cond_mgr = self.conductor.manager.compute_task_mgr
-        if pin_source:
-            src_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
-                '5.2')
-        else:
-            # Since we upgraded the RPC API to 6.0, we somehow need to pin the
-            # compute service here to 5.max to verify the legacy behaviours.
-            # TODO(sbauza): Remove this cruft
-            src_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
-                '5.13')
-        if pin_cond:
-            cond_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
-                '5.2')
-        else:
-            # Since we upgraded the RPC API to 6.0, we somehow need to pin the
-            # compute service here to 5.max to verify the legacy behaviours.
-            # TODO(sbauza): Remove this cruft
-            cond_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
-                '5.13')
-
-        self.assertEqual(
-            not pin_source,
-            src_mgr.compute_rpcapi.router.client(
-                ctxt).can_send_version('5.3'))
-        self.assertEqual(
-            not pin_cond,
-            cond_mgr.compute_rpcapi.router.client(
-                ctxt).can_send_version('5.3'))
-
-        extra_spec = {'hw:numa_nodes': 1,
-                      'hw:cpu_policy': 'dedicated'}
-        flavor = self._create_flavor(vcpu=2, extra_spec=extra_spec)
-        server1 = self._create_server(flavor_id=flavor, networks='none')
-        server2 = self._create_server(flavor_id=flavor, networks='none')
-        if self.get_host(server1['id']) == 'source':
-            self.migrating_server = server1
-            self.server = server1
-        else:
-            self.migrating_server = server2
-            self.server = server2
-        self.api.post_server_action(
-            self.migrating_server['id'],
-            {'os-migrateLive': {'host': 'dest',
-                                'block_migration': 'auto',
-                                'force': True}})
-        self._wait_for_state_change(self.migrating_server, 'ACTIVE')
-        if expect_success:
-            final_host = 'dest'
-            self._wait_for_migration_status(self.migrating_server,
-                                            ['completed'])
-        else:
-            final_host = 'source'
-            self._wait_for_migration_status(self.migrating_server, ['failed'])
-        self.assertEqual(final_host,
-                         self.get_host(self.migrating_server['id']))
-        self.assertTrue(self.migrate_stub_ran)
-
-
-class NUMALiveMigrationLegacyTests(NUMALiveMigrationLegacyBase):
-    """Tests that legacy live migration behavior is observed when either the
-    source or the conductor are pinned to an old RPC version. Stubs
-    fakelibvirt's migrateToURI3 method with a stub that "succeeds" the
-    migration.
-    """
-
-    def _migrate_stub(self, domain, destination, params, flags):
-        # NOTE(artom) This is the crucial bit: by asserting that the migrating
-        # instance has no migration context, we're making sure that we're
-        # hitting the old, pre-claims code paths.
-        self.assertIsNone(
-            self._get_migration_context(self.migrating_server['id']))
-        dest = self.computes['dest']
-        dest.driver._host.get_connection().createXML(
-            params['destination_xml'],
-            'fake-createXML-doesnt-care-about-flags')
-
-        source = self.computes['source']
-        conn = source.driver._host.get_connection()
-        dom = conn.lookupByUUIDString(self.migrating_server['id'])
-        dom.complete_job()
-
-        self.migrate_stub_ran = True
-
-    def test_source_pinned_dest_unpinned(self):
-        self._test(pin_source=True, pin_cond=False)
-
-    def test_conductor_pinned(self):
-        self._test(pin_source=False, pin_cond=True)
-
-
-class NUMALiveMigrationLegacyRollbackTests(NUMALiveMigrationLegacyBase):
-    """Tests that rollback works correctly when either the source or conductor
-    are pinned to an old RPC version. Stubs fakelibvirt's migrateToURI3 method
-    with a stub that "fails" the migraton in order to trigger rollback.
-    """
-
-    def _migrate_stub(self, domain, destination, params, flags):
-        # NOTE(artom) This is the crucial bit: by asserting that the migrating
-        # instance has no migration context, we're making sure that we're
-        # hitting the old, pre-claims code paths.
-        self.assertIsNone(
-            self._get_migration_context(self.migrating_server['id']))
-        source = self.computes['source']
-        conn = source.driver._host.get_connection()
-        dom = conn.lookupByUUIDString(self.migrating_server['id'])
-        dom.fail_job()
-        self.migrate_stub_ran = True
-
-    def test_source_pinned_dest_unpinned(self):
-        self._test(pin_source=True, pin_cond=False, expect_success=False)
-
-    def test_conductor_pinned(self):
-        self._test(pin_source=False, pin_cond=True, expect_success=False)
 
 
 class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):

@@ -232,27 +232,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 version='6.0',
                 topic_alt=compute_rpcapi.RPC_TOPIC_ALT)
 
-    def test_check_instance_shared_storage_old_compute(self):
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        rpcapi.check_instance_shared_storage(
-            ctxt, instance=self.fake_instance_obj, data='foo')
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('6.0')])
-        mock_client.prepare.assert_called_with(
-            server=self.fake_instance_obj.host, version='5.0',
-            topic=compute_rpcapi.RPC_TOPIC)
-        mock_cctx.call.assert_called_with(
-            ctxt, 'check_instance_shared_storage',
-            instance=self.fake_instance_obj, data='foo')
-
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'foo'},
@@ -280,62 +259,12 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 request_spec=self.fake_request_spec_obj, version='6.0',
                 topic_alt=compute_rpcapi.RPC_TOPIC_ALT)
 
-    def test_finish_resize_old_compute(self):
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        # So we expect that the messages is backported therefore the
-        # request_spec is dropped
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        rpcapi.finish_resize(
-            ctxt, instance=self.fake_instance_obj,
-            migration=mock.sentinel.migration, image='image',
-            disk_info='disk_info', host='host',
-            request_spec=self.fake_request_spec_obj)
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('5.2')])
-        mock_client.prepare.assert_called_with(
-            server='host', version='5.0', topic=compute_rpcapi.RPC_TOPIC)
-        mock_cctx.cast.assert_called_with(
-            ctxt, 'finish_resize', instance=self.fake_instance_obj,
-            migration=mock.sentinel.migration, image='image',
-            disk_info='disk_info')
-
     def test_finish_revert_resize(self):
         self._test_compute_api('finish_revert_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
                 host='host', request_spec=self.fake_request_spec_obj,
                 version='6.0',
                 topic_alt=compute_rpcapi.RPC_TOPIC_ALT)
-
-    def test_finish_revert_resize_old_compute(self):
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        # So we expect that the messages is backported therefore the
-        # request_spec is dropped
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        rpcapi.finish_revert_resize(
-            ctxt, instance=self.fake_instance_obj,
-            migration=mock.sentinel.migration, host='host',
-            request_spec=self.fake_request_spec_obj)
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('5.2')])
-        mock_client.prepare.assert_called_with(
-            server='host', version='5.0', topic=compute_rpcapi.RPC_TOPIC)
-        mock_cctx.cast.assert_called_with(
-            ctxt, 'finish_revert_resize', instance=self.fake_instance_obj,
-            migration=mock.sentinel.migration)
 
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
@@ -461,21 +390,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 call_monitor_timeout=60, timeout=1234,
                 topic_alt=compute_rpcapi.RPC_TOPIC_ALT)
 
-    def test_supports_numa_live_migration(self):
-        mock_client = mock.MagicMock()
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        rpcapi.router.client.return_value = mock_client
-
-        ctxt = context.RequestContext('fake_user', 'fake_project'),
-        mock_client.can_send_version.return_value = False
-        self.assertFalse(rpcapi.supports_numa_live_migration(ctxt))
-        mock_client.can_send_version.return_value = True
-        self.assertTrue(rpcapi.supports_numa_live_migration(ctxt))
-        mock_client.can_send_version.assert_has_calls(
-            [mock.call('6.0'), mock.call('5.3'),
-             mock.call('6.0'), mock.call('6.0')])
-
     def test_check_can_live_migrate_destination(self):
         self.flags(long_rpc_timeout=1234)
         self._test_compute_api('check_can_live_migrate_destination', 'call',
@@ -487,35 +401,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                migration='migration',
                                limits='limits',
                                timeout=1234)
-
-    def test_check_can_live_migrate_destination_backlevel(self):
-        mock_cctxt = mock.MagicMock()
-        mock_client = mock.MagicMock()
-        mock_client.can_send_version.return_value = False
-        mock_client.prepare.return_value = mock_cctxt
-
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        rpcapi.router.client.return_value = mock_client
-
-        ctxt = context.RequestContext('fake_user', 'fake_project'),
-        rpcapi.check_can_live_migrate_destination(
-            ctxt, instance=self.fake_instance_obj,
-            destination='dest',
-            block_migration=False,
-            disk_over_commit=False,
-            migration='migration',
-            limits='limits')
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('5.3')])
-        mock_client.prepare.assert_called_with(server='dest', version='5.0',
-                                               call_monitor_timeout=mock.ANY,
-                                               timeout=mock.ANY)
-        mock_cctxt.call.assert_called_once_with(
-            ctxt, 'check_can_live_migrate_destination',
-            instance=self.fake_instance_obj, block_migration=False,
-            disk_over_commit=False)
 
     def test_rollback_live_migration_at_destination(self):
         self._test_compute_api('rollback_live_migration_at_destination',
@@ -542,43 +427,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 node='node', clean_shutdown=True, host_list=None,
                 version='6.0')
 
-    def test_prep_resize_old_compute(self):
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        # So we expect that the messages is backported therefore the
-        # request_spec is dropped
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        request_spec = objects.RequestSpec()
-        rpcapi.prep_resize(
-            ctxt, instance=self.fake_instance_obj,
-            flavor=self.fake_flavor_obj,
-            image='fake_image', host='host',
-            request_spec=request_spec,
-            filter_properties={'fakeprop': 'fakeval'},
-            migration='migration',
-            node='node', clean_shutdown=True, host_list=None)
-
-        mock_client.can_send_version.assert_has_calls([
-            mock.call('6.0'), mock.call('5.1'),
-        ])
-        mock_client.prepare.assert_called_with(
-            server='host', version='5.0')
-        # we should call with a dict for request_spec and an instance_type
-        # parameter instead of flavor
-        mock_cctx.cast.assert_called_with(
-            ctxt, 'prep_resize', instance=self.fake_instance_obj,
-            instance_type=self.fake_flavor_obj,
-            image='fake_image',
-            request_spec=request_spec.to_legacy_request_spec_dict(),
-            filter_properties={'fakeprop': 'fakeval'},
-            migration='migration',
-            node='node', clean_shutdown=True, host_list=None)
-
     def test_prep_snapshot_based_resize_at_dest(self):
         """Tests happy path for prep_snapshot_based_resize_at_dest rpc call"""
         expected_args = {'instance': self.fake_instance_obj,
@@ -599,60 +447,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             # assert the expected return value
             _return_value=mock.sentinel.migration_context)
 
-    @mock.patch('nova.rpc.ClientRouter.client')
-    def test_prep_snapshot_based_resize_at_dest_old_compute(self, mock_client):
-        """Tests when the destination compute service is too old to call
-        prep_snapshot_based_resize_at_dest so MigrationPreCheckError is
-        raised.
-        """
-        mock_client.return_value.can_send_version.return_value = False
-        rpcapi = compute_rpcapi.ComputeAPI()
-        ex = self.assertRaises(
-            exception.MigrationPreCheckError,
-            rpcapi.prep_snapshot_based_resize_at_dest,
-            self.context,
-            instance=self.fake_instance_obj,
-            flavor=self.fake_flavor_obj,
-            nodename='node',
-            migration=migration_obj.Migration(),
-            limits={},
-            request_spec=objects.RequestSpec(),
-            destination='dest')
-        self.assertIn('Compute too old', str(ex))
-
-    def test_prep_snapshot_based_resize_at_dest_6_0_non_compat(self):
-        """Tests when the destination compute service is not compatible with
-        the 6.0 RPC API version.
-        """
-        self.flags(long_rpc_timeout=1234)
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        mock_client.can_send_version.side_effect = [False, False, True]
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        expected_args = {'instance': self.fake_instance_obj,
-                        'flavor': self.fake_flavor_obj,
-                        'nodename': 'node',
-                        'migration': migration_obj.Migration(),
-                        'limits': {},
-                        'request_spec': objects.RequestSpec()}
-        rpcapi.prep_snapshot_based_resize_at_dest(
-            self.context,
-            **expected_args,
-            destination='dest')
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('6.0'),
-                                                       mock.call('5.5')])
-        mock_client.prepare.assert_called_with(
-            server='dest', version='5.5',
-            call_monitor_timeout=60, timeout=1234)
-        mock_cctx.call.assert_called_with(
-            self.context, 'prep_snapshot_based_resize_at_dest',
-            **expected_args)
-
     def test_prep_snapshot_based_resize_at_source(self):
         """Tests happy path for prep_snapshot_based_resize_at_source rpc call
         """
@@ -666,23 +460,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             # client.prepare kwargs
             version='6.0', call_monitor_timeout=60, timeout=1234,
             topic_alt=compute_rpcapi.RPC_TOPIC_ALT)
-
-    @mock.patch('nova.rpc.ClientRouter.client')
-    def test_prep_snapshot_based_resize_at_source_old_compute(
-            self, mock_client):
-        """Tests when the source compute service is too old to call
-        prep_snapshot_based_resize_at_source so MigrationError is raised.
-        """
-        mock_client.return_value.can_send_version.return_value = False
-        rpcapi = compute_rpcapi.ComputeAPI()
-        ex = self.assertRaises(
-            exception.MigrationError,
-            rpcapi.prep_snapshot_based_resize_at_source,
-            self.context,
-            instance=self.fake_instance_obj,
-            migration=migration_obj.Migration(),
-            snapshot_id=uuids.snapshot_id)
-        self.assertIn('Compute too old', str(ex))
 
     def test_finish_snapshot_based_resize_at_dest(self):
         """Tests happy path for finish_snapshot_based_resize_at_dest."""
@@ -702,56 +479,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             call_monitor_timeout=60, timeout=1234,
             topic_alt=compute_rpcapi.RPC_TOPIC_ALT)
 
-    @mock.patch('nova.rpc.ClientRouter.client')
-    def test_finish_snapshot_based_resize_at_dest_old_compute(self, client):
-        """Tests when the dest compute service is too old to call
-        finish_snapshot_based_resize_at_dest so MigrationError is raised.
-        """
-        client.return_value.can_send_version.return_value = False
-        rpcapi = compute_rpcapi.ComputeAPI()
-        ex = self.assertRaises(
-            exception.MigrationError,
-            rpcapi.finish_snapshot_based_resize_at_dest,
-            self.context,
-            instance=self.fake_instance_obj,
-            migration=migration_obj.Migration(dest_compute='dest'),
-            snapshot_id=uuids.snapshot_id,
-            request_spec=objects.RequestSpec())
-        self.assertIn('Compute too old', str(ex))
-
-    def test_finish_snapshot_based_resize_at_dest_6_0_non_compat(self):
-        """Tests when the destination compute service is not compatible with
-        the 6.0 RPC API version.
-        """
-        self.flags(long_rpc_timeout=1234)
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        mock_client.can_send_version.side_effect = [False, False, True, False]
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        expected_args = {'instance': self.fake_instance_obj,
-                        'migration': migration_obj.Migration(
-                            dest_compute='dest'),
-                        'snapshot_id': uuids.snapshot_id,
-                        'request_spec': objects.RequestSpec()}
-        rpcapi.finish_snapshot_based_resize_at_dest(
-            self.context,
-            **expected_args)
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('6.0'),
-                                                       mock.call('5.7'),
-                                                       mock.call('6.5')])
-        mock_client.prepare.assert_called_with(
-            server='dest', version='5.7',
-            call_monitor_timeout=60, timeout=1234,
-            topic=compute_rpcapi.RPC_TOPIC)
-        mock_cctx.call.assert_called_with(
-            self.context, 'finish_snapshot_based_resize_at_dest',
-            **expected_args)
-
     def test_confirm_snapshot_based_resize_at_source(self):
         """Tests happy path for confirm_snapshot_based_resize_at_source."""
         self.flags(long_rpc_timeout=1234)
@@ -764,21 +491,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             version='6.0', prepare_server='source',
             call_monitor_timeout=60, timeout=1234)
 
-    @mock.patch('nova.rpc.ClientRouter.client')
-    def test_confirm_snapshot_based_resize_at_source_old_compute(self, client):
-        """Tests when the source compute service is too old to call
-        confirm_snapshot_based_resize_at_source so MigrationError is raised.
-        """
-        client.return_value.can_send_version.return_value = False
-        rpcapi = compute_rpcapi.ComputeAPI()
-        ex = self.assertRaises(
-            exception.MigrationError,
-            rpcapi.confirm_snapshot_based_resize_at_source,
-            self.context,
-            instance=self.fake_instance_obj,
-            migration=migration_obj.Migration(source_compute='source'))
-        self.assertIn('Compute too old', str(ex))
-
     def test_revert_snapshot_based_resize_at_dest(self):
         """Tests happy path for revert_snapshot_based_resize_at_dest."""
         self.flags(long_rpc_timeout=1234)
@@ -790,21 +502,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             # client.prepare kwargs
             version='6.0', prepare_server='dest',
             call_monitor_timeout=60, timeout=1234)
-
-    @mock.patch('nova.rpc.ClientRouter.client')
-    def test_revert_snapshot_based_resize_at_dest_old_compute(self, client):
-        """Tests when the dest compute service is too old to call
-        revert_snapshot_based_resize_at_dest so MigrationError is raised.
-        """
-        client.return_value.can_send_version.return_value = False
-        rpcapi = compute_rpcapi.ComputeAPI()
-        ex = self.assertRaises(
-            exception.MigrationError,
-            rpcapi.revert_snapshot_based_resize_at_dest,
-            self.context,
-            instance=self.fake_instance_obj,
-            migration=migration_obj.Migration(dest_compute='dest'))
-        self.assertIn('Compute too old', str(ex))
 
     def test_finish_revert_snapshot_based_resize_at_source(self):
         """Tests happy path for finish_revert_snapshot_based_resize_at_source.
@@ -819,23 +516,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             version='6.0', prepare_server='source',
             call_monitor_timeout=60, timeout=1234,
             topic_alt='compute-alt')
-
-    @mock.patch('nova.rpc.ClientRouter.client')
-    def test_finish_revert_snapshot_based_resize_at_source_old_compute(
-            self, client):
-        """Tests when the source compute service is too old to call
-        finish_revert_snapshot_based_resize_at_source so MigrationError is
-        raised.
-        """
-        client.return_value.can_send_version.return_value = False
-        rpcapi = compute_rpcapi.ComputeAPI()
-        ex = self.assertRaises(
-            exception.MigrationError,
-            rpcapi.finish_revert_snapshot_based_resize_at_source,
-            self.context,
-            instance=self.fake_instance_obj,
-            migration=migration_obj.Migration(source_compute='source'))
-        self.assertIn('Compute too old', str(ex))
 
     def test_reboot_instance(self):
         self.maxDiff = None
@@ -858,50 +538,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             limits=None, request_spec=None, accel_uuids=[],
             reimage_boot_volume=False, target_state=None,
             version='6.2')
-
-    def test_rebuild_instance_old_rpcapi(self):
-        # With rpcapi < 5.12, accel_uuids must be dropped in the client call.
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        compute_api = compute_rpcapi.ComputeAPI()
-        compute_api.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        compute_api.router.client.return_value = mock_client
-        # Force can_send_version to False, so that 5.0 version is used.
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        rebuild_args = {
-            'new_pass': 'admin_password',
-            'injected_files': 'files_to_inject',
-            'image_ref': uuids.image_ref,
-            'orig_image_ref': uuids.orig_image_ref,
-            'orig_sys_metadata': 'orig_sys_meta',
-            'bdms': {},
-            'recreate': False,
-            'on_shared_storage': False,
-            'preserve_ephemeral': False,
-            'request_spec': None,
-            'migration': None,
-            'limits': None
-        }
-        # Pass reimage_boot_volume to the client call...
-        compute_api.rebuild_instance(
-            ctxt, instance=self.fake_instance_obj,
-            accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'],
-            node=None, host=None, reimage_boot_volume=False,
-            target_state=None, **rebuild_args)
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.2'),
-                                                       mock.call('6.1'),
-                                                       mock.call('6.0'),
-                                                       mock.call('5.12')])
-        mock_client.prepare.assert_called_with(
-                server=self.fake_instance_obj.host, version='5.0')
-        # ...and assert that it does not show up on the wire before 6.1
-        mock_cctx.cast.assert_called_with(  # No accel_uuids
-                ctxt, 'rebuild_instance',
-                instance=self.fake_instance_obj,
-                scheduled_node=None, **rebuild_args)
 
     def test_rebuild_instance_vol_backed_old_rpcapi(self):
         # With rpcapi < 6.1, if reimage_boot_volume is True then we
@@ -1007,33 +643,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 version='6.0',
                 topic_alt=compute_rpcapi.RPC_TOPIC_ALT)
 
-    def test_resize_instance_old_compute(self):
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        # So we expect that the messages is backported therefore the
-        # request_spec is dropped
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        rpcapi.resize_instance(
-            ctxt, instance=self.fake_instance_obj,
-            migration=mock.sentinel.migration, image='image',
-            flavor=self.fake_flavor_obj, clean_shutdown=True,
-            request_spec=self.fake_request_spec_obj)
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('5.2')])
-        mock_client.prepare.assert_called_with(
-            server=self.fake_instance_obj.host, version='5.0',
-            topic=compute_rpcapi.RPC_TOPIC)
-        mock_cctx.cast.assert_called_with(
-            ctxt, 'resize_instance', instance=self.fake_instance_obj,
-            migration=mock.sentinel.migration, image='image',
-            instance_type=self.fake_flavor_obj, clean_shutdown=True)
-
     def test_resume_instance(self):
         self._test_compute_api('resume_instance', 'cast',
                                instance=self.fake_instance_obj)
@@ -1043,30 +652,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
                 host='host', request_spec=self.fake_request_spec_obj,
                 version='6.0')
-
-    def test_revert_resize_old_compute(self):
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        # So we expect that the messages is backported therefore the
-        # request_spec is dropped
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        rpcapi.revert_resize(
-            ctxt, instance=self.fake_instance_obj,
-            migration=mock.sentinel.migration, host='host',
-            request_spec=self.fake_request_spec_obj)
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('5.2')])
-        mock_client.prepare.assert_called_with(
-            server='host', version='5.0')
-        mock_cctx.cast.assert_called_with(
-            ctxt, 'revert_resize', instance=self.fake_instance_obj,
-            migration=mock.sentinel.migration)
 
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'call',
@@ -1127,60 +712,10 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, image_id='image_id',
                 clean_shutdown=True, accel_uuids=None, version='6.0')
 
-    def test_shelve_instance_old_rpcapi(self):
-        # With rpcapi < 5.13, accel_uuids must be dropped in the client call.
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        compute_api = compute_rpcapi.ComputeAPI()
-        compute_api.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        compute_api.router.client.return_value = mock_client
-        # Force can_send_version to False, so that 5.0 version is used.
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        compute_api.shelve_instance(
-                ctxt, instance=self.fake_instance_obj,
-                accel_uuids=[],
-                image_id='image_id', clean_shutdown=True)
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('5.13')])
-        mock_client.prepare.assert_called_with(
-                server=self.fake_instance_obj.host, version='5.0')
-        mock_cctx.cast.assert_called_with(  # No accel_uuids
-                ctxt, 'shelve_instance',
-                instance=self.fake_instance_obj,
-                image_id='image_id', clean_shutdown=True)
-
     def test_shelve_offload_instance(self):
         self._test_compute_api('shelve_offload_instance', 'cast',
                 instance=self.fake_instance_obj,
                 clean_shutdown=True, accel_uuids=None, version='6.0')
-
-    def test_shelve_offload_instance_old_rpcapi(self):
-        # With rpcapi < 5.13, accel_uuids must be dropped in the client call.
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        compute_api = compute_rpcapi.ComputeAPI()
-        compute_api.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        compute_api.router.client.return_value = mock_client
-        # Force can_send_version to False, so that 5.0 version is used.
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        compute_api.shelve_offload_instance(
-                ctxt, instance=self.fake_instance_obj,
-                accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'],
-                clean_shutdown=True,)
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('5.13')])
-        mock_client.prepare.assert_called_with(
-                server=self.fake_instance_obj.host, version='5.0')
-        mock_cctx.cast.assert_called_with(  # No accel_uuids
-                ctxt, 'shelve_offload_instance',
-                instance=self.fake_instance_obj,
-                clean_shutdown=True)
 
     def test_unshelve_instance(self):
         self._test_compute_api('unshelve_instance', 'cast',
@@ -1194,43 +729,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                host='host', image_ids=['image'],
                                call_monitor_timeout=60, timeout=1800,
                                version='6.0')
-
-    def test_cache_image_pinned(self):
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        mock_client.can_send_version.return_value = False
-        self.assertRaises(exception.NovaException,
-                          rpcapi.cache_images, ctxt, 'host', ['image'])
-
-    def test_unshelve_instance_old_compute(self):
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        rpcapi = compute_rpcapi.ComputeAPI()
-        rpcapi.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        rpcapi.router.client.return_value = mock_client
-        # So we expect that the messages is backported therefore the
-        # request_spec is dropped
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        rpcapi.unshelve_instance(
-            ctxt, instance=self.fake_instance_obj,
-            host='host', request_spec=self.fake_request_spec_obj,
-            image='image')
-
-        mock_client.can_send_version.assert_has_calls([
-            mock.call('6.0'),
-            mock.call('5.13'),
-            mock.call('5.2'),
-        ])
-        mock_client.prepare.assert_called_with(
-            server='host', version='5.0')
-        mock_cctx.cast.assert_called_with(
-            ctxt, 'unshelve_instance', instance=self.fake_instance_obj,
-            image='image', filter_properties=None, node=None)
 
     def test_volume_snapshot_create(self):
         self._test_compute_api('volume_snapshot_create', 'cast',
@@ -1262,37 +760,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 requested_networks=['network1'], security_groups=None,
                 block_device_mapping=None, node='node', limits=[],
                 host_list=None, accel_uuids=accel_uuids, version='6.0')
-
-    def test_build_and_run_instance_old_rpcapi(self):
-        # With rpcapi < 5.11, accel_uuids must be dropped in the client call.
-        ctxt = context.RequestContext('fake_user', 'fake_project')
-        compute_api = compute_rpcapi.ComputeAPI()
-        compute_api.router.client = mock.Mock()
-        mock_client = mock.MagicMock()
-        compute_api.router.client.return_value = mock_client
-        # Force can_send_version to False, so that 5.0 version is used.
-        mock_client.can_send_version.return_value = False
-        mock_cctx = mock.MagicMock()
-        mock_client.prepare.return_value = mock_cctx
-        compute_api.build_and_run_instance(
-                ctxt, instance=self.fake_instance_obj,
-                host='host', image='image',
-                request_spec=self.fake_request_spec_obj,
-                filter_properties={},
-                accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'])
-
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
-                                                       mock.call('5.11')])
-        mock_client.prepare.assert_called_with(
-                server='host', version='5.0')
-        mock_cctx.cast.assert_called_with(  # No accel_uuids
-                ctxt, 'build_and_run_instance',
-                instance=self.fake_instance_obj,
-                image='image', request_spec=self.fake_request_spec_obj,
-                filter_properties={}, admin_password=None,
-                injected_files=None, requested_networks=None,
-                security_groups=None, block_device_mapping=None,
-                node=None, limits=None, host_list=None)
 
     def test_quiesce_instance(self):
         self._test_compute_api('quiesce_instance', 'call',

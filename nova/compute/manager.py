@@ -8871,8 +8871,8 @@ class ComputeManager(manager.Manager):
                     ctxt, instance, migrate_data, migration, limits, allocs)
             elif 'dst_supports_numa_live_migration' in dest_check_data:
                 LOG.info('Destination was ready for NUMA live migration, '
-                         'but source is either too old, or is set to an '
-                         'older upgrade level.', instance=instance)
+                         'but the source virt driver does not support it.',
+                         instance=instance)
 
             # At this point, we know that this compute node (destination)
             # potentially has enough live-migratable PCI devices, based on the
@@ -9004,25 +9004,18 @@ class ComputeManager(manager.Manager):
         return self.driver.post_claim_migrate_data(ctxt, instance,
                                                    migrate_data, claim)
 
-    def _source_can_numa_live_migrate(self, ctxt, dest_check_data,
+    def _source_can_numa_live_migrate(self, dest_check_data,
                                       source_check_data):
         # TODO(artom) Our virt driver may have told us that it supports NUMA
-        # live migration. However, the following other conditions must be met
-        # for a NUMA live migration to happen:
-        # 1. We got a True dst_supports_numa_live_migration in
-        #    dest_check_data, indicating that the dest virt driver supports
-        #    NUMA live migration and that the conductor can send RPC 5.3 and
-        #    that the destination compute manager can receive it.
-        # 2. Ourselves, the source, can send RPC 5.3. There's no
-        #    sentinel/parameter for this, so we just ask our rpcapi directly.
-        # If any of these are not met, we need to remove the
-        # src_supports_numa_live_migration flag from source_check_data to avoid
-        # incorrectly initiating a NUMA live migration.
-        # All of this can be removed in RPC 6.0/objects 2.0.
+        # live migration. However, we also need a True
+        # dst_supports_numa_live_migration in dest_check_data, indicating that
+        # the dest virt driver supports NUMA live migration. If not, we need to
+        # remove the src_supports_numa_live_migration flag from
+        # source_check_data to avoid incorrectly initiating a NUMA live
+        # migration. All of this can be removed in objects 2.0.
         can_numa_live_migrate = (
             'dst_supports_numa_live_migration' in dest_check_data and
-            dest_check_data.dst_supports_numa_live_migration and
-            self.compute_rpcapi.supports_numa_live_migration(ctxt))
+            dest_check_data.dst_supports_numa_live_migration)
         if ('src_supports_numa_live_migration' in source_check_data and
                 source_check_data.src_supports_numa_live_migration and
                 not can_numa_live_migrate):
@@ -9053,8 +9046,7 @@ class ComputeManager(manager.Manager):
         result = self.driver.check_can_live_migrate_source(ctxt, instance,
                                                            dest_check_data,
                                                            block_device_info)
-        result = self._source_can_numa_live_migrate(ctxt, dest_check_data,
-                                                    result)
+        result = self._source_can_numa_live_migrate(dest_check_data, result)
         LOG.debug('source check data is %s', result)
         return result
 
@@ -10233,17 +10225,9 @@ class ComputeManager(manager.Manager):
         # NOTE(luyao): We drop move_claim and migration_context after cleanup
         # is complete, to ensure the specific resources claimed on destination
         # are released safely.
-        # TODO(artom) drop_move_claim_at_destination() is new in RPC 5.3, only
-        # call it if we performed a NUMA-aware live migration (which implies us
-        # being able to send RPC 5.3). To check this, we can use the
-        # src_supports_numa_live_migration flag, as it will be set if and only
-        # if:
-        # - dst_supports_numa_live_migration made its way to the source
-        #   (meaning both dest and source are new and conductor can speak
-        #   RPC 5.3)
-        # - src_supports_numa_live_migration was set by the source driver and
-        #   passed the send-RPC-5.3 check.
-        # This check can be removed in RPC 6.0.
+        # Only a NUMA-aware live migration holds a move claim on the
+        # destination. src_supports_numa_live_migration is set if and only if
+        # both the source and destination drivers support it.
         if ('src_supports_numa_live_migration' in migrate_data and
                 migrate_data.src_supports_numa_live_migration):
             LOG.debug('Calling destination to drop move claim.',

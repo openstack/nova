@@ -476,22 +476,6 @@ class ComputeAPI(object):
                     _ROUTER = rpc.ClientRouter(default_client)
         return _ROUTER
 
-    def _ver(self, ctxt, old):
-        """Determine compatibility version.
-        This is to be used when we could send either the current major or
-        a revision of the previous major when they are equivalent. This
-        should only be used by calls that are the exact same in the current
-        and previous major versions. Returns either old, or the current major
-        version.
-        :param old: The version under the previous major version that should
-                    be sent if we're pinned to it.
-        """
-        client = self.router.client(ctxt)
-        if client.can_send_version('6.0'):
-            return '6.0'
-        else:
-            return old
-
     @staticmethod
     def _determine_version_cap(target):
         global LAST_VERSION
@@ -603,7 +587,7 @@ class ComputeAPI(object):
         return client.prepare(**params)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
@@ -614,14 +598,14 @@ class ComputeAPI(object):
         kw = {'instance': instance, 'network_id': network_id,
               'port_id': port_id, 'requested_ip': requested_ip,
               'tag': tag}
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         cctxt = client.prepare(server=_compute_host(None, instance),
                                version=version)
         return cctxt.call(ctxt, 'attach_interface', **kw)
 
     def attach_volume(self, ctxt, instance, bdm):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'attach_volume', instance=instance, bdm=bdm)
@@ -630,7 +614,7 @@ class ComputeAPI(object):
                                            block_migration, disk_over_commit,
                                            migration, limits):
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.3')
+        version = '6.0'
         kwargs = {
             'instance': instance,
             'block_migration': block_migration,
@@ -638,10 +622,6 @@ class ComputeAPI(object):
             'migration': migration,
             'limits': limits
         }
-        if not client.can_send_version(version):
-            kwargs.pop('migration')
-            kwargs.pop('limits')
-            version = '5.0'
         # NOTE(gmaan): Most of the live migration RPC methods use the
         # 'compute-alt' topic, but this RPC method should use the 'compute'
         # topic. If a shutdown is initiated on the destination compute, the
@@ -654,7 +634,7 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'check_can_live_migrate_destination', **kwargs)
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         source = _compute_host(None, instance)
         # NOTE(gmaan): Like check_can_live_migrate_destination, this RPC
@@ -669,11 +649,8 @@ class ComputeAPI(object):
     def check_instance_shared_storage(self, ctxt, data, instance=None,
                                       host=None):
         msg_args = {'data': data}
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
-        if not client.can_send_version('6.0'):
-            # We always pass the instance until the 5.0 version
-            msg_args['instance'] = instance
         # NOTE(gmaan): This is called by the destination compute's
         # revert_resize() on source compute. Destination compute check
         # with source compute if instance storage is shared or not so
@@ -688,7 +665,7 @@ class ComputeAPI(object):
     def confirm_resize(self, ctxt, instance, migration, host,
             cast=True):
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = client.prepare(
                 server=_compute_host(host, instance), version=version)
         rpc_method = cctxt.cast if cast else cctxt.call
@@ -713,15 +690,11 @@ class ComputeAPI(object):
         :param instance: Instance object being resized which should have the
             "old_flavor" attribute set
         :param migration: Migration object for the resize operation
-        :raises: nova.exception.MigrationError if the source compute is too
-            old to perform the operation
         :raises: oslo_messaging.exceptions.MessagingTimeout if the RPC call
             times out
         """
-        version = self._ver(ctxt, '5.8')
+        version = '6.0'
         client = self.router.client(ctxt)
-        if not client.can_send_version(version):
-            raise exception.MigrationError(reason=_('Compute too old'))
         cctxt = client.prepare(server=migration.source_compute,
                                version=version,
                                call_monitor_timeout=CONF.rpc_response_timeout,
@@ -731,14 +704,14 @@ class ComputeAPI(object):
             instance=instance, migration=migration)
 
     def detach_interface(self, ctxt, instance, port_id):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'detach_interface',
                    instance=instance, port_id=port_id)
 
     def detach_volume(self, ctxt, instance, volume_id, attachment_id=None):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
@@ -757,11 +730,7 @@ class ComputeAPI(object):
         }
 
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.2')
-
-        if not client.can_send_version(version):
-            msg_args.pop('request_spec')
-            version = '5.0'
+        version = '6.0'
 
         # NOTE(gmaan): This is final step of resize/migration. Make this
         # RPC request to 'compute-alt' topic so that the shutdown request
@@ -780,11 +749,7 @@ class ComputeAPI(object):
         }
 
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.2')
-
-        if not client.can_send_version(version):
-            msg_args.pop('request_spec')
-            version = '5.0'
+        version = '6.0'
 
         # NOTE(gmaan): This is called by the destination compute's
         # revert_resize() on source compute. Destination compute has deleted
@@ -818,8 +783,6 @@ class ComputeAPI(object):
         :param snapshot_id: ID of the image snapshot created for a
             non-volume-backed instance, else None.
         :param request_spec: nova.objects.RequestSpec object for the operation
-        :raises: nova.exception.MigrationError if the destination compute
-            service is too old for this method
         :raises: oslo_messaging.exceptions.MessagingTimeout if the pre-check
             RPC call times out
         """
@@ -827,11 +790,7 @@ class ComputeAPI(object):
                     'migration': migration,
                     'snapshot_id': snapshot_id}
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.7')
-        if not client.can_send_version('6.0'):
-            msg_args['request_spec'] = request_spec
-        if not client.can_send_version(version):
-            raise exception.MigrationError(reason=_('Compute too old'))
+        version = '6.0'
         # NOTE(gmaan): This is the cross-cell resize case to finish the
         # snapshot-based resize on the destination compute. Make this RPC
         # request to 'compute-alt' topic so that the shutdown request will
@@ -862,15 +821,11 @@ class ComputeAPI(object):
         :param instance: Instance object whose vm_state is "resized" and
             task_state is "resize_reverting".
         :param migration: Migration object whose status is "reverting".
-        :raises: nova.exception.MigrationError if the source compute is too
-            old to perform the operation
         :raises: oslo_messaging.exceptions.MessagingTimeout if the RPC call
             times out
         """
-        version = self._ver(ctxt, '5.10')
+        version = '6.0'
         client = self.router.client(ctxt)
-        if not client.can_send_version(version):
-            raise exception.MigrationError(reason=_('Compute too old'))
         # NOTE(gmaan): This is called after the
         # revert_snapshot_based_resize_at_dest so revert resize is completed on
         # destination side. We should complete it on source compute also. Make
@@ -887,55 +842,55 @@ class ComputeAPI(object):
             instance=instance, migration=migration)
 
     def get_console_output(self, ctxt, instance, tail_length):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_console_output',
                           instance=instance, tail_length=tail_length)
 
     def get_diagnostics(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_diagnostics', instance=instance)
 
     def get_instance_diagnostics(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         cctxt = client.prepare(server=_compute_host(None, instance),
                                version=version)
         return cctxt.call(ctxt, 'get_instance_diagnostics', instance=instance)
 
     def get_vnc_console(self, ctxt, instance, console_type):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_vnc_console',
                           instance=instance, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_spice_console',
                           instance=instance, console_type=console_type)
 
     def get_mks_console(self, ctxt, instance, console_type):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_mks_console',
                           instance=instance, console_type=console_type)
 
     def get_serial_console(self, ctxt, instance, console_type):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_serial_console',
                           instance=instance, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         # NOTE(gmaan): Send this RPC request to 'compute-alt' topic. This is
         # called when the console is already requested. If shutdown is
@@ -957,27 +912,27 @@ class ComputeAPI(object):
         :param mode:
         :param host: This is the host to send the message to.
         '''
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'host_maintenance_mode',
                           host=host_param, mode=mode)
 
     def host_power_action(self, ctxt, host, action):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'host_power_action', action=action)
 
     def inject_network_info(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'inject_network_info', instance=instance)
 
     def live_migration(self, ctxt, instance, dest, block_migration, host,
                        migration, migrate_data=None):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         # NOTE(gmaan): Send this RPC request to 'compute-alt' topic. At this
         # stage, both the source and destination compute have already confirmed
@@ -991,7 +946,7 @@ class ComputeAPI(object):
                    migrate_data=migrate_data, migration=migration)
 
     def live_migration_force_complete(self, ctxt, instance, migration):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         cctxt = client.prepare(
                 server=_compute_host(migration.source_compute, instance),
@@ -999,21 +954,21 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'live_migration_force_complete', instance=instance)
 
     def live_migration_abort(self, ctxt, instance, migration_id):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'live_migration_abort', instance=instance,
                 migration_id=migration_id)
 
     def pause_instance(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         # NOTE(gmaan): Send this RPC request to 'compute-alt' topic. If the
         # shutdown is initiated during live migration, the compute should
@@ -1026,17 +981,10 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'post_live_migration_at_destination',
             instance=instance, block_migration=block_migration)
 
-    # TODO(mriedem): Remove the unused block_migration argument in v6.0 of
-    # the compute RPC API.
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data):
         version = '6.0'
-        msg_args = {}
         client = self.router.client(ctxt)
-        if not client.can_send_version(version):
-            version = '5.0'
-            # We just need to honor the argument in the v5.0 RPC API method
-            msg_args['block_migration'] = None
         # NOTE(gmaan): Send this RPC request to 'compute-alt' topic. If the
         # shutdown is initiated during live migration, the compute should
         # finish the live migration using the 'compute-alt' RPC server.
@@ -1047,10 +995,8 @@ class ComputeAPI(object):
                 call_monitor_timeout=CONF.rpc_response_timeout)
         return cctxt.call(ctxt, 'pre_live_migration',
                           instance=instance,
-                          disk=disk, migrate_data=migrate_data,
-                          **msg_args)
+                          disk=disk, migrate_data=migrate_data)
 
-    # TODO(mriedem): Drop compat for request_spec being a legacy dict in v6.0.
     def prep_resize(self, ctxt, instance, image, flavor, host,
                     migration, request_spec, filter_properties, node,
                     clean_shutdown, host_list):
@@ -1069,14 +1015,6 @@ class ComputeAPI(object):
                     'clean_shutdown': clean_shutdown,
                     'host_list': host_list}
         client = self.router.client(ctxt)
-        if not client.can_send_version(version):
-            version = '5.1'
-            del msg_args['flavor']
-            msg_args['instance_type'] = flavor
-            if not client.can_send_version(version):
-                version = '5.0'
-                msg_args['request_spec'] = (
-                    request_spec.to_legacy_request_spec_dict())
         # NOTE(gmaan): This is called by the conductor on the destination
         # compute to check and start the resize/cold migration on source.
         # This method can be called again by the conductor if the destination
@@ -1116,8 +1054,7 @@ class ComputeAPI(object):
         :returns: nova.objects.MigrationContext; the migration context created
             on the destination host during the resize_claim.
         :raises: nova.exception.MigrationPreCheckError if the pre-check
-            validation fails for the given host selection or the destination
-            compute service is too old for this method
+            validation fails for the given host selection
         :raises: oslo_messaging.exceptions.MessagingTimeout if the pre-check
             RPC call times out
         """
@@ -1126,12 +1063,8 @@ class ComputeAPI(object):
                     'nodename': nodename,
                     'migration': migration,
                     'limits': limits}
-        version = self._ver(ctxt, '5.5')
+        version = '6.0'
         client = self.router.client(ctxt)
-        if not client.can_send_version('6.0'):
-            msg_args['request_spec'] = request_spec
-        if not client.can_send_version(version):
-            raise exception.MigrationPreCheckError(reason=_('Compute too old'))
         # NOTE(gmaan): This is the cross-cell resize case, and resize is not
         # yet started, so this RPC request uses 'compute' topic. If a shutdown
         # is initiated, then not taking the resize request at this stage is
@@ -1163,15 +1096,11 @@ class ComputeAPI(object):
             volume-backed instance
         :raises: nova.exception.InstancePowerOffFailure if stopping the
             instance fails
-        :raises: nova.exception.MigrationError if the source compute is too
-            old to perform the operation
         :raises: oslo_messaging.exceptions.MessagingTimeout if the RPC call
             times out
         """
-        version = self._ver(ctxt, '5.6')
+        version = '6.0'
         client = self.router.client(ctxt)
-        if not client.can_send_version(version):
-            raise exception.MigrationError(reason=_('Compute too old'))
         # NOTE(gmaan): This is the cross-cell resize case, and called after
         # resize is prepared on destination compute. At this point, resize
         # is started so make this RPC request to 'compute-alt' topic so that
@@ -1189,7 +1118,7 @@ class ComputeAPI(object):
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'reboot_instance',
@@ -1235,10 +1164,7 @@ class ComputeAPI(object):
                     'reimage_boot_volume parameter.')
             else:
                 del msg_args['reimage_boot_volume']
-            version = self._ver(ctxt, '5.12')
-        if not client.can_send_version(version):
-            del msg_args['accel_uuids']
-            version = '5.0'
+            version = '6.0'
         cctxt = client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'rebuild_instance',
@@ -1250,7 +1176,7 @@ class ComputeAPI(object):
                    **msg_args)
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
@@ -1269,7 +1195,7 @@ class ComputeAPI(object):
         }
         if not client.can_send_version(version):
             kwargs.pop('delete_attachment')
-            version = self._ver(ctxt, '5.0')
+            version = '6.0'
         # NOTE(gmaan): This is called during live migration rollback. Send
         # this RPC request to 'compute-alt' topic. If the shutdown is initiated
         # during live migration rollback, the compute should finish the it
@@ -1280,7 +1206,7 @@ class ComputeAPI(object):
 
     def rescue_instance(self, ctxt, instance, rescue_password,
                         rescue_image_ref=None, clean_shutdown=True):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         msg_args = {'rescue_password': rescue_password,
                     'clean_shutdown': clean_shutdown,
                     'rescue_image_ref': rescue_image_ref,
@@ -1301,15 +1227,6 @@ class ComputeAPI(object):
         }
         client = self.router.client(ctxt)
 
-        if not client.can_send_version(version):
-            version = self._ver(ctxt, '5.2')
-            del msg_args['flavor']
-            msg_args['instance_type'] = flavor
-
-            if not client.can_send_version(version):
-                msg_args.pop('request_spec')
-                version = '5.0'
-
         # NOTE(gmaan): This is called by destination compute's prep_resize()
         # to start the migration on source compute. Make this RPC request to
         # 'compute-alt' topic so that the shutdown request will wait for
@@ -1321,7 +1238,7 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'resize_instance', **msg_args)
 
     def resume_instance(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
@@ -1335,11 +1252,7 @@ class ComputeAPI(object):
         }
 
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.2')
-
-        if not client.can_send_version(version):
-            msg_args.pop('request_spec')
-            version = '5.0'
+        version = '6.0'
 
         # NOTE(gmaan): This revert resize is initiated by API on the
         # destination compute, and the revert resize has not yet started.
@@ -1364,15 +1277,11 @@ class ComputeAPI(object):
         :param instance: Instance object whose vm_state is "resized" and
             task_state is "resize_reverting".
         :param migration: Migration object whose status is "reverting".
-        :raises: nova.exception.MigrationError if the destination compute
-            service is too old to perform the operation
         :raises: oslo_messaging.exceptions.MessagingTimeout if the RPC call
             times out
         """
-        version = self._ver(ctxt, '5.9')
+        version = '6.0'
         client = self.router.client(ctxt)
-        if not client.can_send_version(version):
-            raise exception.MigrationError(reason=_('Compute too old'))
         # NOTE(gmaan): This revert resize for cross-cell resize case. It is
         # initiated by the conductor and the revert resize has not yet started.
         # So this RPC request uses the 'compute' topic. If a shutdown is
@@ -1389,7 +1298,7 @@ class ComputeAPI(object):
     def rollback_live_migration_at_destination(self, ctxt, instance, host,
                                                destroy_disks,
                                                migrate_data):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         # NOTE(gmaan): This is called during live migration rollback. Send
         # this RPC request to 'compute-alt' topic. If the shutdown is initiated
@@ -1401,14 +1310,6 @@ class ComputeAPI(object):
                    instance=instance, destroy_disks=destroy_disks,
                    migrate_data=migrate_data)
 
-    # TODO(sbauza): Remove this when we bump the compute API to v6.0
-    def supports_numa_live_migration(self, ctxt):
-        """Returns whether we can send 5.3, needed for NUMA live migration.
-        """
-        client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.3')
-        return client.can_send_version(version)
-
     def drop_move_claim_at_destination(self, ctxt, instance, host):
         """Called by the source of a live migration that's being rolled back.
         This is a call not because we care about the return value, but because
@@ -1418,7 +1319,7 @@ class ComputeAPI(object):
         dropping the move claim before we drop the migration context from the
         instance.
         """
-        version = self._ver(ctxt, '5.3')
+        version = '6.0'
         client = self.router.client(ctxt)
         # NOTE(gmaan): This is called during live migration rollback. Send
         # this RPC request to 'compute-alt' topic. If the shutdown is initiated
@@ -1429,14 +1330,14 @@ class ComputeAPI(object):
         cctxt.call(ctxt, 'drop_move_claim_at_destination', instance=instance)
 
     def set_admin_password(self, ctxt, instance, new_pass):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'set_admin_password',
                           instance=instance, new_pass=new_pass)
 
     def set_host_enabled(self, ctxt, host, enabled):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version,
                 call_monitor_timeout=CONF.rpc_response_timeout,
@@ -1445,7 +1346,7 @@ class ComputeAPI(object):
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id,
                     new_attachment_id):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         kwargs = dict(instance=instance,
                       old_volume_id=old_volume_id,
@@ -1456,7 +1357,7 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'swap_volume', **kwargs)
 
     def get_host_uptime(self, ctxt, host):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'get_host_uptime')
@@ -1468,7 +1369,7 @@ class ComputeAPI(object):
               'volume_id': volume_id, 'disk_bus': disk_bus,
               'device_type': device_type, 'tag': tag,
               'multiattach': multiattach}
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         cctxt = client.prepare(server=_compute_host(None, instance),
                                version=version,
@@ -1478,7 +1379,7 @@ class ComputeAPI(object):
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'backup_instance',
@@ -1488,7 +1389,7 @@ class ComputeAPI(object):
                    rotation=rotation)
 
     def snapshot_instance(self, ctxt, instance, image_id):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'snapshot_instance',
@@ -1496,7 +1397,7 @@ class ComputeAPI(object):
                    image_id=image_id)
 
     def start_instance(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'start_instance', instance=instance)
@@ -1504,46 +1405,46 @@ class ComputeAPI(object):
     def stop_instance(self, ctxt, instance, do_cast=True, clean_shutdown=True):
         msg_args = {'instance': instance,
                     'clean_shutdown': clean_shutdown}
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         rpc_method = cctxt.cast if do_cast else cctxt.call
         return rpc_method(ctxt, 'stop_instance', **msg_args)
 
     def suspend_instance(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
     def terminate_instance(self, ctxt, instance, bdms):
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'terminate_instance', instance=instance, bdms=bdms)
 
     def unpause_instance(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unrescue_instance', instance=instance)
 
     def soft_delete_instance(self, ctxt, instance):
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'soft_delete_instance', instance=instance)
 
     def restore_instance(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'restore_instance', instance=instance)
@@ -1557,15 +1458,7 @@ class ComputeAPI(object):
             'accel_uuids': accel_uuids,
         }
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.13')
-        if not client.can_send_version(version):
-            if accel_uuids:
-                LOG.error("Shelve with accelerators is not supported as "
-                          "RPC version is too old.")
-                raise exception.ForbiddenWithAccelerators()
-            else:
-                msg_kwargs.pop('accel_uuids')
-            version = '5.0'
+        version = '6.0'
         cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'shelve_instance', **msg_kwargs)
@@ -1578,17 +1471,14 @@ class ComputeAPI(object):
             'accel_uuids': accel_uuids,
         }
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.13')
-        if not client.can_send_version(version):
-            msg_kwargs.pop('accel_uuids')
-            version = '5.0'
+        version = '6.0'
         cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'shelve_offload_instance', **msg_kwargs)
 
     def unshelve_instance(self, ctxt, instance, host, request_spec, image=None,
                           filter_properties=None, node=None, accel_uuids=None):
-        version = self._ver(ctxt, '5.13')
+        version = '6.0'
         msg_kwargs = {
             'instance': instance,
             'image': image,
@@ -1600,19 +1490,12 @@ class ComputeAPI(object):
 
         client = self.router.client(ctxt)
 
-        if not client.can_send_version(version):
-            msg_kwargs.pop('accel_uuids')
-            version = '5.2'
-        if not client.can_send_version(version):
-            msg_kwargs.pop('request_spec')
-            version = '5.0'
-
         cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'unshelve_instance', **msg_kwargs)
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,
                                create_info):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance,
@@ -1620,7 +1503,7 @@ class ComputeAPI(object):
 
     def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
                                delete_info):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance,
@@ -1661,7 +1544,7 @@ class ComputeAPI(object):
 
     def external_instance_event(self, ctxt, instances, events, host=None):
         instance = instances[0]
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         # NOTE(gmaan): This is initiated by the external services (for
         # example, neutron send event for network change) and let's not block
@@ -1696,39 +1579,33 @@ class ComputeAPI(object):
                   "accel_uuids": accel_uuids,
                  }
         client = self.router.client(ctxt)
-        version = self._ver(ctxt, '5.11')
-        if not client.can_send_version(version):
-            kwargs.pop('accel_uuids')
-            version = '5.0'
+        version = '6.0'
         cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'build_and_run_instance', **kwargs)
 
     def quiesce_instance(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'quiesce_instance', instance=instance)
 
     def unquiesce_instance(self, ctxt, instance, mapping=None):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unquiesce_instance', instance=instance,
                    mapping=mapping)
 
     def trigger_crash_dump(self, ctxt, instance):
-        version = self._ver(ctxt, '5.0')
+        version = '6.0'
         client = self.router.client(ctxt)
         cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, "trigger_crash_dump", instance=instance)
 
     def cache_images(self, ctxt, host, image_ids):
-        version = self._ver(ctxt, '5.4')
+        version = '6.0'
         client = self.router.client(ctxt)
-        if not client.can_send_version(version):
-            raise exception.NovaException('Compute RPC version pin does not '
-                                          'allow cache_images() to be called')
         # This is a potentially very long-running call, so we provide the
         # two timeout values which enables the call monitor in oslo.messaging
         # so that this can run for extended periods.

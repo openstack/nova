@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The compute RPC API client no longer falls back to the 5.x versions of
+    the compute RPC API. With an ``[upgrade_levels] compute`` pin older than
+    Wallaby, every compute RPC call now fails. Remove such a pin, or set it
+    to ``auto``.
