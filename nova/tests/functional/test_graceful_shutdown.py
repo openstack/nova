@@ -39,6 +39,7 @@ import nova.conf
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
+from nova import utils
 
 CONF = nova.conf.CONF
 
@@ -122,17 +123,24 @@ class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
             stop_thread.is_alive(),
             'Graceful shutdown thread did not complete within %ds' % timeout)
 
+    def _set_forced_down(self, host, binary, forced_down):
+        with utils.temporary_mutation(self.admin_api, microversion='2.53'):
+            svc = self.admin_api.get_services(host=host, binary=binary)[0]
+            self.admin_api.put_service_force_down(svc['id'], forced_down)
+
     def wait_for_service_stop(self, stop_thread, host,
                               binary='nova-compute', timeout=60):
         """Join stop_thread then poll until the service is down in the DB."""
         self._join_stop_thread(stop_thread, timeout=timeout)
-        # self._wait_for_service_parameter polls the service status every
-        # .5 sec, so wait for CONF.service_down_time + 10 sec worth of
-        # retries whenever we poll for a service state ('up' or 'down')
-        # change in this test class.
-        max_retries = int(CONF.service_down_time / 0.5 + 10)
+        # The stop thread has been joined, so the service process has
+        # completed its full shutdown sequence including cleanup_host().
+        # At this point the only thing left is for the servicegroup to
+        # notice the heartbeats have stopped, which takes up to
+        # service_down_time (30s) and is not what these tests exercise.
+        # Mark it forced_down so the servicegroup reports "down" immediately.
+        self._set_forced_down(host, binary, True)
         self._wait_for_service_parameter(
-            host, binary, {'state': 'down'}, max_retries=max_retries)
+            host, binary, {'state': 'down'}, max_retries=10)
 
     def _assert_in_progress_task_count(
             self, compute, task_count, task_name=None):
@@ -148,6 +156,9 @@ class GracefulShutdownTestBase(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_assert(no_task_tracked)
 
     def _restart_compute(self, hostname):
+        # Clear forced_down set by wait_for_service_stop so the restarted
+        # service can report as "up" once it heartbeats.
+        self._set_forced_down(hostname, 'nova-compute', False)
         self.computes.pop(hostname, None)
         self._start_compute(hostname)
         # NOTE(gmaan): In this case, existing service is started again
