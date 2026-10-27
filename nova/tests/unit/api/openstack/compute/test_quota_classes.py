@@ -132,15 +132,21 @@ class QuotaClassSetsTestV21(test.TestCase):
 
 class QuotaClassSetsTestV250(QuotaClassSetsTestV21):
     api_version = '2.50'
-    quota_resources = {'metadata_items': 128,
-                       'ram': 51200, 'instances': 10,
-                       'injected_files': 5, 'cores': 20,
-                       'injected_file_content_bytes': 10240,
-                       'key_pairs': 100,
-                       'injected_file_path_bytes': 255,
-                       'server_groups': 10,
-                       'server_group_members': 10}
-    filtered_quotas = quota_classes_v21.FILTERED_QUOTAS_v250
+
+    def __init__(self, *args, **kwargs):
+        super(QuotaClassSetsTestV250, self).__init__(*args, **kwargs)
+        # Give every test instance its own copies of these dicts so that
+        # subclasses mutating them (see QuotaClassSetsTestV257.setUp)
+        # cannot leak state into any other test.
+        self.quota_resources = {'metadata_items': 128,
+                                'ram': 51200, 'instances': 10,
+                                'injected_files': 5, 'cores': 20,
+                                'injected_file_content_bytes': 10240,
+                                'key_pairs': 100,
+                                'injected_file_path_bytes': 255,
+                                'server_groups': 10,
+                                'server_group_members': 10}
+        self.filtered_quotas = list(quota_classes_v21.FILTERED_QUOTAS_v250)
 
     def _check_filtered_extended_quota(self, quota_set):
         self.assertEqual(10, quota_set['server_groups'])
