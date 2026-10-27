@@ -202,6 +202,9 @@ _NUMA_HOST_TOPOLOGIES = {
 }
 
 
+_COMPUTE_NODE_FIXTURES_PRISTINE = copy.deepcopy(_COMPUTE_NODE_FIXTURES)
+
+
 _INSTANCE_FIXTURES = [
     objects.Instance(
         id=1,
@@ -530,10 +533,21 @@ def compute_update_usage(resources, flavor, sign=1):
     return resources
 
 
+def _reset_compute_node_fixtures():
+    # Some tests hand the shared module-level fixtures to the resource
+    # tracker, which mutates them in place (either directly or through a
+    # mocked ComputeNode.get_by_host_and_node). Restore pristine copies so
+    # that the mutations do not leak into other tests when the scheduler
+    # packs test groups into a single worker process in an arbitrary order.
+    for index, fixture in enumerate(_COMPUTE_NODE_FIXTURES_PRISTINE):
+        _COMPUTE_NODE_FIXTURES[index] = fixture.obj_clone()
+
+
 class BaseTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
+        self.addCleanup(_reset_compute_node_fixtures)
         self.rt = None
         self.flags(my_ip='1.1.1.1',
                    reserved_host_disk_mb=0,
