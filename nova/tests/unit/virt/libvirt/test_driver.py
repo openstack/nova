@@ -12683,7 +12683,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self, mock_cpu, mock_test_file):
         self.flags(group='workarounds', skip_cpu_compare_on_dest=True)
         instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
+        # Use our own copy: the module-level fake is shared by reference,
+        # so assigning it and then mutating the model would leak the
+        # change to every later test running in this process.
+        instance_ref.vcpu_model = objects.VirtCPUModel(
+            **test_vcpu_model.fake_vcpumodel_dict)
         instance_ref.vcpu_model.model = None
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
