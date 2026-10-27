@@ -9225,16 +9225,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 accel_uuids=[], reimage_boot_volume=False, target_state=None)
         self.assertIn('Trusted image certificates provided on host', str(ex))
 
-    def test_reverts_task_state_instance_not_found(self):
+    @mock.patch.object(manager, 'LOG')
+    def test_reverts_task_state_instance_not_found(self, log_mock):
         # Tests that the reverts_task_state decorator in the compute manager
         # will not trace when an InstanceNotFound is raised.
         instance = objects.Instance(uuid=uuids.instance, task_state="FAKE")
         instance_update_mock = mock.Mock(
             side_effect=exception.InstanceNotFound(instance_id=instance.uuid))
         self.compute._instance_update = instance_update_mock
-
-        log_mock = mock.Mock()
-        manager.LOG = log_mock
 
         @manager.reverts_task_state
         def fake_function(self, context, instance):
