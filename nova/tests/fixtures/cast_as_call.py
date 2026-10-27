@@ -53,12 +53,25 @@ class CastAsCallFixture(fixtures.Fixture):
         if obj:
             cls = getattr(sys.modules[obj.__class__.__module__],
                           obj.__class__.__name__)
-            testcase.stub_out('%s.%s.prepare' % (obj.__class__.__module__,
-                                                 obj.__class__.__name__),
+
+            def _owning_class(klass, name):
+                # The class that defines the attribute in its own
+                # __dict__. Stubbing an inherited attribute on the
+                # subclass makes the monkeypatch restore write the
+                # inherited value into the subclass __dict__, leaving
+                # a phantom entry behind that shadows later patches
+                # of the parent attribute.
+                return next(
+                    (k for k in klass.__mro__ if name in k.__dict__), klass)
+
+            prep_cls = _owning_class(cls, 'prepare')
+            cast_cls = _owning_class(cls, 'cast')
+            testcase.stub_out('%s.%s.prepare' % (prep_cls.__module__,
+                                                 prep_cls.__name__),
                               prepare)
-            testcase.stub_out('%s.%s.cast' % (obj.__class__.__module__,
-                                              obj.__class__.__name__),
-                              cls.call)
+            testcase.stub_out('%s.%s.cast' % (cast_cls.__module__,
+                                              cast_cls.__name__),
+                              cast_cls.call)
         else:
             testcase.stub_out('oslo_messaging.RPCClient.prepare', prepare)
             testcase.stub_out('oslo_messaging.RPCClient.cast',
