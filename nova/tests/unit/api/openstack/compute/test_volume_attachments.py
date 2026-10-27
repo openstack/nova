@@ -17,6 +17,7 @@
 import datetime
 from unittest import mock
 
+import ddt
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import webob
@@ -95,6 +96,69 @@ def fake_bdm_get_by_volume_and_instance(cls, ctxt, volume_id, instance_uuid):
     })
     return objects.BlockDeviceMapping._from_db_object(
         ctxt, objects.BlockDeviceMapping(), db_bdm)
+
+
+@ddt.ddt
+class VolumeAttachmentPaginationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.stub_out('nova.compute.api.API.get', fake_get_instance)
+        self.controller = volume_attachments.VolumeAttachmentController()
+        self.context = context.get_admin_context()
+
+    @ddt.data('2.1', '2.88', '2.89', '2.101')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_pagination(self, microversion, mock_get_bdms):
+        # Local devices and volumes without attachment IDs must not consume
+        # positions in pages where they are excluded from the response.
+        volume_ids = [None, FAKE_UUID_A, None, FAKE_UUID_C, FAKE_UUID_B]
+        bdms = []
+        for index, volume_id in enumerate(volume_ids):
+            bdms.append(objects.BlockDeviceMapping(
+                self.context,
+                instance_uuid=FAKE_UUID,
+                uuid=getattr(uuids, 'bdm_%s' % index),
+                volume_id=volume_id,
+                device_name='/dev/vd%s' % chr(ord('a') + index),
+                tag=None,
+                delete_on_termination=False,
+                attachment_id=(None if volume_id == FAKE_UUID_C
+                               else uuids.attachment_id)))
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList(
+            objects=bdms)
+        expected_ids = [FAKE_UUID_A, FAKE_UUID_C, FAKE_UUID_B]
+        if api_version_request.APIVersionRequest(microversion) >= (
+            api_version_request.APIVersionRequest('2.89')
+        ):
+            expected_ids.remove(FAKE_UUID_C)
+
+        def get_page(query):
+            req = fakes.HTTPRequest.blank(
+                '/servers/%s/os-volume_attachments%s' % (FAKE_UUID, query),
+                version=microversion)
+            result = self.controller.index(req, FAKE_UUID)
+            return [item['volumeId'] for item in result['volumeAttachments']]
+
+        # An omitted limit and a limit above max_limit must both count only
+        # attachments visible at the requested microversion.
+        self.flags(max_limit=2, group='api')
+        self.assertEqual(expected_ids[:2], get_page(''))
+        self.assertEqual(expected_ids[:2], get_page('?limit=100'))
+        self.assertEqual(expected_ids[:2], get_page('?limit=0'))
+        self.assertEqual(expected_ids[1:3], get_page('?offset=1'))
+
+        # Advancing by the number returned must visit every attachment once,
+        # without empty intermediate pages or repeated attachments.
+        actual_ids = []
+        for offset, volume_id in enumerate(expected_ids):
+            page = get_page('?limit=1&offset=%s' % offset)
+            self.assertEqual([volume_id], page)
+            actual_ids.extend(page)
+        self.assertEqual(expected_ids, actual_ids)
+        self.assertEqual(
+            [], get_page('?limit=1&offset=%s' % len(expected_ids)))
+        self.assertEqual([], get_page('?limit=1&offset=100'))
 
 
 class VolumeAttachTestsV21(test.NoDBTestCase):

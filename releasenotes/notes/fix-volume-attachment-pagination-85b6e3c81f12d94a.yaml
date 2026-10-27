@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Fixed pagination of ``GET /servers/{server_id}/os-volume_attachments``
+    to apply ``limit`` and ``offset`` after excluding block device mappings
+    that are not visible in the response. Previously, local disks and, from
+    microversion 2.89, volumes without an attachment ID consumed positions
+    in pages. This could produce short or empty pages while attachments
+    remained, or repeated attachments when clients advanced the offset by
+    the number of returned attachments.
