@@ -15,6 +15,10 @@ List volume attachments for an instance
 
 List volume attachments for an instance.
 
+The ``limit`` and ``offset`` parameters apply to the volume attachments in the
+response, excluding local disks and any other block device mappings that are
+not shown at the requested microversion.
+
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)

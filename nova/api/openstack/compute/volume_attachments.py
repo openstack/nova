@@ -120,7 +120,6 @@ class VolumeAttachmentController(wsgi.Controller):
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
-        limited_list = common.limited(bdms, req)
 
         results = []
         show_tag = api_version_request.is_supported(req, '2.70')
@@ -128,7 +127,7 @@ class VolumeAttachmentController(wsgi.Controller):
             req, '2.79')
         show_attachment_id_bdm_uuid = api_version_request.is_supported(
             req, '2.89')
-        for bdm in limited_list:
+        for bdm in bdms:
             if not bdm.volume_id:
                 continue
             if show_attachment_id_bdm_uuid and bdm.attachment_id is None:
@@ -142,7 +141,7 @@ class VolumeAttachmentController(wsgi.Controller):
             )
             results.append(va)
 
-        return {'volumeAttachments': results}
+        return {'volumeAttachments': common.limited(results, req)}
 
     @wsgi.expected_errors(404)
     @validation.query_schema(schema.show_query)
