@@ -2637,9 +2637,10 @@ class _ComputeAPIUnitTestMixIn(object):
                                                            vcpus=3,
                                                            memory_mb=1536)
 
+        instance = self._create_instance_obj()
         self.assertRaises(limit_exceptions.ProjectOverLimit,
                           self.compute_api.resize,
-                          self.context, self._create_instance_obj(),
+                          self.context, instance,
                           'fake_flavor_id')
 
         mock_get_flavor.assert_called_once_with(self.context,
@@ -2647,6 +2648,11 @@ class _ComputeAPIUnitTestMixIn(object):
                                                 read_deleted="no")
         mock_enforce.assert_called_once_with(
             self.context, "fake", mock.ANY, 1, 1)
+        # The image is needed to translate extra specs such as
+        # hw:mem_encryption, see bug #2088831.
+        req_spec = mock_enforce.call_args.args[2]
+        self.assertEqual(instance.image_meta.obj_to_primitive(),
+                         req_spec.image.obj_to_primitive())
 
     # TODO(huaqiang): Remove in Wallaby
     @mock.patch('nova.servicegroup.api.API.service_is_up',

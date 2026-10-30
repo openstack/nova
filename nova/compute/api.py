@@ -2829,7 +2829,11 @@ class API:
         compute_utils.check_num_instances_quota(context, flavor, 1, 1,
                 project_id=project_id, user_id=user_id)
         is_bfv = compute_utils.is_volume_backed_instance(context, instance)
-        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=is_bfv)
+        # NOTE: The image is needed for extra specs such as hw:mem_encryption
+        # that can only be translated in combination with the image. See bug
+        # #2088831.
+        req_spec = objects.RequestSpec(
+            flavor=flavor, is_bfv=is_bfv, image=instance.image_meta)
         placement_limits.enforce_num_instances_and_resources(
             context, project_id, req_spec, 1, 1)
 
@@ -3969,8 +3973,11 @@ class API:
         # But for revert resize, we are just removing claims in placement
         # so we can ignore the quota check
         if not is_revert:
+            # NOTE: The image is needed for extra specs such as
+            # hw:mem_encryption that can only be translated in combination
+            # with the image. See bug #2088831.
             req_spec = objects.RequestSpec(
-                flavor=new_flavor, is_bfv=is_bfv)
+                flavor=new_flavor, is_bfv=is_bfv, image=instance.image_meta)
             placement_limits.enforce_num_instances_and_resources(
                 context, project_id, req_spec, 1, 1)
 
