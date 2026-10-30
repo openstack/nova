@@ -3,5 +3,5 @@
 ===========================
 
 .. release-notes::
-   :branch: stable/2025.1
+   :branch: unmaintained/2025.1
    :earliest-version: 31.0.0
