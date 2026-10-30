@@ -229,14 +229,11 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
 
         self.admin_api.delete_server(server['id'])
 
-    def test_resource_request(self):
+    def _create_mem_encryption_server(self):
         # Create a server with a flavor extra spec (hw:mem_encryption) that
         # translates into a resource class (MEM_ENCRYPTION_CONTEXT) and a
         # required host trait (HW_CPU_X86_AMD_SEV) only in combination with
-        # the image. Bug #2088831: the unified limits quota check translated
-        # the flavor against an empty image, raising a spurious flavor/image
-        # conflict (400). The image metadata is now included in the quota
-        # check, so the create succeeds.
+        # the image.
         self.limits.reglimits['class:MEM_ENCRYPTION_CONTEXT'] = 10
         flavor_id = self._create_flavor(
             vcpu=1, memory_mb=512, disk=1, ephemeral=0,
@@ -249,7 +246,42 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
                 rp['uuid'], [os_traits.HW_CPU_X86_AMD_SEV])
         image_id = self._create_image(
             metadata={'hw_firmware_type': 'uefi'})['id']
-        self._create_server(flavor_id=flavor_id, image_uuid=image_id)
+        return self._create_server(flavor_id=flavor_id, image_uuid=image_id)
+
+    def test_resource_request(self):
+        # Bug #2088831: the unified limits quota check translated the flavor
+        # against an empty image, raising a spurious flavor/image conflict
+        # (400). The image metadata is now included in the quota check, so
+        # the create succeeds.
+        self._create_mem_encryption_server()
+
+    def test_resource_request_resize(self):
+        # Bug #2088831: the unified limits quota check for resize also
+        # translated the new flavor against an empty image, so resizing a
+        # hw:mem_encryption server failed with a spurious flavor/image
+        # conflict (400).
+        # There is only one compute host, so resize to the same host.
+        self.flags(allow_resize_to_same_host=True)
+        server = self._create_mem_encryption_server()
+        new_flavor_id = self._create_flavor(
+            vcpu=2, memory_mb=1024, disk=1, ephemeral=0,
+            extra_spec={'hw:mem_encryption': 'true'})
+
+        server = self._resize_server(server, new_flavor_id)
+        self._confirm_resize(server)
+
+    def test_resource_request_restore(self):
+        # Bug #2088831: the unified limits quota check for restoring a
+        # soft-deleted server also translated the flavor against an empty
+        # image, so restoring a hw:mem_encryption server failed with a
+        # spurious flavor/image conflict (400).
+        self.flags(reclaim_instance_interval=3600)
+        server = self._create_mem_encryption_server()
+
+        self.api.delete_server(server['id'])
+        server = self._wait_for_state_change(server, 'SOFT_DELETED')
+        self.api.post_server_action(server['id'], {'restore': {}})
+        self._wait_for_state_change(server, 'ACTIVE')
 
 
 class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):

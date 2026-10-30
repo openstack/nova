@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Resizing or restoring a soft-deleted server with a flavor requesting
+    memory encryption (``hw:mem_encryption``) no longer fails with a 400 error
+    when unified limits quotas are enabled
+    (``[quota]driver = nova.quota.UnifiedLimitsDriver``). The image metadata
+    of the server is now included in the quota checks for these operations.
+    See `bug 2088831 <https://bugs.launchpad.net/nova/+bug/2088831>`__ for
+    details.
