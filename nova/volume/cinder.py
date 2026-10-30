@@ -185,6 +185,7 @@ def _get_cinderclient_parameters(context):
 
     if CONF.cinder.endpoint_template:
         url = CONF.cinder.endpoint_template % context.to_dict()
+        service_parameters['endpoint_override'] = url
     else:
         url = session.get_endpoint(auth, **service_parameters)
 
@@ -220,11 +221,7 @@ def cinderclient(context, microversion=None, skip_version_check=False,
     :returns: A cinderclient.client.Client wrapper, unless check_only is False.
     """
 
-    endpoint_override = None
     auth, service_parameters, url = _get_cinderclient_parameters(context)
-
-    if CONF.cinder.endpoint_template:
-        endpoint_override = url
 
     # TODO(jamielennox): This should be using proper version discovery from
     # the cinder service rather than just inspecting the URL for certain string
@@ -247,14 +244,14 @@ def cinderclient(context, microversion=None, skip_version_check=False,
         return
 
     session = service_auth.get_service_auth_session(
-            nova.conf.cinder.cinder_group.name)
-    return cinder_client.Client(version,
-                                session=session,
-                                auth=auth,
-                                endpoint_override=endpoint_override,
-                                connect_retries=CONF.cinder.http_retries,
-                                global_request_id=context.global_id,
-                                **service_parameters)
+        nova.conf.cinder.cinder_group.name)
+    return cinder_client.Client(
+        version,
+        session=session,
+        auth=auth,
+        connect_retries=CONF.cinder.http_retries,
+        global_request_id=context.global_id,
+        **service_parameters)
 
 
 def _untranslate_volume_summary_view(context, vol):
