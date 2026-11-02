@@ -64,6 +64,26 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
         self._verify_response(
             'list-volume-attachments-resp', subs, response, 200)
 
+    def test_list_volume_attachments_pagination(self):
+        # The image-backed server has a local root disk, which must not
+        # consume a position in the attachment list.
+        self.test_list_volume_attachments()
+        self.flags(max_limit=1, group='api')
+        url = 'servers/%s/os-volume_attachments' % self.server_id
+        volume_ids = []
+        for offset in range(2):
+            response = self._do_get(
+                '%s?limit=1&offset=%s' % (url, offset),
+                return_json_body=True)
+            attachments = response['volumeAttachments']
+            self.assertEqual(1, len(attachments))
+            volume_ids.append(attachments[0]['volumeId'])
+        self.assertCountEqual(
+            [self.OLD_VOLUME_ID, self.NEW_VOLUME_ID], volume_ids)
+        response = self._do_get(
+            '%s?limit=1&offset=2' % url, return_json_body=True)
+        self.assertEqual([], response['volumeAttachments'])
+
     def test_volume_attachment_detail(self):
         subs = self.test_attach_volume_to_server()
         response = self._do_get(
