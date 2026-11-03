@@ -235,7 +235,8 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
         # required host trait (HW_CPU_X86_AMD_SEV) only in combination with
         # the image. Bug #2088831: the unified limits quota check translated
         # the flavor against an empty image, raising a spurious flavor/image
-        # conflict (400).
+        # conflict (400). The image metadata is now included in the quota
+        # check, so the create succeeds.
         self.limits.reglimits['class:MEM_ENCRYPTION_CONTEXT'] = 10
         flavor_id = self._create_flavor(
             vcpu=1, memory_mb=512, disk=1, ephemeral=0,
@@ -248,13 +249,7 @@ class UnifiedLimitsTest(integrated_helpers._IntegratedTestBase):
                 rp['uuid'], [os_traits.HW_CPU_X86_AMD_SEV])
         image_id = self._create_image(
             metadata={'hw_firmware_type': 'uefi'})['id']
-        # FIXME(melwitt): Remove the expected exception and assert a
-        # successful create when bug #2088831 is fixed.
-        e = self.assertRaises(
-            client.OpenStackApiException, self._create_server,
-            flavor_id=flavor_id, image_uuid=image_id)
-        self.assertEqual(400, e.response.status_code)
-        self.assertIn('hw:mem_encryption', e.response.text)
+        self._create_server(flavor_id=flavor_id, image_uuid=image_id)
 
 
 class ResourceStrategyTest(integrated_helpers._IntegratedTestBase):
