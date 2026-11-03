@@ -6568,69 +6568,6 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         self.assertEqual(400, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
-    def _test_shelve_instance_with_compute_rpc_pin(
-            self, version_cap, body=None):
-        self.flags(compute=version_cap, group='upgrade_levels')
-
-        self.flags(shelved_offload_time=-1)
-        self.api.post_server_action(self.server['id'], body)
-        self._wait_for_state_change(self.server, 'SHELVED')
-
-    def test_shelve_with_compute_rpc_pin_5_0(self):
-        self.flags(compute=5.0, group='upgrade_levels')
-        compute_rpcapi.reset_globals()
-        ex = self.assertRaises(
-            client.OpenStackApiException, self.api.post_server_action,
-            self.server['id'], {'shelve': {}})
-        self.assertEqual(400, ex.response.status_code)
-
-    def test_shelve_instance_5_13(self):
-        body = {'shelve': {}}
-        self._test_shelve_instance_with_compute_rpc_pin(
-                '5.13', body=body)
-
-    def _test_shelve_offload_instance_with_compute_rpc_pin(self, version_cap):
-        self.flags(compute=version_cap, group='upgrade_levels')
-
-        self.flags(shelved_offload_time=2)
-        self.api.post_server_action(self.server['id'], {'shelve': {}})
-        self._wait_for_state_change(self.server, 'SHELVED')
-
-        self.api.post_server_action(self.server['id'], {'shelveOffload': {}})
-        self._wait_for_state_change(self.server, 'SHELVED_OFFLOADED')
-
-    def test_shelve_offload_instance_5_0(self):
-        self._test_shelve_offload_instance_with_compute_rpc_pin('5.0')
-
-    def test_shelve_offload_instance_5_13(self):
-        self._test_shelve_offload_instance_with_compute_rpc_pin('5.13')
-
-    def _test_unshelve_instance_with_compute_rpc_pin(
-            self, version_cap, body=None):
-        self.flags(compute=version_cap, group='upgrade_levels')
-
-        self.api.microversion = '2.87'
-        self.api.post_server_action(self.server['id'], {'shelve': {}})
-        self._wait_for_state_change(self.server, 'SHELVED_OFFLOADED')
-
-        self.api.post_server_action(self.server['id'], body)
-        self._wait_for_state_change(self.server, 'ACTIVE')
-
-    def test_unshelve_instance_5_0(self):
-        body = {'unshelve': None}
-        self._test_unshelve_instance_with_compute_rpc_pin(
-                '5.0', body=body)
-
-    def test_unshelve_instance_5_2(self):
-        body = {'unshelve': None}
-        self._test_unshelve_instance_with_compute_rpc_pin(
-                '5.2', body=body)
-
-    def test_unshelve_instance_5_13(self):
-        body = {'unshelve': None}
-        self._test_unshelve_instance_with_compute_rpc_pin(
-                '5.13', body=body)
-
 
 class TwoPortsAcceleratorServerOpsTest(AcceleratorServerBase):
     def setUp(self):

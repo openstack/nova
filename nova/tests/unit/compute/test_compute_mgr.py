@@ -6571,7 +6571,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 dest_check_data=dest_check_data)
         self.assertEqual(can_numa_result, result)
         mock_src_can_numa.assert_called_once_with(
-            self.context, dest_check_data, drvr_check_result)
+            dest_check_data, drvr_check_result)
         mock_event.assert_called_once_with(
             self.context, 'compute_check_can_live_migrate_source', CONF.host,
             instance.uuid, graceful_exit=False)
@@ -6918,56 +6918,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         positive_source_check_data = objects.LibvirtLiveMigrateData(
             src_supports_numa_live_migration=True)
         negative_source_check_data = objects.LibvirtLiveMigrateData()
-        with mock.patch.object(self.compute.compute_rpcapi,
-                               'supports_numa_live_migration',
-                               return_value=True
-        ) as mock_supports_numa_lm:
-            self.assertIn(
-                'src_supports_numa_live_migration',
-                self.compute._source_can_numa_live_migrate(
-                    self.context, positive_dest_check_data,
-                    copy.deepcopy(positive_source_check_data)))
-            mock_supports_numa_lm.assert_called_once_with(self.context)
-            self.assertNotIn(
-                'src_supports_numa_live_migration',
-                self.compute._source_can_numa_live_migrate(
-                    self.context, positive_dest_check_data,
-                    copy.deepcopy(negative_source_check_data)))
-            self.assertNotIn(
-                'src_supports_numa_live_migration',
-                self.compute._source_can_numa_live_migrate(
-                    self.context, negative_dest_check_data,
-                    copy.deepcopy(positive_source_check_data)))
-            self.assertNotIn(
-                'src_supports_numa_live_migration',
-                self.compute._source_can_numa_live_migrate(
-                    self.context, negative_dest_check_data,
-                    copy.deepcopy(negative_source_check_data)))
-        with mock.patch.object(self.compute.compute_rpcapi,
-                               'supports_numa_live_migration',
-                               return_value=False
-        ) as mock_supports_numa_lm:
-            self.assertNotIn(
-                'src_supports_numa_live_migration',
-                self.compute._source_can_numa_live_migrate(
-                    self.context, positive_dest_check_data,
-                    copy.deepcopy(positive_source_check_data)))
-            mock_supports_numa_lm.assert_called_once_with(self.context)
-            self.assertNotIn(
-                'src_supports_numa_live_migration',
-                self.compute._source_can_numa_live_migrate(
-                    self.context, positive_dest_check_data,
-                    copy.deepcopy(negative_source_check_data)))
-            self.assertNotIn(
-                'src_supports_numa_live_migration',
-                self.compute._source_can_numa_live_migrate(
-                    self.context, negative_dest_check_data,
-                    copy.deepcopy(positive_source_check_data)))
-            self.assertNotIn(
-                'src_supports_numa_live_migration',
-                self.compute._source_can_numa_live_migrate(
-                    self.context, negative_dest_check_data,
-                    copy.deepcopy(negative_source_check_data)))
+        self.assertIn(
+            'src_supports_numa_live_migration',
+            self.compute._source_can_numa_live_migrate(
+                positive_dest_check_data,
+                copy.deepcopy(positive_source_check_data)))
+        self.assertNotIn(
+            'src_supports_numa_live_migration',
+            self.compute._source_can_numa_live_migrate(
+                positive_dest_check_data,
+                copy.deepcopy(negative_source_check_data)))
+        self.assertNotIn(
+            'src_supports_numa_live_migration',
+            self.compute._source_can_numa_live_migrate(
+                negative_dest_check_data,
+                copy.deepcopy(positive_source_check_data)))
+        self.assertNotIn(
+            'src_supports_numa_live_migration',
+            self.compute._source_can_numa_live_migrate(
+                negative_dest_check_data,
+                copy.deepcopy(negative_source_check_data)))
 
     @mock.patch('nova.compute.manager.InstanceEvents._lock_name')
     def test_prepare_for_instance_event(self, lock_name_mock):
