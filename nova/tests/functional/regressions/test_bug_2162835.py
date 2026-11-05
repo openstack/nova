@@ -72,8 +72,9 @@ class TestEvacuatePinnedCpusPeriodicRace(base.ServersTestBase):
         return numa_topology.cells[0].pinned_cpus
 
     def test_evacuate_pinned_cpus_race_with_periodic(self):
-        """Verify that the periodic task corrupts pinned_cpus during
-        evacuate, causing duplicate pCPU assignments across VMs.
+        """Verify that the periodic task does not corrupt pinned_cpus
+        during evacuate, even when it runs in the race window between
+        _update_instance_after_spawn and finish_evacuation.
         """
         flavor_id = self._create_flavor(
             vcpu=2, extra_spec={'hw:cpu_policy': 'dedicated'})
@@ -96,8 +97,9 @@ class TestEvacuatePinnedCpusPeriodicRace(base.ServersTestBase):
         # Two threading.Events coordinate the test thread with the
         # compute thread running the evacuation:
         # - entered: signals that finish_evacuation has been called,
-        #   meaning _update_instance_after_spawn has already cleared
-        #   task_state but instance.host has not been updated yet.
+        #   meaning _update_instance_after_spawn has already run
+        #   (task_state=REBUILDING) but instance.host has not been
+        #   updated yet.
         # - proceed: the test signals finish_evacuation to continue
         #   after the periodic has run.
         entered = threading.Event()
@@ -120,16 +122,17 @@ class TestEvacuatePinnedCpusPeriodicRace(base.ServersTestBase):
         self.api.post_server_action(server_a['id'], {'evacuate': {}})
 
         # 2) Wait until the evacuation reaches finish_evacuation,
-        #    i.e. _update_instance_after_spawn has already run and
-        #    task_state is cleared.
+        #    i.e. _update_instance_after_spawn has already run
+        #    (task_state=REBUILDING) but instance.host is still source.
         self.assertTrue(
             entered.wait(timeout=60),
             "Timed out waiting for finish_evacuation to be entered")
 
-        # 3) Run the periodic task from the test thread. This resets
-        #    host2's pinned_cpus because:
-        #    - instance.host still = host1 (not counted)
-        #    - migration is skipped (task_state=None)
+        # 3) Run the periodic task from the test thread. Without the
+        #    fix, this would reset host2's pinned_cpus because the
+        #    evacuating instance is not counted (host=source) and the
+        #    migration is skipped. With the fix, _instance_is_evacuating
+        #    ensures the migration resources are still tracked.
         self._run_periodics()
 
         # 4) Allow finish_evacuation to proceed
@@ -156,18 +159,11 @@ class TestEvacuatePinnedCpusPeriodicRace(base.ServersTestBase):
         cpus_a = self._get_instance_host_cpus(server_a['id'])
         cpus_b = self._get_instance_host_cpus(server_b['id'])
 
-        # TODO(bug #2162835): Due to the race condition in the
-        # ResourceTracker, the periodic task resets pinned_cpus
-        # during evacuate. This causes server_b to be assigned the
-        # same pCPUs as server_a. Once the bug is fixed, the CPU
-        # sets should be disjoint (no overlap) and host2 should
-        # track all 4 CPUs as pinned:
-        #   self.assertFalse(cpus_a & cpus_b)
-        #   self.assertEqual(4, len(self._get_host_pinned_cpus('host2')))
-        self.assertTrue(
+        self.assertFalse(
             cpus_a & cpus_b,
-            f"Expected overlapping pCPUs but got disjoint sets: "
+            f"Expected disjoint pCPUs but got overlap: "
             f"server_a={cpus_a}, server_b={cpus_b}")
+        self.assertEqual(4, len(self._get_host_pinned_cpus('host2')))
 
 
 class TestEvacuateTaskStateRace(base.ServersTestBase):
@@ -177,11 +173,10 @@ class TestEvacuateTaskStateRace(base.ServersTestBase):
     1. server created on host 'source'
     2. host 'source' is stopped
     3. server evacuation requested and let it just before finish_evacuation
-       on the destination. At this point the task_state is None and the
-       instance.host is still pointing to the 'sorce' host.
-    4. sends a reboot request to the server that is accepted
-    5. let evuaction finishes and observer that the server is in an
-       inconsistent state.
+       on the destination. At this point the task_state is REBUILDING and
+       the instance.host is still pointing to the 'source' host.
+    4. sends a reboot request to the server that is now rejected properly
+       and does not interfere with the ongoing evacuation.
     """
 
     ADMIN_API = True
@@ -252,29 +247,26 @@ class TestEvacuateTaskStateRace(base.ServersTestBase):
 
     def test_reboot_during_evacuation(self):
         server, proceed, finished = self._create_evac_and_stop_before_finish()
-        # NOTE(gibi): we cannot user self._reboot_server() as it waits for the
-        # reboot.end notification which also missing as this reboot never
-        # finishes.
+
+        # The API now rejects the reboot properly
         self.api.api_post(
             "/servers/%s/action" % server["id"],
             {"reboot": {"type": "HARD"}},
-            check_response_status=[202],
+            check_response_status=[409],
         )
 
-        # The API accepts the reboot and sends its RPC to
-        # the dead source, leaving the evacuated guest stuck rebooting_hard.
-        # This is part of bug 2162835 and 2166474 as well.
         server = self.api.get_server(server["id"])
         self._wait_for_server_parameter(
             server,
             {
                 "OS-EXT-SRV-ATTR:host": "source",
-                "OS-EXT-STS:task_state": "rebooting_hard",
-                "status": "SHUTOFF",
+                "OS-EXT-STS:task_state": "rebuilding",
+                "status": "REBUILD",
             })
         self._wait_for_migration_status(server, ["pre-migrating"])
 
-        # This allows the evacuation to finish but the reboot is still stuck
+        # This allows the evacuation to finish and the reboot is not
+        # interfering with it
         proceed.set()
         finished.wait(timeout=60)
         self.assertTrue(finished.is_set(), "Evacuation did not finish")
@@ -283,7 +275,7 @@ class TestEvacuateTaskStateRace(base.ServersTestBase):
             server,
             {
                 "OS-EXT-SRV-ATTR:host": "dest",
-                "OS-EXT-STS:task_state": "rebooting_hard",
+                "OS-EXT-STS:task_state": None,
                 "status": "SHUTOFF",
             })
 
@@ -293,29 +285,25 @@ class TestEvacuateTaskStateRace(base.ServersTestBase):
         self.api.microversion = "2.94"
         server, proceed, finished = self._create_evac_and_stop_before_finish()
 
-        # NOTE(gibi): we cannot user self._reboot_server() as it waits for the
-        # reboot.end notification which also missing as this reboot never
-        # finishes.
+        # The API now rejects the reboot properly
         self.api.api_post(
             "/servers/%s/action" % server["id"],
             {"reboot": {"type": "HARD"}},
-            check_response_status=[202],
+            check_response_status=[409],
         )
 
-        # The API accepts the reboot and sends its RPC to
-        # the dead source, leaving the evacuated guest stuck rebooting_hard.
-        # This is part of bug 2162835 and 2166474 as well.
         server = self.api.get_server(server["id"])
         self._wait_for_server_parameter(
             server,
             {
                 "OS-EXT-SRV-ATTR:host": "source",
-                "OS-EXT-STS:task_state": "rebooting_hard",
-                "status": "HARD_REBOOT",
+                "OS-EXT-STS:task_state": "rebuilding",
+                "status": "REBUILD",
             })
         self._wait_for_migration_status(server, ["pre-migrating"])
 
-        # This allows the evacuation to finish but the reboot is still stuck
+        # This allows the evacuation to finish and the reboot is not
+        # interfering with it
         proceed.set()
         finished.wait(timeout=60)
         self.assertTrue(finished.is_set(), "Evacuation did not finish")
@@ -324,6 +312,6 @@ class TestEvacuateTaskStateRace(base.ServersTestBase):
             server,
             {
                 "OS-EXT-SRV-ATTR:host": "dest",
-                "OS-EXT-STS:task_state": "rebooting_hard",
-                "status": "HARD_REBOOT",
+                "OS-EXT-STS:task_state": None,
+                "status": "ACTIVE",
             })

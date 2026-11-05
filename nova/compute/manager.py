@@ -2243,10 +2243,18 @@ class ComputeManager(manager.Manager):
             raise exception.InvalidBDM(str(ex))
 
     def _update_instance_after_spawn(self, instance,
-                                     vm_state=vm_states.ACTIVE):
+                                     vm_state=vm_states.ACTIVE,
+                                     task_state=None):
+        """Update instance state after a successful spawn.
+
+        :param task_state: Defaults to None. During evacuate, pass a
+            non-None value (e.g. REBUILDING) to keep the instance locked
+            for further API actions until instance.host is updated by
+            finish_evacuation. See bug #2162835.
+        """
         instance.power_state = self._get_power_state(instance)
         instance.vm_state = vm_state
-        instance.task_state = None
+        instance.task_state = task_state
         # NOTE(sean-k-mooney): configdrive.update_instance checks
         # instance.launched_at to determine if it is the first or
         # subsequent spawn of an instance. We need to call update_instance
@@ -4000,9 +4008,19 @@ class ComputeManager(manager.Manager):
         # do anything to the guest or its networking/volumes we want to keep
         # the current status rather than put the instance into ERROR status.
         instance_state = instance.vm_state
+
         with self._error_out_instance_on_exception(
                 context, instance, instance_state=instance_state):
             try:
+                orig_vm_state = instance.vm_state
+                if evacuate and target_state and (
+                        orig_vm_state != vm_states.ERROR):
+                    if target_state not in vm_states.ALLOW_TARGET_STATES:
+                        raise exception.\
+                            InstanceEvacuateNotSupportedTargetState(
+                                target_state=target_state)
+                    orig_vm_state = target_state
+
                 self._do_rebuild_instance_with_claim(
                     context, instance, orig_image_ref,
                     image_meta, injected_files, new_pass, orig_sys_metadata,
@@ -4064,6 +4082,36 @@ class ComputeManager(manager.Manager):
                 # _update_available_resources. See bug 1896463.
                 self.rt.finish_evacuation(instance, scheduled_node, migration)
 
+                if orig_vm_state == vm_states.STOPPED:
+                    LOG.info("bringing vm to original state: '%s'",
+                        orig_vm_state, instance=instance)
+                    instance.vm_state = vm_states.ACTIVE
+                    instance.task_state = task_states.POWERING_OFF
+                    instance.progress = 0
+                    instance.save(
+                        expected_task_state=[task_states.REBUILDING])
+                    self.stop_instance(context, instance, False)
+                else:
+                    instance.task_state = None
+                    instance.save(
+                        expected_task_state=[task_states.REBUILDING])
+
+                # TODO(melwitt): We should clean up instance console
+                # tokens here in the case of evacuate. The instance is
+                # on a new host and will need to establish a new console
+                # connection.
+                self._update_scheduler_instance_info(context, instance)
+                extra_usage_info = {
+                    'image_name': self._get_image_name(image_meta)}
+                self._notify_about_instance_usage(
+                    context, instance, "rebuild.end",
+                    network_info=instance.get_network_info(),
+                    extra_usage_info=extra_usage_info)
+                compute_utils.notify_about_instance_rebuild(
+                    context, instance, self.host,
+                    phase=fields.NotificationPhase.END,
+                    bdms=bdms)
+
     def _do_rebuild_instance_with_claim(
             self, context, instance, orig_image_ref, image_meta,
             injected_files, new_pass, orig_sys_metadata, bdms, evacuate,
@@ -4109,16 +4157,8 @@ class ComputeManager(manager.Manager):
             on_shared_storage, preserve_ephemeral, migration, request_spec,
             allocations, request_group_resource_providers_mapping,
             accel_uuids, reimage_boot_volume, target_state):
-        orig_vm_state = instance.vm_state
 
         if evacuate:
-            if target_state and orig_vm_state != vm_states.ERROR:
-                # This will ensure that at destination the instance will have
-                # the desired state.
-                if target_state not in vm_states.ALLOW_TARGET_STATES:
-                    raise exception.InstanceEvacuateNotSupportedTargetState(
-                        target_state=target_state)
-                orig_vm_state = target_state
 
             if request_spec:
                 # NOTE(gibi): Do a late check of server group policy as
@@ -4282,29 +4322,13 @@ class ComputeManager(manager.Manager):
             # NOTE(rpodolyaka): driver doesn't provide specialized version
             # of rebuild, fall back to the default implementation
             self._rebuild_default_impl(**kwargs)
-        self._update_instance_after_spawn(instance)
+        # Keep task_state=REBUILDING after spawn so that the instance
+        # is protected from racing API actions. rebuild_instance will
+        # clear task_state after finish_evacuation (for evacuate) or
+        # directly (for non-evacuate rebuild).
+        self._update_instance_after_spawn(
+            instance, task_state=task_states.REBUILDING)
         instance.save(expected_task_state=[task_states.REBUILD_SPAWNING])
-
-        if orig_vm_state == vm_states.STOPPED:
-            LOG.info("bringing vm to original state: '%s'",
-                     orig_vm_state, instance=instance)
-            instance.vm_state = vm_states.ACTIVE
-            instance.task_state = task_states.POWERING_OFF
-            instance.progress = 0
-            instance.save()
-            self.stop_instance(context, instance, False)
-        # TODO(melwitt): We should clean up instance console tokens here in the
-        # case of evacuate. The instance is on a new host and will need to
-        # establish a new console connection.
-        self._update_scheduler_instance_info(context, instance)
-        self._notify_about_instance_usage(
-                context, instance, "rebuild.end",
-                network_info=network_info,
-                extra_usage_info=extra_usage_info)
-        compute_utils.notify_about_instance_rebuild(
-            context, instance, self.host,
-            phase=fields.NotificationPhase.END,
-            bdms=bdms)
 
     def _handle_bad_volumes_detached(self, context, instance, bad_devices,
                                      block_device_info):
