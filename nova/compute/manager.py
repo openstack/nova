@@ -710,9 +710,6 @@ class ComputeManager(manager.Manager):
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
-        # TODO(sbauza): Remove this call once we delete the V5Proxy class
-        self.additional_endpoints.append(_ComputeV5Proxy(self))
-
         # NOTE(russellb) Load the driver last.  It may call back into the
         # compute manager via the virtapi, so we want it to be fully
         # initialized before that happens.
@@ -5694,9 +5691,7 @@ class ComputeManager(manager.Manager):
         finally:
             self._delete_stashed_flavor_info(instance)
 
-    def _finish_revert_resize(
-        self, context, instance, migration, request_spec=None,
-    ):
+    def _finish_revert_resize(self, context, instance, migration, request_spec):
         """Inner version of finish_revert_resize."""
         with self._error_out_instance_on_exception(context, instance):
             bdms = self._update_bdm_for_swap_to_finish_resize(
@@ -5808,30 +5803,16 @@ class ComputeManager(manager.Manager):
         :param allocation: allocation dict keyed by RP UUID.
         :param request_spec: The RequestSpec object associated with the
             operation
-        :returns: None if the request_spec is None. Otherwise a mapping
-            between RequestGroup requester_id, currently Neutron port_id,
-            and a list of resource provider UUIDs providing resource for
-            that RequestGroup.
+        :returns: A mapping between RequestGroup requester_id, currently
+            Neutron port_id, and a list of resource provider UUIDs providing
+            resource for that RequestGroup.
         """
-        if request_spec:
-            # NOTE(gibi): We need to re-calculate the resource provider -
-            # port mapping as we have to have the neutron ports allocate
-            # from the source compute after revert.
-            scheduler_utils.fill_provider_mapping_based_on_allocation(
-                context, self.reportclient, request_spec, allocations)
-            provider_mappings = self._get_request_group_mapping(
-                request_spec)
-        else:
-            # TODO(sbauza): Remove this conditional once we only support RPC
-            # API 6.0
-            # NOTE(gibi): The compute RPC is pinned to be older than 5.2
-            # and therefore request_spec is not sent. We cannot calculate
-            # the provider mappings. If the instance has ports with
-            # resource request then the port update will fail in
-            # _update_port_binding_for_instance() called via
-            # migrate_instance_finish() in finish_revert_resize.
-            provider_mappings = None
-        return provider_mappings
+        # NOTE(gibi): We need to re-calculate the resource provider -
+        # port mapping as we have to have the neutron ports allocate
+        # from the source compute after revert.
+        scheduler_utils.fill_provider_mapping_based_on_allocation(
+            context, self.reportclient, request_spec, allocations)
+        return self._get_request_group_mapping(request_spec)
 
     def _revert_allocation(self, context, instance, migration):
         """Revert an allocation that is held by migration to our instance."""
@@ -5895,20 +5876,6 @@ class ComputeManager(manager.Manager):
         LOG.debug('Stashing vm_state: %s', vm_state, instance=instance)
         instance.system_metadata['old_vm_state'] = vm_state
         instance.save()
-
-        if not isinstance(request_spec, objects.RequestSpec):
-            # Prior to compute RPC API 5.1 conductor would pass a legacy dict
-            # version of the request spec to compute and since Stein compute
-            # could be sending that back to conductor on reschedule, so if we
-            # got a dict convert it to an object.
-            # TODO(mriedem): We can drop this compat code when we only support
-            # compute RPC API >=6.0.
-            request_spec = objects.RequestSpec.from_primitives(
-                context, request_spec, filter_properties)
-            # We don't have to set the new flavor on the request spec because
-            # if we got here it was due to a reschedule from the compute and
-            # the request spec would already have the new flavor in it from the
-            # else block below.
 
         provider_mapping = self._get_request_group_mapping(request_spec)
 
@@ -8816,17 +8783,6 @@ class ComputeManager(manager.Manager):
         """
         return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
-    def _dest_can_numa_live_migrate(self, dest_check_data, migration):
-        # TODO(artom) If we have a libvirt driver we expect it to set
-        # dst_supports_numa_live_migration, but we have to remove it if we
-        # did not get a migration from the conductor, indicating that it
-        # cannot send RPC 5.3. This check can be removed in RPC 6.0.
-        if ('dst_supports_numa_live_migration' in dest_check_data and
-                dest_check_data.dst_supports_numa_live_migration and
-                not migration):
-            delattr(dest_check_data, 'dst_supports_numa_live_migration')
-        return dest_check_data
-
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
@@ -8869,8 +8825,6 @@ class ComputeManager(manager.Manager):
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
             instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
-        dest_check_data = self._dest_can_numa_live_migrate(dest_check_data,
-                                                           migration)
         LOG.debug('destination check data is %s', dest_check_data)
         try:
             allocs = self.reportclient.get_allocations_for_consumer(
@@ -12001,144 +11955,3 @@ class ComputeManager(manager.Manager):
             LOG.debug("Updating migrate VIF profile for port %(port_id)s:"
                       "%(profile)s", {'port_id': port_id,
                                       'profile': profile})
-
-
-# TODO(sbauza): Remove this proxy class in the X release once we drop the 5.x
-# support.
-# NOTE(sbauza): This proxy class will support the existing <=5.13 RPC calls
-# from any RPC client but will also make sure that the new 6.0 RPC calls will
-# be supported.
-class _ComputeV5Proxy(object):
-
-    target = messaging.Target(version='5.13')
-
-    def __init__(self, manager):
-        self.manager = manager
-
-    def __getattr__(self, name):
-        # NOTE(sbauza): Proxying all the other methods but the V5 ones.
-        return getattr(self.manager, name)
-
-    # 5.0 support for block_migration argument
-    def pre_live_migration(self, context, instance, block_migration, disk,
-                           migrate_data):
-        return self.manager.pre_live_migration(context, instance, disk,
-                                               migrate_data)
-
-    # 5.1 support for legacy request_spec argument
-    def prep_resize(self, context, image, instance, instance_type,
-                    request_spec, filter_properties, node,
-                    clean_shutdown, migration, host_list):
-        if not isinstance(request_spec, objects.RequestSpec):
-            # Prior to compute RPC API 5.1 conductor would pass a legacy dict
-            # version of the request spec to compute and since Stein compute
-            # could be sending that back to conductor on reschedule, so if we
-            # got a dict convert it to an object.
-            # TODO(mriedem): We can drop this compat code when we only support
-            # compute RPC API >=6.0.
-            request_spec = objects.RequestSpec.from_primitives(
-                context, request_spec, filter_properties)
-            # We don't have to set the new flavor on the request spec because
-            # if we got here it was due to a reschedule from the compute and
-            # the request spec would already have the new flavor in it from the
-            # else block below.
-        self.manager.prep_resize(context, image, instance, instance_type,
-                                 request_spec, filter_properties, node,
-                                 clean_shutdown, migration, host_list)
-
-    # 5.2 support for optional request_spec argument
-    def resize_instance(self, context, instance, image,
-                        migration, instance_type, clean_shutdown,
-                        request_spec=None):
-        self.manager.resize_instance(context, instance, image,
-                                    migration, instance_type, clean_shutdown,
-                                    request_spec)
-
-    # 5.2 support for optional request_spec argument
-    def finish_resize(self, context, disk_info, image, instance,
-                      migration, request_spec=None):
-        self.manager.finish_resize(context, disk_info, image, instance,
-                                   migration, request_spec)
-
-    # 5.2 support for optional request_spec argument
-    def revert_resize(self, context, instance, migration, request_spec=None):
-        self.manager.revert_resize(context, instance, migration, request_spec)
-
-    # 5.2 support for optional request_spec argument
-    def finish_revert_resize(
-            self, context, instance, migration, request_spec=None):
-        self.manager.finish_revert_resize(context, instance, migration,
-                                          request_spec)
-
-    # 5.2 support for optional request_spec argument
-    # 5.13 support for optional accel_uuids argument
-    def unshelve_instance(self, context, instance, image, filter_properties,
-                          node, request_spec=None, accel_uuids=None):
-        self.manager.unshelve_instance(context, instance, image,
-                                       filter_properties, node, request_spec,
-                                       accel_uuids or [])
-
-    # 5.3 support for optional migration and limits arguments
-    def check_can_live_migrate_destination(self, ctxt, instance,
-                                           block_migration, disk_over_commit,
-                                           migration=None, limits=None):
-        return self.manager.check_can_live_migrate_destination(
-            ctxt, instance, block_migration, disk_over_commit,
-            migration, limits)
-
-    # 5.11 support for optional accel_uuids argument
-    def build_and_run_instance(self, context, instance, image, request_spec,
-                     filter_properties, admin_password=None,
-                     injected_files=None, requested_networks=None,
-                     security_groups=None, block_device_mapping=None,
-                     node=None, limits=None, host_list=None, accel_uuids=None):
-        self.manager.build_and_run_instance(
-            context, instance, image, request_spec,
-            filter_properties, accel_uuids, admin_password,
-            injected_files, requested_networks,
-            security_groups, block_device_mapping,
-            node, limits, host_list)
-
-    # 5.12 support for optional accel_uuids argument
-    def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
-                         injected_files, new_pass, orig_sys_metadata,
-                         bdms, recreate, on_shared_storage,
-                         preserve_ephemeral, migration,
-                         scheduled_node, limits, request_spec,
-                         accel_uuids=None):
-        self.manager.rebuild_instance(
-            context, instance, orig_image_ref, image_ref,
-            injected_files, new_pass, orig_sys_metadata,
-            bdms, recreate, on_shared_storage,
-            preserve_ephemeral, migration,
-            scheduled_node, limits, request_spec,
-            accel_uuids, False, None)
-
-    # 5.13 support for optional accel_uuids argument
-    def shelve_instance(self, context, instance, image_id,
-                        clean_shutdown, accel_uuids=None):
-        self.manager.shelve_instance(context, instance, image_id,
-                                     clean_shutdown, accel_uuids)
-
-    # 5.13 support for optional accel_uuids argument
-    def shelve_offload_instance(self, context, instance, clean_shutdown,
-            accel_uuids=None):
-        self.manager.shelve_offload_instance(
-            context, instance, clean_shutdown, accel_uuids)
-
-    # 6.0 drop unused request_spec argument
-    def prep_snapshot_based_resize_at_dest(
-            self, ctxt, instance, flavor, nodename, migration, limits,
-            request_spec):
-        return self.manager.prep_snapshot_based_resize_at_dest(
-            ctxt, instance, flavor, nodename, migration, limits)
-
-    # 6.0 drop unused request_spec argument
-    def finish_snapshot_based_resize_at_dest(
-            self, ctxt, instance, migration, snapshot_id, request_spec):
-        self.manager.finish_snapshot_based_resize_at_dest(
-            ctxt, instance, migration, snapshot_id)
-
-    # 6.0 drop unused instance argument
-    def check_instance_shared_storage(self, ctxt, instance, data):
-        return self.manager.check_instance_shared_storage(ctxt, data)

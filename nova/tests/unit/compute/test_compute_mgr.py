@@ -6619,18 +6619,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute, '_claim_pci_for_instance_vifs'),
             mock.patch.object(self.compute,
                               '_update_migrate_vifs_profile_with_pci'),
-            mock.patch.object(self.compute, '_dest_can_numa_live_migrate'),
             mock.patch('nova.compute.manager.LOG'),
             mock.patch.object(self.compute.driver,
                               'check_source_migrate_data_at_dest'),
         ) as (mock_lm_claim, mock_get, mock_check_dest, mock_check_src,
               mock_check_clean, mock_fault_create, mock_event,
               mock_create_mig_vif, mock_nw_info, mock_claim_pci,
-              mock_update_mig_vif, mock_dest_can_numa, mock_log,
+              mock_update_mig_vif, mock_log,
               mock_post_check):
             mock_get.side_effect = (src_info, dest_info)
             mock_check_dest.return_value = dest_check_data
-            mock_dest_can_numa.return_value = dest_check_data
             post_claim_md = objects.LibvirtLiveMigrateData(
                 dst_numa_info=objects.LibvirtLiveMigrateNUMAInfo())
             mock_lm_claim.return_value = post_claim_md
@@ -6659,8 +6657,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                           mock.ANY)
             mock_check_src.assert_called_once_with(self.context, instance,
                                                    dest_check_data)
-            mock_dest_can_numa.assert_called_with(dest_check_data,
-                                                  migration)
             if not src_numa_lm:
                 mock_lm_claim.assert_not_called()
                 self.assertEqual(mig_data, result)
@@ -6889,27 +6885,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                     self.compute.check_can_live_migrate_destination,
                     self.context, instance, None, None, None, None)
         _do_test()
-
-    def test_dest_can_numa_live_migrate(self):
-        positive_dest_check_data = objects.LibvirtLiveMigrateData(
-            dst_supports_numa_live_migration=True)
-        negative_dest_check_data = objects.LibvirtLiveMigrateData()
-        self.assertNotIn(
-            'dst_supports_numa_live_migration',
-            self.compute._dest_can_numa_live_migrate(
-                copy.deepcopy(positive_dest_check_data), None))
-        self.assertIn(
-            'dst_supports_numa_live_migration',
-            self.compute._dest_can_numa_live_migrate(
-                copy.deepcopy(positive_dest_check_data), 'fake-migration'))
-        self.assertNotIn(
-            'dst_supports_numa_live_migration',
-            self.compute._dest_can_numa_live_migrate(
-                copy.deepcopy(negative_dest_check_data), 'fake-migration'))
-        self.assertNotIn(
-            'dst_supports_numa_live_migration',
-            self.compute._dest_can_numa_live_migrate(
-                copy.deepcopy(negative_dest_check_data), None))
 
     def test_source_can_numa_live_migrate(self):
         positive_dest_check_data = objects.LibvirtLiveMigrateData(
@@ -12943,44 +12918,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.context, self.compute.reportclient, request_spec,
             mock.sentinel.allocation)
 
-    @mock.patch.object(objects.Instance, 'drop_migration_context')
-    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
-    @mock.patch('nova.scheduler.utils.'
-                'fill_provider_mapping_based_on_allocation')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_allocations_for_consumer')
-    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
-    @mock.patch.object(objects.Instance, 'save')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_set_instance_info')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_notify_about_instance_usage')
-    @mock.patch.object(compute_utils, 'notify_about_instance_action')
-    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
-    def test_finish_revert_resize_recalc_group_rp_mapping_missing_request_spec(
-            self, mock_get_bdms, mock_notify_action, mock_notify_usage,
-            mock_set_instance_info, mock_instance_save, mock_revert_allocation,
-            mock_get_allocations, mock_fill_provider_mapping,
-            mock_migrate_instance_finish, mock_drop_migration_context):
-
-        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
-        mock_get_allocations.return_value = mock.sentinel.allocation
-        self.compute.rt.compute_nodes[self.migration.source_node] = (
-            mock.MagicMock(id=123,
-                           hypervisor_hostname=self.migration.source_node))
-
-        with mock.patch.object(
-                self.compute.network_api, 'get_instance_nw_info'):
-            # This is the case when the compute is pinned to use older than
-            # RPC version 5.2
-            self.compute.finish_revert_resize(
-                self.context, self.instance, self.migration, request_spec=None)
-
-        mock_get_allocations.assert_not_called()
-        mock_fill_provider_mapping.assert_not_called()
-        mock_migrate_instance_finish.assert_called_once_with(
-            self.context, self.instance, self.migration, None)
-
     def test_confirm_resize_deletes_allocations_and_update_scheduler(self):
         @mock.patch.object(self.compute, '_delete_scheduler_instance_info')
         @mock.patch('nova.objects.Instance.get_by_uuid')
@@ -14978,29 +14915,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 request_spec=mock.sentinel)
         self.assertIsInstance(
             ex.inner_exception, exception.UnableToMigrateToSelf)
-
-    @mock.patch('nova.compute.rpcapi.ComputeAPI.resize_instance')
-    @mock.patch('nova.compute.resource_tracker.ResourceTracker.resize_claim')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_get_request_group_mapping')
-    @mock.patch.object(objects.Instance, 'save')
-    def test_prep_resize_handles_legacy_request_spec(
-            self, mock_save, mock_get_mapping, mock_claim, mock_resize):
-        instance = fake_instance.fake_instance_obj(
-            self.context, host=self.compute.host,
-            expected_attrs=['system_metadata', 'flavor'])
-        request_spec = objects.RequestSpec(instance_uuid = instance.uuid)
-        mock_get_mapping.return_value = {}
-
-        self.compute._prep_resize(
-            self.context, instance.image_meta, instance, instance.flavor,
-            filter_properties={}, node=instance.node, migration=self.migration,
-            request_spec=request_spec.to_legacy_request_spec_dict())
-
-        # we expect that the legacy request spec is transformed to object
-        # before _prep_resize calls _get_request_group_mapping()
-        mock_get_mapping.assert_called_once_with(
-            test.MatchType(objects.RequestSpec))
 
     @mock.patch('nova.compute.utils.notify_usage_exists')
     @mock.patch('nova.compute.manager.ComputeManager.'
