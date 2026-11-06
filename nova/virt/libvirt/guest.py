@@ -600,7 +600,7 @@ class Guest:
 
     def migrate(self, destination, migrate_uri=None, migrate_disks=None,
                 destination_xml=None, flags=0, bandwidth=0,
-                parallel=0):
+                parallel=0, destination_name=None):
         """Migrate guest object from its current host to the destination
 
         :param destination: URI of host destination where guest will be migrate
@@ -632,12 +632,15 @@ class Guest:
            VIR_MIGRATE_TLS Use QEMU-native TLS
         :param bandwidth: The maximum bandwidth in MiB/s
         :param parallel: Number of connections used during live migration
+        :param destination_name: Optional domain name on the destination host
         """
         params = {}
         # In migrateToURI3 these parameters are extracted from the
         # `params` dict
         params['bandwidth'] = bandwidth
 
+        if destination_name:
+            params['destination_name'] = destination_name
         if destination_xml:
             params['destination_xml'] = destination_xml
             params['persistent_xml'] = destination_xml

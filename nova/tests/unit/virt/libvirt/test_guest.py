@@ -695,6 +695,12 @@ class GuestTestCase(test.NoDBTestCase):
                                            'persistent_xml': '</xml>',
                                            'bandwidth': 2})
 
+    def test_migrate_v3_destination_name(self):
+        self.guest.migrate('an-uri', destination_name='renamed-instance')
+        self.domain.migrateToURI3.assert_called_once_with(
+            'an-uri', flags=0,
+            params={'bandwidth': 0, 'destination_name': 'renamed-instance'})
+
     def test_abort_job(self):
         self.guest.abort_job()
         self.domain.abortJob.assert_called_once_with()
