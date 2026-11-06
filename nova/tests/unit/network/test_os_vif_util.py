@@ -47,7 +47,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
 
         expect = osv_objects.instance_info.InstanceInfo(
             uuid="d5b1090c-9e00-4fa4-9504-4b1494857970",
-            name="instance-000004da",
+            name="instance-%s" % inst.uuid,
             project_id="2f37d7f6-e51a-4a1f-8b6e-b0917ffc8390")
 
         self.assertObjEqual(info, expect)

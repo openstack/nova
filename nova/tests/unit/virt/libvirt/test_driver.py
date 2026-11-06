@@ -14519,6 +14519,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml')
     def test_live_migration_updates_domain_name(self, block_migration,
                                                mock_new_xml):
+        self.flags(instance_name_template='instance-%08x')
         instance = objects.Instance(**self.test_instance)
         old_name = instance.name
         domain = mock.Mock(spec=fakelibvirt.virDomain)
@@ -14531,8 +14532,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             block_migration=block_migration, serial_listen_addr=None,
             target_connect_addr=None, bdms=[])
 
-        self.flags(instance_name_template='renamed-%(uuid)s')
-        new_name = 'renamed-%s' % instance.uuid
+        CONF.clear_override('instance_name_template')
+        new_name = 'instance-%s' % instance.uuid
         self.assertNotEqual(old_name, new_name)
 
         drvr._live_migration_operation(

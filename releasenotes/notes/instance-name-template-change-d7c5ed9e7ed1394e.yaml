@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    The default value for ``instance_name_template`` has changed from one
+    which encodes the database ID to using the UUID. This makes it stable
+    across migrations between cells and also makes it easier to correlate an
+    instance with its libvirt domain. The template will change existing
+    instances when a hard reboot (or similar) action is triggered, and is also
+    updated during live migration. Note that the value that the API shows to
+    clients is computed on the fly and not actually what the instance is using
+    in libvirt, so if any nodes have this overridden, they must match for
+    consistency. Existing deployments with the old default encoded in their
+    config are encouraged to revert to the new UUID-based default.

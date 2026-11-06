@@ -130,17 +130,18 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         mock_bdms_by_uuid.assert_called_once_with(ctxt,
                      [uuids.instance_1, uuids.instance_2, uuids.instance_3])
         self.assertEqual(4, len(running['used_images']))
-        self.assertEqual((1, 0, ['instance-00000001']),
+        self.assertEqual((1, 0, ['instance-%s' % uuids.instance_1]),
                          running['used_images']['1'])
-        self.assertEqual((1, 1, ['instance-00000002',
-                                 'instance-00000003']),
+        self.assertEqual((1, 1, ['instance-%s' % uuids.instance_2,
+                                 'instance-%s' % uuids.instance_3]),
                          running['used_images']['2'])
-        self.assertEqual((0, 1, ['instance-00000003']),
+        self.assertEqual((0, 1, ['instance-%s' % uuids.instance_3]),
                          running['used_images']['21'])
-        self.assertEqual((0, 1, ['instance-00000003']),
+        self.assertEqual((0, 1, ['instance-%s' % uuids.instance_3]),
                          running['used_images']['22'])
 
-        self.assertIn('instance-00000001', running['instance_names'])
+        self.assertIn('instance-%s' % uuids.instance_1,
+                      running['instance_names'])
         self.assertIn(uuids.instance_1, running['instance_names'])
 
         self.assertEqual(len(running['used_swap_images']), 2)
@@ -175,9 +176,9 @@ class ImageCacheManagerTests(test.NoDBTestCase):
 
         mock_bdms_by_uuid.assert_called_once_with(ctxt, [uuids.instance])
         self.assertEqual(1, len(running['used_images']))
-        self.assertEqual((1, 0, ['instance-00000001']),
+        self.assertEqual((1, 0, ['instance-%s' % uuids.instance]),
                          running['used_images']['1'])
-        self.assertEqual(set(['instance-00000001', uuids.instance,
-                              'instance-00000001_resize',
+        self.assertEqual(set(['instance-%s' % uuids.instance, uuids.instance,
+                              'instance-%s_resize' % uuids.instance,
                               '%s_resize' % uuids.instance]),
                          running['instance_names'])
