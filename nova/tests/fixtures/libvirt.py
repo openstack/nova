@@ -27,6 +27,7 @@ from oslo_utils import versionutils
 from nova import conf
 from nova.objects import fields as obj_fields
 from nova.tests.fixtures import libvirt_data as fake_libvirt_data
+from nova.virt.disk.vfs import guestfs
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 
@@ -2772,6 +2773,12 @@ class LibvirtFixture(fixtures.Fixture):
 
     def setUp(self):
         super().setUp()
+        # LibvirtDriver.init_host() enables TCG for virt_type != "kvm" by
+        # setting a module-level flag in nova.virt.disk.vfs.guestfs, which
+        # would otherwise leak out of this test into later tests running
+        # in the same worker (e.g. the guestfs VFS tests asserting on the
+        # backend settings of their handles).
+        self.addCleanup(guestfs.force_tcg, False)
 
         # Some modules load the libvirt library in a strange way
         for module in ('driver', 'host', 'guest', 'migration'):
