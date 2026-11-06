@@ -5275,8 +5275,17 @@ OS-EXT-SRV-ATTR:hypervisor_hostname_update_rebuild:
   min_version: 2.75
 OS-EXT-SRV-ATTR:instance_name:
   description: |
-    The instance name. The Compute API generates the instance name from the instance
-    name template. Appears in the response for administrative users only.
+    The instance name. The Compute API generates the instance name from the
+    instance name template. Appears in the response for administrative users
+    only.
+
+    .. note:: This field intends to expose the name of the actual virtual
+      machine on the hypervisor (i.e. the "domain name" in libvirt). However,
+      this may be inaccurate as it is not stored or retrieved from the
+      hypervisor itself, but instead computed per-request at the API layer
+      based on the value of the ``instance_name_template`` config variable and
+      thus may be different from what is actually in use. Admins are
+      encouraged to *not* trust this value.
   in: body
   required: true
   type: string
