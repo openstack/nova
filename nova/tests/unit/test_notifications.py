@@ -60,6 +60,7 @@ class NotificationsTestCase(test.TestCase):
 
         self.fake_time = datetime.datetime(2017, 2, 2, 16, 45, 0)
         timeutils.set_time_override(self.fake_time)
+        self.addCleanup(timeutils.clear_time_override)
 
         self.instance = self._wrapped_create()
 

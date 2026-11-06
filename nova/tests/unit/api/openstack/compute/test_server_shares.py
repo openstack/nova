@@ -87,6 +87,7 @@ class ServerSharesTest(BaseTestCase):
             self, mock_get_instance, mock_db_get_shares, mock_shares_support
     ):
         timeutils.set_time_override()
+        self.addCleanup(timeutils.clear_time_override)
         NOW = timeutils.utcnow()
         instance = self.fake_get_instance()
         mock_get_instance.return_value = instance
