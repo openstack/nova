@@ -22,7 +22,7 @@ serial_opt_group = cfg.OptGroup("serial_console",
         help="""
 The serial console feature allows you to connect to a guest in case a
 graphical console like VNC, RDP or SPICE is not available. This is only
-currently supported for the libvirt, Ironic and hyper-v drivers.""")
+currently supported for the libvirt and Ironic drivers.""")
 
 ALL_OPTS = [
     cfg.BoolOpt('enabled',
