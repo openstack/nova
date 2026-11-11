@@ -888,6 +888,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._check_cpu_compatibility()
 
+        self._check_multipath()
+
         self._check_vtpm_support()
 
     def _update_host_specific_capabilities(self) -> None:
