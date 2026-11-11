@@ -95,7 +95,6 @@ from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields
 from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import utils as pci_utils
-from nova.pci import whitelist
 import nova.privsep.libvirt
 import nova.privsep.path
 import nova.privsep.utils
@@ -208,9 +207,6 @@ MIN_QEMU_VERSION = (8, 2, 2)
 NEXT_MIN_LIBVIRT_VERSION = (12, 0, 0)
 NEXT_MIN_QEMU_VERSION = (10, 2, 1)
 
-# vIOMMU model value `virtio` minimal support version
-MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL = (8, 3, 0)
-
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
@@ -224,35 +220,13 @@ ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 
 VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
-# Minimum versions supporting mdev live-migration.
-MIN_MDEV_LIVEMIG_LIBVIRT_VERSION = (8, 6, 0)
-MIN_MDEV_LIVEMIG_QEMU_VERSION = (8, 1, 0)
-
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
-
-# Maxphysaddr minimal support version.
-MIN_LIBVIRT_MAXPHYSADDR = (8, 7, 0)
-
-# stateless firmware support
-MIN_LIBVIRT_STATELESS_FIRMWARE = (8, 6, 0)
-
-# Minimum versions supporting igb hw_vif_model
-MIN_IGB_LIBVIRT_VERSION = (9, 3, 0)
-MIN_IGB_QEMU_VERSION = (8, 0, 0)
-
-# Minimum versions supporting vfio-pci variant driver.
-MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION = (10, 0, 0)
-MIN_VFIO_PCI_VARIANT_QEMU_VERSION = (8, 2, 2)
 
 # Minimum versions supporting the virtio sound model
 MIN_VIRTIO_SOUND_LIBVIRT_VERSION = (10, 4, 0)
-MIN_VIRTIO_SOUND_QEMU_VERSION = (8, 2, 0)
 
 # Minimum version of Qemu that supports multifd migration with post-copy
 MIN_MULTIFD_WITH_POSTCOPY_QEMU_VERSION = (10, 1, 0)
-
-# Minimum version to preserve vTPM data
-MIN_VERSION_INT_FOR_KEEP_TPM = (8, 9, 0)
 
 REGISTER_IMAGE_PROPERTY_DEFAULTS = [
     'hw_machine_type',
@@ -473,6 +447,9 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_ephemeral_encryption_luks":
                 self.image_backend.backend().SUPPORTS_LUKS,
             'supports_remote_managed_ports': True,
+            'supports_address_space_passthrough': True,
+            'supports_address_space_emulated': True,
+            'supports_stateless_firmware': True,
         }
         super().__init__(virtapi)
 
@@ -586,10 +563,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # distinguish between cores on the source and destination hosts.
         # See also nova.virt.libvirt.cpu.api.API.core().
         self.cpu_api = libvirt_cpu.API()
-
-        # Cache the availability of the VIR_DOMAIN_UNDEFINE_KEEP_TPM flag in
-        # this libvirt version. This is set in init_host.
-        self._may_keep_vtpm = False
 
     def _discover_vpmems(
         self, vpmem_conf: list[str]
@@ -917,39 +890,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._check_vtpm_support()
 
-        # Cache the availability of the VIR_DOMAIN_UNDEFINE_KEEP_TPM flag in
-        # this libvirt version.
-        self._may_keep_vtpm = self._host.has_min_version(
-            MIN_VERSION_INT_FOR_KEEP_TPM,
-        )
-
-        self._check_multipath()
-
-        # Even if we already checked the whitelist at startup, this driver
-        # needs to check specific hypervisor versions
-        self._check_pci_whitelist()
-
-    def _check_pci_whitelist(self):
-
-        need_specific_version = False
-
-        if CONF.pci.device_spec:
-            pci_whitelist = whitelist.Whitelist(CONF.pci.device_spec)
-            for spec in pci_whitelist.specs:
-                if spec.tags.get("live_migratable"):
-                    need_specific_version = True
-
-        if need_specific_version and not self._host.has_min_version(
-            lv_ver=MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION,
-            hv_ver=MIN_VFIO_PCI_VARIANT_QEMU_VERSION,
-            hv_type=host.HV_DRIVER_QEMU,
-        ):
-            msg = _(
-                "PCI device spec is configured for "
-                "live_migratable but it's not supported by libvirt."
-            )
-            raise exception.InvalidConfiguration(msg)
-
     def _update_host_specific_capabilities(self) -> None:
         """Update driver capabilities based on capabilities of the host."""
         # TODO(stephenfin): We should also be reporting e.g. SEV functionality
@@ -958,25 +898,6 @@ class LibvirtDriver(driver.ComputeDriver):
             'supports_secure_boot': self._host.supports_secure_boot,
             'supports_virtio_fs': self._host.supports_virtio_fs,
             'supports_mem_backing_file': self._host.supports_mem_backing_file
-        })
-
-        supports_maxphysaddr = self._host.has_min_version(
-            lv_ver=MIN_LIBVIRT_MAXPHYSADDR,
-            hv_type=host.HV_DRIVER_QEMU,
-        )
-
-        # NOTE(nmiki): Currently libvirt does not provide a distinction
-        # between passthrough mode and emulated mode support status.
-        self.capabilities.update({
-            'supports_address_space_passthrough': supports_maxphysaddr,
-            'supports_address_space_emulated': supports_maxphysaddr,
-        })
-
-        supports_stateless_firmware = self._host.has_min_version(
-            lv_ver=MIN_LIBVIRT_STATELESS_FIRMWARE,
-        )
-        self.capabilities.update({
-            'supports_stateless_firmware': supports_stateless_firmware,
         })
 
     def process_instances_at_startup(self, context, instances):
@@ -1775,18 +1696,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param guest: The domain to undefine.
         :param keep_vtpm: If set, the vTPM data (if any) is not deleted during
             undefine.
-
-            This flag may be ignored if libvirt is too old to support
-            preserving vTPM data (see bug #2118888).
         """
-        if keep_vtpm and not self._may_keep_vtpm:
-            LOG.warning(
-                "Temporary undefine operation is deleting vTPM contents. "
-                "Please upgrade libvirt to >= 8.9.0 to avoid this.",
-                instance=guest.uuid,
-            )
-            keep_vtpm = False
-
         guest.delete_configuration(keep_vtpm=keep_vtpm, keep_nvram=keep_nvram)
 
     def _undefine_domain(self, instance, keep_vtpm=False, keep_nvram=False):
@@ -8280,15 +8190,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 arch=self._check_emulation_arch(image_meta))
 
         if model == fields.VIOMMUModel.AUTO:
-            if self._host.has_min_version(MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL):
-                model = fields.VIOMMUModel.VIRTIO
-            elif self._is_x86_guest(image_meta) and (
-                guest.os_mach_type is not None and 'q35' in guest.os_mach_type
-            ):
-                model = fields.VIOMMUModel.INTEL
-            else:
-                # AArch64
-                model = fields.VIOMMUModel.SMMUV3
+            model = fields.VIOMMUModel.VIRTIO
         return model
 
     def _guest_add_iommu_device(
@@ -10864,8 +10766,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Just flag the fact we can live-migrate mdevs even if we don't use
         # them so the source will know we can use this compute.
-        if self._host_can_support_mdev_live_migration():
-            data.dst_supports_mdev_live_migration = True
+        data.dst_supports_mdev_live_migration = True
 
         return data
 
@@ -11151,13 +11052,6 @@ class LibvirtDriver(driver.ComputeDriver):
             dest_check_data.vtpm_secret_uuid = None
             dest_check_data.vtpm_secret_value = None
 
-    def _host_can_support_mdev_live_migration(self):
-        return self._host.has_min_version(
-            lv_ver=MIN_MDEV_LIVEMIG_LIBVIRT_VERSION,
-            hv_ver=MIN_MDEV_LIVEMIG_QEMU_VERSION,
-            hv_type=host.HV_DRIVER_QEMU,
-        )
-
     def _assert_source_can_live_migrate_mdevs(self, instance, dest_check_data):
         """Check if the source can live migrate the instance by looking at the
         QEMU and libvirt versions but also at the destination object.
@@ -11168,23 +11062,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 dst_supports_mdev_live_migration sentinel is not True.
         """
 
-        failed = ''
-        if not self._host_can_support_mdev_live_migration():
-            failed = 'source'
-        elif not ('dst_supports_mdev_live_migration' in dest_check_data and
-                  dest_check_data.dst_supports_mdev_live_migration):
-            failed = 'target'
-        if failed:
+        if not ('dst_supports_mdev_live_migration' in dest_check_data and
+                dest_check_data.dst_supports_mdev_live_migration):
             reason = (_('Unable to migrate %(instance_uuid)s: '
                         'Either libvirt or QEMU version for compute service '
-                        '%(host)s are too old than the supported ones : '
-                        '(QEMU: %(qemu_v)s, libvirt: %(libv_v)s)' %
-                      {'instance_uuid': instance.uuid,
-                       'host': failed,
-                       'qemu_v': libvirt_utils.version_to_string(
-                           MIN_MDEV_LIVEMIG_QEMU_VERSION),
-                       'libv_v': libvirt_utils.version_to_string(
-                           MIN_MDEV_LIVEMIG_LIBVIRT_VERSION)}))
+                        'target are too old than the supported ones : '
+                        '(QEMU: 8.1.0, libvirt: 9.6.0)' %
+                      {'instance_uuid': instance.uuid}))
             raise exception.MigrationPreCheckError(reason=reason)
 
     def _is_shared_block_storage(self, instance, dest_check_data,
@@ -13756,14 +13640,6 @@ class LibvirtDriver(driver.ComputeDriver):
             CONF.libvirt.virt_type, []
         )
 
-        # remove version dependent vif models if we are on older libvirt/qemu
-        igb_supported = self._host.has_min_version(
-            MIN_IGB_LIBVIRT_VERSION, MIN_IGB_QEMU_VERSION)
-        if not igb_supported:
-            supported_models = [
-                model for model in supported_models
-                if model != network_model.VIF_MODEL_IGB]
-
         # construct the corresponding standard trait from the VIF model name
         return {
             f'COMPUTE_NET_VIF_MODEL_{model.replace("-", "_").upper()}': model
@@ -13777,7 +13653,10 @@ class LibvirtDriver(driver.ComputeDriver):
         :return: A dict of trait names mapped to boolean values.
         """
         dom_caps = self._host.get_domain_capabilities()
-        supported_models: set[str] = {fields.VIOMMUModel.AUTO}
+        supported_models: set[str] = {
+            fields.VIOMMUModel.AUTO,
+            fields.VIOMMUModel.VIRTIO,
+        }
         # our min version of qemu/libvirt support q35 and virt machine types.
         # They also support the smmuv3 and intel iommu modeles so if the qemu
         # binary is available we can report the trait.
@@ -13785,10 +13664,6 @@ class LibvirtDriver(driver.ComputeDriver):
             supported_models.add(fields.VIOMMUModel.SMMUV3)
         if fields.Architecture.X86_64 in dom_caps:
             supported_models.add(fields.VIOMMUModel.INTEL)
-        # the virtio iommu model requires a newer libvirt then our min
-        # libvirt so we need to check the version explicitly.
-        if self._host.has_min_version(MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL):
-            supported_models.add(fields.VIOMMUModel.VIRTIO)
         return {
             f'COMPUTE_VIOMMU_MODEL_{model.replace("-", "_").upper()}': model
             in supported_models for model in fields.VIOMMUModel.ALL
@@ -14013,9 +13888,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         has_virtio = True
         if not self._host.has_min_version(MIN_VIRTIO_SOUND_LIBVIRT_VERSION):
-            has_virtio = False
-        if not self._host.has_min_version(
-                hv_ver=MIN_VIRTIO_SOUND_QEMU_VERSION):
             has_virtio = False
 
         return {

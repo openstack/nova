@@ -26,7 +26,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
-from oslo_utils import versionutils
 
 import nova
 from nova.compute import pci_placement_translator
@@ -42,7 +41,6 @@ from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.virt import hardware
-from nova.virt.libvirt import driver
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -437,8 +435,6 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         pci_info,
         expected_managed,
         device_spec=None,
-        libvirt_version=None,
-        qemu_version=None,
     ):
         """Runs a create server test with a specified PCI setup and checks
         Guest.create call.
@@ -454,11 +450,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             "create",
             wraps=nova.virt.libvirt.guest.Guest.create,
         ) as mock_create:
-            compute = self.start_compute(
-                pci_info=pci_info,
-                libvirt_version=libvirt_version,
-                qemu_version=qemu_version,
-            )
+            compute = self.start_compute(pci_info=pci_info)
             self.host = self.computes[compute].driver._host
 
             # Create a server
@@ -767,23 +759,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -842,23 +822,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -912,23 +880,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -993,23 +949,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1063,23 +1007,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1133,23 +1065,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1203,23 +1123,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1282,23 +1190,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1361,23 +1257,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1446,23 +1330,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1553,23 +1425,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1650,23 +1510,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1748,23 +1596,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1842,23 +1678,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -1927,23 +1751,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -2029,23 +1841,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -2137,23 +1937,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -2282,23 +2070,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -2497,23 +2273,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -2698,23 +2462,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -2841,23 +2593,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -3026,23 +2766,11 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         self.comp0 = self.start_compute(
             hostname="test_compute0",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=src_pci_info,
         )
 
         self.comp1 = self.start_compute(
             hostname="test_compute1",
-            libvirt_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_LIBVIRT_VERSION
-            ),
-            qemu_version=versionutils.convert_version_to_int(
-                driver.MIN_VFIO_PCI_VARIANT_QEMU_VERSION
-            ),
             pci_info=dst_pci_info,
         )
 
@@ -6441,9 +6169,6 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
     NUM_VFS = 4
     vf_ratio = NUM_VFS // NUM_PFS
 
-    # Min Libvirt version that supports working with PCI VPD.
-    FAKE_LIBVIRT_VERSION = 10_000_000  # 10.0.0
-
     def setUp(self):
         super().setUp()
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
@@ -6479,9 +6204,7 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
 
     def start_compute(
         self, hostname='test_compute0', host_info=None, pci_info=None,
-        mdev_info=None, vdpa_info=None,
-        libvirt_version=None,
-        qemu_version=None):
+        mdev_info=None, vdpa_info=None):
 
         if not pci_info:
             pci_info = fakelibvirt.HostPCIDevicesInfo(
@@ -6570,8 +6293,7 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
 
         return super().start_compute(
             hostname=hostname, host_info=host_info, pci_info=pci_info,
-            mdev_info=mdev_info, vdpa_info=vdpa_info,
-            libvirt_version=libvirt_version or self.FAKE_LIBVIRT_VERSION)
+            mdev_info=mdev_info, vdpa_info=vdpa_info)
 
     def create_remote_managed_tunnel_port(self):
         dpu_tunnel_port = {

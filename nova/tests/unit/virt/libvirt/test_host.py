@@ -22,7 +22,6 @@ import fixtures
 from lxml import etree
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
-from oslo_utils import versionutils
 import testtools
 
 from nova.compute import manager
@@ -2298,33 +2297,17 @@ class TestLibvirtSEVESUnsupported(TestLibvirtSEV):
                                return_value=fake_caps_xml):
             self.assertFalse(self.host.supports_amd_sev_es)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            host.MIN_QEMU_SEV_ES_VERSION) - 1)
     @mock.patch.object(vc, '_domain_capability_features',
                        new=vc._domain_capability_features_with_SEV)
-    def test_unsupported_with_qemu_too_old(self, get_version):
-        self.kernel_sev = "1\n"
-        self.kernel_sev_es = "1\n"
-        self.assertFalse(self.host.supports_amd_sev_es)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            host.MIN_QEMU_SEV_ES_VERSION))
-    @mock.patch.object(vc, '_domain_capability_features',
-                       new=vc._domain_capability_features_with_SEV)
-    def test_unsupported_without_sev(self, get_version):
+    def test_unsupported_without_sev(self):
         self.kernel_sev = None
         self.kernel_sev_es = "1\n"
         self.assertFalse(self.host.supports_amd_sev_es)
         self.assertFalse(self.host.supports_mem_encryption)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            host.MIN_QEMU_SEV_ES_VERSION))
     @mock.patch.object(vc, '_domain_capability_features',
                        new=vc._domain_capability_features_with_SEV)
-    def test_unsupported_with_snp(self, get_version):
+    def test_unsupported_with_snp(self):
         self.kernel_sev_es = "1\n"
         self.kernel_sev_snp = "1\n"
         self.assertFalse(self.host.supports_amd_sev_es)
@@ -2350,41 +2333,29 @@ class TestLibvirtSEVESSupported(TestLibvirtSEV):
         super().setUp()
         self.kernel_sev = "1\n"
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            host.MIN_QEMU_SEV_ES_VERSION))
     @mock.patch.object(vc, '_domain_capability_features',
                        new=vc._domain_capability_features_with_SEV)
-    def test_supported_with_feature(self, get_version):
+    def test_supported_with_feature(self):
         self.kernel_sev_es = "1\n"
         self.assertTrue(self.host.supports_amd_sev_es)
         self.assertTrue(self.host.supports_mem_encryption)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            host.MIN_QEMU_SEV_ES_VERSION))
     @mock.patch.object(vc, '_domain_capability_features',
                        new=vc._domain_capability_features_with_SEV)
-    def test_slots_(self, get_version):
+    def test_slots_(self):
         self.kernel_sev_es = "1\n"
         self.assertEqual(15, self.host._get_mem_encryption_slots_amd_sev_es())
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            host.MIN_QEMU_SEV_ES_VERSION))
     @mock.patch.object(vc, '_domain_capability_features',
                        new=vc._domain_capability_features_with_SEV)
-    def test_inventory_traits(self, get_version):
+    def test_inventory_traits(self):
         self.kernel_sev_es = "1\n"
         self.assertEqual(['HW_CPU_X86_AMD_SEV_ES'],
                          self.host._get_mem_encryption_traits_amd_sev_es())
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            host.MIN_QEMU_SEV_ES_VERSION))
     @mock.patch.object(vc, '_domain_capability_features',
                        new=vc._domain_capability_features_with_SEV)
-    def test_inventory(self, get_version):
+    def test_inventory(self):
         self.kernel_sev_es = "1\n"
         inventories = self.host.get_mem_encryption_inventories()
         self.assertIn('amd_sev_es', inventories)
