@@ -24363,18 +24363,6 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
             self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
-    @mock.patch.object(
-        fakelibvirt.virConnect, '_domain_capability_tpm',
-        new=fakelibvirt.virConnect._domain_capability_tpm_with_tpm_versions
-    )
-    def test_update_provider_tree_with_tpm_traits_versions(self):
-        self.flags(swtpm_enabled=True, group='libvirt')
-        self._test_update_provider_tree()
-        for trait in ('COMPUTE_SECURITY_TPM_TIS', 'COMPUTE_SECURITY_TPM_2_0'):
-            self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
-        for trait in ('COMPUTE_SECURITY_TPM_CRB', 'COMPUTE_SECURITY_TPM_1_2',):
-            self.assertNotIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
-
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_get_mediated_device_information')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'

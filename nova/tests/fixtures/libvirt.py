@@ -2373,6 +2373,10 @@ class Connection(object):
         <value>emulator</value>
         <value>external</value>
       </enum>
+      <enum name='backendVersion'>
+        <value>2.0</value>
+        <value>1.2</value>
+      </enum>
     </tpm>
 '''
 
@@ -2390,24 +2394,9 @@ class Connection(object):
         <value>passthrough</value>
         <value>external</value>
       </enum>
-    </tpm>
-'''
-
-    # TODO(tkajinam): Merge this to _supported value once libvirt >= 8.6.0 is
-    # required
-    _domain_capability_tpm_with_tpm_versions = \
-        _domain_capability_devices_default + '''
-    <tpm supported='yes'>
-      <enum name='model'>
-        <value>tpm-tis</value>
-      </enum>
-      <enum name='backendModel'>
-        <value>passthrough</value>
-        <value>emulator</value>
-        <value>external</value>
-      </enum>
       <enum name='backendVersion'>
         <value>2.0</value>
+        <value>1.2</value>
       </enum>
     </tpm>
 '''

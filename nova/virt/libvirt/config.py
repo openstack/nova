@@ -256,9 +256,7 @@ class LibvirtConfigDomainCapsTpm(LibvirtConfigObject):
         self.supported = False
         self.models = []
         self.backend_models = []
-        # TODO(tkajinam): Change default to [] once libvirt >= 8.6.0 is
-        #                 required
-        self.backend_versions = None
+        self.backend_versions = []
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigDomainCapsTpm, self).parse_dom(xmldoc)
@@ -278,8 +276,6 @@ class LibvirtConfigDomainCapsTpm(LibvirtConfigObject):
                 if c.get('name') == 'backendVersion':
                     for c2 in c:
                         if c2.tag == 'value':
-                            if self.backend_versions is None:
-                                self.backend_versions = []
                             self.backend_versions.append(c2.text)
 
 

@@ -1973,17 +1973,13 @@ class Host(object):
         return False
 
     @property
-    def tpm_versions(self) -> list[str] | None:
+    def tpm_versions(self) -> list[str]:
         # we only check the host architecture and the first machine type
         # because vtpm support is independent from cpu architecture
         arch = self.get_capabilities().host.cpu.arch
         domain_caps = self.get_domain_capabilities()
         for machine_type in domain_caps[arch]:
             _tpm = domain_caps[arch][machine_type].devices.tpm
-            # TODO(tkajinam): Remove this check once libvirt >= 8.6.0 is
-            # required
-            if _tpm.backend_versions is None:
-                return None
             return _tpm.backend_versions
         # safe guard
         return []
