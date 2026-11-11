@@ -2413,12 +2413,9 @@ class Connection(object):
     # class variable with alternate values.
     _domain_capability_features = '''  <features>
     <gic supported='no'/>
+    <sev supported='no'/>
   </features>'''
 
-    # TODO(tkajinam): Libvirt >= 10.0.0 always shows the sev feature.
-    # Merge this into the base template after the minimum libvirt version is
-    # bumped.
-    # https://gitlab.com/libvirt/libvirt/-/commit/6688393c6b2
     _domain_capability_features_with_SEV_base = '''  <features>
     <gic supported='no'/>
     <sev supported='yes'>
@@ -2432,14 +2429,9 @@ class Connection(object):
     _domain_capability_features_with_SEV = \
         _domain_capability_features_with_SEV_base % ''
 
-    _domain_capability_features_with_SEV_unsupported = '''  <features>
-    <gic supported='no'/>
-    <sev supported='no'/>
-  </features>'''
-
     # TODO(tkajinam): Libvirt >= 10.5.0 always shows the launchSecurity
     # feature. Merge this into the base template when minimum libvirt
-    # version is >= bumped.
+    # version is bumped to >=10.5.0.
     # https://gitlab.com/libvirt/libvirt/-/commit/d460e17282b
     _domain_capability_features_with_launch_security_SEV = \
         _domain_capability_features_with_SEV_base % '''
@@ -2465,15 +2457,21 @@ class Connection(object):
       </enum>
     </launchSecurity>'''
 
+    # TODO(tkajinam): Libvirt >= 11.10.0 always shows the tdx capability.
+    # Merge this into the base template when minimum libvirt version is
+    # bumped to >=10.10.0.
+    # https://gitlab.com/libvirt/libvirt/-/commit/f8739748833
     _domain_capability_features_with_TDX = '''\
     <features>
       <gic supported='no'/>
+      <sev supported='no'/>
       <tdx supported='yes'/>
     </features>'''
 
     _domain_capability_features_with_TDX_unsupported = '''\
     <features>
       <gic supported='no'/>
+      <sev supported='no'/>
       <tdx supported='no'/>
     </features>'''
 

@@ -802,7 +802,7 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(vconfig.LibvirtConfigDomainCaps, type(caps))
         # There is a <gic supported='no'/> feature in the fixture but
         # we don't parse that because nothing currently cares about it.
-        self.assertEqual(0, len(caps.features))
+        self.assertEqual(1, len(caps.features))
 
     def test_get_domain_capabilities_non_native_kvm(self):
         # This test assumes that we are on a x86 host and the
@@ -965,10 +965,6 @@ class HostTestCase(test.NoDBTestCase):
             self.assertIsNone(sev.max_guests)
             self.assertIsNone(sev.max_es_guests)
 
-    @mock.patch.object(
-        fakelibvirt.virConnect, '_domain_capability_features', new=
-        fakelibvirt.virConnect._domain_capability_features_with_SEV_unsupported
-    )
     def test_get_domain_capabilities_sev_unsupported(self):
         self._test_get_domain_capabilities_sev(False)
 
@@ -2144,14 +2140,7 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
         self.mock_open.assert_called_once_with(
             '/sys/module/kvm_amd/parameters/sev')
 
-    def test_unsupported_without_feature(self):
-        self.kernel_sev = "1\n"
-        self.assertFalse(self.host.supports_amd_sev)
-        self.assertFalse(self.host.supports_mem_encryption)
-
-    @mock.patch.object(vc, '_domain_capability_features',
-        new=vc._domain_capability_features_with_SEV_unsupported)
-    def test_unsupported_with_feature(self):
+    def test_unsupported_without_sev_domcap(self):
         self.kernel_sev = "1\n"
         self.assertFalse(self.host.supports_amd_sev)
         self.assertFalse(self.host.supports_mem_encryption)
@@ -2252,13 +2241,7 @@ class TestLibvirtSEVESUnsupported(TestLibvirtSEV):
         self.mock_exists.assert_called_once_with(
             '/sys/module/kvm_amd/parameters/sev_es')
 
-    def test_unsupported_without_feature(self):
-        self.kernel_sev_es = "1\n"
-        self.assertFalse(self.host.supports_amd_sev_es)
-
-    @mock.patch.object(vc, '_domain_capability_features',
-        new=vc._domain_capability_features_with_SEV_unsupported)
-    def test_unsupported_with_feature(self):
+    def test_unsupported_without_sev_domcap(self):
         self.kernel_sev = "1\n"
         self.kernel_sev_es = "1\n"
         self.assertFalse(self.host.supports_amd_sev_es)
@@ -2376,20 +2359,7 @@ class TestLibvirtSEVSNPUnsupported(TestLibvirtSEV):
         self.mock_exists.assert_called_once_with(
             '/sys/module/kvm_amd/parameters/sev_snp')
 
-    def test_unsupported_without_sev_feature(self):
-        self.kernel_sev_snp = "1\n"
-        self.assertFalse(self.host.supports_amd_sev_snp)
-
-    @mock.patch.object(vc, '_domain_capability_features',
-        new=vc._domain_capability_features_with_SEV_unsupported)
-    def test_unsupported_with_feature(self):
-        self.kernel_sev_snp = "1\n"
-        self.assertFalse(self.host.supports_amd_sev_snp)
-
-    @mock.patch.object(vc, '_domain_capability_features',
-        new=vc.
-        _domain_capability_features_with_launch_security_unsupported)
-    def test_unsupported_with_launch_security(self):
+    def test_unsupported_without_sev_domcap(self):
         self.kernel_sev_snp = "1\n"
         self.assertFalse(self.host.supports_amd_sev_snp)
 
