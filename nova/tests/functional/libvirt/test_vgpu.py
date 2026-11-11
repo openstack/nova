@@ -13,6 +13,7 @@
 
 import fixtures
 import re
+from unittest import mock
 
 import collections
 import os_resource_classes as orc
@@ -38,9 +39,6 @@ class VGPUTestBase(base.ServersTestBase):
     # We want to target some hosts for some created instances
     microversion = 'latest'
     ADMIN_API = True
-
-    FAKE_LIBVIRT_VERSION = 8000000
-    FAKE_QEMU_VERSION = 6002000
 
     # Since we run all computes by a single process, we need to identify which
     # current compute service we use at the moment.
@@ -117,12 +115,7 @@ class VGPUTestBase(base.ServersTestBase):
             pci_info = fakelibvirt.HostPCIDevicesInfo(
                 num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
             )
-        hostname = self.start_compute(
-            pci_info=pci_info,
-            hostname=hostname,
-            libvirt_version=self.FAKE_LIBVIRT_VERSION,
-            qemu_version=self.FAKE_QEMU_VERSION
-        )
+        hostname = self.start_compute(pci_info=pci_info, hostname=hostname)
         compute = self.computes[hostname]
         rp_uuid = self.compute_rp_uuids[hostname]
         rp_uuids = self._get_all_rp_uuids_in_a_tree(rp_uuid)
@@ -528,10 +521,6 @@ class VGPULimitMultipleTypesTests(VGPUTestBase):
 
 class VGPULiveMigrationTests(base.LibvirtMigrationMixin, VGPUTestBase):
 
-    # Use the right minimum versions for live-migration
-    FAKE_LIBVIRT_VERSION = 8006000
-    FAKE_QEMU_VERSION = 8001000
-
     def setUp(self):
         # Prepares two computes (src and dst), each of them having two GPUs
         # (81:00.0 and 81:01.0) with two types but where the operator only
@@ -578,55 +567,29 @@ class VGPULiveMigrationTests(base.LibvirtMigrationMixin, VGPUTestBase):
                       "trait:CUSTOM_NVIDIA_11": "required"}
         self.flavor = self._create_flavor(extra_spec=extra_spec)
 
-    def test_live_migration_fails_on_old_source(self):
-        pci_info = fakelibvirt.HostPCIDevicesInfo(
-            num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
-            multiple_gpu_types=True)
-        self.src = self.restart_compute_service(
-            self.src.host,
-            pci_info=pci_info,
-            keep_hypervisor_state=False,
-            qemu_version=8000000,
-            libvirt_version=8005000)
-        server = self._create_server(
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            flavor_id=self.flavor, networks='auto', host=self.src.host)
-        # now live migrate that server
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._live_migrate,
-            server, 'completed')
-
-        self.assertEqual(500, ex.response.status_code)
-        self.assertIn('NoValidHost', str(ex))
-        log_out = self.stdlog.logger.output
-        self.assertIn('Migration pre-check error: Unable to migrate %s: '
-                      'Either libvirt or QEMU version for compute service '
-                      'source are too old than the supported ones '
-                      '' % server['id'], log_out)
-
     def test_live_migration_fails_on_old_destination(self):
-        # For the fact to testing that we look at the dest object, we need to
-        # skip the verification for whether the destination HV version is older
-        self.flags(skip_hypervisor_version_check_on_lm=True,
-                   group='workarounds')
-        pci_info = fakelibvirt.HostPCIDevicesInfo(
-            num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
-            multiple_gpu_types=True)
-        self.dest = self.restart_compute_service(
-            self.dest.host,
-            pci_info=pci_info,
-            keep_hypervisor_state=False,
-            qemu_version=8000000,
-            libvirt_version=8005000)
-        server = self._create_server(
+        self.server = self._create_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=self.flavor, networks='auto', host=self.src.host)
+
+        orig_check = (
+            libvirt_driver.LibvirtDriver.check_can_live_migrate_destination)
+
+        # NOTE(tkajinam): We simulate a check result from old nova-compute with
+        # old libvirt
+        def fake_check_can_live_migrate_destination(*args, **kwargs):
+            dest_check = orig_check(*args, **kwargs)
+            dest_check.dst_supports_mdev_live_migration = False
+            return dest_check
+
         # now live migrate that server
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._live_migrate,
-            server, 'completed')
+        with mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                        'check_can_live_migrate_destination',
+                        new=fake_check_can_live_migrate_destination):
+            ex = self.assertRaises(
+                client.OpenStackApiException,
+                self._live_migrate,
+                self.server, 'completed')
 
         self.assertEqual(500, ex.response.status_code)
         self.assertIn('NoValidHost', str(ex))
@@ -634,7 +597,7 @@ class VGPULiveMigrationTests(base.LibvirtMigrationMixin, VGPUTestBase):
         self.assertIn('Migration pre-check error: Unable to migrate %s: '
                       'Either libvirt or QEMU version for compute service '
                       'target are too old than the supported ones '
-                      '' % server['id'],
+                      '' % self.server['id'],
                       log_out)
 
     def test_live_migration_fails_due_to_non_supported_mdev_types(self):

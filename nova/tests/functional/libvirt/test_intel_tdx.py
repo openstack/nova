@@ -15,12 +15,10 @@ from unittest import mock
 
 import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
-from oslo_utils import versionutils
 
 from nova import exception
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base
-from nova.virt.libvirt import driver
 
 
 class TestTDX(base.ServersTestBase):
@@ -72,10 +70,7 @@ class TestTDX(base.ServersTestBase):
         """Compute should fail if intel-tdx instance exists but intel-tdx is
         lost
         """
-        libvirt_version = versionutils.convert_version_to_int(
-            driver.MIN_LIBVIRT_STATELESS_FIRMWARE)
-        self.hostname = self.start_compute(
-            libvirt_version=libvirt_version)
+        self.hostname = self.start_compute()
 
         # create intel-tdx instance
         self._create_server(

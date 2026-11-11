@@ -203,10 +203,10 @@ VOLUME_DRIVERS = {
 # doc/source/reference/libvirt-distro-support-matrix.rst
 #
 # DO NOT FORGET to update this document when touching any versions below!
-MIN_LIBVIRT_VERSION = (8, 0, 0)
-MIN_QEMU_VERSION = (6, 2, 0)
-NEXT_MIN_LIBVIRT_VERSION = (10, 0, 0)
-NEXT_MIN_QEMU_VERSION = (8, 2, 2)
+MIN_LIBVIRT_VERSION = (10, 0, 0)
+MIN_QEMU_VERSION = (8, 2, 2)
+NEXT_MIN_LIBVIRT_VERSION = (12, 0, 0)
+NEXT_MIN_QEMU_VERSION = (10, 2, 1)
 
 # vIOMMU model value `virtio` minimal support version
 MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL = (8, 3, 0)

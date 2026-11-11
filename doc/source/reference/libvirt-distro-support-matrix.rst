@@ -229,6 +229,18 @@ support the decided libvirt version.
       - 10.0.0
       - 6.2.0
       - 8.2.2
+    * - 2026.2 Hibiscus
+      - 34.0.0
+      - 8.0.0
+      - 10.0.0
+      - 6.2.0
+      - 8.2.2
+    * - 2027.1 Indri
+      - 35.0.0
+      - 10.0.0
+      - 12.0.0
+      - 8.2.2
+      - 10.2.1
 
 OS distribution versions
 ------------------------
@@ -340,6 +352,11 @@ important OS distros.
       - 10.0.0
       - 8.2.2
       - 1.52.0
+    * - 26.04 (Resolute Raccoon)
+      - 2026-10-06
+      - 12.0.0
+      - 10.2.1
+      - 1.58.1
 
 .. NB: maintain alphabetical ordering of distros, followed by oldest released
        versions first

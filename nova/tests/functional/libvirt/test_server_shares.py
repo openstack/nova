@@ -36,8 +36,6 @@ LOG = logging.getLogger(__name__)
 class ServerSharesTestBase(base.ServersTestBase):
     microversion = 'latest'
     ADMIN_API = True
-    FAKE_LIBVIRT_VERSION = 8000000
-    FAKE_QEMU_VERSION = 6002000
 
     def setUp(self):
         super(ServerSharesTestBase, self).setUp()
@@ -48,11 +46,7 @@ class ServerSharesTestBase(base.ServersTestBase):
         self.flags(ram_allocation_ratio=1.0)
         self.flags(file_backed_memory=8192, group='libvirt')
         self.flags(reserved_host_memory_mb=0)
-        self.compute = self.start_compute(
-            'host1',
-            libvirt_version=self.FAKE_LIBVIRT_VERSION,
-            qemu_version=self.FAKE_QEMU_VERSION
-        )
+        self.compute = self.start_compute('host1')
 
         self.api_fixture = self.useFixture(nova_fixtures.OSMetadataServer())
         self.md_url = self.api_fixture.md_url
@@ -518,11 +512,7 @@ class ServerSharesColdMigrateTest(ServerSharesTestBase):
 
     def setUp(self):
         super(ServerSharesColdMigrateTest, self).setUp()
-        self.compute2 = self.start_compute(
-            'host2',
-            libvirt_version=self.FAKE_LIBVIRT_VERSION,
-            qemu_version=self.FAKE_QEMU_VERSION
-        )
+        self.compute2 = self.start_compute('host2')
         self.flags(allow_resize_to_same_host=False)
 
     def _get_xml_on_host(self, server, hostname):

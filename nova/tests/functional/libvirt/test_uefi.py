@@ -220,7 +220,7 @@ class UEFIServersTest(base.ServersTestBase):
 
         self.stub_out('nova.virt.libvirt.guest.Guest.create', fake_create)
 
-        compute = self.start_compute(libvirt_version=8006000)
+        compute = self.start_compute()
 
         # ensure we are reporting the correct trait
         traits = self._get_provider_traits(self.compute_rp_uuids[compute])
@@ -285,7 +285,7 @@ class UEFIServersTest(base.ServersTestBase):
 
         self.stub_out('nova.virt.libvirt.guest.Guest.create', fake_create)
 
-        compute = self.start_compute(libvirt_version=8006000)
+        compute = self.start_compute()
 
         # ensure we are reporting the correct trait
         traits = self._get_provider_traits(self.compute_rp_uuids[compute])
@@ -362,7 +362,7 @@ class UEFIServersTest(base.ServersTestBase):
 
         self.stub_out('nova.virt.libvirt.guest.Guest.create', fake_create)
 
-        compute = self.start_compute(libvirt_version=8006000)
+        compute = self.start_compute()
 
         # ensure we are reporting the correct trait
         traits = self._get_provider_traits(self.compute_rp_uuids[compute])

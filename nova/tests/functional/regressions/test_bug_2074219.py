@@ -17,8 +17,6 @@ from nova.tests.functional.libvirt import test_vgpu
 
 class VGPUTestVolumeOPs(test_vgpu.VGPUTestBase):
 
-    FAKE_LIBVIRT_VERSION = 8000000
-
     def setUp(self):
         super().setUp()
         extra_spec = {"resources:VGPU": "1"}

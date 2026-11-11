@@ -70,31 +70,7 @@ class LibvirtVifModelTest(base.ServersTestBase):
 
         self.start_compute(
             hostname='compute1',
-            libvirt_version=9003000,
-            qemu_version=8000000,
         )
 
         self._create_server(image_uuid=uuids.image_vif_model_igb)
         self.assertIn('<model type="igb"/>', self.xml)
-
-    def _test_boot_with_vif_model_igb_old_hypervisor(
-        self, libvirt_version, qemu_version
-    ):
-        self.start_compute(
-            hostname='compute1',
-            libvirt_version=libvirt_version,
-            qemu_version=qemu_version,
-        )
-
-        server = self._create_server(
-            image_uuid=uuids.image_vif_model_igb, expected_state='ERROR')
-        self.assertEqual(
-            "No valid host was found. ", server['fault']['message'])
-
-    def test_boot_with_vif_model_igb_old_qemu(self):
-        self._test_boot_with_vif_model_igb_old_hypervisor(
-            libvirt_version=9003000, qemu_version=7000000)
-
-    def test_boot_with_vif_model_igb_old_libvirt(self):
-        self._test_boot_with_vif_model_igb_old_hypervisor(
-            libvirt_version=9002000, qemu_version=8000000)
