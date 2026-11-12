@@ -21,11 +21,11 @@ from nova.tests.functional.regressions import test_bug_2166786 as pci_base
 
 
 class TestCrossCellColdMigratePCI(pci_base.TestPCIColdMigrationBase):
-    """Reproduce losing PCI requests when copying between cells."""
+    """Verify PCI requests survive cold migration between cells."""
 
     NUMBER_OF_CELLS = 2
 
-    def test_cold_migrate_with_missing_destination_pci_devices(self):
+    def _test_cold_migrate_with_pci_devices(self, confirm):
         self.policy.set_rules({
             servers_policies.CROSS_CELL_RESIZE: base_policies.RULE_ADMIN_API,
         }, overwrite=False)
@@ -42,34 +42,47 @@ class TestCrossCellColdMigratePCI(pci_base.TestPCIColdMigrationBase):
             flavor_id=flavor, networks='none', host=source)
         self.assert_pci_inventory(source, total=2, free=1)
 
-        # FIXME(gibi): The cold-migrate API does not load pci_requests. Copying
-        # only loaded fields loses them, and Instance.create sets
-        # pci_devices=None.
-        # Migration fails during destination preparation
-        # leaving the server running on the source.
-        # This is https://bugs.launchpad.net/nova/+bug/2168874
-        self.api.post_server_action(
-            server['id'], {'migrate': {'host': dest}})
-        self._wait_for_action_fail_completion(
-            server, 'migrate', 'conductor_migrate_server')
-        self._wait_for_migration_status(server, ['error'])
-        server = self.api.get_server(server['id'])
-        self.assertEqual(source, server['OS-EXT-SRV-ATTR:host'])
+        server = self._migrate_server(server, host=dest)
+        self.assertEqual(dest, server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual(power_state.RUNNING, server['OS-EXT-STS:power_state'])
+        self.assert_pci_inventory(source, total=2, free=1)
+
+        if confirm:
+            server = self._confirm_resize(server, cross_cell=True)
+            self.assertEqual(dest, server['OS-EXT-SRV-ATTR:host'])
+            self.assert_pci_inventory(source, total=2, free=2)
+        else:
+            server = self._revert_resize(server)
+            self.assertEqual(source, server['OS-EXT-SRV-ATTR:host'])
+            self.assert_pci_inventory(source, total=2, free=1)
         self.assertEqual(power_state.RUNNING, server['OS-EXT-STS:power_state'])
 
         with context.target_cell(
             self.ctxt, self.cell_mappings['cell2'],
         ) as ctxt:
-
-            # FIXME(gibi): Unlike a completed claim followed by source failure,
-            # this partial claim is not cleaned up by the destination periodic.
-            # This is also part of https://bugs.launchpad.net/nova/+bug/2168874
+            # The destination allocation survives confirm and the periodic,
+            # but is released on revert.
             self.computes[dest].manager.update_available_resource(ctxt)
 
             devices = objects.PciDeviceList.get_by_instance_uuid(
                 ctxt, server['id'])
-            self.assertEqual(1, len(devices))
-            self.assertEqual(
-                fields.PciDeviceStatus.ALLOCATED, devices[0].status)
+            self.assertEqual(1 if confirm else 0, len(devices))
+            if confirm:
+                self.assertEqual(
+                    fields.PciDeviceStatus.ALLOCATED, devices[0].status)
 
-        self.assert_pci_inventory(source, total=2, free=1)
+        self._delete_server(server)
+        self._run_periodics()
+        with context.target_cell(
+            self.ctxt, self.cell_mappings['cell2'],
+        ) as ctxt:
+            devices = objects.PciDeviceList.get_by_instance_uuid(
+                ctxt, server['id'])
+            self.assertEqual(0, len(devices))
+        self.assert_pci_inventory(source, total=2, free=2)
+
+    def test_cold_migrate_with_pci_devices_confirm(self):
+        self._test_cold_migrate_with_pci_devices(confirm=True)
+
+    def test_cold_migrate_with_pci_devices_revert(self):
+        self._test_cold_migrate_with_pci_devices(confirm=False)

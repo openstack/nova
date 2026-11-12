@@ -145,6 +145,11 @@ class TargetDBSetupTask(base.TaskBase):
         # included when cloning the instance to the target cell (bug 2108974).
         if 'keypairs' not in self.instance:
             self.instance.obj_load_attr('keypairs')
+        # Cold migration does not preload PCI requests in the API. Load them
+        # from the source cell before cloning so the destination can claim
+        # devices for both flavor aliases and SR-IOV ports (bug 2168874).
+        if 'pci_requests' not in self.instance:
+            self.instance.obj_load_attr('pci_requests')
         # We copy instance actions to preserve the history of the instance
         # in case the resize is confirmed.
         actions = objects.InstanceActionList.get_by_instance_uuid(
@@ -732,6 +737,12 @@ class CrossCellMigrationTask(base.TaskBase):
         target_cell_migration_context = verify_task.execute()
         self._completed_tasks['PrepResizeAtDestTask'] = verify_task
 
+        # Instance.create initialized this to None. Keep the context returned
+        # by the destination claim so finish_resize can apply the new PCI
+        # requests and devices before spawning the guest.
+        self._target_cell_instance.migration_context = (
+            target_cell_migration_context)
+
         # Stash the old vm_state so we can set the resized/reverted instance
         # back to the same state later, i.e. if STOPPED do not power on the
         # guest.
@@ -747,14 +758,15 @@ class CrossCellMigrationTask(base.TaskBase):
 
         # We need to mirror the MigrationContext, created in the target cell
         # database, into the source cell database. Keep in mind that the
-        # MigrationContext has pci_devices and a migration_id in it which
-        # are specific to the target cell database. The only one we care about
-        # correcting for the source cell database is migration_id since that
-        # is used to route neutron external events to the source and target
-        # hosts.
+        # migration_id is cell-specific and is used to route neutron external
+        # events to the source and target hosts. The target instance had no
+        # PCI devices before the claim, so restore the source devices in the
+        # source context for confirm cleanup and revert.
         self.instance.migration_context = (
             target_cell_migration_context.obj_clone())
         self.instance.migration_context.migration_id = self.source_migration.id
+        self.instance.migration_context.old_pci_devices = (
+            self.instance.pci_devices.obj_clone())
         self.instance.save()
 
         return self._update_migration_from_dest_after_claim(
