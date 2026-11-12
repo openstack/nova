@@ -1677,6 +1677,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_getgrnam.assert_called_once_with('tss')
         mock_getpwnam.assert_called_once_with('tss')
 
+    def test_init_host_checks_multipath(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        with mock.patch.object(drvr, '_check_multipath') as mock_check:
+            drvr.init_host('fake-host')
+            mock_check.assert_called_once_with()
+
     def test__check_multipath_misconfiguration(self):
         self.flags(volume_use_multipath=False, volume_enforce_multipath=True,
                    group='libvirt')
