@@ -626,7 +626,9 @@ class InstanceHelperMixin:
             event = 'conductor_confirm_snapshot_based_resize'
         self._wait_for_instance_action_event(
             server, instance_actions.CONFIRM_RESIZE, event, 'success')
-        return server
+        self.notifier.wait_for_versioned_notifications(
+            'instance.resize_confirm.end')
+        return self.api.get_server(server['id'])
 
     def _revert_resize(self, server):
         # NOTE(sbauza): This method requires the caller to setup a fake
@@ -640,7 +642,7 @@ class InstanceHelperMixin:
         # for the finish_revert_resize method to complete.
         self.notifier.wait_for_versioned_notifications(
             'instance.resize_revert.end')
-        return server
+        return self.api.get_server(server['id'])
 
     def _live_migrate(
         self, server, migration_expected_state='completed',
