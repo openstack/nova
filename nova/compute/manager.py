@@ -5837,8 +5837,12 @@ class ComputeManager(manager.Manager):
         # to duplicate allocations against the sharing provider during
         # migration.
         # TODO(cdent): Should we be doing anything with return values here?
-        self.reportclient.move_allocations(context, migration.uuid,
-                                           instance.uuid)
+        # COMPUTE_INSTANCE labels the restored consumer on rollback or revert
+        # only; normal builds and successful destination claims remain
+        # untyped because they do not use this allocation-move path.
+        self.reportclient.move_allocations(
+            context, migration.uuid, instance.uuid,
+            target_consumer_type=report.CONSUMER_TYPE_INSTANCE)
         return orig_alloc
 
     def _prep_resize(

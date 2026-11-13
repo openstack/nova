@@ -1593,6 +1593,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertTrue(res)
 
 
+@ddt.ddt
 class TestMoveAllocations(SchedulerReportClientTestCase):
 
     def setUp(self):
@@ -1651,19 +1652,26 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
         self.target_rsp.json.return_value = self.target_consumer_data
         self.mock_get.side_effect = [self.source_rsp, self.target_rsp]
         self.expected_url = '/allocations'
-        self.expected_microversion = '1.28'
+        self.expected_microversion = '1.38'
 
     def test_url_microversion(self):
         resp = self.client.move_allocations(
-            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid,
+            target_consumer_type=report.CONSUMER_TYPE_MIGRATION)
 
         self.assertTrue(resp)
         self.mock_post.assert_called_once_with(
             self.expected_url, mock.ANY,
             version=self.expected_microversion,
             global_request_id=self.context.global_id)
+        self.mock_get.assert_has_calls([
+            mock.call('/allocations/%s' % consumer_uuid, version='1.28',
+                      global_request_id=self.context.global_id)
+            for consumer_uuid in (self.source_consumer_uuid,
+                                  self.target_consumer_uuid)])
 
-    def test_move_to_empty_target(self):
+    @ddt.data(report.CONSUMER_TYPE_INSTANCE, report.CONSUMER_TYPE_MIGRATION)
+    def test_move_to_empty_target(self, target_type):
         self.target_consumer_data = {"allocations": {}}
         target_rsp = mock.Mock()
         target_rsp.json.return_value = self.target_consumer_data
@@ -1680,19 +1688,22 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
                     }
                 },
                 "consumer_generation": None,
+                "consumer_type": target_type,
                 "project_id": self.project_id,
                 "user_id": self.user_id,
             },
             self.source_consumer_uuid: {
                 "allocations": {},
                 "consumer_generation": 2,
+                "consumer_type": "IGNORED",
                 "project_id": self.project_id,
                 "user_id": self.user_id,
             }
         }
 
         resp = self.client.move_allocations(
-            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid,
+            target_consumer_type=target_type)
 
         self.assertTrue(resp)
         self.mock_post.assert_called_once_with(
@@ -1712,7 +1723,8 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
         self.mock_get.side_effect = [source_rsp, self.target_rsp]
 
         resp = self.client.move_allocations(
-            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid,
+            target_consumer_type=report.CONSUMER_TYPE_MIGRATION)
 
         self.assertTrue(resp)
         self.mock_post.assert_not_called()
@@ -1720,7 +1732,8 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
         self.assertIn('Allocations not found for consumer',
                       mock_info.call_args[0][0])
 
-    def test_move_to_non_empty_target(self):
+    @ddt.data(report.CONSUMER_TYPE_INSTANCE, report.CONSUMER_TYPE_MIGRATION)
+    def test_move_to_non_empty_target(self, target_type):
         self.mock_get.side_effect = [self.source_rsp, self.target_rsp]
 
         expected_payload = {
@@ -1734,12 +1747,14 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
                     }
                 },
                 "consumer_generation": 1,
+                "consumer_type": target_type,
                 "project_id": self.project_id,
                 "user_id": self.user_id,
             },
             self.source_consumer_uuid: {
                 "allocations": {},
                 "consumer_generation": 2,
+                "consumer_type": "IGNORED",
                 "project_id": self.project_id,
                 "user_id": self.user_id,
             }
@@ -1749,7 +1764,8 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
             with nova_fixtures.StandardLogging() as stdlog:
                 resp = self.client.move_allocations(
                     self.context, self.source_consumer_uuid,
-                    self.target_consumer_uuid)
+                    self.target_consumer_uuid,
+                    target_consumer_type=target_type)
 
         self.assertTrue(resp)
         self.mock_post.assert_called_once_with(
@@ -1776,7 +1792,8 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
         self.mock_post.return_value = rsp
 
         resp = self.client.move_allocations(
-            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid,
+            target_consumer_type=report.CONSUMER_TYPE_MIGRATION)
 
         self.assertFalse(resp)
         # Post was attempted four times.
@@ -1789,7 +1806,8 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
         self.mock_post.return_value.text = error_message
 
         resp = self.client.move_allocations(
-            self.context, self.source_consumer_uuid, self.target_consumer_uuid)
+            self.context, self.source_consumer_uuid, self.target_consumer_uuid,
+            target_consumer_type=report.CONSUMER_TYPE_MIGRATION)
 
         self.assertFalse(resp)
         args, kwargs = mock_log.call_args
@@ -1807,7 +1825,8 @@ class TestMoveAllocations(SchedulerReportClientTestCase):
 
         self.assertRaises(exception.AllocationMoveFailed,
             self.client.move_allocations, self.context,
-            self.source_consumer_uuid, self.target_consumer_uuid)
+            self.source_consumer_uuid, self.target_consumer_uuid,
+            target_consumer_type=report.CONSUMER_TYPE_MIGRATION)
 
 
 class TestProviderOperations(SchedulerReportClientTestCase):

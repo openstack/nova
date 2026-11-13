@@ -41,6 +41,7 @@ from nova.network import constants as neutron_constants
 from nova.network import neutron as neutronapi
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova.scheduler.client import report
 from nova.scheduler import utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -2093,6 +2094,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(server, 'ACTIVE')
 
+        self.assertConsumerType(server['id'], report.CONSUMER_TYPE_INSTANCE)
         # Make sure the RequestSpec.flavor matches the original flavor.
         ctxt = context.get_admin_context()
         reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
@@ -3201,12 +3203,33 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             }
         }
 
-        self.api.post_server_action(server['id'], post)
-        self._wait_for_server_parameter(server,
-                                        {'OS-EXT-SRV-ATTR:host': dest_hostname,
-                                         'status': 'ACTIVE'})
+        pre_live_migration = self.compute2.manager.driver.pre_live_migration
+
+        def check_migration_type(*args, **kwargs):
+            migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+            self.assertConsumerType(migration_uuid,
+                                    report.CONSUMER_TYPE_MIGRATION)
+            return pre_live_migration(*args, **kwargs)
+
+        with mock.patch.object(self.compute2.manager.driver,
+                               'pre_live_migration',
+                               side_effect=check_migration_type) as mock_pre:
+            self.api.post_server_action(server['id'], post)
+            self._wait_for_server_parameter(
+                server, {'OS-EXT-SRV-ATTR:host': dest_hostname,
+                         'status': 'ACTIVE'})
+        mock_pre.assert_called_once()
         self.notifier.wait_for_versioned_notifications(
             'instance.live_migration_post.end')
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+
+        # The end notification precedes allocation cleanup on the source.
+        # Wait for the cleanup itself, not just the notification or status.
+        def migration_allocations_removed():
+            self.assertEqual({}, self._get_allocations_by_server_uuid(
+                migration_uuid))
+
+        self._wait_for_assert(migration_allocations_removed)
 
         self._run_periodics()
 
@@ -3271,6 +3294,9 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # destination shouldn't be as we never made it to one.
         self.assertEqual(source_hostname, migration['source_compute'])
         self.assertIsNone(migration['dest_compute'])
+        self.assertConsumerType(server['id'], report.CONSUMER_TYPE_INSTANCE)
+        self.assertEqual({}, self._get_allocations_by_server_uuid(
+            migration['uuid']))
         # Make sure the destination host (the only other host) is the failed
         # host.
         self.assertEqual(dest_hostname, self.failed_hostname)
@@ -3318,6 +3344,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             # record and the dest node allocations are against the instance.
             self.assertFlavorMatchesAllocation(
                 self.flavor1, migrate_data.migration.uuid, source_rp_uuid)
+            self.assertConsumerType(migrate_data.migration.uuid,
+                                    report.CONSUMER_TYPE_MIGRATION)
 
             self.assertFlavorMatchesAllocation(
                 self.flavor1, server['id'], dest_rp_uuid)
@@ -3349,6 +3377,9 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self.assertEqual(source_hostname, migration['source_compute'])
         self.assertEqual(dest_hostname, migration['dest_compute'])
+        self.assertConsumerType(server['id'], report.CONSUMER_TYPE_INSTANCE)
+        self.assertEqual({}, self._get_allocations_by_server_uuid(
+            migration['uuid']))
 
         # Since the instance didn't move, assert the allocations are still
         # on the source node.
@@ -3843,6 +3874,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(server, 'ACTIVE')
+        self.assertConsumerType(server['id'], report.CONSUMER_TYPE_INSTANCE)
 
         def _check_allocation():
             self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)

@@ -12,17 +12,33 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
 from unittest import mock
 
+import ddt
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context
 from nova import exception
 from nova import objects
+from nova.scheduler.client import report
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
+
+
+class _LegacyAllocationMoveReportClient(report.SchedulerReportClient):
+    """Emulate old services' allocation moves against real Placement."""
+
+    def post(self, url, data, version=None, global_request_id=None):
+        if url == '/allocations':
+            data = copy.deepcopy(data)
+            for consumer in data.values():
+                consumer.pop('consumer_type', None)
+            version = '1.28'
+        return super().post(url, data, version=version,
+                            global_request_id=global_request_id)
 
 
 class FakeCinderError(object):
@@ -94,6 +110,75 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase):
                                          'status': 'ACTIVE'})
         self.assertEqual(2, stub_attachment_delete.call_count)
         self.assertEqual(1, stub_attachment_delete.raise_count)
+
+
+@ddt.ddt
+class TestLiveMigrationAllocationRollback(
+    integrated_helpers._IntegratedTestBase
+):
+    ADMIN_API = True
+    microversion = 'latest'
+
+    def _setup_compute_service(self):
+        self._start_compute('src')
+        self._start_compute('dest')
+
+    @ddt.data((False, False), (False, True), (True, False), (True, True))
+    @ddt.unpack
+    @mock.patch('nova.virt.fake.FakeDriver.live_migration')
+    def test_consumer_types_during_driver_rollback(
+            self, old_source, old_conductor, mock_lm):
+        old_host = 'src' if old_source else 'dest'
+        self.computes[old_host].manager.reportclient = (
+            _LegacyAllocationMoveReportClient())
+        if old_conductor:
+            legacy_conductor_client = _LegacyAllocationMoveReportClient()
+            self.stub_out(
+                'nova.scheduler.client.report.report_client_singleton',
+                lambda: legacy_conductor_client)
+
+        server = self._create_server(networks='none', host='src')
+        source_uuid = self._get_provider_uuid_by_host('src')
+        dest_uuid = self._get_provider_uuid_by_host('dest')
+        source_resources = self._get_allocations_by_server_uuid(
+            server['id'])[source_uuid]['resources']
+
+        def fake_live_migration_with_rollback(
+                context, instance, dest, post_method, recover_method,
+                block_migration=False, migrate_data=None):
+            migration_uuid = migrate_data.migration.uuid
+            expected_type = ('unknown' if old_conductor else
+                             report.CONSUMER_TYPE_MIGRATION)
+            self.assertConsumerType(migration_uuid, expected_type)
+            self.assertEqual(
+                source_resources,
+                self._get_allocations_by_server_uuid(
+                    migration_uuid)[source_uuid]['resources'])
+            self.assertEqual(
+                {dest_uuid},
+                set(self._get_allocations_by_server_uuid(server['id'])))
+            recover_method(context, instance, dest, migrate_data)
+            raise test.TestingException()
+
+        mock_lm.side_effect = fake_live_migration_with_rollback
+        self._live_migrate(
+            server, 'error', server_expected_state='ERROR',
+            wait_for_fault_key=False)
+
+        mock_lm.assert_called_once()
+        server = self.api.get_server(server['id'])
+        self.assertEqual('src', server['OS-EXT-SRV-ATTR:host'])
+        expected_type = (
+            'unknown' if old_source else report.CONSUMER_TYPE_INSTANCE)
+        self.assertConsumerType(server['id'], expected_type)
+        instance_allocs = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual({source_uuid}, set(instance_allocs))
+        self.assertEqual(source_resources,
+                         instance_allocs[source_uuid]['resources'])
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+        self.assertEqual({}, self._get_allocations_by_server_uuid(
+            migration_uuid))
+        self.assertEqual({}, self._get_allocations_by_provider_uuid(dest_uuid))
 
 
 class TestVolAttachmentsDuringLiveMigration(

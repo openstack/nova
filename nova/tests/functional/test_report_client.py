@@ -124,6 +124,37 @@ class SchedulerReportClientTests(test.TestCase):
 
         self.client = VersionCheckingReportClient()
 
+    @ddt.data(report.CONSUMER_TYPE_INSTANCE, report.CONSUMER_TYPE_MIGRATION)
+    def test_move_allocations_consumer_types(self, consumer_type):
+        self.client._ensure_resource_provider(
+            self.context, self.compute_uuid, name=self.compute_name)
+        self.client.set_inventory_for_provider(
+            self.context, self.compute_uuid,
+            self.compute_node_to_inventory_dict())
+        payload = {
+            'allocations': {self.compute_uuid: {'resources': {'VCPU': 1}}},
+            'project_id': self.instance.project_id,
+            'user_id': self.instance.user_id,
+            'consumer_generation': None,
+        }
+        self.assertTrue(self.client.put_allocations(
+            self.context, self.instance_uuid, payload))
+
+        self.assertTrue(self.client.move_allocations(
+            self.context, self.instance_uuid, uuids.migration,
+            target_consumer_type=consumer_type))
+        response = self.client.get(
+            '/allocations/%s' % uuids.migration, version='1.38')
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual(consumer_type, result['consumer_type'])
+        self.assertEqual({self.compute_uuid}, set(result['allocations']))
+        self.assertEqual(
+            {'VCPU': 1},
+            result['allocations'][self.compute_uuid]['resources'])
+        self.assertEqual({}, self.client.get_allocs_for_consumer(
+            self.context, self.instance_uuid)['allocations'])
+
     def compute_node_to_inventory_dict(self):
         result = {}
         if self.compute_node.vcpus > 0:

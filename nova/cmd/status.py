@@ -52,12 +52,11 @@ from nova.volume import cinder
 
 CONF = nova.conf.CONF
 
-# NOTE(gibi): 1.36 is required by nova-scheduler to support the same_subtree
-# queryparam to make GET /allocation_candidates require that a list of request
-# groups are satisfied from the same provider subtree.
+# NOTE: 1.38 is required to specify COMPUTE_MIGRATION and COMPUTE_INSTANCE
+# consumer types when moving allocations during migration and resize.
 # NOTE: If you bump this version, remember to update the history
 # section in the nova-status man page (doc/source/cli/nova-status).
-MIN_PLACEMENT_MICROVERSION = "1.36"
+MIN_PLACEMENT_MICROVERSION = "1.38"
 
 # NOTE(mriedem): 3.44 is needed to work with volume attachment records which
 # are required for supporting multi-attach capable volumes.

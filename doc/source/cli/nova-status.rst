@@ -152,6 +152,11 @@ Upgrade
 
   *  Checks for the Placement API are modified to require version 1.36.
 
+  **35.0.0 (2027.1)**
+
+  * Checks for the Placement API are modified to require version 1.38 so
+    migration allocation moves can specify consumer types.
+
 See Also
 ========
 

@@ -35,6 +35,7 @@ from nova import context
 from nova.db.main import api as db
 import nova.image.glance
 from nova import objects
+from nova.scheduler.client import report
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
@@ -1085,6 +1086,11 @@ class PlacementHelperMixin:
 class PlacementInstanceHelperMixin(InstanceHelperMixin, PlacementHelperMixin):
     """A placement-aware variant of InstanceHelperMixin."""
 
+    def assertConsumerType(self, consumer_uuid, consumer_type):
+        allocations = self.placement.get(
+            '/allocations/%s' % consumer_uuid, version='1.38').body
+        self.assertEqual(consumer_type, allocations['consumer_type'])
+
     # TODO(stephenfin): Rename to '_get_server_allocations'
     def _get_allocations_by_server_uuid(self, server_uuid):
         return self.placement.get(
@@ -1266,6 +1272,8 @@ class PlacementInstanceHelperMixin(InstanceHelperMixin, PlacementHelperMixin):
             migration_uuid = self.get_migration_uuid_for_instance(server['id'])
             self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
                                                source_rp_uuid)
+            self.assertConsumerType(migration_uuid,
+                                    report.CONSUMER_TYPE_MIGRATION)
 
         # OK, so the move operation has run, but we have not yet confirmed or
         # reverted the move operation. Before we run periodics, make sure

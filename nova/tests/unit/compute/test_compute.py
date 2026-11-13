@@ -70,6 +70,7 @@ from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
 from nova.policies import base as base_policy
 from nova.policies import servers as servers_policy
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
@@ -6808,7 +6809,8 @@ class ComputeTestCase(BaseTestCase,
                 migrate_data=migrate_data)
             mock_setup.assert_called_once_with(c, instance, self.compute.host)
             mock_client.move_allocations.assert_called_once_with(
-                c, migration.uuid, instance.uuid)
+                c, migration.uuid, instance.uuid,
+                target_consumer_type=report.CONSUMER_TYPE_INSTANCE)
 
         do_it()
 
