@@ -4729,3 +4729,192 @@ class TestCleanComputeNodeCache(BaseTestCase):
 
         mock_remove.assert_called_once_with(invalid_nodename)
         mock_invalidate.assert_called_once_with(invalid_nodename)
+
+
+class TestReleaseLeakedMoveClaims(BaseTestCase):
+    """Tests for ResourceTracker._release_leaked_move_claims().
+
+    See bug https://bugs.launchpad.net/nova/+bug/2166786
+    """
+
+    def setUp(self):
+        super().setUp()
+        self._setup_rt()
+        # By default the RT tracks nothing as an in-progress incoming
+        # migration.
+        self.rt.tracked_migrations = {}
+        # Set up a PCI tracker that reports the instance as having leaked
+        # allocations by default. Individual tests override this.
+        self.pci_tracker = mock.Mock(spec_set=[
+            'allocations', 'claims', 'free_instance'])
+        self.pci_tracker.allocations = {uuids.instance: mock.sentinel.devs}
+        self.pci_tracker.claims = {}
+        self.rt.pci_tracker = self.pci_tracker
+
+    def _migration(self, **kwargs):
+        instance = objects.Instance(uuid=uuids.instance)
+        values = dict(
+            uuid=uuids.migration,
+            instance_uuid=uuids.instance,
+            instance=instance,
+            source_compute='other-host',
+            source_node='other-node',
+            dest_compute=_HOSTNAME,
+            dest_node=_NODENAME,
+            status='error',
+        )
+        values.update(kwargs)
+        return objects.Migration(context=mock.sentinel.ctx, **values)
+
+    def _release(self, migrations, instance_by_uuid=None):
+        self.rt._release_leaked_move_claims(
+            mock.sentinel.ctx, migrations,
+            instance_by_uuid if instance_by_uuid is not None else {},
+            _NODENAME)
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_leaked_allocation_released(self, mock_save):
+        migration = self._migration()
+
+        self._release([migration])
+
+        self.pci_tracker.free_instance.assert_called_once_with(
+            mock.sentinel.ctx, migration.instance)
+
+        self.assertEqual('failed', migration.status)
+        mock_save.assert_called_once_with()
+        self.assertIn(
+            'Releasing a move claim leaked on this host',
+            self.stdlog.logger.output)
+
+        # The migration is marked as 'failed' so it is not re-examined on the
+        # next periodic run.
+        self.pci_tracker.reset_mock()
+        mock_save.reset_mock()
+
+        self._release([migration])
+
+        self.pci_tracker.free_instance.assert_not_called()
+        mock_save.assert_not_called()
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_leaked_claim_released(self, mock_save):
+        # The leak may be recorded in pci_tracker.claims rather than
+        # allocations.
+        self.pci_tracker.allocations = {}
+        self.pci_tracker.claims = {uuids.instance: mock.sentinel.devs}
+        migration = self._migration()
+
+        self._release([migration])
+
+        self.pci_tracker.free_instance.assert_called_once_with(
+            mock.sentinel.ctx, migration.instance)
+        self.assertEqual('failed', migration.status)
+        mock_save.assert_called_once_with()
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_migration_to_other_dest_ignored(self, mock_save):
+        # A migration where this node is not the destination is left alone.
+        migration = self._migration(
+            dest_compute='other-host', dest_node='other-node')
+
+        self._release([migration])
+
+        self.pci_tracker.free_instance.assert_not_called()
+        mock_save.assert_not_called()
+        self.assertEqual('error', migration.status)
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_migration_to_other_node_on_same_host_ignored(self, mock_save):
+        # Same host but a different node is not our destination.
+        migration = self._migration(dest_node='other-node')
+
+        self._release([migration])
+
+        self.pci_tracker.free_instance.assert_not_called()
+        mock_save.assert_not_called()
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_non_error_migration_ignored(self, mock_save):
+        # In-progress (or otherwise non-error) migrations are handled by the
+        # normal tracked_migrations accounting and must not be touched here.
+        for status in ('pre-migrating', 'migrating', 'finished', 'confirmed',
+                       'reverted', 'failed', 'done'):
+            self.pci_tracker.free_instance.reset_mock()
+            migration = self._migration(status=status)
+
+            self._release([migration])
+
+            self.pci_tracker.free_instance.assert_not_called()
+            mock_save.assert_not_called()
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_instance_present_on_this_node_ignored(self, mock_save):
+        # If the instance is actually running here the claim is legitimate.
+        migration = self._migration()
+
+        self._release(
+            [migration],
+            instance_by_uuid={uuids.instance: migration.instance})
+
+        self.pci_tracker.free_instance.assert_not_called()
+        mock_save.assert_not_called()
+        self.assertEqual('error', migration.status)
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_tracked_migration_ignored(self, mock_save):
+        # A migration accounted for as an in-progress incoming migration is
+        # not leaked.
+        migration = self._migration()
+        self.rt.tracked_migrations = {uuids.instance: migration}
+
+        self._release([migration])
+
+        self.pci_tracker.free_instance.assert_not_called()
+        mock_save.assert_not_called()
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_no_pci_tracker_ignored(self, mock_save):
+        self.rt.pci_tracker = None
+        migration = self._migration()
+
+        # Should not raise even though there is no pci_tracker to consult.
+        self._release([migration])
+
+        mock_save.assert_not_called()
+        self.assertEqual('error', migration.status)
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_nothing_claimed_for_instance_ignored(self, mock_save):
+        # The instance has no PCI allocation or claim on this node, so there
+        # is nothing leaked to heal.
+        self.pci_tracker.allocations = {}
+        self.pci_tracker.claims = {}
+        migration = self._migration()
+
+        self._release([migration])
+
+        self.pci_tracker.free_instance.assert_not_called()
+        mock_save.assert_not_called()
+        self.assertEqual('error', migration.status)
+
+    @mock.patch('nova.objects.migration.Migration.save')
+    def test_only_leaked_migration_released(self, mock_save):
+        # A mix of migrations: only the genuinely leaked one is healed.
+        leaked = self._migration()
+        # A migration for an instance that is still running here.
+        present_uuid = uuids.instance2
+        present = self._migration(
+            uuid=uuids.migration2, instance_uuid=present_uuid)
+        present.instance = objects.Instance(uuid=present_uuid)
+        self.pci_tracker.allocations[present_uuid] = mock.sentinel.devs2
+
+        self._release(
+            [leaked, present],
+            instance_by_uuid={present_uuid: present.instance})
+
+        self.pci_tracker.free_instance.assert_called_once_with(
+            mock.sentinel.ctx, leaked.instance)
+        self.assertEqual('failed', leaked.status)
+        self.assertEqual('error', present.status)
+        mock_save.assert_called_once_with()
