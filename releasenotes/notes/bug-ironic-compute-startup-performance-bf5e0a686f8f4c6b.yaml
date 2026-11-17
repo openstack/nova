@@ -1,0 +1,15 @@
+---
+fixes:
+  - |
+    Improved nova-compute startup and resource reporting performance for large
+    Ironic deployments. The compute service now avoids repeated per-instance
+    metadata lookups during startup, limits vTPM startup validation to the
+    libvirt driver, avoids deep-copying the full Placement provider tree for
+    each Ironic node, and can update per-node resources concurrently using the
+    new ``[compute]update_resources_max_workers`` option.
+
+    The new option defaults to ``1``, preserving the previous sequential
+    behavior. Operators of large Ironic deployments can increase it to reduce
+    ``update_available_resource`` startup and periodic-task latency, trading
+    lower wall-clock time for additional nova-compute CPU usage and Placement
+    API concurrency.

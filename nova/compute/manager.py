@@ -670,6 +670,8 @@ class ComputeManager(manager.Manager):
             max_workers=CONF.sync_power_state_pool_size)
         self._syncs_in_progress: set[str] = set()
         self._syncs_in_progress_lock = threading.Lock()
+        self._update_resources_executor = nova.utils.create_executor(
+            max_workers=CONF.compute.update_resources_max_workers)
         self.send_instance_updates = (
             CONF.filter_scheduler.track_instance_changes)
 
@@ -11593,9 +11595,40 @@ class ComputeManager(manager.Manager):
                             "Failed to delete compute node resource provider "
                             "for compute node %s: %s", cn.uuid, str(e))
 
-        for nodename in nodenames:
-            self._update_available_resource_for_node(context, nodename,
-                                                     startup=startup)
+        # Run per-node updates in parallel.  Each node's update touches
+        # only its own ResourceTracker state and its own ProviderTree
+        # subtree (protected by the report client's lock), so concurrent
+        # execution is safe.
+        futures = [
+            (
+                nodename,
+                utils.spawn_on(
+                    self._update_resources_executor,
+                    self._update_available_resource_for_node,
+                    context, nodename, startup=startup),
+            )
+            for nodename in nodenames
+        ]
+        # Drain all futures so errors are re-raised in this thread rather
+        # than being silently lost. Keep draining after the first failure
+        # so all scheduled per-node updates finish before we preserve the
+        # sequential path's exception propagation semantics.
+        first_exc: Exception | None = None
+        failed_nodes = []
+        for nodename, fut in futures:
+            try:
+                fut.result()
+            except Exception as exc:
+                failed_nodes.append(nodename)
+                if first_exc is None:
+                    first_exc = exc
+
+        if first_exc is not None:
+            LOG.error(
+                "update_available_resource failed for %(count)d nodes; "
+                "re-raising the first failure from node %(node)s.",
+                {'count': len(failed_nodes), 'node': failed_nodes[0]})
+            raise first_exc
 
     def _get_compute_nodes_in_db(self, context, nodenames, use_slave=False,
                                  startup=False):
