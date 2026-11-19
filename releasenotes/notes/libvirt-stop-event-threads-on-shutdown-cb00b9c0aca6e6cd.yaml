@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    The graceful shutdown of ``nova-compute`` with the libvirt driver no
+    longer always waits for the full ``[DEFAULT]/manager_shutdown_timeout``.
+    The libvirt event handler threads never stopped, so the shutdown of the
+    service thread pools waited for them until the timeout, and the queued
+    live migrations were not cancelled. These threads now stop when the
+    service shuts down.
+    See `bug 2169804 <https://bugs.launchpad.net/nova/+bug/2169804>`_.

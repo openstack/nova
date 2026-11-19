@@ -15,6 +15,7 @@
 #    under the License.
 
 import io
+import threading
 from unittest import mock
 
 import ddt
@@ -531,6 +532,63 @@ class HostTestCase(test.NoDBTestCase):
         # This test will timeout if it fails. Success is implicit in a
         # timely return from wait(), indicating that the connection event
         # handler was called.
+
+    def test_cleanup_stops_conn_event_thread(self):
+        handler = mock.MagicMock()
+        h = self._create_host("qemu:///system", conn_event_handler=handler)
+        h._queue_conn_event_handler(True, None)
+
+        h.cleanup()
+
+        # This test will hang if it fails.
+        h._conn_event_thread()
+        handler.assert_called_once_with(True, None)
+
+    def test_cleanup_drops_later_conn_events(self):
+        handler = mock.MagicMock()
+        h = self._create_host("qemu:///system", conn_event_handler=handler)
+
+        h.cleanup()
+        h._queue_conn_event_handler(True, None)
+        h.cleanup()
+
+        self.assertIsNone(h._conn_event_handler_queue.get_nowait())
+        self.assertTrue(h._conn_event_handler_queue.empty())
+        handler.assert_not_called()
+
+    def test_cleanup_stops_native_event_thread(self):
+        h = self._create_host("qemu:///system")
+
+        with mock.patch.object(
+                host.libvirt, 'virEventRunDefaultImpl') as mock_run:
+            h.cleanup()
+            # This test will hang if it fails.
+            h._event_handler._native_thread()
+
+        mock_run.assert_not_called()
+
+    def test_cleanup_stops_event_dispatch_thread(self):
+        if utils.concurrency_mode_threading():
+            self.skipTest(
+                "In threading mode the libvirt events are dispatched from "
+                "the native event thread.")
+        h = self._create_host("qemu:///system")
+        handler = h._event_handler
+        waiting = threading.Event()
+        real_dispatch_events = handler._dispatch_events
+
+        def dispatch_events():
+            waiting.set()
+            real_dispatch_events()
+
+        with mock.patch.object(handler, '_dispatch_events', dispatch_events):
+            thread = thread_pool_factory.spawn(handler._dispatch_thread)
+            self.assertTrue(waiting.wait(timeout=10))
+            utils.cooperative_yield()
+
+            h.cleanup()
+
+            thread.result(timeout=10)
 
     @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
     @mock.patch.object(fakelibvirt.virConnect, "getVersion")

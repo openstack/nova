@@ -86,12 +86,16 @@ class LibvirtEventHandler:
     def __init__(self, conn_event_handler=None, lifecycle_event_handler=None):
         self._lifecycle_event_handler = lifecycle_event_handler
         self._conn_event_handler = conn_event_handler
+        self._stopped = False
 
     def _queue_event(self, event):
         raise NotImplementedError()
 
     def start(self):
         raise NotImplementedError()
+
+    def stop(self):
+        self._stopped = True
 
     @classmethod
     def create(cls, conn_event_handler=None, lifecycle_event_handler=None):
@@ -178,7 +182,9 @@ class _EventletLibvirtEventHandler(LibvirtEventHandler):
         eventlet's greenthread integration
         """
 
-        while True:
+        # libvirt has no API to interrupt virEventRunDefaultImpl(), so a stop
+        # only takes effect once the current iteration returns.
+        while not self._stopped:
             libvirt.virEventRunDefaultImpl()
 
     def _dispatch_thread(self):
@@ -189,8 +195,14 @@ class _EventletLibvirtEventHandler(LibvirtEventHandler):
         then dispatches the events to the compute manager.
         """
 
-        while True:
+        while not self._stopped:
             self._dispatch_events()
+
+    def stop(self):
+        super().stop()
+        # Wake up _dispatch_thread() blocked on the self-pipe.
+        self._event_notify_send.write(b' ')
+        self._event_notify_send.flush()
 
     def _dispatch_events(self):
         """Wait for & dispatch events from native thread
@@ -276,7 +288,9 @@ class _ThreadingLibvirtEventHandler(LibvirtEventHandler):
         any incoming async events from libvirtd.
         """
 
-        while True:
+        # libvirt has no API to interrupt virEventRunDefaultImpl(), so a stop
+        # only takes effect once the current iteration returns.
+        while not self._stopped:
             libvirt.virEventRunDefaultImpl()
 
 
@@ -296,9 +310,13 @@ class Host(object):
         # This queue is just for the async handling of connection closed
         # events. In eventlet mode this only pass events within the main
         # native thread with the eventlet hub, so no proxying is needed.
+        # None stops the connection event thread.
         self._conn_event_handler_queue: queue.Queue[
-            Callable[[], None]
+            Callable[[], None] | None
         ] = queue.Queue()
+        # Guarantees that nothing is queued after the None.
+        self._conn_event_handler_lock = threading.Lock()
+        self._conn_events_stopped = False
         self._lifecycle_event_handler = lifecycle_event_handler
         self._caps = None
         self._domain_caps = None
@@ -364,20 +382,24 @@ class Host(object):
         # NOTE(mdbooth): This thread doesn't need to jump through the same
         # hoops as the lifecycle event handling because it doesn't interact
         # directly with the libvirt native thread.
-        while True:
-            self._dispatch_conn_event()
+        while self._dispatch_conn_event():
+            pass
 
     def _dispatch_conn_event(self):
         # NOTE(mdbooth): Splitting out this loop looks redundant, but it
         # means we can easily dispatch events synchronously from tests and
         # it isn't completely awful.
         handler = self._conn_event_handler_queue.get()
+        if handler is None:
+            self._conn_event_handler_queue.task_done()
+            return False
         try:
             handler()
         except Exception:
             LOG.exception('Exception handling connection event')
         finally:
             self._conn_event_handler_queue.task_done()
+        return True
 
     @staticmethod
     def _event_device_removed_callback(conn, dom, dev, opaque):
@@ -600,7 +622,18 @@ class Host(object):
         def handler():
             return self._conn_event_handler(*args, **kwargs)
 
-        self._conn_event_handler_queue.put(handler)
+        with self._conn_event_handler_lock:
+            if self._conn_events_stopped:
+                LOG.debug('Dropping connection event during shutdown')
+                return
+            self._conn_event_handler_queue.put(handler)
+
+    def _stop_conn_event_thread(self):
+        with self._conn_event_handler_lock:
+            if self._conn_events_stopped:
+                return
+            self._conn_events_stopped = True
+            self._conn_event_handler_queue.put(None)
 
     def _get_connection(self):
         # multiple concurrent connections are protected by _wrapped_conn_lock
@@ -676,9 +709,11 @@ class Host(object):
         self._initialized = True
 
     def cleanup(self):
-        # TODO(gibi): We might want to stop the _event_handler here as well
-        # as the _conn_event_thread loop to have a fully graceful and clean
-        # shutdown
+        # _conn_event_thread() and, in eventlet mode, the event dispatch
+        # thread run on the default executor, which shutdown_all_executors()
+        # waits for: they must return first.
+        self._stop_conn_event_thread()
+        self._event_handler.stop()
 
         # If domain STOPPED events are delayed then the executor shutdown can
         # take up to 15 seconds. Also as nova-compute is shutting down not
