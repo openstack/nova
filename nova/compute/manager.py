@@ -6336,6 +6336,23 @@ class ComputeManager(manager.Manager):
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._revert_allocation(context, instance, migration)
+                # NOTE(gibi): The resize_claim done in prep_resize on the
+                # destination host claimed resources and created a migration
+                # context on the destination. As the resize failed here on the
+                # source before finish_resize could run on the destination,
+                # nothing will release that claim on the destination. So we ask
+                # the destination to drop the move claim to avoid leaking those
+                # resources. See bug https://launchpad.net/bugs/2166786
+                self.compute_rpcapi.drop_move_claim_at_destination(
+                    context, instance, migration.dest_compute)
+                # The move claim on the destination was dropped above (which
+                # relies on the migration context still being present in the
+                # instance sent over RPC) so now we can drop the migration
+                # context that prep_resize created. The instance stays on and
+                # is reverted to the source host so nothing else will clean it
+                # up, similar to what finish_revert_migration() does on a
+                # normal revert.
+                instance.drop_migration_context()
 
     def _resize_instance(
         self, context, instance, image, migration, flavor,
@@ -10239,12 +10256,12 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def drop_move_claim_at_destination(self, context, instance):
-        """Called by the source of a live migration during rollback to ask the
-        destination to drop the MoveClaim object that was created for the live
+        """Called by the source of a migration during rollback to ask the
+        destination to drop the MoveClaim object that was created for the
         migration on the destination.
         """
         nodename = self._get_nodename(instance)
-        LOG.debug('Dropping live migration resource claim on destination '
+        LOG.debug('Dropping migration resource claim on destination '
                   'node %s', nodename, instance=instance)
         self.rt.drop_move_claim(
             context, instance, nodename, flavor=instance.flavor)
