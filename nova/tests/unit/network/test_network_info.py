@@ -1333,7 +1333,6 @@ class TestNetworkMetadata(test.NoDBTestCase):
             model.VIF_TYPE_BRIDGE,
             model.VIF_TYPE_DVS,
             model.VIF_TYPE_HW_VEB,
-            model.VIF_TYPE_HYPERV,
             model.VIF_TYPE_OVS,
             model.VIF_TYPE_TAP,
             model.VIF_TYPE_VHOSTUSER,
