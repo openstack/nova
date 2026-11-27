@@ -23,6 +23,7 @@ from nova import exception
 from nova.network import constants as neutron_constants
 from nova.network import model as network_model
 from nova.tests.fixtures import nova as nova_fixtures
+from nova import utils
 
 
 class _FakeNeutronClient:
@@ -61,7 +62,12 @@ class _FakeNeutronClient:
 # TODO(stephenfin): We should split out the stubs of neutronclient from the
 # stubs of 'nova.network.neutron' to simplify matters
 class NeutronFixture(fixtures.Fixture):
-    """A fixture to boot instances with neutron ports"""
+    """A fixture to boot instances with neutron ports.
+
+    Port and binding API operations share a lock so readers can deep-copy a
+    consistent snapshot while compute and API threads update the fixture.
+    The lock is shared across fixtures as some tests share their port state.
+    """
 
     # the default project_id in OsaAPIFixtures
     tenant_id = nova_fixtures.PROJECT_ID
@@ -697,6 +703,7 @@ class NeutronFixture(fixtures.Fixture):
         admin = admin or context.is_admin and not context.auth_token
         return _FakeNeutronClient(self, admin)
 
+    @utils.synchronized('neutron-fixture')
     def create_port_binding(self, port_id, body):
         if port_id not in self._ports:
             raise neutron_client_exc.NeutronClientException(status_code=404)
@@ -717,7 +724,7 @@ class NeutronFixture(fixtures.Fixture):
 
         self._port_bindings[port_id][binding['host']] = binding
 
-        return {'binding': binding}
+        return {'binding': copy.deepcopy(binding)}
 
     def _validate_port_binding(self, port_id, host_id):
         if port_id not in self._ports:
@@ -726,6 +733,7 @@ class NeutronFixture(fixtures.Fixture):
         if host_id not in self._port_bindings[port_id]:
             raise neutron_client_exc.NeutronClientException(status_code=404)
 
+    @utils.synchronized('neutron-fixture')
     def delete_port_binding(self, port_id, host_id):
         self._validate_port_binding(port_id, host_id)
         del self._port_bindings[port_id][host_id]
@@ -743,13 +751,17 @@ class NeutronFixture(fixtures.Fixture):
             else:
                 binding['status'] = 'INACTIVE'
 
+    @utils.synchronized('neutron-fixture')
     def activate_port_binding(self, port_id, host_id):
         self._validate_port_binding(port_id, host_id)
         self._activate_port_binding(port_id, host_id, modify_port=True)
 
+    @utils.synchronized('neutron-fixture')
     def show_port_binding(self, port_id, host_id):
         self._validate_port_binding(port_id, host_id)
-        return {'binding': self._port_bindings[port_id][host_id]}
+        return {
+            'binding': copy.deepcopy(self._port_bindings[port_id][host_id]),
+        }
 
     def _list_resource(self, resources, retrieve_all, **_params):
         # If 'fields' is passed we need to strip that out since it will mess
@@ -808,6 +820,7 @@ class NeutronFixture(fixtures.Fixture):
             else:
                 port['binding:host_id'] = binding['host']
 
+    @utils.synchronized('neutron-fixture')
     def show_port(self, port_id, **_params):
         if port_id not in self._ports:
             raise exception.PortNotFound(port_id=port_id)
@@ -824,6 +837,7 @@ class NeutronFixture(fixtures.Fixture):
 
         return {'port': port}
 
+    @utils.synchronized('neutron-fixture')
     def delete_port(self, port_id, **_params):
         if port_id in self._ports:
             del self._ports[port_id]
@@ -834,6 +848,7 @@ class NeutronFixture(fixtures.Fixture):
             if port_id in self._port_bindings:
                 del self._port_bindings[port_id]
 
+    @utils.synchronized('neutron-fixture')
     def list_ports(self, is_admin, retrieve_all=True, **_params):
         ports = self._list_resource(self._ports, retrieve_all, **_params)
         for port in ports:
@@ -878,6 +893,7 @@ class NeutronFixture(fixtures.Fixture):
             ),
         }
 
+    @utils.synchronized('neutron-fixture')
     def create_port(self, body=None):
         body = body or {'port': {}}
         # Note(gibi): Some of the test expects that a pre-defined port is
@@ -902,6 +918,7 @@ class NeutronFixture(fixtures.Fixture):
         # the self._ports dict.
         return {'port': copy.deepcopy(new_port)}
 
+    @utils.synchronized('neutron-fixture')
     def update_port(self, port_id, body=None):
         port = self._ports[port_id]
         # We need to deepcopy here as well as the body can have a nested dict

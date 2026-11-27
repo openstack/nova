@@ -24,6 +24,7 @@ from nova import conf
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional import integrated_helpers
+from nova import utils
 
 
 CONF = conf.CONF
@@ -519,6 +520,7 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
         }
         self._net1_ports = [self.network_1_port_2, self.network_1_port_3]
 
+    @utils.synchronized('neutron-fixture')
     def create_port(self, body=None):
         network_id = body['port']['network_id']
         assert network_id in self._networks, ('Network %s not in fixture' %
